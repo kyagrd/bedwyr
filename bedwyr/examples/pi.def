@@ -1,0 +1,292 @@
+% Specification of late pi-calculus and strong bisimulation
+% 
+% Please refer to the following paper for background:
+%
+% Alwen Tiu and Dale Miller. A proof search specification of 
+% the pi-calculus. Proceedings of FGUC04. 
+% Available from http://www.loria.fr/~tiu
+
+
+% bound input
+onep (in X M) (dn X) M := true.
+
+% free output
+one  (out X Y P) (up X Y) P := true.
+
+% tau 
+one  (taup P) tau P := true.
+
+% match prefix
+one  (match X X P) A Q := one P A Q.
+onep (match X X P) A M := onep P A M.
+
+% sum
+one  (plus P Q) A R := one P A R.
+one  (plus P Q) A R := one Q A R.
+onep (plus P Q) A M := onep P A M.
+onep (plus P Q) A M := onep Q A M.
+
+% par
+one  (par P Q) A (par P1 Q) := one P A P1.
+one  (par P Q) A (par P Q1) := one Q A Q1.
+onep (par P Q) A (x\par (M x) Q) := onep P A M.
+onep (par P Q) A (x\par P (N x)) := onep Q A N.
+
+% restriction
+one  (nu x\P x) A (nu x\Q x)      := nabla x\ one  (P x) A (Q x).
+onep (nu x\P x) A (y\ nu x\Q x y) := nabla x\ onep (P x) A (y\ Q x y).
+
+% open 
+onep (nu y\M y) (up X) N := nabla y\ one (M y) (up X y) (N y).
+
+% close
+one (par P Q) tau (nu y\ par (M y) (N y)) :=
+  sigma X\ onep P (dn X) M & onep Q (up X) N.
+one (par P Q) tau (nu y\ par (M y) (N y)) :=
+  sigma X\ onep P (up X) M & onep Q (dn X) N.
+
+% comm
+one (par P Q) tau (par R T) :=
+  sigma X\ sigma Y\ sigma M\ onep P (dn X) M & one Q (up X Y) T & (R = (M Y)).
+one (par P Q) tau (par R T) :=
+  sigma X\ sigma Y\ sigma M\ onep Q (dn X) M & one P (up X Y) R & (T = (M Y)).
+
+% Rep-act
+one  (bang P) A (par P1 (bang P)) := one P A P1.
+onep (bang P) X (y\ par (M y) (bang P)) := onep P X M.
+
+% Rep-com
+one (bang P) tau (par (par R T) (bang P)) :=
+  sigma X\ sigma Y\ sigma M\ onep P (dn X) M & one P (up X Y) R & (T = (M Y)).
+
+% Rep-close
+one (bang P) tau (par (nu y\ par (M y) (N y)) (bang P)) := 
+  sigma X\ onep P (up X) M & onep P (dn X) N.
+
+     
+% Simulation and Bi-Simulation
+
+sim P Q := 
+	(pi A\ pi P1\ one P A P1 => sigma Q1\ one Q A Q1 & sim P1 Q1) &
+	(pi X\ pi M\ onep P (dn X) M => sigma N\ onep Q (dn X) N & 
+					pi w\ sim (M w) (N w)) &
+	(pi X\ pi M\ onep P (up X) M => sigma N\ onep Q (up X) N &
+					nabla w\ sim (M w) (N w)).
+
+bisim P Q :=
+	(pi A\ pi P1\ one P A P1 => sigma Q1\ one Q A Q1 & bisim P1 Q1) &
+	(pi X\ pi M\ onep P (dn X) M => sigma N\ onep Q (dn X) N & 
+					pi w\ bisim (M w) (N w)) &
+	(pi X\ pi M\ onep P (up X) M => sigma N\ onep Q (up X) N &
+					nabla w\ bisim (M w) (N w)) &
+	(pi A\ pi Q1\ one Q A Q1 => sigma P1\ one P A P1 & bisim Q1 P1) &
+	(pi X\ pi N\ onep Q (dn X) N => sigma M\ onep P (dn X) M & 
+					pi w\ bisim (N w) (M w)) &
+	(pi X\ pi N\ onep Q (up X) N => sigma M\ onep P (up X) M &
+					nabla w\ bisim (N w) (M w)).
+
+taus P P.
+taus P QQ := one P tau Q, taus Q QQ.
+weak_one Q A P := (A = up X Y), taus Q QQ, one QQ A PP, taus PP P.
+weak_one Q tau QQ := taus Q QQ.
+
+weak_onep Q (up X) P :=
+  taus Q QQ, onep QQ (up X) PP, nabla x\ taus (PP x) (P x).
+weak_onep Q (dn X) P :=
+  taus Q QQ, onep QQ (dn X) PP, pi    x\ taus (PP x) (P x).
+
+weak_bisim P Q :=
+	(pi A\ pi P1\ one P A P1 =>
+           sigma Q1\ weak_one Q A Q1 & weak_bisim P1 Q1) &
+
+	(pi X\ pi M\ onep P (dn X) M => sigma N\ weak_onep Q (dn X) N & 
+					pi w\ weak_bisim (M w) (N w)) &
+
+	(pi X\ pi M\ onep P (up X) M => sigma N\ weak_onep Q (up X) N &
+					nabla w\ weak_bisim (M w) (N w)) &
+
+	(pi A\ pi Q1\ one Q A Q1 =>
+           sigma P1\ weak_one P A P1 & weak_bisim Q1 P1) &
+
+	(pi X\ pi N\ onep Q (dn X) N => sigma M\ weak_onep P (dn X) M & 
+					pi w\ weak_bisim (N w) (M w)) &
+
+	(pi X\ pi N\ onep Q (up X) N => sigma M\ weak_onep P (up X) M &
+					nabla w\ weak_bisim (N w) (M w)).
+
+weak_trace P (do A T)  := taus P PP, one PP A Q, (A = tau => false),
+                          weak_trace Q T.
+weak_trace P (dop A T) := taus P PP, onep PP A Q,
+                          nabla x\ weak_trace (Q x) (T x).
+weak_trace P PP := taus P PP, pi A\ pi Q\ (one PP A Q ; onep PP A Q) => false.
+
+% Natural numbers in pi, using recursive agents -------------------------------
+
+one  P A PP := agent P Body, one  Body A PP.
+onep P A PP := agent P Body, onep Body A PP.
+
+agent (zero C)    (in C s\ in C n\ out n nil z).
+agent (succ P C)  (in C s\ in C n\ out s P z).
+agent (add P Q R) (nu s\ nu n\ out P s (out P n
+                    (in R ss\ in R nn\
+                      (plus (in s k\ nu kk\ (par (out ss kk z) (add k Q kk)))
+                            (in n nil\ out Q ss (out Q nn z)))))).
+ 
+agent (nat (s N) C) (nu n\ par (nat N n) (succ n C)).
+agent (nat zz    C) (zero C).
+
+agent (explicit_2 C) (in C s\ in C zz\ nu un\
+                        par (out s un z)
+                            (nu zero\ (in un s\ in un zz\
+                               (par (out s zero z)
+                                    (in zero s\ in zero zz\ out zz nil z))))).
+
+% The three defs of zero are weakly bisim
+% Merdouille pour un...
+
+natest 0 := weak_bisim (nu u\ nu d\ (par (nat zz u)
+                                    (par (nat zz d)
+                                         (add u d t))))
+                       (nat zz t).
+natest 1 := weak_bisim (nu u\ nu d\ (par (nat zz u)
+                                    (par (nat (s zz) d)
+                                         (add u d t))))
+                       (nat (s zz) t).
+natest 2 := weak_bisim (nu u\ nu d\ (par (nat (s (s zz)) d)
+                                    (par (nat (s (s (s zz))) u)
+                                         (add u d t))))
+                       (nat (s (s (s (s (s zz))))) t).
+
+montest X := weak_onep (nat (s zz) c) A P, nabla x\ weak_onep (P x) (B x) (Q 
+x), nabla y\ weak_one (Q x y) (C x y) (R x y), X = (do A B C R).
+
+% A few example processes -- see the paper for a few check on them ============
+
+example 0  (nu x\ match x a (taup z)).
+example 1  (par (in x y\z) (out x a z)).
+example 2  (plus (in x y\out x a) (out x a (in x y\z))).
+example 3  (in x u\ (plus (taup (taup z)) (taup z))).
+example 4  (in x u\ (plus (taup (taup z))
+                    (plus (taup z)
+                          (taup (match u y (taup z)))))).
+example 5  (nu a\ (par (in x y\z) (out x a z))).
+example 6  (nu a\ (plus (in x y\out x a) (out x a (in x y\z)))).
+example 7  (taup z).
+example 8  (nu x\ (par (in x y\z) (out x a z))).
+example 9  (nu x\ out a x z).
+example 10 (par (in x y\ z) (nu y\ out x y z)).
+example 11 (in x u\ nu y\ ((plus (taup (taup z))
+                           (plus (taup z)
+                                 (taup (match u y (taup z))))))).
+example 12 (bang P) := example 1 P.
+
+% More complex examples from Romain ===========================================
+
+% Definition of may-traces
+run P nil := true.
+run P (cons A R) := one P A P1, run P1 R.
+
+% Simplify a trace by removing tau-actions
+weaken nil nil := true.
+weaken (cons tau L) LL          := weaken L LL.
+weaken (cons A L)   (cons A LL) := (A=tau => false), weaken L LL.
+
+% Encoding of the empty queue in the pi-calculus
+q_empty
+  (nu s\ nu trig\
+     par (in u alpha\ par (out v alpha (out s o z))
+                          (out trig s z))
+         (bang (nu s1\ in trig s\ in u alpha\
+                  (par (in s o\ out v alpha (out s1 o z))
+                       (out trig s1 z))))) := true.
+
+% Initially, the empty queue can only receive on u.
+notest 1 := q_empty E, one E A F.
+% The queue cannot do anything else than (dn u)
+notest 2 := q_empty E, onep E A F, (A = dn u => false).
+% Trust me it can do (dn u)...
+
+% Now we observe a simple use in which we send sequentially a, b and c
+xmpl (par E (out u a (out u b (out u c z)))) := q_empty E.
+q_run R :=
+  xmpl P,
+  run P Rt,
+  weaken Rt R.
+
+% Check that something can get out of the queue...
+test 1   := q_run (cons (up v X) R).
+
+% Now, check that the order is preserved
+notest 3 := q_run (cons (up v a) (cons (up v c) R)).
+
+% Is it possible that the queue eats A and B, then C goes outside,
+% then the queue replays A and B ?
+test 2   := q_run (cons (up u c) (cons (up v a) (cons (up v b) nil))).
+test 3   := q_run (cons (up v a) (cons (up u c) (cons (up v b) nil))).
+notest 4 := q_run (cons (up u c) (cons (up v b) (cons (up v a) nil))).
+
+% A weak bisimulation =========================================================
+
+% Same example as before but we hide u so that only the values sent to it
+% can only escape by going through the queue.
+nu_example (nu u\
+  par
+  (nu s\ nu trig\
+     par (in u alpha\ par (out v alpha (out s o z))
+                          (out trig s z))
+         (bang (nu s1\ in trig s\ in u alpha\
+                  (par (in s o\ out v alpha (out s1 o z))
+                       (out trig s1 z)))))
+  (out u a (out u b (out u c z)))) := true.
+
+% A very simple bisimulation (takes time)
+test 4 := nu_example P, weak_bisim P (out v a (out v b (out v c z))).
+% Of course this is wrong
+notest 5 :=
+   nu_example P, weak_bisim P (out v b (out v a (out v c z))).
+
+% Summarize all this
+
+ptest N := print (check N), test N.
+
+all_test := ptest 1, ptest 2, ptest 3, ptest 4.
+all_notest := notest X.
+
+% We define an abstract representation of a queue of messages
+% taken on channel u and emitted on channel v,
+% and define the associated one-step transitions.
+
+queue qnil := true.
+queue (qcons V Q) := queue Q.
+
+% [insert Q X QX] QX is the queue Q with X added at the end
+insert qnil X (qcons X qnil) := true.
+insert (qcons A B) X (qcons A L) := insert B X L.
+
+% Extend the transition predicates to abstract queues
+one  (qcons V Q) (up v V) Q := true.
+onep Q (dn u) Qx := nabla x\ insert Q x (Qx x).
+
+translate_queue (qcons V Q)
+  (trig\ s\
+   nu s1\
+     (par (Qtr trig s1)
+     (par (in s o\ out v V (out s1 o z))))) := translate_queue Q Qtr.
+
+translate_queue qnil
+  (trig\ s\
+     (bang (nu s1\
+            in trig o\
+            in u alpha\
+              (par (in s o\ out v alpha (out s1 o z))
+                   (out trig s1 z))))) := true.
+
+% queue Q (nu trig\ nu s\ par (out trig o (out s o z)) (Qtr trig s)) :=
+%   translate_queue Q Qtr.
+
+% The system stupidly tries to enumerate all possible queues and queue 
+% processes when running on (queue (qcons X Q) Px), so we can't do much...
+
+% try := queue (qcons a qnil) Pa, weak_one Pa (out C V) P.
+% loop := pi x\px\p\q\
+%          (queue (qcons x q) px, print q, one_w px (out v x) p) => queue q p.

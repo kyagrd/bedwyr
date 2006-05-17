@@ -1,0 +1,83 @@
+%% Abstract Transition Systems
+
+%% Some experiments encoding ats into this prover.  
+
+% display all the one-step transitions of the ats
+display := one P A Q, print (one P A Q), fail.
+
+% Determine if transition system is determinate or not.
+determinate :=  pi P\ pi A\ pi Q\ pi R\ one P A Q =>  one P A R => Q = R.
+
+% membership in a list.  Returns a bool to make it more efficient when
+% used in a conditional expression.
+   %% It would make a nice little theorem (involving induction) to
+   %% prove that this member is determinate in it's third argument.
+member X nil        ff := true.
+member X (cons Y L) Bool := (X = Y => false) & member X L Bool.
+member X (cons X L) tt := true.
+
+% co-induction with History checking.  Simply check that goal appears
+% before.  If so, succeed.  Here, pr is for pairing.
+
+cyclic SIM History P Q := 
+   member (pr P Q) History Bool &
+   (Bool = tt;  % A cycle observed so succeed - coinduction
+    (Bool = ff & (SIM (cyclic SIM (cons (pr P Q) History)) P Q))).
+
+sim P Q :=
+    cyclic (S\ P\ Q\ (pi P1\ pi A\ one P A P1 => sigma Q1\ one Q A Q1 & S P1 Q1))
+           nil P Q.
+
+bisim P Q :=
+    cyclic (S\ P\ Q\ ((pi P1\ pi A\ one P A P1 => sigma Q1\ one Q A Q1 & S P1 Q1) &
+                      (pi Q1\ pi A\ one Q A Q1 => sigma P1\ one P A P1 & S P1 Q1)))
+           nil P Q.
+
+%% ATS 1:
+
+%one p a q.
+%one p a r.
+%one q b s.
+%one r c t.
+%one u a v.
+%one v b w.
+%one v c x.
+
+% Tests:
+% Postive:  sim p u.
+% Negative: sim u p.
+% test := sim p u,(sim u p => false).
+
+
+%% ATS 2:
+
+%one p a q := true.
+%one p a t := true.
+%one q a p := true.
+%one s a s := true.
+
+% Tests:
+% Postive:  sim s s, sim p s, sim q s.
+% Negative: sim s t.
+
+%test := sim s s, sim p s, sim q s.
+%test2 := sim s t.
+
+
+%% ATS 3:  (a.b + a.c) vs a.(b + c)
+
+one p a q := true.
+one p a s := true.
+one q b t := true.
+one s c u := true.
+
+one v a w := true.
+one w b x := true.
+one w c y := true.
+
+% Tests:
+% Postive:  sim p v, sim s w
+% Negative: sim v p, sim w s
+
+test := sim p v, sim s w.
+false_test := sim v p ; sim w s.
