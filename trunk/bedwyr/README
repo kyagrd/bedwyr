@@ -1,0 +1,23 @@
+
+This is Bedwyr, a theorem prover for the Level-0/1 fragment of the Linc logic.
+
+It is based on Alwen's Tiu Level-0/1, and Nadathur & Linell's LLambda library,
+both written in SML. The OCaml translation has been done by Ziegler & Baelde.
+All that is free software, licensed under GPL version 2.
+
+What to do ?
+
+Simply run: ./configure && make
+You might also want to run make test.
+
+Check Alwen's paper for background on the system, and type "#help." for
+in Bedwyr implementation-specific help.
+
+Structure of the distribution:
+/examples
+  A few simple examples.
+/src
+  Source code for the prover.
+/src/ndcore
+  Code for the unification and non-destructive normalization of LLambda.
+  This comes with oUnit and Test for testing it.

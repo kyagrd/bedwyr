@@ -1,0 +1,35 @@
+empty   (c b (c b (c b (c b (c b (c b (c b (c b (c b nil))))))))):= true.
+three W (c W (c W (c W (c A (c B (c C (c D (c E (c F nil))))))))):= true.
+three W (c A (c B (c C (c W (c W (c W (c D (c E (c F nil))))))))):= true.
+three W (c A (c B (c C (c D (c E (c F (c W (c W (c W nil))))))))):= true.
+three W (c W (c A (c B (c W (c C (c D (c W (c E (c F nil))))))))):= true.
+three W (c A (c W (c B (c C (c W (c D (c E (c W (c F nil))))))))):= true.
+three W (c A (c B (c W (c C (c D (c W (c E (c F (c W nil))))))))):= true.
+three W (c W (c A (c B (c C (c W (c D (c E (c F (c W nil))))))))):= true.
+three W (c A (c B (c W (c C (c W (c D (c W (c E (c F nil))))))))):= true.
+
+one (c b L) W (c W L):= true.
+one (c X L) W (c X L1) := one L W L1.
+
+move L x K := (three o L => false), one L x K.
+move L o K := (three x L => false), one L o K.
+
+xwins L := pi K\ move L o K  => owins K => false.
+owins L := pi K\ move L x K  => xwins K => false.
+
+wins L := three x L.
+wins L := pi k\ one L o k => ((three o k => false), sigma m\ one k x m, wins m).
+
+thm1 := wins (c x (c x (c b (c b (c b (c b (c b (c b (c b nil))))))))).
+thm2 := wins (c x (c b (c b (c b (c b (c b (c b (c b (c b nil))))))))).
+thm3 := wins (c x (c x (c x (c b (c b (c b (c b (c b (c b nil))))))))).
+thm4 := empty B, wins B.
+test1 L := move (c x (c x (c x (c b (c b (c b (c b (c b (c b nil))))))))) x L.
+test2 L := move (c x (c x (c b (c b (c b (c b (c b (c b (c b nil))))))))) x L.
+
+test :=
+  print "thm1 proving a winning board", thm1,
+  print "thm2 proving a winning board", thm2,
+  print "thm3 proving a winning board", thm3,
+  print "proving that there is no winning strategy",
+  print "this is expected to be a huge computation", thm4.
