@@ -1,0 +1,39 @@
+% This example highlights some simple benefits of tabling.
+
+% Nodes for the graph
+
+node(1).
+node(2).
+node(3).
+node(4).
+node(5).
+node(6).
+
+% Directed predicates
+
+arrow(1,2).
+arrow(2,3).
+arrow(2,4).
+arrow(3,5).
+arrow(4,5).
+arrow(5,6).
+
+path(X,Y) := arrow(X,Y).
+path(X,Y) := arrow(X,Z), path(Z,Y).
+
+% Undirected predicates
+
+edge(X,Y) := arrow(X,Y) ; arrow(Y,X).
+
+edgepath(X,Y) := edge(X,Y).
+edgepath(X,Y) := edge(X,Z), edgepath(Z,Y).
+
+% Queries to try
+
+allpaths := path(X,Y), print (X to Y), false.
+
+alledgepaths := edgepath(X,Y), print (X to Y), false.
+
+connected := pi X\ pi Y\ node(X) => node(Y) => edgepath(X,Y).
+
+disconnected := sigma X\ sigma Y\ node(X), node(Y), edgepath(X,Y) => false.
