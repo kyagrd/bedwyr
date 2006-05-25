@@ -1,0 +1,61 @@
+% This is an alternate presentation of graphs where the graph structure
+% is not hardcoded into the predicates, but rather is kept as a
+% datastrcture of the following form:
+%   (graph (c 1 (c 2 (c 3 (c 4 nil))))
+%          (c (arrow 1 2) (c (arrow 3 4) nil)))
+% where the the first list is the nodes of the graph and the second is
+% the arrows of the graph. The benefit of this representation is that
+% we modify the graph on the fly (as seen in the 'tree' predicate).
+% The downside is that we must pass the graph as an argument to all of
+% our graph predicates.
+% Note: This example requires tabling.
+
+% List utilities
+
+member X (c X L).
+member X (c Y L) := member X L.
+
+remove (c X L) X L.
+remove (c Y L) X (c Y Lp) := remove L X Lp.
+
+% Nodes of the graph
+
+node (graph N A) X := member X N.
+
+% Directed predicates
+
+arrow (graph N A) X := member X A.
+
+path G X Y := arrow G X Y.
+path G X Y := arrow G X Z, path G Z Y.
+
+% Undirected predicates
+
+edge G (edge X Y) := arrow G (arrow X Y) ; arrow G (arrow Y X).
+
+edgepath G X Y := edge G (edge X Y).
+edgepath G X Y := edge G (edge X Z), edgepath G Z Y.
+
+% Notions of connectedness
+
+connected G := pi X\ pi Y\ node G X => node G Y => edgepath G X Y.
+disconnected G := sigma X\ sigma Y\
+                    node G X, node G Y, edgepath G X Y => false.
+
+removearrow (graph N A) X (graph N Ap) := remove A X Ap.
+
+% A tree is a connected graph that becomes disconnected
+% if you remove any edge.
+
+tree G := connected G, pi A\ arrow G A => remove G A Gp => disconnected Gp.
+
+% Queries to try
+
+%       3
+%      / \
+% 1 - 2   5 - 6
+%      \
+%       4
+test := tree (graph (c 1 (c 2 (c 3 (c 4 (c 5 (c 6 nil))))))
+                    (c (arrow 1 2) (c (arrow 2 3) (c (arrow 2 4)
+                       (c (arrow 3 5) (c (arrow 5 6) nil)))))).
