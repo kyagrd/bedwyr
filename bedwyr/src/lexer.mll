@@ -46,6 +46,6 @@ rule token = parse
 | "coinductive" { COIND }
 
 | name as n { ID n }
-| '"' (instring as n) '"' { ID n }
+| '"' (instring as n) '"' { STRING n }
 
 | eof    { failwith "eof" }

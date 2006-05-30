@@ -255,6 +255,8 @@ let atom ?(ts=0) name =
           Hashtbl.add tbl name t ;
           t
 
+let string text = const text 0
+
 let binop s a b = ref (App ((atom s),[a;b]))
 
 let rec collapse_lam t = match !t with

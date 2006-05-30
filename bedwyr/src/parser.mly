@@ -74,6 +74,7 @@
 %token EQ AND IMP OR
 %token DEF IND COIND
 %token <string> ID
+%token <string> STRING
 
 %nonassoc BSLASH
 %right IMP
@@ -123,3 +124,4 @@ lexp:
 aexp:
 | LPAREN exp RPAREN { $2 }
 | ID { Term.atom $1 }
+| STRING { Term.string $1 }

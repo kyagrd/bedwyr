@@ -53,6 +53,7 @@ val const : ?tag:tag -> string -> int -> term
 val var : ?tag:tag -> string -> int -> term
 
 val atom : ?ts:int -> string -> term
+val string : string -> term
 
 val binop : string -> term -> term -> term
 
