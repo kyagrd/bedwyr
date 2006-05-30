@@ -1,0 +1,26 @@
+% Here we define an append predicate and prove properties about it such as
+% coverage and determinancy. Bedwyr does not yet support induction, so we
+% use the "list" predicate to isolate a finite domain to work over.
+% Eventually, it would be nice to extend Bedwyr to handle the general case
+% since coverage and determinancy checks would be useful to lambda prolog
+% programmers, for example.
+
+list nil.
+list (cons X nil).
+list (cons X (cons Y nil)).
+list (cons X (cons Y (cons Z nil))).
+
+append nil K K.
+append (cons X L) K (cons X M) := append L K M.
+
+% In the following checks, we assume the mode: append +L +K -M.
+
+% Coverage implicitly proves termination
+coverage := pi L\ pi K\ list L => sigma M\ append L K M.
+
+determinancy := pi L\ pi K\ pi M\ pi Mp\
+    list L => append L K M => append L K Mp => M = Mp.
+
+test := (coverage ; print "Coverage failure"),
+        (determinancy ; print "Determinancy failure"),
+        print "Done".
