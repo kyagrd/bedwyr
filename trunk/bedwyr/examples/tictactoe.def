@@ -1,35 +1,70 @@
-empty   (c b (c b (c b (c b (c b (c b (c b (c b (c b nil))))))))):= true.
-three W (c W (c W (c W (c A (c B (c C (c D (c E (c F nil))))))))):= true.
-three W (c A (c B (c C (c W (c W (c W (c D (c E (c F nil))))))))):= true.
-three W (c A (c B (c C (c D (c E (c F (c W (c W (c W nil))))))))):= true.
-three W (c W (c A (c B (c W (c C (c D (c W (c E (c F nil))))))))):= true.
-three W (c A (c W (c B (c C (c W (c D (c E (c W (c F nil))))))))):= true.
-three W (c A (c B (c W (c C (c D (c W (c E (c F (c W nil))))))))):= true.
-three W (c W (c A (c B (c C (c W (c D (c E (c F (c W nil))))))))):= true.
-three W (c A (c B (c W (c C (c W (c D (c W (c E (c F nil))))))))):= true.
+% convert Internal External
+% Allows us to convert between internal and external formats.
+% The internal format is simple to read and write, but the internal
+% format is better for recursion.
+convert (c A (c B (c C (c D (c E (c F (c G (c H (c I nil)))))))))
+        (board (row A B C) (row D E F) (row G H I)).
 
-one (c b L) W (c W L):= true.
-one (c X L) W (c X L1) := one L W L1.
+% winner Player Board
+% True if Player has won on the Board
+winner W (c W (c W (c W (c A (c B (c C (c D (c E (c F nil))))))))).
+winner W (c A (c B (c C (c W (c W (c W (c D (c E (c F nil))))))))).
+winner W (c A (c B (c C (c D (c E (c F (c W (c W (c W nil))))))))).
+winner W (c W (c A (c B (c W (c C (c D (c W (c E (c F nil))))))))).
+winner W (c A (c W (c B (c C (c W (c D (c E (c W (c F nil))))))))).
+winner W (c A (c B (c W (c C (c D (c W (c E (c F (c W nil))))))))).
+winner W (c W (c A (c B (c C (c W (c D (c E (c F (c W nil))))))))).
+winner W (c A (c B (c W (c C (c W (c D (c W (c E (c F nil))))))))).
 
-move L x K := (three o L => false), one L x K.
-move L o K := (three x L => false), one L o K.
+% nowinner Board
+% True if nobody has won on the Board yet
+nowinner B := pi X\ winner X B => X = b.
 
-xwins L := pi K\ move L o K  => owins K => false.
-owins L := pi K\ move L x K  => xwins K => false.
+% move Board Player Board'
+% True if Board' is the same as Board except for one move by Player.
+move (c b L) W (c W L).
+move (c X L) W (c X K) := move L W K.
 
-wins L := three x L.
-wins L := pi k\ one L o k => ((three o k => false), sigma m\ one k x m, wins m).
+% nomoves Board
+% True if there are no possible moves on the Board.
+nomoves L := pi K\ move L o K => false.
 
-thm1 := wins (c x (c x (c b (c b (c b (c b (c b (c b (c b nil))))))))).
-thm2 := wins (c x (c b (c b (c b (c b (c b (c b (c b (c b nil))))))))).
-thm3 := wins (c x (c x (c x (c b (c b (c b (c b (c b (c b nil))))))))).
-thm4 := empty B, wins B.
-test1 L := move (c x (c x (c x (c b (c b (c b (c b (c b (c b nil))))))))) x L.
-test2 L := move (c x (c x (c b (c b (c b (c b (c b (c b (c b nil))))))))) x L.
+% tie Board
+% True if the Board is a tie.
+tie L := nomoves L, nowinner L.
 
-test :=
-  print "thm1 proving a winning board", thm1,
-  print "thm2 proving a winning board", thm2,
-  print "thm3 proving a winning board", thm3,
-  print "proving that there is no winning strategy",
-  print "this is expected to be a huge computation", thm4.
+% xwins Board
+% True if x has a winning strategy for Board, assuming o plays first.
+xwins L := winner x L.
+xwins L := pi K\ move L o K => (nowinner K, sigma M\ move K x M, xwins M).
+
+% These definitions are not stratified, but might be nice.
+% Note: they would require that move L o K checks that x has not won,
+%       and vice-versa.
+% xwins L := pi K\ move L o K  => owins K => false.
+% owins L := pi K\ move L x K  => xwins K => false.
+
+% notxwins Board
+% True if x does not have a winning strategy for Board, assuming o plays first.
+% It would be nice to use (pi L\ xwins L => false), but xwins is level 1.
+notxwins L := tie L ; winner o L.
+notxwins L := nowinner L, sigma K\ move L o K,
+                (tie K ; winner o K ; pi M\ move K x M => notxwins M).
+
+thm 1 := convert Board (board (row x x x) (row b b b) (row b b b)),
+         xwins Board.
+        
+thm 2 := convert Board (board (row x x b) (row b b b) (row b b b)),
+         xwins Board.
+
+thm 3 := convert Board (board (row x b o) (row b b b) (row b b b)),
+         notxwins Board.
+
+thm 4 := convert Board (board (row b b b) (row b b b) (row b b b)),
+         notxwins Board.
+
+checkthm X := print (running test X), (thm X ; print "!!! failure !!!").
+
+test := checkthm 1, checkthm 2, checkthm 3, checkthm 4,
+        print "testing complete".
+
