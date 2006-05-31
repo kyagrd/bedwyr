@@ -260,7 +260,14 @@ let toplevel_prove g =
   let vars = List.map (fun t -> Pprint.term_to_string t, t)
                (List.rev (Term.freevars [g])) in
   let found = ref false in
+  let reset,time =
+    let t0 = ref (Unix.gettimeofday ()) in
+      (fun () -> t0 := Unix.gettimeofday ()),
+      (fun () ->
+         printf "+ %.0fms\n" (1000. *. (Unix.gettimeofday () -. !t0)))
+  in
   let show k =
+    time () ;
     found := true ;
     if vars = [] then printf "True.\n" else
       printf "Solution found:\n" ;
@@ -269,9 +276,10 @@ let toplevel_prove g =
       vars ;
     printf "More [y] ? %!" ;
     let l = input_line stdin in
-      if l = "" || l.[0] = 'y' || l.[0] = 'Y' then
+      if l = "" || l.[0] = 'y' || l.[0] = 'Y' then begin
+        reset () ;
         k ()
-      else begin
+      end else begin
         Term.restore_state s0 ;
         printf "Search stopped.\n"
       end
@@ -279,6 +287,7 @@ let toplevel_prove g =
     prove ~level:One ~local:0 ~timestamp:0 g
       ~success:show
       ~failure:(fun () ->
+                  time () ;
                   if !found then printf "No more solutions.\n"
                   else printf "Wrong.\n" ;
                   assert (s0 = Term.save_state ()))
