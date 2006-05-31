@@ -27,7 +27,7 @@ TEST   = $(CORE_ML:.ml=.$(cmo)) $(TEST_ML:.ml=.$(cmo))
 # BUILDING
 
 bedwyr: $(BEDWYR)
-	$(OCAMLL) $(BEDWYR) -o bedwyr
+	$(OCAMLL) unix.$(cma) $(BEDWYR) -o bedwyr
 
 -include depend
 depend: $(CORE_SRC) $(BEDWYR_SRC) $(TEST_ML)
