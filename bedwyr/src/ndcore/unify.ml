@@ -307,7 +307,7 @@ let rec prune_same_var l1 l2 j bl = match l1,l2 with
   * The unification computation is split into two parts, one that
   * examines the top level structure of [t2] and the other that descends
   * into its nested subparts. This organization is useful primarily
-  * because [h1], the variable head, of the first term can appear at the
+  * because [h1], the variable head of the first term can appear at the
   * toplevel in t2 without sacrificing unifiability but not in a nested
   * part. *)
 let makesubst h1 t2 a1 n =
@@ -383,7 +383,7 @@ let makesubst h1 t2 a1 n =
                     if ts1<ts2 then
                       let h' = Term.fresh ts1 in
                         Term.bind h2 h' ;
-                        Term.app h' a1
+                        Term.app h' a1'
                     else 
                       Term.app h2 a1'
             | _ -> assert false

@@ -324,7 +324,7 @@ let test =
          Unify.unify (2 // (p ^^ [db 2])) (1 // (q ^^ [db 1])) ;
          assert_equal (2 // (p ^^ [db 2])) q) ;
 
-    "Cyclic thing" >::
+    "[T = a X, T = a Y, Y = T]" >::
     (fun () ->
        let t = var "T" 1 in
        let x = var "X" 1 in
@@ -333,8 +333,16 @@ let test =
        let a x = a ^^ [x] in
          Unify.unify t (a x) ;
          Unify.unify t (a y) ;
-         begin try Unify.unify y t with _ -> () end ;
-         assert false)
+         begin try Unify.unify y t ; assert false with
+           | Unify.Error _ -> () end) ;
+
+    "[x\\y\\ H1 x = x\\y\\ G2 x]" >::
+    (fun () ->
+       let h = var "H" 1 in
+       let g = var "G" 2 in
+         (* Different timestamps matter *)
+         Unify.unify (2// (h ^^ [db 2])) (2// (g ^^ [db 2])) ;
+         assert_equal (g^^[db 2]) (h^^[db 2]))
 
     ]
   ]
