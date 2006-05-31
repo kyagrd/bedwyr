@@ -78,15 +78,15 @@ let pp_term out t =
               let op_p = priority op in
               let op = " "^op^" " in
                 if op_p > p && p <> 0 then
-                  fprintf out "@[<hov 0>%a@]" (out_ls op op_p n) l
+                  fprintf out "%a" (out_ls op op_p n) l
                 else
-                  fprintf out "@[<hov 1>(%a)@]" (out_ls op op_p n) l
-          | _ -> fprintf out "@[<hov 3>(%a)@]" (out_ls " " 0 n) (r::l)
+                  fprintf out "(%a)" (out_ls op op_p n) l
+          | _ -> fprintf out "(%a)" (out_ls " " 0 n) (r::l)
         end
     | Lam (0,t) -> assert false
     | Lam (i,t) ->
           (* This is a bit too much parenthesis sometimes *)
-          fprintf out "@[<hov 1>(%a%a)@]"
+          fprintf out "(%a%a)"
             (let rec arg n out i =
                if i>0 then begin
                  fprintf out "%s%d\\" pre (n+1) ; arg (n+1) out (i-1)

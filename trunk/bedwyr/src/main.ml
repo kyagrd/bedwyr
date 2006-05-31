@@ -64,7 +64,6 @@ and command lexbuf = function
 "Available commands:
 #help.
 #exit.
-#prove (theorem).
 #debug [flag].
 #include \"some/filename.def\".
 In query mode, just type a term to ask for its verification.

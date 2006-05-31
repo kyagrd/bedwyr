@@ -76,20 +76,20 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
   let state = Term.save_state () in
   let failure () =
     if !debug then
-      Format.printf "No (more) success for %a!\n%!" Pprint.pp_term g ;
+      Format.printf "No (more) success for %a\n" Pprint.pp_term g ;
     Term.restore_state state ;
     failure ()
   in
   let success k =
     if !debug then
-      Format.printf "Success for           %a!\n%!" Pprint.pp_term g ;
+      Format.printf "Success for           %a\n" Pprint.pp_term g ;
     success k
   in
 
   let g = Norm.hnorm g in
 
   if !debug then
-    printf "Proving %a...\n%!" Pprint.pp_term g ;
+    printf "Proving %a...\n" Pprint.pp_term g ;
 
   let prove_atom d args =
     let kind,body = System.get_def ~check_arity:(List.length args) d in
@@ -237,7 +237,7 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
 
         (* Output *)
         | Const ("print",_,_) ->
-            List.iter (fun t -> printf "%a\n%!" Pprint.pp_term t) goals ;
+            List.iter (fun t -> printf "%a\n" Pprint.pp_term t) goals ;
             success failure
 
         (* Check for definitions *)
