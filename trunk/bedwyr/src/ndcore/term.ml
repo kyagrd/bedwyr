@@ -268,7 +268,10 @@ let rec collapse_lam t = match !t with
   | _ -> t
 
 let db n = ref (DB n)
-let app a b = if b = [] then a else ref (App (a,b))
+(* let app a b = if b = [] then a else ref (App (a,b)) *)
+let app a b = if b = [] then a else match (observe a) with
+  | App(a,c) -> ref (App (a,c @ b))
+  | _ -> ref (App (a,b))
 let susp t ol nl e = ref (Susp (t,ol,nl,e))
 
 module Notations =

@@ -65,7 +65,7 @@ let add_clause kind head arity body =
     with
       | Not_found -> kind, (Term.lambda arity body)
   in
-  let b = Norm.norm b in
+  let b = Norm.hnorm b in
     Hashtbl.replace defs head (k,b) ;
     if !debug then
       Format.printf "%s := %a\n" head Pprint.pp_term b
