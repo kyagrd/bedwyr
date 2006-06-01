@@ -34,35 +34,88 @@ let test =
     [
       "[(x\\ x) c]" >::
       (fun () ->
-         let c = const "c" 1 in
-         let t = (1 // db 1) ^^ [c] in
-         let t = Norm.norm t in
-           assert_equal c t) ;
+        let c = const "c" 1 in
+        let t = (1 // db 1) ^^ [c] in
+        let t = Norm.hnorm t in
+          assert_equal c t) ;
 
+      "[(x\\ y\\ x) a b]" >::
+      (fun () ->
+        let a = const "a" 1 in
+        let b = const "b" 1 in
+        let t = (2 // db 2) ^^ [a; b] in
+        let t = Norm.hnorm t in
+          assert_equal a t) ;
+      
+      "[(x\\ y\\ y) a b]" >::
+      (fun () ->
+        let a = const "a" 1 in
+        let b = const "b" 1 in
+        let t = (2 // db 1) ^^ [a; b] in
+        let t = Norm.hnorm t in
+          assert_equal b t) ;
+      
+      "[(x\\ y\\ z\\ x)]" >::
+      (fun () ->
+        let t = (3 // db 3) in
+        let t = Norm.hnorm t in
+          assert_equal (3 // db 3) t) ;
+      
+      "[(x\\ y\\ z\\ x) a]" >::
+      (fun () ->
+        let a = const "a" 1 in
+        let t = (3 // db 3) ^^ [a] in
+        let t = Norm.hnorm t in
+          assert_equal (2 // a) t) ;
+      
+      "[(x\\ x (x\\ x)) (x\\y\\ x y)]" >::
+      (fun () ->
+        let t = 1 // (db 1 ^^ [1 // db 1]) in
+        let t = t ^^ [ 2 // (db 2 ^^ [db 1]) ] in
+        let t = Norm.hnorm t in
+          assert_equal (1 // ((1 // db 1) ^^ [db 1]))  t) ;
+      
       "[(x\\ x (x\\ x)) (x\\y\\ x y) c]" >::
       (fun () ->
-         let c = const "c" 1 in
-         let t = 1 // (db 1 ^^ [1 // db 1]) in
-         let t = t ^^ [ 2 // (db 2 ^^ [db 1]) ; c ] in
-         let t = Norm.norm t in
-           assert_equal c t) ;
+        let c = const "c" 1 in
+        let t = 1 // (db 1 ^^ [1 // db 1]) in
+        let t = t ^^ [ 2 // (db 2 ^^ [db 1]) ; c ] in
+        let t = Norm.hnorm t in
+          assert_equal c t) ;
 
       "[x\\ c x]" >::
       (fun () ->
-         let c = const "c" 1 in
-         let t = 1 // (c ^^ [db 1]) in
-         let t = Norm.norm t in
-           assert_equal (1 // (c ^^ [db 1])) t) ;
-
+        let c = const "c" 1 in
+        let t = 1 // (c ^^ [db 1]) in
+        let t = Norm.hnorm t in
+          assert_equal (1 // (c ^^ [db 1])) t) ;
+      
       (* This is a normalization pb which appeared to be causing
        * a failure in an unification test below. *)
       "[x\\y\\((a\\b\\ a b) x y)]" >::
       (fun () ->
-         let ii = 2 // (db 2 ^^ [db 1]) in
-         let t = 2 // (ii ^^ [db 2;db 1]) in
-         let t = Norm.norm t in
-           assert_equal (2//(db 2 ^^ [db 1])) t) ;
-    ] ;
+        let ii = 2 // (db 2 ^^ [db 1]) in
+        let t = 2 // (ii ^^ [db 2;db 1]) in
+        let t = Norm.hnorm t in
+          assert_equal (2//(db 2 ^^ [db 1])) t) ;
+
+      (* Test that Term.App is flattened *)
+      "[(a b) c]" >::
+      (fun () ->
+        let a = const "a" 1 in
+        let b = const "b" 1 in
+        let c = const "c" 1 in
+        let t = (a ^^ [b]) ^^ [c] in
+        let t = Norm.hnorm t in
+          assert_equal (a ^^ [b ; c]) t) ;
+
+      (* Test that Term.Lam is flattened *)
+      "[x\\ (y\\ x)]" >::
+      (fun () ->
+        let t = 1 // (1 // db 2) in
+        let t = Norm.hnorm t in
+          assert_equal (2 // db 2) t) ;
+] ;
 
     (* Tests from Nadathur's SML implementation ---------------------------- *)
     "Unif" >:::
@@ -116,7 +169,7 @@ let test =
        let t2 = y ^^ [ b ; c ] in
          Unify.unify t1 t2 ;
          let h =
-           let x = Norm.norm x in
+           let x = Norm.hnorm x in
            match extract [L;H] x with
              | Var (h,1,Unset) -> var h 1
              | _ -> failwith "X should match x\\y\\ H ..."
@@ -137,7 +190,7 @@ let test =
        let c3 = const "c" 3 in
          Unify.unify (x ^^ [a;b]) (c ^^ [y ^^ [b;c3]]) ;
          let h =
-           let x = Norm.norm x in
+           let x = Norm.hnorm x in
            match extract [L;A;H] x with
              | Var (h,1,Unset) -> var h 1
              | _ -> failwith "X should match x\\y\\ _ H .."
@@ -188,7 +241,7 @@ let test =
        let c = const "c" 3 in
          Unify.unify (x ^^ [a;b;c]) (x ^^ [c;b;a]) ;
          let h =
-           let x = Norm.norm x in
+           let x = Norm.hnorm x in
            match extract [L;H] x with
              | Var (h,1,Unset) -> var h 1
              | _ -> failwith "X should match x\\y\\z\\ H ..."
@@ -233,7 +286,7 @@ let test =
        let c = const "c" 3 in
          Unify.unify (x ^^ [a;b]) (y ^^ [b;c]) ;
          let h =
-           let x = Norm.norm x in
+           let x = Norm.hnorm x in
            match extract [L;H] x with
              | Var (h,1,Unset) -> var h 1
              | _ -> failwith
@@ -254,7 +307,7 @@ let test =
        let c = const "c" 3 in
          Unify.unify (x ^^ [a;b;c]) (y ^^ [c]) ;
          let h =
-           let x = Norm.norm x in
+           let x = Norm.hnorm x in
            match extract [L;H] x with
              | Var (h,1,Unset) -> var h 1
              | _ -> failwith "X should match x\\y\\z\\ H ..."
@@ -273,7 +326,7 @@ let test =
        let c = const "c" 3 in
          Unify.unify (x ^^ [a;b]) (a ^^ [y ^^ [b;c]]) ;
          let h =
-           let x = Norm.norm x in
+           let x = Norm.hnorm x in
            match extract [L;A;H] x with
              | Var (h,1,Unset) -> var h 1
              | _ -> failwith "X should match x\\y\\ _ (H ..) .."
