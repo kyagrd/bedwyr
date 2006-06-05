@@ -85,6 +85,12 @@ In query mode, just type a term to ask for its verification.
           | _ -> raise Invalid_command
         end
 
+  | "table",[p] ->
+      begin match Term.observe p with
+        | Term.Const(name,_,_) -> System.table(name)
+        | _ -> raise Invalid_command
+      end
+
   | _ -> raise Invalid_command
 
 let interactive = ref true

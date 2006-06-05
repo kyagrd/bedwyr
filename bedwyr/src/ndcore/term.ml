@@ -281,3 +281,24 @@ struct
   let (//) = lambda
   let (^^) = app
 end
+
+let rec is_ground term =
+  match observe term with
+    | Const(_,_,Unset) -> true
+    | Const _ -> false
+    | Var _ -> false
+    | DB _ -> true
+    | Lam(n,t) -> is_ground t
+    | App(t,ts) -> is_ground t && (List.for_all is_ground ts)
+    | Susp _ -> failwith "Call deep_norm before is_ground"
+    | Ptr _ -> failwith "Ptr found on observed term"
+
+let rec copy term =
+  match observe term with
+    | Const(name,ts,tag) -> const ~tag:tag name ts
+    | Var _ -> failwith "Check is_ground before copy"
+    | DB i -> db i
+    | Lam(n,t) -> lambda n t
+    | App(t,ts) -> app t ts
+    | Susp _ -> failwith "Call deep_norm before copy"
+    | Ptr _ -> failwith "Ptr found on observed term"

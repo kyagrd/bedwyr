@@ -8,7 +8,7 @@
 % we modify the graph on the fly (as seen in the 'tree' predicate).
 % The downside is that we must pass the graph as an argument to all of
 % our graph predicates.
-% Note: This example requires tabling.
+% Note: This example requires tabling for edgepath.
 
 % List utilities
 
@@ -35,19 +35,25 @@ edge G (edge X Y) := arrow G (arrow X Y) ; arrow G (arrow Y X).
 
 edgepath G X Y := edge G (edge X Y).
 edgepath G X Y := edge G (edge X Z), edgepath G Z Y.
+#table edgepath.
 
 % Notions of connectedness
 
+t := graph 1 G, disconnected G.
+
 connected G := pi X\ pi Y\ node G X => node G Y => edgepath G X Y.
 disconnected G := sigma X\ sigma Y\
-                    node G X, node G Y, edgepath G X Y => false.
+                    node G X, node G Y, (edgepath G X Y => false).
 
 removearrow (graph N A) X (graph N Ap) := remove A X Ap.
 
 % A tree is a connected graph that becomes disconnected
 % if you remove any edge.
 
-tree G := connected G, pi A\ arrow G A => remove G A Gp => disconnected Gp.
+tree G := connected G, pi A\ pi Gp\ removearrow G A Gp => disconnected Gp.
+
+nottree G := disconnected G ;
+             sigma A\ sigma Gp\ removearrow G A Gp, connected Gp.
 
 % Queries to try
 
@@ -56,6 +62,24 @@ tree G := connected G, pi A\ arrow G A => remove G A Gp => disconnected Gp.
 % 1 - 2   5 - 6
 %      \
 %       4
-test := tree (graph (c 1 (c 2 (c 3 (c 4 (c 5 (c 6 nil))))))
-                    (c (arrow 1 2) (c (arrow 2 3) (c (arrow 2 4)
-                       (c (arrow 3 5) (c (arrow 5 6) nil)))))).
+graph 1  (graph (c 1 (c 2 (c 3 (c 4 (c 5 (c 6 nil))))))
+                (c (arrow 1 2) (c (arrow 2 3) (c (arrow 2 4)
+                   (c (arrow 3 5) (c (arrow 5 6) nil)))))).
+
+%       3
+%      / \
+% 1 - 2   5 - 6
+%      \ /
+%       4
+graph 2  (graph (c 1 (c 2 (c 3 (c 4 (c 5 (c 6 nil))))))
+                (c (arrow 1 2) (c (arrow 2 3) (c (arrow 2 4)
+                   (c (arrow 3 5) (c (arrow 4 5) (c (arrow 5 6) nil))))))).
+
+thm 1 := graph 1 G, tree G.
+
+thm 2 := graph 2 G, nottree G.
+
+checkthm X := print (running test X), (thm X ; print "!!! failure !!!").
+
+test := checkthm 1, checkthm 2,
+        print "testing complete".

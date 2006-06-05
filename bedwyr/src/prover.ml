@@ -91,9 +91,49 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
   if !debug then
     printf "Proving %a...\n" Pprint.pp_term g ;
 
+  let prove_tabled table kind body args =
+    let table_update_success k =
+      Table.add table args Table.Proven ;
+      success k
+    in
+    let table_update_failure () =
+      (* This may be called due to backtracking, so we should be
+         careful not to remove goals which are Proven *)
+      begin match Table.find table args with
+        | Some Table.Working -> Table.remove table args
+        | Some _ -> ()
+        | None -> failwith
+            "Trying to update something without table entry"
+      end ;
+      failure ()
+    in
+      match Table.find table args with
+        | Some Table.Proven -> success failure
+        | Some Table.Working ->
+            if kind == System.CoInductive
+            then success failure
+            else failure ()
+        | None ->
+            Table.add table args Table.Working ;
+            prove ~level ~timestamp ~local
+              ~success:table_update_success
+              ~failure:table_update_failure
+              (Term.app body args)
+  
+  in
+    
   let prove_atom d args =
-    let kind,body = System.get_def ~check_arity:(List.length args) d in
-      prove ~level ~timestamp ~local ~success ~failure (Term.app body args)
+    let kind,body,table = System.get_def ~check_arity:(List.length args) d in
+      match table with
+        | None ->
+            prove ~level ~timestamp ~local ~success ~failure
+              (Term.app body args)
+        | Some table ->
+            let args = List.map Norm.deep_norm args in
+              if List.for_all Term.is_ground args
+              then prove_tabled table kind body (List.map Term.copy args)
+              else prove ~level ~timestamp ~local ~success ~failure
+                (Term.app body args)
   in
 
   match Term.observe g with
@@ -237,7 +277,7 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
 
         (* Output *)
         | Const ("print",_,_) ->
-            List.iter (fun t -> printf "%a\n" Pprint.pp_term t) goals ;
+            List.iter (fun t -> printf "%a\n%!" Pprint.pp_term t) goals ;
             success failure
 
         (* Check for definitions *)
