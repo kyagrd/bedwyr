@@ -97,21 +97,6 @@ let rec make_list f = function
   | 0 -> []
   | n -> (f n)::(make_list f (n-1))
 
-let new_logicvars ~timestamp n = make_list (fun _ -> Term.fresh timestamp) n
-let new_eigenvars ~timestamp n = make_list (fun _ -> Term.fresh_ev timestamp) n
-let new_dbs = make_list (fun n -> Term.db n)
-
-let raise_terms ~local l =
-  if local = 0 then l else
-    let dBs = new_dbs local in
-      List.map (function x -> Term.app x dBs) l
-
-let raise_vars ~timestamp ~local m =
-  raise_terms ~local (new_logicvars ~timestamp m)
-
-let raise_eigenvars ~timestamp ~local m =
-  raise_terms ~local (new_eigenvars ~timestamp m)
-
 (* Handle user interruptions *)
 
 let interrupt = ref false

@@ -27,30 +27,6 @@ open System
 
 open Term
 
-let iter_env f = List.iter (function
-                             | Dum n -> ()
-                             | Binding (t,n) -> f t)
-
-let rec logical_to_ev t = match Term.observe t with
-  | Var (n,ts,_) -> Term.bind t (Term.const ~tag:Term.Ev n ts)
-  | Const _ | DB _ -> ()
-  | App (h,l) -> List.iter logical_to_ev (h::l)
-  | Lam (n,t) -> logical_to_ev t
-  | Susp (t,_,_,e) -> logical_to_ev t ; iter_env logical_to_ev e
-  | Ptr _ -> assert false
-
-(* [t] is supposed to be fully normalized,
- * we need to check that logical variables in suspensions are not used anyway *)
-let rec ev_to_logical t = match Term.observe t with
-  | Const (n,ts,Ev) -> Term.bind t (Term.var ~tag:Term.Ev n ts)
-  | Const _ | DB _ -> ()
-  | Var (n,_,Ev) -> () (* Already switched *)
-  | Var (n,_,_) -> failwith "Logical var on the left !"
-  | App (h,l) -> List.iter ev_to_logical (h::l)
-  | Lam (n,t) -> ev_to_logical t
-  | Susp _
-  | Ptr  _ -> assert false
-
 (** Proof search *)
 
 (* Internal design of the prover has two levels. *)
@@ -59,9 +35,30 @@ let assert_level_one = function
   | One -> ()
   | Zero -> raise Level_inconsistency
 
-(* Small definition to help having a tailrec prover *)
-let unify a b =
-  try Unify.pattern_unify a b ; true with Unify.Error _ -> false
+module Right =
+  Unify.Make (struct
+                let instantiatable = Logic
+                let constant_like = Eigen
+              end)
+module Left =
+  Unify.Make (struct
+                let instantiatable = Eigen
+                let constant_like = Constant
+              end)
+
+let unify lvl a b =
+  try
+    (if lvl = Zero then Left.pattern_unify else Right.pattern_unify) a b ;
+    true
+  with
+    | Unify.Error _ -> false
+
+let new_dbs = make_list (fun n -> Term.db n)
+
+let raise_term ~local x =
+  if local = 0 then x else
+    let dBs = new_dbs local in
+      Term.app x dBs
 
 (* Attemps to prove that the goal [(nabla x_1..x_local . g)(S)] by
  * destructively instantiating it,
@@ -137,23 +134,23 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
   in
 
   match Term.observe g with
-  | Const (t,_,_) when t = "exit" -> exit 0
-  | Const (t,_,_) when t = Logic.truth -> success failure
-  | Const (t,_,_) when t = Logic.falsity -> failure ()
-  | Const (d,_,_) -> prove_atom d []
+  | Var {name=t} when t = "exit" -> exit 0
+  | Var {name=t} when t = Logic.truth -> success failure
+  | Var {name=t} when t = Logic.falsity -> failure ()
+  | Var {name=d;tag=Constant} -> prove_atom d []
   | App (hd,goals) ->
       let goals = List.map Norm.hnorm goals in
       begin match Term.observe hd with
 
         (* Solving an equality *)
-        | Const (e,_,_) when e = Logic.eq && List.length goals = 2 ->
-            if unify (List.hd goals) (List.hd (List.tl goals)) then
+        | Var {name=e} when e = Logic.eq && List.length goals = 2 ->
+            if unify level (List.hd goals) (List.hd (List.tl goals)) then
               success failure
             else
               failure ()
 
         (* Proving a conjunction *)
-        | Const (a,_,_) when a = Logic.andc ->
+        | Var {name=a} when a = Logic.andc ->
             let rec conj failure = function
               | [] -> success failure
               | goal::goals ->
@@ -166,7 +163,7 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
               conj failure goals
 
         (* Proving a disjunction *)
-        | Const (o,_,_) when o = Logic.orc ->
+        | Var {name=o} when o = Logic.orc ->
             let rec alt = function
               | [] -> failure ()
               | g::goals ->
@@ -179,7 +176,7 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
               alt goals
 
         (* Level 1: Implication *)
-        | Const (i,_,_) when i = Logic.imp && List.length goals = 2 ->
+        | Var {name=i} when i = Logic.imp && List.length goals = 2 ->
             assert_level_one level ;
             let (a,b) = match goals with [a;b] -> a,b | _ -> assert false in
             (* The full normalization is useful for getting rid of logical
@@ -191,7 +188,7 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
              * thanks to the commutability between patches for [a] and [b],
              * one modifying eigenvars,
              * the other modifying logical variables. *)
-            let state = save_state () in
+            let state = save_state () in (* TODO no need to save that one ? *)
             let ev_substs = ref [] in
             let store_subst k =
               (* We store the state in which we should leave the system
@@ -200,7 +197,6 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
                * flip of variables to eigenvariables, and we get sigma which
                * we store. *)
               let s = save_state () in
-                logical_to_ev a ;
                 ev_substs := (get_subst state)::!ev_substs ;
                 restore_state s ;
                 k ()
@@ -228,31 +224,29 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
                                 undo_subst !unsig ;
                                 failure ())
             in
-              ev_to_logical a ;
               prove ~level:Zero ~local ~timestamp a
                 ~success:store_subst
                 ~failure:(fun () ->
-                            (* Undo ev_to_logical and prove b *)
                             restore_state state ;
                             prove_b failure !ev_substs)
 
         (* Level 1: Universal quantification *)
-        | Const (forall,_,_) when forall = Logic.forall ->
+        | Var {name=forall} when forall = Logic.forall ->
             assert_level_one level ;
             let goal = match goals with
               | [g] -> g
               | _ -> assert false
             in begin match observe goal with
-              | Lam (m,_) ->
+              | Lam (1,_) ->
                   let timestamp = timestamp + 1 in
-                  let args = raise_eigenvars ~timestamp ~local m in
-                  let goal = app goal args in
+                  let var = raise_term (Term.fresh_ev timestamp) ~local in
+                  let goal = app goal [var] in
                     prove ~timestamp ~local ~level ~success ~failure goal
               | _ -> assert false
             end
 
         (* Local quantification *)
-        | Const (nabla,_,_) when nabla = Logic.nabla ->
+        | Var {name=nabla} when nabla = Logic.nabla ->
             let goal = match goals with
               | [g] -> g
               | _ -> assert false
@@ -264,24 +258,30 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
             end
 
         (* Existential quantification *)
-        | Const (ex,_,_) when ex = Logic.exists ->
+        | Var {name=ex} when ex = Logic.exists ->
             let goal = match goals with
               | [g] -> g
               | _ -> assert false
             in begin match observe goal with
-              | Lam (m,g) ->
-                  prove ~timestamp ~local ~level ~success ~failure
-                    (app goal (raise_vars ~timestamp ~local m))
+              | Lam (1,g) ->
+                  let var =
+                    if level = Zero then
+                      raise_term (Term.fresh_ev timestamp) ~local
+                    else
+                      raise_term (Term.fresh timestamp) ~local
+                  in
+                    prove ~timestamp ~local ~level ~success ~failure
+                      (app goal [var])
               | _ -> assert false
             end
 
         (* Output *)
-        | Const ("print",_,_) ->
+        | Var {name="print"} ->
             List.iter (fun t -> printf "%a\n%!" Pprint.pp_term t) goals ;
             success failure
 
         (* Check for definitions *)
-        | Const (d,_,_) -> prove_atom d goals
+        | Var {name=d;tag=Constant} -> prove_atom d goals
 
         (* Invalid goal *)
         | _ ->
@@ -298,7 +298,7 @@ let toplevel_prove g =
   let _ = Term.reset_namespace () in
   let s0 = Term.save_state () in
   let vars = List.map (fun t -> Pprint.term_to_string t, t)
-               (List.rev (Term.freevars [g])) in
+               (List.rev (Term.logic_vars [g])) in
   let found = ref false in
   let reset,time =
     let t0 = ref (Unix.gettimeofday ()) in

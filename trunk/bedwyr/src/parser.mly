@@ -25,14 +25,15 @@
 
   let to_string t =
     match Term.observe t with
-      | Term.Const (s,_,_) -> s
+      | Term.Var {Term.name=s;Term.tag=Term.Constant} -> s
       | _ -> assert false
 
   let mkdef kind head params body =
-    let freevars = Term.freevars (body::params) in
+    let vars = Term.logic_vars (body::params) in
     (* Replace the params by fresh variables and
      * put the constraints on the parameters in the body:
      * d (s X) X := ... --> d Y Z := (Y = s X), Z=X, ... *)
+    (* Avoid useless intermediate parameters, such a Z on the example TODO *)
     let params,prolog =
       List.fold_left
         (fun (params,prolog) p ->
@@ -53,7 +54,7 @@
            Term.app (Term.atom System.Logic.exists)
              [Term.abstract_var v body])
         body
-        freevars
+        vars
     in
     (* Finally, abstract over parameters *)
     let arity,body =

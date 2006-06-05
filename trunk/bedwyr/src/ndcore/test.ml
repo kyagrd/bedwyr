@@ -15,6 +15,15 @@ let equal2 a b c d =
 
 let assert_equal = assert_equal ~cmp:eq ~printer:Pprint.term_to_string
 
+let unify =
+  let module Unify =
+    Unify.Make (struct
+                  let instantiatable = Logic
+                  let constant_like  = Eigen
+                end)
+  in
+    Unify.unify
+
 (* Extracting a variable at some position in a term,
  * used when we know a variable should be there, but don't know what it is
  * since it's fresh. *)
@@ -25,7 +34,7 @@ let rec extract path t =
       | Lam (_,t) when hd = L -> extract tl t
       | App (_,l) when hd = A -> extract tl (List.nth l 0)
       | App (t,_) when hd = H -> !!t
-      | _ -> Const ("notfound",0,Unset)
+      | _ -> Var {name="notfound";ts=0;tag=Constant}
 
 let test =
   "Tests" >:::
@@ -127,7 +136,7 @@ let test =
        let t1 = 1 // db 1 in
        let m = var "m" 1 in
        let t2 = 1 // ( m ^^ [ db 1 ] ) in
-         Unify.unify t1 t2 ;
+         unify t1 t2 ;
          assert_equal (1 // db 1) m) ;
 
     (* Example 2, adds descending into constructors *)
@@ -137,7 +146,7 @@ let test =
        let c = const "c" 1 in
        let t1 = 1 // (c ^^ [ db 1 ]) in
        let t2 = 1 // (c ^^ [ n ^^ [ db 1 ] ]) in
-         Unify.unify t1 t2 ;
+         unify t1 t2 ;
          assert_equal (1 // db 1) n) ;
 
     (* Example 3, needs eta expanding on the fly *)
@@ -146,7 +155,7 @@ let test =
        let n = var "n" 1 in
        let c = const "c" 1 in
        let t = 2 // (c ^^ [ db 1 ; db 2 ]) in
-         Unify.unify t n ;
+         unify t n ;
          assert_equal (2 // (c ^^ [ db 1 ; db 2 ])) n) ;
 
     (* Example 4, on-the-fly eta, constructors at top-level *)
@@ -154,7 +163,7 @@ let test =
     (fun () ->
        let n = var "n" 1 in
        let c = const "c" 1 in
-         Unify.unify (2 // (c ^^ [db 2;db 1])) (1 // (c ^^ [n ^^ [db 1]])) ;
+         unify (2 // (c ^^ [db 2;db 1])) (1 // (c ^^ [n ^^ [db 1]])) ;
          assert_equal (1 // db 1) n) ;
 
     (* Example 5, flex-flex case where we need to raise & prune *)
@@ -167,18 +176,18 @@ let test =
        let c = const "c" 3 in
        let t1 = x ^^ [ a ; b ] in
        let t2 = y ^^ [ b ; c ] in
-         Unify.unify t1 t2 ;
+         unify t1 t2 ;
          let h =
            let x = Norm.hnorm x in
            match extract [L;H] x with
-             | Var (h,1,Unset) -> var h 1
+             | Var {name=h;ts=1;tag=Logic} -> var h 1
              | _ -> failwith "X should match x\\y\\ H ..."
          in
            equal2
              (2 // (h ^^ [ db 2 ; db 1 ])) x
              (2 // (h ^^ [ a ; db 2 ])) y) ;
 
-    (* Example 6, flex-rigid case involving raise & prine relative to an
+    (* Example 6, flex-rigid case involving raise & prune relative to an
      * embedded flex term. *)
     "[X1 a2 b3 = c1 (Y2 b3 c3)]" >::
     (fun () ->
@@ -188,11 +197,11 @@ let test =
        let b = const "b" 3 in
        let c = const "c" 1 in
        let c3 = const "c" 3 in
-         Unify.unify (x ^^ [a;b]) (c ^^ [y ^^ [b;c3]]) ;
+         unify (x ^^ [a;b]) (c ^^ [y ^^ [b;c3]]) ;
          let h =
            let x = Norm.hnorm x in
            match extract [L;A;H] x with
-             | Var (h,1,Unset) -> var h 1
+             | Var {name=h;ts=1;tag=Logic} -> var h 1
              | _ -> failwith "X should match x\\y\\ _ H .."
          in
            equal2
@@ -208,7 +217,7 @@ let test =
        let b = const "b" 3 in
        let c = const "c" 3 in
        let d = const "d" 2 in
-         Unify.unify
+         unify
            (c ^^ [ x ^^ [a;b] ; x ^^ [b;d] ])
            (c ^^ [ y ^^ [b;c] ; b ^^ [d] ]) ;
          equal2
@@ -225,7 +234,7 @@ let test =
        let b = const "b" 3 in
        let d = const "d" 2 in
        let c = const "c" 3 in
-         Unify.unify
+         unify
            (1 // (c ^^ [ x ^^ [a;b] ; x ^^ [db 1;d]]))
            (1 // (c ^^ [ y ^^ [b;c] ; db 1 ^^ [d] ])) ;
          equal2
@@ -239,11 +248,11 @@ let test =
        let a = const "a" 2 in
        let b = const "b" 3 in
        let c = const "c" 3 in
-         Unify.unify (x ^^ [a;b;c]) (x ^^ [c;b;a]) ;
+         unify (x ^^ [a;b;c]) (x ^^ [c;b;a]) ;
          let h =
            let x = Norm.hnorm x in
            match extract [L;H] x with
-             | Var (h,1,Unset) -> var h 1
+             | Var {name=h;ts=1;tag=Logic} -> var h 1
              | _ -> failwith "X should match x\\y\\z\\ H ..."
          in
            assert_equal (3 // (h^^[db 2])) x) ;
@@ -258,7 +267,7 @@ let test =
        let c1 = const "c" 1 in
        let c3 = const "c" 3 in
          try
-           Unify.unify (x ^^ [a;b]) (c1 ^^ [x ^^ [b;c3]]) ;
+           unify (x ^^ [a;b]) (c1 ^^ [x ^^ [b;c3]]) ;
            "Expected OccursCheck" @? false
          with
            | Unify.Error Unify.OccursCheck -> ()) ;
@@ -271,7 +280,7 @@ let test =
        let b = const "b" 3 in
        let c = const "c" 3 in
          try
-           Unify.unify (x ^^ [a;b]) (c ^^ [x ^^ [b;c]]) ;
+           unify (x ^^ [a;b]) (c ^^ [x ^^ [b;c]]) ;
            "Expected OccursCheck" @? false
          with
            | Unify.Error Unify.OccursCheck -> ()) ;
@@ -284,11 +293,11 @@ let test =
        let a = const "a" 2 in
        let b = const "b" 3 in
        let c = const "c" 3 in
-         Unify.unify (x ^^ [a;b]) (y ^^ [b;c]) ;
+         unify (x ^^ [a;b]) (y ^^ [b;c]) ;
          let h =
            let x = Norm.hnorm x in
            match extract [L;H] x with
-             | Var (h,1,Unset) -> var h 1
+             | Var {name=h;ts=1;tag=Logic} -> var h 1
              | _ -> failwith
                       (Printf.sprintf "X=%s should match Lam (_,(App H _))"
                          (Pprint.term_to_string x))
@@ -305,11 +314,11 @@ let test =
        let a = const "a" 2 in
        let b = const "b" 3 in
        let c = const "c" 3 in
-         Unify.unify (x ^^ [a;b;c]) (y ^^ [c]) ;
+         unify (x ^^ [a;b;c]) (y ^^ [c]) ;
          let h =
            let x = Norm.hnorm x in
            match extract [L;H] x with
-             | Var (h,1,Unset) -> var h 1
+             | Var {name=h;ts=1;tag=Logic} -> var h 1
              | _ -> failwith "X should match x\\y\\z\\ H ..."
          in
            equal2
@@ -324,11 +333,11 @@ let test =
        let a = const "a" 2 in
        let b = const "b" 3 in
        let c = const "c" 3 in
-         Unify.unify (x ^^ [a;b]) (a ^^ [y ^^ [b;c]]) ;
+         unify (x ^^ [a;b]) (a ^^ [y ^^ [b;c]]) ;
          let h =
            let x = Norm.hnorm x in
            match extract [L;A;H] x with
-             | Var (h,1,Unset) -> var h 1
+             | Var {name=h;ts=1;tag=Logic} -> var h 1
              | _ -> failwith "X should match x\\y\\ _ (H ..) .."
          in
            equal2
@@ -345,21 +354,21 @@ let test =
        let c = const "c" 3 in
        let d = const "d" 3 in
          try
-           Unify.unify (x ^^ [a;b]) (d ^^ [y ^^ [b;c]]) ;
+           unify (x ^^ [a;b]) (d ^^ [y ^^ [b;c]]) ;
            "Expected OccursCheck" @? false
          with
            | Unify.Error Unify.OccursCheck -> ()) ;
 
     "[a = a]" >::
     (fun () ->
-       Unify.unify (const "a" 1) (const "a" 1)) ;
+       unify (const "a" 1) (const "a" 1)) ;
 
     "[x\\ a x b = x\\ a x b]" >::
     (fun () ->
        let a = const "a" 1 in
        let b = const "b" 1 in
        let t = 1 // ( a ^^ [ db 1 ; b ] ) in
-         Unify.unify t t) ;
+         unify t t) ;
 
     (* End of Gopalan's examples *)
 
@@ -368,15 +377,16 @@ let test =
        let a = const "a" 2 in
        let f = const "f" 1 in
        let x = var "x" 3 in
-         Unify.unify (f ^^ [x;x]) (f ^^ [a;a])) ;
+         unify (f ^^ [x;x]) (f ^^ [a;a])) ;
 
     "[x\\x1\\ P x = x\\ Q x]" >::
     (fun () ->
        let p = var "P" 1 in
        let q = var "Q" 1 in
-         Unify.unify (2 // (p ^^ [db 2])) (1 // (q ^^ [db 1])) ;
+         unify (2 // (p ^^ [db 2])) (1 // (q ^^ [db 1])) ;
          assert_equal (2 // (p ^^ [db 2])) q) ;
 
+    (* This one used to fail, I don't remember having fixed it consciously.. *)
     "[T = a X, T = a Y, Y = T]" >::
     (fun () ->
        let t = var "T" 1 in
@@ -384,18 +394,26 @@ let test =
        let y = var "Y" 1 in
        let a = const "a" 0 in
        let a x = a ^^ [x] in
-         Unify.unify t (a x) ;
-         Unify.unify t (a y) ;
-         begin try Unify.unify y t ; assert false with
+         unify t (a x) ;
+         unify t (a y) ;
+         begin try unify y t ; assert false with
            | Unify.Error _ -> () end) ;
 
+    (* This one used to fail, but the bug is fixed *)
     "[x\\y\\ H1 x = x\\y\\ G2 x]" >::
     (fun () ->
        let h = var "H" 1 in
        let g = var "G" 2 in
          (* Different timestamps matter *)
-         Unify.unify (2// (h ^^ [db 2])) (2// (g ^^ [db 2])) ;
-         assert_equal (g^^[db 2]) (h^^[db 2]))
+         unify (2// (h ^^ [db 2])) (2// (g ^^ [db 2])) ;
+         assert_equal (g^^[db 2]) (h^^[db 2])) ;
+
+    "[X1 = y2]" >::
+    (fun () ->
+       let x = var "X" 1 in
+       let y = var ~tag:Eigen "y" 2 in
+         try unify x y ; assert false with
+           | Unify.Error _ -> ())
 
     ]
   ]

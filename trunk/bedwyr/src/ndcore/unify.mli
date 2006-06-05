@@ -22,8 +22,16 @@ type error =
   | TypesMismatch
   | ConstClash of (Term.term * Term.term)
 
-exception Error of error
+exception Error      of error
 exception NotLLambda of Term.term
 
-val unify : Term.term -> Term.term -> unit
-val pattern_unify : Term.term -> Term.term -> unit
+module type Param =
+sig
+  val instantiatable : Term.tag
+  val constant_like  : Term.tag
+end
+
+module Make : functor (P:Param) -> sig
+  val unify : Term.term -> Term.term -> unit
+  val pattern_unify : Term.term -> Term.term -> unit
+end

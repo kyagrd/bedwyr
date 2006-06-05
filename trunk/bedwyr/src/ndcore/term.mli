@@ -17,6 +17,13 @@
 (* Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA             *)
 (****************************************************************************)
 
+type tag = Eigen | Constant | Logic
+type var = {
+  name : string ;
+  tag  : tag    ;
+  ts   : int
+}
+
 (* Terms. The use of references allow in-place normalization,
  * but is completely hidden by the interface. *)
 
@@ -24,12 +31,9 @@ type term
 type ptr
 type envitem = Dum of int | Binding of term * int
 type env = envitem list
-(* Eigenvariables will be marked by [Ev] tag. *)
-type tag = Unset | Ev
 
 type rawterm = 
-  | Const of string * int * tag
-  | Var of string * int * tag
+  | Var of var
   | DB of int
   | Lam of int * term
   | App of term * term list
@@ -113,7 +117,7 @@ val getAbsName : unit -> string
 (** Generating a fresh variable with a given time stamp; the use of ref
   * ensures uniqueness. We should attach useful names as well, but this 
   * will do for the moment. *)
-val fresh : int -> term
+val fresh : ?tag:tag -> int -> term
 val fresh_ev : int -> term
 
 exception NonNormalTerm
@@ -125,7 +129,7 @@ val abstract_var : term -> term -> term
 val abstract : string -> term -> term
 
 (** Free variables of [ts]. Bound variables are represented by DB indices. *)
-val freevars : term list -> term list
+val logic_vars : term list -> term list
 val eigenvars : term list -> term list
 
 val is_ground : term -> bool

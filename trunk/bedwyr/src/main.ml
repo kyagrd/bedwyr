@@ -49,6 +49,8 @@ let rec process ?(interactive=false) parse lexbuf =
           Pprint.pp_term t
     | Invalid_command ->
         Format.printf "Invalid command!\n%!"
+    | e when e <> Failure "eof" ->
+        Format.printf "Unknown error: %s\n%!" (Printexc.to_string e)
   done with
   | Failure "eof" -> ()
 
@@ -72,7 +74,7 @@ In query mode, just type a term to ask for its verification.
   (* Include a file *)
   | "include",[f] ->
       begin match Term.observe f with
-        | Term.Const (f,_,_) -> input_defs (Lexing.from_channel (open_in f))
+        | Term.Var {Term.name=f} -> input_defs (Lexing.from_channel (open_in f))
         | _ -> raise Invalid_command
       end
 
@@ -80,14 +82,16 @@ In query mode, just type a term to ask for its verification.
   | "debug",[d] ->
       System.debug :=
         begin match Term.observe d with
-          | Term.Const ("true",_,_)  | Term.Const ("on",_,_)  -> true
-          | Term.Const ("false",_,_) | Term.Const ("off",_,_) -> false
+          | Term.Var {Term.name="on"}
+          | Term.Var {Term.name="true"}  -> true
+          | Term.Var {Term.name="off"}
+          | Term.Var {Term.name="false"} -> false
           | _ -> raise Invalid_command
         end
 
   | "table",[p] ->
       begin match Term.observe p with
-        | Term.Const(name,_,_) -> System.table(name)
+        | Term.Var {Term.name=name} -> System.table name
         | _ -> raise Invalid_command
       end
 
