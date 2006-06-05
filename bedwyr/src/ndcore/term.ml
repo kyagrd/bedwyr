@@ -17,20 +17,23 @@
 (* Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA             *)
 (****************************************************************************)
 
-(* Eigenvariables will be marked by [Ev] tag. *)
-type tag = Unset | Ev
+type tag = Eigen | Constant | Logic
+type var = {
+  name : string ;
+  tag  : tag    ;
+  ts   : int
+}
 
 (* Terms. The use of references allow in-place normalization. *)
 type term = rawterm ref
 and rawterm = 
-  | Const of string * int * tag
-  | Var of string * int * tag
-  | DB of int
-  | Lam of int * term
-  | App of term * term list
+  | Var  of var
+  | DB   of int
+  | Lam  of int * term
+  | App  of term * term list
   | Susp of term * int * int * env
-  | Ptr of ptr
-and ptr = term (* Hide this *)
+  | Ptr  of ptr
+and ptr = term (* This will be hidden to force the user to use dereferencing *)
 and env = envitem list
 and envitem = Dum of int | Binding of term * int
 
@@ -46,8 +49,7 @@ let rec eq t1 t2 =
     match !t1,!t2 with
       (* Compare leafs *)
       | DB _, DB _
-      | Var _, Var _
-      | Const _, Const _ -> t1 = t2
+      | Var _, Var _ -> t1 = t2
       (* Ignore Ptr. It's an implementation artifact *)
       | _, Ptr t2 -> eq t1 t2
       | Ptr t1, _ -> eq t1 t2
@@ -172,19 +174,18 @@ let fresh =
 let fresh_ev ts =
   let i = fresh () in
   let name = prefix_ev ^ (string_of_int i) in
-    ref (Const (name,ts,Ev))
+    ref (Var { name=name ; ts=ts ; tag=Eigen })
 
-let fresh ts =
+let fresh ?(tag=Logic) ts =
   let i = fresh () in
   let name = prefix ^ (string_of_int i) in
-    ref (Var (name,ts,Unset))
+    ref (Var { name=name ; ts=ts ; tag=tag })
 
-(* Recursively raise dB indices and abstract over variables or constants
+(* Recursively raise dB indices and abstract over variables
  * selected by [test]. *)
 let abstract test =
   let rec aux n t = match !t with
-    | Var (id',i,f)
-    | Const (id',i,f) -> if test t id' then ref (DB n) else t
+    | Var { name=id' } -> if test t id' then ref (DB n) else t
     | DB i -> t
     | App (h,ts) ->
         ref (App ((aux n h), (List.map (aux n) ts)))
@@ -199,13 +200,13 @@ let abstract_var v t = lambda 1 (abstract (fun t id' -> t = v) 1 t)
 (** Abstract [t] over constant or variable named [id]. *)
 let abstract id t = lambda 1 (abstract (fun t id' -> id' = id) 1 t)
 
-(** Free variables of [ts]. Bound variables are represented by DB indices. *)
-let freevars ts =
+(** Logic variables of [ts]. *)
+let logic_vars ts =
   let rec fv l t = match observe t with
-    | Var _ -> if List.mem t l then l else (t::l)
+    | Var {tag=Logic} -> if List.mem t l then l else (t::l)
     | App (h,ts) -> List.fold_left fv (fv l h) ts
     | Lam (n,t') -> fv l t'
-    | Const _ | DB _ -> l
+    | Var _ | DB _ -> l
     | Susp _ -> l (* TODO Looks like a gross approx ?! *)
     | Ptr _ -> assert false
   in
@@ -213,10 +214,10 @@ let freevars ts =
 
 let eigenvars ts =
   let rec fv l t = match observe t with
-    | Const (n,ts,Ev) -> if List.mem t l then l else (t::l)
+    | Var { tag=Eigen } -> if List.mem t l then l else (t::l)
     | App (h,ts) -> List.fold_left fv (fv l h) ts
     | Lam (n,t') -> fv l t'
-    | Var _ | DB _ | Const _ -> l
+    | Var _ | DB _ -> l
     | Susp _ -> l (* TODO Looks like a gross approx ?! *)
     | Ptr _ -> assert false
   in
@@ -225,12 +226,8 @@ let eigenvars ts =
 (** Utilities.
   * Easy creation of constants and variables, with sharing. *)
 
-let tag_of_opt = function
-  | Some Ev -> Ev
-  | _ -> Unset
-
-let const ?tag s n = ref (Const (s,n,tag_of_opt tag))
-let var ?tag s n = ref (Var (s,n,tag_of_opt tag))
+let const ?(tag=Constant) s n = ref (Var { name=s ; ts=n ; tag=tag })
+let var   ?(tag=Logic)    s n = ref (Var { name=s ; ts=n ; tag=tag })
 
 let tbl = Hashtbl.create 100
 let reset_namespace () = Hashtbl.clear tbl
@@ -284,9 +281,7 @@ end
 
 let rec is_ground term =
   match observe term with
-    | Const(_,_,Unset) -> true
-    | Const _ -> false
-    | Var _ -> false
+    | Var {tag=tag} -> tag=Constant
     | DB _ -> true
     | Lam(n,t) -> is_ground t
     | App(t,ts) -> is_ground t && (List.for_all is_ground ts)
@@ -295,7 +290,7 @@ let rec is_ground term =
 
 let rec copy term =
   match observe term with
-    | Const(name,ts,tag) -> const ~tag:tag name ts
+    | Var {name=name;ts=ts;tag=Constant} -> const name ts
     | Var _ -> failwith "Check is_ground before copy"
     | DB i -> db i
     | Lam(n,t) -> lambda n t

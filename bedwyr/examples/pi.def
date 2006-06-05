@@ -158,14 +158,14 @@ _weak_trace P nil      := pi A\ pi Q\ (one P A Q ; onep P A Q) => false.
 weak_trace P T         := maxtaus P PP, _weak_trace PP T.
 
 % Remark: maxtaus doesn't deal with interleaving and generate redundancy.
-% TIME/poum: 928ms for the first solution, +1370ms for the second one, etc.
+% TIME/poum: 768ms for the first solution, +1167ms for the second one, etc.
 % Remark: it is SLOW...
 trtest 0 T := weak_trace (par (par (taup z) (taup z))
                               (par (taup z) (out c c z))) T.
 
 % The following is a kind of simplified inlined version of the (trtest 0)
 % which is already unreasonably long to compute
-% TIME/poum: 879ms for the first solution, 1200ms for the second, etc.
+% TIME/poum: 770ms for the first solution, 1008ms for the second, etc.
 intest 0 T := P = (par (par (taup z) (taup z))
                        (par (taup z) (out c c z))),
               maxtaus P PP, one PP A QQ, maxtaus QQ Q,
@@ -173,16 +173,16 @@ intest 0 T := P = (par (par (taup z) (taup z))
               (pi X\ pi Y\ onep Q X Y => false),
               (pi X\ pi Y\ (one Q X Y ; onep Q X Y) => false).
 
-% TIME/poum: 1158ms
+% TIME/poum: 1026ms
 trtest 1 T := weak_trace (nat (s zz) c) T.
 
-% TIME/poum: 23.969s
+% TIME/poum: 20.402s
 trtest 2 T :=
   weak_trace (nu x\ nu y\ par (par (nat (s zz) x) (nat zz y)) (add x y c)) T.
 
 % Remark: it is easy to fall outside llambda for a bad reason:
 % nabla x\ pi h\ one (nu y\ out h z z) (A h) Q.
-% Remove the useless nabla and it works again (TIME/poum=14ms)...
+% Remove the useless nabla and it works again (TIME/poum=2ms)...
 
 % Natural numbers in pi, using recursive agents -------------------------------
 
@@ -209,21 +209,21 @@ agent (explicit_1 C)      (in C s\ in C zz\
                                     (in zero s\ in zero zz\ out zz nil z))).
 
 % Tests about simulations (the third one has several solutions)
-stest 0 := weak_sim (nat (s zz) c) (nat (s zz) c).         % TIME/poum=1213ms
-stest 1 := weak_sim (nat (s (s zz)) c) (nat (s (s zz)) c). % TIME/poum=3026ms
+stest 0 := weak_sim (nat (s zz) c) (nat (s zz) c).         % TIME/poum=1025ms
+stest 1 := weak_sim (nat (s (s zz)) c) (nat (s (s zz)) c). % TIME/poum=2581ms
 stest 2 := weak_sim (nat (s zz) c)
                     (nu x\ nu y\ par (par (nat zz x) (nat (s zz) y))
-                                     (add x y c)).         % TIME/poum=5753ms
+                                     (add x y c)).         % TIME/poum=4996ms
 
 % Tests about bisimulations
 natest 0 := weak_bisim (nu u\ nu d\ (par (nat zz u)
                                     (par (nat zz d)
                                          (add u d t))))
-                       (nat zz t).                         % TIME/poum=45.8s
+                       (nat zz t).                         % TIME/poum=39.2s
 natest 1 := weak_bisim (nu u\ nu d\ (par (nat zz u)
                                     (par (nat (s zz) d)
                                          (add u d t))))
-                       (nat (s zz) t).                     % TIME/poum=532s
+                       (nat (s zz) t).                     % TIME/poum=440s
 % passed !?
 natest 2 := weak_bisim (nu u\ nu d\ (par (nat (s (s zz)) d)
                                     (par (nat (s (s (s zz))) u)

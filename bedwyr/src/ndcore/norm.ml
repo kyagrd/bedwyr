@@ -33,7 +33,6 @@ let make_env n args =
 (** Head normalization function.*)
 let rec hnorm term =
   match Term.observe term with
-    | Term.Const _
     | Term.Var _
     | Term.DB _ -> term
     | Term.Lam(n,t) -> Term.lambda n (hnorm t)
@@ -51,7 +50,6 @@ let rec hnorm term =
     | Term.Susp(t,ol,nl,e) ->
         let t = hnorm t in
           begin match Term.observe t with
-            | Term.Const _
             | Term.Var _ -> t
             | Term.DB i ->
                 if i > ol then
@@ -77,11 +75,11 @@ let rec hnorm term =
 let rec deep_norm t =
   let t = hnorm t in
     match Term.observe t with
-      | Term.Var _ | Term.Const _ | Term.DB _ -> t
+      | Term.Var _ | Term.DB _ -> t
       | Term.Lam (n,t) -> Term.lambda n (deep_norm t)
       | Term.App (a,b) ->
             begin match Term.observe a with
-              | Term.Var _ | Term.Const _ | Term.DB _ ->
+              | Term.Var _ | Term.DB _ ->
                     Term.app a (List.map deep_norm b)
               | _ -> deep_norm (Term.app (deep_norm a) (List.map deep_norm b))
             end
