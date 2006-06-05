@@ -39,8 +39,6 @@ type rawterm =
 (* [observe t] is the way to analyze the structure of a term. *)
 val observe : term -> rawterm
 
-val eq : term -> term -> bool
-
 (** Creation of terms.
   * There is probably more to come here. *)
 
@@ -129,3 +127,7 @@ val abstract : string -> term -> term
 (** Free variables of [ts]. Bound variables are represented by DB indices. *)
 val freevars : term list -> term list
 val eigenvars : term list -> term list
+
+val is_ground : term -> bool
+val copy : term -> term
+   

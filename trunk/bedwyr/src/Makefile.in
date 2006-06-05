@@ -16,7 +16,7 @@ OCAMLLEX = @OCAMLLEX@
 
 CORE_ML    = ndcore/term.ml ndcore/norm.ml ndcore/unify.ml ndcore/pprint.ml
 TEST_ML    = ndcore/oUnit.ml ndcore/test.ml
-BEDWYR_ML  = system.ml parser.ml lexer.ml prover.ml main.ml
+BEDWYR_ML  = table.ml system.ml parser.ml lexer.ml prover.ml main.ml
 
 CORE_SRC   = $(CORE_ML)   $(wildcard $(CORE_ML:.ml=.mli))
 BEDWYR_SRC = $(BEDWYR_ML) $(wildcard $(BEDWYR_ML:.ml=.mli))

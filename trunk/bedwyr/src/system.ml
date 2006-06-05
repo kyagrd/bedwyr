@@ -51,36 +51,43 @@ exception Undefined of string
 exception Arity_mismatch of string*int
 
 type definition = string * int * Term.term
-let defs : (string,(defkind*Term.term)) Hashtbl.t = Hashtbl.create 100
+let defs : (string,(defkind*Term.term*Table.t option)) Hashtbl.t = Hashtbl.create 100
 
 let add_clause kind head arity body =
-  let k,b =
+  let k,b,t =
     try
-      let k,b = Hashtbl.find defs head in
+      let k,b,t = Hashtbl.find defs head in
         match Term.observe b with
           | Term.Lam (a,b) when a=arity && k=kind ->
               k, Term.lambda a
-                   (Term.app (Term.atom Logic.orc) [b;body])
+                   (Term.app (Term.atom Logic.orc) [b;body]), t
           | _ -> raise (Inconsistent_definition head)
     with
-      | Not_found -> kind, (Term.lambda arity body)
+      | Not_found -> kind, (Term.lambda arity body), None
   in
   let b = Norm.hnorm b in
-    Hashtbl.replace defs head (k,b) ;
+    Hashtbl.replace defs head (k,b,t) ;
     if !debug then
       Format.printf "%s := %a\n" head Pprint.pp_term b
 
 let get_def ?check_arity head =
   try
-    let k,b = Hashtbl.find defs head in
+    let k,b,t = Hashtbl.find defs head in
       match check_arity with
-        | None -> k,b
+        | None -> k,b,t
         | Some a ->
             begin match Term.observe b with
-              | Term.Lam (n,_) when n=a -> k,b
-              | _ when a=0 -> k,b
+              | Term.Lam (n,_) when n=a -> k,b,t
+              | _ when a=0 -> k,b,t
               | _ -> raise (Arity_mismatch (head,a))
             end
+  with
+    | Not_found -> raise (Undefined head)
+
+let table head =
+  try
+    let k,b,t = Hashtbl.find defs head in
+      Hashtbl.replace defs head (k,b,Some (Table.create ()))
   with
     | Not_found -> raise (Undefined head)
 

@@ -11,6 +11,11 @@ node(6).
 
 % Directed predicates
 
+%       3
+%      / \
+% 1 - 2   5 - 6
+%      \ /
+%       4
 arrow(1,2).
 arrow(2,3).
 arrow(2,4).
@@ -27,6 +32,7 @@ edge(X,Y) := arrow(X,Y) ; arrow(Y,X).
 
 edgepath(X,Y) := edge(X,Y).
 edgepath(X,Y) := edge(X,Z), edgepath(Z,Y).
+#table edgepath.
 
 % Queries to try
 
@@ -36,4 +42,4 @@ alledgepaths := edgepath(X,Y), print (X to Y), false.
 
 connected := pi X\ pi Y\ node(X) => node(Y) => edgepath(X,Y).
 
-disconnected := sigma X\ sigma Y\ node(X), node(Y), edgepath(X,Y) => false.
+disconnected := sigma X\ sigma Y\ node(X), node(Y), (edgepath(X,Y) => false).
