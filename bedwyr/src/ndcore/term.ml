@@ -293,7 +293,7 @@ let rec copy term =
     | Var {name=name;ts=ts;tag=Constant} -> const name ts
     | Var _ -> failwith "Check is_ground before copy"
     | DB i -> db i
-    | Lam(n,t) -> lambda n t
-    | App(t,ts) -> app t ts
+    | Lam(n,t) -> lambda n (copy t)
+    | App(t,ts) -> app (copy t) (List.map copy ts)
     | Susp _ -> failwith "Call deep_norm before copy"
     | Ptr _ -> failwith "Ptr found on observed term"
