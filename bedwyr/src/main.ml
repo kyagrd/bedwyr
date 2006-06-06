@@ -95,6 +95,12 @@ In query mode, just type a term to ask for its verification.
         | _ -> raise Invalid_command
       end
 
+  | "show_table",[p] ->
+      begin match Term.observe p with
+        | Term.Var {Term.name=name} -> System.show_table name
+        | _ -> raise Invalid_command
+      end
+
   | _ -> raise Invalid_command
 
 let interactive = ref true

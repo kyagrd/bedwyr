@@ -9,4 +9,6 @@ val find : t -> Term.term list -> tag option
 
 val remove : t -> Term.term list -> unit
 
+val print : t -> unit
+
 

@@ -91,6 +91,17 @@ let table head =
   with
     | Not_found -> raise (Undefined head)
 
+let show_table head =
+  try
+    let _,_,table = Hashtbl.find defs head in
+      match table with
+        | Some table ->
+            Printf.printf "Table for %s contains:\n" head ;
+            Table.print table
+        | None -> failwith ("No table defined for " ^ head)
+  with
+    | Not_found -> raise (Undefined head)
+
 (* Common utils *)
 
 let rec make_list f = function
