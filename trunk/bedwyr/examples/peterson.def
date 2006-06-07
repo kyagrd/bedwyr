@@ -1,0 +1,62 @@
+% This code verifies Peterson's algorithm.
+% The code is taken from the Level 0/1 Tutorial by Alwen Tiu:
+% http://www.lix.polytechnique.fr/~tiu/lincproject/level01/level01.pdf
+
+%    int turn = 0;
+%    boolean[ ] active = {false, false};
+%    int i, j;
+%
+%    void process(int k)
+%    {
+%       i = k;
+%       j = 1 - k;
+% 1:    while (true) {
+% 2:       active[i] = true;
+%          turn = j;
+%          while (
+% 3:               active[j] &&
+% 4:               turn == j)
+%               ;
+%           // critical section
+% 5:        ...
+%           // end of critical section
+%           active[i] = false;
+%       }
+%    }
+
+boolean 0.
+boolean 1.
+
+section 1.
+section 2.
+section 3.
+section 4.
+section 5.
+
+node (state P0 P1 A0 A1 T) := section P0, section P1,
+    boolean A0, boolean A1, boolean T.
+
+arrow (state  1 P1 A0 A1 T) (state  2 P1  1 A1 T).
+arrow (state  2 P1 A0 A1 T) (state  3 P1 A0 A1 1).
+arrow (state  3 P1 A0  0 T) (state  5 P1 A0  0 T).
+arrow (state  3 P1 A0  1 T) (state  4 P1 A0  1 T).
+arrow (state  4 P1 A0 A1 0) (state  5 P1 A0 A1 0).
+arrow (state  4 P1 A0 A1 1) (state  3 P1 A0 A1 1).
+arrow (state  5 P1 A0 A1 T) (state  1 P1  0 A1 T).
+
+arrow (state P0  1 A0 A1 T) (state P0  2 A0  1 T).
+arrow (state P0  2 A0 A1 T) (state P0  3 A0 A1 0).
+arrow (state P0  3 0  A1 T) (state P0  5  0 A1 T).
+arrow (state P0  3 1  A1 T) (state P0  4  1 A1 T).
+arrow (state P0  4 A0 A1 1) (state P0  5 A0 A1 1).
+arrow (state P0  4 A0 A1 0) (state P0  3 A0 A1 0).
+arrow (state P0  5 A0 A1 T) (state P0  1 A0  0 T).
+
+path X X.
+path X Y := arrow X Z, path Z Y.
+#table path.
+
+initial (state 1 1 0 0 0).
+bad (state 5 5 A0 A1 T) := boolean A0, boolean A1, boolean T.
+
+test := initial I, pi B\ bad B, path I B => false.
