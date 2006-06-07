@@ -1,4 +1,4 @@
-type tag = Proven | Working
+type tag = Proven | Working of bool ref | Disproven
 type t = (Term.term list, tag) Hashtbl.t
     
 let create () = Hashtbl.create 100
@@ -11,6 +11,10 @@ let remove table args = Hashtbl.remove table args
 
 let print table =
   Hashtbl.iter
-    (fun args tag -> Printf.printf "%s\n"
+    (fun args tag -> Printf.printf "%s: %s\n"
+      (match tag with
+        | Proven -> "Proven"
+        | Disproven -> "Disproven"
+        | Working b -> assert false (* No working goals at toplevel *))
       (String.concat " " (List.map Pprint.term_to_string args)))
     table
