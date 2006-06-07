@@ -60,6 +60,17 @@ let raise_term ~local x =
     let dBs = new_dbs local in
       Term.app x dBs
 
+let disprovable_stack : (string * Term.term list * bool ref) Stack.t = Stack.create ()
+
+let clear_stack_until name args =
+  let rec aux () =
+    let (name', args', disprovable) = Stack.pop disprovable_stack in
+      if name = name' && args = args'
+      then Stack.push (name', args', disprovable) disprovable_stack 
+      else begin disprovable := false ; aux () end
+  in
+    aux ()
+  
 (* Attemps to prove that the goal [(nabla x_1..x_local . g)(S)] by
  * destructively instantiating it,
  * calling [success] on every success, and finishing with [failure]
@@ -88,18 +99,33 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
   if !debug then
     printf "Proving %a...\n" Pprint.pp_term g ;
 
-  let prove_tabled table kind body args =
+  let prove_tabled table kind name body args =
     let args_copy = List.map Term.copy args in
+    let disprovable = ref true in
     let table_update_success k =
       Table.add table args_copy Table.Proven ;
+      if !disprovable then begin
+          ignore (Stack.pop disprovable_stack) ;
+          disprovable := false
+        end ;
       success k
     in
     let table_update_failure () =
       (* This may be called due to backtracking, so we should be
          careful not to remove goals which are Proven *)
       begin match Table.find table args_copy with
-        | Some Table.Working -> Table.remove table args_copy
-        | Some _ -> ()
+        | Some (Table.Working _) ->
+            if !disprovable
+            then begin
+                Table.add table args_copy Table.Disproven ;
+                ignore (Stack.pop disprovable_stack) ;
+                disprovable := false ;
+              end
+            else
+              Table.remove table args_copy
+        | Some Table.Disproven ->
+            failwith "Failed on disproven goal"
+        | Some Table.Proven -> ()
         | None -> failwith
             "Trying to update something without table entry"
       end ;
@@ -107,17 +133,22 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
     in
       match Table.find table args_copy with
         | Some Table.Proven -> success failure
-        | Some Table.Working ->
+        | Some Table.Disproven -> failure ()
+        | Some (Table.Working disprovable) ->
             if kind == System.CoInductive
             then success failure
-            else failure ()
+            else begin
+                if !disprovable then clear_stack_until name args_copy ;
+                failure ()
+              end
         | None ->
-            Table.add table args_copy Table.Working ;
+            Table.add table args_copy (Table.Working disprovable) ;
+            Stack.push (name, args_copy, disprovable) disprovable_stack ;
             prove ~level ~timestamp ~local
               ~success:table_update_success
               ~failure:table_update_failure
               (Term.app body args)
-  
+              
   in
     
   let prove_atom d args =
@@ -129,7 +160,7 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
         | Some table ->
             let args = List.map Norm.deep_norm args in
               if List.for_all Term.is_ground args
-              then prove_tabled table kind body args
+              then prove_tabled table kind d body args
               else prove ~level ~timestamp ~local ~success ~failure
                 (Term.app body args)
   in

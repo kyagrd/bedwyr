@@ -1,4 +1,4 @@
-type tag = Proven | Working
+type tag = Proven | Working of bool ref | Disproven
 type t
     
 val create : unit -> t
@@ -10,5 +10,3 @@ val find : t -> Term.term list -> tag option
 val remove : t -> Term.term list -> unit
 
 val print : t -> unit
-
-
