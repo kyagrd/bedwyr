@@ -1,0 +1,28 @@
+% Reasoning about an object logic. See the following paper:
+% A Proof Theory for Generic Judgments: An extended abstract,
+% by Dale Miller and Alwen Tiu. Proceedings of LICS 2003,
+% edited by Phokion Kolaitis. Ottawa, July 2003, pp. 118-127
+
+% Interpreter for an object-level logic
+
+pv t.
+pv (and G G') := pv G, pv G'.
+pv (forall G) := nabla x\ pv (G x).
+pv (exists G) := sigma x\ pv (G x).
+pv A := atom A, sigma D\ prog D, bc D A.
+
+bc A A := atom A.
+bc (imp G D) A := bc D A, pv G.
+bc (forall D) A := sigma t\ bc (D t) A.
+
+% Additional definition clauses
+
+atom (q X Y Z).
+prog (forall x\ forall y\ q x x y).
+prog (forall x\ forall y\ q x y x).
+prog (forall x\ forall y\ q y x x).
+
+% Tests
+
+test := pi x\ pi y\ pi z\
+        pv (forall u\ forall v\ q (pair u x) (pair v y) (pair v z)) => y = z.
