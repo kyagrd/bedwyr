@@ -1,0 +1,36 @@
+member X (cons X L).
+member X (cons Y L) := member X L.
+
+seq L A := member A L.
+
+seq L t.
+seq L (and B C) := seq L B, seq L C.
+seq L (forall B) := nabla x\ seq L (B x).
+seq L (exists B) := sigma x\ seq L (B x).
+seq L (imp B C) := seq (cons B L) C.
+seq L A := member A L.
+seq L A := atom A, sigma D\ prog D, bc L D A.
+
+bc L A A.
+bc L (imp G A) A := seq L G.
+bc L (forall D) A := sigma t\ bc L (D t) A.
+
+atom (typeof X T).
+
+prog (forall B\ forall Tin\ forall Tout\
+       (imp (forall x\ (imp (typeof x Tin) (typeof (B x) Tout)))
+            (typeof (lam B) (arrow Tin Tout)))).
+prog (forall A\ forall B\ forall Tout\
+       (imp (exists Tin\ and (typeof A (arrow Tin Tout)) (typeof B Tin))
+            (typeof (app A B) Tout))).
+
+thm 1 := seq nil (typeof (lam x\ lam y\ x) T).
+
+thm 2 := seq nil (typeof (app (lam x\ lam y\ x) (lam x\ x)) T).
+
+thm 3 := pi T\ seq nil (typeof (lam x\ app x x) T) => false.
+
+checkthm X := print (running test X), (thm X ; print "!!! failure !!!").
+
+test := checkthm 1, checkthm 2, checkthm 3,
+        print "testing complete".
