@@ -30,7 +30,15 @@ struct
   let nabla = "nabla"
 
   let _ =
-    Pprint.set_infix [ imp ; andc ; orc ; eq  ; "+" ; "-" ; "*" ]
+    Pprint.set_infix [ (imp, Pprint.Right) ;
+                       ("->", Pprint.Right);
+                       ("<-", Pprint.Left) ;
+                       (andc, Pprint.Both) ;
+                       (orc, Pprint.Both) ;
+                       (eq, Pprint.None) ;
+                       ("+", Pprint.Both) ;
+                       ("-", Pprint.Left) ;
+                       ("*", Pprint.Both) ]
 end
 
 type defkind = Normal | Inductive | CoInductive

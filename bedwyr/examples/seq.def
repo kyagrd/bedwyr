@@ -5,32 +5,36 @@ seq L t.
 seq L (and B C)  := seq L B, seq L C.
 seq L (forall B) := nabla x\ seq L (B x).
 seq L (exists B) := sigma x\ seq L (B x).
-seq L (imp B C)  := seq (cons B L) C.
+seq L (G <- D)   := seq (cons D L) G.
+seq L (D -> G)   := seq (cons D L) G.
 
 seq L A          := atom A, (member A L ; sigma D\ prog D, bc L D A).
 
 bc L A A.
-bc L (imp G D)  A := bc L D A, seq L G.
+bc L (G <- D)   A := bc L G A, seq L D.
+bc L (D -> G)   A := bc L G A, seq L D.
 bc L (forall D) A := sigma t\ bc L (D t) A.
 
 atom (typeof X T).
 
 prog (forall B\ forall Tin\ forall Tout\
-       (imp (forall x\ (imp (typeof x Tin) (typeof (B x) Tout)))
-            (typeof (lam B) (arrow Tin Tout)))).
-prog (forall A\ forall B\ forall Tout\
-       (imp (exists Tin\ and (typeof A (arrow Tin Tout)) (typeof B Tin))
-            (typeof (app A B) Tout))).
+       typeof (lam B) (Tin -> Tout) <-
+       forall x\ typeof x Tin -> typeof (B x) Tout).
 
+prog (forall A\ forall B\ forall Tout\
+       typeof (app A B) Tout <-
+       exists Tin\ and (typeof A (Tin -> Tout)) (typeof B Tin)).
+       
 thm 1 := seq nil (typeof (lam x\ lam y\ x) T).
 
 thm 2 := seq nil (typeof (app (lam x\ lam y\ x) (lam x\ x)) T).
 
 thm 3 := pi T\ seq nil (typeof (lam x\ app x x) T) => false.
 
-thm 4 := pi T\ pi S\ seq nil (typeof (lam x\ x) (arrow T S)) => T = S.
+thm 4 := pi T\ pi S\ seq nil (typeof (lam x\ x) (T -> S)) => T = S.
 
 checkthm X := print (running test X), (thm X ; print "!!! failure !!!").
 
 test := checkthm 1, checkthm 2, checkthm 3, checkthm 4,
         print "testing complete".
+
