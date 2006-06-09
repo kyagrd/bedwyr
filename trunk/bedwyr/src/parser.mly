@@ -113,7 +113,7 @@ exp:
 | exp AND  exp { andc $1 $3 }
 | exp OR   exp { orc  $1 $3 }
 | exp IMP  exp { imp  $1 $3 }
-| exp iexp exp { Term.app $2 [$1; $3] }
+| iexp         { $1 }
 | sexp         { let (t,l) = $1 in Term.app t l }
 
 sexp:
@@ -130,9 +130,11 @@ aexp:
 | ID { Term.atom $1 }
 | STRING { Term.string $1 }
 
+/* There is redundency here, but ocamlyacc seems to have problems
+   with left associativity if we abstract it. */
 iexp:
-| LARROW { Term.atom "<-" }
-| RARROW { Term.atom "->" }
-| PLUS { Term.atom "+" }
-| MINUS { Term.atom "-" }
-| TIMES { Term.atom "*" }
+| exp LARROW exp { Term.app (Term.atom "<-") [$1; $3] }
+| exp RARROW exp { Term.app (Term.atom "->") [$1; $3] }
+| exp PLUS   exp { Term.app (Term.atom "+")  [$1; $3] }
+| exp MINUS  exp { Term.app (Term.atom "-")  [$1; $3] }
+| exp TIMES  exp { Term.app (Term.atom "*")  [$1; $3] }

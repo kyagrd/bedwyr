@@ -52,6 +52,7 @@ let rec list_range a b =
   if a > b then [] else a::(list_range (a+1) b)
 
 let term_to_string term =
+  let term = Norm.deep_norm term in
   let high_pr = 1 + get_max_priority () in
   let pre = getAbsName () in
   let pp_var x = pre ^ (string_of_int x) in
@@ -81,7 +82,7 @@ let term_to_string term =
                       (pp 0 (n+i) t)) in
             if pr == 0 then res else parenthesis res
       | Ptr t -> assert false (* observe *)
-      | Susp _ -> pp pr n (Norm.hnorm term)
+      | Susp _ -> assert false (* deep_norm *)
  in
     pp high_pr 0 term
 
