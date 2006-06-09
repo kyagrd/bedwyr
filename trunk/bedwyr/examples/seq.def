@@ -18,13 +18,45 @@ bc L (forall D) A := sigma t\ bc L (D t) A.
 atom (typeof X T).
 
 prog (forall B\ forall Tin\ forall Tout\
-       typeof (lam B) (Tin -> Tout) <-
+       typeof (lam x\ B x) (Tin -> Tout) <-
        forall x\ typeof x Tin -> typeof (B x) Tout).
 
-prog (forall A\ forall B\ forall Tout\
-       typeof (app A B) Tout <-
-       exists Tin\ and (typeof A (Tin -> Tout)) (typeof B Tin)).
-       
+prog (forall A\ forall B\ forall Tout\ forall Tin\
+       typeof (app A B) Tout
+        <- typeof A (Tin -> Tout)
+        <- typeof B Tin).
+
+
+atom (copy S T).
+
+prog (forall M\ forall N\ forall M'\ forall N'\
+       copy (app M N) (app M' N')
+        <- copy M M'
+        <- copy N N').
+
+prog (forall M\ forall M'\
+       copy (lam x\ M x) (lam x\ M' x)
+        <- forall x\ forall x'\ copy x x' -> copy (M x) (M' x')).
+
+
+atom (subst R S T).
+
+prog (forall R\ forall S\ forall T\
+       subst R S T
+        <- forall x\ copy x S -> copy (R x) T).
+
+
+atom (eval E V).
+
+prog (forall M\ eval (lam x\ M x) (lam x\ M x)).
+
+prog (forall M\ forall N\ forall M'\ forall M''\
+       eval (app M N) V
+        <- eval M (lam x\ M' x)
+        <- subst M' N M''
+        <- eval M'' V).
+
+
 thm 1 := seq nil (typeof (lam x\ lam y\ x) T).
 
 thm 2 := seq nil (typeof (app (lam x\ lam y\ x) (lam x\ x)) T).
