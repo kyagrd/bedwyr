@@ -72,7 +72,7 @@
 %}
 
 %token BSLASH LPAREN RPAREN DOT SHARP
-%token EQ AND IMP OR
+%token EQ AND IMP RARROW LARROW OR PLUS MINUS TIMES
 %token DEF IND COIND
 %token <string> ID
 %token <string> STRING
@@ -82,6 +82,8 @@
 %left AND
 %left OR
 %nonassoc EQ
+%right RARROW
+%left LARROW
 %left PLUS
 %left MINUS
 %left TIMES
@@ -111,6 +113,7 @@ exp:
 | exp AND  exp { andc $1 $3 }
 | exp OR   exp { orc  $1 $3 }
 | exp IMP  exp { imp  $1 $3 }
+| exp iexp exp { Term.app $2 [$1; $3] }
 | sexp         { let (t,l) = $1 in Term.app t l }
 
 sexp:
@@ -126,3 +129,10 @@ aexp:
 | LPAREN exp RPAREN { $2 }
 | ID { Term.atom $1 }
 | STRING { Term.string $1 }
+
+iexp:
+| LARROW { Term.atom "<-" }
+| RARROW { Term.atom "->" }
+| PLUS { Term.atom "+" }
+| MINUS { Term.atom "-" }
+| TIMES { Term.atom "*" }

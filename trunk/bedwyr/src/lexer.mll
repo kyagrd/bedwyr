@@ -21,7 +21,7 @@
   open Parser
 }
 
-let name = ['A' - 'Z' 'a'-'z' '_' '-' '+' '*' '/' '0'-'9' '\''] +
+let name = ['A' - 'Z' 'a'-'z' '_' '/' '0'-'9' '\''] +
 let blank = ' ' | '\t' | '\r'
 let instring = [^'"'] *
 
@@ -38,6 +38,11 @@ rule token = parse
 | "&" { AND }
 | ";" { OR }
 | "=>" { IMP }
+| "->" { RARROW }
+| "<-" { LARROW }
+| "+" { PLUS }
+| "-" { MINUS }
+| "*" { TIMES }
 | "\\" { BSLASH }
 | "(" { LPAREN }
 | ")" { RPAREN }
