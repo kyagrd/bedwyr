@@ -129,7 +129,7 @@ weak_sim P Q :=
     (onep P (up X) M => sigma N\ weak_onep Q (up X) N,
                           nabla w\ weak_sim (M w) (N w)).
 
-weak_bisim P Q :=
+coinductive weak_bisim P Q :=
 	(pi A\ pi P1\ one P A P1 =>
            sigma Q1\ weak_one Q A Q1 & weak_bisim P1 Q1) &
 
@@ -140,13 +140,14 @@ weak_bisim P Q :=
 					nabla w\ weak_bisim (M w) (N w)) &
 
 	(pi A\ pi Q1\ one Q A Q1 =>
-           sigma P1\ weak_one P A P1 & weak_bisim Q1 P1) &
+           sigma P1\ weak_one P A P1 & weak_bisim P1 Q1) &
 
 	(pi X\ pi N\ onep Q (dn X) N => sigma M\ weak_onep P (dn X) M & 
-					pi w\ weak_bisim (N w) (M w)) &
+					pi w\ weak_bisim (M w) (N w)) &
 
 	(pi X\ pi N\ onep Q (up X) N => sigma M\ weak_onep P (up X) M &
-					nabla w\ weak_bisim (N w) (M w)).
+					nabla w\ weak_bisim (M w) (N w)).
+#table weak_bisim.
 
 % Computing weak traces (for debugging and efficiency evaluation)
 
@@ -224,7 +225,13 @@ natest 1 := weak_bisim (nu u\ nu d\ (par (nat zz u)
                                     (par (nat (s zz) d)
                                          (add u d t))))
                        (nat (s zz) t).                     % TIME/poum=440s
-% passed !?
+% With the first implementation of tabling (ground goals, no eigenvariable)
+% natest 0 and 1 are much faster: respectively 32 and 63s on poum.
+% With tabling of failures the time falls to 28.8s and 51.5s
+% but is (very) slightly higher for traces and simulation examples.
+% With the support of eigenvariables in tabled goals and term indexing,
+% we reach respectively 11s and 17s.
+
 natest 2 := weak_bisim (nu u\ nu d\ (par (nat (s (s zz)) d)
                                     (par (nat (s (s (s zz))) u)
                                          (add u d t))))

@@ -14,7 +14,8 @@ OCAMLLEX = @OCAMLLEX@
 
 # SOURCE FILES
 
-CORE_ML    = ndcore/term.ml ndcore/norm.ml ndcore/unify.ml ndcore/pprint.ml
+CORE_ML    = ndcore/term.ml ndcore/norm.ml ndcore/unify.ml ndcore/pprint.ml \
+             ndcore/index.ml
 TEST_ML    = ndcore/oUnit.ml ndcore/test.ml
 BEDWYR_ML  = table.ml system.ml parser.ml lexer.ml prover.ml main.ml
 

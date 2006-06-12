@@ -18,8 +18,9 @@
 (****************************************************************************)
 
 type tag = Eigen | Constant | Logic
+type id = string
 type var = {
-  name : string ;
+  name : id ;
   tag  : tag    ;
   ts   : int
 }
@@ -154,11 +155,12 @@ let rec lambda n t =
   * TODO choose a policy here.. use more prefixes depending on the type,
   * if typing is introduced ? *)
 
-let prefix = "H"
-let prefix_ev = "h"
-let prefix_name = "x"
+let prefix = function
+  | Constant -> "c"
+  | Logic -> "H"
+  | Eigen -> "h"
 
-let getAbsName () = prefix_name
+let getAbsName () = "x"
 
 (** Generating a fresh variable with a given time stamp; the use of ref
   * ensures uniqueness. We should attach useful names as well, but this 
@@ -171,14 +173,9 @@ let fresh =
         incr varcount ;
         i
 
-let fresh_ev ts =
-  let i = fresh () in
-  let name = prefix_ev ^ (string_of_int i) in
-    ref (Var { name=name ; ts=ts ; tag=Eigen })
-
 let fresh ?(tag=Logic) ts =
   let i = fresh () in
-  let name = prefix ^ (string_of_int i) in
+  let name = (prefix tag) ^ (string_of_int i) in
     ref (Var { name=name ; ts=ts ; tag=tag })
 
 (* Recursively raise dB indices and abstract over variables
