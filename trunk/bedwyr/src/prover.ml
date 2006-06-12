@@ -112,8 +112,7 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
             if !disprovable then clear_stack_until disprovable ;
             failure ()
           end
-      | Some {contents=Table.Unset} -> assert false
-      | None ->
+      | _ ->
           (* This handles the cases where nothing is in the table,
            * or Unset has been left, in which case the [Table.add] will
            * overwrite it. *)
@@ -125,12 +124,18 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
               ignore (Stack.pop disprovable_stack) ;
               disprovable := false
             end ;
-            success k
+            (* TODO check that optimization: since we know that there is at most
+             * one success, we ignore the continuation [k] and directly jump
+             * to the [failure] continuation. It _seems_ OK regarding the
+             * cleanup handlers, which are just jumps to previous states.
+             * It is actually quite useful for (thm 2) in graph-alt.def. *)
+            success failure
           in
           let table_update_failure () =
-            (* This may be called due to backtracking, so we should be
-             careful not to remove goals which are Proven *)
             begin match !status with
+              | Table.Proven ->
+                  (* This is just backtracking, don't worry. *)
+                  ()
               | Table.Working _ ->
                   if !disprovable then begin
                     status := Table.Disproven ;
@@ -138,12 +143,11 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
                     disprovable := false ;
                   end else
                     status := Table.Unset
-              | Table.Proven -> ()
               | _ -> assert false
             end ;
             failure ()
           in
-            Table.add table args status ;
+            Table.add ~allow_eigenvar:(level=One) table args status ;
             Stack.push disprovable disprovable_stack ;
             prove ~level ~timestamp ~local
               ~success:table_update_success
@@ -154,15 +158,14 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
   let prove_atom d args =
     let kind,body,table = System.get_def ~check_arity:(List.length args) d in
       match table with
-        | Some table when level = One ->
-            let args = List.map Norm.deep_norm args in
-              begin try
-                prove_tabled table kind d body args
-              with
-                | Index.Cannot_table ->
-                    prove ~level ~timestamp ~local ~success ~failure
-                      (Term.app body args)
-              end
+        | Some table ->
+            begin try
+              prove_tabled table kind d body args
+            with
+              | Index.Cannot_table ->
+                  prove ~level ~timestamp ~local ~success ~failure
+                    (Term.app body args)
+            end
         | _ ->
             prove ~level ~timestamp ~local ~success ~failure
               (Term.app body args)
