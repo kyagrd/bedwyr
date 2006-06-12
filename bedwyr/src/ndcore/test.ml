@@ -415,6 +415,42 @@ let test =
          try unify x y ; assert false with
            | Unify.Error _ -> ())
 
+    ] ;
+
+    "Indexing" >:::
+    [
+
+    "Four ground terms" >::
+    (fun () ->
+       let d = db in
+       let t1 = ((d 1) ^^ [ d 2 ; (d 1) ^^ [ d 2 ; d 2 ] ]) in
+       let t2 = ((d 1) ^^ [ d 3 ; (d 1) ^^ [ d 4 ; d 5 ] ]) in
+       let t3 = ((d 1) ^^ [ d 3 ; (d 1) ^^ [ d 4 ; d 4 ] ]) in
+       let t4 = ((d 1) ^^ [ d 3 ; d 2 ]) in
+       let i0 = Index.empty in
+       let i1 = Index.add i0 [t1] 10 in
+       let i2 = Index.add i1 [t2] 20 in
+       let i3 = Index.add i2 [t3] 30 in
+         assert (None = Index.find i3 [t4]) ;
+         let i4 = Index.add i3 [t4] 40 in
+           assert (Some 40 = Index.find i4 [t4]) ;
+           assert (Some 20 = Index.find i2 [t2]) ;
+           assert (Some 20 = Index.find i4 [t2]) ;
+           let i5 = Index.add i4 [t4] 42 in
+             assert (Some 42 = Index.find i5 [t4])) ;
+
+    "With eigenvariables" >::
+    (fun () ->
+       let x = var ~tag:Eigen "x" 0 in
+       let y = var ~tag:Eigen "y" 0 in
+       let z = var ~tag:Eigen "z" 0 in
+       let t1 = (db 1) ^^ [ x ; y ; y ] in
+       let t2 = (db 1) ^^ [ y ; y ; y ] in
+       let index = Index.add (Index.add Index.empty [t1] 1) [t2] 2 in
+         assert (Some 1 = Index.find index [(db 1) ^^ [ y ; z ; z ]]) ;
+         assert (Some 2 = Index.find index [(db 1) ^^ [ x ; x ; x ]]) ;
+         assert (None = Index.find index [(db 1) ^^ [ x ; z ; x ]]))
+
     ]
   ]
 

@@ -18,8 +18,9 @@
 (****************************************************************************)
 
 type tag = Eigen | Constant | Logic
+type id = string
 type var = {
-  name : string ;
+  name : id ;
   tag  : tag    ;
   ts   : int
 }
@@ -118,7 +119,6 @@ val getAbsName : unit -> string
   * ensures uniqueness. We should attach useful names as well, but this 
   * will do for the moment. *)
 val fresh : ?tag:tag -> int -> term
-val fresh_ev : int -> term
 
 exception NonNormalTerm
 

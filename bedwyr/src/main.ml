@@ -116,7 +116,7 @@ let _ =
     (fun file -> input_defs (Lexing.from_channel (open_in file)))
     "Bedwyr prover.
 This software is under GNU Public License.
-Copyright (c) 2005 David Baelde, Gopalan Nadathur, Alwen Tiu, Axelle Ziegler.
+Copyright (c) 2005-2006 Slimmer project.
 
 Usage: bedwyr [filename | option]*
 "
@@ -124,10 +124,10 @@ Usage: bedwyr [filename | option]*
 let _ =
   if !interactive then begin
     Format.printf
-"Welcome on a very sketchy theorem-prover.
+"Bedwyr welcomes you.
 
 This software is under GNU Public License.
-Copyright (c) 2005 David Baelde, Gopalan Nadathur, Alwen Tiu, Axelle Ziegler.
+Copyright (c) 2005-2006 Slimmer project.
 
 For a little help, type #help.
 \n%!" ;

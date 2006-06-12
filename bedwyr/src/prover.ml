@@ -60,14 +60,16 @@ let raise_term ~local x =
     let dBs = new_dbs local in
       Term.app x dBs
 
-let disprovable_stack : (string * Term.term list * bool ref) Stack.t = Stack.create ()
+let disprovable_stack : (bool ref) Stack.t = Stack.create ()
 
-let clear_stack_until name args =
+let clear_stack_until d =
   let rec aux () =
-    let (name', args', disprovable) = Stack.pop disprovable_stack in
-      if name = name' && args = args'
-      then Stack.push (name', args', disprovable) disprovable_stack 
-      else begin disprovable := false ; aux () end
+    let disprovable = Stack.top disprovable_stack in
+      if disprovable != d then begin
+        disprovable := false ;
+        ignore (Stack.pop disprovable_stack) ;
+        aux ()
+      end
   in
     aux ()
   
@@ -100,69 +102,70 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
     printf "Proving %a...\n" Pprint.pp_term g ;
 
   let prove_tabled table kind name body args =
-    let args_copy = List.map Term.copy args in
-    let disprovable = ref true in
-    let table_update_success k =
-      Table.add table args_copy Table.Proven ;
-      if !disprovable then begin
-          ignore (Stack.pop disprovable_stack) ;
-          disprovable := false
-        end ;
-      success k
-    in
-    let table_update_failure () =
-      (* This may be called due to backtracking, so we should be
-         careful not to remove goals which are Proven *)
-      begin match Table.find table args_copy with
-        | Some (Table.Working _) ->
-            if !disprovable
-            then begin
-                Table.add table args_copy Table.Disproven ;
-                ignore (Stack.pop disprovable_stack) ;
-                disprovable := false ;
-              end
-            else
-              Table.remove table args_copy
-        | Some Table.Disproven ->
-            failwith "Failed on disproven goal"
-        | Some Table.Proven -> ()
-        | None -> failwith
-            "Trying to update something without table entry"
-      end ;
-      failure ()
-    in
-      match Table.find table args_copy with
-        | Some Table.Proven -> success failure
-        | Some Table.Disproven -> failure ()
-        | Some (Table.Working disprovable) ->
-            if kind == System.CoInductive
-            then success failure
-            else begin
-                if !disprovable then clear_stack_until name args_copy ;
-                failure ()
-              end
-        | None ->
-            Table.add table args_copy (Table.Working disprovable) ;
-            Stack.push (name, args_copy, disprovable) disprovable_stack ;
+    match Table.find table args with
+      | Some {contents=Table.Proven} -> success failure
+      | Some {contents=Table.Disproven} -> failure ()
+      | Some {contents=Table.Working disprovable} ->
+          if kind = System.CoInductive then
+            success failure
+          else begin
+            if !disprovable then clear_stack_until disprovable ;
+            failure ()
+          end
+      | Some {contents=Table.Unset} -> assert false
+      | None ->
+          (* This handles the cases where nothing is in the table,
+           * or Unset has been left, in which case the [Table.add] will
+           * overwrite it. *)
+          let disprovable = ref true in
+          let status = ref (Table.Working disprovable) in
+          let table_update_success k =
+            status := Table.Proven ;
+            if !disprovable then begin
+              ignore (Stack.pop disprovable_stack) ;
+              disprovable := false
+            end ;
+            success k
+          in
+          let table_update_failure () =
+            (* This may be called due to backtracking, so we should be
+             careful not to remove goals which are Proven *)
+            begin match !status with
+              | Table.Working _ ->
+                  if !disprovable then begin
+                    status := Table.Disproven ;
+                    ignore (Stack.pop disprovable_stack) ;
+                    disprovable := false ;
+                  end else
+                    status := Table.Unset
+              | Table.Proven -> ()
+              | _ -> assert false
+            end ;
+            failure ()
+          in
+            Table.add table args status ;
+            Stack.push disprovable disprovable_stack ;
             prove ~level ~timestamp ~local
               ~success:table_update_success
               ~failure:table_update_failure
               (Term.app body args)
-              
   in
-    
+
   let prove_atom d args =
     let kind,body,table = System.get_def ~check_arity:(List.length args) d in
       match table with
-        | None ->
+        | Some table when level = One ->
+            let args = List.map Norm.deep_norm args in
+              begin try
+                prove_tabled table kind d body args
+              with
+                | Index.Cannot_table ->
+                    prove ~level ~timestamp ~local ~success ~failure
+                      (Term.app body args)
+              end
+        | _ ->
             prove ~level ~timestamp ~local ~success ~failure
               (Term.app body args)
-        | Some table ->
-            let args = List.map Norm.deep_norm args in
-              if List.for_all Term.is_ground args
-              then prove_tabled table kind d body args
-              else prove ~level ~timestamp ~local ~success ~failure
-                (Term.app body args)
   in
 
   match Term.observe g with
@@ -220,7 +223,6 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
              * thanks to the commutability between patches for [a] and [b],
              * one modifying eigenvars,
              * the other modifying logical variables. *)
-            let state = save_state () in (* TODO no need to save that one ? *)
             let ev_substs = ref [] in
             let store_subst k =
               (* We store the state in which we should leave the system
@@ -271,7 +273,9 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
             in begin match observe goal with
               | Lam (1,_) ->
                   let timestamp = timestamp + 1 in
-                  let var = raise_term (Term.fresh_ev timestamp) ~local in
+                  let var =
+                    raise_term (Term.fresh ~tag:Eigen timestamp) ~local
+                  in
                   let goal = app goal [var] in
                     prove ~timestamp ~local ~level ~success ~failure goal
               | _ -> assert false
@@ -298,7 +302,7 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
               | Lam (1,g) ->
                   let var =
                     if level = Zero then
-                      raise_term (Term.fresh_ev timestamp) ~local
+                      raise_term (Term.fresh ~tag:Eigen timestamp) ~local
                     else
                       raise_term (Term.fresh timestamp) ~local
                   in
