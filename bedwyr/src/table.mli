@@ -3,7 +3,7 @@ type t
     
 val create : unit -> t
 
-val add : t -> Term.term list -> tag ref -> unit
+val add : allow_eigenvar:bool -> t -> Term.term list -> tag ref -> unit
 
 val find : t -> Term.term list -> tag ref option
 

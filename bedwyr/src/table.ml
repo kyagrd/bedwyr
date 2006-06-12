@@ -3,7 +3,8 @@ type t = tag ref Index.t ref
 
 let create () = ref Index.empty
 
-let add table args tag = table := Index.add !table args tag
+let add ~allow_eigenvar table args tag =
+  table := Index.add ~allow_eigenvar !table args tag
   
 let find table args = Index.find !table args
 

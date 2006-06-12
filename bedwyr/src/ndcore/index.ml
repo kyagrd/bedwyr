@@ -72,11 +72,11 @@ let observe term = Term.observe (Norm.hnorm term)
 (** [create_node bindings terms data] compiles the terms into patterns
   * and associates them a leaf containing the data.
   * Terms are expected to be reversed. *)
-let create_node bindings terms data =
+let create_node ~allow_eigenvar bindings terms data =
   let rec compile n bindings term = match observe term with
     | Term.DB i -> DB i, n, bindings
     | Term.Var {Term.tag=Term.Constant;Term.name=id} -> Cst id, n, bindings
-    | Term.Var var when var.Term.tag = Term.Eigen ->
+    | Term.Var var when allow_eigenvar && var.Term.tag = Term.Eigen ->
         Var n, (n+1), (n,var)::bindings
     | Term.Lam (i,t) ->
         let pat,n,bindings = compile n bindings t in
@@ -126,7 +126,7 @@ let superficial_match patterns terms =
  * access : index -> term -> data option * (data -> index) * (() -> index)
  *                           found         update            delete          *)
 
-let update index terms data =
+let update ~allow_eigenvar index terms data =
   (* Update_pattern returns the list of catches and the alternative
    * corresponding to the former index in reverse order. *)
   let rec update_pattern bindings catches former_alt pattern term =
@@ -135,7 +135,7 @@ let update index terms data =
           (false, DB i, bindings, catches, former_alt)
       | Cst c, Term.Var {Term.name=c';Term.tag=Term.Constant} when c=c' ->
           (false, Cst c, bindings, catches, former_alt)
-      | Var i, Term.Var var when var.Term.tag=Term.Eigen ->
+      | Var i, Term.Var var when allow_eigenvar && var.Term.tag=Term.Eigen ->
           (false, Var i, (i,var)::bindings, catches, former_alt)
       | App (i,patterns), Term.App (h,terms) when i = 1 + List.length terms ->
           let terms = h::terms in
@@ -183,7 +183,7 @@ let update index terms data =
          * We need to compile the caught terms into patterns. *)
         match data with
           | Some data ->
-              Refine [ create_node bindings catches data ;
+              Refine [ create_node ~allow_eigenvar bindings catches data ;
                        former_alt, children ]
           | None -> raise Not_found
       else
@@ -202,7 +202,9 @@ let update index terms data =
   and update_index bindings terms index' = function
     | [] ->
         begin match data with
-          | Some data -> (create_node bindings (List.rev terms) data)::index'
+          | Some data ->
+              (create_node ~allow_eigenvar
+                 bindings (List.rev terms) data)::index'
           | None -> raise Not_found
         end
     | node::index ->
@@ -213,8 +215,8 @@ let update index terms data =
   in
     update_index [] (List.map Norm.hnorm terms) [] index
 
-let add index terms data = update index terms (Some data)
-let remove index terms = update index terms None
+let add ~allow_eigenvar index terms data =
+  update ~allow_eigenvar index terms (Some data)
 
 (* == FIND ================================================================= *)
 
@@ -269,18 +271,3 @@ let rec find bindings index terms =
 
 let find index terms =
   try Some (find [] index (List.map Norm.hnorm terms)) with _ -> None
-
-(*
-open Term
-open Notations
-let d = db
-let i0 = Index.empty
-let t1 = ((d 1) ^^ [ d 2 ; (d 1) ^^ [ d 2 ; d 2 ] ])
-let t2 = ((d 1) ^^ [ d 3 ; (d 1) ^^ [ d 4 ; d 5 ] ])
-let t3 = ((d 1) ^^ [ d 3 ; (d 1) ^^ [ d 4 ; d 4 ] ])
-let t4 = ((d 1) ^^ [ d 3 ; d 2 ])
-let i1 = Index.update i0 t1 10
-let i2 = Index.update i1 t2 20
-let i3 = Index.update i2 t3 30
-let i4 = Index.update i3 t4 40 
-*)
