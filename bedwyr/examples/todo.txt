@@ -1,0 +1,20 @@
+Examples (and counterexample) that we might write in Bedwyr
+
+I (Dale) list a few topics quickly that we might consider putting into
+the example repository.  
+
+Pi-calculus
+  We already have some files for this, but we should develop this into
+  a larger collection of examples.  Including oben bisimulation,
+  traces, trace equivalence, structural equivalence (without !),
+  modals (Hennessy-Milner logic (as in Alwen's CONCUR2006 paper)) and 
+  spacial logic kinds of examples.
+
+Divergence and applicative bisimulation examples
+  see paper by Alberto and Alwen for examples.  These are mostly
+  co-inductive.  I'm guessing that cyclic checking will work rarely,
+  but still it will illustrate teh spirit of the logic.
+
+Spacial logic
+  for structured data
+
