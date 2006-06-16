@@ -50,6 +50,7 @@ xwins L := pi K\ move L o K => (nowinner K, sigma M\ move K x M, xwins M).
 notxwins L := tie L ; winner o L.
 notxwins L := nowinner L, sigma K\ move L o K,
                 (tie K ; winner o K ; pi M\ move K x M => notxwins M).
+#table notxwins.
 
 thm 1 := convert Board (board (row x x x) (row b b b) (row b b b)),
          xwins Board.

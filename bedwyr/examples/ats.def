@@ -12,12 +12,15 @@ display One := One P A Q, print (One P A Q), false.
 % Determine if transition system is determinate or not.
 determinate :=  pi P\ pi A\ pi Q\ pi R\ one P A Q =>  one P A R => Q = R.
 
-sim One P Q := 
+coinductive sim One P Q := 
    pi P1\ pi A\ One P A P1 => sigma Q1\ One Q A Q1 & sim One P1 Q1.
 
-bisim One P Q :=
+coinductive bisim One P Q :=
    (pi P1\ pi A\ One P A P1 => sigma Q1\ One Q A Q1 & bisim One P1 Q1) &
    (pi Q1\ pi A\ One Q A Q1 => sigma P1\ One P A P1 & bisim One P1 Q1).
+
+#table bisim.
+#table sim.
 
 %% ATS 1:
 one1 p a q.

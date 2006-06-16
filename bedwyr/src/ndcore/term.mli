@@ -128,10 +128,5 @@ val abstract_var : term -> term -> term
 (** Abstract [t] over constant or variable named [id]. *)
 val abstract : string -> term -> term
 
-(** Free variables of [ts]. Bound variables are represented by DB indices. *)
+(** Logic variables of [ts]. *)
 val logic_vars : term list -> term list
-val eigenvars : term list -> term list
-
-val is_ground : term -> bool
-val copy : term -> term
-   

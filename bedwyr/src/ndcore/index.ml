@@ -215,7 +215,7 @@ let update ~allow_eigenvar index terms data =
   in
     update_index [] (List.map Norm.hnorm terms) [] index
 
-let add ~allow_eigenvar index terms data =
+let add ?(allow_eigenvar=true) index terms data =
   update ~allow_eigenvar index terms (Some data)
 
 (* == FIND ================================================================= *)

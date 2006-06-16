@@ -144,7 +144,7 @@ decfourbit A B S :=
 % We restrict the domain in order to speed up the prover
 domain X := X=0;X=1;X=2;X=3;X=4;X=5;X=6;X=7;X=8;X=9;X=10;X=11;X=12;X=13;X=14;X=15.
 
-printsum A B S := print ((+ A B) = S).
+printsum A B S := print (A + B = S).
 
 % Test that our fourbit adder is sound and complete relative to addition on
 % the integers 0 through 15
