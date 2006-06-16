@@ -231,6 +231,8 @@ natest 1 := weak_bisim (nu u\ nu d\ (par (nat zz u)
 % but is (very) slightly higher for traces and simulation examples.
 % With the support of eigenvariables in tabled goals and term indexing,
 % we reach respectively 11s and 17s.
+% And 8.8 and 14.8 (again about 15% better) after removing many references
+% from the term representation.
 
 natest 2 := weak_bisim (nu u\ nu d\ (par (nat (s (s zz)) d)
                                     (par (nat (s (s (s zz))) u)
@@ -241,3 +243,6 @@ notest 0 := weak_bisim (nu u\ nu d\ (par (nat (s zz) d)
                                     (par (nat (s zz) u)
                                          (add u d t))))
                        (nat (s zz) t).
+
+test :=
+  print "Running tests...", stest 2, natest 0, natest 1, print "All done.".

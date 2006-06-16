@@ -25,21 +25,24 @@ wt E (abs F) (arrow Tx T) := nabla x\ wt (bind x Tx E) (F (var x)) T.
 
 % Play with a few examples ====================================================
 
-test 1 := wt (bind a t nil) (var a) T, print (term has type T).
+_test 1 := wt (bind a t nil) (var a) T, print (term has type T).
 
-test 2 := wt (bind a t (bind b (arrow t tt) nil))
-             (app (var b) (var a)) T,
-          print (term has type T).
+_test 2 := wt (bind a t (bind b (arrow t tt) nil))
+              (app (var b) (var a)) T,
+           print (term has type T).
 
-test 3 := wt (bind a Ta (bind b Tb nil))
-             (app (abs x\ (app (var a) (var b))) (var a)) T,
-          print (a has type Ta), print (b has type Tb),
-          print (term has type T).
+_test 3 := wt (bind a Ta (bind b Tb nil))
+              (app (abs x\ (app (var a) (var b))) (var a)) T,
+           print (a has type Ta), print (b has type Tb),
+           print (term has type T).
 
-test 4 := (sigma T\ wt nil (abs x\ app x x) T) => false.
+_test 4 := (sigma T\ wt nil (abs x\ app x x) T) => false.
 
 notest 0 := pi x\ pi y\       type (bind x t1 (bind y t2 nil)) y t1 => false.
-test   0 := nabla x\ nabla y\ type (bind x t1 (bind y t2 nil)) y t1 => false.
+_test  0 := nabla x\ nabla y\ type (bind x t1 (bind y t2 nil)) y t1 => false.
+
+run_test X := print ("Running test" X "..."), _test X.
+test := run_test 1, run_test 2, run_test 3, run_test 4, run_test 0.
 
 % If we had written the wt predicate using a pi instead of the nabla then:
 % (1) it would have been on Level 1 instead of 0;

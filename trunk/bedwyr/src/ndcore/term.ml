@@ -26,57 +26,62 @@ type var = {
 }
 
 (* Terms. The use of references allow in-place normalization. *)
-type term = rawterm ref
-and rawterm = 
+type term = rawterm
+and rawterm =
   | Var  of var
   | DB   of int
   | Lam  of int * term
   | App  of term * term list
   | Susp of term * int * int * env
   | Ptr  of ptr
-and ptr = term (* This will be hidden to force the user to use dereferencing *)
+and ptr = in_ptr ref
+and in_ptr = V of var | T of term
 and env = envitem list
 and envitem = Dum of int | Binding of term * int
 
 exception NonNormalTerm
 exception NotValidTerm
 
-(* Fast structural equality modulo Ptr.
- * Fast: try to use physical equality first.
- * Structural: no normalization peformed. *)
+(* Fast structural equality modulo Ptr -- no normalization peformed. *)
 let rec eq t1 t2 =
-  (* We do sharing, it may be worth trying physical equality first. *)
-  if t1 == t2 then true else
-    match !t1,!t2 with
-      (* Compare leafs *)
-      | DB _, DB _
-      | Var _, Var _ -> t1 = t2
-      (* Ignore Ptr. It's an implementation artifact *)
-      | _, Ptr t2 -> eq t1 t2
-      | Ptr t1, _ -> eq t1 t2
-      (* Propagation *)
-      | App (h1,l1), App (h2,l2) ->
-          List.length l1 = List.length l2 &&
-            List.fold_left2
-              (fun test t1 t2 -> test && eq t1 t2)
-              true (h1::l1) (h2::l2)
-      | Lam (n,t1), Lam (m,t2) -> n = m && eq t1 t2
-      | Susp (t,ol,nl,e), Susp (tt,oll,nll,ee) ->
-          ol = oll && nl = nll && eq t tt &&
-            List.fold_left2
-              (fun test e1 e2 ->
-                 test && match e1,e2 with
-                   | Dum i, Dum j when i = j -> true
-                   | Binding (t,i), Binding (tt,j) when i=j && eq t tt -> true
-                   | _ -> false)
-              true e ee
-      | _ -> false
+  match t1,t2 with
+    (* Compare leafs *)
+    | DB i1, DB i2 -> i1=i2
+    | Ptr {contents=V v1}, Ptr {contents=V v2} -> v1=v2
+    (* Ignore Ptr. It's an implementation artifact *)
+    | _, Ptr {contents=T t2} -> eq t1 t2
+    | Ptr {contents=T t1}, _ -> eq t1 t2
+    (* Propagation *)
+    | App (h1,l1), App (h2,l2) ->
+        List.length l1 = List.length l2 &&
+        List.fold_left2
+          (fun test t1 t2 -> test && eq t1 t2)
+          true (h1::l1) (h2::l2)
+    | Lam (n,t1), Lam (m,t2) -> n = m && eq t1 t2
+    | Var _, _ | _, Var _ -> assert false
+    | Susp (t,ol,nl,e), Susp (tt,oll,nll,ee) ->
+        ol = oll && nl = nll && eq t tt &&
+          List.fold_left2
+            (fun test e1 e2 ->
+               test && match e1,e2 with
+                 | Dum i, Dum j when i = j -> true
+                 | Binding (t,i), Binding (tt,j) when i=j && eq t tt -> true
+                 | _ -> false)
+            true e ee
+    | _ -> false
 
-let rec deref t = match !t with
-  | Ptr d -> deref d
-  | _ -> t
+let rec observe = function
+  | Ptr {contents=T d} -> observe d
+  | Ptr {contents=V v} -> Var v
+  | t -> t
 
-let observe t = !(deref t)
+let rec deref = function
+  | Ptr {contents=T t} -> deref t
+  | t -> t
+
+let getref = function
+  | Ptr t -> t
+  | _ -> assert false
 
 (* Binding a variable to a term. The *contents* of the cell representing the
  * variable is a reference which must be updated. Also the variable must
@@ -100,15 +105,15 @@ let restore_state n =
   done ;
   bind_len := n
 
-type subst = (term*rawterm) list
+type subst = (ptr*in_ptr) list
 type unsubst = subst
 
 let bind v t =
-  let dv = deref v in
+  let dv = getref (deref v) in
   let dt = deref t in
-    if dv != dt then begin
+    if match dt with Ptr r when r==dv -> false | _ -> true then begin
       Stack.push (dv,!dv) bind_stack ;
-      dv := Ptr dt ;
+      dv := T dt ;
       incr bind_len
     end
 
@@ -144,9 +149,9 @@ let rec add_dummies env n m =
 let rec lambda n t =
   let t = deref t in
     if n = 0 then t else
-      match !t with
+      match t with
         | Lam (n',t') -> lambda (n+n') t'
-        | _ -> ref (Lam (n,t))
+        | _ -> Lam (n,t)
 
 (** We try to attach useful names to generated variables.
   * For that purpose we use prefixes like 'h' or 'x',
@@ -176,18 +181,19 @@ let fresh =
 let fresh ?(tag=Logic) ts =
   let i = fresh () in
   let name = (prefix tag) ^ (string_of_int i) in
-    ref (Var { name=name ; ts=ts ; tag=tag })
+    Ptr (ref (V { name=name ; ts=ts ; tag=tag }))
 
 (* Recursively raise dB indices and abstract over variables
  * selected by [test]. *)
 let abstract test =
-  let rec aux n t = match !t with
-    | Var { name=id' } -> if test t id' then ref (DB n) else t
+  let rec aux n t = match t with
     | DB i -> t
     | App (h,ts) ->
-        ref (App ((aux n h), (List.map (aux n) ts)))
-    | Lam (m,s) -> ref (Lam (m, aux (n+m) s))
-    | Ptr t -> ref (Ptr (aux n t))
+        App ((aux n h), (List.map (aux n) ts))
+    | Lam (m,s) -> Lam (m, aux (n+m) s)
+    | Ptr {contents=T t} -> Ptr (ref (T (aux n t)))
+    | Ptr {contents=V v} -> if test t v.name then DB n else t
+    | Var _ -> assert false
     | Susp _ -> raise NonNormalTerm
   in aux
 
@@ -197,25 +203,15 @@ let abstract_var v t = lambda 1 (abstract (fun t id' -> t = v) 1 t)
 (** Abstract [t] over constant or variable named [id]. *)
 let abstract id t = lambda 1 (abstract (fun t id' -> id' = id) 1 t)
 
-(** Logic variables of [ts]. *)
+(** Logic variables of [ts], assuming that it is normalized. *)
 let logic_vars ts =
   let rec fv l t = match observe t with
-    | Var {tag=Logic} -> if List.mem t l then l else (t::l)
+    | Var v ->
+        if v.tag = Logic && not (List.mem t l) then (t::l) else l
     | App (h,ts) -> List.fold_left fv (fv l h) ts
     | Lam (n,t') -> fv l t'
     | Var _ | DB _ -> l
-    | Susp _ -> l (* TODO Looks like a gross approx ?! *)
-    | Ptr _ -> assert false
-  in
-    List.fold_left fv [] ts
-
-let eigenvars ts =
-  let rec fv l t = match observe t with
-    | Var { tag=Eigen } -> if List.mem t l then l else (t::l)
-    | App (h,ts) -> List.fold_left fv (fv l h) ts
-    | Lam (n,t') -> fv l t'
-    | Var _ | DB _ -> l
-    | Susp _ -> l (* TODO Looks like a gross approx ?! *)
+    | Susp _ -> assert false
     | Ptr _ -> assert false
   in
     List.fold_left fv [] ts
@@ -223,15 +219,15 @@ let eigenvars ts =
 (** Utilities.
   * Easy creation of constants and variables, with sharing. *)
 
-let const ?(tag=Constant) s n = ref (Var { name=s ; ts=n ; tag=tag })
-let var   ?(tag=Logic)    s n = ref (Var { name=s ; ts=n ; tag=tag })
+let const ?(tag=Constant) s n = Ptr (ref (V { name=s ; ts=n ; tag=tag }))
+let var   ?(tag=Logic)    s n = Ptr (ref (V { name=s ; ts=n ; tag=tag }))
 
 let tbl = Hashtbl.create 100
 let reset_namespace () = Hashtbl.clear tbl
 let reset_namespace_vars () =
   Hashtbl.iter
-    (fun k v -> match !v with
-       | Var _ -> Hashtbl.remove tbl k
+    (fun k v -> match v with
+       | Ptr {contents=V {tag=Logic}} -> Hashtbl.remove tbl k
        | _ -> ())
     tbl
 
@@ -251,22 +247,22 @@ let atom ?(ts=0) name =
 
 let string text = const text 0
 
-let binop s a b = ref (App ((atom s),[a;b]))
+let binop s a b = App ((atom s),[a;b])
 
-let rec collapse_lam t = match !t with
+let rec collapse_lam t = match t with
   | Lam (n,t') ->
-      begin match !(collapse_lam t') with 
-        | Lam (m,u) -> ref (Lam (n+m,u))
+      begin match collapse_lam t' with 
+        | Lam (m,u) -> Lam (n+m,u)
         | _ -> t
       end
   | _ -> t
 
-let db n = ref (DB n)
+let db n = DB n
 (* let app a b = if b = [] then a else ref (App (a,b)) *)
-let app a b = if b = [] then a else match (observe a) with
-  | App(a,c) -> ref (App (a,c @ b))
-  | _ -> ref (App (a,b))
-let susp t ol nl e = ref (Susp (t,ol,nl,e))
+let app a b = if b = [] then a else match observe a with
+  | App(a,c) -> App (a,c @ b)
+  | _ -> App (a,b)
+let susp t ol nl e = Susp (t,ol,nl,e)
 
 module Notations =
 struct
@@ -275,22 +271,3 @@ struct
   let (//) = lambda
   let (^^) = app
 end
-
-let rec is_ground term =
-  match observe term with
-    | Var {tag=tag} -> tag=Constant
-    | DB _ -> true
-    | Lam(n,t) -> is_ground t
-    | App(t,ts) -> is_ground t && (List.for_all is_ground ts)
-    | Susp _ -> failwith "Call deep_norm before is_ground"
-    | Ptr _ -> failwith "Ptr found on observed term"
-
-let rec copy term =
-  match observe term with
-    | Var {name=name;ts=ts;tag=Constant} -> const name ts
-    | Var _ -> failwith "Check is_ground before copy"
-    | DB i -> db i
-    | Lam(n,t) -> lambda n (copy t)
-    | App(t,ts) -> app (copy t) (List.map copy ts)
-    | Susp _ -> failwith "Call deep_norm before copy"
-    | Ptr _ -> failwith "Ptr found on observed term"
