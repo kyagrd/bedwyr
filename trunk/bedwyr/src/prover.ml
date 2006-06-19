@@ -62,16 +62,15 @@ let raise_term ~local x =
 
 let disprovable_stack : (bool ref) Stack.t = Stack.create ()
 
-let clear_stack_until d =
-  let rec aux () =
-    let disprovable = Stack.top disprovable_stack in
-      if disprovable != d then begin
-        disprovable := false ;
-        ignore (Stack.pop disprovable_stack) ;
-        aux ()
-      end
-  in
-    aux ()
+exception Found
+let mark_not_disprovable_until d =
+  try
+    Stack.iter (fun disprovable ->
+      if disprovable == d
+      then raise Found
+      else disprovable := false)
+      disprovable_stack
+  with Found -> ()
   
 (* Attemps to prove that the goal [(nabla x_1..x_local . g)(S)] by
  * destructively instantiating it,
@@ -109,8 +108,8 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
           if kind = System.CoInductive then
             success failure
           else begin
-            if !disprovable then clear_stack_until disprovable ;
-            failure ()
+              mark_not_disprovable_until disprovable ;
+              failure ()
           end
       | _ ->
           (* This handles the cases where nothing is in the table,
@@ -120,10 +119,8 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
           let status = ref (Table.Working disprovable) in
           let table_update_success k =
             status := Table.Proven ;
-            if !disprovable then begin
-              ignore (Stack.pop disprovable_stack) ;
-              disprovable := false
-            end ;
+            ignore (Stack.pop disprovable_stack) ;
+            disprovable := false ;
             (* TODO check that optimization: since we know that there is at most
              * one success, we ignore the continuation [k] and directly jump
              * to the [failure] continuation. It _seems_ OK regarding the
@@ -137,9 +134,9 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
                   (* This is just backtracking, don't worry. *)
                   ()
               | Table.Working _ ->
+                  ignore (Stack.pop disprovable_stack) ;
                   if !disprovable then begin
                     status := Table.Disproven ;
-                    ignore (Stack.pop disprovable_stack) ;
                     disprovable := false ;
                   end else
                     status := Table.Unset

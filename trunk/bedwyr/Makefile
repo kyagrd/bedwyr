@@ -5,7 +5,7 @@ default:
 XPL = examples/3bits.def \
       examples/lambda.def examples/pi.def \
       examples/graph-alt.def examples/tictactoe.def \
-      examples/minmax.def examples/peterson.def examples/seq.def
+      examples/minmax.def examples/seq.def
 test:
 	@echo Testing the core LLambda library
 	make -C src test
