@@ -271,3 +271,138 @@ let rec find bindings index terms =
 
 let find index terms =
   try Some (find [] index (List.map Norm.hnorm terms)) with _ -> None
+
+(* == FOLD ================================================================== *)
+
+(* We use some kind of multi-locations zippers *)
+
+module type MZ_t =
+sig
+  type t
+  val empty : t
+  val refine : t -> pattern list -> t
+  val zip : Term.term array -> t -> Term.term list
+end
+
+module MZ : MZ_t =
+struct
+
+  type item =
+    | ZDB of int  | ZCst of Term.id | ZVar of int
+    | ZLam of int | ZApp of int
+    | ZHole
+
+  type t = item list list
+
+  let arity = function
+    | ZDB _ | ZCst _ | ZVar _ -> 0
+    | ZHole | ZLam _ -> 1
+    | ZApp n -> n
+
+  let arity = function
+    | [] -> assert false
+    | row::_ -> List.fold_left (+) 0 (List.map arity row)
+
+  let empty = []
+
+  let compile_step pats =
+    let row,subpats =
+      List.fold_left
+        (fun (row,subpats) -> function
+           | DB i  ->  (ZDB i)::row, subpats
+           | Cst c -> (ZCst c)::row, subpats
+           | Var i -> (ZVar i)::row, subpats
+           | App (n,l) -> (ZApp n)::row, List.rev_append l subpats
+           | Lam (n,p) -> (ZLam n)::row, p::subpats
+           | Hole -> ZHole::row, Hole::subpats)
+        ([],[])
+        pats
+    in
+      List.rev row,
+      List.rev subpats
+
+  let rec refine acc patterns =
+    if List.for_all ((=) Hole) patterns then acc else
+      let row,sub = compile_step patterns in
+        refine (row::acc) sub
+
+  let split_at_nth l n =
+    let rec aux before l n =
+      if n = 0 then List.rev before, l else
+        match l with
+          | h::l -> aux (h::before) l (n-1)
+          | _ -> assert false
+    in aux [] l n
+
+  let zip table mz =
+    let zip_step terms = function
+      | ZDB i  -> Term.db i, terms
+      | ZCst c -> Term.const c 0, terms
+      | ZVar i -> table.(i), terms
+      | ZApp n ->
+          begin match split_at_nth terms n with
+            | (h::tl),terms ->
+                Term.app h tl, terms
+            | _ -> assert false
+          end
+      | ZLam n ->
+          begin match terms with
+            | h::terms -> Term.lambda n h, terms
+            | _ -> assert false
+          end
+      | ZHole ->
+          begin match terms with
+            | h::terms -> h, terms
+            | _ -> assert false
+          end
+    in
+    let rec zip terms row =
+      let out,terms =
+        List.fold_left
+          (fun (out,terms) item ->
+             let t,terms = zip_step terms item in
+               t::out,terms)
+          ([],terms)
+          row
+      in
+        assert (terms = []) ;
+        List.rev out
+    in
+      List.fold_left zip [] mz
+
+end
+
+let iter index f =
+  let rec iter_children mz = function
+    | Leaf map ->
+        ConstraintsMap.iter
+          (fun key v ->
+             let table = Array.make (Array.length key) (Term.db 0) in
+             let l = ref [] in
+               for i = 0 to Array.length key - 1 do
+                 table.(i) <-
+                   if key.(i) = i then
+                     Term.fresh 0
+                   else
+                     table.(key.(i)) ;
+                 if key.(i) = i then
+                   l := table.(i) :: !l
+               done ;
+               let head = Term.fresh 0 in
+               let t = Term.app head (MZ.zip table mz) in
+               let l = List.rev !l in
+               let t =
+                 List.fold_left
+                   (fun t v -> Term.abstract_var v t)
+                   t
+                   l
+               in
+                 f (Term.abstract_var head t) v)
+          map
+    | Refine i -> iter_index mz i
+
+  and iter_node mz (patterns,children) =
+    iter_children (MZ.refine mz patterns) children
+  and iter_index mz = List.iter (iter_node mz) in
+
+    iter_index MZ.empty index
