@@ -244,5 +244,31 @@ notest 0 := weak_bisim (nu u\ nu d\ (par (nat (s zz) d)
                                          (add u d t))))
                        (nat (s zz) t).
 
+% Church natural numbers as encoded in the MWB examples
+agent (nul L) (in L w\ in w n\ in w z\ nu i\ out z i (nul L)).
+agent (un L)   (in L w\ in w n\ in w z\ nu i\ out n i (nu i\ out z i (un L))).
+agent (deux L)
+      (in L w\ in w n\ in w z\ nu i\ out n i (nu i\ out z i (deux L))).
+
+agent (ch_succ X Z Y W) (nu i\ out Y i (ch_copy X Z Y W)).
+agent (ch_copy X Z Y W) (plus (in X i\ ch_succ X Z Y W)
+                              (in Z i\ nu i\ out W i z)).
+agent (ch_add X1 Z1 X2 Z2 Y W)
+      (plus (in X1 i\ nu i\ out y i (ch_add X1 Z1 X2 Z2 Y W))
+            (in Z1 i\ ch_copy X2 Z2 Y W)).
+
+ch_test 0 :=
+  weak_bisim
+    (deux x z)
+    (nu x1\ nu x2\ nu z1\ nu z2\
+      par (un x1 z2) (par (un x2 z2) (ch_add x1 z1 x2 z2 x z))).
+ch_test 1 :=
+  weak_bisim
+    (deux x z)
+    (nu x1\ nu x2\ nu z1\ nu z2\
+      par (nul x1 z2) (par (deux x2 z2) (ch_add x1 z1 x2 z2 x z))).
+
 test :=
-  print "Running tests...", stest 2, natest 0, natest 1, print "All done.".
+  print "Running tests...",
+  stest 2, natest 0, natest 1, ch_test 0, ch_test 1,
+  print "All done.".
