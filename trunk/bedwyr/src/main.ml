@@ -48,7 +48,7 @@ let rec process ?(interactive=false) parse lexbuf =
         Format.printf "Not LLambda unification encountered: %a\n%!"
           Pprint.pp_term t
     | Invalid_command ->
-        Format.printf "Invalid command!\n%!"
+        Format.printf "Invalid command, or wrong arity!\n%!"
     | e when e <> Failure "eof" ->
         Format.printf "Unknown error: %s\n%!" (Printexc.to_string e)
   done with
