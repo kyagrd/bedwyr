@@ -15,5 +15,10 @@ test:
 	  time src/bedwyr $$i -e "test, exit." ; \
 	done
 
+.PHONY: doc
+doc:
+	make -C doc
+
 clean:
 	make -C src clean
+	make -C doc clean
