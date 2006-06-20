@@ -1,0 +1,210 @@
+\documentclass{article}
+
+\usepackage{url}
+
+\title{{\Huge Bedwyr} \\ User Guide}
+\author{David Baelde, Andrew Gacek, Dale Miller, Gopalan Nadathur}
+
+\begin{document}
+\maketitle
+
+\tableofcontents
+
+\section{Introduction}
+
+In the Section \ref{sec:install} we install Bedwyr as distributed
+in tarballs or from the SVN.
+In Section \ref{sec:interface} we describe the way the user interacts with 
+Bedwyr, the command-line, the prompt and the syntax.
+In Section \ref{sec:howto} the user should finally understand the main concepts 
+involved in order to use Bedwyr efficiently.
+
+% ============================================================================
+\newpage
+\section{Get Bedwyr}
+\label{sec:install}
+
+You can get Bedwyr from Slimmer's INRIA Gforge project page:
+\url{http://gforge.inria.fr/projects/slimmer}.
+There you can download tarballs or get the development version using SVN
+| instructions are provided on the project page.
+
+\subsection{Distribution layout}
+
+The Bedwyr distribution is organized as follows:
+
+\begin{tabular}{rl}
+  \texttt{/src}      & Source code \\
+  \texttt{/doc}      &  Documentation | you're reading it \\
+  \texttt{/examples} &  Examples | reading them helps
+\end{tabular}
+
+\subsection{Build}
+
+Bedwyr's only dependency is the OCaml compiler suite.
+Then, the procedure is quite simple.
+
+\begin{verbatim}
+# ./configure
+# make
+\end{verbatim}
+
+You'll get the bedwyr executable in \texttt{src/bedwyr}.
+
+By default, Bedwyr is built using the nativecode compiler \texttt{ocamlopt},
+since it is much faster. If you don't have it or don't want it (e.g.
+for easier debugging) use \texttt{./configure --disable-nativecode}.
+
+\subsection{Test}
+
+\begin{verbatim}
+Testing the core library:
+# make -C src test
+More tests, including examples in Bedwyr:
+# make test
+\end{verbatim}
+
+% ============================================================================
+\newpage
+\section{User interface}
+\label{sec:interface}
+
+\subsection{Syntax}
+
+Bedwyr uses HOAS (Higher-Order Abstract Syntax), which means that formulas
+of the Linc logic and of the object logics are represented using 
+$\lambda$-terms. The term normalization is implicit, the equality is the 
+equality of $\lambda$-terms, notable handling implicitly $\alpha$-equivalence.
+
+The abstraction over \verb.x. in \verb.term. is denoted by \verb.x\term. | 
+which is read as $\lambda x. term$. On top of that we build 
+formulas: e.g. we write \verb.pi x\ x=x.
+(that is $pi\;(\lambda{}x.(=\;x\;x))$)
+to represent $\forall x. x=x$.
+
+Formulas are formed as follows:
+\[\begin{array}{rclp{5cm}}
+form &::=& form \texttt{,}  form & conjunction \\
+     & | & form \texttt{;}  form & disjunction \\
+     & | & form \texttt{=>} form & implication \\
+     & | & \verb.pi x\.    form  & universal quantification over $x$ \\
+     & | & \verb.sigma x\. form  & existential quantification over $x$ \\
+     & | & \verb.nabla x\. form  & generic quantification over $x$ \\
+     & | & atomic & definition \\
+     & | & term \verb.=. term & equality \\
+term &::=& id & identifiers are non-empty sequences of \verb.[A-Za-z0-9/_']. \\
+     & | & term \; term+ & application \\
+     & | & id \verb.\. term & abstraction \\
+     & | & term \; infix \; term & infix operators are
+             \verb.+., \verb.-., \verb.*., \verb.->. and \verb.<-.. \\
+     & | & \verb.(. term \verb.). & \\
+atomic &::=& id \; term* & a possibly empty application with a constant head \\
+\end{array}\]
+
+\subsection{Running Bedwyr}
+
+Bedwyr has two modes: one for extending definitions and one for querying.
+Definitions should be put in a file, as a set of clauses.
+\[ clause ::= atomic \;\verb.:=.\; term \verb|.| \]
+Such files are usually named with a \verb|.def| extension, you can find several
+in the \verb.examples. directory of the Bedwyr distribution.
+
+Queries are then asked against a given set of definitions.
+Any well-formed formula is a query.
+
+In queries, variables starting with an uppercase character (\verb.A-Z_.)
+are implicitely quantified existentially, and their instantiations in solutions
+are displayed.
+
+In definitions, uppercase variables are implicitely universally quantified.
+
+You can run Bedwyr in interactive mode by simply calling \texttt{src/bedwyr}.
+You'll then get the Bedwyr prompt. In the following example we load a set of 
+definitions and check a theorem about it: $\lambda x.x\;x$ has no simple type.
+
+\begin{verbatim}
+dbaelde@poum bedwyr $ src/bedwyr
+[...welcome message...]
+?= #include "examples/lambda.def".
+?= (sigma T\ wt nil (abs x\ app x x) T) => false.
++ 1ms
+Yes.
+More [y] ?
++ 0ms
+No more solutions.
+?= pi x\ X x = x x.
++ 0ms
+Solution found:
+ X = (x1\x1 x1)
+More [y] ?
++ 0ms
+No more solutions.
+\end{verbatim}
+
+A simpler way to load definition files is to pass them directly on the
+command-line (call \verb|src/bedwyr examples/lambda.def|).
+Other options are detailed in \verb.src/bedwyr --help..
+
+% ============================================================================
+\newpage
+\section{How to use Bedwyr ?}
+\label{sec:howto}
+
+A better undestanding of the tool is probably needed to get your work done.
+
+\subsection{Proof-search within Level 0/1}
+
+Bedwyr is a proof-search engine for the Level 0/1 fragment of the Linc logic.
+Roughly, the Level 0/1 fragment requires that the formulas on the left of
+implications do not contain implications and universal quantifications.
+It allows the proof-search to be simple and (more) efficient,
+since the formulas on the left can be immediately eliminated.
+
+To prove an implication $A\Rightarrow B$,
+Bedwyr enumerates all possible solutions $\theta_i$ for $A$,
+and then tries to prove $B\theta_1\wedge\dots\wedge B\theta_N$.
+In particular when $A$ has no solution, the formula is true.
+
+Two runtime errors can occur:
+when the prover encounters an unification which isn't a higher-order pattern;
+when a logic variable appears on the left of an implication.
+
+Examples will help to understand the second one:
+\begin{verbatim}
+?= X=1 => X=1.
+Unknown error: Failure("logic variable on the left")
+?= X=1, pi x\ x = X => x = X.
++ 0ms
+Solution found:
+ X = 1
+More [y] ?
++ 0ms
+No more solutions.
+\end{verbatim}
+The first query requires radically different tools than those we use |
+namely, disunification. The query actually has infinitely many solutions,
+any term other than $1$ fits $X$.
+In the second case, it works, since \verb.X. is instantiated at the time the
+implication is processed.
+
+\subsection{Tabling}
+
+Until now, all definitions (inductive, coinductive or non-recursive)
+are treated the same way, loops can occur in the proof-search, and Bedwyr
+won't avoid them. Also, Bedwyr can do the same search several times without
+noticing. To solve that, we use tabling.
+
+Although quite weak, tabling in Bedwyr is a great improvement.
+It is still under work.
+
+To enable tabling for some predicate \texttt{p}, simply use the directive
+\texttt{\#table p.}, in a definition file or from the prompt.
+For tabled definitions, being inductive of coinductive matters.
+You should thus declare it by prepending the \texttt{inductive} or
+\texttt{coinductive} keyword to every clause of the definition.
+
+For now, tabling only applies to goals which do not contain logic variables.
+Then, loops are successes for coinductive definitions,
+and failures for inductive ones.
+
+\end{document}

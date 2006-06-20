@@ -32,9 +32,16 @@ fi
 AC_ARG_ENABLE([nativecode],
    AC_HELP_STRING(
       [--enable-nativecode],
-      [compile liquidsoap in nativecode, i.e. with ocamlopt (disabled)]))
+      [compile bedwyr in nativecode (default)]))
 
-if test "$enable_nativecode" = "yes" ; then
+if test "$enable_nativecode" = "no" ; then
+    cma=cma
+    cmo=cmo
+    cmi=cmi
+    ocamlcflags=""
+    ocamllflags="-linkpkg"
+    OCAMLC="ocamlc"
+else
     cma=cmxa
     cmo=cmx
     cmi=cmi
@@ -42,13 +49,6 @@ if test "$enable_nativecode" = "yes" ; then
     ocamllflags="-linkpkg"
     OCAMLC="ocamlopt"
     OCAMLDEP="$OCAMLDEP -native"
-else
-    cma=cma
-    cmo=cmo
-    cmi=cmi
-    ocamlcflags=""
-    ocamllflags="-linkpkg"
-    OCAMLC="ocamlc"
 fi
 
 AC_SUBST(OCAMLC)
