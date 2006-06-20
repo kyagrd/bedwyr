@@ -13,12 +13,19 @@
   (interactive)
   (switch-to-buffer "*bedwyr*")
   (kill-buffer "*bedwyr*")
+  (prompt-and-save)
   (if cmd
       (setq bedwyr-program cmd)
     (if (not bedwyr-program)
         (setq bedwyr-program
               (read-from-minibuffer "Bedwyr program to run: " "bedwyr"))))
-  (switch-to-buffer (make-comint "bedwyr" bedwyr-program nil (buffer-file-name))))
+  (switch-to-buffer
+   (make-comint "bedwyr" bedwyr-program nil (buffer-file-name))))
+
+(defun prompt-and-save ()
+  (if (buffer-modified-p)
+      (if (y-or-n-p "Save buffer? ")
+          (save-buffer))))
 
 (defvar bedwyr-mode-map
   (let ((map (make-keymap)))
@@ -37,7 +44,6 @@
    (cons (make-regex "pi" "sigma" "nabla") font-lock-keyword-face)
    (cons (make-regex "inductive" "coinductive") font-lock-keyword-face)
    (cons (make-regex "print") font-lock-keyword-face)
-   (cons "\\#table" font-lock-keyword-face)
    (cons "\\#show_table" font-lock-keyword-face)
    (cons "\\<[A-Z][A-Za-z0-9'/]*" font-lock-variable-name-face))
   "Default highlighting for Bedwyr mode")
