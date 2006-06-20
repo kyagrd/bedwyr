@@ -17,6 +17,7 @@ let print head table =
        match !tag with
          | Proven    -> Format.printf " [P] %a\n" Pprint.pp_term t
          | Disproven -> Format.printf " [D] %a\n" Pprint.pp_term t
-         | _     -> () (* Garbage can happen in case of user interrupt *))
+         | Unset     -> ()
+         | Working _ -> assert false)
 
 let reset x = x := Index.empty

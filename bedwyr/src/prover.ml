@@ -60,17 +60,19 @@ let raise_term ~local x =
     let dBs = new_dbs local in
       Term.app x dBs
 
-let disprovable_stack : (bool ref) Stack.t = Stack.create ()
+let disprovable_stack = Stack.create ()
 
 let clear_disprovable () =
   try
-    while true do ignore (Stack.pop disprovable_stack) done
+    while true do
+      let s,_ = Stack.pop disprovable_stack in s := Table.Unset
+    done
   with Stack.Empty -> ()
 
 exception Found
 let mark_not_disprovable_until d =
   try
-    Stack.iter (fun disprovable ->
+    Stack.iter (fun (_,disprovable) ->
       if disprovable == d
       then raise Found
       else disprovable := false)
@@ -153,7 +155,7 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
             failure ()
           in
             Table.add ~allow_eigenvar:(level=One) table args status ;
-            Stack.push disprovable disprovable_stack ;
+            Stack.push (status,disprovable) disprovable_stack ;
             prove ~level ~timestamp ~local
               ~success:table_update_success
               ~failure:table_update_failure
