@@ -10,9 +10,9 @@ test:
 	@echo Testing the core LLambda library
 	make -C src test
 	@echo Testing bedwyr on examples
-	-@for i in $(XPL) ; do \
-	  echo Running $$i... ; \
-	  time src/bedwyr $$i -e "test, exit." ; \
+	@time for i in $(XPL) ; do \
+	  echo "==== Running $$i ====" ; \
+	  src/bedwyr $$i -e "test, exit." ; \
 	done
 
 .PHONY: doc

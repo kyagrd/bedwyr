@@ -51,6 +51,7 @@ type input =
 (** A simple debug flag, which can be set dynamically from the logic program. *)
 
 let debug = ref false
+let time  = ref false
 
 (** Definitions *)
 
@@ -59,7 +60,8 @@ exception Undefined of string
 exception Arity_mismatch of string*int
 
 type definition = string * int * Term.term
-let defs : (string,(defkind*Term.term*Table.t option)) Hashtbl.t = Hashtbl.create 100
+let defs : (string,(defkind*Term.term*Table.t option)) Hashtbl.t =
+  Hashtbl.create 100
 
 let add_clause kind head arity body =
   (* Cleanup all tables.
@@ -80,7 +82,9 @@ let add_clause kind head arity body =
                    (Term.app (Term.atom Logic.orc) [b;body]), t
           | _ -> raise (Inconsistent_definition head)
     with
-      | Not_found -> kind, (Term.lambda arity body), None
+      | Not_found ->
+          kind, (Term.lambda arity body),
+          (if kind=Normal then None else Some (Table.create ()))
   in
   let b = Norm.hnorm b in
     Hashtbl.replace defs head (k,b,t) ;
@@ -98,13 +102,6 @@ let get_def ?check_arity head =
               | _ when a=0 -> k,b,t
               | _ -> raise (Arity_mismatch (head,a))
             end
-  with
-    | Not_found -> raise (Undefined head)
-
-let table head =
-  try
-    let k,b,t = Hashtbl.find defs head in
-      Hashtbl.replace defs head (k,b,Some (Table.create ()))
   with
     | Not_found -> raise (Undefined head)
 

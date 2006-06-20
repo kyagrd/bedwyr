@@ -79,7 +79,7 @@ In query mode, just type a term to ask for its verification.
         | _ -> raise Invalid_command
       end
 
-  (* Turn debugging on/off, query state. *)
+  (* Turn debugging on/off. *)
   | "debug",[d] ->
       System.debug :=
         begin match Term.observe d with
@@ -90,11 +90,16 @@ In query mode, just type a term to ask for its verification.
           | _ -> raise Invalid_command
         end
 
-  | "table",[p] ->
-      begin match Term.observe p with
-        | Term.Var {Term.name=name} -> System.table name
-        | _ -> raise Invalid_command
-      end
+  (* Turn timing on/off. *)
+  | "time",[d] ->
+      System.time :=
+        begin match Term.observe d with
+          | Term.Var {Term.name="on"}
+          | Term.Var {Term.name="true"}  -> true
+          | Term.Var {Term.name="off"}
+          | Term.Var {Term.name="false"} -> false
+          | _ -> raise Invalid_command
+        end
 
   | "show_table",[p] ->
       begin match Term.observe p with

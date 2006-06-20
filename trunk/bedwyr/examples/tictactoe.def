@@ -47,10 +47,9 @@ xwins L := pi K\ move L o K => (nowinner K, sigma M\ move K x M, xwins M).
 % notxwins Board
 % True if x does not have a winning strategy for Board, assuming o plays first.
 % It would be nice to use (pi L\ xwins L => false), but xwins is level 1.
-notxwins L := tie L ; winner o L.
-notxwins L := nowinner L, sigma K\ move L o K,
+coinductive notxwins L := tie L ; winner o L.
+coinductive notxwins L := nowinner L, sigma K\ move L o K,
                 (tie K ; winner o K ; pi M\ move K x M => notxwins M).
-#table notxwins.
 
 thm 1 := convert Board (board (row x x x) (row b b b) (row b b b)),
          xwins Board.

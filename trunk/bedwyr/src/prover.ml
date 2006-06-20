@@ -350,7 +350,8 @@ let toplevel_prove g =
     let t0 = ref (Unix.gettimeofday ()) in
       (fun () -> t0 := Unix.gettimeofday ()),
       (fun () ->
-         printf "+ %.0fms\n" (1000. *. (Unix.gettimeofday () -. !t0)))
+         if !System.time then
+           printf "+ %.0fms\n" (1000. *. (Unix.gettimeofday () -. !t0)))
   in
   let show k =
     time () ;

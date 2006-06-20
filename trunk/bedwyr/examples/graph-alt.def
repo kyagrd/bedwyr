@@ -33,9 +33,8 @@ path G X Y := arrow G X Z, path G Z Y.
 
 edge G (edge X Y) := arrow G (arrow X Y) ; arrow G (arrow Y X).
 
-edgepath G X X := node G X.
-edgepath G X Y := edge G (edge X Z), edgepath G Z Y.
-#table edgepath.
+inductive edgepath G X X := node G X.
+inductive edgepath G X Y := edge G (edge X Z), edgepath G Z Y.
 
 % Notions of connectedness
 

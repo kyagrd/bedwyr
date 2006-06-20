@@ -52,9 +52,8 @@ arrow (state P0  4 A0 A1 1) (state P0  5 A0 A1 1).
 arrow (state P0  4 A0 A1 0) (state P0  3 A0 A1 0).
 arrow (state P0  5 A0 A1 T) (state P0  1 A0  0 T).
 
-path X X.
-path X Y := arrow X Z, path Z Y.
-#table path.
+inductive path X X.
+inductive path X Y := arrow X Z, path Z Y.
 
 initial (state 1 1 0 0 0).
 bad (state 5 5 A0 A1 T) := boolean A0, boolean A1, boolean T.

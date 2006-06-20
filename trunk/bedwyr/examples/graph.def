@@ -30,9 +30,8 @@ path X Y := arrow X Z, path Z Y.
 
 edge X Y := arrow X Y ; arrow Y X.
 
-edgepath X Y := edge X Y.
-edgepath X Y := edge X Z, edgepath Z Y.
-#table edgepath.
+inductive edgepath X Y := edge X Y.
+inductive edgepath X Y := edge X Z, edgepath Z Y.
 
 % Queries to try
 
