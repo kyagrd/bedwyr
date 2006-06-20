@@ -210,7 +210,7 @@ let logic_vars ts =
         if v.tag = Logic && not (List.mem t l) then (t::l) else l
     | App (h,ts) -> List.fold_left fv (fv l h) ts
     | Lam (n,t') -> fv l t'
-    | Var _ | DB _ -> l
+    | DB _ -> l
     | Susp _ -> assert false
     | Ptr _ -> assert false
   in

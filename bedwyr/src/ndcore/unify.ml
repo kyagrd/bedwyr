@@ -483,6 +483,8 @@ and unify_const_term cst t2 = if Term.eq cst t2 then () else
     | Term.Lam (n,t2) ->
         let a1 = lift_args [] n in
           unify_app_term cst a1 (Term.app cst a1) t2
+    | Term.Var {Term.tag=v} when (not (variable v)) && (not (constant v)) ->
+        failwith "logic variable on the left"
     | _ -> raise (ConstClash (cst,t2))
 
 (* Unifying the bound variable [t1] with [t2].
@@ -554,7 +556,7 @@ and unify t1 t2 = match Term.observe t1,Term.observe t2 with
         unify (Term.lambda (n1-n2) t1) t2
       else
         unify t1 (Term.lambda (n2-n1) t2)
-  | _ -> assert false
+  | _ -> failwith "logic variable on the left"
 
 let pattern_unify t1 t2 = unify (Norm.hnorm t1) (Norm.hnorm t2)
 
