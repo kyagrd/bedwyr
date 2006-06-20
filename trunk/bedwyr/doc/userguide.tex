@@ -64,6 +64,22 @@ More tests, including examples in Bedwyr:
 # make test
 \end{verbatim}
 
+\subsection{Emacs mode}
+
+Assuming Bedwyr sits in your \verb.~/bedwyr. directory,
+you can use the Emacs mode for Bedwyr by adding these two lines to your
+\verb,~/.emacs, file:
+\begin{verbatim}
+(load "~/bedwyr/contrib/bedwyr.el")
+(setq bedwyr-program "~/bedwyr/src/bedwyr")
+;; Of course you can change both locations to wherever you want.
+\end{verbatim}
+
+Then you should be able to load any \verb:.def: file
+and have syntax highlighting and some rough auto-indenting.
+Also if you do \verb.C-c C-c. it will start Bedwyr
+and load the current file you are working on.
+
 % ============================================================================
 \newpage
 \section{User interface}
@@ -197,11 +213,11 @@ noticing. To solve that, we use tabling.
 Although quite weak, tabling in Bedwyr is a great improvement.
 It is still under work.
 
-To enable tabling for some predicate \texttt{p}, simply use the directive
-\texttt{\#table p.}, in a definition file or from the prompt.
-For tabled definitions, being inductive of coinductive matters.
-You should thus declare it by prepending the \texttt{inductive} or
-\texttt{coinductive} keyword to every clause of the definition.
+For tabled definitions, being inductive of coinductive matters, and this 
+matters only for tabled definitions.
+Tabling is thus enabled by prepending the \texttt{inductive} or
+\texttt{coinductive} keyword to \emph{every} clause of the definition |
+even if the definition is non-recursive.
 
 For now, tabling only applies to goals which do not contain logic variables.
 Then, loops are successes for coinductive definitions,
