@@ -65,14 +65,14 @@ one (bang P) tau (par (nu y\ par (M y) (N y)) (bang P)) :=
      
 % Simulation and bisimulation
 
-sim P Q := 
+coinductive sim P Q :=
 	(pi A\ pi P1\ one P A P1 => sigma Q1\ one Q A Q1 & sim P1 Q1) &
 	(pi X\ pi M\ onep P (dn X) M => sigma N\ onep Q (dn X) N & 
 					pi w\ sim (M w) (N w)) &
 	(pi X\ pi M\ onep P (up X) M => sigma N\ onep Q (up X) N &
 					nabla w\ sim (M w) (N w)).
 
-bisim P Q :=
+coinductive bisim P Q :=
 	(pi A\ pi P1\ one P A P1 => sigma Q1\ one Q A Q1 & bisim P1 Q1) &
 	(pi X\ pi M\ onep P (dn X) M => sigma N\ onep Q (dn X) N & 
 					pi w\ bisim (M w) (N w)) &
@@ -120,7 +120,7 @@ weak_onep Q (up X) P :=
 weak_onep Q (dn X) P :=
   taus Q QQ, onep QQ (dn X) PP, nabla x\ taus (PP x) (P x). % pi -> not llam
 
-weak_sim P Q :=
+coinductive weak_sim P Q :=
   pi A\ pi X\ pi M\
     (one  P A M      => sigma N\ weak_one  Q A N,
                                  weak_sim M N),
@@ -147,7 +147,6 @@ coinductive weak_bisim P Q :=
 
 	(pi X\ pi N\ onep Q (up X) N => sigma M\ weak_onep P (up X) M &
 					nabla w\ weak_bisim (M w) (N w)).
-#table weak_bisim.
 
 % Computing weak traces (for debugging and efficiency evaluation)
 
@@ -270,5 +269,9 @@ ch_test 1 :=
 
 test :=
   print "Running tests...",
-  stest 2, natest 0, natest 1, ch_test 0, ch_test 1,
-  print "All done.".
+  print (running weak_sim test), stest 2,
+  print (running weak_bisim tests on natural number encodings),
+  natest 0, natest 1,
+  print (on another natural number encodings),
+  ch_test 0, ch_test 1,
+  print "testing complete".
