@@ -345,7 +345,7 @@ let toplevel_prove g =
   let show k =
     time () ;
     found := true ;
-    if vars = [] then printf "True.\n" else
+    if vars = [] then printf "Yes.\n" else
       printf "Solution found:\n" ;
     List.iter
       (fun (o,t) -> printf " %s = %a\n" o Pprint.pp_term t)
@@ -365,5 +365,5 @@ let toplevel_prove g =
       ~failure:(fun () ->
                   time () ;
                   if !found then printf "No more solutions.\n"
-                  else printf "Wrong.\n" ;
+                  else printf "No.\n" ;
                   assert (s0 = Term.save_state ()))
