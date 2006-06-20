@@ -112,9 +112,7 @@ let show_table head =
   try
     let _,_,table = Hashtbl.find defs head in
       match table with
-        | Some table ->
-            Printf.printf "Table for %s contains:\n" head ;
-            Table.print table
+        | Some table -> Table.print head table
         | None -> failwith ("No table defined for " ^ head)
   with
     | Not_found -> raise (Undefined head)
@@ -132,4 +130,4 @@ exception Interrupt
 let _ =
   Sys.set_signal Sys.sigint (Sys.Signal_handle (fun _ -> interrupt := true))
 let check_interrupt () =
-  if !interrupt then ( interrupt := false ; raise Interrupt )
+  if !interrupt then ( interrupt := false ; true ) else false

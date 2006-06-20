@@ -62,6 +62,11 @@ let raise_term ~local x =
 
 let disprovable_stack : (bool ref) Stack.t = Stack.create ()
 
+let clear_disprovable () =
+  try
+    while true do ignore (Stack.pop disprovable_stack) done
+  with Stack.Empty -> ()
+
 exception Found
 let mark_not_disprovable_until d =
   try
@@ -80,7 +85,10 @@ let mark_not_disprovable_until d =
  * [timestamp] must be the oldest timestamp in the goal. *)
 let rec prove ~success ~failure ~level ~timestamp ~local g =
 
-  System.check_interrupt () ;
+  if System.check_interrupt () then begin
+    clear_disprovable () ;
+    raise System.Interrupt
+  end ;
 
   let state = Term.save_state () in
   let failure () =
