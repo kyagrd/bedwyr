@@ -32,6 +32,7 @@ let rec process ?(interactive=false) parse lexbuf =
     | e when not interactive -> raise e
     | Failure "lexing: empty token" ->
         Format.printf "Lexing error: Watch your fingers.\n%!" ;
+        Lexing.flush_input lexbuf
     | Parsing.Parse_error ->
         Format.printf "Syntax error!\n%!"
     | System.Undefined s ->
