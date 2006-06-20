@@ -18,3 +18,5 @@ let print table =
               | Unset     -> "Unset    "
               | Working b -> assert false)
            Pprint.pp_term t)
+
+let reset x = x := Index.empty

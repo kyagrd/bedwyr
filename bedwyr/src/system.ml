@@ -62,6 +62,15 @@ type definition = string * int * Term.term
 let defs : (string,(defkind*Term.term*Table.t option)) Hashtbl.t = Hashtbl.create 100
 
 let add_clause kind head arity body =
+  (* Cleanup all tables.
+   * Cleaning only this definition's table is _not_ enough, since other
+   * definitions may rely on it. *)
+  Hashtbl.iter
+    (fun k v ->
+       match v with
+         | _,_,Some t -> Table.reset t
+         | _ -> ())
+    defs ;
   let k,b,t =
     try
       let k,b,t = Hashtbl.find defs head in
