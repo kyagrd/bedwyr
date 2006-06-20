@@ -1,1 +1,93 @@
-TODO
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+  <head>
+    <title>Bedwyr</title>
+    <link href="../style.css" rel="stylesheet" type="text/css"/>
+  </head>
+
+  <body>
+
+    <div id="header">
+      <h1 class="title">Bedwyr</h1>
+      <h2 class="subtitle">
+        An automated theorem prover for the Level 0/1 fragment of the Linc 
+        logic.
+      </h2>
+    </div>
+
+
+    <div class="section">
+      <h2 class="title">
+        Bedwyr
+      </h2>
+
+      <p class="body">
+      Bedwyr is a software system currently under development between two
+      teams at INRIA (LIX, Ecole Polytechnique) and the University of
+      Minnesota.  This system, currently written in OCaml, is a direct
+      implementation of two recent advances in the theory of proof search.
+      <ol>
+        <li>
+        Finite success and finite failure can be modelled as a negation
+        within a proof theory setting allows a proof search system to
+        capture both aspects of may and must behavior in operational
+        semantics.
+        For more details, see
+        Alwen Tiu and Gopalan Nadathur and Dale Miller, <em>Mixing Finite
+          Success and Finite Failure in an Automated Prover</em> (<a
+  href="http://www.lix.polytechnique.fr/Labo/Dale.Miller/papers/eshol05sub.pdf"
+        >pdf</a>).
+        </li><li>
+        Higher-order abstract syntax is directly supported using
+        term-level lambda-binders, the nabla-quantifier, higher-order
+        pattern unification, and explicit substitutions.  These features
+        allow reasoning directly on expressions containing bound
+        variables.
+        </li>
+      </ol>
+      Applications that we have explored range from computing symbolic
+      bisimulation and modal logic checking for the pi-calculus, computing
+      winning strategies for games, and various model checking problems.
+      </p>
+    </div>
+
+    <div class="section">
+      <h2 class="title">
+        Source code
+      </h2>
+      <p class="body">
+      Our SVN repository on INRIA's Gforge is <a 
+        href="http://gforge.inria.fr/scm/?group_id=367">publicly available</a>.
+      You can <a 
+        href=
+"http://gforge.inria.fr/plugins/scmsvn/viewcvs.php/trunk/bedwyr/?root=slimmer"
+      >browse it</a>, especially the <a href=
+"http://gforge.inria.fr/plugins/scmsvn/viewcvs.php/trunk/bedwyr/examples/?root=slimmer"
+      >examples</a>.
+    <p class="body">
+    <code>bedwyr-0.1beta2</code> is coming soon ! (<code>bedwyr-0.1beta</code>
+    was informal but should end up here too..)</p>
+    </div>
+
+    <div class="section">
+      <h2 class="title">
+        People
+      </h2>
+      <p class="body">
+      Bedwyr is developed by
+      David Baelde &amp; Dale Miller (INRIA &amp; LIX/Ecole Polytechnique)
+      Andrew Gacek &amp; Gopalan Nadathur (University of Minneapolis)
+      Alwen Tiu (Australian National University and NICTA).
+      </p>
+      <p class="body">
+      The team thanks:
+      <ul>
+        <li>Brigitte Pientka, for her advices regarding tabling;</li>
+        <li>Axelle Ziegler, who started the translation from SML to OCaml.</li>
+      </ul>
+      </p>
+    </div>
+
+  </body>
+</html>
