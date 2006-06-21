@@ -67,11 +67,14 @@ let rec process ?(interactive=false) parse lexbuf =
   | Failure "eof" -> ()
 
 and input_from_file file =
+  let cwd = Sys.getcwd () in
   let lexbuf = Lexing.from_channel (open_in file) in
+    Sys.chdir (Filename.dirname file) ;
     lexbuf.Lexing.lex_curr_p <- {
         lexbuf.Lexing.lex_curr_p with
           Lexing.pos_fname = file } ;
-    input_defs lexbuf
+    input_defs lexbuf ;
+    Sys.chdir cwd
 
 and input_defs lexbuf = process Parser.input_def lexbuf
 and input_queries ?(interactive=false) lexbuf =
