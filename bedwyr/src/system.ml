@@ -77,9 +77,14 @@ let add_clause kind head arity body =
     try
       let k,b,t = Hashtbl.find defs head in
         match Term.observe b with
-          | Term.Lam (a,b) when a=arity && k=kind ->
-              k, Term.lambda a
-                   (Term.app (Term.atom Logic.orc) [b;body]), t
+          | Term.Lam (a,b) ->
+              if a=arity && k=kind then
+                k, Term.lambda a
+                     (Term.app (Term.atom Logic.orc) [b;body]), t
+              else
+                raise (Inconsistent_definition head)
+          | _ when arity=0 && k=kind ->
+              k, Term.app (Term.atom Logic.orc) [b;body], t
           | _ -> raise (Inconsistent_definition head)
     with
       | Not_found ->

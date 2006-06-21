@@ -12,8 +12,14 @@ For background on the system, see "Mixing Finite Success and Finite Failure
 in an Automated Prover" (Alwen Tiu and Gopalan Nadathur and Dale Miller):
 http://www.lix.polytechnique.fr/Labo/Dale.Miller/papers/eshol05sub.pdf
 
+Building the system:
+# ./configure
+# make
+# src/bedwyr
+
 Type "#help." in Bedwyr for a little help.
-See userguide.(ps|pdf) for more information on how to use it.
+See doc/userguide.(ps.gz|pdf) for more information on how to use it -- you need
+to run "make doc" to build them.
 
 Structure of the distribution:
 /examples

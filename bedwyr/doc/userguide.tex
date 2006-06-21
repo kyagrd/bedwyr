@@ -10,14 +10,14 @@
 
 \tableofcontents
 
-\section{Introduction}
+\section*{Layout}
 
-In the Section \ref{sec:install} we install Bedwyr as distributed
+In Section \ref{sec:install} we install Bedwyr as distributed
 in tarballs or from the SVN.
 In Section \ref{sec:interface} we describe the way the user interacts with 
 Bedwyr, the command-line, the prompt and the syntax.
-In Section \ref{sec:howto} the user should finally understand the main concepts 
-involved in order to use Bedwyr efficiently.
+In Section \ref{sec:howto} we try to give the user an understanding
+of the main concepts in order to use Bedwyr efficiently.
 
 % ============================================================================
 \newpage
@@ -51,10 +51,6 @@ Then, the procedure is quite simple.
 
 You'll get the bedwyr executable in \texttt{src/bedwyr}.
 
-By default, Bedwyr is built using the nativecode compiler \texttt{ocamlopt},
-since it is much faster. If you don't have it or don't want it (e.g.
-for easier debugging) use \texttt{./configure --disable-nativecode}.
-
 \subsection{Test}
 
 \begin{verbatim}
@@ -63,6 +59,17 @@ Testing the core library:
 More tests, including examples in Bedwyr:
 # make test
 \end{verbatim}
+
+\subsection{Line edition}
+
+By default, Bedwyr is built using the nativecode compiler \texttt{ocamlopt},
+since it is much faster. If you don't have it or don't want it (e.g.
+for easier debugging) use \texttt{./configure --disable-nativecode}.
+
+Bedwyr has no line edition facilities at all. We recommend using \texttt{ledit}
+for a nicer experience. Get it (from your usual package manager of at
+(\url{ftp://ftp.inria.fr/INRIA/cristal/Daniel.de_Rauglaudre/Tools})
+and simply run \texttt{ledit src/bedwyr}.
 
 \subsection{Emacs mode}
 
@@ -210,7 +217,7 @@ are treated the same way, loops can occur in the proof-search, and Bedwyr
 won't avoid them. Also, Bedwyr can do the same search several times without
 noticing. To solve that, we use tabling.
 
-Although quite weak, tabling in Bedwyr is a great improvement.
+Although quite weak, tabling in Bedwyr is already a great improvement.
 It is still under work.
 
 For tabled definitions, being inductive of coinductive matters, and this 
