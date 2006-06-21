@@ -23,3 +23,22 @@ doc:
 clean:
 	make -C src clean
 	make -C doc clean
+
+VERSION=0.1beta2
+D=bedwyr-$(VERSION)
+dist:
+	find . -name '*~' -exec rm \{\} \;
+	rm -rf $(D)
+	mkdir $(D)
+	mkdir $(D)/doc
+	mkdir $(D)/examples
+	mkdir $(D)/src
+	mkdir $(D)/src/ndcore
+	cp configure configure.ac install-sh Makefile $(D)
+	cp doc/*.tex doc/Makefile $(D)/doc
+	cp examples/*.def examples/todo.txt $(D)/examples
+	cp src/*.ml* src/Makefile.in $(D)/src
+	cp src/ndcore/*.ml* $(D)/src/ndcore
+	tar cjf $(D).tar.bz2 $(D)
+	tar czf $(D).tar.gz $(D)
+	rm -rf $(D)
