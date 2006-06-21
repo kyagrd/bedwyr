@@ -19,6 +19,16 @@
 
 exception Invalid_command
 
+let position lexbuf =
+  let curr = lexbuf.Lexing.lex_curr_p in
+  let file = curr.Lexing.pos_fname in
+  let line = curr.Lexing.pos_lnum in
+  let char = curr.Lexing.pos_cnum - curr.Lexing.pos_bol in
+    if file = "" then
+      "" (* lexbuf information is rarely accurate at the toplevel *)
+    else
+      Format.sprintf ": file %s, line %d, character %d" file line char
+
 let rec process ?(interactive=false) parse lexbuf =
   try while true do try
     if interactive then Format.printf "?= %!" ;
@@ -29,12 +39,13 @@ let rec process ?(interactive=false) parse lexbuf =
     end ;
     if interactive then flush stdout
   with
-    | e when not interactive -> raise e
-    | Failure "lexing: empty token" ->
-        Format.printf "Lexing error: Watch your fingers.\n%!" ;
-        Lexing.flush_input lexbuf
     | Parsing.Parse_error ->
-        Format.printf "Syntax error!\n%!"
+        Format.printf "Syntax error%s.\n%!" (position lexbuf) ;
+        if not interactive then exit 1;
+    | Failure "lexing: empty token" ->
+        Format.printf "Lexing error%s.\n%!" (position lexbuf) ;
+        if interactive then Lexing.flush_input lexbuf else exit 1
+    | e when not interactive -> raise e
     | System.Undefined s ->
         Format.printf "No definition found for %S !\n%!" s
     | System.Inconsistent_definition s ->
@@ -54,6 +65,13 @@ let rec process ?(interactive=false) parse lexbuf =
         Format.printf "Unknown error: %s\n%!" (Printexc.to_string e)
   done with
   | Failure "eof" -> ()
+
+and input_from_file file =
+  let lexbuf = Lexing.from_channel (open_in file) in
+    lexbuf.Lexing.lex_curr_p <- {
+        lexbuf.Lexing.lex_curr_p with
+          Lexing.pos_fname = file } ;
+    input_defs lexbuf
 
 and input_defs lexbuf = process Parser.input_def lexbuf
 and input_queries ?(interactive=false) lexbuf =
@@ -76,7 +94,7 @@ In query mode, just type a term to ask for its verification.
   (* Include a file *)
   | "include",[f] ->
       begin match Term.observe f with
-        | Term.Var {Term.name=f} -> input_defs (Lexing.from_channel (open_in f))
+        | Term.Var {Term.name=f} -> input_from_file f
         | _ -> raise Invalid_command
       end
 
@@ -120,7 +138,7 @@ let _ =
       "-e", Arg.String (fun s -> input_queries (Lexing.from_string s)),
       "Execute query."
     ]
-    (fun file -> input_defs (Lexing.from_channel (open_in file)))
+    input_from_file
     "Bedwyr prover.
 This software is under GNU Public License.
 Copyright (c) 2005-2006 Slimmer project.
