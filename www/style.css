@@ -5,6 +5,10 @@ body {
     font-size: 11pt;
 }
 
+code {
+    font-size: 10pt;
+}
+
 a {
     color: #339;
     text-decoration: none;
