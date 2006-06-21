@@ -1,0 +1,8 @@
+Implement static analyses: typing, and mode checking (which would allow to
+statically avoid logical variables on the left).
+
+Tail-rec zipper-based indexing, to make it more flexible,
+have get-and-set or be able to use it for definition lookup.
+
+Prove the many little optimizations, especially those related to tabling.
+We avoid redundant successes, call failure instead of k directly.
