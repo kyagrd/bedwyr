@@ -11,4 +11,4 @@ clean:
 %.ps: %.dvi
 	dvips $< -o $@
 %.gz: %
-	gzip $<
+	gzip -f $<
