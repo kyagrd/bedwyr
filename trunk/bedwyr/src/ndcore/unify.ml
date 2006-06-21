@@ -230,7 +230,7 @@ let raise_and_invert ts1 ts2 a1 a2 lev =
     | _ -> assert false
   in
 
-  (** Revelant to the case when [ts1 > ts2]. In this case,
+  (** Relevant to the case when [ts1 > ts2]. In this case,
     * [prune_and_raise args n] prunes those constants and de
     * Bruijn indices not bound by an embedded abstraction that do
     * not appear in [a1] and, in the case of constants, that do not
@@ -483,7 +483,7 @@ and unify_const_term cst t2 = if Term.eq cst t2 then () else
     | Term.Lam (n,t2) ->
         let a1 = lift_args [] n in
           unify_app_term cst a1 (Term.app cst a1) t2
-    | Term.Var {Term.tag=v} when (not (variable v)) && (not (constant v)) ->
+    | Term.Var {tag=t} when not (variable t || constant t) ->
         failwith "logic variable on the left"
     | _ -> raise (ConstClash (cst,t2))
 
@@ -519,7 +519,7 @@ and unify_app_term h1 a1 t1 t2 = match Term.observe h1,Term.observe t2 with
         | Var {tag=tag} when variable tag ->
             let m = List.length a2 in
               Term.bind h2 (makesubst h2 t1 a2 m)
-        | _ -> assert false (* Logical variable on the left ? *)
+        | _ -> assert false (* Logic variable on the left ? *)
       end
   | _, Term.Lam (n,t2) ->
       let h1' = lift h1 n in
@@ -528,6 +528,8 @@ and unify_app_term h1 a1 t1 t2 = match Term.observe h1,Term.observe t2 with
         unify_app_term h1' a1' t1' t2
   | Term.Ptr _, _ | _, Term.Ptr _
   | Term.Susp _, _ | _, Term.Susp _ -> assert false
+  | Term.Var {tag=t}, _ when not (variable t || constant t) ->
+      failwith "logic variable on the left"
   | _ -> raise (ConstClash (h1,t2))
 
 (** The main unification procedure.
