@@ -62,7 +62,10 @@ one (bang P) tau (par (par R T) (bang P)) :=
 one (bang P) tau (par (nu y\ par (M y) (N y)) (bang P)) := 
   sigma X\ onep P (up X) M & onep P (dn X) N.
 
-     
+% Allow agent-style definitions as a controled recursion
+one  P A PP := agent P Body, one  Body A PP.
+onep P A PP := agent P Body, onep Body A PP.
+
 % Simulation and bisimulation
 
 coinductive sim P Q :=
@@ -83,26 +86,6 @@ coinductive bisim P Q :=
 					pi w\ bisim (N w) (M w)) &
 	(pi X\ pi N\ onep Q (up X) N => sigma M\ onep P (up X) M &
 					nabla w\ bisim (N w) (M w)).
-
-% A few example processes -- see the paper for a few checks on them ===========
-
-example 0  (nu x\ match x a (taup z)).
-example 1  (par (in x y\z) (out x a z)).
-example 2  (plus (in x y\out x a) (out x a (in x y\z))).
-example 3  (in x u\ (plus (taup (taup z)) (taup z))).
-example 4  (in x u\ (plus (taup (taup z))
-                    (plus (taup z)
-                          (taup (match u y (taup z)))))).
-example 5  (nu a\ (par (in x y\z) (out x a z))).
-example 6  (nu a\ (plus (in x y\out x a) (out x a (in x y\z)))).
-example 7  (taup z).
-example 8  (nu x\ (par (in x y\z) (out x a z))).
-example 9  (nu x\ out a x z).
-example 10 (par (in x y\ z) (nu y\ out x y z)).
-example 11 (in x u\ nu y\ ((plus (taup (taup z))
-                           (plus (taup z)
-                                 (taup (match u y (taup z))))))).
-example 12 (bang P) := example 1 P.
 
 % Weak bisimulation ===========================================================
 
@@ -148,130 +131,22 @@ coinductive weak_bisim P Q :=
 	(pi X\ pi N\ onep Q (up X) N => sigma M\ weak_onep P (up X) M &
 					nabla w\ weak_bisim (M w) (N w)).
 
-% Computing weak traces (for debugging and efficiency evaluation)
+% A few example processes -- see the paper for a few checks on them ===========
 
-_weak_trace P (do A T) := one P A Q, (A = tau => false),
-                          weak_trace Q T.
-_weak_trace P (do A T) := onep P A Q,
-                          nabla x\ weak_trace (Q x) (T x).
-_weak_trace P nil      := pi A\ pi Q\ (one P A Q ; onep P A Q) => false.
-weak_trace P T         := maxtaus P PP, _weak_trace PP T.
-
-% Remark: maxtaus doesn't deal with interleaving and generate redundancy.
-% TIME/poum: 768ms for the first solution, +1167ms for the second one, etc.
-% Remark: it is SLOW...
-trtest 0 T := weak_trace (par (par (taup z) (taup z))
-                              (par (taup z) (out c c z))) T.
-
-% The following is a kind of simplified inlined version of the (trtest 0)
-% which is already unreasonably long to compute
-% TIME/poum: 770ms for the first solution, 1008ms for the second, etc.
-intest 0 T := P = (par (par (taup z) (taup z))
-                       (par (taup z) (out c c z))),
-              maxtaus P PP, one PP A QQ, maxtaus QQ Q,
-              (pi X\ pi Y\  one Q X Y => false),
-              (pi X\ pi Y\ onep Q X Y => false),
-              (pi X\ pi Y\ (one Q X Y ; onep Q X Y) => false).
-
-% TIME/poum: 1026ms
-trtest 1 T := weak_trace (nat (s zz) c) T.
-
-% TIME/poum: 20.402s
-trtest 2 T :=
-  weak_trace (nu x\ nu y\ par (par (nat (s zz) x) (nat zz y)) (add x y c)) T.
-
-% Remark: it is easy to fall outside llambda for a bad reason:
-% nabla x\ pi h\ one (nu y\ out h z z) (A h) Q.
-% Remove the useless nabla and it works again (TIME/poum=2ms)...
-
-% Natural numbers in pi, using recursive agents -------------------------------
-
-one  P A PP := agent P Body, one  Body A PP.
-onep P A PP := agent P Body, onep Body A PP.
-
-agent (zero C)    (in C s\ in C n\ out n nil z).
-agent (succ P C)  (in C s\ in C n\ out s P z).
-agent (add P Q R) (nu s\ nu n\ out P s (out P n
-                    (in R ss\ in R nn\
-                      (plus (in s k\ nu kk\ (par (out ss kk z) (add k Q kk)))
-                            (in n nil\ out Q ss (out Q nn z)))))).
- 
-agent (nat (s N) C) (in C s\ in C zz\ nu n\ par (out s n z) (nat N n)).
-agent (nat zz    C) (zero C).
-
-agent (explicit_2 C) (in C s\ in C zz\ nu un\
-                        par (out s un z)
-                            (in un s\ in un zz\(nu zero\ 
-                               (par (out s zero z)
-                                    (in zero s\ in zero zz\ out zz nil z))))).
-agent (explicit_1 C)      (in C s\ in C zz\
-                               (nu zero\ par (out s zero z)
-                                    (in zero s\ in zero zz\ out zz nil z))).
-
-% Tests about simulations (the third one has several solutions)
-stest 0 := weak_sim (nat (s zz) c) (nat (s zz) c).         % TIME/poum=1025ms
-stest 1 := weak_sim (nat (s (s zz)) c) (nat (s (s zz)) c). % TIME/poum=2581ms
-stest 2 := weak_sim (nat (s zz) c)
-                    (nu x\ nu y\ par (par (nat zz x) (nat (s zz) y))
-                                     (add x y c)).         % TIME/poum=4996ms
-
-% Tests about bisimulations
-natest 0 := weak_bisim (nu u\ nu d\ (par (nat zz u)
-                                    (par (nat zz d)
-                                         (add u d t))))
-                       (nat zz t).                         % TIME/poum=39.2s
-natest 1 := weak_bisim (nu u\ nu d\ (par (nat zz u)
-                                    (par (nat (s zz) d)
-                                         (add u d t))))
-                       (nat (s zz) t).                     % TIME/poum=440s
-% With the first implementation of tabling (ground goals, no eigenvariable)
-% natest 0 and 1 are much faster: respectively 32 and 63s on poum.
-% With tabling of failures the time falls to 28.8s and 51.5s
-% but is (very) slightly higher for traces and simulation examples.
-% With the support of eigenvariables in tabled goals and term indexing,
-% we reach respectively 11s and 17s.
-% And 8.8 and 14.8 (again about 15% better) after removing many references
-% from the term representation.
-
-natest 2 := weak_bisim (nu u\ nu d\ (par (nat (s (s zz)) d)
-                                    (par (nat (s (s (s zz))) u)
-                                         (add u d t))))
-                       (nat (s (s (s (s (s zz))))) t).
-
-notest 0 := weak_bisim (nu u\ nu d\ (par (nat (s zz) d)
-                                    (par (nat (s zz) u)
-                                         (add u d t))))
-                       (nat (s zz) t).
-
-% Church natural numbers as encoded in the MWB examples
-agent (nul L) (in L w\ in w n\ in w z\ nu i\ out z i (nul L)).
-agent (un L)   (in L w\ in w n\ in w z\ nu i\ out n i (nu i\ out z i (un L))).
-agent (deux L)
-      (in L w\ in w n\ in w z\ nu i\ out n i (nu i\ out z i (deux L))).
-
-agent (ch_succ X Z Y W) (nu i\ out Y i (ch_copy X Z Y W)).
-agent (ch_copy X Z Y W) (plus (in X i\ ch_succ X Z Y W)
-                              (in Z i\ nu i\ out W i z)).
-agent (ch_add X1 Z1 X2 Z2 Y W)
-      (plus (in X1 i\ nu i\ out y i (ch_add X1 Z1 X2 Z2 Y W))
-            (in Z1 i\ ch_copy X2 Z2 Y W)).
-
-ch_test 0 :=
-  weak_bisim
-    (deux x z)
-    (nu x1\ nu x2\ nu z1\ nu z2\
-      par (un x1 z2) (par (un x2 z2) (ch_add x1 z1 x2 z2 x z))).
-ch_test 1 :=
-  weak_bisim
-    (deux x z)
-    (nu x1\ nu x2\ nu z1\ nu z2\
-      par (nul x1 z2) (par (deux x2 z2) (ch_add x1 z1 x2 z2 x z))).
-
-test :=
-  print "Running tests...",
-  print (running weak_sim test), stest 2,
-  print (running weak_bisim tests on natural number encodings),
-  natest 0, natest 1,
-  print (on another natural number encodings),
-  ch_test 0, ch_test 1,
-  print "testing complete".
+example 0  (nu x\ match x a (taup z)).
+example 1  (par (in x y\z) (out x a z)).
+example 2  (plus (in x y\out x a) (out x a (in x y\z))).
+example 3  (in x u\ (plus (taup (taup z)) (taup z))).
+example 4  (in x u\ (plus (taup (taup z))
+                    (plus (taup z)
+                          (taup (match u y (taup z)))))).
+example 5  (nu a\ (par (in x y\z) (out x a z))).
+example 6  (nu a\ (plus (in x y\out x a) (out x a (in x y\z)))).
+example 7  (taup z).
+example 8  (nu x\ (par (in x y\z) (out x a z))).
+example 9  (nu x\ out a x z).
+example 10 (par (in x y\ z) (nu y\ out x y z)).
+example 11 (in x u\ nu y\ ((plus (taup (taup z))
+                           (plus (taup z)
+                                 (taup (match u y (taup z))))))).
+example 12 (bang P) := example 1 P.

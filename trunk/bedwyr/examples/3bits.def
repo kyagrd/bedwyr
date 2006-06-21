@@ -108,4 +108,5 @@ test :=
   print "Testing all 3-bits additions...",
   pi x\ pi y\ pi z\
   pi a\ pi b\ pi c\
-    (bool x, bool y, bool z, bool a, bool b, bool c) => (valid x y z a b c).
+    ((bool x, bool y, bool z, bool a, bool b, bool c) => (valid x y z a b c)),
+  print "testing complete".
