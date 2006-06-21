@@ -1,6 +1,3 @@
-
-Automatically table coinductive definitions.
-
 Implement static analyses: typing, and mode checking (which would allow to
 statically avoid logical variables on the left).
 
