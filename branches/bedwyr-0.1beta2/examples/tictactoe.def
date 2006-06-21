@@ -1,0 +1,70 @@
+% convert Internal External
+% Allows us to convert between internal and external formats.
+% The internal format is simple to read and write, but the internal
+% format is better for recursion.
+convert (c A (c B (c C (c D (c E (c F (c G (c H (c I nil)))))))))
+        (board (row A B C) (row D E F) (row G H I)).
+
+% winner Player Board
+% True if Player has won on the Board
+winner W (c W (c W (c W (c A (c B (c C (c D (c E (c F nil))))))))).
+winner W (c A (c B (c C (c W (c W (c W (c D (c E (c F nil))))))))).
+winner W (c A (c B (c C (c D (c E (c F (c W (c W (c W nil))))))))).
+winner W (c W (c A (c B (c W (c C (c D (c W (c E (c F nil))))))))).
+winner W (c A (c W (c B (c C (c W (c D (c E (c W (c F nil))))))))).
+winner W (c A (c B (c W (c C (c D (c W (c E (c F (c W nil))))))))).
+winner W (c W (c A (c B (c C (c W (c D (c E (c F (c W nil))))))))).
+winner W (c A (c B (c W (c C (c W (c D (c W (c E (c F nil))))))))).
+
+% nowinner Board
+% True if nobody has won on the Board yet
+nowinner B := pi X\ winner X B => X = b.
+
+% move Board Player Board'
+% True if Board' is the same as Board except for one move by Player.
+move (c b L) W (c W L).
+move (c X L) W (c X K) := move L W K.
+
+% nomoves Board
+% True if there are no possible moves on the Board.
+nomoves L := pi K\ move L o K => false.
+
+% tie Board
+% True if the Board is a tie.
+tie L := nomoves L, nowinner L.
+
+% xwins Board
+% True if x has a winning strategy for Board, assuming o plays first.
+xwins L := winner x L.
+xwins L := pi K\ move L o K => (nowinner K, sigma M\ move K x M, xwins M).
+
+% These definitions are not stratified, but might be nice.
+% Note: they would require that move L o K checks that x has not won,
+%       and vice-versa.
+% xwins L := pi K\ move L o K  => owins K => false.
+% owins L := pi K\ move L x K  => xwins K => false.
+
+% notxwins Board
+% True if x does not have a winning strategy for Board, assuming o plays first.
+% It would be nice to use (pi L\ xwins L => false), but xwins is level 1.
+coinductive notxwins L := tie L ; winner o L.
+coinductive notxwins L := nowinner L, sigma K\ move L o K,
+                (tie K ; winner o K ; pi M\ move K x M => notxwins M).
+
+thm 1 := convert Board (board (row x x x) (row b b b) (row b b b)),
+         xwins Board.
+        
+thm 2 := convert Board (board (row x x b) (row b b b) (row b b b)),
+         xwins Board.
+
+thm 3 := convert Board (board (row x b o) (row b b b) (row b b b)),
+         notxwins Board.
+
+thm 4 := convert Board (board (row b b b) (row b b b) (row b b b)),
+         notxwins Board.
+
+checkthm X := print (running test X), (thm X ; print "!!! failure !!!").
+
+test := checkthm 1, checkthm 2, checkthm 3, checkthm 4,
+        print "testing complete".
+

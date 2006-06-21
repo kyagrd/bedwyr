@@ -1,0 +1,65 @@
+#include "pi.def".
+
+agent (zero C)    (in C s\ in C n\ out n nil z).
+agent (succ P C)  (in C s\ in C n\ out s P z).
+agent (add P Q R) (nu s\ nu n\ out P s (out P n
+                    (in R ss\ in R nn\
+                      (plus (in s k\ nu kk\ (par (out ss kk z) (add k Q kk)))
+                            (in n nil\ out Q ss (out Q nn z)))))).
+ 
+agent (nat (s N) C) (in C s\ in C zz\ nu n\ par (out s n z) (nat N n)).
+agent (nat zz    C) (zero C).
+
+agent (explicit_2 C) (in C s\ in C zz\ nu un\
+                        par (out s un z)
+                            (in un s\ in un zz\(nu zero\ 
+                               (par (out s zero z)
+                                    (in zero s\ in zero zz\ out zz nil z))))).
+agent (explicit_1 C)      (in C s\ in C zz\
+                               (nu zero\ par (out s zero z)
+                                    (in zero s\ in zero zz\ out zz nil z))).
+
+% Tests about simulations (the third one has several solutions)
+stest 0 := weak_sim (nat (s zz) c) (nat (s zz) c).         % TIME/poum=1025ms
+stest 1 := weak_sim (nat (s (s zz)) c) (nat (s (s zz)) c). % TIME/poum=2581ms
+stest 2 := weak_sim (nat (s zz) c)
+                    (nu x\ nu y\ par (par (nat zz x) (nat (s zz) y))
+                                     (add x y c)).         % TIME/poum=4996ms
+
+% Tests about bisimulations
+natest 0 := weak_bisim (nu u\ nu d\ (par (nat zz u)
+                                    (par (nat zz d)
+                                         (add u d t))))
+                       (nat zz t).                         % TIME/poum=39.2s
+natest 1 := weak_bisim (nu u\ nu d\ (par (nat zz u)
+                                    (par (nat (s zz) d)
+                                         (add u d t))))
+                       (nat (s zz) t).                     % TIME/poum=440s
+% With the first implementation of tabling (ground goals, no eigenvariable)
+% natest 0 and 1 are much faster: respectively 32 and 63s on poum.
+% With tabling of failures the time falls to 28.8s and 51.5s
+% but is (very) slightly higher for traces and simulation examples.
+% With the support of eigenvariables in tabled goals and term indexing,
+% we reach respectively 11s and 17s.
+% And 8.8 and 14.8 (again about 15% better) after removing many references
+% from the term representation.
+
+natest 2 := weak_bisim (nu u\ nu d\ (par (nat (s (s zz)) d)
+                                    (par (nat (s (s (s zz))) u)
+                                         (add u d t))))
+                       (nat (s (s (s (s (s zz))))) t).
+
+notest 0 := weak_bisim (nu u\ nu d\ (par (nat (s zz) d)
+                                    (par (nat (s zz) u)
+                                         (add u d t))))
+                       (nat (s zz) t).
+
+test :=
+  print "Natural numbers in pi tests...",
+  print (running test 1),
+  stest 2,
+  print (running test 2),
+  natest 0,
+  print (running test 3),
+  natest 1,
+  print "testing complete".

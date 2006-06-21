@@ -1,0 +1,34 @@
+% Simple order relation of Peano's integers
+
+a (s (s (s z))).
+a (s (s (s (s (s z))))).
+a (s (s z)).
+
+leq z N.
+leq (s N) (s M) := leq N M.
+
+% Now the decide the maximum of a given predicate.  In the first-order
+% setting we could write just:
+%    maxa N := a N, pi x\ a x => leq x N.
+% but it seems that Bedwyr allows for predicates to be arguments. 
+
+max A N := A N, pi x\ A x => leq x N.
+
+test1 N := max a N.  % Should be 5.
+
+% The following program should not work in the current version of
+% Bedwyr.
+% Compute the minimum maximal of the predictes (b I).
+
+minmax B N := max (B I) N, pi j\ pi m\ max (B j) M => (j = I ; leq N M).
+
+b z (s (s (s z))).
+b z (s (s (s (s (s z))))).
+b z (s (s z)).
+
+b (s z) (s (s (s z))).
+b (s z) (s (s (s (s z)))).
+b (s z) (s (s z)).
+
+test := print "Computing a max (wow)...", test1 X, X = (s (s (s (s (s z))))), 
+  print "testing complete".

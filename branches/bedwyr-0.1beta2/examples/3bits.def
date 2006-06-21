@@ -1,0 +1,112 @@
+
+% Boolean operators
+
+bool X := X=0 ; X=1.
+xor X Y Z := (X=Y, Z=0) ; (X=0, Y=Z) ; (X=Z, Y=0).
+or  X Y Z := (Z=1,(X=1;Y=1)) ; (Z=0,X=0,Y=0).
+and X Y Z := (X=1,Y=1,Z=1) ; (Z=0,(X=0;Y=0)).
+
+% Addition on 3bit integers
+
+simple_add A B R C := xor A B R, and A B C.
+
+full_add A B Cin R Cout :=
+  xor A B X, xor X Cin R,
+  and X Cin C1, and A B C2, or C1 C2 Cout.
+
+3add X2 X1 X0 Y2 Y1 Y0 Z2 Z1 Z0 :=
+  simple_add X0 Y0 Z0 C1,
+  full_add X1 Y1 C1 Z1 C2,
+  full_add X2 Y2 C2 Z2 C3.
+
+% Addition modulo 8. No other way to do this for now..
+
+add 0 0 0.
+add 0 1 1.
+add 0 2 2.
+add 0 3 3.
+add 0 4 4.
+add 0 5 5.
+add 0 6 6.
+add 0 7 7.
+add 1 0 1.
+add 1 1 2.
+add 1 2 3.
+add 1 3 4.
+add 1 4 5.
+add 1 5 6.
+add 1 6 7.
+add 1 7 0.
+add 2 0 2.
+add 2 1 3.
+add 2 2 4.
+add 2 3 5.
+add 2 4 6.
+add 2 5 7.
+add 2 6 0.
+add 2 7 1.
+add 3 0 3.
+add 3 1 4.
+add 3 2 5.
+add 3 3 6.
+add 3 4 7.
+add 3 5 0.
+add 3 6 1.
+add 3 7 2.
+add 4 0 4.
+add 4 1 5.
+add 4 2 6.
+add 4 3 7.
+add 4 4 0.
+add 4 5 1.
+add 4 6 2.
+add 4 7 3.
+add 5 0 5.
+add 5 1 6.
+add 5 2 7.
+add 5 3 0.
+add 5 4 1.
+add 5 5 2.
+add 5 6 3.
+add 5 7 4.
+add 6 0 6.
+add 6 1 7.
+add 6 2 0.
+add 6 3 1.
+add 6 4 2.
+add 6 5 3.
+add 6 6 4.
+add 6 7 5.
+add 7 0 7.
+add 7 1 0.
+add 7 2 1.
+add 7 3 2.
+add 7 4 3.
+add 7 5 4.
+add 7 6 5.
+add 7 7 6.
+
+% Conversion from 3bit to integer
+
+convert Z Y X N :=
+  A=X,
+  ((Y=1, B=2) ; (Y=0, B=0)),
+  ((Z=1, C=4) ; (Z=0, C=0)),
+  add A B R, add R C N.
+
+% Check that 3add is the same as add, up to convert
+
+valid X Y Z A B C :=
+  3add X Y Z A B C P Q R,
+  convert X Y Z XYZ,
+  convert A B C ABC,
+  convert P Q R PQR,
+  % print (check that XYZ plus ABC is PQR),
+  add XYZ ABC PQR.
+
+test :=
+  print "Testing all 3-bits additions...",
+  pi x\ pi y\ pi z\
+  pi a\ pi b\ pi c\
+    ((bool x, bool y, bool z, bool a, bool b, bool c) => (valid x y z a b c)),
+  print "testing complete".

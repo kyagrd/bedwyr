@@ -1,0 +1,83 @@
+%% Abstract Transition Systems (ats)
+%% Some experiments encoding ats into this prover.  
+%% First, use the simpliest approach to defining sim and bisim.
+
+%% This approach will cause the current system (13.06.06) to loop 
+%% when the transition system has loops.  Current tabling scheme 
+%% does not detect such loops.
+
+% display all the one-step transitions of the ats
+display One := One P A Q, print (One P A Q), false.
+
+% Determine if transition system is determinate or not.
+determinate :=  pi P\ pi A\ pi Q\ pi R\ one P A Q =>  one P A R => Q = R.
+
+coinductive sim One P Q := 
+   pi P1\ pi A\ One P A P1 => sigma Q1\ One Q A Q1 & sim One P1 Q1.
+
+coinductive bisim One P Q :=
+   (pi P1\ pi A\ One P A P1 => sigma Q1\ One Q A Q1 & bisim One P1 Q1) &
+   (pi Q1\ pi A\ One Q A Q1 => sigma P1\ One P A P1 & bisim One P1 Q1).
+
+%% ATS 1:
+one1 p a q.
+one1 p a r.
+one1 q b s.
+one1 r c t.
+one1 u a v.
+one1 v b w.
+one1 v c x.
+
+% Tests:
+% Postive:  sim one1 p u.
+% Negative: sim one1 u p.
+
+%% ATS 2:
+one2 p a q := true.
+one2 p a t := true.
+one2 q a p := true.
+one2 s a s := true.
+
+% Tests:
+% Loops:    sim one2 s s, sim one2 p s, sim one2 q s.
+% Negative: sim one2 s t.
+
+%% ATS 3:  (a.b + a.c) vs a.(b + c)
+one3 p a q := true.
+one3 p a s := true.
+one3 q b t := true.
+one3 s c u := true.
+one3 v a w := true.
+one3 w b x := true.
+one3 w c y := true.
+
+% Tests:
+% Postive:  sim one3 p v, sim one3 s w.
+% Negative: sim one3 v p, sim one3 w s.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% membership in a list.  This predicate always succeeds with a boolean value. 
+member X nil        ff := true.
+member X (cons Y L) Bool := (X = Y => false) & member X L Bool.
+member X (cons X L) tt := true.
+
+% co-induction with History checking.  Simply check that goal appears
+% before.  If so, succeed.  Here, pr is for pairing.
+
+cyclic R History P Q := 
+   member (pr P Q) History Bool &
+   (Bool = tt;  % A cycle observed so succeed - coinduction
+    (Bool = ff & (R (cyclic R (cons (pr P Q) History)) P Q))).
+
+cycsim One P Q :=
+    cyclic (S\ P\ Q\ (pi P1\ pi A\ One P A P1 => sigma Q1\ One Q A Q1 & S P1 Q1))
+           nil P Q.
+
+cycbisim One P Q :=
+    cyclic (S\ P\ Q\ ((pi P1\ pi A\ One P A P1 => sigma Q1\ One Q A Q1 & S P1 Q1) &
+                      (pi Q1\ pi A\ One Q A Q1 => sigma P1\ One P A P1 & S P1 Q1)))
+           nil P Q.
+
+% Now, retry the examples above: those marked as "Loops:" should now succeed.
+
