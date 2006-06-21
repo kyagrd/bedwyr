@@ -2,6 +2,8 @@
 %% over tt, ff (truth values) or, and (binary prop functions) is
 %% true or false.  (dam)
 
+%% WARNING: this file is broken.
+
 %% First, decide what are the conjunctions and disjunctions of a formula.
 
 conj K (and B C) := conj K B ; conj K C.
@@ -41,6 +43,7 @@ form z ff.
 
 dotest N := pi F\ (form N F => (faux F ; vrai F)).
 
-% This takes just a few seconds.
+% The test actually fails because this it falls outside
+% the Level 0/1 fragment.
 
 test := test1, test2, test3, test4, test5, dotest (s (s (s (s z)))).
