@@ -30,4 +30,5 @@ b (s z) (s (s (s z))).
 b (s z) (s (s (s (s z)))).
 b (s z) (s (s z)).
 
-test := test1 X, X = (s (s (s (s (s z))))).
+test := print "Computing a max (wow)...", test1 X, X = (s (s (s (s (s z))))), 
+  print "testing complete".

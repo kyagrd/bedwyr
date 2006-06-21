@@ -38,7 +38,8 @@ dist:
 	cp README TODO configure configure.ac install-sh Makefile $(D)
 	cp contrib/bedwyr.el $(D)/contrib
 	cp doc/*.tex doc/Makefile $(D)/doc
-	cp examples/*.def examples/todo.txt $(D)/examples
+	cp examples/*.def $(D)/examples
+	rm -f $(D)/examples/andor.def
 	cp src/*.ml* src/Makefile.in $(D)/src
 	rm -f $(D)/src/parser.ml $(D)/src/parser.mli $(D)/src/lexer.ml
 	cp src/ndcore/*.ml* $(D)/src/ndcore
