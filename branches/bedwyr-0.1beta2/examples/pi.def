@@ -135,13 +135,13 @@ coinductive weak_bisim P Q :=
 
 example 0  (nu x\ match x a (taup z)).
 example 1  (par (in x y\z) (out x a z)).
-example 2  (plus (in x y\out x a) (out x a (in x y\z))).
+example 2  (plus (in x y\out x a z) (out x a (in x y\z))).
 example 3  (in x u\ (plus (taup (taup z)) (taup z))).
 example 4  (in x u\ (plus (taup (taup z))
                     (plus (taup z)
                           (taup (match u y (taup z)))))).
 example 5  (nu a\ (par (in x y\z) (out x a z))).
-example 6  (nu a\ (plus (in x y\out x a) (out x a (in x y\z)))).
+example 6  (nu a\ (plus (in x y\out x a z) (out x a (in x y\z)))).
 example 7  (taup z).
 example 8  (nu x\ (par (in x y\z) (out x a z))).
 example 9  (nu x\ out a x z).

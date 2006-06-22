@@ -10,6 +10,9 @@ Pi-calculus
   modals (Hennessy-Milner logic (as in Alwen's CONCUR2006 paper)) and 
   spacial logic kinds of examples.
 
+  Catuscia sent the following link about a project on checking open
+  bisimilarity http://www.cs.auc.dk/research/FS/ny/PR-pi/ 
+
 Divergence and applicative bisimulation examples
   see paper by Alberto and Alwen for examples.  These are mostly
   co-inductive.  I'm guessing that cyclic checking will work rarely,
