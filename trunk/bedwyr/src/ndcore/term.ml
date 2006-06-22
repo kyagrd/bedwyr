@@ -25,7 +25,6 @@ type var = {
   ts   : int
 }
 
-(* Terms. The use of references allow in-place normalization. *)
 type term = rawterm
 and rawterm =
   | Var  of var
@@ -143,7 +142,7 @@ let undo_subst = List.iter (fun (s,old) -> s:=old)
 let rec add_dummies env n m = 
   match n with
     | 0 -> env
-    | _ -> let n'= n-1 in ((Dum (m+n'))::(add_dummies env n' m));;
+    | _ -> let n'= n-1 in ((Dum (m+n'))::(add_dummies env n' m))
 
 (* Add [n] abstractions. *)
 let rec lambda n t =

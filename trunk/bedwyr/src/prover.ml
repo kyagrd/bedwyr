@@ -224,9 +224,6 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
         | Var {name=i} when i = Logic.imp && List.length goals = 2 ->
             assert_level_one level ;
             let (a,b) = match goals with [a;b] -> a,b | _ -> assert false in
-            (* The full normalization is useful for getting rid of logical
-             * variables left in suspensions.  *)
-            let a = Norm.deep_norm a in
             (* Solve [a] using level 0,
              * remind of the solution substitutions as slices of the bind stack,
              * then prove [b] at level 1 for every solution for [a],
@@ -240,27 +237,25 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
                * The we complete the current solution with the reverse
                * flip of variables to eigenvariables, and we get sigma which
                * we store. *)
-              let s = save_state () in
-                ev_substs := (get_subst state)::!ev_substs ;
-                restore_state s ;
-                k ()
+              ev_substs := (get_subst state)::!ev_substs ;
+              k ()
             in
             let rec prove_b failure = function
               | [] -> success failure
               | sigma::substs ->
-                  (* We have to prove (b theta_0 sigma) *)
+                  (* We have to prove (b theta_0 sigma_i) *)
                   let unsig = ref (apply_subst sigma) in
                     prove ~level ~local ~timestamp b
                     ~success:(fun k ->
-                                (* We found (b theta_0 sigma theta).
-                                 * Temporarily remove sigma to
+                                (* We found (b theta_0 sigma_i theta).
+                                 * Temporarily remove sigma_i to
                                  * prove (b theta_0 theta) against other
                                  * sigmas in substs. *)
                                 undo_subst !unsig ;
                                 prove_b
                                   (fun () ->
-                                     (* Put sigma back to call k
-                                      * in the correct environment. *)
+                                     (* Put sigma_i to restore the environment
+                                      * for the next successes of (b sigma_i) *)
                                      unsig := apply_subst sigma ;
                                      k ())
                                   substs)
@@ -271,7 +266,6 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
               prove ~level:Zero ~local ~timestamp a
                 ~success:store_subst
                 ~failure:(fun () ->
-                            restore_state state ;
                             prove_b failure !ev_substs)
 
         (* Level 1: Universal quantification *)
