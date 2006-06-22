@@ -1,5 +1,9 @@
 #include "pi.def".
 
+%% Allow agent-style definitions as a controled recursion
+one  P A PP := agent P Body, one  Body A PP.
+onep P A PP := agent P Body, onep Body A PP.
+
 agent (zero C)    (in C s\ in C n\ out n nil z).
 agent (succ P C)  (in C s\ in C n\ out s P z).
 agent (add P Q R) (nu s\ nu n\ out P s (out P n
