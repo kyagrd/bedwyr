@@ -6,6 +6,26 @@
 % the pi-calculus. Proceedings of FGUC04. 
 % Available from http://www.loria.fr/~tiu
 
+%% First, a lambda Prolog style typing declaration for the pi-calculus
+% kind  n   type.    % Names
+% type  a, x, y    n.
+% 
+% type  tau  a.      % Actions
+% type  dn, up    n -> n -> a.
+% 
+% kind  p    type.   % Processes
+% type  in   	    n -> (n -> p) -> p.
+% type  out  	    n -> n -> p -> p.
+% type  taup 	    p -> p.
+% type  match       n -> n -> p -> p.
+% type  plus, par   p -> p -> p.
+% type  nu          (n -> p) -> p).
+% type  bang        p -> p.
+% type  z           p.
+% 
+% type  one    p -> a -> p -> o.
+% type  onep   p -> (n -> a) -> (n -> p) -> o.
+ 
 % bound input
 onep (in X M) (dn X) M.
 
@@ -62,9 +82,9 @@ one (bang P) tau (par (par R T) (bang P)) :=
 one (bang P) tau (par (nu y\ par (M y) (N y)) (bang P)) := 
   sigma X\ onep P (up X) M & onep P (dn X) N.
 
-% Allow agent-style definitions as a controled recursion
-one  P A PP := agent P Body, one  Body A PP.
-onep P A PP := agent P Body, onep Body A PP.
+%% Allow agent-style definitions as a controled recursion
+%one  P A PP := agent P Body, one  Body A PP.
+%onep P A PP := agent P Body, onep Body A PP.
 
 % Simulation and bisimulation
 
@@ -135,13 +155,13 @@ coinductive weak_bisim P Q :=
 
 example 0  (nu x\ match x a (taup z)).
 example 1  (par (in x y\z) (out x a z)).
-example 2  (plus (in x y\out x a z) (out x a (in x y\z))).
+example 2  (plus (in x y\out x a) (out x a (in x y\z))).
 example 3  (in x u\ (plus (taup (taup z)) (taup z))).
 example 4  (in x u\ (plus (taup (taup z))
                     (plus (taup z)
                           (taup (match u y (taup z)))))).
 example 5  (nu a\ (par (in x y\z) (out x a z))).
-example 6  (nu a\ (plus (in x y\out x a z) (out x a (in x y\z)))).
+example 6  (nu a\ (plus (in x y\out x a) (out x a (in x y\z)))).
 example 7  (taup z).
 example 8  (nu x\ (par (in x y\z) (out x a z))).
 example 9  (nu x\ out a x z).
