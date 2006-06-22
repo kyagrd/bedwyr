@@ -291,8 +291,8 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
               | [g] -> g
               | _ -> assert false
             in begin match observe goal with
-              | Lam (m,g) ->
-                  let local = local + m in
+              | Lam (1,g) ->
+                  let local = local + 1 in
                     prove ~timestamp ~local ~level ~success ~failure g
               | _ -> assert false
             end
