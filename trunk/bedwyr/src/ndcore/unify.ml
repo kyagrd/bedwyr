@@ -361,7 +361,7 @@ let makesubst h1 t2 a1 n =
             let j = bvindex (i-lev) a1 n in
               if j = 0 then raise OccursCheck ;
               Term.db (j+lev)
-      | Term.Var {ts=ts2;tag=tag} when tag=instantiatable ->
+      | Term.Var {ts=ts2;tag=tag} when variable tag ->
           if Term.eq c h1 then raise OccursCheck ;
           let (changed,a1',a2') = raise_and_invert ts1 ts2 a1 [] lev in
             if changed || ts1<ts2 then
@@ -498,6 +498,8 @@ and unify_bv_term n1 t1 t2 = match Term.observe t2 with
       let t1' = lift t1 n in
       let a1 = lift_args [] n in
         unify_app_term t1' a1 (Term.app t1' a1) t2
+  | Var {tag=t} when not (variable t || constant t) ->
+      failwith "logic variable on the left"
   | _ -> assert false
 
 (* [unify_app_term h1 a1 t1 t2] unify [App h1 a1 = t2].
@@ -519,7 +521,9 @@ and unify_app_term h1 a1 t1 t2 = match Term.observe h1,Term.observe t2 with
         | Var {tag=tag} when variable tag ->
             let m = List.length a2 in
               Term.bind h2 (makesubst h2 t1 a2 m)
-        | _ -> assert false (* Logic variable on the left ? *)
+        | Var {tag=t} when not (variable t || constant t) ->
+            failwith "logic variable on the left"
+        | _ -> assert false
       end
   | _, Term.Lam (n,t2) ->
       let h1' = lift h1 n in
