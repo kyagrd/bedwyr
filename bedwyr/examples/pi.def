@@ -82,10 +82,6 @@ one (bang P) tau (par (par R T) (bang P)) :=
 one (bang P) tau (par (nu y\ par (M y) (N y)) (bang P)) := 
   sigma X\ onep P (up X) M & onep P (dn X) N.
 
-%% Allow agent-style definitions as a controled recursion
-%one  P A PP := agent P Body, one  Body A PP.
-%onep P A PP := agent P Body, onep Body A PP.
-
 % Simulation and bisimulation
 
 coinductive sim P Q :=
