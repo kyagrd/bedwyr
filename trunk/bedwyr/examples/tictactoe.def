@@ -1,6 +1,6 @@
 % convert Internal External
 % Allows us to convert between internal and external formats.
-% The internal format is simple to read and write, but the internal
+% The external format is simple to read and write, but the internal
 % format is better for recursion.
 convert (c A (c B (c C (c D (c E (c F (c G (c H (c I nil)))))))))
         (board (row A B C) (row D E F) (row G H I)).
@@ -25,9 +25,13 @@ nowinner B := pi X\ winner X B => X = b.
 move (c b L) W (c W L).
 move (c X L) W (c X K) := move L W K.
 
+% somemove Board
+% True if there is a possible move on the Board
+somemove L := sigma K\ move L o K.
+
 % nomoves Board
 % True if there are no possible moves on the Board.
-nomoves L := pi K\ move L o K => false.
+nomoves L := somemove L => false.
 
 % tie Board
 % True if the Board is a tie.
@@ -37,6 +41,12 @@ tie L := nomoves L, nowinner L.
 % True if x has a winning strategy for Board, assuming o plays first.
 xwins L := winner x L.
 xwins L := pi K\ move L o K => (nowinner K, sigma M\ move K x M, xwins M).
+
+% owins Board
+% True if o has a winning strategy for Board, assuming o plays first.
+inductive owins L := winner o L.
+inductive owins L := nowinner L, sigma K\ move L o K,
+    (winner o K ; somemove K, pi M\ move K x M => owins M).
 
 % These definitions are not stratified, but might be nice.
 % Note: they would require that move L o K checks that x has not won,
@@ -50,6 +60,21 @@ xwins L := pi K\ move L o K => (nowinner K, sigma M\ move K x M, xwins M).
 coinductive notxwins L := tie L ; winner o L.
 coinductive notxwins L := nowinner L, sigma K\ move L o K,
                 (tie K ; winner o K ; pi M\ move K x M => notxwins M).
+
+% play Board
+% This predicate lets you play tic-tac-toe against the computer.
+% Given a board, the computer attempts to make a move in a winning
+% strategy. If this is not possible, it attempts to make a move in a
+% non-losing strategy. If this is not possible, it just makes some move.
+play L' := convert L L', nowinner L, sigma K\
+    ((move L o K, play_to_win L K, print "Playing to win...") ;
+     (move L o K, play_to_tie L K, print "Playing to tie...") ;
+     (move L o K, print "Playing to lose...")),
+    convert K K', print K'.
+
+play_to_win L K := winner o K ; somemove K, pi M\ move K x M => owins M.
+
+play_to_tie L K := tie K ; pi M\ move K x M => notxwins M.
 
 thm 1 := convert Board (board (row x x x) (row b b b) (row b b b)),
          xwins Board.
