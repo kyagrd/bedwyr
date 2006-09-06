@@ -277,9 +277,7 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
             in begin match observe goal with
               | Lam (1,_) ->
                   let timestamp = timestamp + 1 in
-                  let var =
-                    raise_term (Term.fresh ~tag:Eigen timestamp) ~local
-                  in
+                  let var = Term.fresh ~lts:local ~tag:Eigen timestamp in
                   let goal = app goal [var] in
                     prove ~timestamp ~local ~level ~success ~failure goal
               | _ -> assert false
@@ -291,9 +289,10 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
               | [g] -> g
               | _ -> assert false
             in begin match observe goal with
-              | Lam (1,g) ->
+              | Lam (1,_) ->
                   let local = local + 1 in
-                    prove ~timestamp ~local ~level ~success ~failure g
+                    prove ~timestamp ~local ~level ~success ~failure
+                      (app goal [Term.nabla local])
               | _ -> assert false
             end
 
@@ -303,12 +302,10 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
               | [g] -> g
               | _ -> assert false
             in begin match observe goal with
-              | Lam (1,g) ->
+              | Lam (1,_) ->
                   let var =
-                    if level = Zero then
-                      raise_term (Term.fresh ~tag:Eigen timestamp) ~local
-                    else
-                      raise_term (Term.fresh timestamp) ~local
+                    let tag = if level = Zero then Eigen else Logic in
+                      Term.fresh ~lts:local ~tag timestamp
                   in
                     prove ~timestamp ~local ~level ~success ~failure
                       (app goal [var])
@@ -365,6 +362,7 @@ let toplevel_prove g =
         printf "Search stopped.\n"
       end
   in
+    try
     prove ~level:One ~local:0 ~timestamp:0 g
       ~success:show
       ~failure:(fun () ->
@@ -372,3 +370,4 @@ let toplevel_prove g =
                   if !found then printf "No more solutions.\n"
                   else printf "No.\n" ;
                   assert (s0 = Term.save_state ()))
+    with e -> clear_disprovable () ; raise e

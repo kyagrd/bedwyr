@@ -1,11 +1,23 @@
 
+(** In this file we implement and index structure used for tabling.
+  * An index represents a set of terms, in which eigenvariables may be allowed
+  * but not logic variable -- since this requires suspensions.
+  * The terms are abstracted over their eigenvars in the set.
+  * For efficiency, the index lookup first parses the "rigid" structure of a
+  * term in linear time, and extracts variables, and then takes care of the
+  * equalities among these variables.
+  * Currently the Nabla indices are handled as part of the rigid structure of
+  * terms, which means that weakening and swapping are not supported.
+  * Later, the set of nabla variables could be extracted and simplified to an
+  * essential representation just like eigenvariables. *)
+
 (** {1 Constraint management}
   * Constraints are sets of equalities between eigenvariables represented
   * as integers. They are uniquely represented as arrays of integers. *)
 
 type constraints = int array
 
-let dummy_var = {Term.name="";Term.ts=0;Term.tag=Term.Constant}
+let dummy_var = {Term.name="";Term.lts=0;Term.ts=0;Term.tag=Term.Constant}
 
 exception Found of int
 
@@ -53,8 +65,9 @@ let find_leaf map bindings =
 (** Patterns allow eigenvariables and nabla variables as deBruijn indices. *)
 type pattern =
   | DB    of int
+  | NB    of int
   | Cst   of Term.id
-  | Var of int
+  | Var   of int
   | Lam   of int * pattern
   | App   of int * pattern list (* Store the length of the list *)
   | Hole
@@ -75,6 +88,7 @@ let observe term = Term.observe (Norm.hnorm term)
 let create_node ~allow_eigenvar bindings terms data =
   let rec compile n bindings term = match observe term with
     | Term.DB i -> DB i, n, bindings
+    | Term.NB i -> NB i, n, bindings
     | Term.Var {Term.tag=Term.Constant;Term.name=id} -> Cst id, n, bindings
     | Term.Var var when allow_eigenvar && var.Term.tag = Term.Eigen ->
         Var n, (n+1), (n,var)::bindings
@@ -108,6 +122,7 @@ let create_node ~allow_eigenvar bindings terms data =
 let superficial_match patterns terms =
   let sub (pat,term) = match pat, Term.observe term with
     | DB i, Term.DB j
+    | NB i, Term.NB j
     | Lam (i,_), Term.Lam (j,_) -> i=j
     | Cst i, Term.Var {Term.name=j;Term.tag=Term.Constant} -> i=j
     | Var _, Term.Var {Term.tag=Term.Eigen} -> true
@@ -133,6 +148,8 @@ let update ~allow_eigenvar index terms data =
     match pattern, observe term with
       | DB i, Term.DB j when i = j ->
           (false, DB i, bindings, catches, former_alt)
+      | NB i, Term.NB j when i = j ->
+          (false, NB i, bindings, catches, former_alt)
       | Cst c, Term.Var {Term.name=c';Term.tag=Term.Constant} when c=c' ->
           (false, Cst c, bindings, catches, former_alt)
       | Var i, Term.Var var when allow_eigenvar && var.Term.tag=Term.Eigen ->
@@ -224,8 +241,8 @@ let add ?(allow_eigenvar=true) index terms data =
  * return the list of bindings and the reversed list of catches. *)
 let rec filter bindings catches pattern term =
   match pattern, observe term with
-    | DB i, Term.DB j ->
-        if i=j then bindings,catches else raise Not_found
+    | DB i, Term.DB j
+    | NB i, Term.NB j when i=j -> bindings,catches
     | Cst i, Term.Var {Term.name=j;Term.tag=Term.Constant} ->
         if i=j then bindings,catches else raise Not_found
     | Var i, Term.Var var ->
@@ -288,14 +305,14 @@ module MZ : MZ_t =
 struct
 
   type item =
-    | ZDB of int  | ZCst of Term.id | ZVar of int
+    | ZNB of int | ZDB of int  | ZCst of Term.id | ZVar of int
     | ZLam of int | ZApp of int
     | ZHole
 
   type t = item list list
 
   let arity = function
-    | ZDB _ | ZCst _ | ZVar _ -> 0
+    | ZDB _ | ZNB _ | ZCst _ | ZVar _ -> 0
     | ZHole | ZLam _ -> 1
     | ZApp n -> n
 
@@ -310,6 +327,7 @@ struct
       List.fold_left
         (fun (row,subpats) -> function
            | DB i  ->  (ZDB i)::row, subpats
+           | NB i  ->  (ZNB i)::row, subpats
            | Cst c -> (ZCst c)::row, subpats
            | Var i -> (ZVar i)::row, subpats
            | App (n,l) -> (ZApp n)::row, List.rev_append l subpats
@@ -337,6 +355,7 @@ struct
   let zip table mz =
     let zip_step terms = function
       | ZDB i  -> Term.db i, terms
+      | ZNB i  -> Term.nabla i, terms
       | ZCst c -> Term.const c 0, terms
       | ZVar i -> table.(i), terms
       | ZApp n ->

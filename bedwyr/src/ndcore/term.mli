@@ -20,9 +20,10 @@
 type tag = Eigen | Constant | Logic
 type id = string
 type var = {
-  name : id ;
-  tag  : tag    ;
-  ts   : int
+  name : id  ;
+  tag  : tag ;
+  ts   : int ;
+  lts  : int
 }
 
 (* Terms. The use of references allow in-place normalization,
@@ -36,6 +37,7 @@ type env = envitem list
 type rawterm = 
   | Var of var
   | DB of int
+  | NB of int
   | Lam of int * term
   | App of term * term list
   | Susp of term * int * int * env
@@ -52,8 +54,8 @@ val observe : term -> rawterm
 val reset_namespace : unit -> unit
 val reset_namespace_vars : unit -> unit
 
-val const : ?tag:tag -> string -> int -> term
-val var : ?tag:tag -> string -> int -> term
+val const : ?tag:tag -> ?lts:int -> string -> int -> term
+val var   : ?tag:tag -> ?lts:int -> string -> int -> term
 
 val atom : ?ts:int -> string -> term
 val string : string -> term
@@ -65,6 +67,7 @@ val collapse_lam : term -> term
 val app : term -> term list -> term
 val susp : term -> int -> int -> env -> term
 val db : int -> term
+val nabla : int -> term
 
 module Notations :
 sig
@@ -118,7 +121,7 @@ val getAbsName : unit -> string
 (** Generating a fresh variable with a given time stamp; the use of ref
   * ensures uniqueness. We should attach useful names as well, but this 
   * will do for the moment. *)
-val fresh : ?tag:tag -> int -> term
+val fresh : ?tag:tag -> ?lts:int -> int -> term
 
 exception NonNormalTerm
 
