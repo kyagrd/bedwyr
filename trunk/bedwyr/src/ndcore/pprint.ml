@@ -58,7 +58,8 @@ let term_to_string term =
   let pp_var x = pre ^ (string_of_int x) in
   let rec pp pr n term =
     match observe term with
-      | Var {name=s} -> s
+      | Var v -> Printf.sprintf "%s" v.name
+      | NB i -> "n" ^ (string_of_int i)
       | DB i -> pp_var (n-i+1)
       | App (t,ts) ->
           begin match observe t, ts with
@@ -70,10 +71,15 @@ let term_to_string term =
                   | Right -> op_p+1, op_p
                   | _ -> op_p, op_p
                   end in
-                let res = (pp pr_left n a) ^ " " ^ op ^ " " ^ (pp pr_right n b) in
+                let res =
+                  (pp pr_left n a) ^ " " ^ op ^ " " ^ (pp pr_right n b)
+                in
                   if op_p >= pr then res else parenthesis res
-            | _ -> let res = String.concat " " (List.map (pp high_pr n) (t::ts)) in
-                     if pr == 0 then res else parenthesis res
+            | _ ->
+                let res =
+                  String.concat " " (List.map (pp high_pr n) (t::ts))
+                in
+                  if pr == 0 then res else parenthesis res
           end
       | Lam (0,t) -> assert false
       | Lam (i,t) ->

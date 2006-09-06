@@ -61,6 +61,8 @@ let rec process ?(interactive=false) parse lexbuf =
           Pprint.pp_term t
     | Invalid_command ->
         Format.printf "Invalid command, or wrong arity!\n%!"
+    | Failure s when s <> "eof" ->
+        Format.printf "Error: %s\n" s
     | e when e <> Failure "eof" ->
         Format.printf "Unknown error: %s\n%!" (Printexc.to_string e)
   done with

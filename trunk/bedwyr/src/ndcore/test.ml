@@ -34,7 +34,7 @@ let rec extract path t =
       | Lam (_,t) when hd = L -> extract tl t
       | App (_,l) when hd = A -> extract tl (List.nth l 0)
       | App (t,_) when hd = H -> !!t
-      | _ -> Var {name="notfound";ts=0;tag=Constant}
+      | _ -> Var {name="notfound";lts=0;ts=0;tag=Constant}
 
 let test =
   "Tests" >:::
@@ -413,7 +413,51 @@ let test =
        let x = var "X" 1 in
        let y = var ~tag:Eigen "y" 2 in
          try unify x y ; assert false with
-           | Unify.Error _ -> ())
+           | Unify.Error _ -> ()) ;
+
+    "[X^0 n1 = Y^0]" >::
+    (fun () ->
+       let x = var "X" 0 in
+       let y = var "Y" 0 in
+         unify (x ^^ [nabla 1]) y ;
+         assert_equal (1 // y) x) ;
+
+    "[X^0 n1 = Y^1]" >::
+    (fun () ->
+       let x = var "X" 0 in
+       let y = var "Y" ~lts:1 0 in
+         unify (x ^^ [nabla 1]) y ;
+         assert_equal y (x ^^ [nabla 1]) ;
+         match !!x with
+           | Var v -> ()
+           | _ -> assert_equal (var "a_variable" 0) x) ;
+
+    "[X^0 = Y^1]" >::
+    (fun () ->
+       let x = var "X" 0 in
+       let y = var "Y" ~lts:1 0 in
+         unify x y ;
+         match !!x,!!y with
+           | Var {lts=0}, Var {lts=0} -> ()
+           | _ -> assert false) ;
+
+    "[X^0 = c Y^1]" >::
+    (fun () ->
+       let x = var "X" 0 in
+       let c = var ~tag:Constant "c" 0 in
+       let y = var "Y" ~lts:1 0 in
+         unify x (c ^^ [y]) ;
+         match !!y with
+           | Var {lts=0} -> () | _ -> Pprint.print_term y ; assert false) ;
+
+    "[X^0 n1 n2 = c Y^2 = c n2]" >::
+    (fun () ->
+       let x = var "X" 0 in
+       let y = var "Y" ~lts:2 0 in
+       let c = const "c" 0 in
+       let t = x ^^ [nabla 1 ; nabla 2] in
+         unify t (c ^^ [y]) ;
+         unify (Norm.hnorm t) (c ^^ [nabla 2]))
 
     ] ;
 

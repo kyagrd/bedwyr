@@ -20,15 +20,17 @@
 type tag = Eigen | Constant | Logic
 type id = string
 type var = {
-  name : id ;
-  tag  : tag    ;
-  ts   : int
+  name : id  ;
+  tag  : tag ;
+  ts   : int ; (* Always zero for constants in Bedwyr *)
+  lts  : int
 }
 
 type term = rawterm
 and rawterm =
   | Var  of var
   | DB   of int
+  | NB   of int (* Nabla variables *)
   | Lam  of int * term
   | App  of term * term list
   | Susp of term * int * int * env
@@ -45,7 +47,8 @@ exception NotValidTerm
 let rec eq t1 t2 =
   match t1,t2 with
     (* Compare leafs *)
-    | DB i1, DB i2 -> i1=i2
+    | DB i1, DB i2
+    | NB i1, NB i2 -> i1=i2
     | Ptr {contents=V v1}, Ptr {contents=V v2} -> v1=v2
     (* Ignore Ptr. It's an implementation artifact *)
     | _, Ptr {contents=T t2} -> eq t1 t2
@@ -177,16 +180,17 @@ let fresh =
         incr varcount ;
         i
 
-let fresh ?(tag=Logic) ts =
+let fresh ?(tag=Logic) ?(lts=0) ts =
   let i = fresh () in
   let name = (prefix tag) ^ (string_of_int i) in
-    Ptr (ref (V { name=name ; ts=ts ; tag=tag }))
+    Ptr (ref (V { name=name ; ts=ts ; lts=lts ; tag=tag }))
 
 (* Recursively raise dB indices and abstract over variables
  * selected by [test]. *)
 let abstract test =
   let rec aux n t = match t with
-    | DB i -> t
+    | NB i -> t
+    | DB i -> if i>=n then DB (i+1) else t
     | App (h,ts) ->
         App ((aux n h), (List.map (aux n) ts))
     | Lam (m,s) -> Lam (m, aux (n+m) s)
@@ -209,7 +213,7 @@ let logic_vars ts =
         if v.tag = Logic && not (List.mem t l) then (t::l) else l
     | App (h,ts) -> List.fold_left fv (fv l h) ts
     | Lam (n,t') -> fv l t'
-    | DB _ -> l
+    | NB _ | DB _ -> l
     | Susp _ -> assert false
     | Ptr _ -> assert false
   in
@@ -218,8 +222,10 @@ let logic_vars ts =
 (** Utilities.
   * Easy creation of constants and variables, with sharing. *)
 
-let const ?(tag=Constant) s n = Ptr (ref (V { name=s ; ts=n ; tag=tag }))
-let var   ?(tag=Logic)    s n = Ptr (ref (V { name=s ; ts=n ; tag=tag }))
+let const ?(tag=Constant) ?(lts=0) s n =
+  Ptr (ref (V { name=s; ts=n; lts=lts; tag=tag }))
+let var ?(tag=Logic) ?(lts=0) s n =
+  Ptr (ref (V { name=s; ts=n; lts=lts; tag=tag }))
 
 let tbl = Hashtbl.create 100
 let reset_namespace () = Hashtbl.clear tbl
@@ -257,6 +263,8 @@ let rec collapse_lam t = match t with
   | _ -> t
 
 let db n = DB n
+let nabla n = NB n
+
 (* let app a b = if b = [] then a else ref (App (a,b)) *)
 let app a b = if b = [] then a else match observe a with
   | App(a,c) -> App (a,c @ b)
