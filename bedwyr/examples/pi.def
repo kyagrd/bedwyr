@@ -108,9 +108,6 @@ coinductive bisim P Q :=
 taus P QQ := one P tau Q, taus Q QQ.
 taus P P.
 
-maxtaus P QQ := one P tau Q, maxtaus Q QQ.
-maxtaus P P  := pi Q\ one P tau Q => false.
-
 weak_one Q (up X Y) P := taus Q QQ, one QQ A PP, taus PP P.
 weak_one Q tau QQ     := taus Q QQ.
 
