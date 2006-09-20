@@ -24,17 +24,20 @@ node (graph N A) X := member X N.
 
 % Directed predicates
 
-arrow (graph N A) X := member X A.
+arrow (graph N A) X Y := member (arrow X Y) A.
 
 path G X Y := arrow G X Y.
 path G X Y := arrow G X Z, path G Z Y.
 
 % Undirected predicates
 
-edge G (edge X Y) := arrow G (arrow X Y) ; arrow G (arrow Y X).
+edge G X Y := arrow G X Y ; arrow G Y X.
 
 inductive edgepath G X X := node G X.
-inductive edgepath G X Y := edge G (edge X Z), edgepath G Z Y.
+inductive edgepath G X Y := edge G X Z, edgepath G Z Y.
+% If we make it coinductive then infinite paths starting from node X
+% (typically going back and forth along the same edge) provide an edgepath
+% from X to any other node.
 
 % Notions of connectedness
 

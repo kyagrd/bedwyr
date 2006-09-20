@@ -8,12 +8,21 @@ seq L (exists B) := sigma x\ seq L (B x).
 seq L (G <- D)   := seq (cons D L) G.
 seq L (D -> G)   := seq (cons D L) G.
 
-seq L A          := atom A, (member A L ; sigma D\ prog D, bc L D A).
+seq L A          := atom A, (prog D ; member D L), bc L D A.
 
 bc L A A.
+bc L (and X Y)  A := bc L X A ; bc L Y A.
 bc L (G <- D)   A := bc L G A, seq L D.
 bc L (D -> G)   A := bc L G A, seq L D.
 bc L (forall D) A := sigma t\ bc L (D t) A.
+
+atom (atom P).
+
+thm a := seq nil ((and (atom a) (atom b)) -> (and t (atom a))).
+thm b :=
+  pi t\ pi u\ pi w\
+    seq nil (forall x\ forall y\
+               (atom (p x t)) -> (atom (p y u)) -> (atom (p x w))) => w=t.
 
 atom (typeof X T).
 
@@ -25,7 +34,6 @@ prog (forall A\ forall B\ forall Tout\ forall Tin\
        typeof (app A B) Tout
         <- typeof A (Tin -> Tout)
         <- typeof B Tin).
-
 
 atom (copy S T).
 
@@ -56,7 +64,6 @@ prog (forall M\ forall N\ forall M'\ forall M''\
         <- subst M' N M''
         <- eval M'' V).
 
-
 thm 1 := seq nil (typeof (lam x\ lam y\ x) T).
 
 thm 2 := seq nil (typeof (app (lam x\ lam y\ x) (lam x\ x)) T).
@@ -67,6 +74,6 @@ thm 4 := pi T\ pi S\ seq nil (typeof (lam x\ x) (T -> S)) => T = S.
 
 checkthm X := print (running test X), (thm X ; print "!!! failure !!!").
 
-test := checkthm 1, checkthm 2, checkthm 3, checkthm 4,
+test := checkthm a, checkthm b, checkthm 1, checkthm 2, checkthm 3, checkthm 4,
         print "testing complete".
 
