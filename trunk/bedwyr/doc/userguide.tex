@@ -1,6 +1,7 @@
 \documentclass{article}
-
+\bibliographystyle{alpha}
 \usepackage{url}
+\newcommand{\lp}{$\lambda$Prolog}
 
 \title{{\Huge Bedwyr} \\ User Guide}
 \author{David Baelde, Andrew Gacek, Dale Miller, Gopalan Nadathur}
@@ -10,8 +11,7 @@
 
 \tableofcontents
 
-\section*{Layout}
-
+\paragraph{Layout}
 In Section \ref{sec:install} we install Bedwyr as distributed
 in tarballs or from the SVN.
 In Section \ref{sec:interface} we describe the way the user interacts with 
@@ -19,15 +19,13 @@ Bedwyr, the command-line, the prompt and the syntax.
 In Section \ref{sec:howto} we try to give the user an understanding
 of the main concepts in order to use Bedwyr efficiently.
 
-\section*{Why this name?}
-
-Knights in the legend of King Arthur and the round table were
-considered for this system since the name ``Parisfal'' is associate with
-an INRIA team that is part of the ``Slimmer'' effort.  Bedwyr is one
-of those knights.  For more, see
-\url{http://www.lix.polytechnique.fr/parsifal/} and  
+\paragraph{Why this name?}
+In the legend of King Arthur and the round table, several knights
+shared in the search for the holy grail.  The name of one of them,
+Parsifal, is used for an INRIA team associated with the ``Slimmer''
+effort.  Bedwyr was another one of those knights.  For more
+information, see \url{http://www.lix.polytechnique.fr/parsifal/} and
 \url{http://slimmer.gforge.inria.fr/}.
-
 
 
 % ============================================================================
@@ -74,13 +72,13 @@ More tests, including examples in Bedwyr:
 # make test
 \end{verbatim}
 
-\subsection{Line edition}
+\subsection{Line editing}
 
 By default, Bedwyr is built using the nativecode compiler \texttt{ocamlopt},
 since it is much faster. If you don't have it or don't want it (e.g.
 for easier debugging) use \texttt{./configure --disable-nativecode}.
 
-Bedwyr has no line edition facilities at all. We recommend using \texttt{ledit}
+Bedwyr has no line editing facilities at all. We recommend using \texttt{ledit}
 for a nicer experience. Get it (from your usual package manager of at
 (\url{ftp://ftp.inria.fr/INRIA/cristal/Daniel.de_Rauglaudre/Tools})
 and simply run \texttt{ledit src/bedwyr}.
@@ -160,7 +158,7 @@ You'll then get the Bedwyr prompt. In the following example we load a set of
 definitions and check a theorem about it: $\lambda x.x\;x$ has no simple type.
 
 \begin{verbatim}
-dbaelde@poum bedwyr $ src/bedwyr
+dbaelde@poum bedwyr % src/bedwyr
 [...welcome message...]
 ?= #include "examples/lambda.def".
 ?= (sigma T\ wt nil (abs x\ app x x) T) => false.
@@ -183,7 +181,7 @@ command-line (call \verb|src/bedwyr examples/lambda.def|).
 Other options are detailed in \verb.src/bedwyr --help..
 
 % ============================================================================
-\newpage
+%\newpage
 \section{How to use Bedwyr ?}
 \label{sec:howto}
 
@@ -243,5 +241,111 @@ even if the definition is non-recursive.
 For now, tabling only applies to goals which do not contain logic variables.
 Then, loops are successes for coinductive definitions,
 and failures for inductive ones.
+
+
+\section{The logic behind Bedwyr}
+\label{logic}
+
+The logic behind Bedwyr is an extension to a higher-order version of
+intuitionistic logic.  Below we provide a high-level overview of the
+logical aspects of Bedwyr that differentiate it from (the logics
+underlying) \lp\ and Prolog.  More explicit information on this system
+can be found in \cite{tiu05eshol}: n.b., the name ``Level 0/1'' in
+that paper has now been replace by Bedwyr.
+
+
+\paragraph{Built-in treatment of bindings}
+Function variables are allowed and $\lambda$-abstractions are
+primitive, and these are supported by the implementation of
+``higher-order pattern unification'' (also called
+$L_\lambda$-unification) \cite{miller91jlc}.  This kind of unification
+appears to be the weakest extension to first-order unification that
+treats bindings as a primitive.  A number of ``proof search'' systems
+implement this kind of unification (eg, Twelf, Teyjus, Coq, and
+Minlog).  Full $\beta$-conversion is implemented by Bedwyr as well.
+As a result, {\em higher-order abstract syntax} is fully supported.
+\lp\ similarly implements all these features, although \lp\ implements
+full higher-order unification (that is, it is not restricted to the
+$L_\lambda$ subset).  Another different with \lp\ is that Bedwyr does
+not have a built-in notion of types, while \lp\ is simply typed.
+
+\begin{figure}
+\begin{verbatim}
+% The predicate a holds for 3, 5, and 2.
+a (s (s (s z))).
+a (s (s (s (s (s z))))).
+a (s (s z)).
+
+% The less-than-or-equal relation
+leq z N.
+leq (s N) (s M) := leq N M.
+
+% Compute the maximum of a
+maxa N := a N, pi x\ a x => leq x N.
+\end{verbatim}
+\caption{Computing the maximum of a defined predicate.}
+\label{maxa}
+\end{figure}
+
+\paragraph{Syntax and semantics of clauses}
+Clauses in Bedwyr resemble those in \lp, but the underlying proof
+search semantics of those clauses can differ significantly.  For example,
+consider the Bedwyr program in Figure~\ref{maxa}.  These clauses are
+identical to those in \lp\ except for the use of \verb+:=+ instead of
+\verb+:-+.  Actually the ``proof search semantics'' for all but the
+last clause above is the same in Bedwyr and \lp\ (and, in this case,
+Prolog too).  The last clause, however, has an implication \verb+=>+
+in the goal, something also allowed in \lp.  During proof search,
+however, this occurrence of the implication in \lp\ causes the current
+program to be extended with an atomic fact of the form \verb+(a c)+,
+where {\tt c} is a new eigenvariable of the proof search.  In reality,
+\lp\ uses the ``open-world assumption'': it adds a new item {\tt c}
+and a new fact about it {\tt (a c)}.  In such a new world, however, the 
+{\tt leq} relation to does not have any information about this
+``non-standard'' number {\tt c}.  In constract to this, Bedwyr will
+take the assumption  {\tt (a c)} and ask ``Given the assumption that 
+{\tt (a c)} is true, how could it have been proved?''  The nature
+answer to this is that that assumption could have been proved if {\tt
+c} was either 3 or 5 or 2.  Thus, this analysis will cause a case
+analysis: in particular, the query {\tt (maxa N)} will cause the
+following goals to be considered:
+\begin{verbatim}
+        (a N)     (leq 3 N)    (leq 5 N)    (leq 2 N)
+\end{verbatim}
+The usual approach to unification and depth-first proof search will
+now produce the proper maximum value.
+
+\bigskip
+There are two orthogonal extensions to higher-order intuitionistic
+logic that have been incorporated into Bedwyr.   We describe them next.
+
+\paragraph{Symmetry of finite success and finite failure}
+The underlying logic of {\em fixed points} (also known as {\em
+definitions})
+\cite{girard92mail,schroeder-Heister93lics,mcdowell03tcs,momigliano03types}
+contains an inference rule that allows for failure in unification
+(and, hence, in simple proof search) to be turned into a success.
+Thus, simple forms of ``negation-as-failure'' can be naturally
+captured in Bedwyr and the underlying logic.  It is also possible to
+describe both {\em may} and {\em must} behaviors in process calculi.
+For example, not only can one code reachability in process calculus
+but bisimulation is also possible.  One way to view this enhancement
+to proof search is the following: Let $A$ and $B$ be two atomic
+formulas.  Then, finite success is captured by proving the sequent
+$\longrightarrow A$, finite failure is captured by proving the sequent
+$A\longrightarrow$, and simulation is captured by proving the sequent
+$A\longrightarrow B$.
+
+\paragraph{The $\nabla$ quantifier}
+In order to treat specifications using higher-order abstract syntax
+properly, it appears that a new quantifier, called $\nabla$, is
+necessary.  If finite success is all that is needed, the $\nabla$ can
+be replaced with the universal quantifier.  When finite failure is
+involved, however, the $\nabla$ quantifier plays an independent role.
+See \cite{miller05tocl,tiu04phd,tiu05concur} for more on this
+quantifier.  It is worth pointing out that we know of no examples
+involving $\nabla$ that do not also involve hoas.
+
+\bibliography{userguide}
 
 \end{document}
