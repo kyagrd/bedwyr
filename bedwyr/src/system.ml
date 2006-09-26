@@ -63,10 +63,13 @@ type definition = string * int * Term.term
 let defs : (string,(defkind*Term.term*Table.t option)) Hashtbl.t =
   Hashtbl.create 100
 
+let reset_defs () = Hashtbl.clear defs
+
 let add_clause kind head arity body =
   (* Cleanup all tables.
    * Cleaning only this definition's table is _not_ enough, since other
-   * definitions may rely on it. *)
+   * definitions may rely on it.
+   * TODO: make it optional to speedup huge definitions ? *)
   Hashtbl.iter
     (fun k v ->
        match v with
@@ -100,11 +103,10 @@ let get_def ?check_arity head =
   try
     let k,b,t = Hashtbl.find defs head in
       match check_arity with
-        | None -> k,b,t
+        | None | Some 0 -> k,b,t
         | Some a ->
             begin match Term.observe b with
               | Term.Lam (n,_) when n=a -> k,b,t
-              | _ when a=0 -> k,b,t
               | _ -> raise (Arity_mismatch (head,a))
             end
   with
