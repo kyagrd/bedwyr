@@ -49,6 +49,10 @@ lnorm (path (app N M) (right P))
       (path M P).
 lnorm (path (beta N R) P)
       (forall x\ (forall Q\ path x Q <- path N Q) -> path (R x) P).
+lnorm (path a ap) tt.   % Add a few constants
+lnorm (path b bp) tt.
+lnorm (path f fp) tt.
+lnorm (path g gp) tt.
 
 % This predicate is the same as above, except that it does not contain
 % the case for marked beta-redexes.
@@ -58,6 +62,11 @@ lnorm (path' (app M N) (left  P))
       (path' M P).
 lnorm (path' (app N M) (right P))
       (path' M P).
+lnorm (path' a ap) tt.
+lnorm (path' b bp) tt.
+lnorm (path' f fp) tt.
+lnorm (path' g gp) tt.
+
 
 % This predicate can be used to insert marked beta-redexes into a term.
 lnorm (insert_beta (app (abs R) N) (beta N' R'))
