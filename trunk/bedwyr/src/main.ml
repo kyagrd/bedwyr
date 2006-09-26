@@ -19,6 +19,41 @@
 
 exception Invalid_command
 
+let welcome_msg =
+  "Bedwyr welcomes you.
+
+This software is under GNU Public License.
+Copyright (c) 2005-2006 Slimmer project.
+
+For a little help, type #help.
+\n"
+
+let usage_msg =
+  "Bedwyr prover.
+This software is under GNU Public License.
+Copyright (c) 2005-2006 Slimmer project.
+
+Usage: bedwyr [filename | option]*
+"
+
+let interactive = ref true
+let test        = ref false
+let session     = ref []
+let queries     = ref []
+
+let _ =
+  Arg.parse [
+      "-I", Arg.Clear interactive,
+      "Do not enter interactive mode." ;
+
+      "-t", Arg.Set test, "Run tests in definition files." ;
+
+      "-e", Arg.String (fun s -> queries := s::!queries),
+      "Execute query."
+    ]
+    (fun f -> session := f::!session)
+    usage_msg
+
 let position lexbuf =
   let curr = lexbuf.Lexing.lex_curr_p in
   let file = curr.Lexing.pos_fname in
@@ -82,8 +117,11 @@ and input_defs lexbuf = process Parser.input_def lexbuf
 and input_queries ?(interactive=false) lexbuf =
   process ~interactive Parser.input_query lexbuf
 
+and load_session () =
+  System.reset_defs () ;
+  List.iter input_from_file !session
+
 and command lexbuf = function
-  | "debug",[] -> System.debug := true
   | "exit",[] -> exit 0
   | "help",[] ->
         Format.printf
@@ -96,14 +134,22 @@ and command lexbuf = function
 In query mode, just type a term to ask for its verification.
 
 "
-  (* Include a file *)
+  (* Session management *)
   | "include",[f] ->
       begin match Term.observe f with
         | Term.Var {Term.name=f} -> input_from_file f
         | _ -> raise Invalid_command
       end
+  | "reset",[] -> session := [] ; load_session ()
+  | "reload",[] -> load_session ()
+  | "session",l ->
+      session := List.map (fun f -> match Term.observe f with
+                             | Term.Var {Term.name=f} -> f
+                             | _ -> assert false) l ;
+      load_session ()
 
   (* Turn debugging on/off. *)
+  | "debug",[] -> System.debug := true
   | "debug",[d] ->
       System.debug :=
         begin match Term.observe d with
@@ -131,35 +177,26 @@ In query mode, just type a term to ask for its verification.
         | _ -> raise Invalid_command
       end
 
+  | "test",[query] ->
+      if !test then begin
+        Term.reset_namespace () ;
+        Prover.prove ~level:Prover.One ~local:0 ~timestamp:0 query
+          ~success:ignore ~failure:(fun () -> failwith "Test failed")
+      end
+
+  | "test_negative",[query] ->
+      if !test then begin
+        Term.reset_namespace () ;
+        Prover.prove ~level:Prover.One ~local:0 ~timestamp:0 query
+          ~success:(fun _ -> failwith "Test failed") ~failure:ignore
+      end
+
   | _ -> raise Invalid_command
 
-let interactive = ref true
-
 let _ =
-  Arg.parse [
-      "-I", Arg.Clear interactive,
-      "Do not enter interactive mode." ;
-
-      "-e", Arg.String (fun s -> input_queries (Lexing.from_string s)),
-      "Execute query."
-    ]
-    input_from_file
-    "Bedwyr prover.
-This software is under GNU Public License.
-Copyright (c) 2005-2006 Slimmer project.
-
-Usage: bedwyr [filename | option]*
-"
-
-let _ =
+  load_session () ;
+  List.iter (fun s -> input_queries (Lexing.from_string s)) !queries ;
   if !interactive then begin
-    Format.printf
-"Bedwyr welcomes you.
-
-This software is under GNU Public License.
-Copyright (c) 2005-2006 Slimmer project.
-
-For a little help, type #help.
-\n%!" ;
+    Format.printf "%s%!" welcome_msg ;
     input_queries ~interactive:true (Lexing.from_channel stdin)
   end

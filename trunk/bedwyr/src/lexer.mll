@@ -58,6 +58,8 @@ rule token = parse
 | "coinductive" { COIND }
 
 | name as n { ID n }
-| '"' (instring as n) '"' { STRING n }
+| '"' (instring as n) '"'
+    { String.iter (function '\n' -> incrline lexbuf | _ -> ()) n ;
+      STRING n }
 
 | eof    { failwith "eof" }
