@@ -1,0 +1,41 @@
+#!/bin/bash
+
+COMMAND=$1
+TIMES=10
+
+for k in 10 20 30 40 50 60 70 80
+do
+
+./gensq $k > sq$k.def
+
+s=0
+q=0
+sq=0
+
+for (( i = 0; i < $TIMES; i++ ))
+do
+
+ts=`echo "$1 s0 s0.\
+#exit." \
+| bedwyr sq$k.def | grep "?= +" | sed 's/?= + \([1-9][0-9]*\)ms/\1/' `
+s=`expr $s + $ts`
+
+tq=`echo "$1 q0 q0.\
+#exit." \
+| bedwyr sq$k.def | grep "?= +" | sed 's/?= + \([1-9][0-9]*\)ms/\1/' `
+q=`expr $q + $tq`
+
+tsq=`echo "$1 s0 q0.\
+#exit." \
+| bedwyr sq$k.def | grep "?= +" | sed 's/?= + \([1-9][0-9]*\)ms/\1/' `
+sq=`expr $sq + $tsq`
+
+
+done
+
+s=`expr $s / $TIMES`
+q=`expr $q / $TIMES`
+sq=`expr $sq / $TIMES`
+echo "$k:stack:$s queue:$q nbisim:$sq"
+
+done
