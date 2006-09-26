@@ -1,0 +1,158 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Early and Late Semantics of Value-Passing CCS
+%  written by Peng Wu (LIX, Ecole Polytechnique)
+%
+%  Written to be an example of how to do various kinds of 
+%  simulation checks for the value-passing CCS within Bedwyr.
+%  
+%  Compare this approach to using logic programming and model
+%  checking to the approach described in the paper
+%    
+%  Local and Symbolic Bisimulation Using Tabled Constraint Logic Programming
+%    by Samik Basu, Madhavan Mukund, C. R. Ramakrishnan, I. V. Ramakrishnan, 
+%    Rakesh M. Verma
+%    Proc. 17th ICLP 2001 (LNCS 2237)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Prefixes
+
+% Late and early transition systems are describe together.  The 
+% main difference is in the treatment of the input-prefix.
+
+%% Input prefix is rather simple in Bedwyr, given the presence of 
+%% lambda-abstraction and of beta-conversion.
+
+trans (in C P) (i C V) Q := Q = (P V).
+  % Notice that this definitions should be equivalent to the following one.
+  %     trans (in C P) (i C V) (P V).
+  % This latter one is not used since it involves a non-L-lambda unification 
+  % problem.  Moving the unification to the body of the clause delays 
+  % unification until some beta-conversions are done.  The result yields 
+  % an L-lambda problem.
+
+% Late input 
+ltrans (in C P) (i C) P.
+  % Notice that the "continuation for an ltrans with an input action
+  % is an abstraction of a process, not a process.
+
+trans (out C V P) (o C V) P.
+ltrans(out C V P) (o C V) P.
+
+trans  (taup P) tau P.
+ltrans (taup P) tau P.
+
+% Choice
+trans  (sum P Q) A R := trans  P A R ; trans  Q A R.
+ltrans (sum P Q) A R := ltrans P A R ; ltrans Q A R.
+
+% Parallel
+trans (par P Q) A (par R Q) := trans P A R.
+trans (par P Q) A (par P R) := trans Q A R.
+
+ltrans (par P Q) A (par R Q) := ltrans P A R.
+ltrans (par P Q) A (par P R) := ltrans Q A R.
+
+% Communication
+trans (par P Q) tau (par R S) := sigma C\ sigma V\ trans P (i C V) R, trans Q (o C V) S.
+trans (par P Q) tau (par R S) := sigma C\ sigma V\ trans P (o C V) R, trans Q (i C V) S.	
+
+ltrans (par P Q) tau (par R S) := sigma T\ sigma C\ sigma V\ 
+                                    ltrans P (i C) T, ltrans Q (o C V) S, (R = (T V)).
+ltrans (par P Q) tau (par R S) := sigma T\ sigma C\ sigma V\
+                                    ltrans P (o C V) R, ltrans Q (i C) T, (S = (T V)).	
+
+% Match(if..then..)
+trans  (if V V P) A Q := trans  P A Q.
+ltrans (if V V P) A Q := ltrans P A Q.
+
+% ite(if..then..else..) and "mismatch"  use a negation in the operational 
+% semantics.  This can cause problems in Bedwyr ("logic variable on the left")
+% during bisimulations.
+
+%??% trans (ite V W P R) A Q := V = W, trans P A Q;  V = W => false, trans R A Q.
+% trans (ite V W P R) A Q := trans P A Q, V = W.
+trans (ite V V P R) A Q := trans P A Q.
+trans (ite V W P R) A Q := (V = W => false), trans R A Q.
+%??% ltrans (ite V W P R) A Q := V = W, ltrans P A Q;  V = W => false, ltrans R A Q.
+ltrans (ite V W P R) A Q := V = W, ltrans P A Q.
+ltrans (ite V W P R) A Q := (V = W => false), ltrans R A Q.
+
+% Identifier: replace with an equivalent process.
+trans  (proc I) A Q := pdef I P, trans P A Q.
+ltrans (proc I) A Q := pdef I P, ltrans P A Q.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Simulation and Bisimulation Relations
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% In the other paper, they specify the negation of bisimulation
+
+% Early, \forall\exists- simulation
+coinductive sim P Q := 
+	    (pi R\ pi A\ trans P A R => sigma S\ trans Q A S, sim R S).
+coinductive aesim P Q := 
+	    (pi R\ pi C\ pi V\ ltrans P (o C V) R => sigma S\ ltrans Q (o C V) S, aesim R S),
+	    (pi R\ ltrans P tau R => sigma S\ ltrans Q tau S, aesim R Q),
+	    (pi R\ pi C\ ltrans P (i C) R => pi V\sigma S\ ltrans Q (i C) S, aesim (R V) (S V)).
+
+% Late simulation
+coinductive lsim P Q := 
+	    (pi R\ pi C\ pi V\ ltrans P (o C V) R => sigma S\ ltrans Q (o C V) S, lsim R S),
+	    (pi R\ ltrans P tau R => sigma S\ ltrans Q tau S, lsim R S),
+	    (pi R\ pi C\ ltrans P (i C) R => sigma S\ ltrans Q (i C) S, pi V\ lsim (R V) (S V)).
+
+% Early, \forall\exists- bisimulation
+coinductive bisim P Q := 
+	    (pi R\ pi A\ trans P A R => sigma S\ trans Q A S, bisim R S),
+	    (pi S\ pi A\ trans Q A S => sigma R\ trans P A R, bisim R S).
+coinductive aebisim P Q := 
+	    (pi R\ pi C\ pi V\ ltrans P (o C V) R => sigma S\ ltrans Q (o C V) S, aebisim R S),
+	    (pi R\ ltrans P tau R => sigma S\ ltrans Q tau S, aebisim R S),
+	    (pi R\ pi C\ ltrans P (i C) R => pi V\ sigma S\ ltrans Q (i C) S, aebisim (R V) (S V)),
+	    (pi S\ pi C\ pi V\ ltrans Q (o C V) S => sigma R\ ltrans P (o C V) R, aebisim R S),
+	    (pi S\ ltrans Q tau S => sigma R\ ltrans P tau R, aebisim R S),
+	    (pi S\ pi C\ ltrans Q (i C) S => pi V\ sigma R\ ltrans P (i C) R, aebisim (R V) (S V)).
+
+% Late bisimulation
+coinductive lbisim P Q :=
+	    (pi R\ pi C\ pi V\ ltrans P (o C V) R => sigma S\ ltrans Q (o C V) S, lbisim R S),
+	    (pi R\ ltrans P tau R => sigma S\ ltrans Q tau S, lbisim R S),
+	    (pi R\ pi C\ ltrans P (i C) R => sigma S\ ltrans Q (i C) S, pi V\ lbisim (R V) (S V)),
+	    (pi S\ pi C\ pi V\ ltrans Q (o C V) S => sigma R\ ltrans P (o C V) R, lbisim R S),
+	    (pi S\ ltrans Q tau S => sigma R\ ltrans P tau R, lbisim R S),
+	    (pi S\ pi C\ ltrans Q (i C) S => sigma R\ ltrans P (i C) R, pi V\ lbisim (R V) (S V)).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Some useful predicates for testing
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% 1-step transition
+step  I A Q := pdef I P, trans  P A Q.
+lstep I A Q := pdef I P, ltrans P A Q.
+
+% 2-steps transitions
+2steps I A Q B W := pdef I P, trans P A Q, trans Q B W.
+
+% Simulation checking
+sc   I J := pdef I P, pdef J Q, sim   P Q.
+aesc I J := pdef I P, pdef J Q, aesim P Q.
+
+% Late simulation checking
+lsc I J := pdef I P, pdef J Q, lsim P Q.
+
+% Bisimulation checking
+bc   I J := pdef I P, pdef J Q, bisim   P Q.
+aebc I J := pdef I P, pdef J Q, aebisim P Q.
+
+% Late bisimulation checking
+lbc I J := pdef I P, pdef J Q, lbisim P Q.
+
+% Let's check some instances of some axioms
+% P + 0 = P
+axiom1 I := pdef I P, bisim (sum P null) P.
+% P + P = P
+axiom2 I := pdef I P, bisim (sum P P) P.
+% P + Q = Q + P
+axiom3 I J := pdef I P, pdef J Q, bisim (sum P Q) (sum Q P).
+% (P + Q) + R = P + (Q + R)
+axiom4 I J K := pdef I P, pdef J Q, pdef K R, bisim (sum (sum P Q) R) (sum P (sum Q R)).
