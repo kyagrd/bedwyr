@@ -191,6 +191,8 @@ In query mode, just type a term to ask for its verification.
           ~success:(fun _ -> failwith "Test failed") ~failure:ignore
       end
 
+  | "type",_ -> ()
+
   | _ -> raise Invalid_command
 
 let _ =
