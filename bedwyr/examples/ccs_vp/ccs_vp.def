@@ -2,8 +2,8 @@
 % Early and Late Semantics of Value-Passing CCS
 %  written by Peng Wu (LIX, Ecole Polytechnique)
 %
-%  Written to be an example of how to do various kinds of 
-%  simulation checks for the value-passing CCS within Bedwyr.
+%  An example of how to do various kinds of 
+%  (bi)simulation checks for the value-passing CCS within Bedwyr.
 %  
 %  Compare this approach to using logic programming and model
 %  checking to the approach described in the paper
@@ -23,7 +23,7 @@
 %% lambda-abstraction and of beta-conversion.
 
 trans (in C P) (i C V) Q := Q = (P V).
-  % Notice that this definitions should be equivalent to the following one.
+  % Notice that this definition should be equivalent to the following one.
   %     trans (in C P) (i C V) (P V).
   % This latter one is not used since it involves a non-L-lambda unification 
   % problem.  Moving the unification to the body of the clause delays 
@@ -74,7 +74,7 @@ ltrans (if V V P) A Q := ltrans P A Q.
 trans (ite V V P R) A Q := trans P A Q.
 trans (ite V W P R) A Q := (V = W => false), trans R A Q.
 %??% ltrans (ite V W P R) A Q := V = W, ltrans P A Q;  V = W => false, ltrans R A Q.
-ltrans (ite V W P R) A Q := V = W, ltrans P A Q.
+ltrans (ite V V P R) A Q := ltrans P A Q.
 ltrans (ite V W P R) A Q := (V = W => false), ltrans R A Q.
 
 % Identifier: replace with an equivalent process.
@@ -92,7 +92,7 @@ coinductive sim P Q :=
 	    (pi R\ pi A\ trans P A R => sigma S\ trans Q A S, sim R S).
 coinductive aesim P Q := 
 	    (pi R\ pi C\ pi V\ ltrans P (o C V) R => sigma S\ ltrans Q (o C V) S, aesim R S),
-	    (pi R\ ltrans P tau R => sigma S\ ltrans Q tau S, aesim R Q),
+	    (pi R\ ltrans P tau R => sigma S\ ltrans Q tau S, aesim R S),
 	    (pi R\ pi C\ ltrans P (i C) R => pi V\sigma S\ ltrans Q (i C) S, aesim (R V) (S V)).
 
 % Late simulation
