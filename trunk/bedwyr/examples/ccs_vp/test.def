@@ -4,11 +4,14 @@
 % several simple examples to show how value-passing CCS processes 
 % can be defined in Bedwyr.
 
-% Notice that if a CCS expression contains the ife construct, then checking 
+% Notice that if a CCS expression contains the ite construct, then checking 
 % bisimulation with itself causes an error in Bedwyr: a logic variable can
 % move to the "left" (from prover 1 to prover 0).  
 % Best to avoid mismatch (and other forms of negation) in the specification 
 % of operational semantics.
+
+% Emit a tau action and repeat.
+pdef p0 (taup (proc p0)).
 
 %  a?x.b!x
 pdef p1 (in a (x\ out b x null)).
