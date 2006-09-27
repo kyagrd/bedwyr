@@ -3,7 +3,8 @@
 \usepackage{url}
 \newcommand{\lp}{$\lambda$Prolog}
 
-\title{{\Huge Bedwyr} \\ User Guide}
+\title{{\Huge Bedwyr} \\ User Guide
+   \thanks{This document still needs a lot of improvements.}}
 \author{David Baelde, Andrew Gacek, Dale Miller, Gopalan Nadathur}
 
 \begin{document}
@@ -11,20 +12,18 @@
 
 \tableofcontents
 
-\paragraph{Layout}
-In Section \ref{sec:install} we install Bedwyr as distributed
-in tarballs or from the SVN.
-In Section \ref{sec:interface} we describe the way the user interacts with 
-Bedwyr, the command-line, the prompt and the syntax.
-In Section \ref{sec:howto} we try to give the user an understanding
-of the main concepts in order to use Bedwyr efficiently.
-
 \paragraph{Why this name?}
 In the legend of King Arthur and the round table, several knights
 shared in the search for the holy grail.  The name of one of them,
 Parsifal, is used for an INRIA team associated with the ``Slimmer''
-effort.  Bedwyr was another one of those knights.  For more
-information, see \url{http://www.lix.polytechnique.fr/parsifal/} and
+effort.  Bedwyr was another one of those knights.  Wikipedia (using
+the spelling ``Bedivere'') mentions that Bedwyr appears in {\em Monty
+Python and the Holy Grail} where he is ``portrayed as a master of the
+extremely odd logic in the ancient times, whom occasionally blunders."
+Bedwyr is a re-implementation and rethinking of an earlier system
+called Level 0/1 written by Alwen Tiu and described in
+\cite{tiu05eshol}.  For more information, see
+\url{http://www.lix.polytechnique.fr/parsifal/} and
 \url{http://slimmer.gforge.inria.fr/}.
 
 
@@ -104,20 +103,38 @@ and load the current file you are working on.
 \section{User interface}
 \label{sec:interface}
 
+The concrete syntax of formulas in Bedwyr resemble that used by
+$\lambda$Prolog in, say, the Teyjus implementation
+\cite{nadathur99cade}.  While both systems implement aspects of
+higher-order logic programming, they are rather different systems.
+The most striking difference between these systems is that
+$\lambda$Prolog accepts the ``open-world assumption'': thus, any
+conclusions drawn in (the logic of) $\lambda$Prolog will hold in any
+extension of the underlying logic programming language.  Bedwyr on the
+contrary accepts the ``closed-world assumption'': the notion of
+programs are replaced by {\em definitions} that capture the
+``if-and-only-if'' closure of logic programs.  This change allows
+Bedwyr give a computational interpretation to finite failure and to
+allow it do deduction that encodes model checking.
+
 \subsection{Syntax}
 
-Bedwyr uses HOAS (Higher-Order Abstract Syntax), which means that formulas
-of the Linc logic and of the object logics are represented using 
-$\lambda$-terms. The term normalization is implicit, the equality is the 
-equality of $\lambda$-terms, notable handling implicitly $\alpha$-equivalence.
+Bedwyr uses HOAS (Higher-Order Abstract Syntax), which means that
+formulas of the Linc logic and of the object logics are represented
+using $\lambda$-terms. Term normalization ($\beta$-reduction) is
+implicit and the equality of terms is given by
+$\alpha\beta\eta$-conversion.
 
-The abstraction over \verb.x. in \verb.term. is denoted by \verb.x\term. | 
-which is read as $\lambda x. term$. On top of that we build 
-formulas: e.g. we write \verb.pi x\ x=x.
-(that is $pi\;(\lambda{}x.(=\;x\;x))$)
-to represent $\forall x. x=x$.
+The grammar for formulas and terms is given in Figure~\ref{concrete}.
+The abstraction over variable \verb.x. in \verb.term. is denoted by
+\verb.x\term. | which is read as $\lambda x. term$. On top of that we
+build formulas: e.g. we write \verb.pi x\ x=x.  (that is
+$pi\;(\lambda{}x.(=\;x\;x))$) to represent $\forall x. x=x$.  The
+scope of the infix $\lambda$-abstraction extends to the right as far
+as possible: the term \verb.(x\ y\ f y x)). is parenthesized as 
+\verb.(x\ (y\ ((f y) x))).
 
-Formulas are formed as follows:
+\begin{figure}
 \[\begin{array}{rclp{5cm}}
 form &::=& form \texttt{,}  form & conjunction \\
      & | & form \texttt{;}  form & disjunction \\
@@ -135,6 +152,9 @@ term &::=& id & identifiers are non-empty sequences of \verb.[A-Za-z0-9/_']. \\
      & | & \verb.(. term \verb.). & \\
 atomic &::=& id \; term* & a possibly empty application with a constant head \\
 \end{array}\]
+\caption{Grammar for formulas and terms..}
+\label{concrete}
+\end{figure}
 
 \subsection{Running Bedwyr}
 
@@ -162,18 +182,15 @@ dbaelde@poum bedwyr % src/bedwyr
 [...welcome message...]
 ?= #include "examples/lambda.def".
 ?= (sigma T\ wt nil (abs x\ app x x) T) => false.
-+ 1ms
 Yes.
-More [y] ?
-+ 0ms
+More [y] ? y
 No more solutions.
 ?= pi x\ X x = x x.
-+ 0ms
 Solution found:
  X = (x1\x1 x1)
-More [y] ?
-+ 0ms
+More [y] ? y
 No more solutions.
+?= 
 \end{verbatim}
 
 A simpler way to load definition files is to pass them directly on the
@@ -182,45 +199,62 @@ Other options are detailed in \verb.src/bedwyr --help..
 
 % ============================================================================
 %\newpage
-\section{How to use Bedwyr ?}
+\section{How to use Bedwyr}
 \label{sec:howto}
 
-A better undestanding of the tool is probably needed to get your work done.
+A better undestanding of the tool is probably needed to get your work
+done. 
 
-\subsection{Proof-search within Level 0/1}
+\subsection{Proof-search within LINC}
 
-Bedwyr is a proof-search engine for the Level 0/1 fragment of the Linc logic.
-Roughly, the Level 0/1 fragment requires that the formulas on the left of
-implications do not contain implications and universal quantifications.
-It allows the proof-search to be simple and (more) efficient,
-since the formulas on the left can be immediately eliminated.
+LINC is a logic developed over the past few years.  The acronym, which
+stands for ``lambda, induction, nabla, and coinduction'', lists the
+main novel components of the logic.  In particular, $\lambda$-terms
+are supported directly (and, hence, the $\lambda$-tree syntax approach
+to higher-order abstract syntax is supported \cite{miller00cl}).
+Induction and coinduction are also available.  The nabla $\nabla$
+quantifier has be added to this logic in order to increase the
+expressiveness of programs using hoas in negated situations.  The
+proof theory of LINC is given in \cite{miller05tocl,tiu04phd}.
 
-To prove an implication $A\Rightarrow B$,
-Bedwyr enumerates all possible solutions $\theta_i$ for $A$,
-and then tries to prove $B\theta_1\wedge\dots\wedge B\theta_N$.
-In particular when $A$ has no solution, the formula is true.
+Bedwyr is a proof search engine for a small fragment of the LINC
+logic.  In principle, Bedwyr uses two provers.  Prover 1 is similar to
+a depth-first interpreter used in in $\lambda$Prolog.  The main
+difference is in the proof of an implication.  
+To prove an implication $A\Rightarrow B$, prover 1  calls prover 0
+to enumerates all possible solutions
+$\{\theta_i\;\vert\;i=1,\ldots,n\}$ for $A$, 
+and then prover 1 tries to prove $B\theta_1\wedge\dots\wedge B\theta_N$.
+If $A$ has no solution (that is, if $n=0$), the implication is true.
+The substitutions generated by prover 1 are for ``logic variables'' in
+the sense that is usual for logic programming implementations.  On the
+other hand, the substitutions generated by prover 0 are for
+eigenvariables. 
 
-Two runtime errors can occur:
-when the prover encounters an unification which isn't a higher-order pattern;
-when a logic variable appears on the left of an implication.
+Two runtime errors can occur during proof search in Bedwyr.  The first
+is when either prover encounters a unification problem that is not a 
+higher-order pattern unification: full higher-order unification is not
+implemented (as is done in $\lambda$Prolog).  The second error can
+occur when a logic variable from prover 1 appears on the left of an
+implication: prover 0 does not know what to do with such variables.
 
 Examples will help to understand the second one:
 \begin{verbatim}
-?= X=1 => X=1.
-Unknown error: Failure("logic variable on the left")
+?= X = 1 => X = 1.
+Error: logic variable on the left
 ?= X=1, pi x\ x = X => x = X.
-+ 0ms
 Solution found:
  X = 1
-More [y] ?
-+ 0ms
+More [y] ? y
 No more solutions.
+?= 
 \end{verbatim}
 The first query requires radically different tools than those we use |
-namely, disunification. The query actually has infinitely many solutions,
-any term other than $1$ fits $X$.
-In the second case, it works, since \verb.X. is instantiated at the time the
-implication is processed.
+namely, disunification. (The crypic message about ``on the left''
+refers to the left of the sequent arrow in the proof theory of LINC.)
+The query actually has infinitely many solutions: any term other than
+$1$ can be used to instantiate $X$.  In the second query works since
+\verb.X. is instantiated at the time the implication is processed.
 
 \subsection{Tabling}
 
@@ -381,7 +415,8 @@ These examples can be divided classified roughly as follows.
 
 \end{description}
 
-\bibliography{userguide}
+%\bibliography{userguide}
+\bibliography{../../../../../pap/references/master}
 
 
 \end{document}
