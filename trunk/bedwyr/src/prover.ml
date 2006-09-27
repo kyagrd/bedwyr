@@ -22,15 +22,14 @@ exception Level_inconsistency
 
 open Format
 open System
-
-(* Destructive flag swicth Ev <-> Logical *)
-
 open Term
 
-(** Proof search *)
+(* Internal design of the prover has two levels, Zero and One.
+ * On level One, logic vars are instantiated and eigenvars are constants.
+ * On level Zero, logic vars are forbidden and eigenvars can be instantiated. *)
 
-(* Internal design of the prover has two levels. *)
 type level = Zero | One
+
 let assert_level_one = function
   | One -> ()
   | Zero -> raise Level_inconsistency
@@ -53,12 +52,8 @@ let unify lvl a b =
   with
     | Unify.Error _ -> false
 
-let new_dbs = make_list (fun n -> Term.db n)
-
-let raise_term ~local x =
-  if local = 0 then x else
-    let dBs = new_dbs local in
-      Term.app x dBs
+(* Tabling provides a way to cut some parts of the search,
+ * but we should take care not to mistake shortcuts and disproving. *)
 
 let disprovable_stack = Stack.create ()
 
@@ -173,7 +168,7 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
                   prove ~level ~timestamp ~local ~success ~failure
                     (Term.app body args)
             end
-        | _ ->
+        | None ->
             prove ~level ~timestamp ~local ~success ~failure
               (Term.app body args)
   in
@@ -316,6 +311,22 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
         | Var {name="print"} ->
             List.iter (fun t -> printf "%a\n%!" Pprint.pp_term t) goals ;
             success failure
+
+        (* Get an AST *)
+        | Var {name="parse"} ->
+            begin match goals with
+              | [file;t] ->
+                  begin match Term.observe file with
+                    | Term.Var {Term.name=file} ->
+                        let ast = Parser.to_term Lexer.token file in
+                          if unify level ast t then
+                            success failure
+                          else
+                            failure ()
+                    | _ -> assert false
+                  end
+              | _ -> assert false
+            end
 
         (* Check for definitions *)
         | Var {name=d;tag=Constant} -> prove_atom d goals

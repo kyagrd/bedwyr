@@ -42,6 +42,13 @@ depend: $(CORE_SRC) $(BEDWYR_SRC) $(TEST_ML)
 	$(OCAMLC) $<
 %.ml: %.mly
 	$(OCAMLYACC) $<
+	echo $<
+	echo "val to_term : (Lexing.lexbuf -> token) -> string -> Term.term" \
+	  >> $(<:.mly=.mli)
+%.mli: %.mly
+	$(OCAMLYACC) $<
+	echo "val to_term : (Lexing.lexbuf -> token) -> string -> Term.term" \
+	  >> $(<:.mly=.mli)
 %.ml: %.mll
 	$(OCAMLLEX) $<
 
