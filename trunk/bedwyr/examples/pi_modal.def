@@ -1,0 +1,153 @@
+% A specification of Modal Logic for pi-calculus.
+% Based on the paper 
+%  "Modal logics for mobile processes", by R. Milner, J. Parrow and D. Walker
+%  Theoretical Computer Science 114 (1993).
+%
+% This definition file implements the specification of MPW modal logic 
+% described in the paper:
+%  Alwen Tiu. Model checking for pi-calculus using proof search.
+%  Available online from http://rsise.anu.edu.au/~tiu 
+%
+% Dependency: this file needs the pi.def (definition of late transition
+% system for pi-calculus)
+
+% Assume the formulas in the modal logic are in negation normal form.
+% 
+%
+% The types of the logical constants:
+% 
+% Formulas of MPW logic are given type form.
+% Propositional connectives:
+%  land : form -> form -> form  (conjunction)
+%  lor : form -> form -> form   (disjunction)
+%  top : form  (true)
+%  bot : form (false)
+% 
+% The prefix 'dia' indicates the 'diamond' modality and 'box' indicates
+% the box modality.
+% 'Free' modalities:
+%   boxMatch : name -> name -> form -> form. (match modality, e.g., [x = y] A)
+%   diaMatch : name -> name -> form -> form. (diamond, e.g., <x=y> A)
+%   boxAct, diaAct : name -> form -> form. (free actions)
+%   boxOut, diaOut : name -> (name -> form) -> form. (bound output)
+%   boxIn, diaIn   : name -> (name -> form) -> form. (bound input)
+%   boxInL, diaInL : name -> (name -> form) -> form. ('late' bound input)
+%   boxInE, diaInE : name -> (name -> form) -> form. ('early' bound input)
+
+#include "pi.def".
+
+
+% A "lazy" but incomplete encoding.
+
+sat P top.
+sat P (land A B) := sat P A, sat P B.
+sat P (lor A B) := sat P A ; sat P B.
+sat P (boxMatch X Y A) := (X = Y) => sat P A.
+sat P (diaMatch X Y A) := (X = Y), sat P A.
+sat P (boxAct X A) := pi P1\ one P X P1 => sat P1 A.
+sat P (diaAct X A) := sigma P1\ one P X P1, sat P1 A.
+sat P (boxOut X A) := pi Q\ onep P (up X) Q => nabla y\ sat (Q y) (A y).
+sat P (diaOut X A) := sigma Q\ onep P (up X) Q, nabla y\ sat (Q y) (A y).
+sat P (boxIn X A) := pi Q\ onep P (dn X) Q => pi y\ sat (Q y) (A y).
+sat P (diaIn X A) := sigma Q\ onep P (dn X) Q, sigma y\ sat (Q y) (A y).
+sat P (boxInL X A) := pi Q\ onep P (dn X) Q => sigma y\ sat (Q y) (A y).
+sat P (diaInL X A) := sigma Q\ onep P (dn X) Q, pi y\ sat (Q y) (A y).
+sat P (boxInE X A) := sigma y\ pi Q\ onep P (dn X) Q => sat (Q y) (A y).
+sat P (diaInE X A) := pi y\ sigma Q\ onep P (dn X) Q, sat (Q y) (A y).
+
+
+%
+% A complete encoding: using explicit list of names.
+ 
+member X (cons Y L) := (X = Y) ; member X L.
+
+lsat L P top.
+lsat L P (land A B) := lsat L P A, lsat L P B.
+lsat L P (lor A B) := lsat L P A ; lsat L P B.
+lsat L P (boxMatch X Y A) := (X = Y) => lsat L P A.
+lsat L P (diaMatch X Y A) := (X = Y), lsat L P A.
+lsat L P (boxAct X A) := pi P1\ one P X P1 => lsat L P1 A.
+lsat L P (diaAct X A) := sigma P1\ one P X P1, lsat L P1 A.
+lsat L P (boxOut X A) := pi Q\ onep P (up X) Q => nabla y\ lsat (cons y L) (Q y) (A y).
+lsat L P (diaOut X A) := sigma Q\ onep P (up X) Q, nabla y\ lsat (cons y L) (Q y) (A y).
+lsat L P (boxIn X A) := pi Q\ onep P (dn X) Q => 
+         nabla w\ pi y\ (member y (cons w L) => lsat (cons w L) (Q y) (A y)).
+lsat L P (diaIn X A) := sigma Q\ onep P (dn X) Q, 
+         nabla w\ sigma y\ (member y (cons w L), lsat (cons w L) (Q y) (A y)).
+lsat L P (boxInL X A) := pi Q\ onep P (dn X) Q => 
+         nabla w\ sigma y\ (member y (cons w L), lsat (cons w L) (Q y) (A y)).
+lsat L P (diaInL X A) := sigma Q\ onep P (dn X) Q, 
+         nabla w\ pi y\ (member y (cons w L) => lsat (cons w L) (Q y) (A y)).
+lsat L P (boxInE X A) := nabla w\ sigma y\ 
+         (member y (cons w L), 
+          pi Q\ onep P (dn X) Q => lsat (cons w L) (Q y) (A y)).
+lsat L P (diaInE X A) := nabla w\ pi y\ member y (cons w L) => 
+          sigma Q\ onep P (dn X) Q, lsat (cons w L) (Q y) (A y).
+
+
+% Type checking processes and assertions =========================================
+
+
+atom (form A).
+formcheck (name x) tt.
+formcheck (name y) tt.
+formcheck (name tau) tt.
+formcheck (form top) tt.
+formcheck (form bot) tt.
+formcheck (form (land A B)) (and (form A) (form B)).
+formcheck (form (lor A B)) (and (form A) (form B)).
+formcheck (form (boxMatch X Y A)) (and (name X) (and (name Y) (form A))).
+formcheck (form (diaMatch X Y A)) (and (name X) (and (name Y) (form A))).
+formcheck (form (boxAct X A)) (and (name X) (form A)).
+formcheck (form (diaAct X A)) (and (name X) (form A)).
+formcheck (form (boxOut X A)) (and (name X) (forall u\ (name u) -> (form (A u)))).
+formcheck (form (diaOut X A)) (and (name X) (forall u\ (name u) -> (form (A u)))).
+formcheck (form (boxIn  X A)) (and (name X) (forall u\ (name u) -> (form (A u)))).
+formcheck (form (diaIn  X A)) (and (forall u\ (name u) -> (form (A u))) (name X)).
+formcheck (form (boxInL X A)) (and (name X) (forall u\ (name u) -> (form (A u)))).
+formcheck (form (diaInL X A)) (and (name X) (forall u\ (name u) -> (form (A u)))).
+formcheck (form (boxInE X A)) (and (name X) (forall u\ (name u) -> (form (A u)))).
+formcheck (form (diaInE X A)) (and (name X) (forall u\ (name u) -> (form (A u)))).
+
+
+% Some examples =================================================================
+
+% Encoding the judgment x(y).0 |= <x(u)>[x = u] false.
+% This judgment should be provable in MPW logic
+assert  1 (diaIn x (u\ (boxMatch x u bot))).
+process 1 (in x (y\ z)).
+
+% The 'excluded middle' on names
+assert  2 (diaInL x (y\ diaInL x (u\ lor (diaMatch y u top) (boxMatch y u bot)))).
+process 2 (in x (y\ in x u\ z)).
+
+% Process 3 and 4 are strongly bisimilar, hence should satisfy
+% the same set of assertions.
+% <x(y)>^L (<tau><tau> true \/ <tau> true).
+assert  3 (diaInL x (y\ lor (diaAct tau (diaAct tau top))
+                            (diaAct tau top))).
+process 3 (in x u\ (plus (taup (taup z)) (taup z))).
+process 4 (in x u\ nu y\ ((plus (taup (taup z))
+                           (plus (taup z)
+                                 (taup (match u y (taup z))))))).
+
+typecheck_proc := pi P\ pi N\ process N P => prv picheck (proc P).
+typecheck_form := pi A\ pi N\ assert N A => prv formcheck (form A).
+
+wrong_form N := sigma P\ assert N P, (prv formcheck (form P) => false).
+
+% Counterexample to the completeness of sat: 
+% This will generate an exception
+test1 := process 1 P, assert 1 A, sat P A.
+
+% However, lsat is complete
+test2 := process 1 P, assert 1 A, lsat (cons x nil) P A.
+
+% The excluded middle example is not provable using sat,
+% but is provable using lsat.
+test3 := process 2 P, assert 2 A, sat P A.
+test4 := process 2 P, assert 2 A, lsat (cons x nil) P A.
+
+test5 := process 3 P, process 4 Q, assert 3 A, sat P A, sat Q A.
+
+
