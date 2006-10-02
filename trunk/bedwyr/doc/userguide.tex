@@ -4,8 +4,10 @@
 \newcommand{\lp}{$\lambda$Prolog}
 
 \title{{\Huge A User Guide Bedwyr}
-   \thanks{This document still needs a lot of improvements.}}
-\author{David Baelde, Andrew Gacek, Dale Miller, Gopalan Nadathur}
+%   \thanks{This document still needs a lot of improvements.}
+}
+\author{David Baelde, Andrew Gacek, Dale Miller, \\
+        Gopalan Nadathur, Alwen Tiu}
 
 \begin{document}
 \maketitle
@@ -530,7 +532,7 @@ These query prove that
 $a(x).a(y).0$ and $a(x).(\nu z).a(y).z$ are bisimilar, 
 that
 $a(x).(\nu y).[x=y].c!c.0$ and $a(x).0$ are bisimilar, and that 
-$(\nu x).a!x.c(y).[x=y].\bar c c.0$ and 
+$(\nu x).a!x.c(y).[x=y].c!c.0$ and 
 $(\nu x).a!x.c(y).0$ are not bisimilar.
 
 %\bibliography{userguide}
