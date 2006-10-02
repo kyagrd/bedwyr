@@ -13,6 +13,12 @@ clean:
 %.gz: %
 	gzip -f $<
 
+html: userguide.tex
+	hevea userguide.tex
+
+bib:
+	bibtex userguide
+
 # Currently, the aux file mentions a bib file in Dale's LIX directory.  
 # Only he will be able to do the following command to create the 
 # userguide.bib file.
