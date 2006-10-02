@@ -137,9 +137,9 @@ one (par P Q) tau (nu y\ par (M y) (N y)) :=
 
 % comm
 one (par P Q) tau (par R T) :=
-  sigma X\ sigma Y\ sigma M\ onep P (dn X) M & one Q (up X Y) T & (R = (M Y)).
+  sigma X\ sigma Y\ sigma M\ onep P (dn X) M & one Q (up X Y) T & R = (M Y).
 one (par P Q) tau (par R T) :=
-  sigma X\ sigma Y\ sigma M\ onep Q (dn X) M & one P (up X Y) R & (T = (M Y)).
+  sigma X\ sigma Y\ sigma M\ onep Q (dn X) M & one P (up X Y) R & T = (M Y).
 
 % Rep-act
 one  (bang P) A (par P1 (bang P)) := one P A P1.
@@ -147,7 +147,7 @@ onep (bang P) X (y\ par (M y) (bang P)) := onep P X M.
 
 % Rep-com
 one (bang P) tau (par (par R T) (bang P)) :=
-  sigma X\ sigma Y\ sigma M\ onep P (dn X) M & one P (up X Y) R & (T = (M Y)).
+  sigma X\ sigma Y\ sigma M\ onep P (dn X) M & one P (up X Y) R & T = (M Y).
 
 % Rep-close
 one (bang P) tau (par (nu y\ par (M y) (N y)) (bang P)) := 
