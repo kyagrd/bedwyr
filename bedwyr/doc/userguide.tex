@@ -14,10 +14,12 @@
 
 \tableofcontents
 
+\vfill
+
 \paragraph{Why this name?}
 In the legend of King Arthur and the round table, several knights
 shared in the search for the holy grail.  The name of one of them,
-Parsifal, is used for an INGA team associated with the ``Slimmer''
+Parsifal, is used for an INRIA team associated with the ``Slimmer''
 effort.  Bedwyr was another one of those knights.  Wikipedia (using
 the spelling ``Bedivere'') mentions that Bedwyr appears in {\em Monty
 Python and the Holy Grail} where he is ``portrayed as a master of the
@@ -116,7 +118,7 @@ extension of the underlying logic programming language.  Bedwyr on the
 contrary accepts the ``closed-world assumption'': the notion of
 programs are replaced by {\em definitions} that capture the
 ``if-and-only-if'' closure of logic programs.  This change allows
-Bedwyr give a computational interpretation to finite failure and to
+Bedwyr to give a computational interpretation to finite failure and to
 allow it do deduction that encodes model checking.
 
 \subsection{Syntax}
@@ -160,29 +162,18 @@ atomic &::=& id \; term* & a possibly empty application with a constant head \\
 
 \subsection{Running Bedwyr}
 
-Bedwyr has two modes: one for extending definitions and one for querying.
-Definitions should be put in a file, as a set of clauses.
-\[ clause ::= atomic \;\verb.:=.\; term \verb|.| \]
-Such files are usually named with a \verb|.def| extension, you can find several
-in the \verb.examples. directory of the Bedwyr distribution.
-
-Queries are then asked against a given set of definitions.
-Any well-formed formula is a query.
-
+When you run Bedwyr, it will load a collection of definitions,
+against which you'll then be able to ask queries.
 In queries, variables starting with an uppercase character (\verb.A-Z_.)
 are implicitly quantified existentially, and their instantiations in solutions
 are displayed.
 
-In definitions, uppercase variables are implicitly universally quantified.
-
-You can run Bedwyr in interactive mode by simply calling \texttt{src/bedwyr}.
-You'll then get the Bedwyr prompt. In the following example we load a set of 
+In the following example we load a set of 
 definitions and check a theorem about it: $\lambda x.x\;x$ has no simple type.
 
 \begin{verbatim}
-dbaelde@poum bedwyr % src/bedwyr
+dbaelde@poum bedwyr % src/bedwyr examples/lambda.def
 [...welcome message...]
-?= #include "examples/lambda.def".
 ?= (sigma T\ wt nil (abs x\ app x x) T) => false.
 Yes.
 More [y] ? y
@@ -192,12 +183,43 @@ Solution found:
  X = (x1\x1 x1)
 More [y] ? y
 No more solutions.
-?= 
 \end{verbatim}
 
-A simpler way to load definition files is to pass them directly on the
-command-line (call \verb|src/bedwyr examples/lambda.def|).
-Other options are detailed in \verb.src/bedwyr --help..
+\subsubsection{Definition files}
+
+Definition files are usually named with a \verb|.def| extension.
+You can find several of them in the \verb.examples. directory
+of the Bedwyr distribution.
+Definitions are to be defined as a set of clauses, in which uppercase
+variables are implicitly universally quantified:
+\[ clause ::= atomic \;\verb.:=.\; term \verb|.| \]
+
+Definition files may also contain include commands:
+\begin{verbatim}#include "another/file.def".\end{verbatim}
+
+Finally, if the head of the clause is missing, the body will be processed as a 
+query.
+
+\subsubsection{Session management commands}
+
+Several commands alter the internal set of definitions of Bedwyr:
+\verb.#include., \verb.#session., \verb.#reload. and \verb.#reset..
+\begin{itemize}
+  \item
+    \verb.#include. is meant to be used in \verb;.def; files.
+  \item
+    \verb.#session. is a better \verb.#include. meant for query mode.
+    It accepts any number of filenames as parameters, and this set of files
+    will be remembered as the current \emph{session}.
+    When you pass filenames on Bedwyr's command line,
+    it is equivalent to call \verb.#session. with these definition files.
+  \item
+    \verb.#reload. clears all the definitions,
+    and then reloads all the session's files. It is useful if they have 
+    been changed.
+  \item
+    \verb.#reset. clears all the definitions and empties the session.
+\end{itemize}
 
 % ============================================================================
 %\newpage
@@ -288,7 +310,7 @@ intuitionistic logic.  Below we provide a high-level overview of the
 logical aspects of Bedwyr that differentiate it from (the logics
 underlying) \lp\ and Prolog.  More explicit information on this system
 can be found in \cite{tiu05eshol}: n.b., the name ``Level 0/1'' in
-that paper has now been replace by Bedwyr.
+that paper has now been replaced by Bedwyr.
 
 
 \paragraph{Built-in treatment of bindings}
@@ -342,7 +364,7 @@ and a new fact about it {\tt (a c)}.  In such a new world, however, the
 {\tt leq} relation to does not have any information about this
 ``non-standard'' number {\tt c}.  In contrast to this, Bedwyr will
 take the assumption  {\tt (a c)} and ask ``Given the assumption that 
-{\tt (a c)} is true, how could it have been proved?''  The nature
+{\tt (a c)} is true, how could it have been proved?''  The natural
 answer to this is that that assumption could have been proved if {\tt
 c} was either 3 or 5 or 2.  Thus, this analysis will cause a case
 analysis: in particular, the query {\tt (maxa N)} will cause the
@@ -429,7 +451,7 @@ things defined in that file, the operational semantics for the
 $\pi$-calculus given as using one-step transitions: for a specific
 example, see Figure~\ref{one-step}.  First notice that the syntax of
 clauses is almost identical to that used in $\lambda$Prolog.  In
-particular, the backspace is used to denote the $\lambda$-binder.  The
+particular, the backslash is used to denote the $\lambda$-binder.  The
 main syntactic difference is that the head and body of clauses are
 separated from either other using the \verb+:=+ instead of the
 \verb+:-+ (reverse turnstile).  The former symbol is used to remind
@@ -536,7 +558,7 @@ $(\nu x).a!x.c(y).[x=y].c!c.0$ and
 $(\nu x).a!x.c(y).0$ are not bisimilar.
 
 %\bibliography{userguide}
-\bibliography{../../../../../pap/references/master}
+\bibliography{master}
 
 
 \end{document}
