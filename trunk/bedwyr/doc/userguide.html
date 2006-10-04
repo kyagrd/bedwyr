@@ -1,0 +1,755 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN"
+            "http://www.w3.org/TR/REC-html40/loose.dtd">
+<HTML>
+
+<HEAD>
+
+<TITLE>A User Guide Bedwyr
+</TITLE>
+
+<META http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<META name="GENERATOR" content="hevea 1.08">
+<STYLE type="text/css">
+.toc{list-style:none;}
+.title{margin:auto;text-align:center}
+.center{text-align:center;margin-left:auto;margin-right:auto;}
+.flushleft{text-align:left;margin-left:0ex;margin-right:auto;}
+.flushright{text-align:right;margin-left:auto;margin-right:0ex;}
+DIV TABLE{margin-left:inherit;margin-right:inherit;}
+PRE{text-align:left;margin-left:0ex;margin-right:auto;}
+BLOCKQUOTE{margin-left:4ex;margin-right:4ex;text-align:left;}
+.part{margin:auto;text-align:center}
+</STYLE>
+</HEAD>
+
+<BODY >
+<!--HEVEA command line is: hevea userguide.tex -->
+<!--HTMLHEAD-->
+<!--ENDHTML-->
+<!--PREFIX <ARG ></ARG>-->
+<!--CUT DEF section 1 -->
+
+
+<TABLE CLASS="title">
+<TR><TD>
+<H1 CLASS="titlemain"><FONT SIZE=7>A User Guide Bedwyr</FONT>
+</H1>
+<H3 CLASS="titlerest">David Baelde, Andrew Gacek, Dale Miller,<BR>
+Gopalan Nadathur, Alwen Tiu</H3></TD>
+</TR></TABLE><BR>
+<!--TOC section Contents-->
+
+<H2 CLASS="section">Contents</H2><!--SEC END -->
+
+
+<!--TOC paragraph Why this name?-->
+
+<H5 CLASS="paragraph">Why this name?</H5><!--SEC END -->
+
+In the legend of King Arthur and the round table, several knights
+shared in the search for the holy grail. The name of one of them,
+Parsifal, is used for an INRIA team associated with the &#8220;Slimmer&#8221;
+effort. Bedwyr was another one of those knights. Wikipedia (using
+the spelling &#8220;Bedivere&#8221;) mentions that Bedwyr appears in <EM>Monty
+Python and the Holy Grail</EM> where he is &#8220;portrayed as a master of the
+extremely odd logic in the ancient times, whom occasionally blunders."
+Bedwyr is a re-implementation and rethinking of an earlier system
+called Level 0/1 written by Alwen Tiu and described in
+[<A HREF="#tiu05eshol"><CITE>TNM05</CITE></A>]. For more information, see
+<TT>http://www.lix.polytechnique.fr/parsifal/</TT> and
+<TT>http://slimmer.gforge.inria.fr/</TT>.<BR>
+<BR>
+<!--TOC section Get Bedwyr-->
+
+<H2 CLASS="section"><A NAME="htoc1">1</A>&nbsp;&nbsp;Get Bedwyr</H2><!--SEC END -->
+
+<A NAME="sec:install"></A>
+You can get Bedwyr from Slimmer's INRIA Gforge project page:
+<TT>http://gforge.inria.fr/projects/slimmer</TT>.
+There you can download tarballs or get the development version using SVN
+| instructions are provided on the project page. The development of
+Bedwyr is meant to be an open source project. If you are keen
+to work on the source code and/or examples, please contact
+one of the &#8220;Project Admins&#8221; of the project (as listed at the above url).<BR>
+<BR>
+<!--TOC subsection Distribution layout-->
+
+<H3 CLASS="subsection"><A NAME="htoc2">1.1</A>&nbsp;&nbsp;Distribution layout</H3><!--SEC END -->
+
+The Bedwyr distribution is organized as follows:<BR>
+<TABLE CELLSPACING=2 CELLPADDING=0>
+<TR><TD ALIGN=right NOWRAP><TT>/src</TT></TD>
+<TD VALIGN=top ALIGN=center NOWRAP>&nbsp;&nbsp;</TD>
+<TD ALIGN=left NOWRAP>Source code</TD>
+</TR>
+<TR><TD ALIGN=right NOWRAP><TT>/doc</TT></TD>
+<TD VALIGN=top ALIGN=center NOWRAP>&nbsp;&nbsp;</TD>
+<TD ALIGN=left NOWRAP>Documentation | you're reading it</TD>
+</TR>
+<TR><TD ALIGN=right NOWRAP><TT>/examples</TT></TD>
+<TD VALIGN=top ALIGN=center NOWRAP>&nbsp;&nbsp;</TD>
+<TD ALIGN=left NOWRAP>Examples | reading them helps</TD>
+</TR></TABLE><BR>
+<!--TOC subsection Build-->
+
+<H3 CLASS="subsection"><A NAME="htoc3">1.2</A>&nbsp;&nbsp;Build</H3><!--SEC END -->
+
+Bedwyr's only dependency is the OCaml compiler suite.
+Then, the procedure is quite simple.
+<PRE CLASS="verbatim">
+# ./configure
+# make
+</PRE>
+You'll get the bedwyr executable in <TT>src/bedwyr</TT>.<BR>
+<BR>
+<!--TOC subsection Test-->
+
+<H3 CLASS="subsection"><A NAME="htoc4">1.3</A>&nbsp;&nbsp;Test</H3><!--SEC END -->
+
+<PRE CLASS="verbatim">
+Testing the core library:
+# make -C src test
+More tests, including examples in Bedwyr:
+# make test
+</PRE>
+<!--TOC subsection Line editing-->
+
+<H3 CLASS="subsection"><A NAME="htoc5">1.4</A>&nbsp;&nbsp;Line editing</H3><!--SEC END -->
+
+By default, Bedwyr is built using the native-code compiler <TT>ocamlopt</TT>,
+since it is much faster. If you don't have it or don't want it (e.g.
+for easier debugging) use <TT>./configure &ndash;disable-native-code</TT>.<BR>
+<BR>
+Bedwyr has no line editing facilities at all. We recommend using <TT>ledit</TT>
+for a nicer experience. Get it (from your usual package manager of at
+(<TT>ftp://ftp.inria.fr/INRIA/cristal/Daniel.de_Rauglaudre/Tools</TT>)
+and simply run <TT>ledit src/bedwyr</TT>.<BR>
+<BR>
+<!--TOC subsection Emacs mode-->
+
+<H3 CLASS="subsection"><A NAME="htoc6">1.5</A>&nbsp;&nbsp;Emacs mode</H3><!--SEC END -->
+
+Assuming Bedwyr sits in your <CODE>~/bedwyr</CODE> directory,
+you can use the Emacs mode for Bedwyr by adding these two lines to your
+<CODE>~/.emacs</CODE> file:
+<PRE CLASS="verbatim">
+(load "~/bedwyr/contrib/bedwyr.el")
+(setq bedwyr-program "~/bedwyr/src/bedwyr")
+;; Of course you can change both locations to wherever you want.
+</PRE>
+Then you should be able to load any <CODE>.def</CODE> file
+and have syntax highlighting and some rough auto-indenting.
+Also if you do <CODE>C-c C-c</CODE> it will start Bedwyr
+and load the current file you are working on.<BR>
+<BR>
+<!--TOC section User interface-->
+
+<H2 CLASS="section"><A NAME="htoc7">2</A>&nbsp;&nbsp;User interface</H2><!--SEC END -->
+
+<A NAME="sec:interface"></A>
+The concrete syntax of formulas in Bedwyr resemble that used by
+&lambda;Prolog in, say, the Teyjus implementation
+[<A HREF="#nadathur99cade"><CITE>NM99</CITE></A>]. While both systems implement aspects of
+higher-order logic programming, they are rather different systems.
+The most striking difference between these systems is that
+&lambda;Prolog accepts the &#8220;open-world assumption&#8221;: thus, any
+conclusions drawn in (the logic of) &lambda;Prolog will hold in any
+extension of the underlying logic programming language. Bedwyr on the
+contrary accepts the &#8220;closed-world assumption&#8221;: the notion of
+programs are replaced by <EM>definitions</EM> that capture the
+&#8220;if-and-only-if&#8221; closure of logic programs. This change allows
+Bedwyr to give a computational interpretation to finite failure and to
+allow it do deduction that encodes model checking.<BR>
+<BR>
+<!--TOC subsection Syntax-->
+
+<H3 CLASS="subsection"><A NAME="htoc8">2.1</A>&nbsp;&nbsp;Syntax</H3><!--SEC END -->
+
+Bedwyr uses HOAS (Higher-Order Abstract Syntax), which means that
+formulas of the Linc logic and of the object logics are represented
+using &lambda;-terms. Term normalization (&beta;-reduction) is
+implicit and the equality of terms is given by
+&#945;&beta;&eta;-conversion.<BR>
+<BR>
+The grammar for formulas and terms is given in Figure&nbsp;<A HREF="#concrete">1</A>.
+The abstraction over variable <CODE>x</CODE> in <CODE>term</CODE> is denoted by
+<CODE>x\term</CODE> | which is read as &lambda; <I>x</I>. <I>term</I>. On top of that we
+build formulas: e.g. we write <CODE>pi x\ x=x</CODE> (that is
+<I>pi</I>&nbsp;(&lambda;<I>x</I>.(=&nbsp;<I>x</I>&nbsp;<I>x</I>))) to represent &forall; <I>x</I>. <I>x</I>=<I>x</I>. The
+scope of the infix &lambda;-abstraction extends to the right as far
+as possible: the term <CODE>(x\ y\ f y x))</CODE> is parenthesized as 
+<CODE>(x\ (y\ ((f y) x)))</CODE>
+<BLOCKQUOTE CLASS="figure"><DIV CLASS="center"><HR WIDTH="80%" SIZE=2></DIV>
+<DIV CLASS="center"><TABLE CELLSPACING=2 CELLPADDING=0>
+<TR><TD VALIGN=top ALIGN=right NOWRAP><I>form</I></TD>
+<TD VALIGN=top ALIGN=center NOWRAP>::=</TD>
+<TD VALIGN=top ALIGN=left NOWRAP><I>form</I> <TT>,</TT> <I>form</I></TD>
+<TD VALIGN=top ALIGN=left>conjunction</TD>
+</TR>
+<TR><TD VALIGN=top ALIGN=right NOWRAP>&nbsp;</TD>
+<TD VALIGN=top ALIGN=center NOWRAP>|</TD>
+<TD VALIGN=top ALIGN=left NOWRAP><I>form</I> <TT>;</TT> <I>form</I></TD>
+<TD VALIGN=top ALIGN=left>disjunction</TD>
+</TR>
+<TR><TD VALIGN=top ALIGN=right NOWRAP>&nbsp;</TD>
+<TD VALIGN=top ALIGN=center NOWRAP>|</TD>
+<TD VALIGN=top ALIGN=left NOWRAP><I>form</I> <TT>=&gt;</TT> <I>form</I></TD>
+<TD VALIGN=top ALIGN=left>implication</TD>
+</TR>
+<TR><TD VALIGN=top ALIGN=right NOWRAP>&nbsp;</TD>
+<TD VALIGN=top ALIGN=center NOWRAP>|</TD>
+<TD VALIGN=top ALIGN=left NOWRAP><CODE>pi x\</CODE> <I>form</I></TD>
+<TD VALIGN=top ALIGN=left>universal quantification over <I>x</I></TD>
+</TR>
+<TR><TD VALIGN=top ALIGN=right NOWRAP>&nbsp;</TD>
+<TD VALIGN=top ALIGN=center NOWRAP>|</TD>
+<TD VALIGN=top ALIGN=left NOWRAP><CODE>sigma x\</CODE> <I>form</I></TD>
+<TD VALIGN=top ALIGN=left>existential quantification over <I>x</I></TD>
+</TR>
+<TR><TD VALIGN=top ALIGN=right NOWRAP>&nbsp;</TD>
+<TD VALIGN=top ALIGN=center NOWRAP>|</TD>
+<TD VALIGN=top ALIGN=left NOWRAP><CODE>nabla x\</CODE> <I>form</I></TD>
+<TD VALIGN=top ALIGN=left>generic quantification over <I>x</I></TD>
+</TR>
+<TR><TD VALIGN=top ALIGN=right NOWRAP>&nbsp;</TD>
+<TD VALIGN=top ALIGN=center NOWRAP>|</TD>
+<TD VALIGN=top ALIGN=left NOWRAP><I>atomic</I></TD>
+<TD VALIGN=top ALIGN=left>definition</TD>
+</TR>
+<TR><TD VALIGN=top ALIGN=right NOWRAP>&nbsp;</TD>
+<TD VALIGN=top ALIGN=center NOWRAP>|</TD>
+<TD VALIGN=top ALIGN=left NOWRAP><I>term</I> <CODE>=</CODE> <I>term</I></TD>
+<TD VALIGN=top ALIGN=left>equality</TD>
+</TR>
+<TR><TD VALIGN=top ALIGN=right NOWRAP><I>term</I></TD>
+<TD VALIGN=top ALIGN=center NOWRAP>::=</TD>
+<TD VALIGN=top ALIGN=left NOWRAP><I>id</I></TD>
+<TD VALIGN=top ALIGN=left>identifiers are non-empty sequences of <CODE>[A-Za-z0-9/_']</CODE></TD>
+</TR>
+<TR><TD VALIGN=top ALIGN=right NOWRAP>&nbsp;</TD>
+<TD VALIGN=top ALIGN=center NOWRAP>|</TD>
+<TD VALIGN=top ALIGN=left NOWRAP><I>term</I> &nbsp; <I>term</I>+</TD>
+<TD VALIGN=top ALIGN=left>application</TD>
+</TR>
+<TR><TD VALIGN=top ALIGN=right NOWRAP>&nbsp;</TD>
+<TD VALIGN=top ALIGN=center NOWRAP>|</TD>
+<TD VALIGN=top ALIGN=left NOWRAP><I>id</I> <CODE>\</CODE> <I>term</I></TD>
+<TD VALIGN=top ALIGN=left>abstraction</TD>
+</TR>
+<TR><TD VALIGN=top ALIGN=right NOWRAP>&nbsp;</TD>
+<TD VALIGN=top ALIGN=center NOWRAP>|</TD>
+<TD VALIGN=top ALIGN=left NOWRAP><I>term</I> &nbsp; <I>infix</I> &nbsp; <I>term</I></TD>
+<TD VALIGN=top ALIGN=left>infix operators are
+ <CODE>+</CODE>, <CODE>-</CODE>, <CODE>*</CODE>, <CODE>-&gt;</CODE> and <CODE>&lt;-</CODE>.</TD>
+</TR>
+<TR><TD VALIGN=top ALIGN=right NOWRAP>&nbsp;</TD>
+<TD VALIGN=top ALIGN=center NOWRAP>|</TD>
+<TD VALIGN=top ALIGN=left NOWRAP><CODE>(</CODE> <I>term</I> <CODE>)</CODE></TD>
+<TD VALIGN=top ALIGN=left>&nbsp;</TD>
+</TR>
+<TR><TD VALIGN=top ALIGN=right NOWRAP><I>atomic</I></TD>
+<TD VALIGN=top ALIGN=center NOWRAP>::=</TD>
+<TD VALIGN=top ALIGN=left NOWRAP><I>id</I> &nbsp; <I>term</I>*</TD>
+<TD VALIGN=top ALIGN=left>a possibly empty application with a constant head</TD>
+</TR></TABLE></DIV>
+<BR>
+<BR>
+<DIV CLASS="center">Figure 1: Grammar for formulas and terms..</DIV><BR>
+<BR>
+
+<A NAME="concrete"></A>
+<DIV CLASS="center"><HR WIDTH="80%" SIZE=2></DIV></BLOCKQUOTE>
+<!--TOC subsection Running Bedwyr-->
+
+<H3 CLASS="subsection"><A NAME="htoc9">2.2</A>&nbsp;&nbsp;Running Bedwyr</H3><!--SEC END -->
+
+When you run Bedwyr, it will load a collection of definitions,
+against which you'll then be able to ask queries.
+In queries, variables starting with an uppercase character (<CODE>A-Z_</CODE>)
+are implicitly quantified existentially, and their instantiations in solutions
+are displayed.<BR>
+<BR>
+In the following example we load a set of 
+definitions and check a theorem about it: &lambda; <I>x</I>.<I>x</I>&nbsp;<I>x</I> has no simple type.
+<PRE CLASS="verbatim">
+dbaelde@poum bedwyr % src/bedwyr examples/lambda.def
+[...welcome message...]
+?= (sigma T\ wt nil (abs x\ app x x) T) =&gt; false.
+Yes.
+More [y] ? y
+No more solutions.
+?= pi x\ X x = x x.
+Solution found:
+ X = (x1\x1 x1)
+More [y] ? y
+No more solutions.
+</PRE>
+<!--TOC subsubsection Definition files-->
+
+<H4 CLASS="subsubsection"><A NAME="htoc10">2.2.1</A>&nbsp;&nbsp;Definition files</H4><!--SEC END -->
+
+Definition files are usually named with a <CODE>.def</CODE> extension.
+You can find several of them in the <CODE>examples</CODE> directory
+of the Bedwyr distribution.
+Definitions are to be defined as a set of clauses, in which uppercase
+variables are implicitly universally quantified:
+<DIV CLASS="center"> <I>clause</I> ::= <I>atomic</I> &nbsp;<CODE>:=</CODE>&nbsp; <I>term</I> <CODE>.</CODE> </DIV><BR>
+<BR>
+Definition files may also contain include commands:
+<PRE CLASS="verbatim">#include "another/file.def".</PRE>
+Finally, if the head of the clause is missing, the body will be processed as a 
+query.<BR>
+<BR>
+<!--TOC subsubsection Session management commands-->
+
+<H4 CLASS="subsubsection"><A NAME="htoc11">2.2.2</A>&nbsp;&nbsp;Session management commands</H4><!--SEC END -->
+
+Several commands alter the internal set of definitions of Bedwyr:
+<CODE>#include</CODE>, <CODE>#session</CODE>, <CODE>#reload</CODE> and <CODE>#reset</CODE>.
+<UL CLASS="itemize"><LI CLASS="li-itemize">
+ <CODE>#include</CODE> is meant to be used in <CODE>.def</CODE> files.
+ <LI CLASS="li-itemize"><CODE>#session</CODE> is a better <CODE>#include</CODE> meant for query mode.
+ It accepts any number of filenames as parameters, and this set of files
+ will be remembered as the current <EM>session</EM>.
+ When you pass filenames on Bedwyr's command line,
+ it is equivalent to call <CODE>#session</CODE> with these definition files.
+ <LI CLASS="li-itemize"><CODE>#reload</CODE> clears all the definitions,
+ and then reloads all the session's files. It is useful if they have 
+ been changed.
+ <LI CLASS="li-itemize"><CODE>#reset</CODE> clears all the definitions and empties the session.
+</UL>
+<!--TOC section How to use Bedwyr-->
+
+<H2 CLASS="section"><A NAME="htoc12">3</A>&nbsp;&nbsp;How to use Bedwyr</H2><!--SEC END -->
+
+<A NAME="sec:howto"></A>
+A better understanding of the tool is probably needed to get your work
+done. <BR>
+<BR>
+<!--TOC subsection Proof-search within LINC-->
+
+<H3 CLASS="subsection"><A NAME="htoc13">3.1</A>&nbsp;&nbsp;Proof-search within LINC</H3><!--SEC END -->
+
+<A NAME="psearch"></A>
+LINC is a logic developed over the past few years. The acronym, which
+stands for &#8220;lambda, induction, nabla, and co-induction&#8221;, lists the
+main novel components of the logic. In particular, &lambda;-terms
+are supported directly (and, hence, the &lambda;-tree syntax approach
+to higher-order abstract syntax is supported [<A HREF="#miller00cl"><CITE>Mil00</CITE></A>]).
+Induction and co-induction are also available. The nabla &nabla;
+quantifier has be added to this logic in order to increase the
+expressiveness of programs using hoas in negated situations. The
+proof theory of LINC is given in [<A HREF="#miller05tocl"><CITE>MT05</CITE></A><CITE>, </CITE><A HREF="#tiu04phd"><CITE>Tiu04</CITE></A>].<BR>
+<BR>
+Bedwyr is a proof search engine for a small fragment of the LINC
+logic. In principle, Bedwyr uses two provers. Prover 1 is similar to
+a depth-first interpreter used in in &lambda;Prolog. The main
+difference is in the proof of an implication. 
+To prove an implication <I>A</I>&rArr; <I>B</I>, prover 1 calls prover 0
+to enumerates all possible solutions
+{&theta;<SUB><I>i</I></SUB>&nbsp;|&nbsp;<I>i</I>=1,&hellip;,<I>n</I>} for <I>A</I>, 
+and then prover 1 tries to prove <I>B</I>&theta;<SUB>1</SUB>&and;...&and; <I>B</I>&theta;<SUB><I>N</I></SUB>.
+If <I>A</I> has no solution (that is, if <I>n</I>=0), the implication is true.
+The substitutions generated by prover 1 are for &#8220;logic variables&#8221; in
+the sense that is usual for logic programming implementations. On the
+other hand, the substitutions generated by prover 0 are for
+eigenvariables. <BR>
+<BR>
+Two run-time errors can occur during proof search in Bedwyr. The first
+is when either prover encounters a unification problem that is not a 
+higher-order pattern unification: full higher-order unification is not
+implemented (as is done in &lambda;Prolog). The second error can
+occur when a logic variable from prover 1 appears on the left of an
+implication: prover 0 does not know what to do with such variables.<BR>
+<BR>
+Examples will help to understand the second one:
+<PRE CLASS="verbatim">
+?= X = 1 =&gt; X = 1.
+Error: logic variable on the left
+?= X=1, pi x\ x = X =&gt; x = X.
+Solution found:
+ X = 1
+More [y] ? y
+No more solutions.
+?= 
+</PRE>The first query requires radically different tools than those we use |
+namely, disunification. (The cryptic message about &#8220;on the left&#8221;
+refers to the left of the sequent arrow in the proof theory of LINC.)
+The query actually has infinitely many solutions: any term other than
+1 can be used to instantiate <I>X</I>. In the second query works since
+<CODE>X</CODE> is instantiated at the time the implication is processed.<BR>
+<BR>
+<!--TOC subsection Tabling-->
+
+<H3 CLASS="subsection"><A NAME="htoc14">3.2</A>&nbsp;&nbsp;Tabling</H3><!--SEC END -->
+
+Until now, all definitions (inductive, co-inductive or non-recursive)
+are treated the same way, loops can occur in the proof-search, and Bedwyr
+won't avoid them. Also, Bedwyr can do the same search several times without
+noticing. To solve that, we use tabling.<BR>
+<BR>
+Although quite weak, tabling in Bedwyr is already a great improvement.
+It is still under work.<BR>
+<BR>
+For tabled definitions, being inductive of co-inductive matters, and this 
+matters only for tabled definitions.
+Tabling is thus enabled by prepending the <TT>inductive</TT> or
+<TT>coinductive</TT> keyword to <EM>every</EM> clause of the definition |
+even if the definition is non-recursive.<BR>
+<BR>
+For now, tabling only applies to goals which do not contain logic variables.
+Then, loops are successes for coinductive definitions,
+and failures for inductive ones.<BR>
+<BR>
+<!--TOC section The logic behind Bedwyr-->
+
+<H2 CLASS="section"><A NAME="htoc15">4</A>&nbsp;&nbsp;The logic behind Bedwyr</H2><!--SEC END -->
+
+<A NAME="logic"></A>
+The logic behind Bedwyr is an extension to a higher-order version of
+intuitionistic logic. Below we provide a high-level overview of the
+logical aspects of Bedwyr that differentiate it from (the logics
+underlying) &lambda;Prolog and Prolog. More explicit information on this system
+can be found in [<A HREF="#tiu05eshol"><CITE>TNM05</CITE></A>]: n.b., the name &#8220;Level 0/1&#8221; in
+that paper has now been replaced by Bedwyr.<BR>
+<BR>
+<!--TOC paragraph Built-in treatment of bindings-->
+
+<H5 CLASS="paragraph">Built-in treatment of bindings</H5><!--SEC END -->
+
+Bedwyr treats &lambda;-abstractions within terms as primitive as well
+as allowing for variables of function type and quantifiers within
+formulas (&forall;, &exist;, &nabla;). The system's two provers
+both implement &#8220;higher-order pattern unification&#8221; (also called
+<I>L</I><SUB>&lambda;</SUB>-unification) [<A HREF="#miller91jlc"><CITE>Mil91</CITE></A>]. This kind of unification
+appears to be the weakest extension to first-order unification that
+treats bindings as a primitive. A number of &#8220;proof search&#8221; systems
+implement this kind of unification (eg, Twelf, Teyjus, Coq, and
+Minlog). Full &beta;-conversion is implemented by Bedwyr as well.
+As a result, <EM>higher-order abstract syntax</EM> is fully supported.
+&lambda;Prolog similarly implements all these features, although &lambda;Prolog implements
+full higher-order unification (that is, it is not restricted to the
+<I>L</I><SUB>&lambda;</SUB> subset). Another different with &lambda;Prolog is that Bedwyr does
+not have a built-in notion of types, while &lambda;Prolog is simply typed.
+<BLOCKQUOTE CLASS="figure"><DIV CLASS="center"><HR WIDTH="80%" SIZE=2></DIV>
+<PRE CLASS="verbatim">
+% The predicate a holds for 3, 5, and 2.
+a (s (s (s z))).
+a (s (s (s (s (s z))))).
+a (s (s z)).
+
+% The less-than-or-equal relation
+leq z N.
+leq (s N) (s M) := leq N M.
+
+% Compute the maximum of a
+maxa N := a N, pi x\ a x =&gt; leq x N.
+</PRE><BR>
+<BR>
+<DIV CLASS="center">Figure 2: Computing the maximum of a defined predicate.</DIV><BR>
+<BR>
+
+<A NAME="maxa"></A>
+<DIV CLASS="center"><HR WIDTH="80%" SIZE=2></DIV></BLOCKQUOTE>
+<!--TOC paragraph Syntax and semantics of clauses-->
+
+<H5 CLASS="paragraph">Syntax and semantics of clauses</H5><!--SEC END -->
+
+Clauses in Bedwyr resemble those in &lambda;Prolog, but the underlying proof
+search semantics of those clauses can differ significantly. For example,
+consider the Bedwyr program in Figure&nbsp;<A HREF="#maxa">2</A>. These clauses are
+identical to those in &lambda;Prolog except for the use of <CODE>:=</CODE> instead of
+<CODE>:-</CODE>. Actually the &#8220;proof search semantics&#8221; for all but the
+last clause above is the same in Bedwyr and &lambda;Prolog (and, in this case,
+Prolog too). The last clause, however, has an implication <CODE>=&gt;</CODE>
+in the goal, something also allowed in &lambda;Prolog. During proof search,
+however, this occurrence of the implication in &lambda;Prolog causes the current
+program to be extended with an atomic fact of the form <CODE>(a c)</CODE>,
+where <TT>c</TT> is a new eigenvariable of the proof search. In reality,
+&lambda;Prolog uses the &#8220;open-world assumption&#8221;: it adds a new item <TT>c</TT>
+and a new fact about it <TT>(a c)</TT>. In such a new world, however, the 
+<TT>leq</TT> relation to does not have any information about this
+&#8220;non-standard&#8221; number <TT>c</TT>. In contrast to this, Bedwyr will
+take the assumption <TT>(a c)</TT> and ask &#8220;Given the assumption that 
+<TT>(a c)</TT> is true, how could it have been proved?&#8221; The natural
+answer to this is that that assumption could have been proved if <TT>c</TT> was either 3 or 5 or 2. Thus, this analysis will cause a case
+analysis: in particular, the query <TT>(maxa N)</TT> will cause the
+following goals to be considered:
+<PRE CLASS="verbatim">
+        (a N)     (leq 3 N)    (leq 5 N)    (leq 2 N)
+</PRE>The usual approach to unification and depth-first proof search will
+now produce the proper maximum value.<BR>
+<BR>
+<BR>
+<BR>
+There are two orthogonal extensions to higher-order intuitionistic
+logic that have been incorporated into Bedwyr. We describe them next.<BR>
+<BR>
+<!--TOC paragraph Symmetry of finite success and finite failure-->
+
+<H5 CLASS="paragraph">Symmetry of finite success and finite failure</H5><!--SEC END -->
+
+The underlying logic of <EM>fixed points</EM> (also known as <EM>definitions</EM>)
+[<A HREF="#girard92mail"><CITE>Gir92</CITE></A><CITE>, </CITE><A HREF="#schroeder-Heister93lics"><CITE>SH93</CITE></A><CITE>, </CITE><A HREF="#mcdowell03tcs"><CITE>MMP03</CITE></A><CITE>, </CITE><A HREF="#momigliano03types"><CITE>MT03</CITE></A>]
+contains an inference rule that allows for failure in unification
+(and, hence, in simple proof search) to be turned into a success.
+Thus, simple forms of &#8220;negation-as-failure&#8221; can be naturally
+captured in Bedwyr and the underlying logic. It is also possible to
+describe both <EM>may</EM> and <EM>must</EM> behaviors in process calculi.
+For example, not only can one code reachability in process calculus
+but bisimulation is also possible. One way to view this enhancement
+to proof search is the following: Let <I>A</I> and <I>B</I> be two atomic
+formulas. Then, finite success is captured by proving the sequent
+&mdash;&rarr; <I>A</I>, finite failure is captured by proving the sequent
+<I>A</I>&mdash;&rarr;, and simulation is captured by proving the sequent
+<I>A</I>&mdash;&rarr; <I>B</I>.<BR>
+<BR>
+<!--TOC paragraph The &nabla; quantifier-->
+
+<H5 CLASS="paragraph">The &nabla; quantifier</H5><!--SEC END -->
+
+In order to treat specifications using higher-order abstract syntax
+properly, it appears that a new quantifier, called &nabla;, is
+necessary. If finite success is all that is needed, the &nabla; can
+be replaced with the universal quantifier. When finite failure is
+involved, however, the &nabla; quantifier plays an independent role.
+See [<A HREF="#miller05tocl"><CITE>MT05</CITE></A><CITE>, </CITE><A HREF="#tiu04phd"><CITE>Tiu04</CITE></A><CITE>, </CITE><A HREF="#tiu05concur"><CITE>Tiu05</CITE></A>] for more on this
+quantifier. It is worth pointing out that we know of no examples
+involving &nabla; that do not also involve hoas.<BR>
+<BR>
+<!--TOC section Examples of Bedwyr code-->
+
+<H2 CLASS="section"><A NAME="htoc16">5</A>&nbsp;&nbsp;Examples of Bedwyr code</H2><!--SEC END -->
+<BR>
+<BR>
+<DIV CLASS="flushright">
+Few things are harder to put up with than<BR>
+the annoyance of a good example.<BR>
+&ndash; Mark Twain
+</DIV><BR>
+<BR>
+The distribution of Bedwyr comes with several examples of its use.
+These examples can be divided classified roughly as follows.
+<DL CLASS="description" COMPACT=compact><DT CLASS="dt-description">
+<B>Basic examples</B><DD CLASS="dd-description"> These examples are small and illustrate some
+ simple aspects of the system.<BR>
+<BR>
+<DT CLASS="dt-description"><B>Model checking</B><DD CLASS="dd-description"> Some simple model-checking-style examples are
+ provided. <BR>
+<BR>
+<DT CLASS="dt-description"><B>Games</B><DD CLASS="dd-description"> Bedwyr allows for a simple approach to explore for
+ winning strategies in some simple games, such as tic-tac-toe.<BR>
+<BR>
+<DT CLASS="dt-description"><B>&lambda;-calculus</B><DD CLASS="dd-description"> Various relations and properties of the
+ &lambda;-calculus are developed in some definition files.<BR>
+<BR>
+<DT CLASS="dt-description"><B>Simulation and bisimulation</B><DD CLASS="dd-description"> These relationships between
+ processes where an important class of examples for which the theory
+ behind Bedwyr was targeted. Examples of checking simulation is done
+ for abstract transition systems, value-passing CCS, and the
+ &pi;-calculus. The &pi;-calculus examples are of particular note:
+ all side-conditions for defining the operational semantics and
+ bisimulation are handled directly and declaratively by the logic
+ underlying Bedwyr. Modal logic for the &pi;-calculus is also
+ illustrated by an example definition file.</DL>
+<!--TOC subsection The &pi;-calculus example in more detail-->
+
+<H3 CLASS="subsection"><A NAME="htoc17">5.1</A>&nbsp;&nbsp;The &pi;-calculus example in more detail</H3><!--SEC END -->
+
+To give on a quick illustration of one of these examples and who they
+can be used, consider the implementation of the &pi;-calculus that is
+contained in the example file named <CODE>pi.def</CODE>. Of the several
+things defined in that file, the operational semantics for the
+&pi;-calculus given as using one-step transitions: for a specific
+example, see Figure&nbsp;<A HREF="#one-step">3</A>. First notice that the syntax of
+clauses is almost identical to that used in &lambda;Prolog. In
+particular, the backslash is used to denote the &lambda;-binder. The
+main syntactic difference is that the head and body of clauses are
+separated from either other using the <CODE>:=</CODE> instead of the
+<CODE>:-</CODE> (reverse turnstile). The former symbol is used to remind
+the Bedwyr user that programs are used to define &#8220;if and only if&#8221;
+completions of specifications (whereas, in &lambda;Prolog the <CODE>:-</CODE> is the
+more usual &#8220;if&#8221; interpretation). Unlike &lambda;Prolog, Bedwyr is
+untyped so there are no <TT>kind</TT> and <TT>type</TT> declarations and no
+static checking of your source code. <BR>
+<BR>
+Beyond the syntactic differences, the operational semantics of &lambda;Prolog
+and Bedwyr differ significant. If a specification is simply a Horn
+clause program, the two systems coincide. In operational
+interpretation of an implication differs significantly: in Bedwyr, to
+prove <I>A</I>&sup; <I>B</I>, all possible ways to prove <I>A</I> are explored and
+for each answer substitution &theta; that is found, the goal
+<I>B</I>&theta; is attempted (see Section&nbsp;<A HREF="#psearch">3.1</A>). Bedwyr also
+contains the &nabla;-quantifier [<A HREF="#miller05tocl"><CITE>MT05</CITE></A>]. 
+<BLOCKQUOTE CLASS="figure"><DIV CLASS="center"><HR WIDTH="80%" SIZE=2></DIV>
+<PRE CLASS="verbatim">
+onep (in X M)    (dn X) M.
+one  (out X Y P) (up X Y) P.
+one  (match X X P) A Q := one P A Q.
+onep (match X X P) A M := onep P A M.
+one  (nu x\P x) A (nu x\Q x) := nabla x\ one  (P x) A (Q x).
+onep (nu x\P x) A (y\ nu x\Q x y) := 
+                           nabla x\ onep (P x) A (y\ Q x y).
+one (par P Q) tau (par R T) :=
+  sigma X\ sigma Y\ sigma M\ onep P (dn X) M &amp;
+                             one Q (up X Y) T &amp; R = (M Y).
+one (par P Q) tau (par R T) :=
+  sigma X\ sigma Y\ sigma M\ onep Q (dn X) M &amp;
+                             one P (up X Y) R &amp; T = (M Y).
+</PRE><BR>
+<BR>
+<DIV CLASS="center">Figure 3: Some lines in <TT>pi.def</TT> used to define one-step
+ transitions. See the example file for the full definition.</DIV><BR>
+<BR>
+
+<A NAME="one-step"></A>
+<PRE CLASS="verbatim">
+coinductive bisim P Q :=
+   (pi A\ pi P1\ one P A P1 =&gt; sigma Q1\ one Q A Q1 &amp;
+                                         bisim P1 Q1) &amp;
+   (pi X\ pi M\  onep P (dn X) M =&gt; sigma N\ onep Q (dn X) N &amp; 
+                                     pi w\ bisim (M w) (N w)) &amp;
+   (pi X\ pi M\ onep P (up X) M =&gt; sigma N\ onep Q (up X) N &amp;
+                                     nabla w\ bisim (M w) (N w)) &amp;
+   (pi A\ pi Q1\ one Q A Q1 =&gt; sigma P1\ one P A P1 &amp; 
+                                         bisim Q1 P1) &amp;
+   (pi X\ pi N\  onep Q (dn X) N =&gt; sigma M\ onep P (dn X) M &amp; 
+                                     pi w\ bisim (N w) (M w)) &amp;
+   (pi X\ pi N\ onep Q (up X) N =&gt; sigma M\ onep P (up X) M &amp;
+                                     nabla w\ bisim (N w) (M w)).
+</PRE><BR>
+<BR>
+<DIV CLASS="center">Figure 4: The definition of (open) bisimulation.</DIV><BR>
+<BR>
+
+<A NAME="bisim"></A>
+<DIV CLASS="center"><HR WIDTH="80%" SIZE=2></DIV></BLOCKQUOTE>
+Returning to the example in Figure&nbsp;<A HREF="#one-step">3</A>, notice that two
+predicates are defined: <TT>one</TT> and <TT>onep</TT>. The first one
+relates a processes, an action, and a process. The first relates a 
+processes, an abstractions of an action, and an abstraction of a
+process. The <TT>one</TT> predicate is used to capture &#8220;free
+transitions&#8221; and the &#8220;&tau;-transition&#8221; while the second is used
+to capture bounded transitions. See [<A HREF="#tiu04fguc"><CITE>TM04</CITE></A><CITE>, </CITE><A HREF="#tiu05concur"><CITE>Tiu05</CITE></A>] for
+more details on this encoding strategy for the &pi;-calculus.<BR>
+<BR>
+Figure&nbsp;<A HREF="#bisim">4</A> provides all that is necessary to specify (open)
+bisimulation for (finite) &pi;-calculus. The keyword <TT>coinductive</TT> tells the system that it will be attempting to explore a
+greatest fixed point. The other cases should look natural, at least
+once one understand the &lambda;-tree approach to representing syntax
+and the use of the &nabla;-quantifier. The main thing to point out
+here is that in the specification, no special side conditions need to
+be added to the system: all the familiar side conditions from the
+usual papers on the &pi;-calculus are treated by the implementation
+of the Bedwyr logic: the user of the system no longer needs to deal
+with them explicitly but implicitly and declaratively (via quantifier
+scope, &#945;&beta;&eta;-conversion, etc).<BR>
+<BR>
+It is now possible to test some simple examples in the system. For
+example,
+<PRE CLASS="verbatim">
+$ src/bedwyr examples/pi.def
+Bedwyr welcomes you....
+
+?= bisim (in a x\ in a y\ z) (in a x\ nu z\ in a y\ z).
+Yes.
+More [y] ? y
+No more solutions.
+?= bisim (in a x\ nu y\ match x y\ out c c z) (in a x\ z).
+Yes.
+More [y] ? y
+No more solutions.
+?= bisim (nu x\ out a x (in c y\ match x y (out c c z)))
+                (nu x\ out a x (in c y\ z)).
+No.
+?= 
+</PRE>These query prove that 
+<I>a</I>(<I>x</I>).<I>a</I>(<I>y</I>).0 and <I>a</I>(<I>x</I>).(&nu; <I>z</I>).<I>a</I>(<I>y</I>).<I>z</I> are bisimilar, 
+that
+<I>a</I>(<I>x</I>).(&nu; <I>y</I>).[<I>x</I>=<I>y</I>].<I>c</I>!<I>c</I>.0 and <I>a</I>(<I>x</I>).0 are bisimilar, and that 
+(&nu; <I>x</I>).<I>a</I>!<I>x</I>.<I>c</I>(<I>y</I>).[<I>x</I>=<I>y</I>].<I>c</I>!<I>c</I>.0 and 
+(&nu; <I>x</I>).<I>a</I>!<I>x</I>.<I>c</I>(<I>y</I>).0 are not bisimilar.<BR>
+<BR>
+<!--TOC section References-->
+
+<H2 CLASS="section">References</H2><!--SEC END -->
+<DL CLASS="list" COMPACT="compact"><DT CLASS="dt-list"><A NAME="girard92mail"><FONT COLOR=purple>[Gir92]</FONT></A><DD CLASS="dd-list">
+Jean-Yves Girard.
+A fixpoint theorem in linear logic.
+An email posting to the mailing list linear@cs.stanford.edu, February
+ 1992.<BR>
+<BR>
+<DT CLASS="dt-list"><A NAME="miller91jlc"><FONT COLOR=purple>[Mil91]</FONT></A><DD CLASS="dd-list">
+Dale Miller.
+A logic programming language with lambda-abstraction, function
+ variables, and simple unification.
+<EM>J. of Logic and Computation</EM>, 1(4):497&ndash;536, 1991.<BR>
+<BR>
+<DT CLASS="dt-list"><A NAME="miller00cl"><FONT COLOR=purple>[Mil00]</FONT></A><DD CLASS="dd-list">
+Dale Miller.
+Abstract syntax for variable binders: An overview.
+In John Lloyd and et. al., editors, <EM>Computational Logic - CL
+ 2000</EM>, number 1861 in LNAI, pages 239&ndash;253. Springer, 2000.<BR>
+<BR>
+<DT CLASS="dt-list"><A NAME="mcdowell03tcs"><FONT COLOR=purple>[MMP03]</FONT></A><DD CLASS="dd-list">
+Raymond McDowell, Dale Miller, and Catuscia Palamidessi.
+Encoding transition systems in sequent calculus.
+<EM>Theoretical Computer Science</EM>, 294(3):411&ndash;437, 2003.<BR>
+<BR>
+<DT CLASS="dt-list"><A NAME="momigliano03types"><FONT COLOR=purple>[MT03]</FONT></A><DD CLASS="dd-list">
+Alberto Momigliano and Alwen Tiu.
+Induction and co-induction in sequent calculus.
+In Mario&nbsp;Coppo Stefano&nbsp;Berardi and Ferruccio Damiani, editors, <EM>Post-proceedings of TYPES 2003</EM>, number 3085 in LNCS, pages 293 &ndash; 308,
+ January 2003.<BR>
+<BR>
+<DT CLASS="dt-list"><A NAME="miller05tocl"><FONT COLOR=purple>[MT05]</FONT></A><DD CLASS="dd-list">
+Dale Miller and Alwen Tiu.
+A proof theory for generic judgments.
+<EM>ACM Trans. on Computational Logic</EM>, 6(4):749&ndash;783, October
+ 2005.<BR>
+<BR>
+<DT CLASS="dt-list"><A NAME="nadathur99cade"><FONT COLOR=purple>[NM99]</FONT></A><DD CLASS="dd-list">
+Gopalan Nadathur and Dustin&nbsp;J. Mitchell.
+System description: Teyjus&mdash;a compiler and abstract machine based
+ implementation of Lambda Prolog.
+In H.&nbsp;Ganzinger, editor, <EM>Proceedings of the 16th International
+ Conference on Automated Deduction</EM>, pages 287&ndash;291, Trento, Italy, July 1999.
+ Springer-Verlag LNCS.<BR>
+<BR>
+<DT CLASS="dt-list"><A NAME="schroeder-Heister93lics"><FONT COLOR=purple>[SH93]</FONT></A><DD CLASS="dd-list">
+Peter Schroeder-Heister.
+Rules of definitional reflection.
+In M.&nbsp;Vardi, editor, <EM>Eighth Annual Symposium on Logic in
+ Computer Science</EM>, pages 222&ndash;232. IEEE Computer Society Press, IEEE, June
+ 1993.<BR>
+<BR>
+<DT CLASS="dt-list"><A NAME="tiu04phd"><FONT COLOR=purple>[Tiu04]</FONT></A><DD CLASS="dd-list">
+Alwen Tiu.
+<EM>A Logical Framework for Reasoning about Logical Specifications</EM>.
+PhD thesis, Pennsylvania State University, May 2004.<BR>
+<BR>
+<DT CLASS="dt-list"><A NAME="tiu05concur"><FONT COLOR=purple>[Tiu05]</FONT></A><DD CLASS="dd-list">
+Alwen Tiu.
+Model checking for &pi;-calculus using proof search.
+In Martín Abadi and Luca de&nbsp;Alfaro, editors, <EM>CONCUR</EM>,
+ volume 3653 of <EM>LNCS</EM>, pages 36&ndash;50. Springer, 2005.<BR>
+<BR>
+<DT CLASS="dt-list"><A NAME="tiu04fguc"><FONT COLOR=purple>[TM04]</FONT></A><DD CLASS="dd-list">
+Alwen Tiu and Dale Miller.
+A proof search specification of the &pi;-calculus.
+In <EM>3rd Workshop on the Foundations of Global Ubiquitous
+ Computing</EM>, volume 138 of <EM>ENTCS</EM>, pages 79&ndash;101, September 2004.<BR>
+<BR>
+<DT CLASS="dt-list"><A NAME="tiu05eshol"><FONT COLOR=purple>[TNM05]</FONT></A><DD CLASS="dd-list">
+Alwen Tiu, Gopalan Nadathur, and Dale Miller.
+Mixing finite success and finite failure in an automated prover.
+In <EM>Proceedings of ESHOL'05: Empirically Successful Automated
+ Reasoning in Higher-Order Logics</EM>, pages 79 &ndash; 98, December 2005.</DL>
+
+
+<!--HTMLFOOT-->
+<!--ENDHTML-->
+<!--FOOTER-->
+<HR SIZE=2><BLOCKQUOTE CLASS="quote"><EM>This document was translated from L<sup>A</sup>T<sub>E</sub>X by
+</EM><A HREF="http://pauillac.inria.fr/~maranget/hevea/index.html"><EM>H<FONT SIZE=2><sup>E</sup></FONT>V<FONT SIZE=2><sup>E</sup></FONT>A</EM></A><EM>.</EM></BLOCKQUOTE></BODY>
+</HTML>
