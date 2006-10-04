@@ -1,6 +1,11 @@
 
-default:
+default: src/Makefile
 	make -C src bedwyr
+
+src/Makefile: src/Makefile.in configure
+	./configure
+configure: configure.ac
+	autoconf
 
 XPL = examples/3bits.def \
       examples/lambda.def examples/pi_nat.def examples/pi_church.def \
