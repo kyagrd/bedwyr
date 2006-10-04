@@ -40,12 +40,12 @@ depend: $(CORE_SRC) $(BEDWYR_SRC) $(TEST_ML)
 	$(OCAMLC) $<
 %.cmi: %.mli
 	$(OCAMLC) $<
-%.ml: %.mly
+%.ml: %.mly Makefile
 	$(OCAMLYACC) $<
 	echo $<
 	echo "val to_term : (Lexing.lexbuf -> token) -> string -> Term.term" \
 	  >> $(<:.mly=.mli)
-%.mli: %.mly
+%.mli: %.mly Makefile
 	$(OCAMLYACC) $<
 	echo "val to_term : (Lexing.lexbuf -> token) -> string -> Term.term" \
 	  >> $(<:.mly=.mli)
