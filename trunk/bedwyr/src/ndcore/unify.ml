@@ -626,6 +626,7 @@ and unify_app_term h1 a1 t1 t2 = match Term.observe h1,Term.observe t2 with
         unify_app_term h1' a1' t1' t2
   | Term.Ptr  _, _ | _, Term.Ptr  _
   | Term.Susp _, _ | _, Term.Susp _ -> assert false
+  | _, Term.Var {tag=t}
   | Term.Var {tag=t}, _ when not (variable t || constant t) ->
       failwith "logic variable on the left"
   | _ -> raise (ConstClash (h1,t2))
