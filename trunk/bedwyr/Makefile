@@ -7,18 +7,18 @@ src/Makefile: src/Makefile.in configure
 configure: configure.ac
 	autoconf
 
-XPL = examples/3bits.def \
-      examples/lambda.def examples/pi_nat.def examples/pi_church.def \
-      examples/graph-alt.def examples/tictactoe.def \
-      examples/minmax.def examples/seq.def
+XPL = examples/3bits.def examples/lambda.def examples/progs.def \
+      examples/graph-alt.def examples/minmax.def \
+      examples/tictactoe.def examples/pi_nat.def examples/pi_church.def
 test:
+	# TODO should fail on the first error
 	@echo Testing the core LLambda library
 	make -C src test
 	@echo Testing bedwyr on examples
 	make -C src bedwyr
 	@time for i in $(XPL) ; do \
-	  echo "==== Running $$i ====" ; \
-	  src/bedwyr $$i -e "test, exit." ; \
+	  echo "==== Running tests in $$i ====" ; \
+	  if src/bedwyr -t -I $$i ; then echo "All done." ; else break ; fi ; \
 	done
 
 .PHONY: doc

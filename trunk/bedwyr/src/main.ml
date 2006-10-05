@@ -1,6 +1,6 @@
 (****************************************************************************)
 (* Bedwyr prover                                                            *)
-(* Copyright (C) 2006 David Baelde, Alwen Tiu, Axelle Ziegler               *)
+(* Copyright (C) 2006-2007 David Baelde, Alwen Tiu, Axelle Ziegler          *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -18,12 +18,13 @@
 (****************************************************************************)
 
 exception Invalid_command
+exception Assertion_failed
 
 let welcome_msg =
   "Bedwyr welcomes you.
 
 This software is under GNU Public License.
-Copyright (c) 2005-2006 Slimmer project.
+Copyright (c) 2005-2007 Slimmer project.
 
 For a little help, type #help.
 \n"
@@ -31,9 +32,20 @@ For a little help, type #help.
 let usage_msg =
   "Bedwyr prover.
 This software is under GNU Public License.
-Copyright (c) 2005-2006 Slimmer project.
+Copyright (c) 2005-2007 Slimmer project.
 
 Usage: bedwyr [filename | option]*
+"
+
+let help_msg =
+  "Available commands:
+#help.
+#exit.
+#debug [flag].
+#time [flag].
+#include \"some/filename.def\".
+In query mode, just type a term to ask for its verification.
+
 "
 
 let interactive = ref true
@@ -74,13 +86,19 @@ let rec process ?(interactive=false) parse lexbuf =
     end ;
     if interactive then flush stdout
   with
+    | Failure "eof" as e -> raise e
     | Parsing.Parse_error ->
         Format.printf "Syntax error%s.\n%!" (position lexbuf) ;
         if not interactive then exit 1;
     | Failure "lexing: empty token" ->
         Format.printf "Lexing error%s.\n%!" (position lexbuf) ;
         if interactive then Lexing.flush_input lexbuf else exit 1
-    | e when not interactive -> raise e
+    | e when not interactive ->
+        Format.printf "Error in %s, line %d: %s\n"
+          lexbuf.Lexing.lex_curr_p.Lexing.pos_fname
+          lexbuf.Lexing.lex_curr_p.Lexing.pos_lnum
+          (Printexc.to_string e) ;
+        exit 1
     | System.Undefined s ->
         Format.printf "No definition found for %S !\n%!" s
     | System.Inconsistent_definition s ->
@@ -90,15 +108,15 @@ let rec process ?(interactive=false) parse lexbuf =
     | System.Interrupt ->
         Format.printf "User interruption.\n%!"
     | Prover.Level_inconsistency ->
-        Format.printf "Search fell outside Level-0/1 fragment !\n%!"
+        Format.printf "This formula cannot be handled by the left prover!\n%!"
     | Unify.NotLLambda t ->
         Format.printf "Not LLambda unification encountered: %a\n%!"
           Pprint.pp_term t
     | Invalid_command ->
         Format.printf "Invalid command, or wrong arity!\n%!"
-    | Failure s when s <> "eof" ->
+    | Failure s ->
         Format.printf "Error: %s\n" s
-    | e when e <> Failure "eof" ->
+    | e ->
         Format.printf "Unknown error: %s\n%!" (Printexc.to_string e)
   done with
   | Failure "eof" -> ()
@@ -123,17 +141,8 @@ and load_session () =
 
 and command lexbuf = function
   | "exit",[] -> exit 0
-  | "help",[] ->
-        Format.printf
-"Available commands:
-#help.
-#exit.
-#debug [flag].
-#time [flag].
-#include \"some/filename.def\".
-In query mode, just type a term to ask for its verification.
+  | "help",[] -> Format.printf "%s" help_msg
 
-"
   (* Session management *)
   | "include",[f] ->
       begin match Term.observe f with
@@ -171,26 +180,44 @@ In query mode, just type a term to ask for its verification.
           | _ -> raise Invalid_command
         end
 
+  (* Print the contents of a table *)
   | "show_table",[p] ->
       begin match Term.observe p with
         | Term.Var {Term.name=name} -> System.show_table name
         | _ -> raise Invalid_command
       end
 
-  | "test",[query] ->
+  (* Testing commands *)
+  | "assert",[query] ->
       if !test then begin
+        Format.printf "Checking that %a...\n%!" Pprint.pp_term query ;
         Term.reset_namespace () ;
         Prover.prove ~level:Prover.One ~local:0 ~timestamp:0 query
-          ~success:ignore ~failure:(fun () -> failwith "Test failed")
+          ~success:ignore ~failure:(fun () -> raise Assertion_failed)
       end
-
-  | "test_negative",[query] ->
+  | "assert_not",[query] ->
       if !test then begin
+        Format.printf "Checking that %a is wrong...\n%!" Pprint.pp_term query ;
         Term.reset_namespace () ;
         Prover.prove ~level:Prover.One ~local:0 ~timestamp:0 query
-          ~success:(fun _ -> failwith "Test failed") ~failure:ignore
+          ~success:(fun _ -> raise Assertion_failed) ~failure:ignore
+      end
+  | "assert_raise",[query] ->
+      if !test then begin
+        Format.printf "Checking that %a causes an error...\n%!"
+          Pprint.pp_term query ;
+        Term.reset_namespace () ;
+        if
+          try
+            Prover.prove ~level:Prover.One ~local:0 ~timestamp:0 query
+              ~success:ignore ~failure:ignore ;
+            true
+          with _ -> false
+        then raise Assertion_failed
       end
 
+  (* Experimental command, only taken into account in bedwyr programs
+   * performing static analysis on .def files. *)
   | "type",_ -> ()
 
   | _ -> raise Invalid_command

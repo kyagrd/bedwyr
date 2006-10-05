@@ -76,20 +76,14 @@ play_to_win L K := winner o K ; somemove K, pi M\ move K x M => owins M.
 
 play_to_tie L K := tie K ; pi M\ move K x M => notxwins M.
 
-thm 1 := convert Board (board (row x x x) (row b b b) (row b b b)),
-         xwins Board.
+#assert (convert Board (board (row x x x) (row b b b) (row b b b)),
+         xwins Board).
         
-thm 2 := convert Board (board (row x x b) (row b b b) (row b b b)),
-         xwins Board.
+#assert (convert Board (board (row x x b) (row b b b) (row b b b)),
+         xwins Board).
 
-thm 3 := convert Board (board (row x b o) (row b b b) (row b b b)),
-         notxwins Board.
+#assert (convert Board (board (row x b o) (row b b b) (row b b b)),
+         notxwins Board).
 
-thm 4 := convert Board (board (row b b b) (row b b b) (row b b b)),
-         notxwins Board.
-
-checkthm X := print (running test X), (thm X ; print "!!! failure !!!").
-
-test := checkthm 1, checkthm 2, checkthm 3, checkthm 4,
-        print "testing complete".
-
+#assert (convert Board (board (row b b b) (row b b b) (row b b b)),
+         notxwins Board).
