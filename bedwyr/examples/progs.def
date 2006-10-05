@@ -23,41 +23,43 @@ exprog (append (cons X L) K (cons X M)) (append L K M).
 
 atom a.
 atom b.
-thm a := prv (x\y\ false) ((and a b) -> (and tt a)).
+#assert (prv (x\y\ false) ((and a b) -> (and tt a))).
 
 atom (p X Y).
-thm b := pi t\ pi u\ pi w\
-         prv (x\y\ false) (forall x\ forall y\ (p x t) -> (p y u) -> (p x w)) => w = t.
+#assert
+  (pi t\ pi u\ pi w\
+     prv (x\y\ false) (forall x\ forall y\ (p x t) -> (p y u) -> (p x w)) =>
+     w = t).
 
 % Specification of simply typing inference for untyped lambda-calculus.
 atom (typeof X T).
-prog (typeof (lam x\ B x) (Tin -> Tout)) (forall x\ typeof x Tin -> typeof (B x) Tout).
+prog (typeof (lam x\ B x) (Tin -> Tout))
+     (forall x\ typeof x Tin -> typeof (B x) Tout).
 prog (typeof (app A B) Tout) (and (typeof A (Tin -> Tout)) (typeof B Tin)).
 
 % Implementation of substitution into the untyped lambda-calculus.
 atom (copy S T).
 atom (subst R S T).
 prog (copy (app M N) (app M' N')) (and (copy M M') (copy N N')).
-prog (copy (lam M) (lam M)) (forall x\ forall x'\ copy x x' -> copy (M x) (M' x')).
+prog (copy (lam M) (lam M))
+     (forall x\ forall x'\ copy x x' -> copy (M x) (M' x')).
 prog (subst R S T) (forall x\ copy x S -> copy (R x) T).
 
 % Call-by-value evaluation
 atom (eval E V).
 prog (eval (lam x\ M x) (lam x\ M x)) tt.
-prog (eval (app M N) V) (and (and (eval M (lam M')) (subst M' N M'')) (eval M'' V)).
+prog (eval (app M N) V)
+     (and (and (eval M (lam M')) (subst M' N M'')) (eval M'' V)).
 
-thm 1 := prv prog (typeof (lam x\ lam y\ x) T).
+#assert (prv prog (typeof (lam x\ lam y\ x) T)).
 
-thm 2 := prv prog (typeof (app (lam x\ lam y\ x) (lam x\ x)) T).
+#assert (prv prog (typeof (app (lam x\ lam y\ x) (lam x\ x)) T)).
 
-thm 3 := pi T\ prv prog (typeof (lam x\ app x x) T) => false.
+#assert_not   (pi T\ prv prog (typeof (lam x\ app x x) T)).
+#assert       (pi T\ prv prog (typeof (lam x\ app x x) T) => false).
+#assert_raise ((pi T\ prv prog (typeof (lam x\ app x x) T) => false) => true).
 
-thm 4 := pi T\ pi S\ prv prog (typeof (lam x\ x) (T -> S)) => T = S.
+#assert (pi T\ pi S\ prv prog (typeof (lam x\ x) (T -> S)) => T = S).
 
 % The following has four proofs.
-thm 5 :=  sigma R\ prv prog (subst R (lam x\x) (app (lam x\x) (lam y\y))).
-
-checkthm X := print (running test X), (thm X ; print "!!! failure !!!").
-
-test := checkthm a, checkthm b, checkthm 1, checkthm 2, checkthm 3, checkthm 4, checkthm 5,
-        print "testing complete".
+#assert (sigma R\ prv prog (subst R (lam x\x) (app (lam x\x) (lam y\y)))).

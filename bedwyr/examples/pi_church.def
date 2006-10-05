@@ -19,31 +19,22 @@ agent (add S1 Z1 S2 Z2 Y W)
 agent (church S Z zz)     (nu i\ out Z i z).
 agent (church S Z (ss N)) (nu i\ out S i (church S Z N)).
 
-_test 1 :=
-  weak_bisim
+#assert
+  (weak_bisim
     (deux x z)
     (nu x1\ nu z1\ nu x2\ nu z2\
-      par (un x1 z1) (par (un x2 z2) (add x1 z1 x2 z2 x z))).
-_test 2 :=
-  weak_bisim
+      par (un x1 z1) (par (un x2 z2) (add x1 z1 x2 z2 x z)))).
+#assert
+  (weak_bisim
     (deux x z)
     (nu x1\ nu x2\ nu z1\ nu z2\
-      par (zero x1 z1) (par (deux x2 z2) (add x1 z1 x2 z2 x z))).
+      par (zero x1 z1) (par (deux x2 z2) (add x1 z1 x2 z2 x z)))).
 
-_test 3 := weak_bisim (deux s z) (church s z (ss (ss zz))).
-_test 4 :=
-  weak_bisim
+#assert (weak_bisim (deux s z) (church s z (ss (ss zz)))).
+#assert
+  (weak_bisim
     (church s z (ss (ss (ss (ss (ss (ss (ss (ss (ss (ss zz)))))))))))
     (nu s1\ nu z1\ nu s2\ nu z2\
       (par (church s1 z1 (ss (ss (ss (ss (ss zz))))))
       (par (church s2 z2 (ss (ss (ss (ss (ss zz))))))
-      (add s1 z1 s2 z2 s z)))).
-
-run_test N := print (running test N), _test N.
-test :=
-  print "Church encoding in pi-calculus tests...",
-  run_test 1,
-  run_test 2,
-  run_test 3,
-  run_test 4,
-  print "testing complete".
+      (add s1 z1 s2 z2 s z))))).

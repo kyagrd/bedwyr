@@ -1,6 +1,6 @@
 (****************************************************************************)
 (* Bedwyr prover                                                            *)
-(* Copyright (C) 2006 David Baelde, Alwen Tiu, Axelle Ziegler               *)
+(* Copyright (C) 2006-2007 David Baelde, Alwen Tiu, Axelle Ziegler          *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -342,6 +342,11 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
       printf "Invalid goal %a!" Pprint.pp_term g ;
       failure ()
 
+let prove ~success ~failure ~level ~timestamp ~local g =
+  try
+    prove ~success ~failure ~level ~timestamp ~local g
+  with e -> clear_disprovable () ; raise e
+
 let toplevel_prove g =
   let _ = Term.reset_namespace () in
   let s0 = Term.save_state () in
@@ -373,7 +378,6 @@ let toplevel_prove g =
         printf "Search stopped.\n"
       end
   in
-    try
     prove ~level:One ~local:0 ~timestamp:0 g
       ~success:show
       ~failure:(fun () ->
@@ -381,4 +385,3 @@ let toplevel_prove g =
                   if !found then printf "No more solutions.\n"
                   else printf "No.\n" ;
                   assert (s0 = Term.save_state ()))
-    with e -> clear_disprovable () ; raise e

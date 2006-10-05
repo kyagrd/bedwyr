@@ -77,11 +77,6 @@ graph 2  (graph (c 1 (c 2 (c 3 (c 4 (c 5 (c 6 nil))))))
                 (c (arrow 1 2) (c (arrow 2 3) (c (arrow 2 4)
                    (c (arrow 3 5) (c (arrow 4 5) (c (arrow 5 6) nil))))))).
 
-thm 1 := graph 1 G, tree G.
+#assert (graph 1 G, tree G).
 
-thm 2 := graph 2 G, nottree G.
-
-checkthm X := print (running test X), (thm X ; print "!!! failure !!!").
-
-test := checkthm 1, checkthm 2,
-        print "testing complete".
+#assert (graph 2 G, nottree G).
