@@ -26,6 +26,7 @@ prv Prog B := seq Prog tt B.
 % the logic programming clauses described by Prog. 
 
 % Do right rules first.
+
 seq Prog L tt.
 seq Prog L (and B C)  := seq Prog L B, seq Prog L C.
 seq Prog L (G <- D)   := seq Prog (and D L) G.
