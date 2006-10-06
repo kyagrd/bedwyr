@@ -162,14 +162,17 @@ atomic &::=& id \; term* & a possibly empty application with a constant head \\
 
 \subsection{Running Bedwyr}
 
-When you run Bedwyr, it will load a collection of definitions,
-against which you'll then be able to ask queries.
+When you run Bedwyr, you specify a file or collection of files for it
+to load: the formulas in those files are consider as definitions.  You
+can then ask queries against those definitions.
 In queries, variables starting with an uppercase character (\verb.A-Z_.)
 are implicitly quantified existentially, and their instantiations in solutions
 are displayed.
 
-In the following example we load a set of 
-definitions and check a theorem about it: $\lambda x.x\;x$ has no simple type.
+In the following example we load a set of definitions and check a
+theorem about it: $\lambda x.x\;x$ has no simple type.  Notice that
+Bedwyr is untyped and self-application is possible (as illustrated by
+the second query).
 
 \begin{verbatim}
 dbaelde@poum bedwyr % src/bedwyr examples/lambda.def
@@ -184,13 +187,21 @@ Solution found:
 More [y] ? y
 No more solutions.
 \end{verbatim}
+The first query expresses the fact that there does not exist a simple
+type for $\lambda x (x x)$.  Notice that there is difference between
+the Bedwyr term \verb+(x1\x1 x1)+ and the Bedwyr term
+\verb+(abs x\ app x x)+: the latter encodes $\lambda x (x x)$ by
+mapping object-level abstraction to {\tt abs} and object-level
+application to {\tt app} while the former directly encodes this
+$\lambda$-term directly.
+
 
 \subsubsection{Definition files}
 
 Definition files are usually named with a \verb|.def| extension.
 You can find several of them in the \verb.examples. directory
 of the Bedwyr distribution.
-Definitions are to be defined as a set of clauses, in which uppercase
+Definitions are given as a set of clauses in which uppercase
 variables are implicitly universally quantified:
 \[ clause ::= atomic \;\verb.:=.\; term \verb|.| \]
 
