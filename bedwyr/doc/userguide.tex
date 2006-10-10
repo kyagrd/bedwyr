@@ -11,10 +11,29 @@
 
 \begin{document}
 \maketitle
-
 \tableofcontents
+\newpage
 
-\vfill
+\section{Overview}
+
+Some recent theoretical work in proof search has illustrated that it
+is possible to combine the following two computational principles into
+one computational logic.
+\begin{enumerate}
+\item A symmetric treatment of finite success and finite failure.
+  This allows capturing both aspects of may and must behavior in
+  operational semantics and mixing model checking and logic programming.
+
+\item Direct support for $\lambda$-tree syntax, as in $\lambda$Prolog,
+       via term-level $\lambda$-binders, higher-order pattern
+       unification, and the $\nabla$-quantifier.
+\end{enumerate}
+All these features have a clean proof theory.  The combination of
+these features allow, for example, specifying rather declarative
+approaches to model checking syntactic expressions containing
+bindings.  The Bedwyr system is intended as an implementation of these
+computational logic principles.
+
 
 \paragraph{Why this name?}
 In the legend of King Arthur and the round table, several knights
@@ -30,9 +49,45 @@ called Level 0/1 written by Alwen Tiu and described in
 \url{http://www.lix.polytechnique.fr/parsifal/} and
 \url{http://slimmer.gforge.inria.fr/}.
 
+\paragraph{Is Bedwyr efficient?}
+Some care has been taken to implement the novel logical principles
+that appear in Bedwyr.  In particular, the system makes extensive use
+of the implementation of the suspension calculus \cite{nadathur99jflp}
+and other implementation ideas developed within the Teyjus
+\cite{nadathur99cade} implementation of \lp\ \cite{nadathur88iclp}.
+Aspects of tabled deduction have also been added to the system
+\cite{ramakrishna97cav,pientka05cade}.  We have found that Bedwyr's
+performance is good enough to explore a number of interesting
+examples.  It is not likely, however, that the current implementation
+will support large examples.  For example, the system implements the
+occur-check within logic: this is, of course, necessary for sound
+deduction but it does slow unification a lot.  For example, the append
+program is quadratic in the size of its first argument.  There are a
+number of well-known improvements to unification that make it possible
+to remove many instances of the occur-check (and making append
+linear).  As of this time, such an improvement has not been added to
+Bedwyr.  
+
+\paragraph{An open source effort: Can I help?}
+The Bedwyr system was conceived as a prototype that could help
+validate certain proof theory and proof search topic.  In the end,
+this prototype has illustrated the main principles that we hoped that
+it would.  It has also pointed out a number of new topics to be
+explored.  If you are interested in contributing examples, features,
+or performance enhancements, or if you are interested in considering
+the next generation of a system like this, please let an author of
+this guide know: we are looking for contributions
+
+\paragraph{Background assumed}
+To read this guide, we shall assume that the reader is familiar with
+the implementation of proof search that is found in, say, Prolog, \lp,
+or Twelf.  While familiarity with various foundations oriented papers
+(particularly, \cite{mcdowell03tcs, miller05tocl,tiu04phd}) is
+important for understanding fully this system, much can be learned
+from studying the examples provided in the distribution.
 
 % ============================================================================
-\newpage
+%\newpage
 \section{Get Bedwyr}
 \label{sec:install}
 
@@ -123,11 +178,11 @@ allow it do deduction that encodes model checking.
 
 \subsection{Syntax}
 
-Bedwyr uses HOAS (Higher-Order Abstract Syntax), which means that
-formulas of the Linc logic and of the object logics are represented
-using $\lambda$-terms. Term normalization ($\beta$-reduction) is
-implicit and the equality of terms is given by
-$\alpha\beta\eta$-conversion.
+Bedwyr uses the {\em $\lambda$-tree} approach \cite{miller00cl} to
+hoas (higher-order abstract syntax), which means that formulas of the
+Linc logic and of the object logics are represented using
+$\lambda$-terms.  Term normalization ($\beta$-reduction) is implicit
+and the equality of terms is given by $\alpha\beta\eta$-conversion.
 
 The grammar for formulas and terms is given in Figure~\ref{concrete}.
 The abstraction over variable \verb.x. in \verb.term. is denoted by
@@ -250,7 +305,7 @@ are supported directly (and, hence, the $\lambda$-tree syntax approach
 to higher-order abstract syntax is supported \cite{miller00cl}).
 Induction and co-induction are also available.  The nabla $\nabla$
 quantifier has be added to this logic in order to increase the
-expressiveness of programs using hoas in negated situations.  The
+expressiveness of programs using $\lambda$-tree syntax in negated situations.  The
 proof theory of LINC is given in \cite{miller05tocl,tiu04phd}.
 
 Bedwyr is a proof search engine for a small fragment of the LINC
@@ -415,7 +470,7 @@ be replaced with the universal quantifier.  When finite failure is
 involved, however, the $\nabla$ quantifier plays an independent role.
 See \cite{miller05tocl,tiu04phd,tiu05concur} for more on this
 quantifier.  It is worth pointing out that we know of no examples
-involving $\nabla$ that do not also involve hoas.
+involving $\nabla$ that do not also involve $\lambda$-tree syntax.
 
 \section{Examples of Bedwyr code}
 
@@ -452,6 +507,60 @@ These examples can be divided classified roughly as follows.
   illustrated by an example definition file.
 
 \end{description}
+
+\subsection{Hypothetical reasoning}
+
+For those familiar with \lp, a key difference between
+Bedwyr and \lp\ is that the latter allows for ``hypothetical''
+reasoning and such reasoning is central to the way that \lp\ treats
+bindings in syntax.    Bedwyr treats implication and universals in
+goal formulas in a completely different way: via the closed world
+assumption.  
+
+Sometimes, when dealing with $\lambda$-tree syntax in Bedwyr, one
+wishes to program operations as one might do in \lp.  This is possible
+in the sense that one can write in Bedwyr an interpreter for suitable
+fragments of \lp.  This is done, for example, in the {\tt seq.def}
+definition file.  There a goal-directed proof search procedure for a
+small part of hereditary Harrop formulas (in particular, the minimal
+theory of the fragment based on $\top$, $\wedge$, $\supset$, and
+$\forall$).  This interpreter is prepared to use a logic program that
+is stored as a binary predicate.  For example, in \lp, one would write
+type checking for simple types over the untyped $\lambda$-calculus
+encoded using {\tt abs} and {\tt app} as
+\begin{verbatim}
+typeof (app M N) B :- typeof M (arrow A B), typeof N A.
+typeof (abs R) (arrow A B) :- pi x\ typeof x A => typeof (R x) B.
+\end{verbatim}
+The hypothetical reasoning that is involved in typing the object-level
+$\lambda$-binder in the second clause above is not available directly
+in Bedwyr.  One can, however, rewrite these clauses as simply
+``facts'' in Bedwyr
+\begin{verbatim}
+simple (typeof (app M N) B) 
+       (and (typeof M (arrow A B)) (typeof N A)).
+simple (typeof (abs R) (arrow A B)) 
+       (forall x\ (typeof x A) -> (typeof (R x) B)).
+atom (typeof A B).
+\end{verbatim}
+The first two atomic formulas describe a logic program called {\tt
+simple} that directly encodes the above \lp\ program: the third fact
+above tells the interpreter in {\tt seq.def} how to recognize an
+object-level atomic formula.  A call to
+\verb+seq simple tt (typeof Term Type)+ will now attempt to perform
+simple type checking on {\tt Term}.  Specifically, it should now be
+possible to prove in Bedwyr the goal
+\begin{verbatim}
+(sigma T\ (seq simple tt (abs x\ app x x) T) => false).
+\end{verbatim}
+in other words, the self-application $\lambda x(x x)$ does not have a
+simple type.
+
+Notice that this ``two-level approach'' in which Bedwyr is used as a
+meta-logic and various computations are encoded in an object-logic
+(for example, type checking via minimal logic) is proposed in
+\cite{miller06ijcar} as a general means of reasoning about operational
+semantics.
 
 \subsection{The $\pi$-calculus example in more detail}
 
