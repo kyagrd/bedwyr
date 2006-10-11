@@ -86,34 +86,43 @@ let observe term = Term.observe (Norm.hnorm term)
   * and associates them a leaf containing the data.
   * Terms are expected to be reversed. *)
 let create_node ~allow_eigenvar bindings terms data =
-  let rec compile n bindings term = match observe term with
-    | Term.DB i -> DB i, n, bindings
-    | Term.NB i -> NB i, n, bindings
-    | Term.Var {Term.tag=Term.Constant;Term.name=id} -> Cst id, n, bindings
+  let bindings = List.sort (fun (i,_) (j,_) -> compare i j) bindings in
+  let add bindings v =
+    let rec aux accu expect = function
+      | (i,x)::l when i=expect -> aux ((i,x)::accu) (expect+1) l
+      | l -> expect, List.rev_append accu ((expect,v)::l)
+    in
+      aux [] 0 bindings
+  in
+  let rec compile bindings term = match observe term with
+    | Term.DB i -> DB i, bindings
+    | Term.NB i -> NB i, bindings
+    | Term.Var {Term.tag=Term.Constant;Term.name=id} -> Cst id, bindings
     | Term.Var var when allow_eigenvar && var.Term.tag = Term.Eigen ->
-        Var n, (n+1), (n,var)::bindings
+        let i,bindings = add bindings var in
+          Var i, bindings
     | Term.Lam (i,t) ->
-        let pat,n,bindings = compile n bindings t in
-          Lam (i,pat),n,bindings
+        let pat,bindings = compile bindings t in
+          Lam (i,pat),bindings
     | Term.App (h,terms) ->
         let terms = h::terms in
-        let patterns,n,bindings =
+        let patterns,bindings =
           List.fold_left
-            (fun (pats,n,b) t ->
-               let (p,n,b) = compile n b t in
-                 (p::pats,n,b))
-            ([],n,bindings)
+            (fun (pats,b) t ->
+               let (p,b) = compile b t in
+                 (p::pats,b))
+            ([],bindings)
             terms
         in
-          App (List.length terms, List.rev patterns),n,bindings
+          App (List.length terms, List.rev patterns),bindings
     | _ -> raise Cannot_table
   in
-  let patterns,_,bindings =
+  let patterns,bindings =
     List.fold_left
-      (fun (pats,n,binds) term ->
-         let pat,n,binds = compile n binds term in
-           pat::pats,n,binds)
-      ([],List.length bindings,bindings)
+      (fun (pats,binds) term ->
+         let pat,binds = compile binds term in
+           pat::pats,binds)
+      ([],bindings)
       terms
   in
     patterns, Leaf (new_leaf bindings data)
