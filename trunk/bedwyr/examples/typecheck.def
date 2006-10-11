@@ -11,8 +11,7 @@ __typecheck File := parse File X, __check (bind true o (bind false o nil)) X.
 __check Env nil.
 __check Env (cons (command "kind" K) L)   := __check Env L.
 __check Env (cons (command "type" X T) L) := __check (bind X T Env) L.
-__check Env (cons (command "include" X) L) := __check (bind X T Env) L.
-__check Env (cons (command "test" X) L) :=
+__check Env (cons (command "assert" X) L) :=
   print (checking test),
   __typed Env X o,
   __check Env L.
