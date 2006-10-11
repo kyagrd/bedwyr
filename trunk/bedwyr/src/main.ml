@@ -197,7 +197,7 @@ and command lexbuf = function
       end
   | "assert_not",[query] ->
       if !test then begin
-        Format.printf "Checking that %a is wrong...\n%!" Pprint.pp_term query ;
+        Format.printf "Checking that %a is false...\n%!" Pprint.pp_term query ;
         Term.reset_namespace () ;
         Prover.prove ~level:Prover.One ~local:0 ~timestamp:0 query
           ~success:(fun _ -> raise Assertion_failed) ~failure:ignore
