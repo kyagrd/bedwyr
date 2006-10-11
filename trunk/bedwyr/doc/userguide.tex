@@ -76,7 +76,7 @@ it would.  It has also pointed out a number of new topics to be
 explored.  If you are interested in contributing examples, features,
 or performance enhancements, or if you are interested in considering
 the next generation of a system like this, please let an author of
-this guide know: we are looking for contributions
+this guide know: we are looking for contributions.
 
 \paragraph{Background assumed}
 To read this guide, we shall assume that the reader is familiar with
@@ -121,6 +121,10 @@ Then, the procedure is quite simple.
 
 You'll get the bedwyr executable in \texttt{src/bedwyr}.
 
+By default, Bedwyr is built using the native-code compiler \texttt{ocamlopt},
+since it is much faster. If you don't have it or don't want it (e.g.
+for easier debugging) use \texttt{./configure --disable-native-code}.
+
 \subsection{Test}
 
 \begin{verbatim}
@@ -132,15 +136,17 @@ More tests, including examples in Bedwyr:
 
 \subsection{Line editing}
 
-By default, Bedwyr is built using the native-code compiler \texttt{ocamlopt},
-since it is much faster. If you don't have it or don't want it (e.g.
-for easier debugging) use \texttt{./configure --disable-native-code}.
+Bedwyr has no line editing facilities at all. Thus, we recommend using 
+\texttt{ledit}, which provides such features.
+Get it from your usual package manager or at
+\url{ftp://ftp.inria.fr/INRIA/cristal/Daniel.de_Rauglaudre/Tools}.
 
-Bedwyr has no line editing facilities at all. We recommend using \texttt{ledit}
-for a nicer experience. Get it (from your usual package manager of at
-(\url{ftp://ftp.inria.fr/INRIA/cristal/Daniel.de_Rauglaudre/Tools})
-and simply run \texttt{ledit src/bedwyr}.
-
+Then you can simply run \texttt{ledit src/bedwyr}. One can also define
+an alias in his \verb;.bashrc;, such as the following which also
+make use of \verb#~/.bedwyr_history# to remember history from one session to 
+another:\\
+\verb|alias bedwyr="ledit -h ~/.bedwyr_history -x /path/to/bedwyr"|
+ 
 \subsection{Emacs mode}
 
 Assuming Bedwyr sits in your \verb.~/bedwyr. directory,
@@ -156,6 +162,20 @@ Then you should be able to load any \verb:.def: file
 and have syntax highlighting and some rough auto-indenting.
 Also if you do \verb.C-c C-c. it will start Bedwyr
 and load the current file you are working on.
+
+\subsection{Vim syntax highlighting}
+
+There is a basic syntax highlighting file in \verb;contrib/bedwyr.vim;.
+To use it:
+\begin{itemize}
+\item
+Copy it to your \verb|~/.vim/syntax| directory to use it;
+\item
+To have it used automatically for all \verb|*.def| files, add the
+following line to your \verb;~/.vimrc; file:\\
+\verb|au BufRead,BufNewFile *.def set filetype=bedwyr|
+\end{itemize}
+
 
 % ============================================================================
 %\newpage
@@ -304,9 +324,9 @@ main novel components of the logic.  In particular, $\lambda$-terms
 are supported directly (and, hence, the $\lambda$-tree syntax approach
 to higher-order abstract syntax is supported \cite{miller00cl}).
 Induction and co-induction are also available.  The nabla $\nabla$
-quantifier has be added to this logic in order to increase the
-expressiveness of programs using $\lambda$-tree syntax in negated situations.  The
-proof theory of LINC is given in \cite{miller05tocl,tiu04phd}.
+quantifier has been added to this logic in order to increase the
+expressiveness of programs using $\lambda$-tree syntax in negated situations. 
+The proof theory of LINC is given in \cite{miller05tocl,tiu04phd}.
 
 Bedwyr is a proof search engine for a small fragment of the LINC
 logic.  In principle, Bedwyr uses two provers.  Prover 1 is similar to
@@ -350,12 +370,9 @@ $1$ can be used to instantiate $X$.  In the second query works since
 \subsection{Tabling}
 
 Until now, all definitions (inductive, co-inductive or non-recursive)
-are treated the same way, loops can occur in the proof-search, and Bedwyr
+are treated the same way: loops can occur in the proof-search, and Bedwyr
 won't avoid them. Also, Bedwyr can do the same search several times without
-noticing. To solve that, we use tabling.
-
-Although quite weak, tabling in Bedwyr is already a great improvement.
-It is still under work.
+noticing. To solve both issues, we use tabling.
 
 For tabled definitions, being inductive of co-inductive matters, and this 
 matters only for tabled definitions.
@@ -363,10 +380,41 @@ Tabling is thus enabled by prepending the \texttt{inductive} or
 \texttt{coinductive} keyword to \emph{every} clause of the definition |
 even if the definition is non-recursive.
 
-For now, tabling only applies to goals which do not contain logic variables.
-Then, loops are successes for coinductive definitions,
-and failures for inductive ones.
+Tabling is used in both provers.
+In Prover Right, tabling only applies to goals which do not contain logic 
+variables. In Prover Left, tabled goals cannot contain logic variables
+\emph{or} eigenvariables.
 
+Loops on tabled goals yield successes for coinductive definitions,
+and failures for inductive ones.
+Successes for tabled goals are remembered.
+Failures are remembered, if no loop failure was involved.
+
+The command \verb/#show_table pred./ allows one to inspect the contents of
+\verb.pred.'s table: formulas which have been proven or disproven.
+In some cases this information can be very relevant. For example, once a 
+bisimulation has been checked, the table describes the bisimulation relation.
+
+\begin{verbatim}
+$ bedwyr examples/pi_nat.def
+[..welcome message..]
+?= weak_bisim (nu u\ nu d\ (par (nat zz u)
+                           (par (nat (s zz) d)
+                                (add u d t))))
+              (nat (s zz) t).
+Yes.
+More [y] ? n
+Search stopped.
+?= #show_table weak_bisim.
+Table for weak_bisim contains (P=Proven, D=Disproven):
+ [P] (x1\ weak_bisim [..] [..])
+ [D] (weak_bisim [..] [..])
+[..]
+\end{verbatim}
+
+In this list, formulas are marked as proven or disproven. The abstractions at 
+the head stand for universal quantifications. Generic variables are not 
+abstracted, and represented by \verb.n1., \verb.n2., etc.
 
 \section{The logic behind Bedwyr}
 \label{logic}
@@ -679,8 +727,8 @@ $(\nu x).a!x.c(y).0$ are not bisimilar.
 
 % Link's to Dale's bibref file.  After Dale runs the aux2bib (see Makefile),
 % then one can use the local userguide.bib file.
-\bibliography{../../../../../pap/references/master}
+%\bibliography{../../../../../pap/references/master}
 
-%\bibliography{userguide}
+\bibliography{userguide}
 
 \end{document}
