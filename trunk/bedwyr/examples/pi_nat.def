@@ -31,6 +31,12 @@ agent (nat zz    C) (zero C).
                                       (add u d t))))
                     (nat (s (s (s (s (s zz))))) t)).
 
+% Similar example, but different evolution of the table, which used to crash.
+#assert (weak_bisim (nat (s (s (s (s (s zz))))) t)
+                    (nu two\ nu three\
+                      (par (nat (s (s zz)) two)
+                      (par (nat (s (s (s zz))) three) (add two three t))))).
+
 #assert_not (weak_bisim (nu u\ nu d\ (par (nat (s zz) d)
                                      (par (nat (s zz) u)
                                           (add u d t))))
