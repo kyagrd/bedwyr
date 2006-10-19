@@ -133,8 +133,7 @@ entails L M :=
 %% The predicate reveals takes the following arguments:
 %  E : environment  (input)
 %  M : a message (input)
-%  T : a (symbolic) trace  (output)
-%  The free names of P are assumed to be among the names in N.
+%  T : a concrete trace  (output)
 %
 % The predicate checks whether the process P, in the environment E,
 % reveals the message M at some point in its execution.
