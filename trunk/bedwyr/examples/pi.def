@@ -37,7 +37,7 @@
 % will allow us to write typing rules using familiar (lambda Prolog-like) 
 % clauses.
 
-#include "seq.def".
+#include "../seq.def".
 
 % The logic program clauses for checking of the three syntactic classes in
 % the pi-calculus: names, actions, processes.  Best to think of "picheck" 
