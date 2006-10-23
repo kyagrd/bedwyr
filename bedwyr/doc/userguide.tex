@@ -16,15 +16,18 @@
 \newcommand{\Ll}{$L_\lambda$}
 
 \title{{\Huge A User Guide to Bedwyr}
-%   \thanks{This document still needs a lot of improvements.}
+   \thanks{Support has been obtained for this work from the following
+           sources: from INRIA through the ``Equipes Associ{\'e}es''
+           Slimmer and from the NSF Grant CCR-0429572 that also
+           includes support for Slimmer.}
 }
 \author{David Baelde, Andrew Gacek, Dale Miller, \\
         Gopalan Nadathur, Alwen Tiu}
 
 \begin{document}
 \maketitle
-\tableofcontents
-\newpage
+%\tableofcontents
+%\newpage
 
 \section{Overview}
 
@@ -506,13 +509,13 @@ Successes for tabled goals are remembered.
 Failures are remembered, if no loop failure was involved.
 
 The command \verb/#show_table pred./ allows one to inspect the
-contents of \verb.pred.'s table: formulas which have been proven or
-disproven.  In some cases this information has important uses: for
+contents of \verb.pred.'s table: formulas which have been proved or
+disproved.  In some cases this information has important uses: for
 example, once the co-inductive predicate {\tt bisim} (for bisimulation
 in some of the example files) has been checked, the table for the
 predicate {\tt bisim} describes a bisimulation.  For example,
 \begin{verbatim}
-> bedwyr examples/pi_nat.def
+> bedwyr examples/pi/pi_nat.def
 [..welcome message..]
 ?= weak_bisim (nu u\ nu d\ (par (nat zz u)
                            (par (nat (s zz) d)
@@ -527,7 +530,7 @@ Table for weak_bisim contains (P=Proven, D=Disproven):
  [D] (weak_bisim [..] [..])
 [..]
 \end{verbatim}
-In this list, formulas are marked as proven or disproven. The
+In this list, formulas are marked as proved or disproved. The
 abstractions at the head stand for universal quantifications. Generic
 (``nabla'') variables are not abstracted, and represented by
 \verb.n1., \verb.n2., etc.
@@ -549,7 +552,7 @@ engine of Bedwyr.
 A subset of intuitionistic logic, called \Ll, was presented in
 \cite{miller91jlc} and shown to have a proof search engine that needed
 only a subset of higher-order unification and that that subset was
-decidable, uniary, and did not need typing information.  This subset
+decidable, unary, and did not need typing information.  This subset
 of unification was called \Ll-unification in \cite{miller91jlc} and
 is also known as {\em higher-order pattern unification}
 \cite{nipkow93lics,nadathur05iclp}.  In that subset, variables in
@@ -558,7 +561,7 @@ bound in the scope of the binding of the functional variable.
 
 Bedwyr allows for unrestricted applications of variables to argument
 but it is only willing to solve \Ll-unification problems.  As a result,
-Bedwyr will ocassionally complain that it needs to solve a ``not LL
+Bedwyr will occasionally complain that it needs to solve a ``not LL
 unification problem'' and stop searching for a proof.  Since Bedwyr is
 formally untyped, we use the term \Ll-unification since referring to
 unification with the adjective ``higher-order'' is problematic since
@@ -575,7 +578,7 @@ trans (in C P) (i C V) (P V).
 \end{verbatim}
 Here, {\tt P} is denotes an abstraction over processes and
 \verb+(P V)+ denotes the substitution of the inputted value {\tt V}
-into the abstraction {\tt P} (Bedwyr will do $\beta$-reduction inorder
+into the abstraction {\tt P} (Bedwyr will do $\beta$-reduction in order
 to simplify this application).  It is the case, however, that a
 unification problem containing \verb+(P V)+ does not below to \Ll.
 As a result, the following query results in a runtime error.
@@ -645,7 +648,7 @@ No more solutions.
 ?= 
 \end{verbatim}
 Such reordering of goals is something a future version of Bedwyr might
-attempt to do.
+attempt to do automatically.
 
 \section{Examples of Bedwyr code}
 
@@ -829,7 +832,7 @@ scope, $\alpha\beta\eta$-conversion, etc).
 It is now possible to test some simple examples in the system.  For
 example,
 \begin{verbatim}
-$ src/bedwyr examples/pi.def
+$ src/bedwyr examples/pi/pi.def
 Bedwyr welcomes you....
 
 ?= bisim (in a x\ in a y\ z) (in a x\ nu z\ in a y\ z).
