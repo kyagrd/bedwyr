@@ -393,6 +393,8 @@ following goals to be considered:
 \begin{verbatim}
         (a N)     (leq 3 N)    (leq 5 N)    (leq 2 N)
 \end{verbatim}
+Here we use the numeric symbols `2', `3', etc., as abbreviations of
+the corresponding terms formed using \texttt{0} and \texttt{s}.
 The usual approach to unification and depth-first proof search will
 now produce the proper maximum value.
 
@@ -488,26 +490,55 @@ $1$ can be used to instantiate $X$.  In the second query works since
 
 \subsection{Tabling}
 
-Until now, all definitions (inductive, co-inductive or non-recursive)
-are treated the same way: loops can occur in the proof-search, and Bedwyr
-won't avoid them. Also, Bedwyr can do the same search several times without
-noticing. To solve both issues, we use tabling.
+Proof search for a defined atom is done by unfolding the definition 
+for the atom, i.e., by replacing it with the body of the definition clause 
+whose head matches the atom. It is possible that loops can occur in 
+the proof-search, and Bedwyr does not detect them automatically. 
+There is also the possibility that Bedwyr proves a predicate several
+times, since it does not record whether a predicate has been proved
+previously.
+To address these issues, Bedwyr includes several search-directives
+that the user can use to instruct Bedwyr to keep records of certain
+predicates that have been proven or disproven, hence avoiding redundant search.
+Bedwyr uses tabling in the underlying implementation to keep track
+of proven or disproven predicates.
 
-For tabled definitions, being inductive or co-inductive matters, and this 
-matters only for tabled definitions.
-Tabling is thus enabled by prepending the \texttt{inductive} or
-\texttt{coinductive} keyword to \emph{every} clause of the definition.
+The use of tabling makes it possible to do proof search for
+``non-terminating'' definitions, by simple loop checking.
+The detection of a loop in the proof search for a predicate, say
+$p\,t$, can have several interpretations, depending on whether
+we consider $p\,t$ as an {\em inductive predicate} or
+a {\em coinductive predicate}. In the former case, that means that
+$p\,t$ is not provable, since otherwise it would contradict
+the well-foundedness of inductive definitions. In the latter case,
+we would have a proof of $p\,t$. Bedwyr keeps both previously proven goals 
+(e.g., coinductive $p\,t$ in the previous example), 
+or disproven goals (e.g., inductive $p\,t$). 
 
-Tabling is used in both provers.
+Tabling is by default not enabled in Bedwyr. Bedwyr provides to
+keywords: \texttt{inductive} and \texttt{coinductive}, to explicitly
+enable tabling for a predicate. 
+To use tabling on a predicate $p$, to be treated as an inductive predicate
+(likewise, coinductive predicate), {\em every} definition clause for $p$
+must be preceded by the keyword \texttt{inductive} 
+(likewise, \texttt{coinductive}).
+Note that a predicate cannot be designated as both inductive and co-inductive
+at the same time, as it will lead to contradiction (see 
+\cite{momigliano03types} for more details). 
+
+Tabling is used in both Prover Right and Prover Left.
+In the current implementation of Bedwyr, only ground atomic predicates
+are tabled. Note that ``ground predicates'' here have different meaning
+depending on whether they occur in Prover Right or Prover Left.
 In Prover Right, tabling only applies to goals which do not contain logic 
 variables. In Prover Left, tabled goals cannot contain logic variables
 \emph{or} eigenvariables.
-
 Loops on tabled goals yield successes for coinductive definitions,
 and failures for inductive ones.
 Successes for tabled goals are remembered.
 Failures are remembered, if no loop failure was involved.
 
+%% Alwen: we need a simpler example to illustrate tabling.
 The command \verb/#show_table pred./ allows one to inspect the
 contents of \verb.pred.'s table: formulas which have been proved or
 disproved.  In some cases this information has important uses: for
@@ -538,11 +569,10 @@ abstractions at the head stand for universal quantifications. Generic
 
 \subsection{Two runtime errors from the interpreter}
 
-The strategy used by Bedwyr for attempting proofs in not complete.
+The strategy used by Bedwyr for attempting proofs is not complete.
 That strategy involves using two provers (the left and the right
-prover), tabling, and depth-first search.  While many interesting
-formulas can be proved with this strategy, it is certainly
-incomplete.  Many of the incompleteness that one encounters in
+prover), tabling, and depth-first search.  
+Many of the incompleteness that one encounters in
 traditional logic programming languages, such as Prolog and \lp,
 resulting from depth-first search certainly reappear in Bedwyr.  We
 mention two additional sources of incompleteness in the proof search
@@ -742,7 +772,7 @@ semantics.
 
 \subsection{The $\pi$-calculus example in more detail}
 
-To illustration another example and how they
+To illustrate another example and how it
 can be used, consider the implementation of the $\pi$-calculus that is
 contained in the example file named \verb+pi.def+.  Of the several
 things defined in that file, the operational semantics for the
@@ -760,10 +790,10 @@ untyped so there are no {\tt kind} and {\tt type} declarations and no
 static checking of your source code.  
 
 Beyond the syntactic differences, the operational semantics of \lp\
-and Bedwyr differ significant.  If a specification is simply a Horn
-clause program, the two systems coincide.  In operational
-interpretation of an implication differs significantly: in Bedwyr, to
-prove $A\supset B$, all possible ways to prove $A$ are explored and
+and Bedwyr differ significantly.  If a specification is simply a Horn
+clause program, the two systems coincide. They differ in the operational
+interpretation of implication: in Bedwyr, to prove $A\supset B$, all 
+possible ways to prove $A$ are explored and 
 for each answer substitution $\theta$ that is found, the goal
 $B\theta$ is attempted (see Section~\ref{psearch}).  Bedwyr also
 contains the $\nabla$-quantifier \cite{miller05tocl}. 
@@ -857,8 +887,8 @@ $(\nu x).a!x.c(y).0$ are not bisimilar.
 
 % Link's to Dale's bibref file.  After Dale runs the aux2bib (see Makefile),
 % then one can use the local userguide.bib file.
-\bibliography{../../../../../pap/references/master}
+%\bibliography{../../../../../pap/references/master}
 
-%\bibliography{userguide}
+\bibliography{userguide}
 
 \end{document}
