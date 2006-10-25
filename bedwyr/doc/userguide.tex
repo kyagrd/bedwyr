@@ -450,10 +450,10 @@ expressiveness of programs using $\lambda$-tree syntax in negated situations.
 The proof theory of LINC is given in \cite{miller05tocl,tiu04phd}.
 
 Bedwyr is a proof search engine for a small fragment of the LINC
-logic.  In principle, Bedwyr uses two provers.  Prover 1 is similar to
+logic.  In principle, Bedwyr uses two provers.  {\em Prover 1} is similar to
 a depth-first interpreter used in in $\lambda$Prolog.  The main
 difference is in the proof of an implication.  
-To prove an implication $A\Rightarrow B$, prover 1  calls prover 0
+To prove an implication $A\Rightarrow B$, prover 1  calls {\em prover 0}
 to enumerates all possible solutions
 $\{\theta_i\;|\;i=1,\ldots,n\}$ for $A$, 
 and then prover 1 tries to prove $B\theta_1\wedge\dots\wedge B\theta_N$.
@@ -515,24 +515,21 @@ we would have a proof of $p\,t$. Bedwyr keeps both previously proven goals
 (e.g., coinductive $p\,t$ in the previous example), 
 or disproven goals (e.g., inductive $p\,t$). 
 
-Tabling is by default not enabled in Bedwyr. Bedwyr provides to
+Tabling is by default not enabled in Bedwyr. Bedwyr provides two
 keywords: \texttt{inductive} and \texttt{coinductive}, to explicitly
-enable tabling for a predicate. 
+enable tabling for a given predicate. 
 To use tabling on a predicate $p$, to be treated as an inductive predicate
 (likewise, coinductive predicate), {\em every} definition clause for $p$
 must be preceded by the keyword \texttt{inductive} 
 (likewise, \texttt{coinductive}).
 Note that a predicate cannot be designated as both inductive and co-inductive
 at the same time, as it will lead to contradiction (see 
-\cite{momigliano03types} for more details). 
+\cite{momigliano03types} for more details) in some cases. 
 
-Tabling is used in both Prover Right and Prover Left.
-In the current implementation of Bedwyr, only ground atomic predicates
-are tabled. Note that ``ground predicates'' here have different meaning
-depending on whether they occur in Prover Right or Prover Left.
-In Prover Right, tabling only applies to goals which do not contain logic 
-variables. In Prover Left, tabled goals cannot contain logic variables
-\emph{or} eigenvariables.
+Tabling is used in both prover 0 and prover 1 (see Section~\ref{psearch}).
+In the current implementation of Bedwyr, only ground atomic predicates, i.e.,
+those predicates which do not contain any occurences of logic variables, 
+are tabled. 
 Loops on tabled goals yield successes for coinductive definitions,
 and failures for inductive ones.
 Successes for tabled goals are remembered.
