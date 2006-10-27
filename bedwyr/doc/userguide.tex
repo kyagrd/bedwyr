@@ -12,6 +12,8 @@
 \documentclass{article}
 \bibliographystyle{alpha}
 \usepackage{url}
+\usepackage[all]{xy}
+
 \newcommand{\lp}{$\lambda$Prolog}
 \newcommand{\Ll}{$L_\lambda$}
 
@@ -21,8 +23,12 @@
            Slimmer and from the NSF Grant CCR-0429572 that also
            includes support for Slimmer.}
 }
-\author{David Baelde, Andrew Gacek, Dale Miller, \\
-        Gopalan Nadathur, Alwen Tiu}
+\author{David Baelde$^1$, Andrew Gacek$^2$, Dale Miller$^1$, \\
+        Gopalan Nadathur$^2$, Alwen Tiu$^3$  \\ \\
+$^1$INRIA Futurs and \'Ecole Polytechnique\\
+$^2$University of Minnesota\\
+$^3$Australian National University and National ICT Australia
+}
 
 \begin{document}
 \maketitle
@@ -535,33 +541,91 @@ and failures for inductive ones.
 Successes for tabled goals are remembered.
 Failures are remembered, if no loop failure was involved.
 
-%% Alwen: we need a simpler example to illustrate tabling.
 The command \verb/#show_table pred./ allows one to inspect the
 contents of \verb.pred.'s table: formulas which have been proved or
 disproved.  In some cases this information has important uses: for
 example, once the co-inductive predicate {\tt bisim} (for bisimulation
 in some of the example files) has been checked, the table for the
-predicate {\tt bisim} describes a bisimulation.  For example,
+predicate {\tt bisim} describes a bisimulation.  
+We give here a simple example of checking bisimulation of finite
+state automata. For more sophisticated examples involving the $\pi$-calculus,
+we refer the reader to Section~\ref{pi-examples}.
+
+Consider the following transition system (taken from \cite{milner99book}, 
+page 19):
+$$
+\xymatrix{
+   &  & p1 \ar@/_/[lld]_b \ar@/^/[dd]^a \\
+p0 \ar@/_/[rru]_a \ar@/^/[rrd]_a \\
+ & & p2 \ar@(ur,dr)^a \ar@/^/[llu]^b
+}
+\qquad
+\xymatrix{
+q0 \ar@/^/[rrd]^a \\
+ & & q1 \ar@(ur,dr)^a \ar@/_/[dll]_b \\
+q2 \ar@/_/[rru]_a
+}
+$$
+The state $p0$ and $q0$ are bisimilar (see \cite{milner99book} for a proof).
+This transition system is encoded in Bedwyr as follows:
 \begin{verbatim}
-> bedwyr examples/pi/pi_nat.def
-[..welcome message..]
-?= weak_bisim (nu u\ nu d\ (par (nat zz u)
-                           (par (nat (s zz) d)
-                                (add u d t))))
-              (nat (s zz) t).
-Yes.
-More [y] ? n
-Search stopped.
-?= #show_table weak_bisim.
-Table for weak_bisim contains (P=Proven, D=Disproven):
- [P] (x1\ weak_bisim [..] [..])
- [D] (weak_bisim [..] [..])
-[..]
+next p0 a p1.
+next p0 a p2.
+next p1 b p0.
+next p1 a p2.
+next p2 a p2.
+next p2 b p0.
+next q0 a q1.
+next q1 a q1.
+next q1 b q2.
+next q2 a q1.
 \end{verbatim}
-In this list, formulas are marked as proved or disproved. The
-abstractions at the head stand for universal quantifications. Generic
-(``nabla'') variables are not abstracted, and represented by
-\verb.n1., \verb.n2., etc.
+The bisimulation relation is encoded as the following definition
+\begin{verbatim}
+coinductive bisim P Q := 
+  (pi P1\ pi A\ next P A P1 => sigma Q1\ next Q A Q1 & bisim P1 Q1) &
+  (pi Q1\ pi A\ next Q A Q1 => sigma P1\ next P A P1 & bisim P1 Q1).
+\end{verbatim}
+Using this definition of bisimulation, Bedwyr is able to prove that
+$p0$ and $q0$ are indeed bisimilar. Here is an instance of a run in Bedwyr:
+\begin{verbatim}
+> bisim p0 q0.
+Yes.
+More [y] ? y
+No more solutions.
+> #show_table bisim.
+Table for bisim contains (P=Proven, D=Disproven):
+ [P] (bisim p1 q1)
+ [P] (bisim p2 q1)
+ [P] (bisim p0 q0)
+ [P] (bisim p0 q2)
+> 
+\end{verbatim}
+The table produced gives exactly the bisimulation set
+needed to prove the bisimilarity of $p0$ and $q0$, i.e.,
+the set $\{(p0,q0), (p0, q2), (p1,q1), (p2,q1) \}.$
+
+%% For example,
+%% \begin{verbatim}
+%% > bedwyr examples/pi/pi_nat.def
+%% [..welcome message..]
+%% ?= weak_bisim (nu u\ nu d\ (par (nat zz u)
+%%                            (par (nat (s zz) d)
+%%                                 (add u d t))))
+%%               (nat (s zz) t).
+%% Yes.
+%% More [y] ? n
+%% Search stopped.
+%% ?= #show_table weak_bisim.
+%% Table for weak_bisim contains (P=Proven, D=Disproven):
+%%  [P] (x1\ weak_bisim [..] [..])
+%%  [D] (weak_bisim [..] [..])
+%% [..]
+%% \end{verbatim}
+%% In this list, formulas are marked as proved or disproved. The
+%% abstractions at the head stand for universal quantifications. Generic
+%% (``nabla'') variables are not abstracted, and represented by
+%% \verb.n1., \verb.n2., etc.
 
 
 \subsection{Two runtime errors from the interpreter}
@@ -638,13 +702,15 @@ problems in the hope that future instantiations and $\beta$-reduction
 will make them ``simple'' is employed in such systems as \lp\ and
 Twelf.
 
-\subsubsection{Logic variables from the right prover in the left prover}
+%\subsubsection{Logic variables from the right prover in the left prover}
+\subsubsection{Restriction on the occurrences of logic variables}
 
-As we have already noted, logic variables used in the implementation
-of proof search in the right prover are not allowed in the left
-prover.  This restriction arises more from the fact that we do not
+As we have already noted, in the current implementation of Bedwyr
+we do not allow logic variables to occur negatively in the goals of
+prover 1 (i.e., to the left of an implication). 
+This restriction arises more from the fact that we do not
 have a satisfactory and comprehensive understanding of unification in
-the left prover that incorporates such variables.  As a result, Bedwyr
+the prover 1 that incorporates such variables.  As a result, Bedwyr
 is incomplete since it generates a run-time error in these cases.
 Consider the following two queries.
 \begin{verbatim}
@@ -660,8 +726,8 @@ The first query is certainly meaningful and is provable if there is a
 term different from {\tt a}: in Bedwyr, this query generates a
 run-time error since it requires dealing with a right-prover logic
 variable within left-prover unification.  The second query illustrates
-that some instances of the left-prover unification tolerates
-occurrences of right-prover logic variables.
+that some instances of unification tolerates the negative 
+occurrences of logic variables.
 
 Sometimes, one can change a specification to avoid this runtime
 error.  A simple example is provided by the following two queries.
@@ -768,6 +834,7 @@ meta-logic and various computations are encoded in an object-logic
 semantics.
 
 \subsection{The $\pi$-calculus example in more detail}
+\label{pi-examples}
 
 To illustrate another example and how it
 can be used, consider the implementation of the $\pi$-calculus that is
