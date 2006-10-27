@@ -12,22 +12,24 @@
 %% The most direct uses Bedwyr's built-in beta-reduction.
 %%    ?= pr (lred Term Reduced).
 %% Notice that Reduced is not necessary in beta-normal form: we know,
-%% however, that the marked betas do not occur.
+%% however, that the marked betas do not occur in Reduced.
 
-%% Another method uses paths through lambda-terms: here a path 
-%% through a marked beta-redex continues through the argument.  We
-%% can now do a kind of model checking or simulation: a term M is 
-%% a reduced form of term N, if all paths in N are paths in M.  This 
-%% approach is more "extensional" and uses Bedwyr in a rather interesting
-%% way.  In particular, Bedwyr will need to compute all paths in N, and 
-%% then, using the magic of logic variables (in prover 1), synthesizes the 
-%% reduced lambda-term containing those paths.
+%% Another method uses paths through lambda-terms: here a path through a
+%% marked beta-redex continues through the body until it encounters the
+%% bound variable, at which point the path is directed through the
+%% argument.  We can now do a kind of model checking or simulation: a
+%% term M is a reduced form of term N if all paths in N are paths in M.
+%% This approach is more "extensional" and uses Bedwyr in a rather
+%% interesting way.  In particular, Bedwyr will need to compute all paths
+%% in N, and then, using the magic of logic variables (in prover 1),
+%% synthesizes the reduced lambda-term containing those paths.
 
 %% Some of the code that we write uses hypothetical implications which is 
 %% not directly available in Bedwyr.  Hence, we call an interpreter for
 %% hypothetical implications via the seq predicate in seq.def.  In this way,
-%% we can execute lambda Prolog style programs within Bedwyr.  The predicate
-%% lnorm below stores a "module" of lambda Prolog.
+%% we can execute lambda-Prolog-style programs within Bedwyr.  The predicate
+%% lnorm below stores a "module" of lambda Prolog (a named collection of 
+%% clauses.
 
 #include "seq.def".
 
