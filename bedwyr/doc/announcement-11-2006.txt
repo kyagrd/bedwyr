@@ -1,0 +1,97 @@
+Possible mailing lists:	
+
+  types
+  proof-theory
+  moca
+  lprolog
+  poplmark
+  caml
+
+There is also the ALP newsletter.  For the current version of this news
+letter, see
+http://www.cs.kuleuven.ac.be/~dtai/projects/ALP/newsletter/.
+
+Draft of an announcement:
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+[Dale: below is the one used for CSFW 2006.  Might be a good starting
+point.]
+
+Title: Bedwyr - a proof search approach to model checking
+Presenter: Dale Miller
+URL: http://slimmer.gforge.inria.fr/bedwyr/
+
+Bedwyr is a software system currently under development between two
+teams at INRIA (LIX, Ecole Polytechnique) and the University of
+Minnesota.  This system, currently written in OCaml, is a direct
+implementation of two recent advances in the theory of proof search.
+ (1) Finite success and finite failure can be modelled as a negation
+     within a proof theory setting allows a proof search system to
+     capture both aspects of may and must behavior in operational
+     semantics.
+ (2) Higher-order abstract syntax is directly supported using
+     term-level lambda-binders, the nabla-quantifier, higher-order
+     pattern unification, and explicit substitutions.  These features
+     allow reasoning directly on expressions containing bound
+     variables.
+Applications that we have explored range from computing symbolic
+bisimulation and modal logic checking for the pi-calculus, computing
+winning strategies for games, and various model checking problems.
+   David Baelde & Dale Miller (INRIA & LIX/Ecole Polytechnique)
+   Andrew Gacek & Gopalan Nadathur (University of Minneapolis)
+   Alwen Tiu (Australian National University and NICTA).
+
+
+
+Slide 1:
+
+	  Bedwyr - a proof search approach to model checking
+	     Dale Miller, INRIA & LIX/Ecole Polytechnique
+
+The SLIMMER project: Sophisticated logic implementations for modeling
+and mechanical reasoning.  Jointly funded effort between INRIA (via
+the Parsifal team) and NSF (via the University of Minnesota).
+
+Slimmer team includes:
+INRIA & LIX/Ecole Polytechnique: David Baelde (PhD student)
+University of Minnesota: Andrew Gacek (PhD student) & Gopalan Nadathur
+Australian National University:   Alwen Tiu
+
+Current development effort: Bedwyr - an OCaml implementation of a
+logic programming and model checker for syntactic expressions.
+
+Open source: http://slimmer.gforge.inria.fr/bedwyr/
+
+________________________________________________________________
+Slides 2:
+
+			 Logical Foundations
+
+Theoretical work is based on recent developments in proof search.  In
+particular: 
+
+ (1) A symmetric treatment of finite success and finite failure
+     in a proof theory setting.  
+     - allows capturing both aspects of may and must behavior in
+       operational semantics.
+     - formal justifications found in focused proofs of linear logic
+       and game semantics for proof search
+
+ (2) Direct support for higher-order abstract syntax in syntax
+     - as in lambda Prolog (via the Teyjus implementation), term-level
+       lambda-binders, higher-order pattern unification, and explicit
+       substitutions are directly supported.
+     - the nabla-quantifier is use for encoding "generic judgments"
+
+A proper proof theory for nabla, induction, and co-induction has been
+investigated by Tiu, Miller, and Momigliano.
+
+Effort is mean to be entirely deductive.
+________________________________________________________________
+Slide 3;
+
+			     Applications
+
+finite pi-calculus: modal logics, open and late bisimulation
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
