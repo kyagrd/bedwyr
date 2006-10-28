@@ -11,7 +11,6 @@ XPL = examples/3bits.def examples/lambda.def examples/progs.def \
       examples/graph-alt.def examples/minmax.def \
       examples/tictactoe.def examples/pi/pi_nat.def examples/pi/pi_church.def
 test:
-	# TODO should fail on the first error
 	@echo Testing the core LLambda library
 	make -C src test
 	@echo Testing bedwyr on examples
