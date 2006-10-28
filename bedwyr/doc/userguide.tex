@@ -929,7 +929,7 @@ example,
 $ src/bedwyr examples/pi/pi.def
 Bedwyr welcomes you....
 
-?= bisim (in a x\ in a y\ z) (in a x\ nu z\ in a y\ z).
+?= bisim (in a x\ in a y\ z) (in a x\ nu w\ in a y\ out w w z).
 Yes.
 More [y] ? y
 No more solutions.
@@ -943,7 +943,7 @@ No.
 ?= 
 \end{verbatim}
 These query prove that 
-$a(x).a(y).0$ and $a(x).(\nu z).a(y).z$ are bisimilar, 
+$a(x).a(y).0$ and $a(x).(\nu w).a(y).w!w.0$ are bisimilar, 
 that
 $a(x).(\nu y).[x=y].c!c.0$ and $a(x).0$ are bisimilar, and that 
 $(\nu x).a!x.c(y).[x=y].c!c.0$ and 

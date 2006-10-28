@@ -1,8 +1,8 @@
 Possible mailing lists:	
 
-  types
+  types-announce
   proof-theory
-  moca
+  moca-announce
   lprolog
   poplmark
   caml
