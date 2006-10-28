@@ -214,8 +214,8 @@ extension of the underlying logic programming language.  Bedwyr on the
 contrary accepts the ``closed-world assumption'': the notion of
 programs are replaced by {\em definitions} that capture the
 ``if-and-only-if'' closure of logic programs.  This change allows
-Bedwyr to give a computational interpretation to finite failure and to
-allow it do deduction that encodes model checking.
+Bedwyr to give a computational interpretation to finite failure and
+to do deduction that encodes model checking.
 
 \subsection{Syntax}
 
@@ -259,7 +259,7 @@ atomic &::=& id \; term* & a possibly empty application with a constant head \\
 \subsection{Running Bedwyr}
 
 When you run Bedwyr, you specify a file or collection of files for it
-to load: the formulas in those files are consider as definitions.  You
+to load: the clauses in those files are considered as definitions.  You
 can then ask queries against those definitions.
 In queries, variables starting with an uppercase character (\verb.A-Z_.)
 are implicitly quantified existentially, and their instantiations in solutions
@@ -303,6 +303,8 @@ variables are implicitly universally quantified:
 
 Definition files may also contain include commands:
 \begin{verbatim}#include "another/file.def".\end{verbatim}
+The \verb.#include. can really be seen as the inclusion of another file,
+as Bedwyr doesn't have any namespace or module system.
 
 Finally, if the head of the clause is missing, the body will be processed as a 
 query.
@@ -328,6 +330,24 @@ Several commands alter the internal set of definitions of Bedwyr:
     \verb.#reset. clears all the definitions and empties the session.
 \end{itemize}
 
+\subsubsection{Assertions}
+
+Three kind of assertions can be used in definition files.
+These tests are not executed unless the \verb.-t. flag has been passed 
+on Bedwyr's command-line, in which case any assertion failure is fatal.
+\begin{itemize}
+\item
+\verb.#assert F. checks that the formula $F$ has at least one solution.
+\item
+\verb.#assert_not F. checks that $F$ has no solution.
+\item
+\verb.#assert_raise F. checks that the proof-search for $F$ triggers
+a runtime error.
+\end{itemize}
+
+Our examples include a lot of assertions, to make sure that definitions have 
+(and keep) the intended meaning. These assertions are also the basis of
+Bedwyr's correctness and performance tests ran using \verb.make test..
 
 \section{The logic behind Bedwyr}
 \label{logic}
@@ -343,8 +363,8 @@ that paper has now been replaced by Bedwyr.
 \paragraph{Built-in treatment of bindings}
 Bedwyr treats $\lambda$-abstractions within terms as primitive as well
 as allowing for variables of function type and quantifiers within
-formulas ($\forall$, $\exists$, $\nabla$).  The system's two provers
-both implement ``higher-order pattern unification'' (also called
+formulas ($\forall$, $\exists$, $\nabla$).  The system
+implements ``higher-order pattern unification'' (also called
 $L_\lambda$-unification) \cite{miller91jlc}.   This kind of unification
 appears to be the weakest extension to first-order unification that
 treats bindings as a primitive.  A number of ``proof search'' systems
@@ -391,7 +411,7 @@ and a new fact about it {\tt (a c)}.  In such a new world, however, the
 {\tt leq} relation to does not have any information about this
 ``non-standard'' number {\tt c}.  In contrast to this, Bedwyr will
 take the assumption  {\tt (a c)} and ask ``Given the assumption that 
-{\tt (a c)} is true, how could it have been proved?''  The natural
+{\tt (a c)} is true, how could have it been proved?''  The natural
 answer to this is that that assumption could have been proved if {\tt
 c} was either 3 or 5 or 2.  Thus, this analysis will cause a case
 analysis: in particular, the query {\tt (maxa N)} will cause the
@@ -457,7 +477,7 @@ The proof theory of LINC is given in \cite{miller05tocl,tiu04phd}.
 
 Bedwyr is a proof search engine for a small fragment of the LINC
 logic.  In principle, Bedwyr uses two provers.  {\em Prover 1} is similar to
-a depth-first interpreter used in in $\lambda$Prolog.  The main
+a depth-first interpreter used in $\lambda$Prolog.  The main
 difference is in the proof of an implication.  
 To prove an implication $A\Rightarrow B$, prover 1  calls {\em prover 0}
 to enumerates all possible solutions
@@ -491,7 +511,7 @@ The first query requires radically different tools than those we use |
 namely, disunification. (The cryptic message about ``on the left''
 refers to the left of the sequent arrow in the proof theory of LINC.)
 The query actually has infinitely many solutions: any term other than
-$1$ can be used to instantiate $X$.  In the second query works since
+$1$ can be used to instantiate $X$.  The second query works since
 \verb.X. is instantiated at the time the implication is processed.
 
 \subsection{Tabling}
@@ -752,7 +772,7 @@ the annoyance of a good example.\\
 \end{flushright}
 
 The distribution of Bedwyr comes with several examples of its use.
-These examples can be divided classified roughly as follows.
+These examples can be classified roughly as follows.
 
 \begin{description}
 \item[Basic examples] These examples are small and illustrate some
@@ -838,9 +858,9 @@ semantics.
 
 To illustrate another example and how it
 can be used, consider the implementation of the $\pi$-calculus that is
-contained in the example file named \verb+pi.def+.  Of the several
+contained in the example file \verb+pi/pi.def+.  Of the several
 things defined in that file, the operational semantics for the
-$\pi$-calculus given as using one-step transitions: for a specific
+$\pi$-calculus is given using one-step transitions: for a specific
 example, see Figure~\ref{one-step}.  First notice that the syntax of
 clauses is almost identical to that used in $\lambda$Prolog.  In
 particular, the backslash is used to denote the $\lambda$-binder.  The
