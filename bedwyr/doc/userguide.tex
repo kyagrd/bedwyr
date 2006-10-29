@@ -56,7 +56,7 @@ bindings.  The Bedwyr system is intended as an implementation of these
 computational logic principles.
 
 
-\paragraph{Why this name?}
+\paragraph{Why the name Bedwyr?}
 In the legend of King Arthur and the round table, several knights
 shared in the search for the holy grail.  The name of one of them,
 Parsifal, is used for an INRIA team associated with the ``Slimmer''
@@ -66,9 +66,33 @@ Python and the Holy Grail} where he is ``portrayed as a master of the
 extremely odd logic in the ancient times, whom occasionally blunders."
 Bedwyr is a re-implementation and rethinking of an earlier system
 called Level 0/1 written by Alwen Tiu and described in
-\cite{tiu05eshol}.  For more information, see
+\cite{tiu05eshol}. The name ``Slimmer'' is used for a jointly funded
+effort between INRIA and the University of Minnesota on
+``Sophisticated logic implementations for modeling and mechanical
+reasoning'': Bedwyr is an initial offering from
+that collaboration.
+For more information, see
 \url{http://www.lix.polytechnique.fr/parsifal/} and
 \url{http://slimmer.gforge.inria.fr/}.
+
+\paragraph{What is the difference between {\em hoas} and $\lambda${\em
+    -tree syntax}?} 
+The term ``higher-order abstract syntax'' (hoas) was originally coined
+by Pfenning and Elliott in \cite{pfenning88pldi} and names the general
+practice (that was common then in, say, $\lambda$Prolog
+\cite{miller87slp}) of using an abstraction in a programming or
+specification language to encode binders in an object-language.  Since
+the choice of ``meta-language'' can vary a great deal, the term hoas
+has come to mean different things to different people.  Bedwyr follows
+the {\em $\lambda$-tree} approach \cite{miller00cl} to hoas: in
+particular, Bedwyr's use of $\lambda$-abstraction is meant to provide
+an abstract form of syntax and to not identify syntactic objects with
+functional objects, which is what usually happens when hoas is used
+directly within functional programming or constructive type systems.
+Instead, in Bedwyr (and \lp), $\lambda$-abstractions are more
+accurately thought of as being syntactic expressions with certain weak
+rules of equality which make it possible for unification to be used to
+analyze the structure of $\lambda$-abstractions.  
 
 \paragraph{Is Bedwyr efficient?}
 Some care has been taken to implement the novel logical principles
@@ -102,7 +126,7 @@ this guide know: we are looking for contributions.
 \paragraph{Background assumed}
 To read this guide, we shall assume that the reader is familiar with
 the implementation of proof search that is found in, say, Prolog, \lp,
-or Twelf.  While familiarity with various foundations oriented papers
+or Twelf.  While familiarity with various foundations-oriented papers
 (particularly, \cite{mcdowell03tcs, miller05tocl,tiu04phd}) is
 important for understanding fully this system, much can be learned
 from studying the examples provided in the distribution.
@@ -218,12 +242,6 @@ Bedwyr to give a computational interpretation to finite failure and
 to do deduction that encodes model checking.
 
 \subsection{Syntax}
-
-Bedwyr uses the {\em $\lambda$-tree} approach \cite{miller00cl} to
-hoas (higher-order abstract syntax), which means that formulas of the
-Linc logic and of the object logics are represented using
-$\lambda$-terms.  Term normalization ($\beta$-reduction) is implicit
-and the equality of terms is given by $\alpha\beta\eta$-conversion.
 
 The grammar for formulas and terms is given in Figure~\ref{concrete}.
 The abstraction over variable \verb.x. in \verb.term. is denoted by
@@ -370,7 +388,6 @@ appears to be the weakest extension to first-order unification that
 treats bindings as a primitive.  A number of ``proof search'' systems
 implement this kind of unification (eg, Twelf, Teyjus, Coq, and
 Minlog).  Full $\beta$-conversion is implemented by Bedwyr as well.
-As a result, {\em higher-order abstract syntax} is fully supported.
 \lp\ similarly implements all these features, although \lp\ implements
 full higher-order unification (that is, it is not restricted to the
 $L_\lambda$ subset).  Another different with \lp\ is that Bedwyr does
@@ -446,7 +463,7 @@ $A\longrightarrow$, and simulation is captured by proving the sequent
 $A\longrightarrow B$.
 
 \paragraph{The $\nabla$ quantifier}
-In order to treat specifications using higher-order abstract syntax
+In order to treat specifications using $\lambda$-tree syntax
 properly, it appears that a new quantifier, called $\nabla$, is
 necessary.  If finite success is all that is needed, the $\nabla$ can
 be replaced with the universal quantifier.  When finite failure is
@@ -472,22 +489,22 @@ are supported directly (and, hence, the $\lambda$-tree syntax approach
 to higher-order abstract syntax is supported \cite{miller00cl}).
 Induction and co-induction are also available.  The nabla $\nabla$
 quantifier has been added to this logic in order to increase the
-expressiveness of programs using $\lambda$-tree syntax in negated situations. 
-The proof theory of LINC is given in \cite{miller05tocl,tiu04phd}.
+expressiveness of programs using $\lambda$-tree syntax in negated
+situations.  The proof theory of LINC is given in
+\cite{miller05tocl,tiu04phd}.
 
 Bedwyr is a proof search engine for a small fragment of the LINC
-logic.  In principle, Bedwyr uses two provers.  {\em Prover 1} is similar to
-a depth-first interpreter used in $\lambda$Prolog.  The main
-difference is in the proof of an implication.  
-To prove an implication $A\Rightarrow B$, prover 1  calls {\em prover 0}
-to enumerates all possible solutions
-$\{\theta_i\;|\;i=1,\ldots,n\}$ for $A$, 
-and then prover 1 tries to prove $B\theta_1\wedge\dots\wedge B\theta_N$.
-If $A$ has no solution (that is, if $n=0$), the implication is true.
-The substitutions generated by prover 1 are for ``logic variables'' in
-the sense that is usual for logic programming implementations.  On the
-other hand, the substitutions generated by prover 0 are for
-eigenvariables. 
+logic.  In principle, Bedwyr uses two provers.  {\em Prover 1} is
+similar to a depth-first interpreter used in $\lambda$Prolog.  The
+main difference is in the proof of an implication.  To prove an
+implication $A\Rightarrow B$, prover 1 calls {\em prover 0} to
+enumerates all possible solutions $\{\theta_i\;|\;i=1,\ldots,n\}$ for
+$A$, and then prover 1 tries to prove $B\theta_1\wedge\dots\wedge
+B\theta_N$.  If $A$ has no solution (that is, if $n=0$), the
+implication is true.  The substitutions generated by prover 1 are for
+``logic variables'' in the sense that is usual for logic programming
+implementations.  On the other hand, the substitutions generated by
+prover 0 are for eigenvariables.
 
 Two run-time errors can occur during proof search in Bedwyr.  The first
 is when either prover encounters a unification problem that is not a 
@@ -508,7 +525,7 @@ No more solutions.
 ?= 
 \end{verbatim}
 The first query requires radically different tools than those we use |
-namely, disunification. (The cryptic message about ``on the left''
+namely, dis-unification. (The cryptic message about ``on the left''
 refers to the left of the sequent arrow in the proof theory of LINC.)
 The query actually has infinitely many solutions: any term other than
 $1$ can be used to instantiate $X$.  The second query works since
@@ -525,9 +542,9 @@ times, since it does not record whether a predicate has been proved
 previously.
 To address these issues, Bedwyr includes several search-directives
 that the user can use to instruct Bedwyr to keep records of certain
-predicates that have been proven or disproven, hence avoiding redundant search.
+predicates that have been proved or disproved, hence avoiding redundant search.
 Bedwyr uses tabling in the underlying implementation to keep track
-of proven or disproven predicates.
+of proved or disproved predicates.
 
 The use of tabling makes it possible to do proof search for
 ``non-terminating'' definitions, by simple loop checking.
@@ -537,9 +554,9 @@ we consider $p\,t$ as an {\em inductive predicate} or
 a {\em coinductive predicate}. In the former case, that means that
 $p\,t$ is not provable, since otherwise it would contradict
 the well-foundedness of inductive definitions. In the latter case,
-we would have a proof of $p\,t$. Bedwyr keeps both previously proven goals 
+we would have a proof of $p\,t$. Bedwyr keeps both previously proved goals 
 (e.g., coinductive $p\,t$ in the previous example), 
-or disproven goals (e.g., inductive $p\,t$). 
+or disproved goals (e.g., inductive $p\,t$). 
 
 Tabling is by default not enabled in Bedwyr. Bedwyr provides two
 keywords: \texttt{inductive} and \texttt{coinductive}, to explicitly
@@ -554,7 +571,7 @@ at the same time, as it will lead to contradiction (see
 
 Tabling is used in both prover 0 and prover 1 (see Section~\ref{psearch}).
 In the current implementation of Bedwyr, only ground atomic predicates, i.e.,
-those predicates which do not contain any occurences of logic variables, 
+those predicates which do not contain any occurrences of logic variables, 
 are tabled. 
 Loops on tabled goals yield successes for coinductive definitions,
 and failures for inductive ones.
@@ -603,8 +620,10 @@ next q2 a q1.
 The bisimulation relation is encoded as the following definition
 \begin{verbatim}
 coinductive bisim P Q := 
-  (pi P1\ pi A\ next P A P1 => sigma Q1\ next Q A Q1 & bisim P1 Q1) &
-  (pi Q1\ pi A\ next Q A Q1 => sigma P1\ next P A P1 & bisim P1 Q1).
+  (pi P1\ pi A\ next P A P1 => 
+                   sigma Q1\ next Q A Q1 & bisim P1 Q1) &
+  (pi Q1\ pi A\ next Q A Q1 => 
+                   sigma P1\ next P A P1 & bisim P1 Q1).
 \end{verbatim}
 Using this definition of bisimulation, Bedwyr is able to prove that
 $p0$ and $q0$ are indeed bisimilar. Here is an instance of a run in Bedwyr:
@@ -651,8 +670,8 @@ the set $\{(p0,q0), (p0, q2), (p1,q1), (p2,q1) \}.$
 \subsection{Two runtime errors from the interpreter}
 
 The strategy used by Bedwyr for attempting proofs is not complete.
-That strategy involves using two provers (the left and the right
-prover), tabling, and depth-first search.  
+That strategy involves using two provers (``prover 0'' and the
+``prover 1'' prover), tabling, and depth-first search.  
 Many of the incompleteness that one encounters in
 traditional logic programming languages, such as Prolog and \lp,
 resulting from depth-first search certainly reappear in Bedwyr.  We
@@ -722,7 +741,6 @@ problems in the hope that future instantiations and $\beta$-reduction
 will make them ``simple'' is employed in such systems as \lp\ and
 Twelf.
 
-%\subsubsection{Logic variables from the right prover in the left prover}
 \subsubsection{Restriction on the occurrences of logic variables}
 
 As we have already noted, in the current implementation of Bedwyr
@@ -744,8 +762,8 @@ No more solutions.
 \end{verbatim}
 The first query is certainly meaningful and is provable if there is a
 term different from {\tt a}: in Bedwyr, this query generates a
-run-time error since it requires dealing with a right-prover logic
-variable within left-prover unification.  The second query illustrates
+run-time error since it requires dealing with a prover-1 logic
+variable within prover-0 unification.  The second query illustrates
 that some instances of unification tolerates the negative 
 occurrences of logic variables.
 
@@ -766,9 +784,8 @@ attempt to do automatically.
 \section{Examples of Bedwyr code}
 
 \begin{flushright}
-Few things are harder to put up with than\\
-the annoyance of a good example.\\
-    -- Mark Twain
+Few things are harder to put up with than the\\
+annoyance of a good example.   -- Mark Twain
 \end{flushright}
 
 The distribution of Bedwyr comes with several examples of its use.
