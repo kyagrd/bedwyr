@@ -24,5 +24,6 @@ prog (forall x\ forall y\ q y x x).
 
 % Tests
 
-test := pi x\ pi y\ pi z\
-        pv (forall u\ forall v\ q (pair u x) (pair v y) (pair v z)) => y = z.
+#assert
+   (pi x\ pi y\ pi z\
+      pv (forall u\ forall v\ q (pair u x) (pair v y) (pair v z)) => y = z).

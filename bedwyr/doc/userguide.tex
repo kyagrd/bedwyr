@@ -554,33 +554,40 @@ More details about that can be found in Section \ref{restrict-logic-variables}.
 \subsection{Tabling}
 
 Proof search for a defined atom is done by unfolding the definition 
-for the atom, i.e., by replacing it with the body of the definition clause 
-whose head matches the atom. It is possible that loops can occur in 
-the proof-search, and Bedwyr does not detect them automatically. 
-There is also the possibility that Bedwyr proves a predicate several
-times, since it does not record whether a predicate has been proved
-previously.
-To address these issues, Bedwyr includes several search-directives
-that the user can use to instruct Bedwyr to keep records of certain
-predicates that have been proved or disproved, hence avoiding redundant search.
-Bedwyr uses tabling in the underlying implementation to keep track
-of proved or disproved predicates.
+for the atom, i.e. by replacing it with the body of the definition |
+usually a disjunction of several clauses.
+It is possible that loops occur in the proof-search,
+and that the same goals arise several times.
+By default, Bedwyr doesn't detect any of these issues, which makes the 
+proof-search much longer than needed, or infinite.
+To address this, several search-directives
+allow the user to instruct Bedwyr to keep records of certain
+proved, disproved or ongoing formulas,
+hence avoiding redundant search.
+Bedwyr uses tabling in the underlying implementation to keep track of that.
+
+Tabling is used in both prover 0 and prover 1 (see Section~\ref{psearch}).
+The current implementation restricts tabling to atomic goals
+with no occurence of existential variables in prover 1.
+In prover 0, only ground atomic goals (no occurence of existential or universal 
+variables) are tabled.
+For these goals, successes are always tabled, but some restrictions apply
+to the tabling of failures, which is discussed in Section 
+\ref{restrict-failures-tabling}.
 
 The use of tabling makes it possible to do proof search for
 ``non-terminating'' definitions, by simple loop checking.
+Bedwyr will only detect loops on tabled goals, as described above.
 The detection of a loop in the proof search for a predicate, say
 $p\,t$, can have several interpretations, depending on whether
 we consider $p\,t$ as an {\em inductive predicate} or
 a {\em coinductive predicate}. In the former case, that means that
 $p\,t$ is not provable, since otherwise it would contradict
 the well-foundedness of inductive definitions. In the latter case,
-we would have a proof of $p\,t$. Bedwyr keeps both previously proved goals 
-(e.g., coinductive $p\,t$ in the previous example), 
-or disproved goals (e.g., inductive $p\,t$). 
+we would have a proof of $p\,t$.
 
-Tabling is by default not enabled in Bedwyr. Bedwyr provides two
-keywords: \texttt{inductive} and \texttt{coinductive}, to explicitly
-enable tabling for a given predicate. 
+Tabling is by default not enabled in Bedwyr. To enable it, two keywords
+are provided: \texttt{inductive} and \texttt{coinductive}.
 To use tabling on a predicate $p$, to be treated as an inductive predicate
 (likewise, coinductive predicate), {\em every} definition clause for $p$
 must be preceded by the keyword \texttt{inductive} 
@@ -589,14 +596,7 @@ Note that a predicate cannot be designated as both inductive and co-inductive
 at the same time, as it will lead to contradiction (see 
 \cite{momigliano03types} for more details) in some cases. 
 
-Tabling is used in both prover 0 and prover 1 (see Section~\ref{psearch}).
-In the current implementation of Bedwyr, only ground atomic predicates, i.e.,
-those predicates which do not contain any occurrences of logic variables, 
-are tabled. 
-Loops on tabled goals yield successes for coinductive definitions,
-and failures for inductive ones.
-Successes for tabled goals are remembered.
-Failures are remembered, if no loop failure was involved.
+\subsubsection{A bisimulation example}
 
 The command \verb/#show_table pred./ allows one to inspect the
 contents of \verb.pred.'s table: formulas which have been proved or
@@ -605,7 +605,9 @@ example, once the co-inductive predicate {\tt bisim} (for bisimulation
 in some of the example files) has been checked, the table for the
 predicate {\tt bisim} describes a bisimulation.  
 We give here a simple example of checking bisimulation of finite
-state automata. For more sophisticated examples involving the $\pi$-calculus,
+state automata.
+The example is distributed with Bedwyr in \verb+examples/bisim.def+.
+For more sophisticated examples involving the $\pi$-calculus,
 we refer the reader to Section~\ref{pi-examples}.
 
 Consider the following transition system (taken from \cite{milner99book}, 
@@ -648,44 +650,26 @@ coinductive bisim P Q :=
 Using this definition of bisimulation, Bedwyr is able to prove that
 $p0$ and $q0$ are indeed bisimilar. Here is an instance of a run in Bedwyr:
 \begin{verbatim}
-> bisim p0 q0.
+?= bisim p0 q0.
 Yes.
 More [y] ? y
 No more solutions.
-> #show_table bisim.
+?= #show_table bisim.
 Table for bisim contains (P=Proven, D=Disproven):
  [P] (bisim p1 q1)
  [P] (bisim p2 q1)
  [P] (bisim p0 q0)
  [P] (bisim p0 q2)
-> 
+?=
 \end{verbatim}
 The table produced gives exactly the bisimulation set
 needed to prove the bisimilarity of $p0$ and $q0$, i.e.,
 the set $\{(p0,q0), (p0, q2), (p1,q1), (p2,q1) \}.$
 
-%% For example,
-%% \begin{verbatim}
-%% > bedwyr examples/pi/pi_nat.def
-%% [..welcome message..]
-%% ?= weak_bisim (nu u\ nu d\ (par (nat zz u)
-%%                            (par (nat (s zz) d)
-%%                                 (add u d t))))
-%%               (nat (s zz) t).
-%% Yes.
-%% More [y] ? n
-%% Search stopped.
-%% ?= #show_table weak_bisim.
-%% Table for weak_bisim contains (P=Proven, D=Disproven):
-%%  [P] (x1\ weak_bisim [..] [..])
-%%  [D] (weak_bisim [..] [..])
-%% [..]
-%% \end{verbatim}
-%% In this list, formulas are marked as proved or disproved. The
-%% abstractions at the head stand for universal quantifications. Generic
-%% (``nabla'') variables are not abstracted, and represented by
-%% \verb.n1., \verb.n2., etc.
+\subsubsection{Limitations of failures tabling}
+\label{restrict-failures-tabling}
 
+TODO
 
 \subsection{Two runtime errors from the interpreter}
 

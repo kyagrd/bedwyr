@@ -1,0 +1,20 @@
+% Example from Section 5.2.1 (Tabling) of the Userguide.
+
+next p0 a p1.
+next p0 a p2.
+next p1 b p0.
+next p1 a p2.
+next p2 a p2.
+next p2 b p0.
+next q0 a q1.
+next q1 a q1.
+next q1 b q2.
+next q2 a q1.
+
+coinductive bisim P Q := 
+  (pi P1\ pi A\ next P A P1 => 
+                   sigma Q1\ next Q A Q1 & bisim P1 Q1) &
+  (pi Q1\ pi A\ next Q A Q1 => 
+                   sigma P1\ next P A P1 & bisim P1 Q1).
+
+#assert (bisim p0 q0).
