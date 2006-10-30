@@ -74,27 +74,25 @@ effort between INRIA and the University of Minnesota on
 reasoning'': Bedwyr is an initial offering from
 that collaboration.
 For more information, see
-\url{http://www.lix.polytechnique.fr/parsifal/} and
 \url{http://slimmer.gforge.inria.fr/}.
 
 \paragraph{What is the difference between {\em hoas} and $\lambda${\em
-    -tree syntax}?} 
+    -tree syntax}?}
 The term ``higher-order abstract syntax'' (hoas) was originally coined
 by Pfenning and Elliott in \cite{pfenning88pldi} and names the general
 practice (that was common then in, say, $\lambda$Prolog
 \cite{miller87slp}) of using an abstraction in a programming or
 specification language to encode binders in an object-language.  Since
-the choice of ``meta-language'' can vary a great deal, the term hoas
-has come to mean different things to different people.  Bedwyr follows
-the {\em $\lambda$-tree} approach \cite{miller00cl} to hoas: in
-particular, Bedwyr's use of $\lambda$-abstraction is meant to provide
-an abstract form of syntax and to not identify syntactic objects with
-functional objects, which is what usually happens when hoas is used
-directly within functional programming or constructive type systems.
-Instead, in Bedwyr (and \lp), $\lambda$-abstractions are more
-accurately thought of as being syntactic expressions with certain weak
-rules of equality which make it possible for unification to be used to
-analyze the structure of $\lambda$-abstractions.  
+the choice of ``meta-language'' can vary a great deal, the term
+``hoas'' has come to mean different things to different people.  When
+hoas is used directly within functional programming or constructive
+type systems, syntax with bindings contains functional objects, which
+make rich syntactic manipulations difficult.  Bedwyr, on the other
+hand, follows the {\em $\lambda$-tree} approach \cite{miller00cl} to
+hoas: in particular, Bedwyr's use of $\lambda$-abstraction is meant to
+provide an abstract form in which only the names used for binding
+names are hidden: the rest of the structure of syntactic expressions
+remains.
 
 \paragraph{Is Bedwyr efficient?}
 Some care has been taken to implement the novel logical principles
