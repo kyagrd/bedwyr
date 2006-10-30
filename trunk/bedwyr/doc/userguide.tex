@@ -603,17 +603,19 @@ at the same time, as it will lead to contradiction (see
 The command \verb/#show_table pred/ allows one to inspect the contents of
 \verb.pred.'s table: formulas which have been proved or disproved.
 The output displays one formula per line, with the prefix \verb.P. for proved 
-and \verb.D. for disproved. Generic variables are not explicitely 
+and \verb.D. for disproved. Generic variables are not explicitly 
 quantified but represented as \verb.n1., \verb.n2., etc. The formulas are 
-abstracted over their universal variables. The relative scopings
-of generic universal variables is not represented,
-although that information is present internally,
+abstracted over by their universal variables. The relative scopings
+of generic and universal variables is not displayed 
+although that information is present internally: such information is
+needed, for example,
 to avoid that a proof of $(\forall x\nabla y\qs p~x~y)$
-is used as a proof for $(\nabla y\forall x\qs p~x~y)$. This will 
-be naturally fixed with planned extensions of the tabling mechanisms
-implicitely allowing extra axioms on nabla (see \cite{tiu06lfmtp}),
-in order to be able to inspect in a meaningful way one predicate's table from 
-another logic program.
+is used as a proof for $(\nabla y\forall x\qs p~x~y)$.  The displaying
+of this information will be 
+fixed with planned extensions of the tabling mechanisms that will 
+implicitly allow extra axioms on $\nabla$ (see \cite{tiu06lfmtp})
+in order to be able to inspect in a meaningful way one predicate's
+table from another logic program.
 
 \subsubsection{A bisimulation example}
 
