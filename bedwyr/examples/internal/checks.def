@@ -1,0 +1,4 @@
+
+inductive p X Y := X=Y => false.
+#assert (pi x\ nabla y\ p x y).
+#assert_not (nabla y\ pi x\ p x y).

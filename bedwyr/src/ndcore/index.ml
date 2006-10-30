@@ -15,7 +15,7 @@
   * Constraints are sets of equalities between eigenvariables represented
   * as integers. They are uniquely represented as arrays of integers. *)
 
-type constraints = int array
+type constraints = int array * int array
 
 let dummy_var = {Term.name="";Term.lts=0;Term.ts=0;Term.tag=Term.Constant}
 
@@ -26,10 +26,12 @@ let get_constraints bindings =
   (* We prepare the constraints array,
    * and transform the [(int*var) list] into a more convenient [var array]. *)
   let a = Array.make n 0 in
+  let b = Array.make n 0 in
   let v = Array.make n dummy_var in
     List.iter (fun (i,x) -> v.(i) <- x) bindings ;
     List.iter
       (fun (i,x) ->
+         b.(i) <- x.Term.lts ;
          (* [a.(i)] gets the least index which has an equal value, or [i] *)
          a.(i) <-
            try
@@ -40,7 +42,7 @@ let get_constraints bindings =
            with
              | Found j -> j)
       bindings ;
-    a
+    a,b
 
 module ConstraintsOrdered = struct
   type t = constraints
@@ -404,7 +406,7 @@ let iter index f =
   let rec iter_children mz = function
     | Leaf map ->
         ConstraintsMap.iter
-          (fun key v ->
+          (fun (key,_) v ->
              let table = Array.make (Array.length key) (Term.db 0) in
              let l = ref [] in
                for i = 0 to Array.length key - 1 do
