@@ -11,7 +11,7 @@
 % The constructors for agents are as follows:
 %
 %   ag : proc -> agent
-%   con : name -> agent
+%   con : name -> agent -> agent
 %   abs : (name -> agent) -> agent
 %   new : (name -> agent) -> agent
 % 
