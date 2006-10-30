@@ -600,11 +600,24 @@ Note that a predicate cannot be designated as both inductive and co-inductive
 at the same time, as it will lead to contradiction (see 
 \cite{momigliano03types} for more details) in some cases. 
 
+The command \verb/#show_table pred/ allows one to inspect the contents of
+\verb.pred.'s table: formulas which have been proved or disproved.
+The output displays one formula per line, with the prefix \verb.P. for proved 
+and \verb.D. for disproved. Generic variables are not explicitely 
+quantified but represented as \verb.n1., \verb.n2., etc. The formulas are 
+abstracted over their universal variables. The relative scopings
+of generic universal variables is not represented,
+although that information is present internally,
+to avoid that a proof of $(\forall x\nabla y\qs p~x~y)$
+is used as a proof for $(\nabla y\forall x\qs p~x~y)$. This will 
+be naturally fixed with planned extensions of the tabling mechanisms
+implicitely allowing extra axioms on nabla (see \cite{tiu06lfmtp}),
+in order to be able to inspect in a meaningful way one predicate's table from 
+another logic program.
+
 \subsubsection{A bisimulation example}
 
-The command \verb/#show_table pred./ allows one to inspect the
-contents of \verb.pred.'s table: formulas which have been proved or
-disproved.  In some cases this information has important uses: for
+In some cases the table contents has important uses: for
 example, once the co-inductive predicate {\tt bisim} (for bisimulation
 in some of the example files) has been checked, the table for the
 predicate {\tt bisim} describes a bisimulation.  
