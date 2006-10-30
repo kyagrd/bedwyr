@@ -673,7 +673,35 @@ the set $\{(p0,q0), (p0, q2), (p1,q1), (p2,q1) \}.$
 \subsubsection{Limitations of failures tabling}
 \label{restrict-failures-tabling}
 
-TODO
+Successes for tabled goals are always remembered and used to avoid
+re-proving them. However, storing failures is more complicated.
+The failure of proof-search for some goal doesn't necessarily mean
+that the formula is false: proof-search can have been aborted because
+of loop detection on an inductive definition, which might actually be true.
+
+Consider the following example.
+\begin{verbatim}
+inductive p := q ; true.
+inductive q := p.
+\end{verbatim}
+
+A naive and wrong implementation would proceed as follows:
+Try to prove \verb.p., unfold it, try \verb.q., unfold it, try \verb.p..
+Noticing a loop, a failure would happen, resulting in the marking of \verb.q.
+as disproved. Then the second clause for \verb.p. is tried, and yields a 
+success. In the end, it'd have marked \verb.q. as false, which is wrong.
+
+To avoid this kind of problem, Bedwyr is very conservative and marks goals as 
+disproven only if no inductive-loop failures has been involved in the failure.
+This is a very strong limitation, which makes some examples (like 
+\verb+peterson.def+) too long because the proof-search spends a lot of time
+checking again and again that the same formulas are false.
+
+On our example, \verb.q. is not marked as disproved
+but it isn't marked as proved either: the information is lost.
+If \verb.p. is defined to be \verb.q.,
+then it becomes false and is marked as such,
+but the table for \verb.q. is left blank.
 
 \subsection{Two runtime errors from the interpreter}
 
