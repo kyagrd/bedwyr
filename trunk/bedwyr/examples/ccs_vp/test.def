@@ -6,7 +6,8 @@
 
 % Notice that if a CCS expression contains the ite construct, then checking 
 % bisimulation with itself causes an error in Bedwyr: a logic variable can
-% move to the "left" (from prover 1 to prover 0).  
+% move to the "left" (from prover 1 to prover 0), and implications can occur
+% on the "left" (in prover 0). 
 % Best to avoid mismatch (and other forms of negation) in the specification 
 % of operational semantics.
 

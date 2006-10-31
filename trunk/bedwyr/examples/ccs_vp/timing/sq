@@ -1,5 +1,6 @@
 #!/bin/bash
 
+BEDWYR=../../../src/bedwyr
 COMMAND=$1
 TIMES=10
 
@@ -17,17 +18,17 @@ do
 
 ts=`echo "$1 s0 s0.\
 #exit." \
-| bedwyr sq$k.def | grep "?= +" | sed 's/?= + \([1-9][0-9]*\)ms/\1/' `
+| $BEDWYR sq$k.def | grep "?= +" | sed 's/?= + \([1-9][0-9]*\)ms/\1/' `
 s=`expr $s + $ts`
 
 tq=`echo "$1 q0 q0.\
 #exit." \
-| bedwyr sq$k.def | grep "?= +" | sed 's/?= + \([1-9][0-9]*\)ms/\1/' `
+| $BEDWYR sq$k.def | grep "?= +" | sed 's/?= + \([1-9][0-9]*\)ms/\1/' `
 q=`expr $q + $tq`
 
 tsq=`echo "$1 s0 q0.\
 #exit." \
-| bedwyr sq$k.def | grep "?= +" | sed 's/?= + \([1-9][0-9]*\)ms/\1/' `
+| $BEDWYR sq$k.def | grep "?= +" | sed 's/?= + \([1-9][0-9]*\)ms/\1/' `
 sq=`expr $sq + $tsq`
 
 
