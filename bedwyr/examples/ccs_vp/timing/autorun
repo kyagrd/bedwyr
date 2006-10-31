@@ -1,5 +1,0 @@
-#!/bin/bash
-
-./sq bc > time.bc
-./sq lbc > time.lbc
-
