@@ -981,18 +981,18 @@ one (par P Q) tau (par R T) :=
 
 \begin{verbatim}
 coinductive bisim P Q :=
-   (pi A\ pi P1\ one P A P1 => sigma Q1\ one Q A Q1 &
-                                         bisim P1 Q1) &
-   (pi X\ pi M\  onep P (dn X) M => sigma N\ onep Q (dn X) N & 
-                                     pi w\ bisim (M w) (N w)) &
-   (pi X\ pi M\ onep P (up X) M => sigma N\ onep Q (up X) N &
-                                     nabla w\ bisim (M w) (N w)) &
-   (pi A\ pi Q1\ one Q A Q1 => sigma P1\ one P A P1 & 
-                                         bisim Q1 P1) &
-   (pi X\ pi N\  onep Q (dn X) N => sigma M\ onep P (dn X) M & 
-                                     pi w\ bisim (N w) (M w)) &
-   (pi X\ pi N\ onep Q (up X) N => sigma M\ onep P (up X) M &
-                                     nabla w\ bisim (N w) (M w)).
+  (pi A\ pi P1\ one P A P1 => sigma Q1\ one Q A Q1 &
+                                        bisim P1 Q1) &
+  (pi X\ pi M\  onep P (dn X) M => sigma N\ onep Q (dn X) N & 
+                                    pi w\ bisim (M w) (N w)) &
+  (pi X\ pi M\ onep P (up X) M => sigma N\ onep Q (up X) N &
+                                    nabla w\ bisim (M w) (N w)) &
+  (pi A\ pi Q1\ one Q A Q1 => sigma P1\ one P A P1 & 
+                                        bisim Q1 P1) &
+  (pi X\ pi N\  onep Q (dn X) N => sigma M\ onep P (dn X) M & 
+                                    pi w\ bisim (N w) (M w)) &
+  (pi X\ pi N\ onep Q (up X) N => sigma M\ onep P (up X) M &
+                                    nabla w\ bisim (N w) (M w)).
 \end{verbatim}
 \caption{The definition of (open) bisimulation.}
 \label{bisim}
