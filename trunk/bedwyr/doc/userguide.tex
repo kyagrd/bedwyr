@@ -618,6 +618,18 @@ implicitly allow extra axioms on $\nabla$ (see \cite{tiu06lfmtp})
 in order to be able to inspect in a meaningful way one predicate's
 table from another logic program.
 
+For example, if we define \verb.inductive neq X Y := X=Y => false.,
+and ask the queries \verb.pi x\ nabla y\ neq x y.
+and \verb.nabla y\ pi x\ neq x y. we end up with the following puzzling table:
+\begin{verbatim}
+?= #show_table neq.
+Table for neq contains (P=Proven, D=Disproven):
+ [P] (x1\neq x1 n1)
+ [D] (x1\neq x1 n1)
+\end{verbatim}
+The two entries are undistinguishable by the user, but internally some
+extra information does separate them.
+
 \subsubsection{A bisimulation example}
 
 In some cases the table contents has important uses: for
