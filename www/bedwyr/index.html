@@ -7,57 +7,98 @@
     <link href="bd.css" rel="stylesheet" type="text/css"/>
   </head>
 
-
   <body>
-    <div id="header">
-      <h1>
-          Bedwyr<br>
-          A logic programming approach to model checking
-     </h1>
-    </div>
+   <h1> Bedwyr<br>
+        A proof search  approach to model checking
+  </h1>
 
-    <div class="section">
-      <h2>
-        Overview
-      </h2>
+ <h2>Overview</h2>
 
-      <p class="body">
-      Bedwyr is a software system currently under development between 
-      INRIA (LIX/Ecole Polytechnique) and the University of
-      Minnesota.  This system is written in OCaml and is a direct
-      implementation of two recent advances in the theory of proof search.
-      <ol>
-        <li>
-        Finite success and finite failure can be seen as dual proof
-        theoretic constructions.  See, for example, 
-        <em>Mixing Finite Success and Finite Failure in an Automated Prover</em> (<a
-        href="http://www.lix.polytechnique.fr/Labo/Dale.Miller/papers/eshol05sub.pdf"
-        >pdf</a>) by A. Tui, G. Nadathur, and D. Miller.
-        </li>
-        <li>
-        The lambda-tree appraoch to higher-order abstract syntax is
-        directly supported using term-level lambda-binders, the
-        nabla-quantifier, higher-order pattern unification, and
-        explicit substitutions.  These features allow reasoning and
-      model checking 
-      directly on expressions containing bound variables.
-        </li>
-      </ol>
-      Applications that we have explored range from computing symbolic
-      bisimulation and modal logic checking for the pi-calculus, computing
-      winning strategies for games, and various other model checking problems.
-      </p>
-    </div>
+<p class="body">
+Bedwyr is a generalization of logic programming that allows model
+checking directly on syntactic expression possibly containing
+bindings. 
+This system, written in OCaml, is a direct implementation of two
+recent advances in the theory of proof search.
+<ol>
+<li> It is possible to capture both finite success and finite failure
+     in a sequent calculus.  Proof search in such a proof system can
+     capture both <em>may</em> and <em>must</em> behavior in
+     operational semantics.
+</li>
+<li> Higher-order abstract syntax is directly supported using
+     term-level lambda-binders, the nabla-quantifier, higher-order
+     pattern unification, and explicit substitutions.  These features
+     allow reasoning directly on expressions containing bound
+     variables.
+</li>
+</ol>
+</p>
+
+<p>
+The distributed system comes with several example applications,
+including the finite pi-calculus (operational semantics, bisimulation,
+trace analyses, and modal logics), the spi-calculus (operational
+semantics), value-passing CCS, the lambda-calculus, winning strategies
+for games, and various other model checking problems.
+</p>
+
+<p>
+While the system has been written to validate certain theoretic
+results and to help suggest new theoretical directions, we believe
+that the system can be of use to others interested more in reasoning
+about computer systems than about proof theory foundations.
+</p>
 
 
-    <div class="section">
-      <h2 class="title">
-        Source code
-      </h2>
-      <p class="body">
-      An early beta-release of Bedwyr (<a
-      href="http://gforge.inria.fr/frs/download.php/857/bedwyr-0.1beta2.tar.gz"> 
-      <tt>bedwyr-0.1beta2</tt></a>) was released on June 21, 2006.
+<h2>Current developers</h2>
+
+<p>
+Bedwyr is an open source project.  We welcome contributions from
+others of example applications and new features.  The developers
+behind the current distribution are:
+</p>
+<ul>
+<li> <a href="http://www.lix.polytechnique.fr/~dbaelde">David
+Baelde</a> & <a
+href="http://www.lix.polytechnique.fr/Labo/Dale.Miller/">Dale
+Miller</a>  (INRIA & LIX/Ecole Polytechnique) 
+</li>
+<li> <a href="http://www.cs.umn.edu/~agacek/">Andrew Gacek</a>  & <a
+href="http://www.cs.umn.edu/~gopalan/">Gopalan Nadathur</a>
+(University of Minneapolis)  
+</li>
+<li> <a href="http://users.rsise.anu.edu.au/~tiu/">Alwen Tiu</a>
+(Australian National University and NICTA). 
+</li>
+</ul>
+<p>
+The team thanks Brigitte Pientka, for her advices regarding tabling, and
+Axelle Ziegler, for her help in translating an early implementation
+from SML to OCaml.  Much of the effort for this work is supported
+within the context of the <a
+href="http://slimmer.gforge.inria.fr/">Slimmer</a> project, which is 
+supported by funds from INRIA and NSF.
+</p>
+
+<h2>Links</h2>
+
+<p><font color=green><b>Documentation:</b></font>
+      The <a href="http://gforge.inria.fr/docman/?group_id=367">Bedwyr
+      User's Guide</a> is available in
+      <a href="http://gforge.inria.fr/docman/view.php/367/457/userguide.pdf">pdf</a>
+      or <a
+      href="http://gforge.inria.fr/docman/view.php/367/458/userguide.ps.gz">ps</a>
+      or as html.****
+</p>
+
+<p><font color=green><b>Download:</b></font> tarball *** 
+  An early beta-release of Bedwyr (<a
+  href="http://gforge.inria.fr/frs/download.php/857/bedwyr-0.1beta2.tar.gz"> 
+  <tt>bedwyr-0.1beta2</tt></a>) was released on June 21, 2006.
+</p>
+
+<p><font color=green><b>Open source repository: </b></font> 
       Active development versions are available from the 
       <a href="http://gforge.inria.fr/scm/?group_id=367">Bedwyr
       subversion repository</a> hosted by INRIA's Gforge.
@@ -67,53 +108,32 @@
       <a href="http://gforge.inria.fr/plugins/scmsvn/viewcvs.php/trunk/bedwyr/examples/?root=slimmer">
       examples</a>.
       </p>
-    </div>
 
-    <div class="section">
-      <h2 class="title">
-        Documentation
-      </h2>
-      <p class="body">
-      The <a href="http://gforge.inria.fr/docman/?group_id=367">Bedwyr
-      User's Guide</a> is available in
-      <a href="http://gforge.inria.fr/docman/view.php/367/457/userguide.pdf">pdf</a>
-      or <a href="http://gforge.inria.fr/docman/view.php/367/458/userguide.ps.gz">ps</a>.
-      </p>
-    </div>
+<p><font color=green><b>Some relevant publications:</b></font> 
+<ol>
+<li> <em>Mixing Finite Success and Finite Failure in an Automated
+Prover</em> by A. Tui, G. Nadathur, and D. Miller. 
+(<a
+href="http://www.lix.polytechnique.fr/Labo/Dale.Miller/papers/eshol05sub.pdf">pdf</a>)
+</li>
+<li> <em>Model checking for pi-calculus using proof search</em> by
+Alwen Tiu. In Proceedings of CONCUR 2005, LNCS Vol. 3653, pages 36 -
+50, Springer-Verlag, 2005. (<a
+href="http://users.rsise.anu.edu.au/~tiu/mcpi.pdf">pdf</a>).
+</li>
+<li> <em>A proof theory for generic judgments</em> by Dale Miller and
+  Alwen Tiu. <i>ACM Trans. on Computational Logic</i>, 6(4):749-783,
+  October 2005. (<a
+  href="http://www.lix.polytechnique.fr/Labo/Dale.Miller/papers/tocl-nabla.pdf">.pdf</a>).
+</li>
+</ol>
 
-    <div class="section">
-      <h2 class="title">
-        People
-      </h2>
-      <p class="body">
-      Bedwyr is developed by
-      <a href="http://www.lix.polytechnique.fr/~dbaelde">David Baelde</a> &amp; 
-      <a href="http://www.lix.polytechnique.fr/Labo/Dale.Miller/">Dale
-      Miller</a> (INRIA &amp; LIX/Ecole Polytechnique), 
-      <a href="http://www.cs.umn.edu/~agacek/">Andrew Gacek</a> &amp; 
-      <a href="http://www.cs.umn.edu/~gopalan/">Gopalan Nadathur</a>
-      (University of Minneapolis), and
-      <a href="http://users.rsise.anu.edu.au/~tiu/">Alwen Tiu</a>
-      (Australian National University and NICTA). 
-      </p>
-      <p class="body">
-      The team thanks:
-      <ul>
-        <li>Brigitte Pientka, for her advices regarding tabling;</li>
-        <li>Axelle Ziegler, who translated some early implementation from SML to OCaml.</li>
-      </ul>
-      </p>
-    </div>
-
-    <div id="footer">
-    </div>
-    
-    <script src="http://www.google-analytics.com/urchin.js"
+<script src="http://www.google-analytics.com/urchin.js"
             type="text/javascript">
-    </script>       
-    <script type="text/javascript">
+</script>       
+<script type="text/javascript">
     _uacct = "UA-283578-2";
     urchinTracker();
-    </script>
-  </body>
+</script>
+</body>
 </html>

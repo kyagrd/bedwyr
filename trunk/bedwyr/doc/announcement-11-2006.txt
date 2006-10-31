@@ -6,6 +6,7 @@ Possible mailing lists:
   lprolog
   poplmark
   caml
+  concurrency - some overlap with moca, but is read by model checking people
 
 There is also the ALP newsletter.  For the current version of this news
 letter, see

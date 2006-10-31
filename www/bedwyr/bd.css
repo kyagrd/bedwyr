@@ -1,0 +1,65 @@
+
+body
+{ 
+  font-family:  Helvetica, Sans Serif, Arial ;
+  margin-left:  5%;
+  margin-right: 5%;
+  color: black;
+}
+
+h1
+{ width: 100%; 
+  border: solid black; border-width: 1px 0 1px 0;
+  margin-top: 0; margin-bottom: 0; padding-bottom: 0.2ex;
+  font: bold x-large sans-serif;
+  color: #66F;
+  text-align: center;
+}
+
+
+h2 {
+  display: block;
+  font: bold sans-serif;
+  font-size: medium;
+  color: #66F;
+  text-align: left;
+  margin: 1em 0 0.5em 0;
+}
+
+
+p {margin-top: 0;}
+a:hover { text-decoration: underline; }
+a:active { text-decoration: underline; }
+a:visited { color: rgb(96,0,32); }
+a.plain {text-decoration: none; color: black;}
+a.plain:visited {text-decoration: none; color: black;}
+a.plain:hover {text-decoration: underline;}
+a.plain:active {text-decoration: underline;}
+a.subtle {text-decoration: none;}
+a.subtle:visited {text-decoration: none;}
+a.subtle:hover {text-decoration: none;}
+a.subtle:active {text-decoration: none;}
+img.plain {border: 0;}
+.footer {margin-top: 3em; font-size: xx-small;}
+
+tr.odd  {background-color: #c0c0c0;}
+tr.even {background-color: #FFFFFF;}
+
+/* Following taken from the OCaml homepage (for testing) */
+
+h3 {
+  font: bold medium serif;
+  color: #66F;
+  text-align: left;
+  margin: 1em 0 0.5em 0;
+}
+
+h4 {
+  font: bold medium serif;
+  color: #68F;
+  text-align: left;
+  margin-top: 1em;
+  margin-left: 0px;
+  margin-right: 0px;
+  margin-bottom: 3px ;
+}
