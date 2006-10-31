@@ -350,7 +350,7 @@ Several commands alter the internal set of definitions of Bedwyr:
 
 \subsubsection{Assertions}
 
-Three kind of assertions can be used in definition files.
+Three kinds of assertions can be used in definition files.
 These tests are not executed unless the \verb.-t. flag has been passed 
 on Bedwyr's command-line, in which case any assertion failure is fatal.
 \begin{itemize}
@@ -493,9 +493,9 @@ done.
 \subsection{Proof search within LINC}
 \label{psearch}
 
-Bedwyr is a proof search engine for a small fragment of the LINC
+Bedwyr is a proof-search engine for a small fragment of the LINC
 logic.  In principle, Bedwyr uses two provers.  {\em Prover 1} is similar to
-a depth-first interpreter used in $\lambda$Prolog.  The main
+the depth-first interpreter used in $\lambda$Prolog.  The main
 difference is in the proof of an implication.  
 To prove an implication $A\Rightarrow B$, prover 1  calls {\em prover 0}
 to enumerate all possible solutions
@@ -556,6 +556,7 @@ when the instantiation of an existential variable is needed.
 More details about that can be found in Section \ref{restrict-logic-variables}.
 
 \subsection{Tabling}
+\label{tabling}
 
 Proof search for a defined atom is done by unfolding the definition 
 for the atom, i.e. by replacing it with the body of the definition |
@@ -700,13 +701,16 @@ inductive p := q ; true.
 inductive q := p.
 \end{verbatim}
 
-A naive and wrong implementation would proceed as follows:
+Let's study how the proof-search goes:
 Try to prove \verb.p., unfold it, try \verb.q., unfold it, try \verb.p..
-Noticing a loop, a failure would happen, resulting in the marking of \verb.q.
-as disproved. Then the second clause for \verb.p. is tried, and yields a 
-success. In the end, it'd have marked \verb.q. as false, which is wrong.
+Noticing a loop, a failure happens.
+However, marking \verb.q. as disproved would be wrong,
+since it is clearly provable.
+Indeed, the second clause for \verb.p. is tried, and yields a 
+success, meaning that \verb.q. is true too.
 
-To avoid this kind of problem, Bedwyr is very conservative and marks goals as 
+Bedwyr's implementation of tabling is very simple and conservative.
+It marks goals as 
 disproven only if no inductive-loop failures has been involved in the failure.
 This is a very strong limitation, which makes some examples (like 
 \verb+peterson.def+) too long because the proof-search spends a lot of time
@@ -721,8 +725,8 @@ but the table for \verb.q. is left blank.
 \subsection{Two runtime errors from the interpreter}
 
 The strategy used by Bedwyr for attempting proofs is not complete.
-That strategy involves using two provers (``prover 0'' and the
-``prover 1'' prover), tabling, and depth-first search.  
+That strategy involves using two provers (prover 0 and prover 1),
+tabling, and depth-first search.  
 Many of the incompleteness that one encounters in
 traditional logic programming languages, such as Prolog and \lp,
 resulting from depth-first search certainly reappear in Bedwyr.  We
@@ -753,7 +757,7 @@ problem of specifying an input transition for, say, the value-passing
 CCS, as presented in the example \verb+ccs_vp/ccs_vp.def+.  It would
 be natural to represent input prefix using a $\lambda$-abstracted
 process.  One step (early) transition could then be specified as the
-definition class
+definition clause
 \begin{verbatim}
 trans (in C P) (i C V) (P V).
 \end{verbatim}
@@ -761,7 +765,7 @@ Here, {\tt P} is denotes an abstraction over processes and
 \verb+(P V)+ denotes the substitution of the inputted value {\tt V}
 into the abstraction {\tt P} (Bedwyr will do $\beta$-reduction in order
 to simplify this application).  It is the case, however, that a
-unification problem containing \verb+(P V)+ does not below to \Ll.
+unification problem containing \verb+(P V)+ does not belong to \Ll.
 As a result, the following query results in a runtime error.
 \begin{verbatim}
 ?= trans (in a (w\ out a w zero)) A Cont.
@@ -769,7 +773,7 @@ Not LLambda unification encountered: H4
 ?= 
 \end{verbatim}
 In some situations, a specification can be written so that the
-problematic unification is delay to a point that the unification
+problematic unification is delayed to a point where the unification
 problem is within \Ll\ restriction.  In this particular case, if the clause
 in the definition of {\tt trans} is rewritten to the logically
 equivalent clause
@@ -836,8 +840,12 @@ attempt to do automatically.
 \section{Examples of Bedwyr code}
 
 \begin{flushright}
-Few things are harder to put up with than the\\
-annoyance of a good example.   -- Mark Twain
+%% Tell me if I'm violating conventions about quotes,
+%% but I thought it'd be nicer to avoid the split after "than the",
+%% so I moved Mark Twain on its own line to avoid a too long second line.
+%% - David
+Few things are harder to put up with \\
+than the annoyance of a good example. \\ -- Mark Twain
 \end{flushright}
 
 The distribution of Bedwyr comes with several examples of its use.
@@ -934,8 +942,8 @@ example, see Figure~\ref{one-step}.  First notice that the syntax of
 clauses is almost identical to that used in $\lambda$Prolog.  In
 particular, the backslash is used to denote the $\lambda$-binder.  The
 main syntactic difference is that the head and body of clauses are
-separated from either other using the \verb+:=+ instead of the
-\verb+:-+ (reverse turnstile).  The former symbol is used to remind
+separated from each other using the \verb+:=+ instead of the
+\verb+:-+ (turnstile).  The former symbol is used to remind
 the Bedwyr user that programs are used to define ``if and only if''
 completions of specifications (whereas, in \lp\ the \verb+:-+ is the
 more usual ``if'' interpretation).  Unlike \lp, Bedwyr is
@@ -1002,8 +1010,10 @@ more details on this encoding strategy for the $\pi$-calculus.
 Figure~\ref{bisim} provides all that is necessary to specify (open)
 bisimulation for (finite) $\pi$-calculus.  The keyword {\tt
 coinductive} tells the system that it will be attempting to explore a
-greatest fixed point.  The other cases should look natural, at least
-once one understand the $\lambda$-tree approach to representing syntax
+greatest fixed point. That keyword also enables tabling, which avoids redundant 
+computations and accept loops as successes (see Section \ref{tabling}).
+The other cases should look natural, at least
+once one understands the $\lambda$-tree approach to representing syntax
 and the use of the $\nabla$-quantifier.  The main thing to point out
 here is that in the specification, no special side conditions need to
 be added to the system: all the familiar side conditions from the
