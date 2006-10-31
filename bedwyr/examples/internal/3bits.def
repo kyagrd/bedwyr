@@ -1,12 +1,25 @@
 
 % Boolean operators
 
+#type tt bool.
+#type ff bool.
+
+#type bool (bool -> o).
+#type xor  (bool -> bool -> bool -> o).
+#type or   (bool -> bool -> bool -> o).
+#type and  (bool -> bool -> bool -> o).
+
 bool X := X=ff ; X=tt.
 xor X Y Z := (X=Y, Z=ff) ; (X=ff, Y=Z) ; (X=Z, Y=ff).
 or  X Y Z := (Z=tt,(X=tt;Y=tt)) ; (Z=ff,X=ff,Y=ff).
 and X Y Z := (X=tt,Y=tt,Z=tt) ; (Z=ff,(X=ff;Y=ff)).
 
 % Addition on 3bit integers
+
+#type simple_add (bool -> bool -> bool -> bool -> o).
+#type full_add   (bool -> bool -> bool -> bool -> bool -> o).
+#type 3add       (bool -> bool -> bool -> bool ->
+                  bool -> bool -> bool -> bool -> bool -> o).
 
 simple_add A B R C := xor A B R, and A B C.
 
@@ -21,6 +34,16 @@ full_add A B Cin R Cout :=
 
 % Addition modulo 8. No other way to do this for now..
 % {{{
+
+#type 0 int3.
+#type 1 int3.
+#type 2 int3.
+#type 3 int3.
+#type 4 int3.
+#type 5 int3.
+#type 6 int3.
+#type 7 int3.
+#type add (int3 -> int3 -> int3 -> o).
 
 add 0 0 0.
 add 0 1 1.
@@ -87,6 +110,10 @@ add 7 5 4.
 add 7 6 5.
 add 7 7 6.
 % }}}
+
+#type convert (bool -> bool -> bool -> int3 -> o).
+#type valid   (bool -> bool -> bool ->
+               bool -> bool -> bool -> o).
 
 % Conversion from 3bit to integer
 

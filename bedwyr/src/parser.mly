@@ -230,8 +230,8 @@ let to_term lexer file =
                               aux (list_of_file file l)
                       | _ -> assert false
                     end
-                | System.Command ("test",a) ->
-                    aux ((Term.app command ((Term.const "test" 0)::
+                | System.Command ("assert",a) ->
+                    aux ((Term.app command ((Term.const "assert" 0)::
                                               (List.map objectify a)))::l)
                 | System.Command (c,a) ->
                     aux ((Term.app command ((Term.const c 0)::a))::l)
