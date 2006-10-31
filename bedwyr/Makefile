@@ -11,7 +11,7 @@ XPL = examples/internal/checks.def \
       examples/3bits.def examples/lambda.def examples/progs.def \
       examples/graph-alt.def examples/minmax.def \
       examples/tictactoe.def examples/pi/pi_nat.def examples/pi/pi_church.def
-test:
+test: src/Makefile
 	@echo Testing the core LLambda library
 	make -C src test
 	@echo Testing bedwyr on examples
@@ -29,22 +29,27 @@ clean:
 	make -C src clean
 	make -C doc clean
 
-VERSION=0.1beta2
+VERSION=1.0
 D=bedwyr-$(VERSION)
-dist:
+dist: configure
 	find . -name '*~' -exec rm \{\} \;
 	rm -rf $(D)
 	mkdir $(D)
 	mkdir $(D)/doc
 	mkdir $(D)/examples
+	mkdir $(D)/examples/pi
+	mkdir $(D)/examples/internal
+	mkdir $(D)/examples/ccs_vp
+	mkdir $(D)/examples/ccs_vp/timing
 	mkdir $(D)/contrib
 	mkdir $(D)/src
 	mkdir $(D)/src/ndcore
-	cp README TODO configure configure.ac install-sh Makefile $(D)
+	cp COPYING README TODO configure configure.ac install-sh Makefile $(D)
 	cp contrib/bedwyr.el $(D)/contrib
-	cp doc/*.tex doc/Makefile $(D)/doc
-	cp examples/*.def $(D)/examples
-	rm -f $(D)/examples/andor.def
+	cp doc/*.tex doc/userguide.bib doc/Makefile $(D)/doc
+	for file in `find examples -type f '!' -path '*.svn*'` ; do \
+	  cp $$file $(D)/$$file ; \
+	done
 	cp src/*.ml* src/Makefile.in $(D)/src
 	rm -f $(D)/src/parser.ml $(D)/src/parser.mli $(D)/src/lexer.ml
 	cp src/ndcore/*.ml* $(D)/src/ndcore
