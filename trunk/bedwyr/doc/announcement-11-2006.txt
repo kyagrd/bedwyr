@@ -38,18 +38,18 @@ recent advances in the theory of proof search.
 
 The distributed system comes with several example applications,
 including the finite pi-calculus (operational semantics, bisimulation,
-trace analyses and modal logics), the spi-calculus (operational semantics),
-value-passing CCS, winning strategies for games, and various other
-model checking problems.
+trace analyses and modal logics), the spi-calculus (operational
+semantics), value-passing CCS, the lambda-calculus, winning strategies
+for games, and various other model checking problems.
 
 While the system has been written to validate certain theoretic
 results and to help suggest new theoretical directions, we believe
 that the system can be of use to others interested more in reasoning
 about computer systems than about proof theory foundations.
 
-Bedwyr is an open source project.  We welcome contributions from other
-of examples applications and new features.  The developers behind the
-current distribution are:
+Bedwyr is an open source project.  We welcome contributions from
+others of example applications and new features.  The developers
+behind the current distribution are:
 
    David Baelde & Dale Miller (INRIA & LIX/Ecole Polytechnique)
    Andrew Gacek & Gopalan Nadathur (University of Minneapolis)
