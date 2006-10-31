@@ -38,7 +38,7 @@ recent advances in the theory of proof search.
 
 The distributed system comes with several example applications,
 including the finite pi-calculus (operational semantics, bisimulation,
-and modal logics), the spi-calculus (operational semantics),
+trace analyses and modal logics), the spi-calculus (operational semantics),
 value-passing CCS, winning strategies for games, and various other
 model checking problems.
 
