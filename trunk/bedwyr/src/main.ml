@@ -38,13 +38,19 @@ Usage: bedwyr [filename | option]*
 "
 
 let help_msg =
-  "Available commands:
-#help.
-#exit.
-#debug [flag].
-#time [flag].
-#include \"some/filename.def\".
-In query mode, just type a term to ask for its verification.
+  "Useful commands in query mode:
+#help.                               Display this message.
+#exit.                               Exit.
+#debug [flag].                       Turn debugging on/off (flag=on/off).
+#time [flag].                        Turn timing on/off (flag=on/off).
+#session \"file_1\" ... \"file_N\".      Load these files as the current \
+session.
+#reload.                             Reload the current session.
+#reset.                              Clears the current session.
+#show_table [pred].                  Displays the predicate's table.
+Or type in a formula to ask for its verification.
+For more information (including commands relevant in definition mode),
+see the user guide.
 
 "
 
