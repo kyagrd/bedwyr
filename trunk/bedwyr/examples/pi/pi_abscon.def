@@ -26,7 +26,7 @@
 %   out : name -> agent -> proc
 %
 % For example, x(a,b,c).P is encoded as
-%   in (abs a\ abs b\ abs c\ ag P)
+%   in x (abs a\ abs b\ abs c\ ag P)
 % In particular, we allow input prefix with no parameter, e.g.,
 %   x.P is encoded as in x (ag P).
 % Similarly, the output prefixed process, e.g., ~x<a,b,c>.P
@@ -142,9 +142,6 @@ one (plus P Q) X R := one Q X R.
 % par
 one (par P Q) X R := sigma A\ one P X A, merge (x\ par x Q) A R.
 one (par P Q) X R := sigma A\ one Q X A, merge (x\ par P x) A R.
-
-one (par P Q) X (ag (par R Q)) := one P X (ag R).
-one (par P Q) X (ag (par P R)) := one Q X (ag R).
 
 % restriction 
 one (nu P) Y R := 
