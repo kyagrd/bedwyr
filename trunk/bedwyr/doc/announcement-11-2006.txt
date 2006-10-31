@@ -39,7 +39,7 @@ embodies two important recent observations about proof search:
      these features allow reasoning directly on expressions containing
      bound variables.
 
-The distribution version of Bedwyr includes illustrative applications 
+The distribution of Bedwyr includes illustrative applications 
 to the finite pi-calculus (operational semantics, bisimulation,
 trace analyses and modal logics), the spi-calculus (operational
 semantics), value-passing CCS, the lambda-calculus, winning strategies
@@ -57,6 +57,6 @@ individuals:
    Andrew Gacek & Gopalan Nadathur (University of Minneapolis)
    Alwen Tiu (Australian National University and NICTA).
 
-However, in the spirit of an open source project, we welcome
+In the spirit of an open source project, we welcome
 contributions in the form of example applications and also new 
 features from others. 
