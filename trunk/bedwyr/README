@@ -1,9 +1,14 @@
+
+========================================
+# Bedwyr 1.0 the not-so-sound-logician #
+========================================
+
 This is Bedwyr, a theorem prover for the Level-0/1 fragment of the Linc logic.
 This is free software, licensed under GPL version 2.
 
 Webpage: http://slimmer.gforge.inria.fr/bedwyr
 
-Bedwyr is based on Alwen's Tiu Level-0/1, and Nadathur & Linell's LLambda
+Bedwyr is based on Alwen Tiu's Level-0/1, and Nadathur & Linell's LLambda
 library, both written in SML. The OCaml translation has been done by
 Baelde & Ziegler. It is currently under work by Baelde & Gacek.
 The system also benefited from the wisdom of Miller, Nadathur and Pientka.

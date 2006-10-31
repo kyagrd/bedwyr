@@ -8,6 +8,8 @@ clean:
 	pdflatex $<
 %.dvi: %.tex
 	latex $<
+	bibtex $(<:.tex=)
+	latex $<
 %.ps: %.dvi
 	dvips $< -o $@
 %.gz: %
