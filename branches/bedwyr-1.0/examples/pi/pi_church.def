@@ -1,0 +1,40 @@
+#include "pi.def".
+
+%% Allow agent-style definitions as a controled recursion
+one  P A PP := agent P Body, one  Body A PP.
+onep P A PP := agent P Body, onep Body A PP.
+
+% Church natural numbers as encoded in the MWB examples
+agent (zero S Z) (nu i\ out Z i z).
+agent (un   S Z) (nu i\ out S i (nu i\ out Z i z)).
+agent (deux S Z) (nu i\ out S i (nu i\ out S i (nu i\ out Z i z))).
+
+agent (succ S Z Y W) (nu i\ out Y i (copy S Z Y W)).
+agent (copy S Z Y W) (plus (in S i\ succ S Z Y W)
+                              (in Z i\ nu i\ out W i z)).
+agent (add S1 Z1 S2 Z2 Y W)
+      (plus (in S1 i\ nu i\ out Y i (add S1 Z1 S2 Z2 Y W))
+            (in Z1 i\ copy S2 Z2 Y W)).
+
+agent (church S Z zz)     (nu i\ out Z i z).
+agent (church S Z (ss N)) (nu i\ out S i (church S Z N)).
+
+#assert
+  (weak_bisim
+    (deux x z)
+    (nu x1\ nu z1\ nu x2\ nu z2\
+      par (un x1 z1) (par (un x2 z2) (add x1 z1 x2 z2 x z)))).
+#assert
+  (weak_bisim
+    (deux x z)
+    (nu x1\ nu x2\ nu z1\ nu z2\
+      par (zero x1 z1) (par (deux x2 z2) (add x1 z1 x2 z2 x z)))).
+
+#assert (weak_bisim (deux s z) (church s z (ss (ss zz)))).
+#assert
+  (weak_bisim
+    (church s z (ss (ss (ss (ss (ss (ss (ss (ss (ss (ss zz)))))))))))
+    (nu s1\ nu z1\ nu s2\ nu z2\
+      (par (church s1 z1 (ss (ss (ss (ss (ss zz))))))
+      (par (church s2 z2 (ss (ss (ss (ss (ss zz))))))
+      (add s1 z1 s2 z2 s z))))).

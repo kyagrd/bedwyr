@@ -1,0 +1,15 @@
+
+* Experiments on static analyses: typing, and mode checking (which could allow
+  to statically avoid logical variables on the left). This would probably
+  be done thanks to the "parse" special predicate.
+
+* Unification optimization for "fresh" variables: avoid occurs-check. Hopefully
+  this could help a lot on the efficiency of type checking.
+
+* Tail-rec zipper-based indexing, to make it more flexible,
+ have get-and-set or be able to use it for definition lookup.
+
+* Multiple lines comments?
+
+* Add a special predicate for inspecting the tables, consider tabling modulo
+  (congruence|...).
