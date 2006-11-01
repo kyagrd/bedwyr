@@ -91,6 +91,9 @@ example 11 (in x u\ nu y\ ((plus (taup (taup z))
                                  (taup (match u y (taup z))))))).
 example 12 (bang P) := example 1 P.
 
+example 13 (bang (nu x\ par (out x a z) (in x y\ out c y z))).
+example 14 (bang (taup (out c a z))).
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%     One step transition rules for the pi-calculus      %%%%
 %%%%     Notice the rules are nearly identical to the       %%%%
