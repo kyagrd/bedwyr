@@ -2,7 +2,7 @@
 default: userguide.ps.gz userguide.pdf userguide.html
 
 clean:
-	rm -f userguide.ps.gz userguide.pdf
+	rm -f userguide.ps.gz userguide.pdf userguide.html
 
 %.pdf: %.tex
 	pdflatex $<
@@ -15,7 +15,7 @@ clean:
 %.gz: %
 	gzip -f $<
 %.html: %.tex
-	hevea $<
+	hevea -noiso $<
 
 html: userguide.html
 
