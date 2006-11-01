@@ -1,5 +1,5 @@
 
-default: userguide.ps.gz userguide.pdf
+default: userguide.ps.gz userguide.pdf userguide.html
 
 clean:
 	rm -f userguide.ps.gz userguide.pdf
@@ -14,9 +14,10 @@ clean:
 	dvips $< -o $@
 %.gz: %
 	gzip -f $<
+%.html: %.tex
+	hevea $<
 
-html: userguide.tex
-	hevea userguide.tex
+html: userguide.html
 
 bib:
 	bibtex userguide
