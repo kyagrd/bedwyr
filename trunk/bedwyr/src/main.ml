@@ -1,6 +1,6 @@
 (****************************************************************************)
 (* Bedwyr prover                                                            *)
-(* Copyright (C) 2006-2007 David Baelde, Alwen Tiu, Axelle Ziegler          *)
+(* Copyright (C) 2005-2006 David Baelde, Alwen Tiu, Axelle Ziegler          *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -24,7 +24,7 @@ let welcome_msg =
   "Bedwyr welcomes you.
 
 This software is under GNU Public License.
-Copyright (c) 2005-2007 Slimmer project.
+Copyright (c) 2005-2006 Slimmer project.
 
 For a little help, type #help.
 \n"
@@ -32,7 +32,7 @@ For a little help, type #help.
 let usage_msg =
   "Bedwyr prover.
 This software is under GNU Public License.
-Copyright (c) 2005-2007 Slimmer project.
+Copyright (c) 2005-2006 Slimmer project.
 
 Usage: bedwyr [filename | option]*
 "

@@ -23,8 +23,7 @@ Building the system:
 # src/bedwyr
 
 Type "#help." in Bedwyr for a little help.
-See doc/userguide.(ps.gz|pdf) for more information on how to use it -- you need
-to run "make doc" to build them.
+See doc/userguide.(ps.gz|pdf) for more information on how to use it.
 
 Structure of the distribution:
 /examples
