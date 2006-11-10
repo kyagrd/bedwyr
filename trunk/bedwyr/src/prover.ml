@@ -74,6 +74,8 @@ let mark_not_disprovable_until d =
       disprovable_stack
   with Found -> ()
   
+type 'a answer = Known of 'a | Unknown | OffTopic
+
 (* Attemps to prove that the goal [(nabla x_1..x_local . g)(S)] by
  * destructively instantiating it,
  * calling [success] on every success, and finishing with [failure]
@@ -105,72 +107,74 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
   if !debug then
     printf "Proving %a...\n" Pprint.pp_term g ;
 
-  let prove_tabled table kind name body args =
-    match Table.find table args with
-      | Some {contents=Table.Proven} -> success failure
-      | Some {contents=Table.Disproven} -> failure ()
-      | Some {contents=Table.Working disprovable} ->
-          if kind = System.CoInductive then
-            success failure
-          else begin
-              mark_not_disprovable_until disprovable ;
-              failure ()
-          end
-      | _ ->
-          (* This handles the cases where nothing is in the table,
-           * or Unset has been left, in which case the [Table.add] will
-           * overwrite it. *)
-          let disprovable = ref true in
-          let status = ref (Table.Working disprovable) in
-          let table_update_success k =
-            status := Table.Proven ;
-            ignore (Stack.pop disprovable_stack) ;
-            disprovable := false ;
-            (* TODO check that optimization: since we know that there is at most
-             * one success, we ignore the continuation [k] and directly jump
-             * to the [failure] continuation. It _seems_ OK regarding the
-             * cleanup handlers, which are just jumps to previous states.
-             * It is actually quite useful for (thm 2) in graph-alt.def. *)
-            success failure
-          in
-          let table_update_failure () =
-            begin match !status with
-              | Table.Proven ->
-                  (* This is just backtracking, don't worry. *)
-                  ()
-              | Table.Working _ ->
-                  ignore (Stack.pop disprovable_stack) ;
-                  if !disprovable then begin
-                    status := Table.Disproven ;
-                    disprovable := false ;
-                  end else
-                    status := Table.Unset
-              | _ -> assert false
-            end ;
-            failure ()
-          in
-            Table.add ~allow_eigenvar:(level=One) table args status ;
-            Stack.push (status,disprovable) disprovable_stack ;
-            prove ~level ~timestamp ~local
-              ~success:table_update_success
-              ~failure:table_update_failure
-              (Term.app body args)
-  in
-
   let prove_atom d args =
     let kind,body,table = System.get_def ~check_arity:(List.length args) d in
+    let status =
       match table with
+        | None -> OffTopic
         | Some table ->
-            begin try
-              prove_tabled table kind d body args
+            try match Table.find table args with
+              | Some {contents=c} -> Known c
+              | None -> Unknown
             with
-              | Index.Cannot_table ->
-                  prove ~level ~timestamp ~local ~success ~failure
-                    (Term.app body args)
-            end
-        | None ->
+              | Index.Cannot_table -> OffTopic
+    in
+      match status with
+        | OffTopic ->
             prove ~level ~timestamp ~local ~success ~failure
               (Term.app body args)
+        | Known Table.Proven -> success failure
+        | Known Table.Disproven -> failure ()
+        | Known (Table.Working disprovable) ->
+            if kind = System.CoInductive then
+              success failure
+            else begin
+              mark_not_disprovable_until disprovable ;
+              failure ()
+            end
+        | Unknown
+        | Known Table.Unset ->
+            (* This handles the cases where nothing is in the table,
+             * or Unset has been left, in which case the [Table.add]
+             * will overwrite it. *)
+            let disprovable = ref true in
+            let status = ref (Table.Working disprovable) in
+            let table_update_success k =
+              status := Table.Proven ;
+              ignore (Stack.pop disprovable_stack) ;
+              disprovable := false ;
+              (* TODO check that optimization: since we know that
+               * there is at most one success, we ignore
+               * the continuation [k] and directly jump to the
+               * [failure] continuation. It _seems_ OK regarding the
+               * cleanup handlers, which are just jumps to
+               * previous states.
+               * It is actually quite useful in graph-alt.def. *)
+              success failure
+            in
+            let table_update_failure () =
+              begin match !status with
+                | Table.Proven ->
+                    (* This is just backtracking, don't worry. *)
+                    ()
+                | Table.Working _ ->
+                    ignore (Stack.pop disprovable_stack) ;
+                    if !disprovable then begin
+                      status := Table.Disproven ;
+                      disprovable := false ;
+                    end else
+                      status := Table.Unset
+                | _ -> assert false
+              end ;
+              failure ()
+            in
+            let table = match table with Some t -> t | None -> assert false in
+              Table.add ~allow_eigenvar:(level=One) table args status ;
+              Stack.push (status,disprovable) disprovable_stack ;
+              prove ~level ~timestamp ~local
+                ~success:table_update_success
+                ~failure:table_update_failure
+                (Term.app body args)
   in
 
   match Term.observe g with
