@@ -12,10 +12,27 @@
   * essential representation just like eigenvariables. *)
 
 (** {1 Constraint management}
-  * Constraints are sets of equalities between eigenvariables represented
-  * as integers. They are uniquely represented as arrays of integers. *)
+  * In the tree, variables are identified by uniques numbers, which I'll call
+  * the VID (variable id). We could get rid of that and rely only on the order
+  * in which we meet the vars in the tree, but that would involve extra
+  * care when changing an algorithm (insertion/lookup or fold).
+  * So at the end of a branch we have a collection of variables with VIDs,
+  * and we want to store a constraint describing this collection, such that
+  * two formulas satisfying the same rigid structure and map are indeed
+  * logically equivalent.
+  * We first get rid of VIDs, which are not necessarily [0,1,2..n], and renumber
+  * variables using CIDs (constraint id) from 0 to n. In the constraint we
+  * store:
+  * - the maximum VID
+  * - an array mapping CID to VID
+  * - an array describing variable equalities: to each variable (denoted by its
+  *   CID) is associated the smallest (in term of CID) equal variable.
+  * - the array mapping CIDs to local timestamps. *)
 
-type constraints = int array * int array
+type constraints = { max_vid : int ;
+                     vid     : int array ;
+                     eq      : int array ;
+                     lts     : int array }
 
 let dummy_var = {Term.name="";Term.lts=0;Term.ts=0;Term.tag=Term.Constant}
 
@@ -23,26 +40,41 @@ exception Found of int
 
 let get_constraints bindings =
   let n = List.length bindings in
+  (* Sorting might be a useless precautions since we always parse the index
+   * in the same order, but it's not critical and I need the max anyway. *)
+  let bindings = List.sort (fun (i,_) (j,_) -> compare j i) bindings in
+  let m = match bindings with (m,_)::_ -> m | _ -> 0 in
   (* We prepare the constraints array,
    * and transform the [(int*var) list] into a more convenient [var array]. *)
-  let a = Array.make n 0 in
-  let b = Array.make n 0 in
+  let c = {
+    max_vid = m ;
+    vid     = Array.make n 0 ;
+    eq      = Array.make n 0 ;
+    lts     = Array.make n 0 }
+  in
   let v = Array.make n dummy_var in
-    List.iter (fun (i,x) -> v.(i) <- x) bindings ;
-    List.iter
-      (fun (i,x) ->
-         b.(i) <- x.Term.lts ;
-         (* [a.(i)] gets the least index which has an equal value, or [i] *)
-         a.(i) <-
-           try
-             for j = 0 to i do
-               if v.(j) = x then raise (Found j)
-             done ;
-             assert false
-           with
-             | Found j -> j)
-      bindings ;
-    a,b
+    ignore (List.fold_left
+              (fun j (i,x) ->
+                 c.vid.(j) <- i ;
+                 c.lts.(j) <- x.Term.lts ;
+                 v.(j) <- x ;
+                 j+1)
+              0 bindings) ;
+    ignore (List.fold_left
+              (fun j (i,x) ->
+                 (* [a.(i)] gets the least index which has an equal value *)
+                 c.eq.(j) <-
+                   begin try
+                     for k = 0 to j do
+                       if v.(k) = x then raise (Found k)
+                     done ;
+                     assert false
+                   with
+                     | Found k -> k
+                   end ;
+                 j+1)
+              0 bindings) ;
+    c
 
 module ConstraintsOrdered = struct
   type t = constraints
@@ -406,17 +438,17 @@ let iter index f =
   let rec iter_children mz = function
     | Leaf map ->
         ConstraintsMap.iter
-          (fun (key,_) v ->
-             let table = Array.make (Array.length key) (Term.db 0) in
+          (fun c v ->
+             let table = Array.make (c.max_vid+1) (Term.db 0) in
              let l = ref [] in
-               for i = 0 to Array.length key - 1 do
-                 table.(i) <-
-                   if key.(i) = i then
+               for i = 0 to Array.length c.eq - 1 do
+                 table.(c.vid.(i)) <-
+                   if c.eq.(i) = i then
                      Term.fresh 0
                    else
-                     table.(key.(i)) ;
-                 if key.(i) = i then
-                   l := table.(i) :: !l
+                     table.(c.vid.(c.eq.(i))) ;
+                 if c.eq.(i) = i then
+                   l := table.(c.vid.(i)) :: !l
                done ;
                let head = Term.fresh 0 in
                let t = Term.app head (MZ.zip table mz) in
