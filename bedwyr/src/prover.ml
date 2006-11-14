@@ -123,8 +123,8 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
         | OffTopic ->
             prove ~level ~timestamp ~local ~success ~failure
               (Term.app body args)
-        | Known Table.Proven -> success failure
-        | Known Table.Disproven -> failure ()
+        | Known Table.Proved -> success failure
+        | Known Table.Disproved -> failure ()
         | Known (Table.Working disprovable) ->
             if kind = System.CoInductive then
               success failure
@@ -140,7 +140,7 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
             let disprovable = ref true in
             let status = ref (Table.Working disprovable) in
             let table_update_success k =
-              status := Table.Proven ;
+              status := Table.Proved ;
               ignore (Stack.pop disprovable_stack) ;
               disprovable := false ;
               (* TODO check that optimization: since we know that
@@ -154,13 +154,13 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
             in
             let table_update_failure () =
               begin match !status with
-                | Table.Proven ->
+                | Table.Proved ->
                     (* This is just backtracking, don't worry. *)
                     ()
                 | Table.Working _ ->
                     ignore (Stack.pop disprovable_stack) ;
                     if !disprovable then begin
-                      status := Table.Disproven ;
+                      status := Table.Disproved ;
                       disprovable := false ;
                     end else
                       status := Table.Unset
