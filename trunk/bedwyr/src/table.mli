@@ -1,4 +1,4 @@
-type tag = Proven | Working of bool ref | Disproven | Unset
+type tag = Proved | Working of bool ref | Disproved | Unset
 type t
     
 val create : unit -> t
