@@ -99,6 +99,9 @@ let rec process ?(interactive=false) parse lexbuf =
     | Failure "lexing: empty token" ->
         Format.printf "Lexing error%s.\n%!" (position lexbuf) ;
         if interactive then Lexing.flush_input lexbuf else exit 1
+    | Assertion_failed ->
+        Format.printf "Assertion failed%s.\n%!" (position lexbuf) ;
+        if interactive then Lexing.flush_input lexbuf else exit 1
     | e when not interactive ->
         Format.printf "Error in %s, line %d: %s\n"
           lexbuf.Lexing.lex_curr_p.Lexing.pos_fname

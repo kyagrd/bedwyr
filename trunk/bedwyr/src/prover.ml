@@ -169,12 +169,17 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
               failure ()
             in
             let table = match table with Some t -> t | None -> assert false in
-              Table.add ~allow_eigenvar:(level=One) table args status ;
-              Stack.push (status,disprovable) disprovable_stack ;
-              prove ~level ~timestamp ~local
-                ~success:table_update_success
-                ~failure:table_update_failure
-                (Term.app body args)
+              try
+                Table.add ~allow_eigenvar:(level=One) table args status ;
+                Stack.push (status,disprovable) disprovable_stack ;
+                prove ~level ~timestamp ~local
+                  ~success:table_update_success
+                  ~failure:table_update_failure
+                  (Term.app body args)
+              with
+                | Index.Cannot_table -> 
+                    prove ~level ~timestamp ~local ~success ~failure
+                      (Term.app body args)
   in
 
   match Term.observe g with
