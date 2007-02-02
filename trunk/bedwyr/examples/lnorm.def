@@ -3,7 +3,7 @@
 %% Define the lambda-calculus encoded with the constructors:
 %%   type app   tm -> (tm -> tm).
 %%   type abs   (tm -> tm) -> tm.
-%% Consider identifying some beta-reduceds with a special marker.  That is,
+%% Consider identifying some beta-redexes with a special marker.  That is,
 %% change some expressions of the form (app (abs R) N) to (beta N R), where
 %%   type beta  tm -> (tm -> tm) -> tm.
 
