@@ -8,18 +8,48 @@
 % the Pi-calculus" by Tom Chothia (FORTE 2006), an attack on the MUTE
 % system was demonstrated by first modeling the system in the
 % pi-calculus and then probing the model by hand.  In the Bedwyr
-% definition file below, Chothia and Peng write the pi-calculus
-% specification and then use Bedwyr to find a "separating trace" that
+% definition file below, Chothia and Peng use the pi-calculus
+% specification in Bedwyr to find a "separating trace" that
 % shows that there are ways to distinguish between an "innocent" node
-% and a "guilty" node.  The following query will uncover such a trace.
-%
-% ?= separating_trace i g.
-% 
-% Due to the use of the "bang" operator (replication) in the script, 
-% there are an infinite number of possible answers. 
+% and a "guilty" node.
 
-% There is a special "non-logical" operator "peng" that is used in
-% this definition.  This operator changes Bedwyr's notion of logic
+% 1. Preliminaries ============================================================
+% Include the specification of the pi-calculus, extend it a bit
+% and define the notion of trace.
+
+#include "pi/pi.def".
+
+% Allow agent-style definitions as a controled recursion
+one  P A PP := def P Body, one  Body A PP.
+onep P A PP := def P Body, onep Body A PP.
+
+% Traces of actions
+trace P end.
+trace P (tr  Act      Trace) := one P Act P', trace P' Trace.
+trace P (trp (up X)   Trace) := onep P (up X) P',
+                                nabla x\ trace (P' x) (Trace x).
+trace P (trp (dn X Y) Trace) := onep P (dn X) P', trace (P' Y) Trace.
+
+% These are the models of the [i]nnocent and [g]uilty nodes.
+
+def i (nu a\ nu loop\
+        (par (out cho a z)
+        (par (out loop null z)
+             (bang (in loop x\ in chi y\ par (match y a (out fail null z))
+                                             (out loop null z)))))).
+def g (nu a\ nu loop\
+        (par (out cho a z)
+        (par (out loop null z)
+             (bang (in loop x\ in chi y\ out loop null z))))).
+
+% 2. Find a separating trace (non-logical approach) ===========================
+% The goal is to find T such that (trace i T) but not (trace g T).
+% Here is a first attempt at finding it.
+
+separating_trace P Q T := trace P T, peng T, (trace Q T => false).
+
+% This approach is natural, except for the special "non-logical" operator "peng"
+% that is used. This operator changes Bedwyr's notion of logic
 % variables into eigenvariables.  There is a logical motivation behind
 % this operator: In Bedwyr (as in Prolog), if one asks a query G from a
 % definition (program) and one gets the answer substitution theta, then
@@ -28,132 +58,49 @@
 % variables can be converted to eigenvariables and the result is still
 % provable.  While this "meta-level" observation about the nature of
 % provability in not problematic, the direct incorporation of it into
-% the the "object-logic" via an operator (here, called peng) is not sound
+% the "object-logic" via an operator (here, called peng) is not sound
 % in general.  Thus, the operator is classified as "non-logical" and is
 % not available in the main trunk of the Bedwyr system.
+% Without the "peng" operator, this predicate causes a runtime error because 
+% the logic variables left in T after the clause (trace P T) are used on the 
+% left of the implication (trace Q T => false). This is not allowed in Bedwyr 
+% as it requires more complex proof-search strategies.
 
-#include "pi/pi.def".
+% In a version of Bedwyr hacked to provide "peng",
+% the following query will uncover such a trace.
+%
+% ?= separating_trace i g T.
+% 
+% Due to the use of the "bang" operator (replication) in the script, 
+% there are an infinite number of possible answers. 
 
-%% Allow agent-style definitions as a controled recursion
-one  P A PP := def P Body, one  Body A PP.
-onep P A PP := def P Body, onep Body A PP.
+% 3. Finding a separating trace (meta-reasonning way) =========================
+% The "peng" operator implemented meta-reasoning in the logic itself.
+% Here is another approach which handles meta-reasoning outside of the logic.
+% In particular it will run on the standard Bedwyr.
 
-%% Asynchronous (upz)
+% The following predicate never succeeds, but produces an output which
+% can be analyzed in order to find a separating trace.
+% Every success at finding a trace of P is followed by the output of a line
+% "(left ...)", which will be followed by one or more lines "(right ...)" if 
+% that trace is successfully refined into a trace of Q.
+% If a line "(left T)" is found in the output followed immediately by another
+% "(left ..)" line, it means that T cannot be achieved by Q: it is a separating 
+% trace.
+% Run the following:
+%   src/bedwyr examples/mute.def -e "separate i g." | examples/mute.pl
 
-% free output
-one (outz X Y) (upz X Y) zero.
+separate P Q :=
+  sigma T\ 
+    trace P T, print (left T), trace Q T, print (right T), false.
 
-% par
-one  (par P Q) (up X Y) Q := one P (upz X Y) zero.
-one  (par P Q) (up X Y) P := one Q (upz X Y) zero.
-onep (par P Q) (up X) (x\ Q) := onep P (upz X) zero.
-onep (par P Q) (up X) (x\ P) := onep Q (upz X) zero.
-
-% open 
-onep (nu x\M x) (upz X) zero := nabla y\ one (M y) (upz X y) zero.
-
-% close
-one (par P Q) tau (nu y\ (M y)) :=
-  sigma X\ onep P (dn X) M & onep Q (upz X) zero.
-one (par P Q) tau (nu y\ (N y)) :=
-  sigma X\ onep P (upz X) zero & onep Q (dn X) N.
-
-% comm
-one (par P Q) tau R :=
-  sigma X\ sigma Y\ sigma M\ onep P (dn X) M & one Q (upz X Y) zero & R = (M Y).
-one (par P Q) tau T :=
-  sigma X\ sigma Y\ sigma M\ onep Q (dn X) M & one P (upz X Y) zero & T = (M Y).
-
-% Rep-act
-one  (bang P) (up X Y) (bang P) := one P (upz X Y) zero.
-onep (bang P) (up X) (y\ (bang P)) := onep P (upz X) zero.
-
-% Rep-com
-one (bang P) tau (par T (bang P)) :=
-  sigma X\ sigma Y\ sigma M\ onep P (dn X) M & one P (upz X Y) zero & T = (M Y).
-
-% Rep-close
-one (bang P) tau (par (nu y\ (N y)) (bang P)) := 
-  sigma X\ onep P (upz X) zero & onep P (dn X) N.
-
-weak_one Q (upz X Y) P := taus Q QQ, one QQ (upz X Y) PP, taus PP P.
-
-weak_onep Q (upz X) P :=
-  taus Q QQ, onep QQ (upz X) PP, nabla x\ taus (PP x) (P x).
-
-dbg_info A P P1 Q Q1 := print (begin a step A), print (P to P1), print (Q to Q1), print (end the step A).
-%dbg_info A P P1 Q Q1.
-
-coinductive weak_bisim P Q := print (checking P "<>" Q),
-	(pi X\ pi M\ onep P (up X) M => print ("LAction:" (up X)),
-					sigma N\ weak_onep Q (up X) N & dbg_info (up X) P M Q N &
-					nabla w\ weak_bisim (M w) (N w)) &
-
-	(pi X\ pi M\ onep P (upz X) M => print ("LAction:" (upz X)),
-					 sigma N\ weak_onep Q (upz X) N & dbg_info (upz X) P M Q N &
-					 nabla w\ weak_bisim (M w) (N w)) &
-
-	(pi A\ pi P1\ one P A P1 => print ("LAction:" A),
-				    sigma Q1\ weak_one Q A Q1 & dbg_info A P P1 Q Q1 & weak_bisim P1 Q1) &
-
-	(pi X\ pi M\ onep P (dn X) M => print ("LAction:" (dn X)),
-					sigma N\ weak_onep Q (dn X) N & dbg_info (dn X) P M Q N &
-					pi w\ weak_bisim (M w) (N w)) &
-
-	(pi X\ pi N\ onep Q (up X) N => print ("RAction:" (up X)),
-					sigma M\ weak_onep P (up X) M & dbg_info (up X) P M Q N &
-					nabla w\ weak_bisim (M w) (N w)) &
-
-	(pi X\ pi N\ onep Q (upz X) N => print ("RAction:" (upz X)),
-					 sigma M\ weak_onep P (upz X) M & dbg_info (upz X) P M Q N &
-					 nabla w\ weak_bisim (M w) (N w)) &
-
-	(pi A\ pi Q1\ one Q A Q1 => print ("RAction:" A),
-				    sigma P1\ weak_one P A P1 & dbg_info A P P1 Q Q1 & weak_bisim P1 Q1) &
-
-	(pi X\ pi N\ onep Q (dn X) N => print ("RAction:" (dn X)),
-					sigma M\ weak_onep P (dn X) M & dbg_info (dn X) P M Q N &
-					pi w\ weak_bisim (M w) (N w)).
-
-% == Non-Bisimulation ===============================================
-
-inductive countercheck P Q := print (checking P "<>" Q),
- (sigma A\ sigma X\ one P X A, print ("L-Action:" X), pi B\ weak_one Q X B => countercheck A B);
- (sigma A\ sigma X\ onep P (dn X) A, print ("L-Action:" (dn X)), pi B\ weak_onep Q (dn X) B => sigma w\ countercheck (A w) (B w));
- (sigma A\ sigma X\ onep P (up X) A, print ("L-Action:" (up X)), pi B\ weak_onep Q (up X) B => nabla w\ countercheck (A w) (B w));
- (sigma B\ sigma X\ one Q X B, print ("R-Action:" X), pi A\ weak_one P X A => countercheck A B);
- (sigma B\ sigma X\ onep Q (dn X) B, print ("R-Action:" (dn X)), pi A\ weak_onep P (dn X) A => sigma w\ countercheck (A w) (B w));
- (sigma B\ sigma X\ onep Q (up X) B, print ("R-Action:" (up X)), pi A\ weak_onep P (up X) A => nabla w\ countercheck (A w) (B w)).
-
-trace P end.
-trace P (tr  Act Trace) := one P Act P', trace P' Trace.
-%trace P (trp Act Trace) := onep P Act P', nabla x\ trace (P' x) (Trace x).
-
-trace P (trp (up X) Trace) := onep P (up X) P', nabla x\ trace (P' x) (Trace x).
-trace P (trp (upz X) Trace) := onep P (upz X) P', nabla x\ trace (P' x) (Trace x).
-%trace P (trp (dn X) Trace) := onep P (dn X) P', sigma x\ trace (P' x) Trace.
-trace P (trp (dn X Y) Trace) := onep P (dn X) P', trace (P' Y) Trace.
-
-separating_trace P Q T := trace P T, peng T, % "peng T" is to convert the logic variables in T to eigenvariables.
-			 (trace Q T => false), print T.
-
-def p (nu x\ out y x (out x y zero)).
-
-def i (nu a\ nu loop\ (par (outz cho a) (par (outz loop null) (bang (in loop x\ in chi y\ par (match y a (outz fail null)) (outz loop null)))))).
-%def i (nu a\ nu loop\ (par (outz cho a) (par (outz loop null) (bang (in loop x\ in chi y\ out loop null (match y a (outz fail null))))))).
-def g (nu a\ nu loop\ (par (outz cho a) (par (outz loop null) (bang (in loop x\ in chi y\ outz loop null))))).
-
-% Type check.
+% A. Type check ===============================================================
+% Add a few valid names.
 picheck (name cho) tt.
 picheck (name chi) tt.
 picheck (name fail) tt.
 picheck (name null) tt.
-picheck (proc zero) tt.
 
-tc := pi N\ pi P\ def N P => print N, prv picheck (proc P).
-
-% Tell us which clause does not type check (if any).
-which N := sigma P\ def N P, (prv picheck (proc P) => false).
-
-
-
+% Type-check defined processes.
+tc := pi N\ pi P\ def N P => print ("Checking" N), prv picheck (proc P).
+#assert tc.
