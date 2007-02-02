@@ -931,16 +931,17 @@ object-level atomic formula.  A call to
 simple type checking on {\tt Term}.  Specifically, it should now be
 possible to prove in Bedwyr the goal
 \begin{verbatim}
-(sigma T\ (seq simple tt (abs x\ app x x) T) => false).
+(sigma T\ seq simple tt (abs x\ app x x) T) => false.
 \end{verbatim}
 in other words, the self-application $\lambda x(x x)$ does not have a
 simple type.
 
-Notice that this ``two-level approach'' in which Bedwyr is used as a
-meta-logic and various computations are encoded in an object-logic
-(for example, type checking via minimal logic) is proposed in
-\cite{miller06ijcar} as a general means of reasoning about operational
-semantics.
+This ``two-level approach'' of specification uses Bedwyr as a
+meta-language in which a simple intuitionistic logic is encoded as an
+object logic: computations can then be specified in the object-logic
+in the usual way and the Bedwyr can be used to reason about that specification.
+This general appraoch has been described in more detail in 
+\cite{miller06ijcar}.
 
 \subsection{The $\pi$-calculus example in more detail}
 \label{pi-examples}
@@ -1076,5 +1077,5 @@ $\pi$-calculus following \cite{milner99book}.
 \bibliography{userguide}
 
 \noindent Any paper listed above that was written by one of the
-authors of his guide can be found on their respective home pages.
+authors of this guide can be found on their respective home pages.
 \end{document}
