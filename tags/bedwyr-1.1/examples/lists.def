@@ -1,0 +1,7 @@
+%% Some basic list manipulation rules are placed below.
+%% we assume that the constructors for lists are
+%%    nil     cons 
+
+member X (cons X L).
+member X (cons Y L) := member X L.
+
