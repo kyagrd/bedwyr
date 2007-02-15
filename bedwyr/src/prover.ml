@@ -89,25 +89,11 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
     raise System.Interrupt
   end ;
 
-  let state = Term.save_state () in
-  let failure () =
-    if !debug then
-      Format.printf "No (more) success for %a\n" Pprint.pp_term g ;
-    Term.restore_state state ;
-    failure ()
-  in
-  let success k =
-    if !debug then
-      Format.printf "Success for           %a\n" Pprint.pp_term g ;
-    success k
-  in
-
   let g = Norm.hnorm g in
 
-  if !debug then
-    printf "Proving %a...\n" Pprint.pp_term g ;
-
   let prove_atom d args =
+    if !debug then
+      printf "Proving %a...\n" Pprint.pp_term g ;
     let kind,body,table = System.get_def ~check_arity:(List.length args) d in
     let status =
       match table with
@@ -196,6 +182,8 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
 
         (* Solving an equality *)
         | Var {name=e} when e = Logic.eq && List.length goals = 2 ->
+            let state = Term.save_state () in
+            let failure () = Term.restore_state state ; failure () in
             if unify level (List.hd goals) (List.hd (List.tl goals)) then
               success failure
             else
@@ -238,6 +226,7 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
              * one modifying eigenvars,
              * the other modifying logical variables. *)
             let ev_substs = ref [] in
+            let state = Term.save_state () in
             let store_subst k =
               (* We store the state in which we should leave the system
                * when calling [k].
@@ -330,6 +319,10 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
               | [file;t] ->
                   begin match Term.observe file with
                     | Term.Var {Term.name=file} ->
+                        let state = Term.save_state () in
+                        let failure () =
+                          Term.restore_state state ; failure ()
+                        in
                         let ast = Parser.to_term Lexer.token file in
                           if unify level ast t then
                             success failure
