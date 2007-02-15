@@ -29,7 +29,7 @@ clean:
 	make -C src clean
 	make -C doc clean
 
-VERSION=1.0
+VERSION=1.1
 D=bedwyr-$(VERSION)
 dist: configure doc
 	find . -name '*~' -exec rm \{\} \;
@@ -45,7 +45,7 @@ dist: configure doc
 	mkdir $(D)/src
 	mkdir $(D)/src/ndcore
 	cp COPYING README TODO configure configure.ac install-sh Makefile $(D)
-	cp contrib/bedwyr.el $(D)/contrib
+	cp contrib/bedwyr.el contrib/bedwyr.vim $(D)/contrib
 	cp doc/*.tex doc/userguide.bib doc/Makefile $(D)/doc
 	cp doc/userguide.pdf doc/userguide.ps.gz doc/userguide.html $(D)/doc
 	for file in `find examples -type f '!' -path '*.svn*'` ; do \
