@@ -486,12 +486,12 @@ let makesubst h1 t2 a1 =
       | Term.Var v2 when variable v2.tag ->
           if h1=t2 then
             if n=0 && lev=0 then h1 else raise TypesMismatch
-          else
-            (* TODO Why wasn't there something similar before, concerning
-             *      the global timestamp ? *)
-            let h'= fresh ~lts:(min lts1 v2.lts) (min ts1 v2.ts) in
-              Term.bind t2 h' ;
-              Term.lambda (lev+n) h'
+          else begin
+            if lts1<v2.lts || ts1<v2.ts then
+              Term.bind t2
+                (fresh ~lts:(min lts1 v2.lts) (min ts1 v2.ts)) ;
+            Term.lambda (lev+n) t2
+          end
       | Term.App (h2,a2) ->
           begin match Term.observe h2 with
             | Term.Var {ts=ts2;lts=lts2} when Term.eq h1 h2 ->
