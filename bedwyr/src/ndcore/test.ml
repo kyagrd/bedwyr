@@ -435,6 +435,15 @@ let test =
     "[X^0 = Y^1]" >::
     (fun () ->
        let x = var "X" 0 in
+       let y = var "Y" 1 in
+         unify x y ;
+         match !!x,!!y with
+           | Var {ts=0}, Var {ts=0} -> ()
+           | _ -> assert false) ;
+
+    "[X^0 = Y^0/1]" >::
+    (fun () ->
+       let x = var "X" 0 in
        let y = var "Y" ~lts:1 0 in
          unify x y ;
          match !!x,!!y with
