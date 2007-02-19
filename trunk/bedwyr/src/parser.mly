@@ -88,8 +88,8 @@
 
 %nonassoc BSLASH
 %right IMP
-%left AND
 %left OR
+%left AND
 %nonassoc EQ
 %right RARROW
 %left LARROW
