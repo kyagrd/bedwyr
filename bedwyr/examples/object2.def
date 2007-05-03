@@ -1,0 +1,20 @@
+% a very simple object logic: a fragment of intuitionistic logic with
+% universal quantifier and implication. The implication formulas are 
+% restricted to the ones with only atomic formulas on the left of
+% implication.
+
+elem A (cons A L).
+elem A (cons B L) := elem A L.
+
+pv L (atm A) := elem A L.
+pv L (impl A B) := pv (cons A L) B.
+pv L (forall B) := nabla x\ pv L (B x).
+
+%
+
+test := pi s\ pi t\ 
+  pv nil (forall x\ impl (p x s) (forall y\ impl (p y t) (atm (p x t))))
+  => s = t.
+
+
+
