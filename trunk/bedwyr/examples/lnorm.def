@@ -29,7 +29,7 @@
 %% hypothetical implications via the seq predicate in seq.def.  In this way,
 %% we can execute lambda-Prolog-style programs within Bedwyr.  The predicate
 %% lnorm below stores a "module" of lambda Prolog (a named collection of 
-%% clauses.
+%% clauses).
 
 #include "seq.def".
 

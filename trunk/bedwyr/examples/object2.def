@@ -3,18 +3,21 @@
 % restricted to the ones with only atomic formulas on the left of
 % implication.
 
-elem A (cons A L).
-elem A (cons B L) := elem A L.
+% Example taken from the CADE2007 systems description for Bedwyr.
 
-pv L (atm A) := elem A L.
+memb A (cons A L).
+memb A (cons B L) := memb A L.
+
+pv L (p X Y) := memb (p X Y) L.
 pv L (impl A B) := pv (cons A L) B.
 pv L (forall B) := nabla x\ pv L (B x).
 
-%
+% To have these assertions tested automatically, use the -t option on the command line.
+#assert 
+  (pi r\ pi s\ pi t\ 
+     pv nil (forall x\ impl (p x r) (forall y\ impl (p y s) (p x t))) => r = t).
 
-test := pi s\ pi t\ 
-  pv nil (forall x\ impl (p x s) (forall y\ impl (p y t) (atm (p x t))))
-  => s = t.
-
-
+#assert_not
+  (pi r\ pi s\ pi t\ 
+     pv nil (forall x\ impl (p x r) (forall y\ impl (p y s) (p x t))) => r = s).
 
