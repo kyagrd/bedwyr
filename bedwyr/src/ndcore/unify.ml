@@ -492,6 +492,10 @@ let makesubst h1 t2 a1 =
                 (fresh ~lts:(min lts1 v2.lts) (min ts1 v2.ts)) ;
             Term.lambda (lev+n) t2
           end
+      (* TODO the following seems harmless, and is sometimes useful..
+      | Term.Var v2 when not (constant v2.tag) && a1=[] ->
+          Term.lambda lev t2 (* [n] is 0 *)
+      *)
       | Term.App (h2,a2) ->
           begin match Term.observe h2 with
             | Term.Var {ts=ts2;lts=lts2} when Term.eq h1 h2 ->
@@ -583,11 +587,11 @@ and unify_app_term h1 a1 t1 t2 = match Term.observe h1,Term.observe t2 with
               unify_list a1 a2
             else
               raise (ConstClash (h1,h2))
-        | DB _ ->
+        | DB _ | NB _ ->
             raise (ConstClash (h1,h2))
         | Var {tag=tag} when variable tag ->
             Term.bind h2 (makesubst h2 t1 a2)
-        | Var {tag=t} when not (variable t || constant t) ->
+        | Var {tag=t} ->
             failwith "logic variable on the left"
         | _ -> assert false
       end
