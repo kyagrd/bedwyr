@@ -76,13 +76,15 @@ let mark_not_disprovable_until d =
   
 type 'a answer = Known of 'a | Unknown | OffTopic
 
+let timestamp = ref 0
+
 (* Attemps to prove that the goal [(nabla x_1..x_local . g)(S)] by
  * destructively instantiating it,
  * calling [success] on every success, and finishing with [failure]
  * which can be seen as a more usual continuation, typically
  * restoring modifications and backtracking.
  * [timestamp] must be the oldest timestamp in the goal. *)
-let rec prove ~success ~failure ~level ~timestamp ~local g =
+let rec prove ~success ~failure ~level ~local g =
 
   if System.check_interrupt () then begin
     clear_disprovable () ;
@@ -107,8 +109,7 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
     in
       match status with
         | OffTopic ->
-            prove ~level ~timestamp ~local ~success ~failure
-              (Term.app body args)
+            prove ~level ~local ~success ~failure (Term.app body args)
         | Known Table.Proved -> success failure
         | Known Table.Disproved -> failure ()
         | Known (Table.Working disprovable) ->
@@ -162,12 +163,12 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
                 | Index.Cannot_table -> false
               then begin
                 Stack.push (status,disprovable) disprovable_stack ;
-                prove ~level ~timestamp ~local
+                prove ~level ~local
                   ~success:table_update_success
                   ~failure:table_update_failure
                   (Term.app body args)
               end else
-                prove ~level ~timestamp ~local ~success ~failure
+                prove ~level ~local ~success ~failure
                   (Term.app body args)
   in
 
@@ -181,7 +182,7 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
       begin match Term.observe hd with
 
         (* Solving an equality *)
-        | Var {name=e} when e = Logic.eq && List.length goals = 2 ->
+        | Var {name=e} when e = Logic.eq ->
             let state = Term.save_state () in
             let failure () = Term.restore_state state ; failure () in
             if unify level (List.hd goals) (List.hd (List.tl goals)) then
@@ -195,7 +196,7 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
               | [] -> success failure
               | goal::goals ->
                   prove
-                    ~local ~timestamp ~level
+                    ~local ~level
                     ~success:(fun k -> conj k goals)
                     ~failure
                     goal
@@ -208,17 +209,57 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
               | [] -> failure ()
               | g::goals ->
                   prove
-                    ~level ~local ~timestamp
-                    ~success
+                    ~level ~local ~success
                     ~failure:(fun () -> alt goals)
                     g
             in
               alt goals
 
         (* Level 1: Implication *)
-        | Var {name=i} when i = Logic.imp && List.length goals = 2 ->
+        | Var {name=i} when i = Logic.imp ->
             assert_level_one level ;
             let (a,b) = match goals with [a;b] -> a,b | _ -> assert false in
+            let a = Norm.deep_norm a in
+            let b = Norm.deep_norm b in
+            let check_variables =
+              let eigen = get_vars (fun v -> v.tag = Eigen) [a] in
+              let logic = get_vars (fun v -> v.tag = Logic) [b] in
+              let var v =
+                match Term.observe v with
+                  | Var v -> v
+                  | _ -> assert false
+              in
+              let eigen = List.map (fun v -> var v,v) eigen in
+                match logic with
+                  | [] -> fun () -> ()
+                  | hd::tl ->
+                      let max =
+                        List.fold_left
+                          (fun m v -> max m (var v).ts) (var hd).ts tl
+                      in
+                        (* Check that whenever an eigen variable [y]
+                         * is instantiated to a non-variable term, there is no
+                         * logic variable on the right with a greater timestamp
+                         * than [y]. *)
+                        fun () ->
+                          List.iter
+                            (fun (v0,v) -> match Term.observe v with
+                               | Var {name=name;tag=Eigen;ts=ts1} ->
+                                   if v0.name <> name then
+                                     (* We have to avoid the situations
+                                      *   pi x\ pi y\ sigma Z\ ...
+                                      *     because we might get unifications
+                                      *     outside LLambda (Z x y -> Z x x).
+                                      * but the following are OK:
+                                      *   sigma Z\ pi x\ pi y\ ...
+                                      *   pi x\ sigma Z\ pi y\ ... *)
+                                     if v0.ts<=max && ts1<=max then
+                                       raise (Unify.NotLLambda v)
+                               | _ ->
+                                   if v0.ts <= max then
+                                     raise (Unify.NotLLambda v))
+                            eigen
+            in
             (* Solve [a] using level 0,
              * remind of the solution substitutions as slices of the bind stack,
              * then prove [b] at level 1 for every solution for [a],
@@ -233,33 +274,39 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
                * The we complete the current solution with the reverse
                * flip of variables to eigenvariables, and we get sigma which
                * we store. *)
-              ev_substs := (get_subst state)::!ev_substs ;
+              check_variables () ;
+              ev_substs := (!timestamp,get_subst state)::!ev_substs ;
               k ()
             in
             let rec prove_b failure = function
               | [] -> success failure
-              | sigma::substs ->
+              | (ts,sigma)::substs ->
                   (* We have to prove (b theta_0 sigma_i) *)
-                  let unsig = ref (apply_subst sigma) in
-                    prove ~level ~local ~timestamp b
+                  let old_ts = !timestamp in
+                  let unsig  = ref (apply_subst sigma) in
+                    timestamp := ts ;
+                    prove ~level ~local b
                     ~success:(fun k ->
                                 (* We found (b theta_0 sigma_i theta).
                                  * Temporarily remove sigma_i to
                                  * prove (b theta_0 theta) against other
                                  * sigmas in substs. *)
                                 undo_subst !unsig ;
+                                timestamp := old_ts ;
                                 prove_b
                                   (fun () ->
                                      (* Put sigma_i to restore the environment
                                       * for the next successes of (b sigma_i) *)
                                      unsig := apply_subst sigma ;
+                                     timestamp := ts ;
                                      k ())
                                   substs)
                     ~failure:(fun () ->
+                                timestamp := old_ts ;
                                 undo_subst !unsig ;
                                 failure ())
             in
-              prove ~level:Zero ~local ~timestamp a
+              prove ~level:Zero ~local a
                 ~success:store_subst
                 ~failure:(fun () ->
                             prove_b failure !ev_substs)
@@ -272,10 +319,11 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
               | _ -> assert false
             in begin match observe goal with
               | Lam (1,_) ->
-                  let timestamp = timestamp + 1 in
-                  let var = Term.fresh ~lts:local ~tag:Eigen timestamp in
+                  incr timestamp ;
+                  let failure () = decr timestamp ; failure () in
+                  let var = Term.fresh ~lts:local ~tag:Eigen !timestamp in
                   let goal = app goal [var] in
-                    prove ~timestamp ~local ~level ~success ~failure goal
+                    prove ~local ~level ~success ~failure goal
               | _ -> assert false
             end
 
@@ -287,7 +335,7 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
             in begin match observe goal with
               | Lam (1,_) ->
                   let local = local + 1 in
-                    prove ~timestamp ~local ~level ~success ~failure
+                    prove ~local ~level ~success ~failure
                       (app goal [Term.nabla local])
               | _ -> assert false
             end
@@ -299,12 +347,18 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
               | _ -> assert false
             in begin match observe goal with
               | Lam (1,_) ->
-                  let var =
-                    let tag = if level = Zero then Eigen else Logic in
-                      Term.fresh ~lts:local ~tag timestamp
+                  let tag,failure =
+                    match level with
+                      | Zero ->
+                          incr timestamp ;
+                          Eigen, (fun () -> decr timestamp ; failure ())
+                      | One ->
+                          Logic, failure
                   in
-                    prove ~timestamp ~local ~level ~success ~failure
-                      (app goal [var])
+                  let var =
+                    Term.fresh ~lts:local ~tag !timestamp
+                  in
+                    prove ~local ~level ~success ~failure (app goal [var])
               | _ -> assert false
             end
 
@@ -347,9 +401,9 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
       printf "Invalid goal %a!" Pprint.pp_term g ;
       failure ()
 
-let prove ~success ~failure ~level ~timestamp ~local g =
+let prove ~success ~failure ~level ~local g =
   try
-    prove ~success ~failure ~level ~timestamp ~local g
+    prove ~success ~failure ~level ~local g
   with e -> clear_disprovable () ; raise e
 
 let toplevel_prove g =
@@ -383,10 +437,11 @@ let toplevel_prove g =
         printf "Search stopped.\n"
       end
   in
-    prove ~level:One ~local:0 ~timestamp:0 g
+    prove ~level:One ~local:0 g
       ~success:show
       ~failure:(fun () ->
                   time () ;
                   if !found then printf "No more solutions.\n"
                   else printf "No.\n" ;
+                  assert (0 = !timestamp) ;
                   assert (s0 = Term.save_state ()))

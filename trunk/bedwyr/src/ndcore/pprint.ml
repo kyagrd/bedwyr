@@ -79,14 +79,14 @@ let term_to_string term =
                 let res =
                   String.concat " " (List.map (pp high_pr n) (t::ts))
                 in
-                  if pr == 0 then res else parenthesis res
+                  if pr = 0 then res else parenthesis res
           end
       | Lam (0,t) -> assert false
       | Lam (i,t) ->
           let res = ((String.concat "\\"
                        (List.map pp_var (list_range (n+1) (n+i)))) ^ "\\" ^
                       (pp 0 (n+i) t)) in
-            if pr == 0 then res else parenthesis res
+            if pr = 0 then res else parenthesis res
       | Ptr t -> assert false (* observe *)
       | Susp _ -> assert false (* deep_norm *)
  in
