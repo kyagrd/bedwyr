@@ -131,5 +131,9 @@ val abstract_var : term -> term -> term
 (** Abstract [t] over constant or variable named [id]. *)
 val abstract : string -> term -> term
 
-(** Logic variables of [ts]. *)
+(** Find all variables [v] in [ts] which satisfy [test v].
+  * [ts] is assumed to be fully normalized. *)
+val get_vars : (var -> bool) -> term list -> term list
+
+(** Logic variables of [ts], which is assumed to be fully normalized. *)
 val logic_vars : term list -> term list
