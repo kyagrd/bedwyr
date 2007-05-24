@@ -229,36 +229,33 @@ let rec prove ~success ~failure ~level ~local g =
                   | Var v -> v
                   | _ -> assert false
               in
-              let eigen = List.map (fun v -> var v,v) eigen in
-                match logic with
+              let max = (* maximum logic variable timestamp *)
+                List.fold_left
+                  (fun m v -> max m (var v).ts) (-1) logic
+              in
+              let eigen = List.filter (fun v -> (var v).ts <= max) eigen in
+                (* Check that all eigen-variables on which logic vars
+                 * can depend are instantiated to distinct eigenvars.
+                 * Then LLambda unifications will be preserved. *)
+                match eigen with
                   | [] -> fun () -> ()
-                  | hd::tl ->
-                      let max =
-                        List.fold_left
-                          (fun m v -> max m (var v).ts) (var hd).ts tl
+                  | _ ->
+                      let var v =
+                        match Term.observe v with
+                          | Var v when v.tag = Eigen -> v
+                          | _ -> raise (Unify.NotLLambda v)
                       in
-                        (* Check that whenever an eigen variable [y]
-                         * is instantiated to a non-variable term, there is no
-                         * logic variable on the right with a greater timestamp
-                         * than [y]. *)
                         fun () ->
-                          List.iter
-                            (fun (v0,v) -> match Term.observe v with
-                               | Var {name=name;tag=Eigen;ts=ts1} ->
-                                   if v0.name <> name then
-                                     (* We have to avoid the situations
-                                      *   pi x\ pi y\ sigma Z\ ...
-                                      *     because we might get unifications
-                                      *     outside LLambda (Z x y -> Z x x).
-                                      * but the following are OK:
-                                      *   sigma Z\ pi x\ pi y\ ...
-                                      *   pi x\ sigma Z\ pi y\ ... *)
-                                     if v0.ts<=max && ts1<=max then
-                                       raise (Unify.NotLLambda v)
-                               | _ ->
-                                   if v0.ts <= max then
-                                     raise (Unify.NotLLambda v))
-                            eigen
+                          (* This is called when some left solution has been
+                           * found. We check that everything is a variable. *)
+                          let eigen = List.map (fun v -> v,var v) eigen in
+                          let rec unicity = function
+                            | [] | [_] -> ()
+                            | (va,a)::(((vb,b)::_) as tl) ->
+                                if a=b then raise (Unify.NotLLambda va) ;
+                                unicity tl
+                          in
+                            unicity eigen
             in
             (* Solve [a] using level 0,
              * remind of the solution substitutions as slices of the bind stack,
