@@ -315,16 +315,8 @@
 			</File>
 		</Filter>
 		<Filter
-			Name="Logics"
+			Name="Propositional"
 			>
-			<File
-				RelativePath=".\NoLogic\nologic.ml"
-				>
-			</File>
-			<File
-				RelativePath=".\NoLogic\nologic.mli"
-				>
-			</File>
 			<File
 				RelativePath=".\Propositional\propositional.ml"
 				>
@@ -347,6 +339,18 @@
 			</File>
 			<File
 				RelativePath=".\Propositional\propositionalparser.mly"
+				>
+			</File>
+		</Filter>
+		<Filter
+			Name="Nologic"
+			>
+			<File
+				RelativePath=".\NoLogic\nologic.ml"
+				>
+			</File>
+			<File
+				RelativePath=".\NoLogic\nologic.mli"
 				>
 			</File>
 		</Filter>

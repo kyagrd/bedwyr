@@ -23,6 +23,25 @@ rule term = parse
 | "\\/"               {OR}
 | "->"                {IMPLICATION}
 | "~"                 {NOT}
+| "true"              {TRUE}
+| "false"             {FALSE}
 | name as n           {ID n}
 | _ as c  {raise (Propositionalabsyn.SyntaxError("invalid character: " ^ (String.make 1 c)))}
-| eof     {raise (Propositionalabsyn.SyntaxError("end of input"))}
+| eof     {EOF}
+
+and tactics = parse
+| blank                 {tactics lexbuf}
+| '\n'                  {incrline lexbuf; tactics lexbuf}
+
+| '('                   {LPAREN}
+| ')'                   {RPAREN}
+| name as n             {match (tactic lexbuf) with
+                            LINE s -> TACTIC(n,s)
+                          | _ -> TACTIC(n,"")}
+| _ as c {raise (Propositionalabsyn.SyntaxError("invalid character: " ^ (String.make 1 c)))}
+| eof     {EOF}
+
+and tactic = parse
+| [^'(' ')']+ as l  {LINE l}
+| _ as c            {raise (Propositionalabsyn.SyntaxError("invalid character: " ^ (String.make 1 c)))}
+| eof               {EOF}

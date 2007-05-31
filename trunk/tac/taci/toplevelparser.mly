@@ -1,13 +1,4 @@
 %{
-  let split s =
-    let result = Str.bounded_split (Str.regexp " \\|\t") s 2 in
-    let len = List.length result in
-    if len == 2 then
-      (List.hd result, List.hd (List.tl result))
-    else if len == 1 then
-      (List.hd result, "")
-    else
-      failwith "Toplevelparser.split: invalid string"
 %}
 
 %token DOT SHARP
@@ -35,7 +26,6 @@ toplevel_command:
   |                     {Command.NoCommand}
   | SHARP command DOT   {$2}
   | TACTICAL            {Command.Tactical($1)}
-  ;
 
 command:
   | EXIT  {Command.Exit}

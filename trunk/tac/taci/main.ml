@@ -18,13 +18,14 @@ let main () =
   let _ = parseArgs () in
   
   if !xmlOutput then
-    let module XmlInterp = Interpreter.Make (Output.XmlOutput) (Nologic.Nologic) in
-    let module Int = Interface.Make (XmlInterp) in
+    let module Interp = Interpreter.Make (Output.XmlOutput) (Propositional.Propositional (Output.XmlOutput)) in
+    let module Int = Interface.Make (Interp) in
     (Int.interpret ())
   else
-    let module OutputInterp = Interpreter.Make (Output.ConsoleOutput) (Nologic.Nologic) in
-    let module Int = Interface.Make (OutputInterp) in
+    let module Interp = Interpreter.Make (Output.ConsoleOutput) (Propositional.Propositional (Output.ConsoleOutput)) in
+    let module Int = Interface.Make (Interp) in
     (Int.interpret ())
 
+  
 (*  Execute main  *)
 let _ = main ()

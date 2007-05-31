@@ -27,10 +27,12 @@ struct
   
   let applyTactical tactical parameters session sc =
     let tactical' = (tactical parameters) in
-    let sequent = List.hd (L.sequents session) in
-    (tactical' sequent sc)
-  
-
+    let so = L.sequent session in
+    if Option.isSome so then
+      let (sequent, session') = Option.get so in
+      (tactical' sequent (sc session'))
+    else
+      ()
     
   let helpMessage =
 "
@@ -71,9 +73,9 @@ Taci v0.0
     *sc:
     * The toplevel success continuation.
     ******************************************************************)
-    let sc sequents =
+    let sc session sequents =
       let currentSequents = L.sequents session in
-      let newSequents = (sequents @ List.tl currentSequents) in
+      let newSequents = (sequents @ currentSequents) in
       let session' = L.updateSequents newSequents session in
       raise (Success session')
     in
@@ -83,15 +85,19 @@ Taci v0.0
       if (Option.isSome tacticalop) then
         let tactical = Option.get tacticalop in
         let () = (applyTactical tactical params session sc) in
-        (O.output "Failure.";
+        (O.output "Failure.\n";
         session)
       else
         (O.error ("Undefined tactical: " ^ name ^ ".\n");
         session)
     with
       Success(session) ->
-        (O.output "Success.";
-        session))
+        (O.output "Success.\n";
+        if not (L.validSequent session) then
+          (O.output "Proved.\n";
+          session)
+        else
+          session))
 
   (********************************************************************
   *handleInput:
@@ -113,7 +119,11 @@ Taci v0.0
       | Command.Include(sl) ->
           (L.incl sl session)
       | Command.Tactical(name, params) ->
-          (tactical name params session)
+          if (L.validSequent session) then
+            (tactical name params session)
+          else
+            (O.error "No valid sequent.\n";
+            session)
       | Command.NoCommand -> session
 
   let onPrompt session =
@@ -129,7 +139,12 @@ Taci v0.0
   let onInput s session =
     try
       let input = Toplevel.parseStringCommand s in
-      (handleInput input session)
+      let session' = handleInput input session in
+      if L.validSequent session' then
+        (O.output ((L.string_of_sequents session') ^ "\n");
+        session')
+      else
+        session'
     with
         Command.SyntaxError(s) -> (O.error (s ^ ".\n"); session)
 end
