@@ -15,12 +15,30 @@ sig
   val definition : string -> session -> session
   
   type sequent
+  val validSequent : session -> bool
+  val sequent : session -> (sequent * session) option
   val sequents : session -> sequent list
+  val string_of_sequents : session -> string
   val updateSequents : sequent list -> session -> session
   
   type tactic = sequent -> (sequent list -> unit) -> unit
-  type tactical = string -> session -> (sequent list -> unit) -> unit
+  type tactical = string -> tactic
 
-  val tactics : tactic table
   val tacticals : tactical table
+end
+
+module type LogicSig =
+sig
+  type sequent
+  type tactic = sequent -> (sequent list -> unit) -> unit
+end
+
+module GenericTacticals : functor (L : LogicSig) ->
+sig
+  val failureTactical : L.tactic
+  val idTactical : L.tactic
+  val applyTactical : L.tactic -> L.tactic
+  val orTactical : L.tactic -> L.tactic -> L.tactic
+  val thenTactical : L.tactic -> L.tactic -> L.tactic
+  val repeatTactical : L.tactic -> L.tactic
 end

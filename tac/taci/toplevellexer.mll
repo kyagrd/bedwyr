@@ -2,6 +2,17 @@
   open Toplevelparser
   open Lexing
 
+  let rec trim s =
+    let l = String.length s in 
+    if l = 0 then
+      s
+    else if s.[0] = ' ' || s.[0]='\t' || s.[0]='\n' || s.[0]='\r' then
+      trim (String.sub s 1 (l-1))
+    else if s.[l-1]=' ' || s.[l-1]='\t' || s.[l-1]='\n' || s.[l-1]='\r' then
+      trim (String.sub s 0 (l-1))
+    else
+      s
+
   let incrline lexbuf =
     lexbuf.lex_curr_p <- {
         lexbuf.lex_curr_p with
@@ -48,6 +59,9 @@ rule command = parse
 | _ as c  {raise (Command.SyntaxError("command: invalid character '" ^ (String.make 1 c) ^ "'"))}
 | eof   {raise (Command.SyntaxError("end of input"))}
 
+(**********************************************************************
+*theorem
+**********************************************************************)
 and theorem = parse
 | '\n'  {incrline lexbuf; anonymous lexbuf}
 | blank {theorem lexbuf}
@@ -57,15 +71,21 @@ and theorem = parse
 | _ as c  {raise (Command.SyntaxError("theorem: invalid character '" ^ (String.make 1 c) ^ "'"))}
 | eof   {raise (Command.SyntaxError("end of input"))}
 
-and anonymous = parse
-| '\n'  {incrline lexbuf; anonymous lexbuf}
-| anything as n {LINE n}
-| _ as c  {raise (Command.SyntaxError("anonymous: invalid character '" ^ (String.make 1 c) ^ "'"))}
-| eof   {raise (Command.SyntaxError("end of input"))}
-
+(**********************************************************************
+*tactical:
+**********************************************************************)
 and tactical = parse
 | '\n'  {incrline lexbuf; anonymous lexbuf}
 | '.'   {LINE ""}
-| (line as n) '.' {LINE n}
+| (line as n) '.' {LINE (trim n)}
 | _ as c  {raise (Command.SyntaxError("tactical: invalid character '" ^ (String.make 1 c) ^ "'"))}
+| eof   {raise (Command.SyntaxError("end of input"))}
+
+(**********************************************************************
+*anonymous:
+**********************************************************************)
+and anonymous = parse
+| '\n'  {incrline lexbuf; anonymous lexbuf}
+| anything as n {LINE (trim n)}
+| _ as c  {raise (Command.SyntaxError("anonymous: invalid character '" ^ (String.make 1 c) ^ "'"))}
 | eof   {raise (Command.SyntaxError("end of input"))}

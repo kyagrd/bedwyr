@@ -30,7 +30,10 @@ No logic does nothing!
     session
 
   type sequent = unit
+  let validSequent session = true
+  let sequent session = Some((), ())
   let sequents session = []
+  let string_of_sequents session = ""
   let updateSequents sequents session = ()
   
   type tactic = sequent -> (sequent list -> unit) -> unit
