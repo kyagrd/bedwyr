@@ -10,7 +10,8 @@ configure: configure.ac
 XPL = examples/scoping.def examples/internal/checks.def \
       examples/3bits.def examples/lambda.def examples/progs.def \
       examples/graph-alt.def examples/minmax.def \
-      examples/tictactoe.def examples/pi/pi_nat.def examples/pi/pi_church.def
+      examples/tictactoe.def examples/pi/pi_nat.def examples/pi/pi_church.def \
+      examples/miniml.def
 test: src/Makefile
 	@echo Testing the core LLambda library
 	make -C src test
