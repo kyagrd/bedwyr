@@ -33,59 +33,29 @@ rule command = parse
 | blank              { command lexbuf }
 | '\n'               { incrline lexbuf; command lexbuf }
 
-| "." { DOT }
-| "#" { SHARP }
+| "." {DOT }
+| "#" {SHARP}
+| "(" {LPAREN}
+| ")" {RPAREN}
+| "," {COMMA}
 
-| "reset" { RESET }
-| "include" { INCLUDE }
-| "exit"  { EXIT  }
+| "reset"   {RESET}
+| "include" {INCLUDE}
+| "exit"    {EXIT}
+| "undo"    {UNDO}
+| "redo"    {REDO}
 
-| "help"  { HELP  }
+| "help"  {HELP}
 
-| "clear" { CLEAR }
-| "debug" { DEBUG }
-| "time"  { TIME  }
-| "on"    { ON  }
-| "off"   { OFF }
+| "clear" {CLEAR}
+| "debug" {DEBUG}
+| "time"  {TIME}
+| "on"    {ON}
+| "off"   {OFF}
 
-| "theorem"     {(theorem lexbuf)}
-| "definition"  { match (anonymous lexbuf) with
-                      LINE(s) -> DEFINITION(s)
-                    | _ -> failwith "DEFINITION: invalid argument"}
+| "theorem"     {THEOREM}
+| "definition"  {DEFINITION}
 | '"' (instring as n) '"' {String.iter (function '\n' -> incrline lexbuf | _ -> ()) n ; STRING(n)}
-| name as n { match (tactical lexbuf) with
-                  LINE(s) -> TACTICAL(n,s)
-                | _ -> failwith "TACTICAL: invalid argument"}
-| _ as c  {raise (Command.SyntaxError("command: invalid character '" ^ (String.make 1 c) ^ "'"))}
-| eof   {raise (Command.SyntaxError("end of input"))}
-
-(**********************************************************************
-*theorem
-**********************************************************************)
-and theorem = parse
-| '\n'  {incrline lexbuf; anonymous lexbuf}
-| blank {theorem lexbuf}
-| name as n { match (anonymous lexbuf) with
-                      LINE(s) -> THEOREM(n,s)
-                    | _ -> failwith "THEOREM: invalid argument"}
-| _ as c  {raise (Command.SyntaxError("theorem: invalid character '" ^ (String.make 1 c) ^ "'"))}
-| eof   {raise (Command.SyntaxError("end of input"))}
-
-(**********************************************************************
-*tactical:
-**********************************************************************)
-and tactical = parse
-| '\n'  {incrline lexbuf; anonymous lexbuf}
-| '.'   {LINE ""}
-| (line as n) '.' {LINE (trim n)}
-| _ as c  {raise (Command.SyntaxError("tactical: invalid character '" ^ (String.make 1 c) ^ "'"))}
-| eof   {raise (Command.SyntaxError("end of input"))}
-
-(**********************************************************************
-*anonymous:
-**********************************************************************)
-and anonymous = parse
-| '\n'  {incrline lexbuf; anonymous lexbuf}
-| anything as n {LINE (trim n)}
-| _ as c  {raise (Command.SyntaxError("anonymous: invalid character '" ^ (String.make 1 c) ^ "'"))}
-| eof   {raise (Command.SyntaxError("end of input"))}
+| name as n     {ID n}
+| _ as c  {raise (Absyn.SyntaxError("invalid character '" ^ (String.make 1 c) ^ "'"))}
+| eof     {raise (Absyn.SyntaxError("end of input"))}

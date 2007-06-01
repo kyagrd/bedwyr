@@ -13,8 +13,8 @@ let parseCommand lexbuf s =
   with
     Parsing.Parse_error ->
       (print_endline ((position lexbuf) ^ "Syntax error" ^ s);
-      Command.NoCommand)
-  
+      Absyn.NoCommand)
+
 let parseStringCommand s =
   let lexbuf = Lexing.from_string s in
   (parseCommand lexbuf (" in: " ^ s))

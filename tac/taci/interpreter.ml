@@ -25,19 +25,21 @@ struct
     with
       Not_found -> None
   
-  let applyTactical tactical parameters session sc =
-    let tactical' = (tactical parameters) in
-    let so = L.sequent session in
-    if Option.isSome so then
-      let (sequent, session') = Option.get so in
-      (tactical' sequent (sc session'))
-    else
-      ()
+  let applyTactical tactical session sc =
+    match tactical with
+        Absyn.Tactical(tac) ->
+          let so = L.sequent session in
+          if Option.isSome so then
+            let (sequent, session') = Option.get so in
+            (tac sequent (sc session'))
+          else
+            ()
+      | Absyn.String(_) -> failwith "invalid quoted string"
     
   let helpMessage =
 "
 Taci v0.0
-  
+
 #clear.                     : Clear the screen.
 #debug <on | off>.          : Turn debugging on or off.
 #definition <definition>.   : Add the given definition to the current session.
@@ -60,15 +62,59 @@ Taci v0.0
     (O.output startupMessage;
     O.output L.start)
 
-  type interpretermode =
-      TopLevelMode
-    | LogicMode
+  (********************************************************************
+  *Undo/Redo:
+  ********************************************************************)
+  let undoList = ref []
+  let redoList = ref []
+  let resetLists () =
+    (undoList := []; redoList := [])
 
+  let undo session =
+    if (List.length (!undoList) > 0) then
+      let session' = List.hd (!undoList) in
+      (redoList := session :: (!redoList);
+      undoList := List.tl (!undoList);
+      session')
+    else
+      (O.error "nothing do undo.\n";
+      session)
+
+  let redo session =
+    if (List.length (!redoList) > 0) then
+      let session' = List.hd (!redoList) in
+      (undoList := session :: (!undoList);
+      redoList := List.tl (!redoList);
+      session')
+    else
+      (O.error "nothing do redo.\n";
+      session)
+  (********************************************************************
+  *buildTactical:
+  * Constructs a tactical from an absyn pretactical.
+  ********************************************************************)
+  let rec buildTactical tac session =
+    let buildArg tac =
+      match tac with
+          Absyn.ApplicationPreTactical(_) -> (buildTactical tac session)
+        | Absyn.StringPreTactical(s) -> Absyn.String(s)
+    in
+    match tac with
+        Absyn.ApplicationPreTactical(name, args) ->
+          let top = findTactical name session in
+          if Option.isSome top then
+            let t = Option.get top in
+            Absyn.Tactical(t (List.map buildArg args))
+          else
+            raise (Absyn.SyntaxError ("undefined tactical: " ^ name))
+      | Absyn.StringPreTactical(s) ->
+          raise (Absyn.SyntaxError ("unexpected quoted string: " ^ s))
+      
   (********************************************************************
   *tactical:
-  * Attempts to apply the named tactical.
+  * Attempts to apply the given pretactical.
   ********************************************************************)
-  let tactical name params session =
+  let tactical pretactical session =
     (******************************************************************
     *sc:
     * The toplevel success continuation.
@@ -80,65 +126,71 @@ Taci v0.0
       raise (Success session')
     in
     
-    (try
-      let tacticalop = findTactical name session in
-      if (Option.isSome tacticalop) then
-        let tactical = Option.get tacticalop in
-        let () = (applyTactical tactical params session sc) in
-        (O.output "Failure.\n";
-        session)
-      else
-        (O.error ("Undefined tactical: " ^ name ^ ".\n");
-        session)
+    try
+      let () = O.debug ("Pretactical: " ^ (Absyn.string_of_pretactical pretactical) ^ ".\n") in
+
+      let tactical = buildTactical pretactical session in
+      let () = (applyTactical tactical session sc) in
+      (O.output "Failure.\n";
+      session)
     with
-      Success(session) ->
-        (O.output "Success.\n";
-        if not (L.validSequent session) then
-          (O.output "Proved.\n";
+        Absyn.SyntaxError(s) ->
+          (O.error (s ^ ".\n");
           session)
-        else
-          session))
+      | Success(session) ->
+          (O.output "Success.\n";
+          if not (L.validSequent session) then
+            (O.output "Proved.\n";
+            session)
+          else
+          session)
 
   (********************************************************************
   *handleInput:
   ********************************************************************)
   let handleInput input session =
     match input with
-        Command.Exit -> raise (Exit session)
-      | Command.Clear -> (O.clear (); session)
-      | Command.Help -> (showHelp (); session)
-      | Command.Reset -> (L.reset ())
-      | Command.Theorem(name, t) ->
-          (L.prove name t session)
-      | Command.Definition(d) ->
+        Absyn.Exit -> raise (Exit session)
+      | Absyn.Clear -> (O.clear (); session)
+      | Absyn.Help -> (showHelp (); session)
+      | Absyn.Undo(_) -> (undo session)
+      | Absyn.Redo(_) -> (redo session)
+      | Absyn.Reset -> (resetLists (); L.reset ())
+      | Absyn.Theorem(name, t) ->
+          (resetLists ();
+          L.prove name t session)
+      | Absyn.Definition(d) ->
           (L.definition d session)
-      | Command.Timing(onoff) ->
+      | Absyn.Timing(onoff) ->
           (timing := onoff; session)
-      | Command.Debug(onoff) ->
+      | Absyn.Debug(onoff) ->
           (debug := onoff; session)
-      | Command.Include(sl) ->
+      | Absyn.Include(sl) ->
           (L.incl sl session)
-      | Command.Tactical(name, params) ->
+      | Absyn.PreTactical(pretactical) ->
           if (L.validSequent session) then
-            (tactical name params session)
+            (redoList := [];
+            undoList := session :: (!undoList);
+            tactical pretactical session)
           else
             (O.error "No valid sequent.\n";
             session)
-      | Command.NoCommand -> session
+      | Absyn.NoCommand -> session
 
   let onPrompt session =
-    (O.output ("[tac <" ^ (L.name) ^ ">]- ");
+    (O.prompt ("[tac <" ^ (L.name) ^ ">]- ");
     session)
 
   let onStart () =
     (showStartup ();
+    resetLists ();
     L.reset ())
   
   let onEnd session = ()
 
   let onInput s session =
     try
-      let input = Toplevel.parseStringCommand s in
+      let input = Toplevel.parseStringCommand s in      
       let session' = handleInput input session in
       if L.validSequent session' then
         (O.output ((L.string_of_sequents session') ^ "\n");
@@ -146,5 +198,5 @@ Taci v0.0
       else
         session'
     with
-        Command.SyntaxError(s) -> (O.error (s ^ ".\n"); session)
+        Absyn.SyntaxError(s) -> (O.error (s ^ ".\n"); session)
 end
