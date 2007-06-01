@@ -37,5 +37,5 @@ No logic does nothing!
   let updateSequents sequents session = ()
   
   type tactic = sequent -> (sequent list -> unit) -> unit
-  type tactical = string -> sequent -> (sequent list -> unit) -> unit
+  type tactical = tactic Absyn.tactical list -> sequent -> (sequent list -> unit) -> unit
 end

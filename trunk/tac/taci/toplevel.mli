@@ -1,1 +1,1 @@
-val parseStringCommand : string -> Command.command
+val parseStringCommand : string -> Absyn.command

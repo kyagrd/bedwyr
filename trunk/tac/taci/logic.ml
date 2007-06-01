@@ -5,7 +5,10 @@ module Table = Map.Make(String)
 type 'a table = 'a Table.t
 
 (**********************************************************************
+*Logic:
 **********************************************************************)
+type 'a tactic = 'a -> ('a list -> unit) -> unit
+type 'a tactical = 'a Absyn.tactical list -> 'a
 module type Logic =
 sig
   val name : string
@@ -26,25 +29,27 @@ sig
   val string_of_sequents : session -> string
   val updateSequents : sequent list -> session -> session
   
-  type tactic = sequent -> (sequent list -> unit) -> unit
-  type tactical = string -> tactic
-
-  val tacticals : tactical table
+  val tacticals : (sequent tactic) tactical table
 end 
  
 module type LogicSig =
 sig
-  type sequent
-  type tactic = sequent -> (sequent list -> unit) -> unit
+  type logic_sequent
 end
 
 (**********************************************************************
 *Standard Tacticals:
 **********************************************************************)
-module GenericTacticals (L : sig type tactic end) =
+module GenericTacticals (L : LogicSig) (O : Output.Output) =
 struct
+  type logic_tactic = (L.logic_sequent tactic)
+  type logic_tactical = logic_tactic tactical
+  
   let failureTactical =
     fun _ _ -> ()
+
+  let invalidArguments s =
+    (O.error (s ^ ": invalid arguments.\n"); failureTactical)
 
   let idTactical =
     fun sequent sc -> (sc [sequent])
@@ -52,10 +57,12 @@ struct
   let applyTactical tactic =
     tactic
 
-  let orTactical tac1 tac2 =
+  let orElseTactical tac1 tac2 =
     fun sequent sc ->
       (tac1 sequent sc; tac2 sequent sc)
-  
+
+  let tryTactical tac =
+    orElseTactical tac idTactical
   
   let rec mapTactical tac sequents result sc =
     match sequents with
@@ -75,5 +82,60 @@ struct
 
   let rec repeatTactical tac =
     fun sequent sc ->
-      (orTactical (thenTactical tac (repeatTactical tac)) idTactical) sequent sc
+      (orElseTactical (thenTactical tac (repeatTactical tac)) idTactical) sequent sc
+
+  let completeTactical tac =
+    fun sequent sc ->
+        let sc' sequents =
+          if (List.length sequents) == 0 then
+            (sc sequents)
+          else
+            ()
+        in
+        (tac sequent sc')
+
+  let applyInterface = function
+      Absyn.Tactical(tac)::[] ->
+        tac
+    | _ -> invalidArguments "apply"
+
+  let orElseInterface = function
+      Absyn.Tactical(tac1)::Absyn.Tactical(tac2)::[] ->
+        (orElseTactical tac1 tac2)
+    | _ -> invalidArguments "orelse"
+
+  let thenInterface = function
+      Absyn.Tactical(tac1)::Absyn.Tactical(tac2)::[] ->
+        (thenTactical tac1 tac2)
+    | _ -> invalidArguments "then"
+
+  let tryInterface = function
+      Absyn.Tactical(tac)::[] ->
+        (tryTactical tac)
+    | _ -> invalidArguments "try"
+
+  let idInterface = function
+      [] ->
+        (idTactical)
+    | _ -> invalidArguments "id"
+  
+  let repeatInterface = function
+      Absyn.Tactical(tac)::[] ->
+        (repeatTactical tac)
+    | _ -> invalidArguments "repeat"
+
+  let completeInterface = function
+      Absyn.Tactical(tac)::[] ->
+        (completeTactical tac)
+    | _ -> invalidArguments "complete"
+
+  let tacticals =
+    let ts = Table.add "apply" applyInterface Table.empty in
+    let ts = Table.add "id" idInterface ts in
+    let ts = Table.add "then" thenInterface ts in
+    let ts = Table.add "orelse" orElseInterface ts in
+    let ts = Table.add "try" tryInterface ts in
+    let ts = Table.add "repeat" repeatInterface ts in
+    let ts = Table.add "complete" completeInterface ts in
+    ts
 end
