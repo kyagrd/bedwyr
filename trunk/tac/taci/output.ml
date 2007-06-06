@@ -14,14 +14,15 @@ struct
   let showDebug = ref false
   let debug s =
     if !showDebug then
-      print_string ("Debug: " ^ s)
+      (print_string ("Debug: " ^ s);
+      flush stdout)
     else
       ()
 
   let prompt s = print_string s
   
-  let error s = print_string ("Error: " ^ s)
-  let output s = print_string s
+  let error s = (print_string ("Error: " ^ s); flush stdout)
+  let output s = (print_string s; flush stdout)
   let clear () =
     if Sys.os_type = "Win32" then
       let _ = Sys.command "cls" in

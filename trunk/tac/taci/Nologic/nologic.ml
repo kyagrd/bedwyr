@@ -18,7 +18,6 @@ No logic does nothing!
   let incl files session =
     (print_endline (String.concat ", " files))
 
-  let tactics = Logic.Table.empty
   let tacticals = Logic.Table.empty
 
   let reset () = ()
@@ -33,9 +32,9 @@ No logic does nothing!
   let validSequent session = true
   let sequent session = Some((), ())
   let sequents session = []
-  let string_of_sequents session = ""
+  let string_of_sequents sequents = "()"
   let updateSequents sequents session = ()
   
-  type tactic = sequent -> (sequent list -> unit) -> unit
-  type tactical = tactic Absyn.tactical list -> sequent -> (sequent list -> unit) -> unit
+  type proof = unit
+  let string_of_proofs proofs = "proofs: ()"
 end

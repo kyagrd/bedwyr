@@ -27,8 +27,8 @@
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
-				Description="Building $(TargetFilename)..."
-				CommandLine="build.bat &quot;$(TargetPath)&quot;  &quot;$(SolutionDir)bin\&quot;&#x0D;&#x0A;"
+				Description="Compiling $(TargetFilename)..."
+				CommandLine="compile.bat &quot;$(TargetPath)&quot;  &quot;$(SolutionDir)bin\&quot;&#x0D;&#x0A;"
 				AdditionalDependencies=""
 				Outputs="none"
 			/>
@@ -92,7 +92,6 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				Description=""
 				CommandLine=""
 			/>
 		</Configuration>
@@ -248,48 +247,38 @@
 			</File>
 		</Filter>
 		<Filter
-			Name="Resource Files"
-			Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav"
-			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}"
-			>
-		</Filter>
-		<Filter
 			Name="ndcore"
 			>
 			<File
-				RelativePath=".\ndcore\index.ml"
+				RelativePath="..\..\bedwyr\src\ndcore\index.ml"
 				>
 			</File>
 			<File
-				RelativePath=".\ndcore\index.mli"
+				RelativePath="..\..\bedwyr\src\ndcore\index.mli"
 				>
 			</File>
 			<File
-				RelativePath=".\ndcore\norm.ml"
+				RelativePath="..\..\bedwyr\src\ndcore\norm.ml"
 				>
 			</File>
 			<File
-				RelativePath=".\ndcore\pprint.ml"
+				RelativePath="..\..\bedwyr\src\ndcore\pprint.ml"
 				>
 			</File>
 			<File
-				RelativePath=".\ndcore\term.ml"
+				RelativePath="..\..\bedwyr\src\ndcore\term.ml"
 				>
 			</File>
 			<File
-				RelativePath=".\ndcore\term.mli"
+				RelativePath="..\..\bedwyr\src\ndcore\term.mli"
 				>
 			</File>
 			<File
-				RelativePath=".\ndcore\test.ml"
+				RelativePath="..\..\bedwyr\src\ndcore\unify.ml"
 				>
 			</File>
 			<File
-				RelativePath=".\ndcore\unify.ml"
-				>
-			</File>
-			<File
-				RelativePath=".\ndcore\unify.mli"
+				RelativePath="..\..\bedwyr\src\ndcore\unify.mli"
 				>
 			</File>
 		</Filter>
@@ -345,6 +334,46 @@
 				>
 			</File>
 		</Filter>
+		<Filter
+			Name="Firstorder"
+			>
+			<File
+				RelativePath=".\Firstorder\firstorder.ml"
+				>
+			</File>
+			<File
+				RelativePath=".\Firstorder\firstorder.mli"
+				>
+			</File>
+			<File
+				RelativePath=".\firstorderabsyn.ml"
+				>
+			</File>
+			<File
+				RelativePath=".\firstorderabsyn.mli"
+				>
+			</File>
+			<File
+				RelativePath=".\Firstorder\firstorderlexer.mll"
+				>
+			</File>
+			<File
+				RelativePath=".\Firstorder\firstorderparser.mly"
+				>
+			</File>
+		</Filter>
+		<File
+			RelativePath=".\compile.bat"
+			>
+			<FileConfiguration
+				Name="Debug|Win32"
+				ExcludedFromBuild="true"
+				>
+				<Tool
+					Name="VCCustomBuildTool"
+				/>
+			</FileConfiguration>
+		</File>
 	</Files>
 	<Globals>
 	</Globals>

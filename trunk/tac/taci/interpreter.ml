@@ -12,12 +12,16 @@ end
 module Make (O : Output.Output) (L : Logic.Logic) =
 struct
   type session = L.session
+  type proofbuilder = L.proof Logic.proofbuilder
   exception Exit of session
   exception Success of session
+  exception Failure
   
   let timing = ref false
-  let debug = ref false
   
+  (********************************************************************
+  *findTactical:
+  ********************************************************************)
   let findTactical name session =
     try
       let tactical = Logic.Table.find name L.tacticals in
@@ -25,15 +29,14 @@ struct
     with
       Not_found -> None
   
+  (********************************************************************
+  *applyTactical:
+  ********************************************************************)
   let applyTactical tactical session sc =
     match tactical with
         Absyn.Tactical(tac) ->
-          let so = L.sequent session in
-          if Option.isSome so then
-            let (sequent, session') = Option.get so in
-            (tac sequent (sc session'))
-          else
-            ()
+          let seqs = L.sequents session in
+          tac seqs (sc session)
       | Absyn.String(_) -> failwith "invalid quoted string"
     
   let helpMessage =
@@ -116,33 +119,41 @@ Taci v0.0
   ********************************************************************)
   let tactical pretactical session =
     (******************************************************************
-    *sc:
+    *success:
     * The toplevel success continuation.
     ******************************************************************)
-    let sc session sequents =
-      let currentSequents = L.sequents session in
-      let newSequents = (sequents @ currentSequents) in
-      let session' = L.updateSequents newSequents session in
-      raise (Success session')
+    let success session newSequents oldSequents proofBuilder continue =
+      let session' = L.updateSequents (newSequents @ oldSequents) session in
+      raise (Success(session'))
+    in
+    
+    (******************************************************************
+    *failure:
+    * The toplevel failure continuation.
+    ******************************************************************)
+    let failure () =
+      raise Failure
     in
     
     try
       let () = O.debug ("Pretactical: " ^ (Absyn.string_of_pretactical pretactical) ^ ".\n") in
-
       let tactical = buildTactical pretactical session in
-      let () = (applyTactical tactical session sc) in
-      (O.output "Failure.\n";
-      session)
+      let () = O.debug ("Built tactical.\n") in
+      let () = (applyTactical tactical session success failure) in
+      session
     with
         Absyn.SyntaxError(s) ->
           (O.error (s ^ ".\n");
           session)
-      | Success(session) ->
+      | Success(s) ->
           (O.output "Success.\n";
-          if not (L.validSequent session) then
+          if not (L.validSequent s) then
             (O.output "Proved.\n";
-            session)
+            s)
           else
+            s)
+      | Failure ->
+          (O.output "Failure.\n";
           session)
 
   (********************************************************************
@@ -164,7 +175,7 @@ Taci v0.0
       | Absyn.Timing(onoff) ->
           (timing := onoff; session)
       | Absyn.Debug(onoff) ->
-          (debug := onoff; session)
+          (O.showDebug := onoff; session)
       | Absyn.Include(sl) ->
           (L.incl sl session)
       | Absyn.PreTactical(pretactical) ->
@@ -193,7 +204,7 @@ Taci v0.0
       let input = Toplevel.parseStringCommand s in      
       let session' = handleInput input session in
       if L.validSequent session' then
-        (O.output ((L.string_of_sequents session') ^ "\n");
+        (O.output ((L.string_of_sequents (L.sequents session')) ^ "\n");
         session')
       else
         session'
