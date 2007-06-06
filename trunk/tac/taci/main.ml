@@ -1,16 +1,7 @@
 let xmlOutput = ref false
 let logicName = ref ""
 let debug = ref false
-    
-(**********************************************************************
-*parseArgs:
-**********************************************************************)
-let parseArgs =
-  fun () ->
-    let speclist = [("--xml", Arg.Set(xmlOutput), "output xml");
-                    ("--logic", Arg.Set_string(logicName), "logic");
-                    ("--debug", Arg.Set(debug), "enable debugging")] in
-    (Arg.parse speclist (fun s -> ()) "Usage: taci --logic \"logic name\"")
+let printLogicInformation = ref false
 
 let consoleTable =
   let module O = Output.ConsoleOutput in
@@ -27,9 +18,10 @@ let consoleTable =
   let module FOInterp = Interpreter.Make (O) (FO) in
   let module FOI = Interface.Make (FOInterp) in
   
-  [("propositional", PI.interpret);
-  ("firstorder", FOI.interpret);
-  ("none", NI.interpret)]
+  [("firstorder", (FO.name, FOI.interpret));
+  ("none", (N.name, NI.interpret));
+  ("propositional", (P.name, PI.interpret))]
+
 
 let xmlTable =
   let module O = Output.XmlOutput in
@@ -46,9 +38,49 @@ let xmlTable =
   let module FOInterp = Interpreter.Make (O) (FO) in
   let module FOI = Interface.Make (FOInterp) in
   
-  [("propositional", PI.interpret);
-  ("firstorder", FOI.interpret);
-  ("none", NI.interpret)]
+  [("firstorder", (FO.name, FOI.interpret));
+  ("none", (N.name, NI.interpret));
+  ("propositional", (P.name, PI.interpret))]
+
+let rec getLogicInterpreter error table name=
+  try
+    let (_,interpreter) = (List.assoc name xmlTable) in
+    Some interpreter
+  with
+    Not_found ->
+      if !logicName = "" then
+        (error ("No logic specified.\n");
+        printHelp ();
+        None)
+      else
+        (error ("Invalid logic name: " ^ !logicName ^ ".\n");
+        None)
+
+and printLogics () =
+  let get (key, (name, _)) =
+    key ^ (String.make (20 - (String.length key)) ' ') ^ ":  " ^ name
+  in
+  if (!xmlOutput) then
+    (Output.XmlOutput.output ("Logics:\n\t" ^ (String.concat "\n\t" (List.map get consoleTable)) ^ "\n");
+    exit 0)
+  else
+    (Output.ConsoleOutput.output ("Logics:\n\t" ^ (String.concat "\n\t" (List.map get consoleTable)) ^ "\n");
+    exit 0)
+
+(**********************************************************************
+*parseArgs:
+**********************************************************************)
+and printHelp () = (Arg.usage speclist usage; exit 0)
+and speclist = [("--debug", Arg.Set(debug), "enable debugging");
+                ("-help", Arg.Unit(printHelp), "");
+                ("--help", Arg.Unit(printHelp), "print usage information");
+                ("--logic", Arg.Set_string(logicName), "logic");
+                ("--logics", Arg.Set(printLogicInformation), "list logics");
+                ("--xml", Arg.Set(xmlOutput), "output xml")]
+and usage = "Usage: taci --logic \"logic name\"\n\nOptions:"
+
+let parseArgs output =
+    (Arg.parse speclist (fun s -> ()) usage)
 
 (**********************************************************************
 *main:
@@ -57,26 +89,24 @@ let main () =
   (*  Parse the command line arguments. *)
   let _ = parseArgs () in
   
+  if !printLogicInformation then
+    printLogics ()
+  else
+  
   if !xmlOutput then
     let () = Output.XmlOutput.showDebug := !debug in
-    try
-      (List.assoc !logicName xmlTable) ()
-    with
-      Not_found ->
-        if !logicName = "" then
-          Output.XmlOutput.error ("No logic specified.\n")
-        else
-          Output.XmlOutput.error ("Invalid logic name: " ^ !logicName ^ ".\n")
+    let i = getLogicInterpreter (Output.XmlOutput.error) xmlTable !logicName in
+    if Option.isSome i then
+      (Option.get i) ()
+    else
+      ()
   else
     let () = Output.ConsoleOutput.showDebug := !debug in
-    try
-      (List.assoc !logicName consoleTable) ()
-    with
-      Not_found ->
-        if !logicName = "" then
-          Output.ConsoleOutput.error ("No logic specified.\n")
-        else
-          Output.ConsoleOutput.error ("Invalid logic name: " ^ !logicName ^ ".\n")
+    let i = getLogicInterpreter (Output.ConsoleOutput.error) consoleTable !logicName in
+    if Option.isSome i then
+      (Option.get i) ()
+    else
+      ()
 
 (*  Execute main  *)
 let _ = main ()
