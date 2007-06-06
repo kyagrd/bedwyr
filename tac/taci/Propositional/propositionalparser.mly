@@ -1,5 +1,4 @@
 %{
-  open Propositional
 %}
 
 %token AND OR IMPLICATION NOT TRUE FALSE EOF

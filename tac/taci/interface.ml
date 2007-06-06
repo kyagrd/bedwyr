@@ -1,3 +1,8 @@
+module type Interface =
+sig
+  val interpret : unit -> unit
+end
+
 module Make (I : Interpreter.Interpreter) =
 struct
   let interpret () =

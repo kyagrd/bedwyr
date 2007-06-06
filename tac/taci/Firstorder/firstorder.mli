@@ -1,0 +1,1 @@
+module Firstorder : functor (O : Output.Output) -> Logic.Logic
