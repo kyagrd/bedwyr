@@ -5,7 +5,10 @@ sig
   val error : string -> unit
   val debug : string -> unit
   val output : string -> unit
+  val goal : string -> unit
   val clear : unit -> unit
+  val logics : (string * string) list -> unit
+  val tacticals : string list -> unit
 end
 
 module ConsoleOutput : Output

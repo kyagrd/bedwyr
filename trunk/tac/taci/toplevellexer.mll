@@ -53,8 +53,13 @@ rule command = parse
 | "on"    {ON}
 | "off"   {OFF}
 
+| "tactical"    {TACTICAL}
+| "tacticals"   {TACTICALS}
+| "logic"       {LOGIC}
+| "logics"      {LOGICS}
+
 | "theorem"     {THEOREM}
-| "definition"  {DEFINITION}
+| "define"  {DEFINITION}
 | '"' (instring as n) '"' {String.iter (function '\n' -> incrline lexbuf | _ -> ()) n ; STRING(n)}
 | name as n     {ID n}
 | _ as c  {raise (Absyn.SyntaxError("invalid character '" ^ (String.make 1 c) ^ "'"))}

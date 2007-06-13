@@ -2,11 +2,12 @@ module type Interpreter =
 sig
   type session
   exception Exit of session
+  exception Logic of string
 
   val onStart : unit -> session
   val onEnd : session -> unit  
   val onPrompt : session -> session
-  val onInput : string -> session -> session 
+  val onInput : session -> session 
 end
 
 module Make (O : Output.Output) (L : Logic.Logic) =
@@ -14,7 +15,8 @@ struct
   type session = L.session
   type proofbuilder = L.proof Logic.proofbuilder
   exception Exit of session
-  exception Success of session
+  exception Logic of string
+  exception Success of session * proofbuilder
   exception Failure
   
   let timing = ref false
@@ -24,24 +26,14 @@ struct
   ********************************************************************)
   let findTactical name session =
     try
-      let tactical = Logic.Table.find name L.tacticals in
+      let tacticals = L.tacticals session in
+      let tactical = Logic.Table.find name tacticals in
       Some tactical
     with
       Not_found -> None
   
-  (********************************************************************
-  *applyTactical:
-  ********************************************************************)
-  let applyTactical tactical session sc =
-    match tactical with
-        Absyn.Tactical(tac) ->
-          let seqs = L.sequents session in
-          tac seqs (sc session)
-      | Absyn.String(_) -> failwith "invalid quoted string"
-    
   let helpMessage =
-"
-Taci v0.0
+"Taci v0.0
 
 #clear.                     : Clear the screen.
 #debug <on | off>.          : Turn debugging on or off.
@@ -58,12 +50,10 @@ Taci v0.0
 
   let startupMessage = "Welcome to " ^ helpMessage
   let showHelp () =
-    (O.output helpMessage;
-    O.output L.info)
+    (O.output (helpMessage ^ L.info))
 
   let showStartup () =
-    (O.output startupMessage;
-    O.output L.start)
+    (O.output (startupMessage ^ L.start))
 
   (********************************************************************
   *Undo/Redo:
@@ -78,7 +68,7 @@ Taci v0.0
       let session' = List.hd (!undoList) in
       (redoList := session :: (!redoList);
       undoList := List.tl (!undoList);
-      session')
+      (L.undo session'))
     else
       (O.error "nothing do undo.\n";
       session)
@@ -88,10 +78,21 @@ Taci v0.0
       let session' = List.hd (!redoList) in
       (undoList := session :: (!undoList);
       redoList := List.tl (!redoList);
-      session')
+      (L.redo session'))
     else
       (O.error "nothing do redo.\n";
       session)
+
+  (********************************************************************
+  *applyTactical:
+  ********************************************************************)
+  let applyTactical tactical session sc =
+    match tactical with
+        Absyn.Tactical(tac) ->
+          let seqs = L.sequents session in
+          tac seqs (sc session)
+      | Absyn.String(_) -> failwith "invalid quoted string"
+    
   (********************************************************************
   *buildTactical:
   * Constructs a tactical from an absyn pretactical.
@@ -107,7 +108,7 @@ Taci v0.0
           let top = findTactical name session in
           if Option.isSome top then
             let t = Option.get top in
-            Absyn.Tactical(t (List.map buildArg args))
+            Absyn.Tactical(t session (List.map buildArg args))
           else
             raise (Absyn.SyntaxError ("undefined tactical: " ^ name))
       | Absyn.StringPreTactical(s) ->
@@ -123,8 +124,10 @@ Taci v0.0
     * The toplevel success continuation.
     ******************************************************************)
     let success session newSequents oldSequents proofBuilder continue =
-      let session' = L.updateSequents (newSequents @ oldSequents) session in
-      raise (Success(session'))
+      let currentProof = L.proof session in
+      let proof' = (Logic.composeProofBuilders proofBuilder currentProof) in
+      let session' = L.update (newSequents @ oldSequents) proof' session in
+      raise (Success(session', proof'))
     in
     
     (******************************************************************
@@ -145,16 +148,61 @@ Taci v0.0
         Absyn.SyntaxError(s) ->
           (O.error (s ^ ".\n");
           session)
-      | Success(s) ->
+      | Success(s, pb) ->
           (O.output "Success.\n";
           if not (L.validSequent s) then
-            (O.output "Proved.\n";
+            (O.output ("Proved:\n" ^ (L.string_of_proofs (pb [])) ^ "\n");
+            O.goal "";
             s)
           else
             s)
       | Failure ->
           (O.output "Failure.\n";
           session)
+
+  (********************************************************************
+  *makeTactical:
+  ********************************************************************)
+  let makeTactical name t session args =
+    match args with
+      [] -> fun sequents sc fc -> (t sequents sc fc)
+    | _ -> fun _ _ fc -> (O.error (name ^ ": invalid arguments.\n"); fc ())
+
+  let defineTactical name pretactical session =
+    match (buildTactical pretactical session) with
+        Absyn.Tactical(t) ->
+          let t' = makeTactical name t in
+          (L.defineTactical name t' session)
+      | _ -> session
+
+  (********************************************************************
+  *showLogics:
+  * Lists all logics available.
+  ********************************************************************)
+  let showLogics _ =
+    (O.logics Logics.logics)
+  
+  (********************************************************************
+  *showTacticals:
+  * Lists all tacticals available.
+  ********************************************************************)
+  let showTacticals session =
+    let get k _ result =
+      k::result
+    in
+    let tacticals = Logic.Table.fold get (L.tacticals session) [] in
+    let tacticals' = List.sort compare tacticals in
+    O.tacticals tacticals'
+
+  (********************************************************************
+  *loadLogic:
+  * Loads the given logic.
+  ********************************************************************)
+  let loadLogic l =
+    if (Logics.find l) then
+      raise (Logic l)
+    else
+      (O.error ("undefined logic: " ^ l))
 
   (********************************************************************
   *handleInput:
@@ -170,18 +218,23 @@ Taci v0.0
       | Absyn.Theorem(name, t) ->
           (resetLists ();
           L.prove name t session)
-      | Absyn.Definition(d) ->
-          (L.definition d session)
+      | Absyn.Definitions(ds) ->
+          (L.definitions ds session)
       | Absyn.Timing(onoff) ->
           (timing := onoff; session)
       | Absyn.Debug(onoff) ->
           (O.showDebug := onoff; session)
       | Absyn.Include(sl) ->
           (L.incl sl session)
+      | Absyn.Logics -> (showLogics session; session)
+      | Absyn.Logic(s) -> (loadLogic s; session)
+      | Absyn.Tacticals -> (showTacticals session; session)
+      | Absyn.TacticalDefinition(name, pretactical) ->
+          (defineTactical name pretactical session)
       | Absyn.PreTactical(pretactical) ->
           if (L.validSequent session) then
             (redoList := [];
-            undoList := session :: (!undoList);
+            undoList := (session) :: (!undoList);
             tactical pretactical session)
           else
             (O.error "No valid sequent.\n";
@@ -199,12 +252,12 @@ Taci v0.0
   
   let onEnd session = ()
 
-  let onInput s session =
+  let onInput session =
     try
-      let input = Toplevel.parseStringCommand s in      
+      let input = Toplevel.parseStdinCommand () in      
       let session' = handleInput input session in
       if L.validSequent session' then
-        (O.output ((L.string_of_sequents (L.sequents session')) ^ "\n");
+        (O.goal ((L.string_of_sequents (L.sequents session')) ^ "\n");
         session')
       else
         session'

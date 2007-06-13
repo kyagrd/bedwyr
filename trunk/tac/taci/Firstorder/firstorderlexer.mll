@@ -39,17 +39,20 @@ rule token = parse
 | "(" {LPAREN}
 | ")" {RPAREN}
 
+| "_" {ANONYMOUS}
 | "=" {EQ}
 | "," {AND}
 | "&" {AND}
 | ";" {OR}
 | "->" {IMP}
-| ":-" {IF}
+| ":=" {DEF}
 | "\\" {BSLASH}
 
-| "pi" {PI}
-| "sigma" {SIGMA}
-| "nabla" {NABLA}
+| "pi"      {PI}
+| "sigma"   {SIGMA}
+| "nabla"   {NABLA}
+| "mu"      {MU}
+| "lambda"  {LAMBDA}
 
 | name as n {ID n}
 | '"' (instring as n) '"'

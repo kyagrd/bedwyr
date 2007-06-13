@@ -18,7 +18,7 @@ namespace StickyTaci
       IdeCtrl ctrl = new IdeCtrl();
       IdeForm frm = new IdeForm(ctrl);
       ctrl.Form = frm;
-      ctrl.StartTaci("taci.exe", "--xml --logic propositional");
+      ctrl.StartTaci("taci.exe", "--xml --logic firstorder");
       Application.Run(frm);
     }
   }

@@ -36,6 +36,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AboutDlg.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="AboutDlg.Designer.cs">
+      <DependentUpon>AboutDlg.cs</DependentUpon>
+    </Compile>
     <Compile Include="IdeCtrl.cs" />
     <Compile Include="IdeForm.cs">
       <SubType>Form</SubType>
@@ -45,6 +51,10 @@
     </Compile>
     <Compile Include="StickyTaci.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <EmbeddedResource Include="AboutDlg.resx">
+      <SubType>Designer</SubType>
+      <DependentUpon>AboutDlg.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="IdeForm.resx">
       <SubType>Designer</SubType>
       <DependentUpon>IdeForm.cs</DependentUpon>
@@ -69,6 +79,13 @@
     </Compile>
     <Compile Include="Taci.cs" />
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="Data\CurrentLine.bmp">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Data\Large.ico" />
+    <Content Include="Data\Small.ico" />
+  </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
@@ -78,6 +95,8 @@
   </Target>
   -->
   <PropertyGroup>
-    <PostBuildEvent>xcopy "$(TargetPath)" "$(SolutionDir)bin\" /Y</PostBuildEvent>
+    <PostBuildEvent>xcopy "$(TargetPath)" "$(SolutionDir)bin\" /Y
+xcopy "$(TargetDir)Data\*" "$(SolutionDir)bin\Data\" /Y
+</PostBuildEvent>
   </PropertyGroup>
 </Project>

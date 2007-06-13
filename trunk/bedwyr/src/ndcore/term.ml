@@ -224,7 +224,7 @@ let logic_vars = get_vars (fun v -> v.tag = Logic)
 (** Copy all variables in a list of terms,
   * only preserving the sharing inside the list.
   * The terms are assumed to be deep-normalized. *)
-let copy l =
+let copy () =
   let tbl = Hashtbl.create 100 in
   let rec cp tm = match observe tm with
     | Var v ->
@@ -239,7 +239,7 @@ let copy l =
     | NB i | DB i as x -> x
     | Susp _ | Ptr _ -> assert false
   in
-    List.map cp l
+    fun l -> cp l
 
 (** Utilities.
   * Easy creation of constants and variables, with sharing. *)

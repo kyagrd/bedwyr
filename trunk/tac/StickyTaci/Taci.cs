@@ -50,6 +50,7 @@ namespace StickyTaci
       m_Taci.BeginOutputReadLine();
     }
 
+   
     public void Write(string s)
     {
       m_Taci.StandardInput.WriteLine(s);
@@ -72,9 +73,8 @@ namespace StickyTaci
       }
     }
 
-    private void Taci_OutputDataReceived(object sender, DataReceivedEventArgs e)
+    private void ProcessOutput()
     {
-      m_Data += e.Data;
       try
       {
         XmlDocument doc = new XmlDocument();
@@ -87,6 +87,11 @@ namespace StickyTaci
         System.Diagnostics.Debug.WriteLine("Unable to parse: " + m_Data);
         return;
       }
+    }
+    private void Taci_OutputDataReceived(object sender, DataReceivedEventArgs e)
+    {
+      m_Data += e.Data;
+      ProcessOutput();
     }
 
     private void ParseOutput(XmlDocument doc)
