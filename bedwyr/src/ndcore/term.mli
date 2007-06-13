@@ -138,7 +138,7 @@ val get_vars : (var -> bool) -> term list -> term list
 (** Logic variables of [ts], which is assumed to be fully normalized. *)
 val logic_vars : term list -> term list
 
-(** Copy all variables in a list of terms,
-  * only preserving the sharing inside the list.
-  * The terms are assumed to be deep-normalized. *)
-val copy : term list -> term list
+(** copy () returns a copier that, when applied to a term,
+    returns a copier term where sharing has been preserved
+    for all calls to the copier *)
+val copy : unit -> term -> term

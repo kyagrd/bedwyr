@@ -14,11 +14,16 @@ let consoleTable =
   let module NInterp = Interpreter.Make (O) (N) in
   let module NI = Interface.Make (NInterp) in
   
-  let module FO = Firstorder.Firstorder (O) in
+  let module FO = Firstorder.Firstordernonstrict (O) in
   let module FOInterp = Interpreter.Make (O) (FO) in
   let module FOI = Interface.Make (FOInterp) in
   
+  let module FOS = Firstorder.Firstorderstrict (O) in
+  let module FOSInterp = Interpreter.Make (O) (FO) in
+  let module FOSI = Interface.Make (FOInterp) in
+  
   [("firstorder", (FO.name, FOI.interpret));
+  ("firstorder-strict", (FOS.name, FOSI.interpret));
   ("none", (N.name, NI.interpret));
   ("propositional", (P.name, PI.interpret))]
 
@@ -34,17 +39,22 @@ let xmlTable =
   let module NInterp = Interpreter.Make (O) (N) in
   let module NI = Interface.Make (NInterp) in
   
-  let module FO = Firstorder.Firstorder (O) in
+  let module FO = Firstorder.Firstordernonstrict (O) in
   let module FOInterp = Interpreter.Make (O) (FO) in
   let module FOI = Interface.Make (FOInterp) in
   
+  let module FOS = Firstorder.Firstorderstrict (O) in
+  let module FOSInterp = Interpreter.Make (O) (FO) in
+  let module FOSI = Interface.Make (FOInterp) in
+  
   [("firstorder", (FO.name, FOI.interpret));
+  ("firstorder-strict", (FOS.name, FOSI.interpret));
   ("none", (N.name, NI.interpret));
   ("propositional", (P.name, PI.interpret))]
 
 let rec getLogicInterpreter error table name=
   try
-    let (_,interpreter) = (List.assoc name xmlTable) in
+    let (_,interpreter) = (List.assoc name table) in
     Some interpreter
   with
     Not_found ->
@@ -91,22 +101,21 @@ let main () =
   
   if !printLogicInformation then
     printLogics ()
-  else
-  
-  if !xmlOutput then
-    let () = Output.XmlOutput.showDebug := !debug in
-    let i = getLogicInterpreter (Output.XmlOutput.error) xmlTable !logicName in
-    if Option.isSome i then
-      (Option.get i) ()
+  else  
+    if !xmlOutput then
+      let () = Output.XmlOutput.showDebug := !debug in
+      let i = getLogicInterpreter (Output.XmlOutput.error) xmlTable !logicName in
+      if Option.isSome i then
+        (Option.get i) ()
+      else
+        ()
     else
-      ()
-  else
-    let () = Output.ConsoleOutput.showDebug := !debug in
-    let i = getLogicInterpreter (Output.ConsoleOutput.error) consoleTable !logicName in
-    if Option.isSome i then
-      (Option.get i) ()
-    else
-      ()
+      let () = Output.ConsoleOutput.showDebug := !debug in
+      let i = getLogicInterpreter (Output.ConsoleOutput.error) consoleTable !logicName in
+      if Option.isSome i then
+        (Option.get i) ()
+      else
+        ()
 
 (*  Execute main  *)
 let _ = main ()

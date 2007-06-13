@@ -41,10 +41,12 @@ Tacticals:
   * A session is just the current list of sequents.  A session is
   * "complete" when it has no sequents.
   ********************************************************************)
-  type session = Session of (sequent list)
-  let emptySession = Session([])
-  let getSessionSequents (Session(sequents)) = sequents
-  let setSessionSequents sequents (Session(_)) = (Session(sequents))
+  type session = Session of (sequent list * proof Logic.proofbuilder *
+    (session, (sequent, proof) Logic.tactic) Logic.tactical Logic.table)
+
+  let getSessionTacticals (Session(_,_,t)) = t
+  let getSessionSequents (Session(sequents,_,_)) = sequents
+  let setSessionSequents sequents (Session(_,b,t)) = (Session(sequents,b,t))
 
   let string_of_sequent seq =
     let lhs = getSequentLHS seq in
@@ -66,10 +68,10 @@ Tacticals:
     else
       (string_of_sequent mainseq) ^ "\n"
 
+  let proof (Session(_,p,_)) = p
+
   let incl files session =
     session
-
-  let reset () = emptySession
 
   let parseTerm t =
     try
@@ -95,26 +97,26 @@ Tacticals:
     else
       session
 
-  let definition d session = session
+  let definitions ds session = session
   let operator name fix prec session = session
-  let updateSequents sequents session = (setSessionSequents sequents session)
+  let update sequents builder session =
+    let tacs = getSessionTacticals session in
+    (Session(sequents,builder,tacs))
+
   let validSequent session =
     match (getSessionSequents session) with
         [] -> false
       | _::_ -> true
-  let sequent session =    
-    let sequents = (getSessionSequents session) in
-    if List.length sequents > 0 then
-      Some (List.hd sequents, (updateSequents (List.tl sequents) session))
-    else
-      None
   let sequents session = (getSessionSequents session)
+  let undo session = session
+  let redo session = session
 
   (********************************************************************
   *Tacticals:
   ********************************************************************)
   module PropositionalSig =
   struct
+    type logic_session = session
     type logic_sequent = sequent
     type logic_proof = proof
   end
@@ -124,7 +126,7 @@ Tacticals:
     s ^ "(" ^ (String.concat ", " proofs) ^ ")"
 
   (*  Axiom *)
-  let axiomTactical = function
+  let axiomTactical session args = match args with
       [] ->
         let pretactic = fun sequent sc fc ->
           let find list el =
@@ -143,7 +145,7 @@ Tacticals:
     | _ -> (G.invalidArguments "axiom")
   
   (*  Trivial *)
-  let trivialTactical = function
+  let trivialTactical session args = match args with
       [] ->
           let pretactic = fun sequent sc fc ->
             let lhs = getSequentLHS sequent in
@@ -158,7 +160,7 @@ Tacticals:
     | _ -> G.invalidArguments "trivial"
 
   (*  Not Right *)
-  let notIR = function
+  let notIR session args = match args with
       [] ->
         let pretactic = fun sequent sc fc ->
           let rec apply terms rhs lhs =
@@ -179,7 +181,7 @@ Tacticals:
     | _ -> G.invalidArguments "not_i_r"
 
   (*  Not Left  *)
-  let notIL = function
+  let notIL session args = match args with
       [] ->
         let pretactic = fun sequent sc fc->
           let rec apply terms lhs rhs =
@@ -200,7 +202,7 @@ Tacticals:
     | _ -> G.invalidArguments "not_i_l"
     
   (*  Implication Right *)
-  let impIR = function
+  let impIR session args = match args with
       [] ->
         let pretactic = fun sequent sc fc ->
           let rec apply terms rhs lhs =
@@ -221,7 +223,7 @@ Tacticals:
     | _ -> G.invalidArguments "imp_i_r"
 
   (*  Implication Left  *)
-  let impIL = function
+  let impIL session args = match args with
       [] ->
         let pretactic = fun sequent sc fc ->
           let rec apply terms lhs rhs =
@@ -243,7 +245,7 @@ Tacticals:
     | _ -> G.invalidArguments "imp_i_l"
 
   (*  Or Left  *)
-  let orIL = function
+  let orIL session args = match args with
       [] ->
         let pretactic = fun sequent sc fc ->
           let rec apply terms lhs rhs =
@@ -265,7 +267,7 @@ Tacticals:
     | _ -> G.invalidArguments "or_i_l"
 
   (*  Or Right  *)
-  let orIR = function
+  let orIR session args = match args with
       [] ->
         let pretactic = fun sequent sc fc ->
           let rec apply terms rhs lhs =
@@ -286,7 +288,7 @@ Tacticals:
     | _ -> G.invalidArguments "or_i_r"
   
   (*  And Left  *)
-  let andIL = function
+  let andIL session args = match args with
       [] ->
         let pretactic = fun sequent sc fc ->
           let rec apply terms lhs rhs =
@@ -307,7 +309,7 @@ Tacticals:
     | _ -> G.invalidArguments "and_i_l"
     
   (*  And Right *)
-  let andIR = function
+  let andIR session args = match args with
       [] -> 
         let pretactic = fun sequent sc fc ->
           let rec apply terms rhs lhs =
@@ -328,41 +330,45 @@ Tacticals:
         G.makeTactical pretactic
     | _ -> G.invalidArguments "and_i_r"
 
-  let orTactical = function
-      [] -> (G.orElseTactical (orIL []) (orIR []))
+  let orTactical session args = match args with
+      [] -> (G.orElseTactical (orIL session []) (orIR session []))
     | _ -> G.invalidArguments "or"
 
-  let andTactical = function
-      [] -> (G.orElseTactical (andIL []) (andIR []))
+  let andTactical session args = match args with
+      [] -> (G.orElseTactical (andIL session []) (andIR session []))
     | _ -> G.invalidArguments "and"
 
-  let impTactical = function
-      [] -> (G.orElseTactical (impIL []) (impIR []))
+  let impTactical session args = match args with
+      [] -> (G.orElseTactical (impIL session []) (impIR session []))
     | _ -> G.invalidArguments "imp"
 
-  let notTactical = function
-      [] -> (G.orElseTactical (notIL []) (notIR []))
+  let notTactical session args = match args with
+      [] -> (G.orElseTactical (notIL session []) (notIR session []))
     | _ -> G.invalidArguments "not"
 
-  let autoTactical s =
-    let any = (G.orElseTactical
-      (G.orElseTactical (andTactical []) (orTactical []))
-      (G.orElseTactical (impTactical []) (notTactical [])))
-    in
-    
-    (G.thenTactical
-      (G.repeatTactical any)
-      (G.orElseTactical
-        (trivialTactical [])
-        (axiomTactical [])))
-
+  let autoTactical session args = match args with
+      [] ->
+        let any = (G.orElseTactical
+          (G.orElseTactical (andTactical session []) (orTactical session []))
+          (G.orElseTactical (impTactical session []) (notTactical session [])))
+        in
+        
+        (G.thenTactical
+          (G.repeatTactical any)
+          (G.orElseTactical
+            (trivialTactical session [])
+            (axiomTactical session [])))
+    | _ -> G.invalidArguments "auto"
   (********************************************************************
   *tacticals:
   * The exported table of tacticals.  These tacticals are the only
   * ones avaible at the toplevel.  GenericTacticals.tacticals is used
   * as the initial table, providing the standard tacticals.
   ********************************************************************)
-  let tacticals =
+  let tacticals session =
+    (getSessionTacticals session)
+
+  let pervasiveTacticals =
     let ts = G.tacticals in    
     let ts = Logic.Table.add "and" andTactical ts in
     let ts = Logic.Table.add "and_r" andIR ts in
@@ -384,4 +390,9 @@ Tacticals:
     let ts = Logic.Table.add "axiom" axiomTactical ts in
     let ts = Logic.Table.add "auto" autoTactical ts in
     ts
+    
+    let emptySession = Session([], (fun l -> l), pervasiveTacticals)
+    let reset () = emptySession
+    let defineTactical name tac (Session(s,pb,t)) =
+      Session(s,pb,Logic.Table.add name tac t)
 end

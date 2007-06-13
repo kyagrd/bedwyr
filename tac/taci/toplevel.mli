@@ -1,1 +1,1 @@
-val parseStringCommand : string -> Absyn.command
+val parseStdinCommand : unit -> Absyn.command

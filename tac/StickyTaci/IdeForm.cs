@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.Text;
 using System.Windows.Forms;
 
@@ -10,10 +11,72 @@ namespace StickyTaci
 {
   public partial class IdeForm : Form
   {
+    public RichTextBox Rtf
+    {
+      get
+      {
+        return inputBox;
+      }
+    }
+
+    private uint m_CurrentLine = 0;
+    public uint CurrentLine
+    {
+      get
+      {
+        return m_CurrentLine;
+      }
+      set
+      {
+        m_CurrentLine = value;
+
+
+        //Hilight everything and make it normal
+        int pos = inputBox.SelectionStart;
+        inputBox.SelectAll();
+        inputBox.SelectionColor = m_InputColor;
+
+        //Hilight everything green upto the current line:
+        if(m_CurrentLine > 0 && m_CurrentLine < inputBox.Lines.Length)
+        {
+          inputBox.Select(0, inputBox.GetFirstCharIndexFromLine((int)(m_CurrentLine)) - 1);
+          
+        }
+        else if(m_CurrentLine > 0 && m_CurrentLine >= inputBox.Lines.Length)
+        {
+          inputBox.SelectAll();
+        }
+        inputBox.SelectionColor = Color.Green;
+        inputBox.DeselectAll();
+        inputBox.SelectionStart = pos;
+        inputBox.SelectionColor = m_InputColor;
+        //Show current line marker:
+        Point p = new Point(1, ((int)((uint)m_InputFont.Height * (m_CurrentLine))));
+        currentLineImagePanel.Location = p;
+      }
+    }
+
     private delegate void OutputHandler(string s);
     private delegate void ClearHandler();
 
-    private Font m_Font = new Font("Courier New", 8, FontStyle.Regular);
+    private Image m_CurrentLineImage = null;
+    private Font m_InputFont = new Font("Courier New", 10, FontStyle.Regular);
+    private Font m_OutputFont = new Font("Courier New", 8, FontStyle.Regular);
+    private Font m_GoalFont = new Font("Courier New", 10, FontStyle.Regular);
+
+    private Color m_InputColor = Color.Black;
+    public Color InputColor
+    {
+      get
+      {
+        return m_InputColor;
+      }
+      set
+      {
+        m_InputColor = value;
+      }
+    }
+
     private Color m_ErrorColor = Color.Red;
     public Color ErrorColor
     {
@@ -65,11 +128,44 @@ namespace StickyTaci
     {
       InitializeComponent();
 
-      goalBox.Font = m_Font;
-      outputBox.SelectionFont = m_Font;
+      m_CurrentLineImage = Image.FromFile("Data/CurrentLine.bmp");
+      currentLineImagePanel.Paint += new PaintEventHandler(currentLineImagePanel_Paint);
+      currentLineImagePanel.Show();
+      
+      goalBox.Font = m_GoalFont;
+      
+      outputBox.Font = m_OutputFont;
+      outputBox.SelectionFont = m_OutputFont;
 
+      inputBox.Font = m_InputFont;
       inputBox.KeyDown += new KeyEventHandler(inputBox_KeyDown);
+      //inputBox.TextChanged += new EventHandler(inputBox_TextChanged);
+      
       m_Ctrl = ctrl;
+
+      mainMenuEdit.DropDownOpening += new EventHandler(mainMenuEdit_DropDownOpening);
+      CurrentLine = 0;
+    }
+
+    void mainMenuEdit_DropDownOpening(object sender, EventArgs e)
+    {
+      mainMenuEditUndo.Enabled = inputBox.CanUndo;
+      mainMenuEditRedo.Enabled = inputBox.CanRedo;
+      mainMenuEditCopy.Enabled = (inputBox.SelectionLength > 0);
+      mainMenuEditPaste.Enabled = inputBox.CanPaste(DataFormats.GetFormat(DataFormats.Text));
+    }
+
+    void currentLineImagePanel_Paint(object sender, PaintEventArgs e)
+    {
+      Rectangle dest = new Rectangle(new Point(0, 0), m_CurrentLineImage.Size);
+      ImageAttributes attr = new ImageAttributes();
+      attr.SetColorKey(Color.Black, Color.Black);
+      e.Graphics.DrawImage(m_CurrentLineImage, dest, 0, 0, m_CurrentLineImage.Width, m_CurrentLineImage.Height, GraphicsUnit.Pixel, attr);
+    }
+
+    void inputBox_TextChanged(object sender, EventArgs e)
+    {
+      Ctrl.OnInputChanged((uint)inputBox.Lines.Length);
     }
 
     public void Output(string s)
@@ -81,7 +177,8 @@ namespace StickyTaci
       }
       else
       {
-        outputBox.SelectionFont = m_Font;
+        outputBox.Clear();
+        outputBox.SelectionFont = m_OutputFont;
         outputBox.SelectionColor = OutputColor;
         outputBox.SelectedText = s;
         outputBox.ScrollToCaret();
@@ -110,9 +207,10 @@ namespace StickyTaci
       }
       else
       {
-        outputBox.SelectionFont = m_Font;
+        outputBox.Clear();
+        outputBox.SelectionFont = m_OutputFont;
         outputBox.SelectionColor = ErrorColor;
-        outputBox.SelectedText = s;
+        outputBox.SelectedText = "Error: " + s;
         outputBox.ScrollToCaret();
       }
     }
@@ -146,12 +244,34 @@ namespace StickyTaci
       }
       else if((e.KeyCode == Keys.Enter) && e.Control && e.Alt)
       {
-        Ctrl.OnAll();
+        Ctrl.OnAll((uint)inputBox.Lines.Length);
         e.SuppressKeyPress = true;
       }
       return;
     }
 
+    public void Clear()
+    {
+      outputBox.Clear();
+      inputBox.Clear();
+      goalBox.Clear();
+    }
+
+    public bool GetNextLine(ref string line)
+    {
+      if(CurrentLine >= inputBox.Lines.Length)
+      {
+        return false;
+      }
+      else
+      {
+        line = inputBox.Lines[CurrentLine];
+        if(CurrentLine == (inputBox.Lines.Length - 1) && line == "" )
+          return false;
+        ++CurrentLine;
+        return true;
+      }
+    }
     private void mainMenuFileExit_Click(object sender, EventArgs e)
     {
       Ctrl.OnExit();
@@ -172,6 +292,75 @@ namespace StickyTaci
     private void mainMenuTacClear_Click(object sender, EventArgs e)
     {
       Ctrl.OnClear();
+    }
+
+    public string GetLine(uint line)
+    {
+      int begin = inputBox.GetFirstCharIndexFromLine((int)line);
+      int end = inputBox.GetFirstCharIndexFromLine((int)line + 1);
+      if(end - begin < 0 || begin < 0 || end < 0)
+        return "";
+      return inputBox.Text.Substring(begin, end - begin);
+    }
+
+    private void mainMenuEditPaste_Click(object sender, EventArgs e)
+    {
+      inputBox.Paste();
+    }
+
+    private void mainMenuEditUndo_Click(object sender, EventArgs e)
+    {
+      inputBox.Undo();
+    }
+
+    private void mainMenuEditRedo_Click(object sender, EventArgs e)
+    {
+      inputBox.Redo();
+    }
+
+    private void mainMenuEditCut_Click(object sender, EventArgs e)
+    {
+      inputBox.Cut();
+    }
+
+    private void mainMenuEditCopy_Click(object sender, EventArgs e)
+    {
+      inputBox.Copy();
+    }
+
+    private void mainMenuEditDelete_Click(object sender, EventArgs e)
+    {
+      inputBox.SelectedText = "";
+    }
+
+    private void mainMenuFileSave_Click(object sender, EventArgs e)
+    {
+      Ctrl.OnSave();
+    }
+
+    private void mainMenuFileSaveAs_Click(object sender, EventArgs e)
+    {
+      Ctrl.OnSaveAs();
+    }
+
+    private void mainMenuEditSelectAll_Click(object sender, EventArgs e)
+    {
+      inputBox.SelectAll();
+    }
+
+    private void mainMenuFileNew_Click(object sender, EventArgs e)
+    {
+      Ctrl.OnNew();
+    }
+
+    private void mainMenuFileOpen_Click(object sender, EventArgs e)
+    {
+      Ctrl.OnOpen();
+    }
+
+    private void mainMenuHelpAbout_Click(object sender, EventArgs e)
+    {
+      Ctrl.OnHelp();
     }
   }
 }

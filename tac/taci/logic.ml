@@ -3,6 +3,18 @@
 **********************************************************************)
 module Table = Map.Make(String)
 type 'a table = 'a Table.t
+let contains el table =
+  try
+    (Table.find el table;
+    true)
+  with
+    Not_found -> false
+
+let find el table =
+  try
+    Some (Table.find el table)
+  with
+    Not_found -> None
 
 (*  Continuations *)
 type continue = unit -> unit
@@ -18,7 +30,15 @@ type ('a, 'b) success = 'a list -> 'a list -> 'b proofbuilder -> continue -> uni
 type ('a, 'b) tactic = 'a list -> ('a, 'b) success -> failure -> unit
 
 (*  Tacticals *)
-type 'a tactical = 'a Absyn.tactical list -> 'a
+type ('a, 'b) tactical = 'a -> 'b Absyn.tactical list -> 'b
+
+(*  Proofs  *)
+let composeProofBuilders b1 b2 =
+  fun l -> b2 (b1 l)
+
+let idProofBuilder =
+  fun l -> l
+
 (**********************************************************************
 *Logic:
 **********************************************************************)
@@ -33,23 +53,29 @@ sig
   val reset : unit -> session
   val operator : string -> string -> int -> session -> session
   val prove : string -> string -> session -> session
-  val definition : string -> session -> session
+  val definitions : string list -> session -> session
+  val undo : session -> session
+  val redo : session -> session
   
   type sequent
   val validSequent : session -> bool
   val sequents : session -> sequent list
   val string_of_sequents : sequent list -> string
-  val updateSequents : sequent list -> session -> session
-  
+    
   type proof
+  val proof : session -> proof proofbuilder
   val string_of_proofs : proof list -> string
   
-  val tacticals : (sequent, proof) tactic tactical table
+  val update : sequent list -> proof proofbuilder -> session -> session
+
+  val tacticals : session -> (session, (sequent, proof) tactic) tactical table
+  val defineTactical : string -> (session, (sequent, proof) tactic) tactical -> session -> session
 end
 
  
 module type LogicSig =
 sig
+  type logic_session
   type logic_sequent
   type logic_proof
 end
@@ -61,7 +87,7 @@ module GenericTacticals (L : LogicSig) (O : Output.Output) =
 struct
   type logic_pretactic = (L.logic_sequent, L.logic_proof) pretactic
   type logic_tactic = (L.logic_sequent, L.logic_proof) tactic
-  type logic_tactical = logic_tactic tactical
+  type logic_tactical = (L.logic_session, logic_tactic) tactical
   
   (********************************************************************
   *empty:
@@ -148,6 +174,16 @@ struct
         (tac2 sequents sc fc)
       in
       (tac1 sequents sc fc')
+
+  (********************************************************************
+  *orElseListTactical:
+  * Builds a nested disjunction from the list.
+  ********************************************************************)
+  let rec orElseListTactical tacs =
+    match tacs with
+      [] -> failureTactical
+    | tac::[] -> tac
+    | tac::tacs -> orElseTactical tac (orElseListTactical tacs)
 
   (********************************************************************
   *tryTactical:
@@ -311,48 +347,48 @@ struct
   (********************************************************************
   * Interfaces for Tacticals
   ********************************************************************)
-  let applyInterface = function
+  let applyInterface session args = match args with
       Absyn.Tactical(tac)::[] -> tac
     | _ -> invalidArguments "apply"
 
-  let orElseInterface = function
+  let orElseInterface session args = match args with
       Absyn.Tactical(tac1)::Absyn.Tactical(tac2)::[] ->
         (orElseTactical tac1 tac2)
     | _ -> invalidArguments "orelse"
 
-  let thenInterface = function
+  let thenInterface session args = match args with
       Absyn.Tactical(tac1)::Absyn.Tactical(tac2)::[] ->
         (thenTactical tac1 tac2)
     | _ -> invalidArguments "then"
 
-  let tryInterface = function
+  let tryInterface session args = match args with
       Absyn.Tactical(tac)::[] ->
         (tryTactical tac)
     | _ -> invalidArguments "try"
 
-  let failureInterface = function
+  let failureInterface session args = match args with
       [] -> (failureTactical)
     | _ -> invalidArguments "fail"
 
-  let idInterface = function
+  let idInterface session args = match args with
       [] -> (idTactical)
     | _ -> invalidArguments "id"
   
-  let repeatInterface = function
+  let repeatInterface session args = match args with
       Absyn.Tactical(tac)::[] ->
         (repeatTactical tac)
     | _ -> invalidArguments "repeat"
 
-  let iterateInterface = function
+  let iterateInterface session args = match args with
       Absyn.Tactical(tac)::[] ->
         (iterateTactical tac)
     | _ -> invalidArguments "iterate"
 
-  let rotateInterface = function
+  let rotateInterface session args = match args with
       [] -> (rotateTactical)
     | _ -> invalidArguments "rotate"
 
-  let completeInterface = function
+  let completeInterface session args = match args with
       Absyn.Tactical(tac)::[] ->
         (completeTactical tac)
     | _ -> invalidArguments "complete"

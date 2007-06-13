@@ -1,8 +1,19 @@
 (**********************************************************************
-*Firstorder:
-* Implements a simple first order logic with equality.
+*NablaSig:
+* Contains a value strictNabla determining whether or not strict nabla
+* comparisons are used in the axiom rule.  Passed to Firstorder
 **********************************************************************)
-module Firstorder (O : Output.Output) =
+module type NablaSig =
+sig
+  val strictNabla : bool
+end
+
+(**********************************************************************
+*Firstorder:
+* Implements a simple first order logic with equality.  Parameterized
+* so that logics with or without nabla strictness can be constructed.
+**********************************************************************)
+module Firstorder (Nabla : NablaSig) (O : Output.Output) =
 struct
   let name = "First Order Logic"
   let info =
@@ -10,7 +21,7 @@ struct
 First Order Logic v0.0
 
 Implements a simple first order logic with equality.
-   
+  
 "
   let start = info
   
@@ -37,14 +48,42 @@ Implements a simple first order logic with equality.
   let getSequentRHS (_,_,r) = r
 
   (********************************************************************
-  *Session:
-  * A session is simply the current list of sequents.
-  ********************************************************************)  
-  type session = Session of sequent list
-  let emptySession = Session([])
-  let getSessionSequents (Session(sequents)) = sequents
-  let setSessionSequents sequents (Session(_)) = (Session(sequents))
+  *Proof:
+  ********************************************************************)
+  type proof = string
+  let string_of_proofs proofs =
+    "\t" ^ (String.concat "\n\t" proofs) ^ "\n"
 
+  (********************************************************************
+  *Session:
+  * A session is:
+  *   tactical table
+  *   definition table
+  *   sequents
+  *   proof builder
+  *   undo info
+  *   redo info
+  ********************************************************************)  
+  type session = Session of
+    ((session, (sequent, proof) Logic.tactic) Logic.tactical Logic.table *
+    Firstorderabsyn.definition Logic.table *
+    sequent list *
+    proof Logic.proofbuilder *
+    Term.bind_state * Term.subst)
+
+  let getSessionSequents (Session(_,_,sequents,_,_,_)) = sequents
+  let setSessionSequents sequents (Session(t,d,_,pb,u,r)) = (Session(t,d,sequents,pb,u,r))
+  let getSessionBuilder (Session(_,_,_,b,_,_)) = b
+  let setSessionBuilder builder (Session(t,d,s,_,u,r)) = (Session(t,d,s,builder,u,r))
+  let getSessionUndo (Session(_,_,_,_,u,_)) = u
+  let getSessionRedo (Session(_,_,_,_,_,r)) = r
+  let getSessionTacticals (Session(t,_,_,_,_,_)) = t
+  let setSessionTacticals tacs (Session(_,d,s,pb,u,r)) = (Session(tacs,d,s,pb,u,r))
+  let getSessionDefinitions (Session(_,d,_,_,_,_)) = d
+  let setSessionDefinitions defs (Session(t,_,s,pb,u,r)) = (Session(t,defs,s,pb,u,r))
+  
+  let proof session = getSessionBuilder session
+  
   let string_of_sequent seq =
     let lhs = getSequentLHS seq in
     let rhs = getSequentRHS seq in
@@ -67,16 +106,11 @@ Implements a simple first order logic with equality.
 
   (********************************************************************
   *incl:
+  * Given a list of files, include all definitions in them.
   ********************************************************************)
   let incl files session =
-    session
-
-  (********************************************************************
-  *reset:
-  * Provides a new sequent.  This amounts to returning the empty
-  * sequent.
-  ********************************************************************)
-  let reset () = emptySession
+    (O.error "logic does not implement #include.";
+    session)
   
   (********************************************************************
   *parseTerm:
@@ -93,16 +127,65 @@ Implements a simple first order logic with equality.
         None)
   
   (********************************************************************
+  *processFormula:
+  * Iterates over a formula, replacing applications with the correct
+  * definitions if they exist.
+  ********************************************************************)
+  let processFormula defs f =
+    let tf t = t in
+    let rec ff f =
+      match f with
+          Firstorderabsyn.AtomicApplicationFormula(head,args) ->
+            let def = Logic.find head defs in
+            if (Option.isSome def) then
+              let def = (Option.get def) in
+              let arity = Firstorderabsyn.getDefinitionArity def in
+              let body = Firstorderabsyn.getDefinitionBody def in
+              if arity = List.length args then
+                let body' = (Firstorderabsyn.applyMu body f) in
+                (Firstorderabsyn.apply args body')
+              else
+                raise (Firstorderabsyn.SemanticError("'" ^ head ^
+                  "' expects " ^ (string_of_int arity) ^ " arguments"))
+            else
+              f
+        | _ -> (Firstorderabsyn.mapFormula ff tf f)
+    in
+    (ff f)
+
+  (********************************************************************
   *parseFormula:
   * Parses the argument into a formula.  If successful, returns Some
   * with the parsed formula, otherwise it returns None.
   ********************************************************************)
-  let parseFormula t =
+  let parseFormula defs t =        
     try
       let formula = Firstorderparser.toplevel_formula Firstorderlexer.token (Lexing.from_string t) in
-      Some formula
+      Some (processFormula defs formula)
     with
         Firstorderabsyn.SyntaxError(s) ->
+          (O.error (s ^ ".\n");
+          None)
+      | Firstorderabsyn.SemanticError(s) ->
+          (O.error (s ^ ".\n");
+          None)
+      | Parsing.Parse_error ->
+          (O.error "Syntax error.\n";
+          None)
+  (********************************************************************
+  *parseDefinition:
+  * Parses the argument into a definition.  If successful, returns Some
+  * with the parsed definition, otherwise it returns None.
+  ********************************************************************)
+  let parseDefinition t =        
+    try
+      let def = Firstorderparser.toplevel_definition Firstorderlexer.token (Lexing.from_string t) in
+      Some def
+    with
+        Firstorderabsyn.SyntaxError(s) ->
+          (O.error (s ^ ".\n");
+          None)
+      | Firstorderabsyn.SemanticError(s) ->
           (O.error (s ^ ".\n");
           None)
       | Parsing.Parse_error ->
@@ -115,82 +198,183 @@ Implements a simple first order logic with equality.
   * prove the formula.
   ********************************************************************)
   let prove name t session =
-    let f = parseFormula t in
+    let defs = getSessionDefinitions session in
+    let f = parseFormula defs t in
     if Option.isSome f then
-      let seq = makeSequent [] [makeFormula (Option.get f)] in
-      (setSessionSequents [seq] session)
+      let f = Option.get f in
+      if (Firstorderabsyn.containsAnonymous f) then
+        (O.error "formula contains a template.\n";
+        session)
+      else
+        let seq = makeSequent [] [makeFormula f] in
+        (setSessionSequents [seq] session)
     else
       session
 
-  let definition d session = session
+  (********************************************************************
+  *definitions:
+  * Given a list of strings representing possibly mutually-recursive
+  * definitions, parses the definitions and adds them to the definition
+  * table.
+  ********************************************************************)
+  let definitions defstrings session =
+    (******************************************************************
+    *processPreDefinitions:
+    * Processes a list of mutually recursive predefinitions into
+    * a list of definitions.
+    ******************************************************************)
+    let processPreDefinitions predefs =
+      (****************************************************************
+      *processFormula:
+      * Abstracts a definition.
+      ****************************************************************)
+      let processFormula abstractions f =
+        (**************************************************************
+        *getDB:
+        * Get the DB index of a name.
+        **************************************************************)
+        let getDB name abs =
+          let rec get name abs =
+            match abs with
+              [] -> 0
+            | a::abs' ->
+                if a = name then
+                  1
+                else
+                  1 + (get name abs')
+          in
+          let len = (List.length abs) in
+          let i = (get name abs) in
+          if i >= len then
+            None
+          else
+            Some (len - i)
+        in
+        
+        (**************************************************************
+        *findDefinition:
+        *
+        **************************************************************)
+        let findDefinition name predefs =
+          try
+            let find name (Firstorderabsyn.PreDefinition(name',ids,formula)) =
+              name' = name
+            in
+            Some (List.find (find name) predefs)
+          with
+            Not_found -> None
+        in
+        
+        let tf t = t in
+        
+        let rec ff abstractions f =
+          match f with
+              Firstorderabsyn.AtomicApplicationFormula(head, args) ->
+                let db = getDB head abstractions in
+                if Option.isSome db then
+                  Firstorderabsyn.DBFormula (Option.get db)
+                else
+                  let def = findDefinition head predefs in
+                  if Option.isSome def then
+                    let Firstorderabsyn.PreDefinition(_,_,f') = (Option.get def) in
+                    (ff (head::abstractions) f')
+                  else
+                    f
+            | _ -> (Firstorderabsyn.mapFormula (ff abstractions) tf f)
+        in
+        (ff abstractions f)
+      in
+      
+      let rec abstract ids formula =
+        match ids with
+          [] -> formula
+        | id::ids' ->
+            let formula' = (Firstorderabsyn.abstract (Term.atom id) formula) in
+            (abstract ids' formula')
+      in
+      
+      let processPreDefinition (Firstorderabsyn.PreDefinition(name, ids, formula)) =
+        let formula' = (processFormula [name] formula) in
+        Firstorderabsyn.Definition(name, List.length ids, (abstract ids formula'))
+      in
+      (List.map processPreDefinition predefs)
+    in
+    
+    (******************************************************************
+    *addDefinitions:
+    * Given a list of definitions and a table, adds the definitions
+    * to the table, but doesn't allow for redefinitions.
+    ******************************************************************)
+    let rec addDefinitions defs table =
+      match defs with
+        [] -> table
+      | def::ds ->
+          let (Firstorderabsyn.Definition(name,arity,formula)) = def in
+          if (Logic.contains name table) then
+            (O.error ("'" ^ name ^ "' already defined.\n");
+            table)
+          else
+            (Logic.Table.add name def table)
+    in
+        
+    let predefs = (List.map parseDefinition defstrings) in
+    if (List.exists (Option.isNone) predefs) then
+      (O.error "definitions contain errors.\n";
+      session)
+    else
+      let defs = processPreDefinitions (List.map (Option.get) predefs) in
+      let defs' = (addDefinitions defs (getSessionDefinitions session)) in
+      (setSessionDefinitions defs' session)
+
+
   let operator name fix prec session = session
-  let updateSequents sequents session = (setSessionSequents sequents session)
+  let update sequents builder session =
+    (setSessionSequents sequents (setSessionBuilder builder session))
+
   let validSequent session =
     let sequents = (getSessionSequents session) in
     (List.length sequents > 0)
-  let sequent session =    
-    let sequents = (getSessionSequents session) in
-    if List.length sequents > 0 then
-      Some (List.hd sequents, (updateSequents (List.tl sequents) session))
-    else
-      None
+
+  let undo session =
+    let undo = getSessionUndo session in
+    let () = Term.restore_state undo in
+    session
+
+  let redo session =
+    let redo = getSessionRedo session in
+    let _ = Term.apply_subst redo in
+    session
+
   let sequents session = (getSessionSequents session)
-  
-  type proof = string
-  let string_of_proofs proofs =
-    "\t" ^ (String.concat "\n\t" proofs) ^ "\n"
-    
-  module Right =
-    Unify.Make (struct
-                  let instantiatable = Term.Logic
-                  let constant_like = Term.Eigen
-                end)
-  module Left =
-    Unify.Make (struct
-                  let instantiatable = Term.Eigen
-                  let constant_like = Term.Constant
-                end)
-
+      
   (********************************************************************
-  *rightUnify:
-  * Performs unification as on the right.  If unification is successful
-  * it calls the success continuation with the failure continuation in
-  * the place of "continue".  Otherwise, it calls the failure
-  * continuation
+  *copySequent:
   ********************************************************************)
-  let rightUnify a b =
-    let state = Term.save_state () in
-    try
-      (Right.pattern_unify a b;
-      true)
-    with
-      Unify.Error _ -> (Term.restore_state state; false)
-     
-  let leftUnify a b =
-    let state = Term.save_state () in
-    match (Term.copy [a;b]) with
-        [a';b'] ->
-          (try
-            (Left.pattern_unify a' b';
-            true)
-          with
-            Unify.Error _ -> (Term.restore_state state; false))
-      | _ -> (failwith "Firstorder.leftUnify: Term.copy returned invalid list.")
+  let copySequent (i,lhs,rhs) =
+    let copier = Term.copy () in
+    let copyTerm t = copier t in
+    let rec copyFormula f = Firstorderabsyn.mapFormula copyFormula copyTerm f in
+    
+    let lhs' = List.map (fun (i,f) -> (i, copyFormula f)) lhs in
+    let rhs' = List.map (fun (i,f) -> (i, copyFormula f)) rhs in
+    (i, lhs', rhs')
 
-  let makeExistentialVar lvl =
-    (lvl, Term.fresh ~tag:Term.Logic lvl)
 
-  let makeUniversalVar lvl =
-    (lvl + 1, Term.fresh ~tag:Term.Eigen (lvl + 1))
+  let makeExistentialVar lvl lts =
+  (lvl, Term.fresh ~tag:Term.Logic ~lts lvl)
+
+  let makeUniversalVar lvl lts =
+    (lvl + 1, Term.fresh ~tag:Term.Eigen ~lts (lvl + 1))
 
   let makeNablaVar lvl i =
     (lvl, i + 1, Term.nabla (i + 1))
-  
+
   (********************************************************************
   *Tacticals:
   ********************************************************************)
   module FirstorderSig =
   struct
+    type logic_session = session
     type logic_sequent = sequent
     type logic_proof = proof
   end
@@ -199,24 +383,85 @@ Implements a simple first order logic with equality.
   let makeBuilder s = fun proofs ->
     s ^ "(" ^ (String.concat ", " proofs) ^ ")"
 
+  let rec findFormula template flist =
+    match flist with
+      [] -> (None, [])
+    | f::fs ->
+        let (_,f') = f in
+        if (Firstorderabsyn.matchFormula template f') then
+          (Some f, fs)
+        else
+          let (r, l) = (findFormula template fs) in
+          (r, f::l)
+
+  (*  Contraction Left *)
+  let contractL session args = match args with
+      Absyn.String(s)::[] ->
+        (try
+          let i = int_of_string s in
+          let pretactic = fun sequent sc fc ->
+            try
+              let lhs = getSequentLHS sequent in
+              let rhs = getSequentRHS sequent in
+              let lvl = getSequentLevel sequent in
+              let el = List.nth lhs i in
+              (sc [(lvl, el::lhs, rhs)] (makeBuilder "contract_l") fc)
+            with
+                Failure "nth" -> (O.error "invalid formula.\n"; fc ())
+              | Invalid_argument "List.nth" -> (O.error "invalid formula.\n"; fc ())
+          in
+          G.makeTactical pretactic
+        with
+          Failure "int_of_string" -> (G.invalidArguments "contract_l"))
+    | _ -> (G.invalidArguments "contract_l")
+
+  (*  Contraction *)
+  let contractR session args = match args with
+      Absyn.String(s)::[] ->
+        (try
+          let i = int_of_string s in
+          let pretactic = fun sequent sc fc ->
+            try
+              let lhs = getSequentLHS sequent in
+              let rhs = getSequentRHS sequent in
+              let lvl = getSequentLevel sequent in
+              let el = List.nth rhs i in
+              (sc [(lvl, lhs, el::rhs)] (makeBuilder "contract_r") fc)
+            with
+                Failure "nth" -> (O.error "invalid formula.\n"; fc ())
+              | Invalid_argument "List.nth" -> (O.error "invalid formula.\n"; fc ())
+          in
+          G.makeTactical pretactic
+        with
+          Failure "int_of_string" -> (G.invalidArguments "contract_r"))
+    | _ -> (G.invalidArguments "contract_r")
+
   (*  Axiom *)
-  let axiomTactical = function
+  let axiomTactical session args = match args with
       [] ->
-        let rec unifyList sc lhs f =
-          match f with
-              (i, Firstorderabsyn.AtomicFormula(t)) ->
-                (match lhs with
-                  [] -> ()
-                | (i', Firstorderabsyn.AtomicFormula(t'))::ls ->
-                    if (rightUnify t t') then
-                      sc ()
-                    else
-                      (unifyList sc ls f)
-                | _::ls ->
-                    (unifyList sc ls f))
-            | _ -> ()
-        in
         let pretactic = fun sequent sc fc ->
+          let rec unifyList sc lhs f =
+            match f with
+                (i, Firstorderabsyn.AtomicApplicationFormula(t,args)) ->
+                  (match lhs with
+                    [] -> ()
+                  | (i', Firstorderabsyn.AtomicApplicationFormula(t', args'))::ls ->
+                      if t = t' then
+                        if (not Nabla.strictNabla) || i = i' then
+                          (match (Firstorderabsyn.unifyList (Firstorderabsyn.rightUnify) args args') with
+                              Firstorderabsyn.UnifySucceeded -> sc ()
+                            | Firstorderabsyn.UnifyFailed -> (unifyList sc ls f)
+                            | Firstorderabsyn.UnifyError(s) ->
+                                (O.error (s ^ ".\n");
+                                fc ()))
+                        else
+                          (unifyList sc ls f)
+                       else
+                         (unifyList sc ls f)
+                  | _::ls ->
+                      (unifyList sc ls f))
+              | _ -> ()
+          in
           let lhs = getSequentLHS sequent in
           let rhs = getSequentRHS sequent in
           
@@ -227,15 +472,15 @@ Implements a simple first order logic with equality.
         G.makeTactical pretactic
     | _ -> (G.invalidArguments "axiom")
   
-    (*  Implication Right *)
-  let impR = function
+  (*  Implication Right *)
+  let impR session args = match args with
       [] ->
         let pretactic = fun sequent sc fc ->
           let rec apply lvl terms rhs lhs =
             match terms with
                 [] -> fc ()
               | (i, Firstorderabsyn.ImplicationFormula(l,r))::ts ->
-                  let rhs' = (List.rev_append ts rhs) in
+                  let rhs' = (List.rev_append rhs ts) in
                   let s = (lvl, (i,l)::lhs, (i,r)::rhs') in
                   (sc [s] (makeBuilder "imp_r") fc)
               | t::ts ->
@@ -250,14 +495,14 @@ Implements a simple first order logic with equality.
     | _ -> G.invalidArguments "imp_r"
 
   (*  Implication Left  *)
-  let impL = function
+  let impL session args = match args with
       [] ->
         let pretactic = fun sequent sc fc ->
           let rec apply lvl terms lhs rhs =
             match terms with
                 [] -> fc ()
               | (i, Firstorderabsyn.ImplicationFormula(l,r))::ts ->
-                  let lhs' = (List.rev_append ts lhs) in
+                  let lhs' = (List.rev_append lhs ts) in
                   let s1 = (lvl, lhs', (i,l)::rhs) in
                   let s2 = (lvl, (i,r)::lhs', rhs) in
                   (sc [s1;s2] (makeBuilder "imp_l") fc)
@@ -273,14 +518,14 @@ Implements a simple first order logic with equality.
     | _ -> G.invalidArguments "imp_l"
 
   (*  Or Left  *)
-  let orL = function
+  let orL session args = match args with
       [] ->
         let pretactic = fun sequent sc fc ->
           let rec apply lvl terms lhs rhs =
             match terms with
                 [] -> fc ()
               | (i,Firstorderabsyn.OrFormula(l,r))::ts ->
-                  let lhs' = (List.rev_append ts lhs) in
+                  let lhs' = (List.rev_append lhs ts) in
                   let s1 = (lvl, (i,l)::lhs', rhs) in
                   let s2 = (lvl, (i,r)::lhs', rhs) in
                   (sc [s1;s2] (makeBuilder "or_l") fc)
@@ -296,14 +541,14 @@ Implements a simple first order logic with equality.
     | _ -> G.invalidArguments "or_l"
 
   (*  Or Right  *)
-  let orR = function
+  let orR session args = match args with
       [] ->
         let pretactic = fun sequent sc fc ->
           let rec apply lvl terms rhs lhs =
             match terms with
                 [] -> fc ()
               | (i, Firstorderabsyn.OrFormula(l,r))::ts ->
-                  let rhs' = (List.rev_append ts rhs) in
+                  let rhs' = (List.rev_append rhs ts) in
                   let s = (lvl, lhs, (i,l)::(i,r)::rhs') in
                   (sc [s] (makeBuilder "or_r") fc)
               | t::ts ->
@@ -318,14 +563,14 @@ Implements a simple first order logic with equality.
     | _ -> G.invalidArguments "or_r"
   
   (*  And Left  *)
-  let andL = function
+  let andL session args = match args with
       [] ->
         let pretactic = fun sequent sc fc ->
           let rec apply lvl terms lhs rhs =
             match terms with
                 [] -> fc ()
               | (i,Firstorderabsyn.AndFormula(l,r))::ts ->
-                  let lhs' = (List.rev_append ts lhs) in
+                  let lhs' = (List.rev_append lhs ts) in
                   let s = (lvl,(i,l)::(i,r)::lhs', rhs) in
                   (sc [s] (makeBuilder "and_l") fc)
               | t::ts ->
@@ -340,14 +585,14 @@ Implements a simple first order logic with equality.
     | _ -> G.invalidArguments "and_l"
     
   (*  And Right *)
-  let andR = function
+  let andR session args = match args with
       [] -> 
         let pretactic = fun sequent sc fc ->
           let rec apply lvl terms rhs lhs =
             match terms with
                 [] -> fc ()
               | (i,Firstorderabsyn.AndFormula(l,r))::ts ->
-                  let rhs' = (List.rev_append ts rhs) in
+                  let rhs' = (List.rev_append rhs ts) in
                   let s1 = (lvl, lhs, (i,l)::rhs') in
                   let s2 = (lvl, lhs, (i,r)::rhs') in
                   (sc [s1;s2] (makeBuilder "and_r") fc)
@@ -363,20 +608,20 @@ Implements a simple first order logic with equality.
     | _ -> G.invalidArguments "and_r"
 
   (*  Pi L  *)
-  let piL = function
+  let piL session args = match args with
       [] ->
         let pretactic = fun sequent sc fc ->
           let rec apply lvl terms lhs rhs =
             match terms with
                 [] -> fc ()
               | (i,Firstorderabsyn.PiFormula(f))::ts ->
-                  let lhs' = (List.rev_append ts lhs) in
-                  let (lvl', var) = makeExistentialVar lvl in
+                  let lhs' = (List.rev_append lhs ts) in
+                  let (lvl', var) = makeExistentialVar lvl i in
                   let f' = Firstorderabsyn.apply [var] f in 
                   let s = (lvl', (i,f')::lhs', rhs) in
                   (sc [s] (makeBuilder "pi_l") fc)
               | t::ts ->
-                  (apply lvl ts (t::lhs) ts)
+                  (apply lvl ts (t::lhs) rhs)
           in
           let lhs = getSequentLHS sequent in
           let rhs = getSequentRHS sequent in
@@ -387,15 +632,15 @@ Implements a simple first order logic with equality.
     | _ -> G.invalidArguments "pi_l"
 
   (*  Pi Right  *)
-  let piR = function
+  let piR session args = match args with
       [] -> 
         let pretactic = fun sequent sc fc ->
           let rec apply lvl terms rhs lhs =
             match terms with
                 [] -> fc ()
               | (i,Firstorderabsyn.PiFormula(f))::ts ->
-                  let rhs' = (List.rev_append ts rhs) in
-                  let (lvl', var) = makeUniversalVar lvl in
+                  let rhs' = (List.rev_append rhs ts) in
+                  let (lvl', var) = makeUniversalVar lvl i in
                   let f' = Firstorderabsyn.apply [var] f in
                   let s = (lvl', lhs, (i,f')::rhs') in
                   (sc [s] (makeBuilder "pi_r") fc)
@@ -411,15 +656,15 @@ Implements a simple first order logic with equality.
     | _ -> G.invalidArguments "pi_r"
 
   (*  Sigma Left *)
-  let sigmaL = function
+  let sigmaL session args = match args with
       [] ->
         let pretactic = fun sequent sc fc ->
           let rec apply lvl terms lhs rhs =
             match terms with
                 [] -> fc ()
               | (i,Firstorderabsyn.SigmaFormula(f))::ts ->
-                  let lhs' = (List.rev_append ts lhs) in
-                  let (lvl', var) = makeUniversalVar lvl in
+                  let lhs' = (List.rev_append lhs ts) in
+                  let (lvl', var) = makeUniversalVar lvl i in
                   let f' = Firstorderabsyn.apply [var] f in 
                   let s = (lvl', (i,f')::lhs', rhs) in
                   (sc [s] (makeBuilder "sigma_l") fc)
@@ -435,15 +680,15 @@ Implements a simple first order logic with equality.
     | _ -> G.invalidArguments "sigma_l"
 
   (*  Sigma Right *)
-  let sigmaR = function
+  let sigmaR session args = match args with
       [] -> 
         let pretactic = fun sequent sc fc ->
           let rec apply lvl terms rhs lhs =
             match terms with
                 [] -> fc ()
               | (i,Firstorderabsyn.SigmaFormula(f))::ts ->
-                  let rhs' = (List.rev_append ts rhs) in
-                  let (lvl', var) = makeExistentialVar lvl in
+                  let rhs' = (List.rev_append rhs ts) in
+                  let (lvl', var) = makeExistentialVar lvl i in
                   let f' = Firstorderabsyn.apply [var] f in
                   let s = (lvl', lhs, (i,f')::rhs') in
                   (sc [s] (makeBuilder "sigma_r") fc)
@@ -459,14 +704,14 @@ Implements a simple first order logic with equality.
     | _ -> G.invalidArguments "sigma_r"
 
   (*  Nabla Left  *)
-  let nablaL = function
+  let nablaL session args = match args with
       [] ->
         let pretactic = fun sequent sc fc ->
           let rec apply lvl terms lhs rhs =
             match terms with
                 [] -> fc ()
               | (i,Firstorderabsyn.NablaFormula(f))::ts ->
-                  let lhs' = (List.rev_append ts lhs) in
+                  let lhs' = (List.rev_append lhs ts) in
                   let (lvl', i', var) = makeNablaVar lvl i in
                   let f' = Firstorderabsyn.apply [var] f in 
                   let s = (lvl', (i',f')::lhs', rhs) in
@@ -483,14 +728,14 @@ Implements a simple first order logic with equality.
     | _ -> G.invalidArguments "nabla_l"
 
   (*  Nabla Right *)
-  let nablaR = function
+  let nablaR session args = match args with
       [] -> 
         let pretactic = fun sequent sc fc ->
           let rec apply lvl terms rhs lhs =
             match terms with
                 [] -> fc ()
               | (i,Firstorderabsyn.NablaFormula(f))::ts ->
-                  let rhs' = (List.rev_append ts rhs) in
+                  let rhs' = (List.rev_append rhs ts) in
                   let (lvl', i', var) = makeNablaVar lvl i in
                   let f' = Firstorderabsyn.apply [var] f in
                   let s = (lvl', lhs, (i',f')::rhs') in
@@ -507,17 +752,19 @@ Implements a simple first order logic with equality.
     | _ -> G.invalidArguments "nabla_r"
   
   (*  Equality Right *)
-  let eqR = function
+  let eqR session args = match args with
       [] -> 
         let pretactic = fun sequent sc fc ->
           let rec apply lvl terms =
             match terms with
                 [] -> fc ()
               | (i,Firstorderabsyn.EqualityFormula(t1, t2))::ts ->                  
-                  if (rightUnify t1 t2) then
-                    (sc [] (makeBuilder "eq_r") fc)
-                  else
-                    (apply lvl ts)
+                  (match (Firstorderabsyn.rightUnify t1 t2) with
+                      Firstorderabsyn.UnifySucceeded -> (sc [] (makeBuilder "eq_r") fc)
+                    | Firstorderabsyn.UnifyFailed -> (apply lvl ts)
+                    | Firstorderabsyn.UnifyError(s) ->
+                          (O.error (s ^ ".\n");
+                          fc ()))
               | t::ts ->
                   (apply lvl ts)
           in
@@ -528,55 +775,109 @@ Implements a simple first order logic with equality.
         G.makeTactical pretactic
     | _ -> G.invalidArguments "eq_r"
 
-  (*  Equality Right *)
-  let eqL = function
+  (*  Equality Left *)
+  let eqL session args = match args with
       [] -> 
         let pretactic = fun sequent sc fc ->
-          let rec apply lvl terms =
+          let rec apply lvl terms lhs rhs =
             match terms with
                 [] -> fc ()
-              | (i,Firstorderabsyn.EqualityFormula(t1, t2))::ts ->                  
-                  if not (leftUnify t1 t2) then
-                    (sc [] (makeBuilder "eq_l") fc)
-                  else
-                    (apply lvl ts)
+              | (i,Firstorderabsyn.EqualityFormula(t1, t2))::ts ->
+                  (match (Firstorderabsyn.leftUnify t1 t2) with
+                      Firstorderabsyn.UnifyFailed -> (sc [] (makeBuilder "eq_l") fc)
+                    | Firstorderabsyn.UnifySucceeded ->
+                        let lhs' = (List.rev_append lhs ts) in
+                        let s = (i, lhs', rhs) in
+                        (sc [s] (makeBuilder "eq_l") fc)
+                    | Firstorderabsyn.UnifyError(s) ->
+                        (O.error (s ^ ".\n");
+                        fc ()))
               | t::ts ->
-                  (apply lvl ts)
+                  (apply lvl ts (t::lhs) rhs)
           in
-          let lhs = getSequentLHS sequent in
-          let lvl = getSequentLevel sequent in
-          (apply lvl lhs)
+          let sequent' = copySequent sequent in
+          let lhs = getSequentLHS sequent' in
+          let rhs = getSequentRHS sequent' in
+          let lvl = getSequentLevel sequent' in
+          (apply lvl lhs [] rhs)
         in
         G.makeTactical pretactic
     | _ -> G.invalidArguments "eq_l"
 
-  let orTactical = function
-      [] -> (G.orElseTactical (orL []) (orR []))
+  let orTactical session args = match args with
+      [] -> (G.orElseTactical (orL session []) (orR session []))
     | _ -> G.invalidArguments "or"
 
-  let andTactical = function
-      [] -> (G.orElseTactical (andL []) (andR []))
+  let andTactical session args = match args with
+      [] -> (G.orElseTactical (andL session []) (andR session []))
     | _ -> G.invalidArguments "and"
 
-  let impTactical = function
-      [] -> (G.orElseTactical (impL []) (impR []))
+  let impTactical session args = match args with
+      [] -> (G.orElseTactical (impL session []) (impR session []))
     | _ -> G.invalidArguments "imp"
   
-  let piTactical = function
-      [] -> (G.orElseTactical (piR []) (piL []))
+  let piTactical session args = match args with
+      [] -> (G.orElseTactical (piR session []) (piL session []))
     | _ -> G.invalidArguments "pi"
 
-  let sigmaTactical = function
-      [] -> (G.orElseTactical (sigmaL []) (sigmaR []))
+  let sigmaTactical session args = match args with
+      [] -> (G.orElseTactical (sigmaL session []) (sigmaR session []))
     | _ -> G.invalidArguments "sigma"
 
-  let nablaTactical = function
-      [] -> (G.orElseTactical (nablaL []) (nablaR []))
+  let nablaTactical session args = match args with
+      [] -> (G.orElseTactical (nablaL session []) (nablaR session []))
     | _ -> G.invalidArguments "nabla"
 
-  let eqTactical = function
-      [] -> (G.orElseTactical (eqL []) (eqR []))
+  let eqTactical session args = match args with
+      [] -> (G.orElseTactical (eqL session []) (eqR session []))
     | _ -> G.invalidArguments "eq"
+
+  let contractTactical session args = match args with
+      Absyn.String(s)::[] ->
+        let template = parseFormula (getSessionDefinitions session) s in
+        if (Option.isSome template) then
+          let template = Option.get template in
+          let pretactic = fun sequent sc fc ->
+            let lhs = getSequentLHS sequent in
+            let rhs = getSequentRHS sequent in
+            let lvl = getSequentLevel sequent in
+            
+            let (r, rhs') = findFormula template rhs in
+            if Option.isSome r then
+              let s = (lvl, lhs, (Option.get r)::rhs) in
+              (sc [s] (makeBuilder "contract") fc)
+            else
+              let (l, lhs') = findFormula template lhs in
+              if Option.isSome l then
+                let s = (lvl, (Option.get l)::lhs, rhs) in
+                (sc [s] (makeBuilder "contract") fc)
+              else
+                (fc ())
+          in
+          (G.makeTactical pretactic)
+        else
+          G.invalidArguments "contract"
+    | _ -> G.invalidArguments "contract"
+  
+  let prologPiTactical session args = match args with
+    [] ->
+      (G.thenTactical
+        (contractTactical session [Absyn.String("pi _")])
+        (piTactical session []))
+  | _ -> G.invalidArguments "prologpi"
+
+  let prologTactical session args = match args with
+    [] ->
+      (G.iterateTactical
+        (G.orElseTactical
+          (G.iterateTactical
+            (G.orElseListTactical
+              [(axiomTactical session []);
+              (impTactical session []);
+              (andTactical session []);
+              (orTactical session [])]))
+          (prologPiTactical session [])))
+  | _ -> G.invalidArguments "prolog"
 
   (********************************************************************
   *tacticals:
@@ -584,7 +885,16 @@ Implements a simple first order logic with equality.
   * ones avaible at the toplevel.  GenericTacticals.tacticals is used
   * as the initial table, providing the standard tacticals.
   ********************************************************************)
-  let tacticals =
+  let tacticals session =
+    let ts = getSessionTacticals session in
+    ts
+
+  let defineTactical name tac session =
+    let ts = getSessionTacticals session in
+    let ts' = Logic.Table.add name tac ts in
+    setSessionTacticals ts' session
+
+  let pervasiveTacticals =
     let ts = G.tacticals in    
     let ts = Logic.Table.add "and" andTactical ts in
     let ts = Logic.Table.add "or" orTactical ts in
@@ -607,5 +917,27 @@ Implements a simple first order logic with equality.
     let ts = Logic.Table.add "eq_r" eqR ts in
     
     let ts = Logic.Table.add "axiom" axiomTactical ts in
+    
+    let ts = Logic.Table.add "contract" contractTactical ts in
+    let ts = Logic.Table.add "contract_l" contractL ts in
+    let ts = Logic.Table.add "contract_r" contractR ts in
+    
+    let ts = Logic.Table.add "prologpi" prologPiTactical ts in
+    let ts = Logic.Table.add "prolog" prologTactical ts in
     ts
+    
+  let emptySession =
+    let state = Term.save_state () in
+    Session(pervasiveTacticals, Logic.Table.empty, [], Logic.idProofBuilder, state, Term.get_subst state)
+
+  (********************************************************************
+  *reset:
+  * Provides a new sequent.  This amounts to returning the empty
+  * sequent.
+  ********************************************************************)
+  let reset () = emptySession
+
 end
+
+module Firstordernonstrict = Firstorder (struct let strictNabla = false end)
+module Firstorderstrict = Firstorder (struct let strictNabla = true end)

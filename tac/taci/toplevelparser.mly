@@ -3,7 +3,8 @@
 
 %token DOT SHARP LPAREN RPAREN COMMA
 %token HELP EXIT RESET INCLUDE TIME DEBUG
-%token ON OFF CLEAR THEOREM TACTICAL 
+%token ON OFF CLEAR THEOREM
+%token TACTICAL TACTICALS LOGIC LOGICS
 %token DEFINITION UNDO REDO
 %token <string> ID STRING
 
@@ -41,23 +42,31 @@ tactical_list
   ;
 
 command
-  : EXIT  {Absyn.Exit}
-  | RESET {Absyn.Reset}
-  | INCLUDE filenames {Absyn.Include($2)}
+  : EXIT                {Absyn.Exit}
+  | RESET               {Absyn.Reset}
+  | INCLUDE stringlist  {Absyn.Include($2)}
   
   | CLEAR       {Absyn.Clear}
+  
   | UNDO        {Absyn.Undo(1)}
   | REDO        {Absyn.Redo(1)}
+  
   | DEBUG onoff {Absyn.Debug($2)}
   | TIME onoff  {Absyn.Timing($2)}
   
-  | HELP                {Absyn.Help}
-  | THEOREM ID STRING   {Absyn.Theorem($2, $3)}
-  | DEFINITION STRING   {Absyn.Definition($2)}
+  | HELP                  {Absyn.Help}
+  | THEOREM ID STRING     {Absyn.Theorem($2, $3)}
+  | DEFINITION stringlist {Absyn.Definitions($2)}
+  
+  | TACTICALS             {Absyn.Tacticals}
+  | TACTICAL ID tactical  {Absyn.TacticalDefinition($2, $3)}
+  
+  | LOGIC ID              {Absyn.Logic($2)}
+  | LOGICS                {Absyn.Logics}
   ;
 
-filenames:
-  | STRING filenames  {$1 :: $2}
+stringlist
+  : STRING stringlist {$1 :: $2}
   | STRING            {[$1]}
   ;
 

@@ -18,10 +18,17 @@ type command =
   | Redo of int
   
   | Theorem of string * string
-  | Definition of string
+  | Definitions of string list
+  
+  | Tacticals
+  | TacticalDefinition of string * pretactical
+
   | PreTactical of pretactical
   | Timing of bool
   | Debug of bool
+
+  | Logic of string  
+  | Logics
   
   | NoCommand
 

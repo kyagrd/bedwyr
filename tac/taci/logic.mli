@@ -1,5 +1,7 @@
 module Table : Map.S with type key = String.t
 type 'a table = 'a Table.t
+val contains : string -> 'a Table.t -> bool
+val find : string -> 'a Table.t -> 'a option
 
 (**********************************************************************
 *Tactics and Tacticals:
@@ -25,7 +27,10 @@ type ('a, 'b) success = 'a list -> 'a list -> 'b proofbuilder -> continue -> uni
 type ('a, 'b) tactic = 'a list -> ('a, 'b) success -> failure -> unit
 
 (*  Tacticals *)
-type 'a tactical = 'a Absyn.tactical list -> 'a
+type ('a, 'b) tactical = 'a -> 'b Absyn.tactical list -> 'b
+
+val composeProofBuilders : 'a proofbuilder -> 'a proofbuilder -> 'a proofbuilder
+val idProofBuilder : 'a proofbuilder
 
 (**********************************************************************
 *Logic:
@@ -42,21 +47,23 @@ sig
   val reset : unit -> session
   val operator : string -> string -> int -> session -> session
   val prove : string -> string -> session -> session
-  val definition : string -> session -> session
+  val definitions : string list -> session -> session
+  val undo : session -> session
+  val redo : session -> session
   
   type sequent
   val validSequent : session -> bool
   val sequents : session -> sequent list
   val string_of_sequents : sequent list -> string
-  val updateSequents : sequent list -> session -> session
-  
+    
   type proof
+  val proof : session -> proof proofbuilder
   val string_of_proofs : proof list -> string
-  (*
-  val updateProofBuilder : proof proofbuilder -> session -> session
-  val proofBuilder : session -> proof proofbuilder
-  *)
-  val tacticals : (sequent, proof) tactic tactical table
+  
+  val update : sequent list -> proof proofbuilder -> session -> session
+
+  val tacticals : session -> (session, (sequent, proof) tactic) tactical table
+  val defineTactical : string -> (session, (sequent, proof) tactic) tactical -> session -> session
 end
 
 (**********************************************************************
@@ -64,6 +71,7 @@ end
 **********************************************************************)
 module type LogicSig =
 sig
+  type logic_session
   type logic_sequent
   type logic_proof
 end
@@ -72,7 +80,7 @@ module GenericTacticals : functor (L : LogicSig) -> functor (O : Output.Output) 
 sig
   type logic_pretactic = (L.logic_sequent, L.logic_proof) pretactic
   type logic_tactic = (L.logic_sequent, L.logic_proof) tactic
-  type logic_tactical = logic_tactic tactical
+  type logic_tactical = (L.logic_session, logic_tactic) tactical
 
   val makeTactical : logic_pretactic -> logic_tactic
   val invalidArguments : string -> logic_tactic
@@ -80,8 +88,10 @@ sig
   val idTactical : logic_tactic
   val applyTactical : logic_tactic -> logic_tactic
   val orElseTactical : logic_tactic -> logic_tactic -> logic_tactic
+  val orElseListTactical : logic_tactic list -> logic_tactic
   val thenTactical : logic_tactic -> logic_tactic -> logic_tactic
   val repeatTactical : logic_tactic -> logic_tactic
+  val iterateTactical : logic_tactic -> logic_tactic
   val tryTactical : logic_tactic -> logic_tactic
   val completeTactical : logic_tactic -> logic_tactic
   val tacticals : logic_tactical table
