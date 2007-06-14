@@ -1,0 +1,6 @@
+output(console, Output.ConsoleOutput);
+output(xml, Output.XmlOutput);
+logic(none, Nologic.Nologic);
+logic(propositional, Propositional.Propositional);
+logic(firstorder, Firstorder.Firstorderstrict);
+logic(firstorder-nonstrict, Firstorder.Firstordernonstrict);
