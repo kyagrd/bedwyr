@@ -1,1 +1,1 @@
-module Nologic : Logic.Logic
+module Nologic : functor (O : Output.Output) -> Logic.Logic

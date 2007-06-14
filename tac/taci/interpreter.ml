@@ -180,7 +180,7 @@ struct
   * Lists all logics available.
   ********************************************************************)
   let showLogics _ =
-    (O.logics Logics.logics)
+    ()
   
   (********************************************************************
   *showTacticals:
@@ -199,10 +199,8 @@ struct
   * Loads the given logic.
   ********************************************************************)
   let loadLogic l =
-    if (Logics.find l) then
-      raise (Logic l)
-    else
-      (O.error ("undefined logic: " ^ l))
+    raise (Logic l)
+    
 
   (********************************************************************
   *handleInput:

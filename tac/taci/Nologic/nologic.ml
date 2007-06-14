@@ -2,7 +2,7 @@
 *NoLogic:
 * A dummy logic module.
 **********************************************************************)
-module Nologic =
+module Nologic (O : Output.Output) =
 struct
   let name = "No Logic"
   let info =
