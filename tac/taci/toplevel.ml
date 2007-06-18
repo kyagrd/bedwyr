@@ -14,6 +14,13 @@ let parseCommand lexbuf s =
     Parsing.Parse_error ->
       raise (Absyn.SyntaxError ((position lexbuf) ^ "Syntax error" ^ s))
 
+let parseCommandList lexbuf s =
+  try
+    (Toplevelparser.toplevel_file Toplevellexer.command lexbuf)
+  with
+    Parsing.Parse_error ->
+      raise (Absyn.SyntaxError ((position lexbuf) ^ "Syntax error" ^ s))
+      
 let parseStringCommand s =
   let lexbuf = Lexing.from_string s in
   (parseCommand lexbuf (" in: " ^ s))
@@ -26,3 +33,7 @@ let parseFile s =
 let parseStdinCommand () =
   let l = Lexing.from_channel stdin in
   (parseCommand l "")
+  
+let parseChannelCommandList channel =
+  let l = Lexing.from_channel channel in
+  (parseCommandList l "")

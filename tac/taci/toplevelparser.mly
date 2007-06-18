@@ -2,10 +2,11 @@
 %}
 
 %token DOT SHARP LPAREN RPAREN COMMA
-%token HELP EXIT RESET INCLUDE TIME DEBUG
+%token HELP EXIT RESET OPEN INCLUDE TIME DEBUG
 %token ON OFF CLEAR THEOREM
 %token TACTICAL TACTICALS LOGIC LOGICS
-%token DEFINITION UNDO REDO
+%token DEFINE UNDO REDO
+%token EOF
 %token <string> ID STRING
 
 %start toplevel_command toplevel_file
@@ -19,7 +20,7 @@ toplevel_file:
 
 file:
   | SHARP command DOT file  {$2 :: $4}
-  | SHARP command DOT       {[$2]}
+  | EOF                     {[]}
   ;
 
 
@@ -44,6 +45,7 @@ tactical_list
 command
   : EXIT                {Absyn.Exit}
   | RESET               {Absyn.Reset}
+  | OPEN stringlist     {Absyn.Open($2)}
   | INCLUDE stringlist  {Absyn.Include($2)}
   
   | CLEAR       {Absyn.Clear}
@@ -56,7 +58,7 @@ command
   
   | HELP                  {Absyn.Help}
   | THEOREM ID STRING     {Absyn.Theorem($2, $3)}
-  | DEFINITION stringlist {Absyn.Definitions($2)}
+  | DEFINE stringlist {Absyn.Definitions($2)}
   
   | TACTICALS             {Absyn.Tacticals}
   | TACTICAL ID tactical  {Absyn.TacticalDefinition($2, $3)}

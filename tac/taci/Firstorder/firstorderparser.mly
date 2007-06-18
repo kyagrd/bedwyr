@@ -26,82 +26,51 @@
   let rec getAbstractions f =
     match f with
         Firstorderabsyn.AbstractionFormula(name, f') ->
-          let (i,f'') = (getAbstractions f') in
-          (i + 1, f'')
-      | _ -> (0, f)
+          let (names,f'') = (getAbstractions f') in
+          (name::names, f'')
+      | _ -> ([], f)
 
   let makeAbstractions make f =
-    let rec makeAbs' i make f =
-      if (i <= 0) then
-        raise (Firstorderabsyn.SemanticError ("argument does not have toplevel abstractions: " ^ (Firstorderabsyn.string_of_formula f)))
-      else if (i = 1) then
-        make f
-      else
-        (makeAbs' (i - 1) make (make f))
+    let rec makeAbs' names make f =
+      match names with
+        [] -> raise (Firstorderabsyn.SemanticError ("argument does not have toplevel abstractions: " ^ (Firstorderabsyn.string_of_formula f)))
+      | [name] -> make name (Firstorderabsyn.AbstractionFormula(name,f))
+      | name::names ->
+          (makeAbs' (names) make (make name (Firstorderabsyn.AbstractionFormula(name,f))))        
     in
-    let (num,f') = getAbstractions f in
-    (makeAbs' num make f')
+    let (names,f') = getAbstractions f in
+    (makeAbs' names make f')
 
   let pi f =
-    let make f = Firstorderabsyn.PiFormula(f) in
+    let make name f = Firstorderabsyn.PiFormula(f) in
     (makeAbstractions make f)
 
   let sigma f =
-    let make f = Firstorderabsyn.SigmaFormula(f) in
+    let make name f = Firstorderabsyn.SigmaFormula(f) in
     (makeAbstractions make f)
 
   let nabla f =
-    let make f = Firstorderabsyn.NablaFormula(f) in
+    let make name f = Firstorderabsyn.NablaFormula(f) in
     (makeAbstractions make f)
 
   let anon () = Firstorderabsyn.AnonymousFormula
 
   let abstract id f =
-    (Firstorderabsyn.AbstractionFormula(
-      id,
-      Firstorderabsyn.abstract (Term.atom id) f))
+    Firstorderabsyn.AbstractionFormula(id, f)
 
-  let atom t =
-    let result = Firstorderabsyn.getTermHeadAndArgs t in
-    if Option.isSome result then
-      let (head,args) = Option.get result in
-      Firstorderabsyn.AtomicApplicationFormula(head,args)
-    else
-      raise (Firstorderabsyn.SemanticError
-        ("term has non-atomic head: " ^ (Firstorderabsyn.string_of_term t)))
-  
-  exception HasAbstractions
-  let hasFormulaAbstractions f =      
-    let tf t = t in
-    let rec ff f =
-      match f with
-          Firstorderabsyn.AbstractionFormula(_) -> raise HasAbstractions
-        | _ -> (Firstorderabsyn.mapFormula ff tf f)
-    in
-    try
-      let _ = (ff f) in
-      false
-    with
-      HasAbstractions -> true
-  
-  let tterm term = 
+  let atom t = Firstorderabsyn.AtomicFormula(t)
+    
+  let application term = 
     match term with
         [] -> failwith "Firstorderparser.tterm: invalid lterm."
       | t::l -> (Term.app t l)
   
-  let analyzeFormula f =
-    if (hasFormulaAbstractions f) then
-      raise (Firstorderabsyn.SemanticError ("formula has toplevel abstractions: " ^ (Firstorderabsyn.string_of_formula f)))
-    else
-    f
-
-  let analyzeDefinition d =
-    d
 %}
 
 %token BSLASH LPAREN RPAREN DOT SHARP ANONYMOUS
 %token EQ AND OR IMP DEF
-%token PI SIGMA NABLA MU LAMBDA
+%token PI SIGMA NABLA
+%token IND COIND
 %token EOF
 %token <string> ID
 %token <string> STRING
@@ -119,23 +88,24 @@
 
 %%
 toplevel_formula
-  : formula     {analyzeFormula $1}
-  | formula EOF {analyzeFormula $1}
+  : formula     {$1}
+  | formula EOF {$1}
   ;
 
 toplevel_definition
-  : definition      {analyzeDefinition $1}
-  | definition EOF  {analyzeDefinition $1}
+  : definition      {$1}
+  | definition EOF  {$1}
   ;
 
 definition
-  : ID definitionargs DEF formula   {Firstorderabsyn.PreDefinition($1, $2, $4)}
-  | ID DEF formula                  {Firstorderabsyn.PreDefinition($1, [] ,$3)}
+  : ID definitionargs DEF formula   {Firstorderabsyn.PreDefinition($1, $2, $4, Firstorderabsyn.Inductive)}
+  | IND ID definitionargs DEF formula   {Firstorderabsyn.PreDefinition($2, $3, $5, Firstorderabsyn.Inductive)}
+  | COIND ID definitionargs DEF formula   {Firstorderabsyn.PreDefinition($2, $3, $5, Firstorderabsyn.CoInductive)}
   ;
 
 definitionargs
   : ID definitionargs   {$1::$2}
-  | ID                  {$1::[]}
+  |                     {[]}
   ;
 
 formula
@@ -163,7 +133,7 @@ toplevel_term
 
 
 term
-  : lterm {tterm $1}
+  : lterm {application $1}
   ;
 
 lterm

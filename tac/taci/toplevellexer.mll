@@ -40,6 +40,7 @@ rule command = parse
 | "," {COMMA}
 
 | "reset"   {RESET}
+| "open"    {OPEN}
 | "include" {INCLUDE}
 | "exit"    {EXIT}
 | "undo"    {UNDO}
@@ -59,8 +60,9 @@ rule command = parse
 | "logics"      {LOGICS}
 
 | "theorem"     {THEOREM}
-| "define"  {DEFINITION}
+| "define"      {DEFINE}
+
 | '"' (instring as n) '"' {String.iter (function '\n' -> incrline lexbuf | _ -> ()) n ; STRING(n)}
 | name as n     {ID n}
 | _ as c  {raise (Absyn.SyntaxError("invalid character '" ^ (String.make 1 c) ^ "'"))}
-| eof     {raise (Absyn.SyntaxError("end of input"))}
+| eof     {EOF}

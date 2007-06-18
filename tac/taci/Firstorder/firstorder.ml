@@ -1,3 +1,5 @@
+module FOA = Firstorderabsyn
+
 (**********************************************************************
 *NablaSig:
 * Contains a value strictNabla determining whether or not strict nabla
@@ -29,10 +31,11 @@ Implements a simple first order logic with equality.
   *Formula:
   * Represent formulae in sequents, with a local context.
   ********************************************************************)
-  type formula = (int * Firstorderabsyn.formula)
-  let string_of_formula (_,t) = Firstorderabsyn.string_of_formula t
+  type formula = (int * FOA.formula)
+  let string_of_formula (_,t) = FOA.string_of_formula t
+  let string_of_formula_ast (_,t) = FOA.string_of_formula_ast t
   let makeFormula t = (0, t)
-  
+  let string_of_definition def = FOA.string_of_definition def
   
   (********************************************************************
   *Sequent:
@@ -66,7 +69,7 @@ Implements a simple first order logic with equality.
   ********************************************************************)  
   type session = Session of
     ((session, (sequent, proof) Logic.tactic) Logic.tactical Logic.table *
-    Firstorderabsyn.definition Logic.table *
+    FOA.definition Logic.table *
     sequent list *
     proof Logic.proofbuilder *
     Term.bind_state * Term.subst)
@@ -122,37 +125,89 @@ Implements a simple first order logic with equality.
       let term = Firstorderparser.toplevel_term Firstorderlexer.token (Lexing.from_string t) in
       Some term
     with
-      Firstorderabsyn.SyntaxError(s) ->
+      FOA.SyntaxError(s) ->
         (O.error (s ^ ".\n");
         None)
   
+  let currentId = ref 0
+  let generateSymbol () =
+    let s = "_" ^ (string_of_int !currentId) in
+    let () = currentId := !currentId + 1 in
+    s
+
   (********************************************************************
-  *processFormula:
-  * Iterates over a formula, replacing applications with the correct
-  * definitions if they exist.
+  *replaceApplications:
+  * Replaces applications in a formula with the correct definition,
+  * if one exists.  If the application doesn't have the correct number
+  * of arguments (relative to the body of the definition) then new
+  * arguments are created to bring the number up to the correct amount,
+  * and abstractions are inserted.
   ********************************************************************)
-  let processFormula defs f =
+  let replaceApplications defs formula =
+    let rec makeArgs i =
+      if i = 0 then
+        []
+      else
+        (generateSymbol ()) :: makeArgs (i - 1)
+    in
+    
+    let rec makeAbstractions args formula =
+      match args with
+        [] -> formula
+      | a::aa ->  FOA.AbstractionFormula(a, (makeAbstractions aa formula))
+    in
+      
+
     let tf t = t in
     let rec ff f =
       match f with
-          Firstorderabsyn.AtomicApplicationFormula(head,args) ->
-            let def = Logic.find head defs in
-            if (Option.isSome def) then
-              let def = (Option.get def) in
-              let arity = Firstorderabsyn.getDefinitionArity def in
-              let body = Firstorderabsyn.getDefinitionBody def in
-              if arity = List.length args then
-                let body' = (Firstorderabsyn.applyMu body f) in
-                (Firstorderabsyn.apply args body')
+          FOA.AtomicFormula(t) ->
+            let ha = FOA.getTermHeadAndArgs t in
+            if (Option.isSome ha) then
+              let (head, args) = Option.get ha in
+              let def = Logic.find head defs in
+              if (Option.isSome def) then
+                let def = (Option.get def) in
+                let arity = FOA.getDefinitionArity def in
+                let body = FOA.getDefinitionBody def in
+                if (arity = List.length args) then
+                  FOA.ApplicationFormula(body, body, args)
+                else if arity > List.length args then
+                  let args' = makeArgs (arity - (List.length args)) in
+                  makeAbstractions args' (FOA.ApplicationFormula(body, body, args@(List.map (Term.atom) args')))
+                else             
+                  raise (FOA.SemanticError("'" ^ head ^ "' applied to too many arguments"))
               else
-                raise (Firstorderabsyn.SemanticError("'" ^ head ^
-                  "' expects " ^ (string_of_int arity) ^ " arguments"))
+                f
             else
               f
-        | _ -> (Firstorderabsyn.mapFormula ff tf f)
+        | _ -> (FOA.mapFormula ff tf f)
     in
-    (ff f)
+    (ff formula)
+  
+  
+  (********************************************************************
+  *application:
+  * Apply arguments.
+  ********************************************************************)
+  let rec application args formula =
+    match args with
+      [] -> Some formula
+    | a::aa ->
+        (match formula with
+            FOA.AbstractionFormula(name,f) ->
+              let f' = FOA.abstract name f in
+              (application aa (FOA.apply [a] f'))
+          | _ -> (O.error "expected abstraction.\n"; None))
 
+  (********************************************************************
+  *processFormula:
+  * Replaces applications and then applies abstractions.
+  ********************************************************************)
+  let processFormula defs f =
+    let f' = replaceApplications defs f in
+    f'
+    
   (********************************************************************
   *parseFormula:
   * Parses the argument into a formula.  If successful, returns Some
@@ -163,29 +218,30 @@ Implements a simple first order logic with equality.
       let formula = Firstorderparser.toplevel_formula Firstorderlexer.token (Lexing.from_string t) in
       Some (processFormula defs formula)
     with
-        Firstorderabsyn.SyntaxError(s) ->
+        FOA.SyntaxError(s) ->
           (O.error (s ^ ".\n");
           None)
-      | Firstorderabsyn.SemanticError(s) ->
+      | FOA.SemanticError(s) ->
           (O.error (s ^ ".\n");
           None)
       | Parsing.Parse_error ->
           (O.error "Syntax error.\n";
           None)
+
   (********************************************************************
   *parseDefinition:
   * Parses the argument into a definition.  If successful, returns Some
   * with the parsed definition, otherwise it returns None.
   ********************************************************************)
-  let parseDefinition t =        
+  let parseDefinition defs t =        
     try
-      let def = Firstorderparser.toplevel_definition Firstorderlexer.token (Lexing.from_string t) in
-      Some def
+      let FOA.PreDefinition(name,args,body,ind) = Firstorderparser.toplevel_definition Firstorderlexer.token (Lexing.from_string t) in
+      Some (FOA.PreDefinition(name,args,(replaceApplications defs body),ind))
     with
-        Firstorderabsyn.SyntaxError(s) ->
+        FOA.SyntaxError(s) ->
           (O.error (s ^ ".\n");
           None)
-      | Firstorderabsyn.SemanticError(s) ->
+      | FOA.SemanticError(s) ->
           (O.error (s ^ ".\n");
           None)
       | Parsing.Parse_error ->
@@ -202,12 +258,12 @@ Implements a simple first order logic with equality.
     let f = parseFormula defs t in
     if Option.isSome f then
       let f = Option.get f in
-      if (Firstorderabsyn.containsAnonymous f) then
+      if (FOA.containsAnonymous f) then
         (O.error "formula contains a template.\n";
         session)
       else
         let seq = makeSequent [] [makeFormula f] in
-        (setSessionSequents [seq] session)
+        (setSessionBuilder Logic.idProofBuilder (setSessionSequents [seq] session))
     else
       session
 
@@ -225,10 +281,26 @@ Implements a simple first order logic with equality.
     ******************************************************************)
     let processPreDefinitions predefs =
       (****************************************************************
-      *processFormula:
-      * Abstracts a definition.
+      *makeFixpoint:
+      * Makes a mu or nu formula based on the combinator type.
       ****************************************************************)
-      let processFormula abstractions f =
+      let makeFixpoint ind name body =
+        match ind with
+            FOA.Inductive ->
+              FOA.MuFormula(name,body)
+          | FOA.CoInductive ->
+              FOA.NuFormula(name,body)
+      in
+      (****************************************************************
+      *abstractDefinition:
+      * Abstracts a definition.  ITerates over a definition body.
+      * If it hits an application whose name is in the abstractions
+      * list, it inserts the correct DB index.  If it hits an application
+      * whose head is not in the abstractions list (but is in then pre-
+      * definitions list), it adds the name to the abstractions list 
+      * and abstracts the body of the pre-definition.
+      ****************************************************************)
+      let abstractDefinition abstractions f =
         (**************************************************************
         *getDB:
         * Get the DB index of a name.
@@ -236,28 +308,28 @@ Implements a simple first order logic with equality.
         let getDB name abs =
           let rec get name abs =
             match abs with
-              [] -> 0
+              [] -> None
             | a::abs' ->
                 if a = name then
-                  1
+                  Some 0
                 else
-                  1 + (get name abs')
+                  let r = (get name abs') in
+                  if Option.isSome r then
+                    Some (1 + (Option.get r))
+                  else
+                    None
           in
-          let len = (List.length abs) in
           let i = (get name abs) in
-          if i >= len then
-            None
-          else
-            Some (len - i)
+          i
         in
         
         (**************************************************************
         *findDefinition:
-        *
+        * Finds a pre-definition in the pre-definition list.
         **************************************************************)
         let findDefinition name predefs =
           try
-            let find name (Firstorderabsyn.PreDefinition(name',ids,formula)) =
+            let find name (FOA.PreDefinition(name',ids,formula,ind)) =
               name' = name
             in
             Some (List.find (find name) predefs)
@@ -265,37 +337,57 @@ Implements a simple first order logic with equality.
             Not_found -> None
         in
         
-        let tf t = t in
         
+        let tf t = t in  
         let rec ff abstractions f =
           match f with
-              Firstorderabsyn.AtomicApplicationFormula(head, args) ->
-                let db = getDB head abstractions in
-                if Option.isSome db then
-                  Firstorderabsyn.DBFormula (Option.get db)
-                else
-                  let def = findDefinition head predefs in
-                  if Option.isSome def then
-                    let Firstorderabsyn.PreDefinition(_,_,f') = (Option.get def) in
-                    (ff (head::abstractions) f')
+              FOA.AtomicFormula(t) ->
+                let ha = FOA.getTermHeadAndArgs t in
+                if (Option.isSome ha) then
+                  let (head,args) = Option.get ha in
+                  let db = getDB head abstractions in
+                  if Option.isSome db then
+                    FOA.ApplicationFormula(FOA.DBFormula(head, Option.get db),
+                      FOA.DBFormula(head, Option.get db),
+                      args)
                   else
-                    f
-            | _ -> (Firstorderabsyn.mapFormula (ff abstractions) tf f)
+                    let def = findDefinition head predefs in
+                    if Option.isSome def then
+                      let FOA.PreDefinition(_,_,f',ind) = (Option.get def) in
+                      (makeFixpoint ind head (ff (head::abstractions) f'))
+                    else
+                      f
+                else
+                  (O.error ("term has no head: " ^ (FOA.string_of_term t));
+                  f)
+            | _ -> (FOA.mapFormula (ff abstractions) tf f)
         in
         (ff abstractions f)
       in
       
-      let rec abstract ids formula =
+      (****************************************************************
+      *abstractArguments:
+      * Pushes down the argument abstractions.
+      *****************************************************************)
+      let rec abstractArguments ids formula =
         match ids with
           [] -> formula
         | id::ids' ->
-            let formula' = (Firstorderabsyn.abstract (Term.atom id) formula) in
-            (abstract ids' formula')
+            let formula' = (FOA.AbstractionFormula(id,formula)) in
+            (abstractArguments ids' formula')
       in
       
-      let processPreDefinition (Firstorderabsyn.PreDefinition(name, ids, formula)) =
-        let formula' = (processFormula [name] formula) in
-        Firstorderabsyn.Definition(name, List.length ids, (abstract ids formula'))
+      (****************************************************************
+      *processPreDefinition:
+      * Mu/Nu-abstracts the body of the predefinition, wraps the body
+      * in a Mu/Nu formula, and applies abstractions in the formula.
+      ****************************************************************)
+      let processPreDefinition (FOA.PreDefinition(name, ids, formula, ind)) =
+        let formula' = abstractDefinition [name] formula in
+        let formula'' = abstractArguments ids formula' in
+        let formula''' = makeFixpoint ind name formula'' in
+        
+        FOA.Definition(name, List.length ids, formula''', ind)
       in
       (List.map processPreDefinition predefs)
     in
@@ -308,16 +400,16 @@ Implements a simple first order logic with equality.
     let rec addDefinitions defs table =
       match defs with
         [] -> table
-      | def::ds ->
-          let (Firstorderabsyn.Definition(name,arity,formula)) = def in
+      | (FOA.Definition(name,arity,formula,ind) as def)::ds ->
           if (Logic.contains name table) then
             (O.error ("'" ^ name ^ "' already defined.\n");
             table)
           else
-            (Logic.Table.add name def table)
+            let () = O.output ("Definition: " ^ (string_of_definition def) ^ ".\n") in
+            Logic.Table.add name def (addDefinitions ds table)
     in
         
-    let predefs = (List.map parseDefinition defstrings) in
+    let predefs = (List.map (parseDefinition (getSessionDefinitions session)) defstrings) in
     if (List.exists (Option.isNone) predefs) then
       (O.error "definitions contain errors.\n";
       session)
@@ -325,7 +417,6 @@ Implements a simple first order logic with equality.
       let defs = processPreDefinitions (List.map (Option.get) predefs) in
       let defs' = (addDefinitions defs (getSessionDefinitions session)) in
       (setSessionDefinitions defs' session)
-
 
   let operator name fix prec session = session
   let update sequents builder session =
@@ -349,11 +440,13 @@ Implements a simple first order logic with equality.
       
   (********************************************************************
   *copySequent:
+  * Copy the terms in a sequent so that left-unification doesn't
+  * introduce invalid unifiers.
   ********************************************************************)
   let copySequent (i,lhs,rhs) =
     let copier = Term.copy () in
     let copyTerm t = copier t in
-    let rec copyFormula f = Firstorderabsyn.mapFormula copyFormula copyTerm f in
+    let rec copyFormula f = FOA.mapFormula copyFormula copyTerm f in
     
     let lhs' = List.map (fun (i,f) -> (i, copyFormula f)) lhs in
     let rhs' = List.map (fun (i,f) -> (i, copyFormula f)) rhs in
@@ -388,7 +481,7 @@ Implements a simple first order logic with equality.
       [] -> (None, [])
     | f::fs ->
         let (_,f') = f in
-        if (Firstorderabsyn.matchFormula template f') then
+        if (FOA.matchFormula template f') then
           (Some f, fs)
         else
           let (r, l) = (findFormula template fs) in
@@ -442,22 +535,51 @@ Implements a simple first order logic with equality.
         let pretactic = fun sequent sc fc ->
           let rec unifyList sc lhs f =
             match f with
-                (i, Firstorderabsyn.AtomicApplicationFormula(t,args)) ->
+                (i, FOA.AtomicFormula(t)) ->
                   (match lhs with
                     [] -> ()
-                  | (i', Firstorderabsyn.AtomicApplicationFormula(t', args'))::ls ->
-                      if t = t' then
-                        if (not Nabla.strictNabla) || i = i' then
-                          (match (Firstorderabsyn.unifyList (Firstorderabsyn.rightUnify) args args') with
-                              Firstorderabsyn.UnifySucceeded -> sc ()
-                            | Firstorderabsyn.UnifyFailed -> (unifyList sc ls f)
-                            | Firstorderabsyn.UnifyError(s) ->
-                                (O.error (s ^ ".\n");
-                                fc ()))
-                        else
-                          (unifyList sc ls f)
-                       else
-                         (unifyList sc ls f)
+                  | (i', FOA.AtomicFormula(t'))::ls ->
+                      if (not Nabla.strictNabla) || i = i' then
+                        (match (FOA.rightUnify t t') with
+                            FOA.UnifySucceeded -> sc ()
+                          | FOA.UnifyFailed -> (unifyList sc ls f)
+                          | FOA.UnifyError(s) ->
+                              (O.error (s ^ ".\n");
+                              fc ()))
+                      else
+                        (unifyList sc ls f)
+                  | _::ls ->
+                      (unifyList sc ls f))
+              | (i,FOA.ApplicationFormula(FOA.MuFormula(n1,_),FOA.MuFormula(n2,_),args)) ->
+                  (match lhs with
+                    [] -> ()
+                  | (i', FOA.ApplicationFormula(FOA.MuFormula(n1',_),
+                      FOA.MuFormula(n2',_),args'))::ls ->
+                      if n1 = n1' && n2 = n2' then
+                        (match (FOA.unifyList FOA.rightUnify args args') with
+                            FOA.UnifySucceeded -> sc ()
+                          | FOA.UnifyFailed -> (unifyList sc ls f)
+                          | FOA.UnifyError(s) ->
+                              (O.error (s ^ ".\n");
+                              fc ()))
+                      else
+                        (unifyList sc ls f)
+                  | _::ls ->
+                      (unifyList sc ls f))
+              | (i,FOA.ApplicationFormula(FOA.NuFormula(n1,_),FOA.NuFormula(n2,_),args)) ->
+                  (match lhs with
+                    [] -> ()
+                  | (i', FOA.ApplicationFormula(FOA.NuFormula(n1',_),
+                      FOA.NuFormula(n2',_),args'))::ls ->
+                      if n1 = n1' && n2 = n2' then
+                        (match (FOA.unifyList FOA.rightUnify args args') with
+                            FOA.UnifySucceeded -> sc ()
+                          | FOA.UnifyFailed -> (unifyList sc ls f)
+                          | FOA.UnifyError(s) ->
+                              (O.error (s ^ ".\n");
+                              fc ()))
+                      else
+                        (unifyList sc ls f)
                   | _::ls ->
                       (unifyList sc ls f))
               | _ -> ()
@@ -479,7 +601,7 @@ Implements a simple first order logic with equality.
           let rec apply lvl terms rhs lhs =
             match terms with
                 [] -> fc ()
-              | (i, Firstorderabsyn.ImplicationFormula(l,r))::ts ->
+              | (i, FOA.ImplicationFormula(l,r))::ts ->
                   let rhs' = (List.rev_append rhs ts) in
                   let s = (lvl, (i,l)::lhs, (i,r)::rhs') in
                   (sc [s] (makeBuilder "imp_r") fc)
@@ -501,7 +623,7 @@ Implements a simple first order logic with equality.
           let rec apply lvl terms lhs rhs =
             match terms with
                 [] -> fc ()
-              | (i, Firstorderabsyn.ImplicationFormula(l,r))::ts ->
+              | (i, FOA.ImplicationFormula(l,r))::ts ->
                   let lhs' = (List.rev_append lhs ts) in
                   let s1 = (lvl, lhs', (i,l)::rhs) in
                   let s2 = (lvl, (i,r)::lhs', rhs) in
@@ -524,7 +646,7 @@ Implements a simple first order logic with equality.
           let rec apply lvl terms lhs rhs =
             match terms with
                 [] -> fc ()
-              | (i,Firstorderabsyn.OrFormula(l,r))::ts ->
+              | (i,FOA.OrFormula(l,r))::ts ->
                   let lhs' = (List.rev_append lhs ts) in
                   let s1 = (lvl, (i,l)::lhs', rhs) in
                   let s2 = (lvl, (i,r)::lhs', rhs) in
@@ -547,7 +669,7 @@ Implements a simple first order logic with equality.
           let rec apply lvl terms rhs lhs =
             match terms with
                 [] -> fc ()
-              | (i, Firstorderabsyn.OrFormula(l,r))::ts ->
+              | (i, FOA.OrFormula(l,r))::ts ->
                   let rhs' = (List.rev_append rhs ts) in
                   let s = (lvl, lhs, (i,l)::(i,r)::rhs') in
                   (sc [s] (makeBuilder "or_r") fc)
@@ -569,7 +691,7 @@ Implements a simple first order logic with equality.
           let rec apply lvl terms lhs rhs =
             match terms with
                 [] -> fc ()
-              | (i,Firstorderabsyn.AndFormula(l,r))::ts ->
+              | (i,FOA.AndFormula(l,r))::ts ->
                   let lhs' = (List.rev_append lhs ts) in
                   let s = (lvl,(i,l)::(i,r)::lhs', rhs) in
                   (sc [s] (makeBuilder "and_l") fc)
@@ -591,7 +713,7 @@ Implements a simple first order logic with equality.
           let rec apply lvl terms rhs lhs =
             match terms with
                 [] -> fc ()
-              | (i,Firstorderabsyn.AndFormula(l,r))::ts ->
+              | (i,FOA.AndFormula(l,r))::ts ->
                   let rhs' = (List.rev_append rhs ts) in
                   let s1 = (lvl, lhs, (i,l)::rhs') in
                   let s2 = (lvl, lhs, (i,r)::rhs') in
@@ -614,10 +736,10 @@ Implements a simple first order logic with equality.
           let rec apply lvl terms lhs rhs =
             match terms with
                 [] -> fc ()
-              | (i,Firstorderabsyn.PiFormula(f))::ts ->
+              | (i,FOA.PiFormula(f))::ts ->
                   let lhs' = (List.rev_append lhs ts) in
                   let (lvl', var) = makeExistentialVar lvl i in
-                  let f' = Firstorderabsyn.apply [var] f in 
+                  let f' = FOA.apply [var] f in 
                   let s = (lvl', (i,f')::lhs', rhs) in
                   (sc [s] (makeBuilder "pi_l") fc)
               | t::ts ->
@@ -631,6 +753,129 @@ Implements a simple first order logic with equality.
         G.makeTactical pretactic
     | _ -> G.invalidArguments "pi_l"
 
+  let muR session args = match args with
+      Absyn.String(n)::[] -> 
+        let pretactic = fun sequent sc fc ->
+          let rec apply lvl terms rhs lhs =
+            match terms with
+                [] -> (O.error ("definition '" ^ n ^ "' not found.\n"); fc ())
+              | (i,FOA.ApplicationFormula(
+                (FOA.MuFormula(name,mu)),muarg,args) as t)::ts ->
+                  if n = name then
+                    let rhs' = (List.rev_append rhs ts) in
+                    let mu' = FOA.applyFixpoint muarg mu in
+                    let f' = application args mu' in
+                    if Option.isSome f' then
+                      let s = (lvl, lhs, (i,Option.get f')::rhs') in
+                      (sc [s] (makeBuilder "mu_r") fc)
+                    else
+                      (O.error ("'" ^ name ^ "': incorrect number of arguments.");
+                      fc ())
+                  else
+                    (O.output ("mu formula: " ^ name ^ ".\n");
+                    (apply lvl ts (t::rhs) lhs))
+              | t::ts ->
+                  (apply lvl ts (t::rhs) lhs)
+          in
+          let lhs = getSequentLHS sequent in
+          let rhs = getSequentRHS sequent in
+          let lvl = getSequentLevel sequent in
+          (apply lvl rhs [] lhs)
+        in
+        G.makeTactical pretactic
+    | _ -> G.invalidArguments "mu_r"
+
+  (*  Induction *)
+  let inductionTactical session args = match args with
+      Absyn.String(n)::Absyn.String(s)::[] ->
+        let pretactic = fun sequent sc fc ->
+          let rec makeArgs lvl lts args =
+            match args with
+              [] -> (lvl, [])
+            | a::aa ->
+                let (lvl', a') = makeUniversalVar lvl lts in
+                let (lvl'', aa') = makeArgs lvl' lts aa in
+                (lvl'',  a'::aa')
+          in
+          
+          let rec apply lvl terms lhs rhs =
+            match terms with
+                [] -> (O.error ("definition '" ^ n ^ "' not found.\n"); fc ())
+              | ((i,FOA.ApplicationFormula(FOA.MuFormula(name,mu),
+                    _, args)) as t)::ts ->
+                  if n = name then
+                    let lhs' = (List.rev_append lhs ts) in
+                    
+                    let s' = parseFormula (getSessionDefinitions session) s in
+                    if Option.isSome s' then
+                      let s' = Option.get s' in
+                      let f' = application args s' in
+                      if Option.isSome f' then
+                        let f' = Option.get f' in
+                        let s1 = (lvl, (i,f')::lhs', rhs) in
+
+                        let (lvl', args') = makeArgs lvl i args in
+                        
+                        let r = application args' s' in
+                        let mu' = FOA.applyFixpoint "invariant" s' mu in
+                        let l = application args' mu' in
+                        
+                        if (Option.isSome r) && (Option.isSome l) then
+                          let s2 = (lvl', [(i, Option.get l)], [(i, Option.get r)]) in
+                          (sc [s1;s2] (makeBuilder "induction") fc)
+                        else
+                          (O.error ("incorrect number of arguments.\n");
+                          fc ())
+                      else
+                        fc ()
+                    else
+                      (O.error ("unable to parse argument formula: " ^ s ^ ".\n");
+                      fc ())
+                  else
+                    (apply lvl ts (t::rhs) lhs)
+              | t::ts ->
+                  (apply lvl ts (t::rhs) lhs)
+          in
+          let lhs = getSequentLHS sequent in
+          let rhs = getSequentRHS sequent in
+          let lvl = getSequentLevel sequent in
+          (apply lvl lhs [] rhs)
+        in
+        G.makeTactical pretactic
+    | _ -> G.invalidArguments "induction"
+
+  (*  Nu Left *)
+  let nuL session args = match args with
+      Absyn.String(n)::[] -> 
+        let pretactic = fun sequent sc fc ->
+          let rec apply lvl terms lhs rhs =
+            match terms with
+                [] -> (O.error ("definition '" ^ n ^ "' not found.\n"); fc ())
+              | (i,FOA.ApplicationFormula(
+                (FOA.NuFormula(name,nu)),nuarg,args) as t)::ts ->
+                  if n = name then
+                    let lhs' = (List.rev_append lhs ts) in
+                    let nu' = FOA.applyFixpoint nuarg nu in
+                    let f' = application args nu' in
+                    if Option.isSome f' then
+                      let s = (lvl, (i,Option.get f')::lhs', rhs) in
+                      (sc [s] (makeBuilder "nu_r") fc)
+                    else
+                      (O.error ("'" ^ name ^ "': incorrect number of arguments.");
+                      fc ())
+                  else
+                    (apply lvl ts (t::lhs) rhs)
+              | t::ts ->
+                  (apply lvl ts (t::lhs) rhs)
+          in
+          let lhs = getSequentLHS sequent in
+          let rhs = getSequentRHS sequent in
+          let lvl = getSequentLevel sequent in
+          (apply lvl lhs [] rhs)
+        in
+        G.makeTactical pretactic
+    | _ -> G.invalidArguments "nu_l"
+
   (*  Pi Right  *)
   let piR session args = match args with
       [] -> 
@@ -638,12 +883,15 @@ Implements a simple first order logic with equality.
           let rec apply lvl terms rhs lhs =
             match terms with
                 [] -> fc ()
-              | (i,Firstorderabsyn.PiFormula(f))::ts ->
+              | (i,FOA.PiFormula(f))::ts ->
                   let rhs' = (List.rev_append rhs ts) in
                   let (lvl', var) = makeUniversalVar lvl i in
-                  let f' = Firstorderabsyn.apply [var] f in
-                  let s = (lvl', lhs, (i,f')::rhs') in
-                  (sc [s] (makeBuilder "pi_r") fc)
+                  let f' = application [var] f in
+                  if Option.isSome f' then
+                    let s = (lvl', lhs, (i,Option.get f')::rhs') in
+                    (sc [s] (makeBuilder "pi_r") fc)
+                  else
+                    fc ()
               | t::ts ->
                   (apply lvl ts (t::rhs) lhs)
           in
@@ -662,12 +910,15 @@ Implements a simple first order logic with equality.
           let rec apply lvl terms lhs rhs =
             match terms with
                 [] -> fc ()
-              | (i,Firstorderabsyn.SigmaFormula(f))::ts ->
+              | (i,FOA.SigmaFormula(f))::ts ->
                   let lhs' = (List.rev_append lhs ts) in
                   let (lvl', var) = makeUniversalVar lvl i in
-                  let f' = Firstorderabsyn.apply [var] f in 
-                  let s = (lvl', (i,f')::lhs', rhs) in
-                  (sc [s] (makeBuilder "sigma_l") fc)
+                  let f' = application [var] f in
+                  if (Option.isSome f') then
+                    let s = (lvl', (i,Option.get f')::lhs', rhs) in
+                    (sc [s] (makeBuilder "sigma_l") fc)
+                  else
+                    fc ()
               | t::ts ->
                   (apply lvl ts (t::lhs) ts)
           in
@@ -686,12 +937,16 @@ Implements a simple first order logic with equality.
           let rec apply lvl terms rhs lhs =
             match terms with
                 [] -> fc ()
-              | (i,Firstorderabsyn.SigmaFormula(f))::ts ->
-                  let rhs' = (List.rev_append rhs ts) in
+              | (i,FOA.SigmaFormula(f))::ts ->
+                  let rhs' = (List.rev_append ts rhs) in
                   let (lvl', var) = makeExistentialVar lvl i in
-                  let f' = Firstorderabsyn.apply [var] f in
-                  let s = (lvl', lhs, (i,f')::rhs') in
-                  (sc [s] (makeBuilder "sigma_r") fc)
+                  let f' = application [var] f in
+                  if Option.isSome f' then
+                    let s = (lvl', lhs, (i,Option.get f')::rhs') in
+                    (sc [s] (makeBuilder "sigma_r") fc)
+                  else
+                    (O.error "sigma: argument is not an abstraction.\n";
+                    (apply lvl ts ((List.hd terms)::rhs) lhs))
               | t::ts ->
                   (apply lvl ts (t::rhs) lhs)
           in
@@ -710,12 +965,15 @@ Implements a simple first order logic with equality.
           let rec apply lvl terms lhs rhs =
             match terms with
                 [] -> fc ()
-              | (i,Firstorderabsyn.NablaFormula(f))::ts ->
+              | (i,FOA.NablaFormula(f))::ts ->
                   let lhs' = (List.rev_append lhs ts) in
                   let (lvl', i', var) = makeNablaVar lvl i in
-                  let f' = Firstorderabsyn.apply [var] f in 
-                  let s = (lvl', (i',f')::lhs', rhs) in
-                  (sc [s] (makeBuilder "nabla_l") fc)
+                  let f' = application [var] f in
+                  if Option.isSome f' then
+                    let s = (lvl', (i',Option.get f')::lhs', rhs) in
+                    (sc [s] (makeBuilder "nabla_l") fc)
+                  else
+                    fc ()
               | t::ts ->
                   (apply lvl ts (t::lhs) ts)
           in
@@ -734,12 +992,15 @@ Implements a simple first order logic with equality.
           let rec apply lvl terms rhs lhs =
             match terms with
                 [] -> fc ()
-              | (i,Firstorderabsyn.NablaFormula(f))::ts ->
+              | (i,FOA.NablaFormula(f))::ts ->
                   let rhs' = (List.rev_append rhs ts) in
                   let (lvl', i', var) = makeNablaVar lvl i in
-                  let f' = Firstorderabsyn.apply [var] f in
-                  let s = (lvl', lhs, (i',f')::rhs') in
-                  (sc [s] (makeBuilder "nabla_r") fc)
+                  let f' = application [var] f in
+                  if Option.isSome f' then
+                    let s = (lvl', lhs, (i',Option.get f')::rhs') in
+                    (sc [s] (makeBuilder "nabla_r") fc)
+                  else
+                    fc ()
               | t::ts ->
                   (apply lvl ts (t::rhs) lhs)
           in
@@ -758,11 +1019,11 @@ Implements a simple first order logic with equality.
           let rec apply lvl terms =
             match terms with
                 [] -> fc ()
-              | (i,Firstorderabsyn.EqualityFormula(t1, t2))::ts ->                  
-                  (match (Firstorderabsyn.rightUnify t1 t2) with
-                      Firstorderabsyn.UnifySucceeded -> (sc [] (makeBuilder "eq_r") fc)
-                    | Firstorderabsyn.UnifyFailed -> (apply lvl ts)
-                    | Firstorderabsyn.UnifyError(s) ->
+              | (i,FOA.EqualityFormula(t1, t2))::ts ->                  
+                  (match (FOA.rightUnify t1 t2) with
+                      FOA.UnifySucceeded -> (sc [] (makeBuilder "eq_r") fc)
+                    | FOA.UnifyFailed -> (apply lvl ts)
+                    | FOA.UnifyError(s) ->
                           (O.error (s ^ ".\n");
                           fc ()))
               | t::ts ->
@@ -782,14 +1043,14 @@ Implements a simple first order logic with equality.
           let rec apply lvl terms lhs rhs =
             match terms with
                 [] -> fc ()
-              | (i,Firstorderabsyn.EqualityFormula(t1, t2))::ts ->
-                  (match (Firstorderabsyn.leftUnify t1 t2) with
-                      Firstorderabsyn.UnifyFailed -> (sc [] (makeBuilder "eq_l") fc)
-                    | Firstorderabsyn.UnifySucceeded ->
+              | (i,FOA.EqualityFormula(t1, t2))::ts ->
+                  (match (FOA.leftUnify t1 t2) with
+                      FOA.UnifyFailed -> (sc [] (makeBuilder "eq_l") fc)
+                    | FOA.UnifySucceeded ->
                         let lhs' = (List.rev_append lhs ts) in
                         let s = (i, lhs', rhs) in
                         (sc [s] (makeBuilder "eq_l") fc)
-                    | Firstorderabsyn.UnifyError(s) ->
+                    | FOA.UnifyError(s) ->
                         (O.error (s ^ ".\n");
                         fc ()))
               | t::ts ->
@@ -831,6 +1092,17 @@ Implements a simple first order logic with equality.
   let eqTactical session args = match args with
       [] -> (G.orElseTactical (eqL session []) (eqR session []))
     | _ -> G.invalidArguments "eq"
+
+  let examineTactical session args = match args with
+      [] -> fun sequents sc fc ->
+            let sequent = List.hd sequents in
+            let lhs = getSequentLHS sequent in
+            let rhs = getSequentRHS sequent in
+            let slhs = String.concat "\n  " (List.map string_of_formula_ast lhs) in
+            let srhs = String.concat "\n  " (List.map string_of_formula_ast rhs) in
+            (O.output ("Sequent AST:\n  " ^ slhs ^ "----------------------------\n  " ^ srhs ^ "\n");
+            (sc [] sequents Logic.idProofBuilder fc))
+    | _ -> G.invalidArguments "examine"
 
   let contractTactical session args = match args with
       Absyn.String(s)::[] ->
@@ -922,8 +1194,13 @@ Implements a simple first order logic with equality.
     let ts = Logic.Table.add "contract_l" contractL ts in
     let ts = Logic.Table.add "contract_r" contractR ts in
     
-    let ts = Logic.Table.add "prologpi" prologPiTactical ts in
-    let ts = Logic.Table.add "prolog" prologTactical ts in
+    let ts = Logic.Table.add "mu_r" muR ts in
+    let ts = Logic.Table.add "induction" inductionTactical ts in
+    
+    let ts = Logic.Table.add "nu_l" nuL ts in
+    
+    let ts = Logic.Table.add "examine" examineTactical ts in
+
     ts
     
   let emptySession =
