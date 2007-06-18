@@ -28,7 +28,7 @@
           pos_lnum = 1 + lexbuf.lex_curr_p.pos_lnum}
 }
 
-let name = ['A' - 'Z' 'a'-'z' '_' '/' '0'-'9' '\''] +
+let name = ['A' - 'Z' 'a'-'z' '_' '/' '0'-'9'] +
 let blank = ' ' | '\t' | '\r'
 let instring = [^'"'] *
 
@@ -44,15 +44,16 @@ rule token = parse
 | "," {AND}
 | "&" {AND}
 | ";" {OR}
-| "->" {IMP}
+| "=>" {IMP}
 | ":=" {DEF}
 | "\\" {BSLASH}
 
 | "pi"      {PI}
 | "sigma"   {SIGMA}
 | "nabla"   {NABLA}
-| "mu"      {MU}
-| "lambda"  {LAMBDA}
+
+| "inductive" {IND}
+| "coinductive" {COIND}
 
 | name as n {ID n}
 | '"' (instring as n) '"'

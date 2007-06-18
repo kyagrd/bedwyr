@@ -18,6 +18,7 @@ type 'a tactical =
 type command =
     Exit
   | Reset
+  | Open of string list
   | Include of string list
   | Help
   | Clear

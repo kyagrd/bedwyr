@@ -1,4 +1,4 @@
-let outputName = ref ""
+let outputName = ref "console"
 let logicName = ref ""
 let debug = ref false
 let printLogicInformation = ref false
@@ -32,7 +32,6 @@ let interpret interp =
 let main () =
   (*  Parse the command line arguments. *)
   let _ = parseArgs () in
-  
   if !printLogicInformation || !printOutputInformation then
     (if !printLogicInformation then
       Logics.printLogics (print_string)
@@ -43,9 +42,9 @@ let main () =
     else
       ();
     0)
-  else  
+  else
     if not (Logics.outputExists !outputName) then
-      (print_endline "Error: undefined output.";
+      (print_endline ("Error: undefined output '" ^ !outputName ^ "'.");
       1)
     else
     

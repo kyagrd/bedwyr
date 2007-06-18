@@ -12,17 +12,22 @@ type formula =
   | SigmaFormula of formula
   | NablaFormula of formula
   | MuFormula of string * formula
+  | NuFormula of string * formula
   | AbstractionFormula of string * formula
-  | MuApplicationFormula of formula * term list
-  | AtomicApplicationFormula of string * term list
-  | DBFormula of int
+  | ApplicationFormula of formula * formula * term list
+  | AtomicFormula of term
+  | DBFormula of string * int
   | AnonymousFormula
 
+type fixpoint =
+    Inductive
+  | CoInductive
+
 type predefinition =
-  PreDefinition of (string * string list * formula)
+  PreDefinition of (string * string list * formula * fixpoint)
 
 type definition =
-  Definition of (string * int * formula)
+  Definition of (string * int * formula * fixpoint)
 
 type unifyresult =
     UnifyFailed
@@ -30,10 +35,12 @@ type unifyresult =
   | UnifyError of string
   
 val mapFormula : (formula -> formula) -> (term -> term) -> formula -> formula
-val abstract : term -> formula -> formula
+val abstract : string -> formula -> formula
 val apply : term list -> formula -> formula
-val applyMu : formula -> formula -> formula
+val applyFixpoint : formula -> formula -> formula
+val string_of_definition : definition -> string
 val string_of_formula : formula -> string
+val string_of_formula_ast : formula -> string
 val string_of_term : term -> string
 
 val rightUnify : term -> term -> unifyresult

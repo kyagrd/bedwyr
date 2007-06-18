@@ -37,15 +37,23 @@ struct
 
 #clear.                     : Clear the screen.
 #debug <on | off>.          : Turn debugging on or off.
-#definition <definition>.   : Add the given definition to the current session.
+#define <definition>.       : Add the given definition to the current session.
 #exit.                      : Exit Taci.
 #help.                      : Show this message.
 #include <files>            : Add the definitions in the given files to the
                               current session.  File names should be surrounded
                               by quotes and separated by spaces.
+#open <files>               : Read each line in the given files as a command.
+                              File names should be surrounded by quotes and
+                              separated by spaces.
+#redo                       : Redo.
+#reset.                     : Reset the current session, removing all definitions
+                              and removing all sequents.
+#tactical <name> <tactical> : Define a tactical with the given name and body.
+#tacticals.                 : List all available tacticals.
 #theorem <name> <theorem>.  : Prove the given theorem in the current logic.
-#reset.                     : Reset the current session.
 #time <on | off>.           : Turn timing on or off.
+#undo.                      : Undo.
 "
 
   let startupMessage = "Welcome to " ^ helpMessage
@@ -201,11 +209,30 @@ struct
   let loadLogic l =
     raise (Logic l)
     
+  (********************************************************************
+  *openFiles:
+  * Open each file and read each command in it.
+  ********************************************************************)
+  let rec openFiles session files =
+    let executeCommand session command =
+      handleInput command session
+    in
+    
+    let executeFile session file =
+      try
+        let infile = open_in file in
+        let commands = Toplevel.parseChannelCommandList infile in
+        List.fold_left executeCommand session commands
+      with
+        Sys_error(s) -> (O.error ("unable to open file '" ^ file ^ "': " ^ s ^ ".\n"); session)
+      | Absyn.SyntaxError(s) -> (O.error ("in file '" ^ file ^ "': " ^ s ^ ".\n"); session)
+    in
+    List.fold_left executeFile session files
 
   (********************************************************************
   *handleInput:
   ********************************************************************)
-  let handleInput input session =
+  and handleInput input session =
     match input with
         Absyn.Exit -> raise (Exit session)
       | Absyn.Clear -> (O.clear (); session)
@@ -224,8 +251,10 @@ struct
           (O.showDebug := onoff; session)
       | Absyn.Include(sl) ->
           (L.incl sl session)
+      | Absyn.Open(sl) ->
+          (openFiles session sl)
       | Absyn.Logics -> (showLogics session; session)
-      | Absyn.Logic(s) -> (loadLogic s; session)
+      | Absyn.Logic(s) -> (loadLogic s)
       | Absyn.Tacticals -> (showTacticals session; session)
       | Absyn.TacticalDefinition(name, pretactical) ->
           (defineTactical name pretactical session)
