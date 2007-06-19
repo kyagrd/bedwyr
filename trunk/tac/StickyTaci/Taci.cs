@@ -169,6 +169,7 @@ namespace StickyTaci
       s = s.Replace("&amp;", "&");
       s = s.Replace("&quot;", "\"");
       s = s.Replace("&apos;", "'");
+      s = s.Replace("\\\\", "\\");
       return System.Text.RegularExpressions.Regex.Unescape(s);
     }
 

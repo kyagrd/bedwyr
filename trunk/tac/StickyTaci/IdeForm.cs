@@ -86,27 +86,12 @@ namespace StickyTaci
       {
         m_CurrentLine = value;
 
-        Rtf.Enabled = false;
-
-        //Hilight everything and make it normal
-        int pos = Rtf.SelectionStart;
-
-        //Color all lines:
-        for(int i = 0; i < Rtf.Lines.Length; i++)
-        {
-          ColorLine(i);
-        }
-
-        Rtf.SelectionStart = pos;
-        Rtf.SelectionLength = 0;
-        Rtf.SelectionColor = m_InputColor;
+        //Color all lines up to and including current:
+        ColorLines(CurrentLine);
 
         //Show current line marker:
         Point p = new Point(1, ((int)((uint)m_InputFont.Height * (m_CurrentLine))));
         currentLineImagePanel.Location = p;
-
-        Rtf.Enabled = true;
-        Rtf.Focus();
       }
     }
 
@@ -279,6 +264,7 @@ namespace StickyTaci
 
     void inputBox_TextChanged(object sender, EventArgs e)
     {
+      ColorLines((uint)inputBox.Lines.Length);
       Ctrl.OnInputChanged((uint)inputBox.Lines.Length);
     }
 
@@ -356,7 +342,23 @@ namespace StickyTaci
         goalBox.SelectedText = s;
       }
     }
-    
+
+    private void ColorLines(uint max)
+    {
+      int orig = Rtf.SelectionStart;
+      Rtf.Enabled = false;
+
+      for(int i = 0; i < max; i++)
+      {
+        ColorLine(i);
+      }
+      Rtf.SelectionStart = orig;
+      Rtf.SelectionLength = 0;
+      Rtf.SelectionColor = InputColor;
+      Rtf.Enabled = true;
+      Rtf.Focus();
+    }
+
     private void ColorLine(int linenum)
     {
       if(linenum < 0 || linenum > (Rtf.Lines.Length - 1))
@@ -456,10 +458,10 @@ namespace StickyTaci
       else if(e.KeyCode == Keys.Back || e.KeyCode == Keys.Delete)
       {
         //Backspace/Delete
-        ColorCurrentLine();
-      }
-      else
-      {
+        if(Rtf.SelectionLength > 0)
+        {
+          Rtf.SelectedText = "";
+        }
         ColorCurrentLine();
       }
       return;
