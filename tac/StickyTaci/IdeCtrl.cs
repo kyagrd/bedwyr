@@ -247,6 +247,7 @@ namespace StickyTaci
       {
         Form.Clear();
         Form.Rtf.LoadFile(dlg.FileName, RichTextBoxStreamType.PlainText);
+        FileName = dlg.FileName;
       }
     }
 
