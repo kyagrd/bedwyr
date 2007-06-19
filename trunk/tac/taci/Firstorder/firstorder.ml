@@ -90,14 +90,16 @@ Implements a simple first order logic with equality.
   let string_of_sequent seq =
     let lhs = getSequentLHS seq in
     let rhs = getSequentRHS seq in
+    let lvl = getSequentLevel seq in
     let top = (String.concat "\n" (List.map string_of_formula lhs)) in
-    let bottom = (String.concat ", " (List.map string_of_formula rhs)) in
-    (top ^ "\n" ^ (String.make (max (min (String.length bottom) 72) 16) '-') ^ "\n" ^ bottom)
+    let bottom = (String.concat "\n" (List.map string_of_formula rhs)) in
+    (top ^ "\n" ^ (string_of_int lvl) ^ ": " ^ (String.make (max (min (String.length bottom) 72) 16) '-') ^ "\n" ^ bottom)
 
   let string_of_sequent_rhs seq =
     let rhs = getSequentRHS seq in
-    let bottom = (String.concat ", " (List.map string_of_formula rhs)) in
-    ((String.make (max (min (String.length bottom) 72) 16) '-') ^ "\n" ^ bottom)
+    let lvl = getSequentLevel seq in
+    let bottom = (String.concat "\n" (List.map string_of_formula rhs)) in
+    ((string_of_int lvl) ^ ": " ^ (String.make (max (min (String.length bottom) 72) 16) '-') ^ "\n" ^ bottom)
     
   let string_of_sequents sequents =
     let mainseq = List.hd sequents in
@@ -171,10 +173,10 @@ Implements a simple first order logic with equality.
                 let arity = FOA.getDefinitionArity def in
                 let body = FOA.getDefinitionBody def in
                 if (arity = List.length args) then
-                  FOA.ApplicationFormula(body, body, args)
+                  FOA.ApplicationFormula(body, args)
                 else if arity > List.length args then
                   let args' = makeArgs (arity - (List.length args)) in
-                  makeAbstractions args' (FOA.ApplicationFormula(body, body, args@(List.map (Term.atom) args')))
+                  makeAbstractions args' (FOA.ApplicationFormula(body, args@(List.map (Term.atom) args')))
                 else             
                   raise (FOA.SemanticError("'" ^ head ^ "' applied to too many arguments"))
               else
@@ -347,9 +349,7 @@ Implements a simple first order logic with equality.
                   let (head,args) = Option.get ha in
                   let db = getDB head abstractions in
                   if Option.isSome db then
-                    FOA.ApplicationFormula(FOA.DBFormula(head, Option.get db),
-                      FOA.DBFormula(head, Option.get db),
-                      args)
+                    FOA.ApplicationFormula(FOA.DBFormula(head, Option.get db), args)
                   else
                     let def = findDefinition head predefs in
                     if Option.isSome def then
@@ -550,12 +550,11 @@ Implements a simple first order logic with equality.
                         (unifyList sc ls f)
                   | _::ls ->
                       (unifyList sc ls f))
-              | (i,FOA.ApplicationFormula(FOA.MuFormula(n1,_),FOA.MuFormula(n2,_),args)) ->
+              | (i,FOA.ApplicationFormula(FOA.MuFormula(n1,_),args)) ->
                   (match lhs with
                     [] -> ()
-                  | (i', FOA.ApplicationFormula(FOA.MuFormula(n1',_),
-                      FOA.MuFormula(n2',_),args'))::ls ->
-                      if n1 = n1' && n2 = n2' then
+                  | (i', FOA.ApplicationFormula(FOA.MuFormula(n1',_),args'))::ls ->
+                      if n1 = n1' then
                         (match (FOA.unifyList FOA.rightUnify args args') with
                             FOA.UnifySucceeded -> sc ()
                           | FOA.UnifyFailed -> (unifyList sc ls f)
@@ -566,12 +565,11 @@ Implements a simple first order logic with equality.
                         (unifyList sc ls f)
                   | _::ls ->
                       (unifyList sc ls f))
-              | (i,FOA.ApplicationFormula(FOA.NuFormula(n1,_),FOA.NuFormula(n2,_),args)) ->
+              | (i,FOA.ApplicationFormula(FOA.NuFormula(n1,_),args)) ->
                   (match lhs with
                     [] -> ()
-                  | (i', FOA.ApplicationFormula(FOA.NuFormula(n1',_),
-                      FOA.NuFormula(n2',_),args'))::ls ->
-                      if n1 = n1' && n2 = n2' then
+                  | (i', FOA.ApplicationFormula(FOA.NuFormula(n1',_),args'))::ls ->
+                      if n1 = n1' then
                         (match (FOA.unifyList FOA.rightUnify args args') with
                             FOA.UnifySucceeded -> sc ()
                           | FOA.UnifyFailed -> (unifyList sc ls f)
@@ -760,10 +758,10 @@ Implements a simple first order logic with equality.
             match terms with
                 [] -> (O.error ("definition '" ^ n ^ "' not found.\n"); fc ())
               | (i,FOA.ApplicationFormula(
-                (FOA.MuFormula(name,mu)),muarg,args) as t)::ts ->
+                FOA.MuFormula(name,body) as mu, args) as t)::ts ->
                   if n = name then
                     let rhs' = (List.rev_append rhs ts) in
-                    let mu' = FOA.applyFixpoint muarg mu in
+                    let mu' = FOA.applyFixpoint (fun alist -> FOA.ApplicationFormula(mu,alist)) body in
                     let f' = application args mu' in
                     if Option.isSome f' then
                       let s = (lvl, lhs, (i,Option.get f')::rhs') in
@@ -801,8 +799,7 @@ Implements a simple first order logic with equality.
           let rec apply lvl terms lhs rhs =
             match terms with
                 [] -> (O.error ("definition '" ^ n ^ "' not found.\n"); fc ())
-              | ((i,FOA.ApplicationFormula(FOA.MuFormula(name,mu),
-                    _, args)) as t)::ts ->
+              | ((i,FOA.ApplicationFormula(FOA.MuFormula(name,mu),args)) as t)::ts ->
                   if n = name then
                     let lhs' = (List.rev_append lhs ts) in
                     
@@ -817,7 +814,7 @@ Implements a simple first order logic with equality.
                         let (lvl', args') = makeArgs lvl i args in
                         
                         let r = application args' s' in
-                        let mu' = FOA.applyFixpoint "invariant" s' mu in
+                        let mu' = FOA.applyFixpoint (fun alist -> Option.get (application alist s')) mu in
                         let l = application args' mu' in
                         
                         if (Option.isSome r) && (Option.isSome l) then
@@ -832,9 +829,9 @@ Implements a simple first order logic with equality.
                       (O.error ("unable to parse argument formula: " ^ s ^ ".\n");
                       fc ())
                   else
-                    (apply lvl ts (t::rhs) lhs)
+                    (apply lvl ts (t::lhs) rhs)
               | t::ts ->
-                  (apply lvl ts (t::rhs) lhs)
+                  (apply lvl ts (t::lhs) rhs)
           in
           let lhs = getSequentLHS sequent in
           let rhs = getSequentRHS sequent in
@@ -851,11 +848,10 @@ Implements a simple first order logic with equality.
           let rec apply lvl terms lhs rhs =
             match terms with
                 [] -> (O.error ("definition '" ^ n ^ "' not found.\n"); fc ())
-              | (i,FOA.ApplicationFormula(
-                (FOA.NuFormula(name,nu)),nuarg,args) as t)::ts ->
+              | ((i,FOA.ApplicationFormula(FOA.NuFormula(name,body)as nu,args)) as t)::ts ->
                   if n = name then
                     let lhs' = (List.rev_append lhs ts) in
-                    let nu' = FOA.applyFixpoint nuarg nu in
+                    let nu' = FOA.applyFixpoint (fun args -> FOA.ApplicationFormula(nu,args)) body in
                     let f' = application args nu' in
                     if Option.isSome f' then
                       let s = (lvl, (i,Option.get f')::lhs', rhs) in
@@ -875,6 +871,64 @@ Implements a simple first order logic with equality.
         in
         G.makeTactical pretactic
     | _ -> G.invalidArguments "nu_l"
+
+  (*  Coinduction *)
+  let coinductionTactical session args = match args with
+      Absyn.String(n)::Absyn.String(s)::[] ->
+        let pretactic = fun sequent sc fc ->
+          let rec makeArgs lvl lts args =
+            match args with
+              [] -> (lvl, [])
+            | a::aa ->
+                let (lvl', a') = makeUniversalVar lvl lts in
+                let (lvl'', aa') = makeArgs lvl' lts aa in
+                (lvl'',  a'::aa')
+          in
+          
+          let rec apply lvl terms rhs lhs =
+            match terms with
+                [] -> (O.error ("definition '" ^ n ^ "' not found.\n"); fc ())
+              | ((i,FOA.ApplicationFormula(FOA.NuFormula(name,nu),args)) as t)::ts ->
+                  if n = name then
+                    let rhs' = (List.rev_append rhs ts) in
+                    
+                    let s' = parseFormula (getSessionDefinitions session) s in
+                    if Option.isSome s' then
+                      let s' = Option.get s' in
+                      let f' = application args s' in
+                      if Option.isSome f' then
+                        let f' = Option.get f' in
+                        let s1 = (lvl, lhs, (i,f')::rhs') in
+
+                        let (lvl', args') = makeArgs lvl i args in
+                        
+                        let l = application args' s' in
+                        let nu' = FOA.applyFixpoint (fun alist -> Option.get (application alist s')) nu in
+                        let r = application args' nu' in
+                        
+                        if (Option.isSome r) && (Option.isSome l) then
+                          let s2 = (lvl', [(i, Option.get l)], [(i, Option.get r)]) in
+                          (sc [s1;s2] (makeBuilder "coinduction") fc)
+                        else
+                          (O.error ("incorrect number of arguments.\n");
+                          fc ())
+                      else
+                        fc ()
+                    else
+                      (O.error ("unable to parse argument formula: " ^ s ^ ".\n");
+                      fc ())
+                  else
+                    (apply lvl ts (t::rhs) lhs)
+              | t::ts ->
+                  (apply lvl ts (t::rhs) lhs)
+          in
+          let lhs = getSequentLHS sequent in
+          let rhs = getSequentRHS sequent in
+          let lvl = getSequentLevel sequent in
+          (apply lvl rhs [] lhs)
+        in
+        G.makeTactical pretactic
+    | _ -> G.invalidArguments "coinduction"
 
   (*  Pi Right  *)
   let piR session args = match args with
@@ -1048,7 +1102,7 @@ Implements a simple first order logic with equality.
                       FOA.UnifyFailed -> (sc [] (makeBuilder "eq_l") fc)
                     | FOA.UnifySucceeded ->
                         let lhs' = (List.rev_append lhs ts) in
-                        let s = (i, lhs', rhs) in
+                        let s = (lvl, lhs', rhs) in
                         (sc [s] (makeBuilder "eq_l") fc)
                     | FOA.UnifyError(s) ->
                         (O.error (s ^ ".\n");
@@ -1100,7 +1154,7 @@ Implements a simple first order logic with equality.
             let rhs = getSequentRHS sequent in
             let slhs = String.concat "\n  " (List.map string_of_formula_ast lhs) in
             let srhs = String.concat "\n  " (List.map string_of_formula_ast rhs) in
-            (O.output ("Sequent AST:\n  " ^ slhs ^ "----------------------------\n  " ^ srhs ^ "\n");
+            (O.output ("Sequent AST:\n  " ^ slhs ^ "\n----------------------------\n  " ^ srhs ^ "\n");
             (sc [] sequents Logic.idProofBuilder fc))
     | _ -> G.invalidArguments "examine"
 
@@ -1151,6 +1205,31 @@ Implements a simple first order logic with equality.
           (prologPiTactical session [])))
   | _ -> G.invalidArguments "prolog"
 
+  let rotateR session args = match args with
+    [] ->
+      let pretactic = fun sequent sc fc ->
+        let lvl = getSequentLevel sequent in
+        let rhs = (getSequentRHS sequent) in
+        let lhs = (getSequentLHS sequent) in
+        let rhs' = (List.tl rhs)@[(List.hd rhs)] in
+        let s = (lvl, lhs, rhs') in
+        sc [s] (makeBuilder "rotate_r") fc
+      in
+      G.makeTactical pretactic
+  | _ -> G.invalidArguments "rotate_r"
+  
+  let rotateL session args = match args with
+    [] ->
+      let pretactic = fun sequent sc fc ->
+        let lvl = getSequentLevel sequent in
+        let rhs = (getSequentRHS sequent) in
+        let lhs = (getSequentLHS sequent) in
+        let lhs' = (List.tl lhs)@[(List.hd lhs)] in
+        let s = (lvl, lhs', rhs) in
+        sc [s] (makeBuilder "rotate_l") fc
+      in
+      G.makeTactical pretactic
+  | _ -> G.invalidArguments "rotate_l"
   (********************************************************************
   *tacticals:
   * The exported table of tacticals.  These tacticals are the only
@@ -1198,8 +1277,11 @@ Implements a simple first order logic with equality.
     let ts = Logic.Table.add "induction" inductionTactical ts in
     
     let ts = Logic.Table.add "nu_l" nuL ts in
+    let ts = Logic.Table.add "coinduction" coinductionTactical ts in
     
     let ts = Logic.Table.add "examine" examineTactical ts in
+    let ts = Logic.Table.add "rotate_r" rotateR ts in
+    let ts = Logic.Table.add "rotate_l" rotateL ts in
 
     ts
     

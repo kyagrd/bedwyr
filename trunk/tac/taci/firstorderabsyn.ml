@@ -15,7 +15,7 @@ type formula =
   | MuFormula of string * formula
   | NuFormula of string * formula
   | AbstractionFormula of string * formula
-  | ApplicationFormula of formula * formula * term list
+  | ApplicationFormula of formula * term list
   | AtomicFormula of term
   | DBFormula of string * int
   | AnonymousFormula
@@ -55,7 +55,7 @@ and string_of_formula f =
     | MuFormula(name, f) -> "(" ^ name ^ " " ^ (string_of_formula f) ^ ")"
     | NuFormula(name, f) -> "(" ^ name ^ " " ^ (string_of_formula f) ^ ")"
     | AbstractionFormula(name, f) -> name ^ "\\ " ^ (string_of_formula f)
-    | ApplicationFormula(mu,f,tl) ->
+    | ApplicationFormula(mu,tl) ->
         (getFormulaName mu) ^ " " ^
           (String.concat " " (List.map (Pprint.term_to_string) tl))
     | AtomicFormula(t) ->
@@ -75,8 +75,8 @@ let rec string_of_formula_ast f =
     | MuFormula(name, f) -> "mu(" ^ name ^ ", " ^ (string_of_formula_ast f) ^ ")"
     | NuFormula(name, f) -> "nu(" ^ name ^ ", " ^ (string_of_formula_ast f) ^ ")"
     | AbstractionFormula(name, f) -> "lambda(" ^ name ^ ", " ^ (string_of_formula_ast f) ^ ")"
-    | ApplicationFormula(mu,f,tl) ->
-        "app(" ^ (string_of_formula_ast mu) ^ ", " ^ (string_of_formula_ast f) ^ ", " ^
+    | ApplicationFormula(mu,tl) ->
+        "app(" ^ (string_of_formula_ast mu) ^ ", " ^
           (String.concat " " (List.map string_of_term tl)) ^ ")"
     | AtomicFormula(t) ->
         (Pprint.term_to_string t)
@@ -101,7 +101,7 @@ let mapFormula formulafun termfun f =
     | MuFormula(name, f) -> MuFormula(name, formulafun f)
     | NuFormula(name, f) -> NuFormula(name, formulafun f)
     | AbstractionFormula(name, f) -> AbstractionFormula(name, formulafun f)
-    | ApplicationFormula(head, f,tl) -> ApplicationFormula(formulafun head, formulafun f, List.map termfun tl)
+    | ApplicationFormula(head,tl) -> ApplicationFormula(formulafun head, List.map termfun tl)
     | AtomicFormula(t) -> AtomicFormula(termfun t)
     | DBFormula(n,i) -> f
     | AnonymousFormula -> raise (InvalidAnonymous "Firstorderabsyn.mapFormula")
@@ -117,7 +117,7 @@ let abstract name formula =
   let rec termFun t = Term.abstract_var var t
   and formulaFun f =
     match f with
-      ApplicationFormula(f1, f2, args) -> ApplicationFormula(f1, f2, (List.map termFun args))
+      ApplicationFormula(f1, args) -> ApplicationFormula(f1, (List.map termFun args))
     | DBFormula(_) -> AbstractionFormula(name, f)
     | _ -> (mapFormula formulaFun termFun f)
   in
@@ -132,7 +132,7 @@ let rec apply terms formula =
   let rec termFun t = Term.app t terms
   and formulaFun f =
     match f with
-      ApplicationFormula(f1, f2, args) -> ApplicationFormula(f1, f2, (List.map termFun args))
+      ApplicationFormula(f1, args) -> ApplicationFormula(f1, (List.map termFun args))
     | _ -> (mapFormula formulaFun termFun f)
   in
   (formulaFun formula)
@@ -288,11 +288,12 @@ let applyFixpoint arg formula =
           MuFormula(name, mapFormula (ff (i + 1)) tf body)
       | NuFormula(name,body) ->
           NuFormula(name, mapFormula (ff (i + 1)) tf body)
-      | DBFormula(n,i') ->
+      | ApplicationFormula(DBFormula(n,i'),args) ->
           if i = i' then
-            arg
+            (arg args)
           else
             f
+      | DBFormula(_) -> failwith "invalid DB"
       | _ -> (mapFormula (ff i) tf f)
   in
   ff (0) formula

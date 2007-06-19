@@ -43,13 +43,23 @@ let main () =
       ();
     0)
   else
+    if !outputName = "" then
+      (print_endline ("Error: no output specified.");
+      1)
+    else
+    
     if not (Logics.outputExists !outputName) then
       (print_endline ("Error: undefined output '" ^ !outputName ^ "'.");
       1)
     else
     
+    if !logicName = "" then
+      (print_endline ("Error: no logic specified.");
+      1)
+    else
+    
     if not (Logics.logicExists !logicName) then
-      (print_endline "Error: undefined logic.";
+      (print_endline ("Error: undefined logic '" ^ !logicName ^ "'.");
       1)
     else
     

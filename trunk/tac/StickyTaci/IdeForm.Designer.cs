@@ -28,6 +28,7 @@ namespace StickyTaci
     /// </summary>
     private void InitializeComponent()
     {
+      System.Windows.Forms.ToolStripMenuItem mainMenuTacOpen;
       System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(IdeForm));
       this.mainMenu = new System.Windows.Forms.MenuStrip();
       this.mainMenuFile = new System.Windows.Forms.ToolStripMenuItem();
@@ -67,6 +68,8 @@ namespace StickyTaci
       this.outputSplitter = new System.Windows.Forms.SplitContainer();
       this.goalBox = new System.Windows.Forms.RichTextBox();
       this.outputBox = new System.Windows.Forms.RichTextBox();
+      this.mainMenuTacReset = new System.Windows.Forms.ToolStripMenuItem();
+      mainMenuTacOpen = new System.Windows.Forms.ToolStripMenuItem();
       this.mainMenu.SuspendLayout();
       this.mainSplitter.Panel1.SuspendLayout();
       this.mainSplitter.Panel2.SuspendLayout();
@@ -239,6 +242,8 @@ namespace StickyTaci
             this.mainMenuTacClear,
             this.mainMenuTacDebug,
             this.mainMenuTacInclude,
+            mainMenuTacOpen,
+            this.mainMenuTacReset,
             this.mainMenuTacRestart,
             this.mainMenuTacTiming,
             this.toolStripSeparator6,
@@ -251,7 +256,7 @@ namespace StickyTaci
       // mainMenuTacClear
       // 
       this.mainMenuTacClear.Name = "mainMenuTacClear";
-      this.mainMenuTacClear.Size = new System.Drawing.Size(126, 22);
+      this.mainMenuTacClear.Size = new System.Drawing.Size(152, 22);
       this.mainMenuTacClear.Text = "&Clear";
       this.mainMenuTacClear.Click += new System.EventHandler(this.mainMenuTacClear_Click);
       // 
@@ -259,44 +264,45 @@ namespace StickyTaci
       // 
       this.mainMenuTacDebug.CheckOnClick = true;
       this.mainMenuTacDebug.Name = "mainMenuTacDebug";
-      this.mainMenuTacDebug.Size = new System.Drawing.Size(126, 22);
+      this.mainMenuTacDebug.Size = new System.Drawing.Size(152, 22);
       this.mainMenuTacDebug.Text = "&Debug";
       // 
       // mainMenuTacInclude
       // 
       this.mainMenuTacInclude.Name = "mainMenuTacInclude";
-      this.mainMenuTacInclude.Size = new System.Drawing.Size(126, 22);
+      this.mainMenuTacInclude.Size = new System.Drawing.Size(152, 22);
       this.mainMenuTacInclude.Text = "&Include";
+      this.mainMenuTacInclude.Click += new System.EventHandler(this.mainMenuTacInclude_Click);
       // 
       // mainMenuTacRestart
       // 
       this.mainMenuTacRestart.Name = "mainMenuTacRestart";
-      this.mainMenuTacRestart.Size = new System.Drawing.Size(126, 22);
-      this.mainMenuTacRestart.Text = "&Restart";
+      this.mainMenuTacRestart.Size = new System.Drawing.Size(152, 22);
+      this.mainMenuTacRestart.Text = "Re&start";
       this.mainMenuTacRestart.Click += new System.EventHandler(this.mainMenuTacRestart_Click);
       // 
       // mainMenuTacTiming
       // 
       this.mainMenuTacTiming.CheckOnClick = true;
       this.mainMenuTacTiming.Name = "mainMenuTacTiming";
-      this.mainMenuTacTiming.Size = new System.Drawing.Size(126, 22);
+      this.mainMenuTacTiming.Size = new System.Drawing.Size(152, 22);
       this.mainMenuTacTiming.Text = "&Timing";
       // 
       // toolStripSeparator6
       // 
       this.toolStripSeparator6.Name = "toolStripSeparator6";
-      this.toolStripSeparator6.Size = new System.Drawing.Size(123, 6);
+      this.toolStripSeparator6.Size = new System.Drawing.Size(149, 6);
       // 
       // mainMenuTacLogics
       // 
       this.mainMenuTacLogics.Name = "mainMenuTacLogics";
-      this.mainMenuTacLogics.Size = new System.Drawing.Size(126, 22);
+      this.mainMenuTacLogics.Size = new System.Drawing.Size(152, 22);
       this.mainMenuTacLogics.Text = "&Logics";
       // 
       // mainMenuTacTacticals
       // 
       this.mainMenuTacTacticals.Name = "mainMenuTacTacticals";
-      this.mainMenuTacTacticals.Size = new System.Drawing.Size(126, 22);
+      this.mainMenuTacTacticals.Size = new System.Drawing.Size(152, 22);
       this.mainMenuTacTacticals.Text = "&Tacticals";
       // 
       // mainMenuHelp
@@ -408,6 +414,20 @@ namespace StickyTaci
       this.outputBox.TabIndex = 0;
       this.outputBox.Text = "";
       // 
+      // mainMenuTacOpen
+      // 
+      mainMenuTacOpen.Name = "mainMenuTacOpen";
+      mainMenuTacOpen.Size = new System.Drawing.Size(152, 22);
+      mainMenuTacOpen.Text = "&Open";
+      mainMenuTacOpen.Click += new System.EventHandler(this.mainMenuTacOpen_Click);
+      // 
+      // mainMenuTacReset
+      // 
+      this.mainMenuTacReset.Name = "mainMenuTacReset";
+      this.mainMenuTacReset.Size = new System.Drawing.Size(152, 22);
+      this.mainMenuTacReset.Text = "&Reset";
+      this.mainMenuTacReset.Click += new System.EventHandler(this.mainMenuTacReset_Click);
+      // 
       // IdeForm
       // 
       this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -474,6 +494,7 @@ namespace StickyTaci
     private System.Windows.Forms.ToolStripMenuItem mainMenuTacTacticals;
     private System.Windows.Forms.ToolStripMenuItem mainMenuTacTiming;
     private System.Windows.Forms.ToolStripMenuItem mainMenuTacLogics;
+    private System.Windows.Forms.ToolStripMenuItem mainMenuTacReset;
   }
 }
 

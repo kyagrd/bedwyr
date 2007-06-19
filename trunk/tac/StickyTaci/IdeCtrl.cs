@@ -7,6 +7,9 @@ namespace StickyTaci
 {
   public class IdeCtrl
   {
+    private string m_Line = "";
+
+    List<string> m_Tacticals = new List<string>();
     private bool m_Dirty = false;
 
     public bool Dirty
@@ -75,30 +78,86 @@ namespace StickyTaci
     public void StartTaci(string path, string arguments)
     {
       m_Taci = new Taci(path, arguments);
-      m_Taci.Output += new Taci.OutputHandler(Taci_Output);
-      m_Taci.Goal += new Taci.OutputHandler(Taci_Goal);
-      m_Taci.Error += new Taci.OutputHandler(Taci_Error);
-      m_Taci.Command += new Taci.OutputHandler(Taci_Command);
+      m_Taci.Output += new Taci.IOHandler(Taci_Output);
+      m_Taci.Goal += new Taci.IOHandler(Taci_Goal);
+      m_Taci.Error += new Taci.IOHandler(Taci_Error);
+      m_Taci.Command += new Taci.IOHandler(Taci_Command);
+      m_Taci.Tactical += new Taci.IOHandler(Taci_Tactical);
+      m_Taci.Restart();
+
+      //Get information.
+      m_Taci.Write(Taci.TACTICALS + ".");
+      m_Taci.Write(Taci.CLEAR + ".");
     }
 
-    public void OnRestart()
+    void Taci_Tactical(Taci instance, string data)
+    {
+      if(instance == m_Taci)
+      {
+        if(!m_Tacticals.Contains(data))
+        {
+          m_Tacticals.Add(data);
+          m_Tacticals.Sort();
+          Form.Tacticals = m_Tacticals;
+        }
+      }
+    }
+
+    public void OnTacInclude()
+    {
+      //Get a list of files.
+      OpenFileDialog dlg = new OpenFileDialog();
+      dlg.Filter = "All Files (*.*)|*.*";
+      dlg.RestoreDirectory = true;
+      dlg.Multiselect = true;
+
+      if(dlg.ShowDialog() == DialogResult.OK)
+      {
+        //Open them:
+        string command = Taci.INCLUDE;
+        foreach(string filename in dlg.FileNames)
+        {
+          command += " \"" + filename + "\"";
+        }
+        command += ".";
+        Taci.Write(command);
+      }
+    }
+
+    public void OnTacOpen()
+    {
+      //Get a list of files.
+      OpenFileDialog dlg = new OpenFileDialog();
+      dlg.Filter = "Taci Files (*.tac)|*.t|All Files (*.*)|*.*";
+      dlg.RestoreDirectory = true;
+      dlg.Multiselect = true;
+
+      if(dlg.ShowDialog() == DialogResult.OK)
+      {
+        //Open them:
+        string command = Taci.OPEN;
+        foreach(string filename in dlg.FileNames)
+        {
+          command += " \"" + filename + "\"";
+        }
+        command += ".\n";
+        Form.Input(command);
+      }
+    }
+    public void OnTacReset()
+    {
+      Taci.Write(Taci.RESET + ".");
+    }
+
+    public void OnTacRestart()
     {
       Taci.Restart();
     }
 
-    public void OnNew()
-    {
-      if((Dirty && SaveMessage()) || !Dirty)
-      {
-        FileName = "";
-        Form.Clear();
-      }
-    }
-
     private bool SaveMessage()
     {
-      string caption = "The current file has changed.\nDo you want to save the changes?";
-      DialogResult result = MessageBox.Show("StickyTaci", caption, MessageBoxButtons.YesNoCancel);
+      string text = "The current file has changed.\nDo you want to save the changes?";
+      DialogResult result = MessageBox.Show(text, "StickyTaci", MessageBoxButtons.YesNoCancel);
       if(result == DialogResult.Yes)
       {
         return OnSave();
@@ -116,9 +175,29 @@ namespace StickyTaci
     private void Save(string filename)
     {
       Dirty = false;
-      Form.Rtf.SaveFile(filename);
+      Form.Rtf.SaveFile(filename, RichTextBoxStreamType.PlainText);
     }
 
+    public void OnNew()
+    {
+      if((Dirty && SaveMessage()) || !Dirty)
+      {
+        Dirty = false;
+        FileName = "";
+        Form.Clear();
+        OnTacReset();
+      }
+    }
+
+    public void OnExit()
+    {
+      if((Dirty && SaveMessage()) || !Dirty)
+      {
+        Taci.Write(Taci.EXIT + ".");
+        Taci.Exit();
+        Form.Close();
+      }
+    }
 
     public bool OnSave()
     {
@@ -136,7 +215,7 @@ namespace StickyTaci
     public bool OnSaveAs()
     {
       SaveFileDialog dlg = new SaveFileDialog();
-      dlg.Filter = "StickyTaci Session (*.st)|*.st";
+      dlg.Filter = "StickyTaci Session (*.st)|*.st|All Files (*.*)|*.*";
       dlg.RestoreDirectory = true;
 
       if(dlg.ShowDialog() == DialogResult.OK)
@@ -161,7 +240,7 @@ namespace StickyTaci
     private void Open()
     {
       OpenFileDialog dlg = new OpenFileDialog();
-      dlg.Filter = "StickyTaci Session (*.st)|*.st";
+      dlg.Filter = "StickyTaci Session (*.st)|*.st|All Files (*.*)|*.*";
 
       if(dlg.ShowDialog() == DialogResult.OK)
       {
@@ -170,16 +249,9 @@ namespace StickyTaci
       }
     }
 
-    public void OnExit()
-    {
-      Taci.Write("#exit.");
-      Taci.Exit();
-      Form.Close();
-    }
-
     public void OnHelpTaci()
     {
-      Taci.Write("#help.");
+      Taci.Write(Taci.HELP + ".");
     }
 
     public void OnHelp()
@@ -188,19 +260,31 @@ namespace StickyTaci
       dlg.ShowDialog();
     }
 
-    public void OnClear()
+    public void OnTacClear()
     {
-      Taci.Write("#clear.");
+      Taci.Write(Taci.CLEAR);
+    }
+
+    public void OnTactical(string tac)
+    {
+      Form.Input(tac);
     }
 
     public bool OnNextLine()
     {
       string line = "";
       if(Form.GetNextLine(ref line))
-      {
-        if(line != "")
+      {        
+        line = line.Trim();
+        m_Line += line;
+        if(m_Line == "" || m_Line[m_Line.Length - 1] != '.')
         {
-          Taci.Write(line + "\n");
+          return false;
+        }
+        else
+        {
+          Taci.Write(m_Line);
+          m_Line = "";
         }
         return true;
       }
@@ -210,9 +294,12 @@ namespace StickyTaci
     public void OnInputChanged(uint numlines)
     {
       Dirty = true;
-      if(CurrentLine > numlines)
+      if(CurrentLine >= numlines)
       {
-        CurrentLine = numlines;
+        if(numlines > 0)
+          CurrentLine = numlines - 1;
+        else
+          CurrentLine = 0;
       }
     }
 
@@ -228,7 +315,8 @@ namespace StickyTaci
 
     public void OnAll(uint line)
     {
-      while((CurrentLine <= line) && OnNextLine());      
+      OnTacReset();
+      while((CurrentLine < line) && OnNextLine());      
     }
 
     private void Taci_Output(Taci instance, string data)
