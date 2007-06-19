@@ -11,6 +11,49 @@ namespace StickyTaci
 {
   public partial class IdeForm : Form
   {
+    private class TacticalHandler
+    {
+      private IdeCtrl m_Ctrl = null;
+      private string m_Tactical = "";
+      public TacticalHandler(IdeCtrl ctrl, string tac)
+      {
+        m_Ctrl = ctrl;
+        m_Tactical = tac;
+      }
+
+      public void OnClick(object instance, EventArgs e)
+      {
+        m_Ctrl.OnTactical(m_Tactical);
+      }
+    }
+
+    private bool m_TacticalsChanged = true;
+    public bool TacticalsChanged
+    {
+      get
+      {
+        return m_TacticalsChanged;
+      }
+      set
+      {
+        m_TacticalsChanged = value;
+      }
+    }
+
+    private List<string> m_Tacticals = null;
+    public List<string> Tacticals
+    {
+      get
+      {
+        return m_Tacticals;
+      }
+      set
+      {
+        m_Tacticals = value;
+        TacticalsChanged = true;
+      }
+    }
+
     public RichTextBox Rtf
     {
       get
@@ -40,23 +83,24 @@ namespace StickyTaci
         if(m_CurrentLine > 0 && m_CurrentLine < inputBox.Lines.Length)
         {
           inputBox.Select(0, inputBox.GetFirstCharIndexFromLine((int)(m_CurrentLine)) - 1);
-          
+          inputBox.SelectionColor = Color.Green;
         }
         else if(m_CurrentLine > 0 && m_CurrentLine >= inputBox.Lines.Length)
         {
           inputBox.SelectAll();
+          inputBox.SelectionColor = Color.Green;
         }
-        inputBox.SelectionColor = Color.Green;
         inputBox.DeselectAll();
         inputBox.SelectionStart = pos;
         inputBox.SelectionColor = m_InputColor;
+
         //Show current line marker:
         Point p = new Point(1, ((int)((uint)m_InputFont.Height * (m_CurrentLine))));
         currentLineImagePanel.Location = p;
       }
     }
 
-    private delegate void OutputHandler(string s);
+    private delegate void IOHandler(string s);
     private delegate void ClearHandler();
 
     private Image m_CurrentLineImage = null;
@@ -139,12 +183,33 @@ namespace StickyTaci
 
       inputBox.Font = m_InputFont;
       inputBox.KeyDown += new KeyEventHandler(inputBox_KeyDown);
-      //inputBox.TextChanged += new EventHandler(inputBox_TextChanged);
-      
+      inputBox.TextChanged += new EventHandler(inputBox_TextChanged);
+
       m_Ctrl = ctrl;
 
       mainMenuEdit.DropDownOpening += new EventHandler(mainMenuEdit_DropDownOpening);
+      mainMenuTacTacticals.DropDownOpening += new EventHandler(mainMenuTacTacticals_DropDownOpening);
+      mainMenuTacTacticals.DropDownItems.Add("*dummy*");
+      TacticalsChanged = true;
       CurrentLine = 0;
+    }
+
+    void mainMenuTacTacticals_DropDownOpening(object sender, EventArgs e)
+    {
+      if(TacticalsChanged)
+      {
+        mainMenuTacTacticals.DropDownItems.Clear();
+        if(Tacticals != null)
+        {
+          foreach(string tac in Tacticals)
+          {
+            ToolStripItem t = mainMenuTacTacticals.DropDownItems.Add(tac);
+            TacticalHandler h = new TacticalHandler(Ctrl, tac);
+            t.Click += new EventHandler(h.OnClick);
+          }
+        }
+        TacticalsChanged = false;
+      }
     }
 
     void mainMenuEdit_DropDownOpening(object sender, EventArgs e)
@@ -172,12 +237,11 @@ namespace StickyTaci
     {
       if(outputBox.InvokeRequired)
       {
-        OutputHandler h = new OutputHandler(Output);
+        IOHandler h = new IOHandler(Output);
         Invoke(h, new object[] { s });
       }
       else
       {
-        outputBox.Clear();
         outputBox.SelectionFont = m_OutputFont;
         outputBox.SelectionColor = OutputColor;
         outputBox.SelectedText = s;
@@ -202,7 +266,7 @@ namespace StickyTaci
     {
       if(outputBox.InvokeRequired)
       {
-        OutputHandler h = new OutputHandler(Error);
+        IOHandler h = new IOHandler(Error);
         Invoke(h, new object[] { s });
       }
       else
@@ -215,11 +279,25 @@ namespace StickyTaci
       }
     }
 
+    public void Input(string s)
+    {
+      if(goalBox.InvokeRequired)
+      {
+        IOHandler h = new IOHandler(Input);
+        Invoke(h, new object[] { s });
+      }
+      else
+      {
+        inputBox.SelectionColor = InputColor;
+        inputBox.SelectedText = s;
+      }
+    }
+
     public void Goal(string s)
     {
       if(goalBox.InvokeRequired)
       {
-        OutputHandler h = new OutputHandler(Goal);
+        IOHandler h = new IOHandler(Goal);
         Invoke(h, new object[] { s });
       }
       else
@@ -286,12 +364,12 @@ namespace StickyTaci
     {
       goalBox.Clear();
       outputBox.Clear();
-      Ctrl.OnRestart();
+      Ctrl.OnTacRestart();
     }
 
     private void mainMenuTacClear_Click(object sender, EventArgs e)
     {
-      Ctrl.OnClear();
+      Ctrl.OnTacClear();
     }
 
     public string GetLine(uint line)
@@ -306,6 +384,7 @@ namespace StickyTaci
     private void mainMenuEditPaste_Click(object sender, EventArgs e)
     {
       inputBox.Paste();
+      inputBox.SelectionColor = InputColor;
     }
 
     private void mainMenuEditUndo_Click(object sender, EventArgs e)
@@ -361,6 +440,21 @@ namespace StickyTaci
     private void mainMenuHelpAbout_Click(object sender, EventArgs e)
     {
       Ctrl.OnHelp();
+    }
+
+    private void mainMenuTacInclude_Click(object sender, EventArgs e)
+    {
+      Ctrl.OnTacInclude();
+    }
+
+    private void mainMenuTacOpen_Click(object sender, EventArgs e)
+    {
+      Ctrl.OnTacOpen();
+    }
+
+    private void mainMenuTacReset_Click(object sender, EventArgs e)
+    {
+      Ctrl.OnTacReset();
     }
   }
 }

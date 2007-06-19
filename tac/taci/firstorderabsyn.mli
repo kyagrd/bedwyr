@@ -14,7 +14,7 @@ type formula =
   | MuFormula of string * formula
   | NuFormula of string * formula
   | AbstractionFormula of string * formula
-  | ApplicationFormula of formula * formula * term list
+  | ApplicationFormula of formula * term list
   | AtomicFormula of term
   | DBFormula of string * int
   | AnonymousFormula
@@ -37,7 +37,7 @@ type unifyresult =
 val mapFormula : (formula -> formula) -> (term -> term) -> formula -> formula
 val abstract : string -> formula -> formula
 val apply : term list -> formula -> formula
-val applyFixpoint : formula -> formula -> formula
+val applyFixpoint : (term list -> formula) -> formula -> formula
 val string_of_definition : definition -> string
 val string_of_formula : formula -> string
 val string_of_formula_ast : formula -> string
