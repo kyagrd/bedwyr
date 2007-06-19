@@ -40,6 +40,19 @@ namespace StickyTaci
       }
     }
 
+    private List<string> m_Commands = null;
+    public List<string> Commands
+    {
+      get
+      {
+        return m_Commands;
+      }
+      set
+      {
+        m_Commands = value;
+      }
+    }
+
     private List<string> m_Tacticals = null;
     public List<string> Tacticals
     {
@@ -73,30 +86,27 @@ namespace StickyTaci
       {
         m_CurrentLine = value;
 
+        Rtf.Enabled = false;
 
         //Hilight everything and make it normal
-        int pos = inputBox.SelectionStart;
-        inputBox.SelectAll();
-        inputBox.SelectionColor = m_InputColor;
+        int pos = Rtf.SelectionStart;
 
-        //Hilight everything green upto the current line:
-        if(m_CurrentLine > 0 && m_CurrentLine < inputBox.Lines.Length)
+        //Color all lines:
+        for(int i = 0; i < Rtf.Lines.Length; i++)
         {
-          inputBox.Select(0, inputBox.GetFirstCharIndexFromLine((int)(m_CurrentLine)) - 1);
-          inputBox.SelectionColor = Color.Green;
+          ColorLine(i);
         }
-        else if(m_CurrentLine > 0 && m_CurrentLine >= inputBox.Lines.Length)
-        {
-          inputBox.SelectAll();
-          inputBox.SelectionColor = Color.Green;
-        }
-        inputBox.DeselectAll();
-        inputBox.SelectionStart = pos;
-        inputBox.SelectionColor = m_InputColor;
+
+        Rtf.SelectionStart = pos;
+        Rtf.SelectionLength = 0;
+        Rtf.SelectionColor = m_InputColor;
 
         //Show current line marker:
         Point p = new Point(1, ((int)((uint)m_InputFont.Height * (m_CurrentLine))));
         currentLineImagePanel.Location = p;
+
+        Rtf.Enabled = true;
+        Rtf.Focus();
       }
     }
 
@@ -107,6 +117,45 @@ namespace StickyTaci
     private Font m_InputFont = new Font("Courier New", 10, FontStyle.Regular);
     private Font m_OutputFont = new Font("Courier New", 8, FontStyle.Regular);
     private Font m_GoalFont = new Font("Courier New", 10, FontStyle.Regular);
+
+    private Color m_TacticalColor = Color.Blue;
+    public Color TacticalColor
+    {
+      get
+      {
+        return m_TacticalColor;
+      }
+      set
+      {
+        m_TacticalColor = value;
+      }
+    }
+
+    private Color m_CommandColor = Color.Red;
+    public Color CommandColor
+    {
+      get
+      {
+        return m_CommandColor;
+      }
+      set
+      {
+        m_CommandColor = value;
+      }
+    }
+    private Color m_OldInputColor = Color.Green;
+
+    public Color OldInputColor
+    {
+      get
+      {
+        return m_OldInputColor;
+      }
+      set
+      {
+        m_OldInputColor = value;
+      }
+    }
 
     private Color m_InputColor = Color.Black;
     public Color InputColor
@@ -181,9 +230,9 @@ namespace StickyTaci
       outputBox.Font = m_OutputFont;
       outputBox.SelectionFont = m_OutputFont;
 
-      inputBox.Font = m_InputFont;
-      inputBox.KeyDown += new KeyEventHandler(inputBox_KeyDown);
-      inputBox.TextChanged += new EventHandler(inputBox_TextChanged);
+      Rtf.Font = m_InputFont;
+      Rtf.KeyDown += new KeyEventHandler(inputBox_KeyDown);
+      Rtf.TextChanged += new EventHandler(inputBox_TextChanged);
 
       m_Ctrl = ctrl;
 
@@ -214,10 +263,10 @@ namespace StickyTaci
 
     void mainMenuEdit_DropDownOpening(object sender, EventArgs e)
     {
-      mainMenuEditUndo.Enabled = inputBox.CanUndo;
-      mainMenuEditRedo.Enabled = inputBox.CanRedo;
-      mainMenuEditCopy.Enabled = (inputBox.SelectionLength > 0);
-      mainMenuEditPaste.Enabled = inputBox.CanPaste(DataFormats.GetFormat(DataFormats.Text));
+      mainMenuEditUndo.Enabled = Rtf.CanUndo;
+      mainMenuEditRedo.Enabled = Rtf.CanRedo;
+      mainMenuEditCopy.Enabled = (Rtf.SelectionLength > 0);
+      mainMenuEditPaste.Enabled = Rtf.CanPaste(DataFormats.GetFormat(DataFormats.Text));
     }
 
     void currentLineImagePanel_Paint(object sender, PaintEventArgs e)
@@ -307,8 +356,72 @@ namespace StickyTaci
         goalBox.SelectedText = s;
       }
     }
+    
+    private void ColorLine(int linenum)
+    {
+      if(linenum < 0 || linenum > (Rtf.Lines.Length - 1))
+        return;
 
-    void inputBox_KeyDown(object sender, KeyEventArgs e)
+      int start = Rtf.GetFirstCharIndexFromLine(linenum);      
+      string line = Rtf.Lines[linenum];
+
+      if(line == "")
+        return;
+
+      //If this is an "old" line, color it green.
+      if(linenum < CurrentLine)
+      {
+        Rtf.Select(start, line.Length);
+        Rtf.SelectionColor = OldInputColor;
+        return;
+      }
+
+      //Reset the color.
+      Rtf.Select(start, line.Length);
+      Rtf.SelectionColor = InputColor;
+
+      if(Tacticals != null)
+      {
+        foreach(string tactical in Tacticals)
+        {
+          int index = line.IndexOf(tactical);
+          while(index != -1)
+          {
+            Rtf.Select(start + index, tactical.Length);
+            Rtf.SelectionColor = TacticalColor;
+            index = line.IndexOf(tactical, index + 1);
+          }
+        }
+      }
+
+      if(Commands != null)
+      {
+        foreach(string command in Commands)
+        {
+          int index = line.IndexOf(command);
+          while(index != -1)
+          {
+            Rtf.Select(start + index, command.Length);
+            Rtf.SelectionColor = CommandColor;
+            index = line.IndexOf(command, index + 1);
+          }
+        }
+      }
+    }
+
+    public void ColorCurrentLine()
+    {
+      Rtf.Enabled = false;
+      int orig = Rtf.SelectionStart;
+      int line = Rtf.GetLineFromCharIndex(orig);
+      ColorLine(line);
+      Rtf.Select(orig, 0);
+      Rtf.SelectionColor = InputColor;
+      Rtf.Enabled = true;
+      Rtf.Focus();
+    }
+
+    public void inputBox_KeyDown(object sender, KeyEventArgs e)
     {
       if((e.KeyCode == Keys.Down) && e.Control && e.Alt)
       {
@@ -324,6 +437,30 @@ namespace StickyTaci
       {
         Ctrl.OnAll((uint)inputBox.Lines.Length);
         e.SuppressKeyPress = true;
+      }
+      else if((e.KeyCode == Keys.D9 || e.KeyCode == Keys.D0) && e.Shift)
+      {
+        //Parens
+        ColorCurrentLine();
+      }
+      else if(e.KeyCode == Keys.OemPeriod)
+      {
+        //Period
+        ColorCurrentLine();
+      }
+      else if(e.KeyCode == Keys.Space || e.KeyCode == Keys.Tab)
+      {
+        //Whitespace
+        ColorCurrentLine();
+      }
+      else if(e.KeyCode == Keys.Back || e.KeyCode == Keys.Delete)
+      {
+        //Backspace/Delete
+        ColorCurrentLine();
+      }
+      else
+      {
+        ColorCurrentLine();
       }
       return;
     }
@@ -385,6 +522,15 @@ namespace StickyTaci
     {
       inputBox.Paste();
       inputBox.SelectionColor = InputColor;
+
+      int startline = Rtf.GetLineFromCharIndex(inputBox.SelectionStart);
+      int endline = Rtf.GetLineFromCharIndex(inputBox.SelectionStart + inputBox.SelectionLength);
+      
+      ColorLine(startline);
+      for(int currentline = startline + 1; (currentline < endline); currentline++)
+      {
+        ColorLine(currentline);
+      }
     }
 
     private void mainMenuEditUndo_Click(object sender, EventArgs e)
@@ -455,6 +601,17 @@ namespace StickyTaci
     private void mainMenuTacReset_Click(object sender, EventArgs e)
     {
       Ctrl.OnTacReset();
+    }
+
+    protected override void WndProc(ref Message m)
+    {
+      //Check for WM_CLOSE:
+      if(m.Msg == 0x0112 && (int)m.WParam == 0xf060)
+      {
+        Ctrl.OnExit();
+        return;
+      }
+      base.WndProc(ref m);
     }
   }
 }

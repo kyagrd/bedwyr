@@ -11,7 +11,6 @@ namespace StickyTaci
 
     List<string> m_Tacticals = new List<string>();
     private bool m_Dirty = false;
-
     public bool Dirty
     {
       get
@@ -88,6 +87,8 @@ namespace StickyTaci
       //Get information.
       m_Taci.Write(Taci.TACTICALS + ".");
       m_Taci.Write(Taci.CLEAR + ".");
+
+      Form.Commands = m_Taci.Commands;
     }
 
     void Taci_Tactical(Taci instance, string data)
@@ -157,7 +158,7 @@ namespace StickyTaci
     private bool SaveMessage()
     {
       string text = "The current file has changed.\nDo you want to save the changes?";
-      DialogResult result = MessageBox.Show(text, "StickyTaci", MessageBoxButtons.YesNoCancel);
+      DialogResult result = MessageBox.Show(text, "StickyTaci", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Exclamation);
       if(result == DialogResult.Yes)
       {
         return OnSave();
@@ -315,7 +316,10 @@ namespace StickyTaci
 
     public void OnAll(uint line)
     {
+      //Reset the environment so everything works as planned.
       OnTacReset();
+
+      //Run each line upto the given one.
       while((CurrentLine < line) && OnNextLine());      
     }
 

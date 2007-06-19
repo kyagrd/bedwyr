@@ -8,6 +8,18 @@ namespace StickyTaci
 {
   public class Taci
   {
+    private List<string> m_Commands = new List<string>();
+    public List<string> Commands
+    {
+      get
+      {
+        return m_Commands;
+      }
+      set
+      {
+        m_Commands = value;
+      }
+    }
     public static string CLEAR = "#clear";
     public static string EXIT = "#exit";
     public static string HELP = "#help";
@@ -35,6 +47,21 @@ namespace StickyTaci
       System.Diagnostics.Debug.WriteLine("Executing '" + path + arguments + "'.");
       m_Path = path;
       m_Arguments = arguments;
+
+      m_Commands.Add("#clear");
+      m_Commands.Add("#debug");
+      m_Commands.Add("#define");
+      m_Commands.Add("#help");
+      m_Commands.Add("#logic");
+      m_Commands.Add("#logics");
+      m_Commands.Add("#open");
+      m_Commands.Add("#redo");
+      m_Commands.Add("#reset");
+      m_Commands.Add("#tactical");
+      m_Commands.Add("#tacticals");
+      m_Commands.Add("#theorem");
+      m_Commands.Add("#timing");
+      m_Commands.Add("#undo");
     }
 
     public void Restart()
