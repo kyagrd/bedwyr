@@ -129,7 +129,7 @@ namespace StickyTaci
     {
       //Get a list of files.
       OpenFileDialog dlg = new OpenFileDialog();
-      dlg.Filter = "Taci Files (*.tac)|*.t|All Files (*.*)|*.*";
+      dlg.Filter = "Taci Files (*.tac)|*.tac|All Files (*.*)|*.*";
       dlg.RestoreDirectory = true;
       dlg.Multiselect = true;
 
@@ -183,10 +183,11 @@ namespace StickyTaci
     {
       if((Dirty && SaveMessage()) || !Dirty)
       {
-        Dirty = false;
         FileName = "";
         Form.Clear();
         OnTacReset();
+        Dirty = false;
+
       }
     }
 
@@ -245,9 +246,14 @@ namespace StickyTaci
 
       if(dlg.ShowDialog() == DialogResult.OK)
       {
+        Dirty = false;
+        OnTacReset();
         Form.Clear();
         Form.Rtf.LoadFile(dlg.FileName, RichTextBoxStreamType.PlainText);
         FileName = dlg.FileName;
+
+        //ReColor
+        Form.ColorLines((uint)Form.Rtf.Lines.Length);
       }
     }
 
@@ -320,8 +326,11 @@ namespace StickyTaci
       //Reset the environment so everything works as planned.
       OnTacReset();
 
+      //ReColor
+      Form.ColorLines(line);
+
       //Run each line upto the given one.
-      while((CurrentLine < line) && OnNextLine());      
+      while((CurrentLine <= line) && OnNextLine());      
     }
 
     private void Taci_Output(Taci instance, string data)

@@ -86,11 +86,22 @@ namespace StickyTaci
       {
         m_CurrentLine = value;
 
-        //Color all lines up to and including current:
-        ColorLines(CurrentLine);
-
         //Show current line marker:
-        Point p = new Point(1, ((int)((uint)m_InputFont.Height * (m_CurrentLine))));
+        int line = (int)m_CurrentLine;
+        int y = 0;
+        if(line == Rtf.Lines.Length)
+        {
+          y = 0;
+        }
+        else
+        {
+          Point inc = (Rtf.GetPositionFromCharIndex(Rtf.GetFirstCharIndexFromLine(line)));
+          Point inw = PointToClient(Rtf.PointToScreen(inc));
+          y = inw.Y;
+          y -= Font.Height;
+          y -= Font.Height;
+        }
+        Point p = new Point(1, y);
         currentLineImagePanel.Location = p;
       }
     }
@@ -264,7 +275,6 @@ namespace StickyTaci
 
     void inputBox_TextChanged(object sender, EventArgs e)
     {
-      ColorLines((uint)inputBox.Lines.Length);
       Ctrl.OnInputChanged((uint)inputBox.Lines.Length);
     }
 
@@ -343,12 +353,12 @@ namespace StickyTaci
       }
     }
 
-    private void ColorLines(uint max)
+    public void ColorLines(uint max)
     {
       int orig = Rtf.SelectionStart;
       Rtf.Enabled = false;
 
-      for(int i = 0; i < max; i++)
+      for(uint i = 0; i < max; i++)
       {
         ColorLine(i);
       }
@@ -359,12 +369,12 @@ namespace StickyTaci
       Rtf.Focus();
     }
 
-    private void ColorLine(int linenum)
+    private void ColorLine(uint linenum)
     {
       if(linenum < 0 || linenum > (Rtf.Lines.Length - 1))
         return;
 
-      int start = Rtf.GetFirstCharIndexFromLine(linenum);      
+      int start = Rtf.GetFirstCharIndexFromLine((int)linenum);      
       string line = Rtf.Lines[linenum];
 
       if(line == "")
@@ -381,6 +391,9 @@ namespace StickyTaci
       //Reset the color.
       Rtf.Select(start, line.Length);
       Rtf.SelectionColor = InputColor;
+
+      //No syntax highlighting.
+      //return;
 
       if(Tacticals != null)
       {
@@ -415,8 +428,7 @@ namespace StickyTaci
     {
       Rtf.Enabled = false;
       int orig = Rtf.SelectionStart;
-      int line = Rtf.GetLineFromCharIndex(orig);
-      ColorLine(line);
+      ColorLine(CurrentLine);
       Rtf.Select(orig, 0);
       Rtf.SelectionColor = InputColor;
       Rtf.Enabled = true;
@@ -486,6 +498,15 @@ namespace StickyTaci
         if(CurrentLine == (inputBox.Lines.Length - 1) && line == "" )
           return false;
         ++CurrentLine;
+      
+        Rtf.Enabled = false;
+        int orig = Rtf.SelectionStart;
+        ColorLine(CurrentLine - 1);
+        Rtf.Select(orig, 0);
+        Rtf.SelectionColor = InputColor;
+        Rtf.Enabled = true;
+        Rtf.Focus();
+
         return true;
       }
     }
@@ -525,11 +546,11 @@ namespace StickyTaci
       inputBox.Paste();
       inputBox.SelectionColor = InputColor;
 
-      int startline = Rtf.GetLineFromCharIndex(inputBox.SelectionStart);
-      int endline = Rtf.GetLineFromCharIndex(inputBox.SelectionStart + inputBox.SelectionLength);
+      uint startline = (uint)Rtf.GetLineFromCharIndex(inputBox.SelectionStart);
+      uint endline = (uint)Rtf.GetLineFromCharIndex(inputBox.SelectionStart + inputBox.SelectionLength);
       
       ColorLine(startline);
-      for(int currentline = startline + 1; (currentline < endline); currentline++)
+      for(uint currentline = startline + 1u; (currentline < endline); currentline++)
       {
         ColorLine(currentline);
       }

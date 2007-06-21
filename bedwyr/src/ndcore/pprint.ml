@@ -58,7 +58,7 @@ let term_to_string term =
   let pp_var x = pre ^ (string_of_int x) in
   let rec pp pr n term =
     match observe term with
-      | Var v -> Printf.sprintf "%s" v.name
+      | Var v -> Printf.sprintf "%s[%d]" v.name v.ts
       | NB i -> "n" ^ (string_of_int i)
       | DB i -> pp_var (n-i+1)
       | App (t,ts) ->

@@ -359,6 +359,7 @@ Tacticals:
             (trivialTactical session [])
             (axiomTactical session [])))
     | _ -> G.invalidArguments "auto"
+
   (********************************************************************
   *tacticals:
   * The exported table of tacticals.  These tacticals are the only

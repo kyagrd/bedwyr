@@ -272,6 +272,24 @@ let atom ?(ts=0) name =
           Hashtbl.add tbl name t ;
           t
 
+let fresh_atom var =
+  let var = match (observe var) with
+      Var(var) -> var
+    | _ -> failwith "Term.fresh_atom: not a var"
+  in
+
+  let prefix = var.name in
+  let rec suffix i =
+    let name' = (prefix ^ (string_of_int i)) in
+    if Hashtbl.mem tbl name' then
+      suffix (i + 1)
+    else
+      let var' = Ptr (ref(V{var with name=name'})) in
+      (Hashtbl.add tbl name' var';
+      var')
+  in
+    suffix 0
+
 let string text = const text 0
 
 let binop s a b = App ((atom s),[a;b])

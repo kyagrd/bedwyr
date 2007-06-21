@@ -293,9 +293,10 @@ Implements a simple first order logic with equality.
           | FOA.CoInductive ->
               FOA.NuFormula(name,body)
       in
+      
       (****************************************************************
       *abstractDefinition:
-      * Abstracts a definition.  ITerates over a definition body.
+      * Abstracts a definition.  Iterates over a definition body.
       * If it hits an application whose name is in the abstractions
       * list, it inserts the correct DB index.  If it hits an application
       * whose head is not in the abstractions list (but is in then pre-
@@ -373,8 +374,7 @@ Implements a simple first order logic with equality.
         match ids with
           [] -> formula
         | id::ids' ->
-            let formula' = (FOA.AbstractionFormula(id,formula)) in
-            (abstractArguments ids' formula')
+            FOA.AbstractionFormula(id, (abstractArguments ids' formula))
       in
       
       (****************************************************************
@@ -694,7 +694,7 @@ Implements a simple first order logic with equality.
                   let s = (lvl,(i,l)::(i,r)::lhs', rhs) in
                   (sc [s] (makeBuilder "and_l") fc)
               | t::ts ->
-                  (apply lvl ts (t::lhs) ts)
+                  (apply lvl ts (t::lhs) rhs)
           in
           let lhs = getSequentLHS sequent in
           let rhs = getSequentRHS sequent in
@@ -737,9 +737,12 @@ Implements a simple first order logic with equality.
               | (i,FOA.PiFormula(f))::ts ->
                   let lhs' = (List.rev_append lhs ts) in
                   let (lvl', var) = makeExistentialVar lvl i in
-                  let f' = FOA.apply [var] f in 
-                  let s = (lvl', (i,f')::lhs', rhs) in
-                  (sc [s] (makeBuilder "pi_l") fc)
+                  let f' = application [var] f in 
+                  if Option.isSome f' then
+                    let s = (lvl', (i,Option.get f')::lhs', rhs) in
+                    (sc [s] (makeBuilder "pi_l") fc)
+                  else
+                    fc ()
               | t::ts ->
                   (apply lvl ts (t::lhs) rhs)
           in
@@ -770,8 +773,7 @@ Implements a simple first order logic with equality.
                       (O.error ("'" ^ name ^ "': incorrect number of arguments.");
                       fc ())
                   else
-                    (O.output ("mu formula: " ^ name ^ ".\n");
-                    (apply lvl ts (t::rhs) lhs))
+                    (apply lvl ts (t::rhs) lhs)
               | t::ts ->
                   (apply lvl ts (t::rhs) lhs)
           in
@@ -805,7 +807,7 @@ Implements a simple first order logic with equality.
                     
                     let s' = parseFormula (getSessionDefinitions session) s in
                     if Option.isSome s' then
-                      let s' = Option.get s' in
+                      let s' = FOA.renameAbstractions (Option.get s') in
                       let f' = application args s' in
                       if Option.isSome f' then
                         let f' = Option.get f' in
@@ -814,11 +816,11 @@ Implements a simple first order logic with equality.
                         let (lvl', args') = makeArgs lvl i args in
                         
                         let r = application args' s' in
-                        let mu' = FOA.applyFixpoint (fun alist -> Option.get (application alist s')) mu in
-                        let l = application args' mu' in
+                        let mu' = application args' mu in
                         
-                        if (Option.isSome r) && (Option.isSome l) then
-                          let s2 = (lvl', [(i, Option.get l)], [(i, Option.get r)]) in
+                        if (Option.isSome r) && (Option.isSome mu') then
+                          let l = FOA.applyFixpoint (fun alist -> Option.get (application alist s')) (Option.get mu') in
+                          let s2 = (lvl', [(i, l)], [(i, Option.get r)]) in
                           (sc [s1;s2] (makeBuilder "induction") fc)
                         else
                           (O.error ("incorrect number of arguments.\n");
@@ -894,7 +896,7 @@ Implements a simple first order logic with equality.
                     
                     let s' = parseFormula (getSessionDefinitions session) s in
                     if Option.isSome s' then
-                      let s' = Option.get s' in
+                      let s' = FOA.renameAbstractions (Option.get s') in
                       let f' = application args s' in
                       if Option.isSome f' then
                         let f' = Option.get f' in
@@ -999,8 +1001,7 @@ Implements a simple first order logic with equality.
                     let s = (lvl', lhs, (i,Option.get f')::rhs') in
                     (sc [s] (makeBuilder "sigma_r") fc)
                   else
-                    (O.error "sigma: argument is not an abstraction.\n";
-                    (apply lvl ts ((List.hd terms)::rhs) lhs))
+                    fc ()
               | t::ts ->
                   (apply lvl ts (t::rhs) lhs)
           in
@@ -1248,8 +1249,16 @@ Implements a simple first order logic with equality.
   let pervasiveTacticals =
     let ts = G.tacticals in    
     let ts = Logic.Table.add "and" andTactical ts in
+    let ts = Logic.Table.add "and_l" andL ts in
+    let ts = Logic.Table.add "and_r" andR ts in
+    
     let ts = Logic.Table.add "or" orTactical ts in
+    let ts = Logic.Table.add "or_l" orL ts in
+    let ts = Logic.Table.add "or_r" orR ts in
+    
     let ts = Logic.Table.add "imp" impTactical ts in
+    let ts = Logic.Table.add "imp_r" impR ts in
+    let ts = Logic.Table.add "imp_l" impL ts in
 
     let ts = Logic.Table.add "pi" piTactical ts in
     let ts = Logic.Table.add "pi_l" piL ts in

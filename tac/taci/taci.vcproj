@@ -346,11 +346,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\firstorderabsyn.ml"
+				RelativePath=".\Firstorder\firstorderabsyn.ml"
 				>
 			</File>
 			<File
-				RelativePath=".\firstorderabsyn.mli"
+				RelativePath=".\Firstorder\firstorderabsyn.mli"
 				>
 			</File>
 			<File
