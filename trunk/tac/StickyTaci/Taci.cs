@@ -29,7 +29,6 @@ namespace StickyTaci
     public static string RESET = "#reset";
     public static string TACTICALS = "#tacticals";
     
-    bool m_Fail = false;
     public delegate void IOHandler(Taci instance, string data);
     public event IOHandler Output;
     public event IOHandler Goal;
@@ -66,9 +65,6 @@ namespace StickyTaci
 
     public void Restart()
     {
-      if(m_Fail)
-        return;
-
       if(m_Taci != null)
       {
         m_Taci.Kill();
@@ -88,8 +84,6 @@ namespace StickyTaci
 
       if(m_Taci.Start())
         m_Taci.BeginOutputReadLine();
-      else
-        m_Fail = true;
       return;
     }
 
@@ -110,7 +104,6 @@ namespace StickyTaci
     {
       if(sender == m_Taci)
       {
-        m_Fail = true;
         m_Taci.Close();
         m_Taci = null;
         Restart();
@@ -169,8 +162,10 @@ namespace StickyTaci
       s = s.Replace("&amp;", "&");
       s = s.Replace("&quot;", "\"");
       s = s.Replace("&apos;", "'");
+      s = s.Replace("\\n", "\n");
       s = s.Replace("\\\\", "\\");
-      return System.Text.RegularExpressions.Regex.Unescape(s);
+      
+      return s;
     }
 
     private void Notify(string type, string text)
