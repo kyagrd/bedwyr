@@ -195,9 +195,9 @@ let () =
   List.iter
     (fun e ->
        bind after ~events:[e] ~action:(fun _ -> eval_command ()))
-    [`Modified ([`Control],`KeyPressDetail "Down");
-     `Modified ([`Control],`KeyPressDetail "Return")] ;
-  bind after ~events:[`Modified ([`Control],`KeyPressDetail "Up")]
+    [`Modified ([`Alt],`KeyPressDetail "Down");
+     `Modified ([`Alt],`KeyPressDetail "Return")] ;
+  bind after ~events:[`Modified ([`Alt],`KeyPressDetail "Up")]
     ~action:(fun _ -> ignore (undo ()))
 
 (* ********** BUTTONS ********** *)
