@@ -1,8 +1,8 @@
 
-O=.cmo
-A=.cma
-I=-I Nologic -I Propositional -I FirstOrder
-OCAMLC=ocamlc
+O=.cmx
+A=.cmxa
+I=-I Nologic -I Propositional -I Firstorder -I ../../bedwyr/src/ndcore
+OCAMLC=ocamlopt
 OCAMLYACC=ocamlyacc
 OCAMLLEX=ocamllex
 
@@ -16,17 +16,26 @@ SOURCE= absyn.ml output.ml option.ml logic.ml propositionalabsyn.ml \
 	Firstorder/firstorderlexer.ml \
 	Firstorder/firstorder.ml \
 	toplevellexer.ml toplevelparser.ml \
-	toplevel.ml interpreter.ml interface.ml logics_gen.ml main.ml
+	toplevel.ml interpreter.ml interface.ml logics_gen.ml logics.ml main.ml
 OBJ= $(SOURCE:.ml=$(O))
 
 taci: $(OBJ)
-	$(OCAMLC) str$(A) $(OBJ) -o $@
+	$(OCAMLC) $(I) str$(A) term$(O) norm$(O) unify$(O) pprint$(O) $(OBJ) -o $@
+
+logics_gen.ml: ../logics_gen/bin/Logics.in
+	make -C ../logics_gen
+	../logics_gen/logics_gen --input $(<) --output logics_gen
 
 clean:
-	rm -f *.cm* Nologic/*.cm* Propositional/*.cm*
+	rm -f *.cm* Nologic/*.cm* Propositional/*.cm* Firstorder/*.cm*
+	rm -f *.o Nologic/*.o Propositional/*.o Firstorder/*.o
+	rm -f toplevellexer.ml toplevelparser.ml toplevelparser.mli
+	rm -f logics_gen.*
 
+HEADERS=$(wildcard $(SOURCE:.ml=.mli)) \
+  $($(wildcard SOURCE:.ml=.mly):.mly=.mli)
 .depend: $(SOURCE)
-	ocamldep $(SOURCE) > .depend
+	ocamldep $(I) $(SOURCE) $(HEADERS) > .depend
 -include .depend
 
 %.cmx: %.ml
