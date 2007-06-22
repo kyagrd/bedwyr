@@ -86,7 +86,7 @@ let before,after,output,reset,load,save =
     (* Pack in the left frame. *)
     pack ~side:`Right ~expand:true ~fill:`Y    [before_scroll] ;
     pack ~side:`Right ~expand:true ~fill:`Both [before] ;
-    pack ~side:`Top   ~expand:true ~fill:`Both [before_frame] ;
+    pack ~side:`Top   ~expand:true ~fill:`X [before_frame] ;
     pack ~side:`Right ~expand:true ~fill:`Y    [after_scroll] ;
     pack ~side:`Right ~expand:true ~fill:`Both [after] ;
     pack ~side:`Top   ~expand:true ~fill:`Both [after_frame] ;
