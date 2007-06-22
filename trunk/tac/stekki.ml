@@ -44,22 +44,59 @@ let window =
 (* ********** LAYOUT ********** *)
 
 let before,after,output,reset,load,save =
-  let txt     = Text.create ~width:80 window in
+  let output  =
+    Text.create ~width:80 window in
+
   let left    = Frame.create window in
-  let before  = Listbox.create left in
-  let after   = Text.create ~width:80 left in
+
+  let before_frame = Frame.create left in
+  let after_frame  = Frame.create left in
+  let before  = Listbox.create ~width:80 before_frame in
+  let after   = Text.create ~width:80 after_frame in
+
   let buttons = Frame.create left in
   let reset   = Button.create ~text:"Reset" buttons in
   let load    = Button.create ~text:"Load" buttons in
   let save    = Button.create ~text:"Save" buttons in
-    Text.configure ~state:`Disabled txt ;
-    pack ~fill:`Both ~expand:true [before] ;
-    pack ~fill:`Both ~expand:true [after] ;
+
+  let output_scroll =
+    let scroll = Scrollbar.create window ~command:(Text.yview output) in
+      Text.configure output ~yscrollcommand:(Scrollbar.set scroll) ;
+      scroll
+  in
+  let after_scroll =
+    let scroll = Scrollbar.create after_frame ~command:(Text.yview after) in
+      Text.configure after ~yscrollcommand:(Scrollbar.set scroll) ;
+      scroll
+  in
+  let before_scroll =
+    let scroll =
+      Scrollbar.create before_frame ~command:(Listbox.yview before)
+    in
+      Listbox.configure before ~yscrollcommand:(Scrollbar.set scroll) ;
+      scroll
+  in
+
+    Text.configure ~state:`Disabled output ;
+
+    (* Pack the output on the right. *)
+    pack ~side:`Right ~fill:`Y ~expand:true [output_scroll] ;
+    pack ~side:`Right ~fill:`Both ~expand:true [output] ;
+
+    (* Pack in the left frame. *)
+    pack ~side:`Right ~expand:true ~fill:`Y    [before_scroll] ;
+    pack ~side:`Right ~expand:true ~fill:`Both [before] ;
+    pack ~side:`Top   ~expand:true ~fill:`Both [before_frame] ;
+    pack ~side:`Right ~expand:true ~fill:`Y    [after_scroll] ;
+    pack ~side:`Right ~expand:true ~fill:`Both [after] ;
+    pack ~side:`Top   ~expand:true ~fill:`Both [after_frame] ;
+
     pack ~side:`Left [reset;load;save] ;
     pack [buttons] ;
+
     pack ~side:`Left ~fill:`Both ~expand:true [left] ;
-    pack ~side:`Right ~fill:`Both ~expand:true [txt] ;
-    before,after,txt,reset,load,save
+
+    before,after,output,reset,load,save
 
 (* ********** EXTERNAL PROCESS ********** *)
 
@@ -143,6 +180,7 @@ let eval_command () =
           let command = Text.get after ~start ~stop:(`Linechar (l,c+1),[]) in
             Text.delete after ~start ~stop:(`Linechar (l+1,0),[]) ;
             Listbox.insert before ~index:`End ~texts:[command] ;
+            Listbox.yview before (`Moveto 1.) ;
             write_process (command^"\n")
 
 let undo () =
