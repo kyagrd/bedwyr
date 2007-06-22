@@ -1,7 +1,7 @@
 
 O=.cmo
 A=.cma
-I=-I Nologic -I Propositional
+I=-I Nologic -I Propositional -I FirstOrder
 OCAMLC=ocamlc
 OCAMLYACC=ocamlyacc
 OCAMLLEX=ocamllex
@@ -11,8 +11,12 @@ SOURCE= absyn.ml output.ml option.ml logic.ml propositionalabsyn.ml \
 	Propositional/propositionalparser.ml \
 	Propositional/propositionallexer.ml \
 	Propositional/propositional.ml \
+	Firstorder/firstorderabsyn.ml \
+	Firstorder/firstorderparser.ml \
+	Firstorder/firstorderlexer.ml \
+	Firstorder/firstorder.ml \
 	toplevellexer.ml toplevelparser.ml \
-	toplevel.ml interpreter.ml interface.ml main.ml
+	toplevel.ml interpreter.ml interface.ml logics_gen.ml main.ml
 OBJ= $(SOURCE:.ml=$(O))
 
 taci: $(OBJ)
