@@ -1,7 +1,18 @@
-(* stekki.ml -- an experimental simple GUI for taci
- *
- * Run with: ocaml -I +labltk labltk.cma stekki.ml
- *)
+(*****************************************************************************
+ * stekki.ml -- a simple GUI for taci                                        *
+ *                                                                           *
+ * ocamlopt -I +labltk str.cmxa unix.cmxa labltk.cmxa stekki.ml -o stekki    * 
+ *****************************************************************************)
+
+let filename =
+  if Array.length Sys.argv = 1 then begin
+    Printf.printf "Usage: stekki <filename>\n" ;
+    Printf.printf "The file is used to load/save the script.\n" ;
+    exit 1
+  end else
+    Sys.argv.(1)
+
+(* ********** GENERAL TK CONFIG ********** *)
 
 open Tk
 
@@ -24,69 +35,76 @@ let window =
     Encoding.system_set "utf-8" ;
     ignore (get_font "guifont" ~size:8
               ["sans"; "verdana"; "lucida"; "bitstream vera sans"]) ;
-    Option.add ~path:"*Separator.borderWidth" "5";
-    Option.add ~path:"*Separator.background" "black";
     Option.add ~path:"*Label.font" "guifont" ;
+    Option.add ~path:"*Button.font" "guifont" ;
 
-    Wm.title_set w "Stekki" ;
+    Wm.title_set w (Printf.sprintf "Stekki: %s" filename) ;
     w
 
-let before,input,after,output =
-  let txt   = Text.create ~width:80 window in
-  let left  = Frame.create window in
-  let before = Listbox.create left in
-  let after  = Listbox.create left in
-  let input  = Entry.create   left in
+(* ********** LAYOUT ********** *)
+
+let before,after,output,reset,load,save =
+  let txt     = Text.create ~width:80 window in
+  let left    = Frame.create window in
+  let before  = Listbox.create left in
+  let after   = Text.create ~width:80 left in
+  let buttons = Frame.create left in
+  let reset   = Button.create ~text:"Reset" buttons in
+  let load    = Button.create ~text:"Load" buttons in
+  let save    = Button.create ~text:"Save" buttons in
     Text.configure ~state:`Disabled txt ;
     pack ~fill:`Both ~expand:true [before] ;
-    pack ~fill:`X [input] ;
     pack ~fill:`Both ~expand:true [after] ;
+    pack ~side:`Left [reset;load;save] ;
+    pack [buttons] ;
     pack ~side:`Left ~fill:`Both ~expand:true [left] ;
     pack ~side:`Right ~fill:`Both ~expand:true [txt] ;
-    before,input,after,txt
+    before,after,txt,reset,load,save
 
-(** The external process *)
+(* ********** EXTERNAL PROCESS ********** *)
 
-let proc_pid,proc_in,proc_out =
+let proc_in,proc_out,reload =
   let rin,win = Unix.pipe () in
   let rout,wout = Unix.pipe () in
-  let pid =
-    Unix.create_process "ocaml" [|"ocaml"|] Unix.stdin wout Unix.stderr
+  let pid = ref None in
+  let reload () =
+    begin match !pid with
+      | None -> ()
+      | Some p -> Unix.kill p 9 ; ignore (Unix.wait ())
+    end ;
+    Text.configure ~state:`Normal output ;
+    Text.delete output ~start:(`Linechar (0,0),[]) ~stop:(`End,[]) ;
+    Text.configure ~state:`Disabled output ;
+    pid := Some (Unix.create_process
+                   "taci" [|"taci";"--logic";"firstorder"|]
+                   rin wout Unix.stderr)
   in
-    Unix.close rin ; Unix.close wout ;
-    pid,win,rout
+    reload () ;
+    win,rout,reload
 
-(** INPUT *)
-
-let on_input () =
-  let line = Entry.get input in
-    Entry.delete_range input ~start:(`At 0) ~stop:`End ;
-    Listbox.insert before ~index:`End ~texts:[line] ;
-    let line = line ^ "\n" in
-    let len = String.length line in
-      assert (len = Unix.write proc_in line 0 len) ;
-      assert (10 = Unix.write proc_in "\n\n\n\n\n\n\n\n\n\n" 0 10) ;
-      assert (len = Unix.write Unix.stdout line 0 len) ;
-      flush_all ()
-
-let () =
-  bind input ~events:[`KeyReleaseDetail "Return"]
-    ~action:(fun _ -> on_input ())
-
-(** OUTPUT *)
+(* ********** READ FROM THE PROCESS ********** *)
 
 let startup_delay = 1.
 let len = 80
 let buf = String.make len 'x'
 
+let clear_on_read = ref false
+
+let read_from_process () =
+  let len = Unix.read proc_out buf 0 len in
+  let s = String.sub buf 0 len in
+  let s = Str.global_replace (Str.regexp "\r") "" s in
+    (* TODO: remove a command from the list on error. *)
+    Text.configure ~state:`Normal output ;
+    if !clear_on_read then begin
+      Text.delete output ~start:(`Linechar (0,0),[]) ~stop:(`End,[]) ;
+      clear_on_read := false
+    end ;
+    Text.insert ~index:(`End,[]) ~text:s output ;
+    Text.configure ~state:`Disabled output
+
 let () =
-  Fileevent.add_fileinput ~fd:Unix.stdin
-    ~callback:(fun () ->
-                 let len = Unix.read proc_out buf 0 len in
-                 let s = String.sub buf 0 len in
-                   Text.configure ~state:`Normal output ;
-                   Text.insert ~index:(`End,[]) ~text:s output ;
-                   Text.configure ~state:`Disabled output)
+  Fileevent.add_fileinput ~fd:proc_out ~callback:read_from_process
 
 let () =
   (** The initial available data on proc_out isn't obtained via the file event
@@ -95,15 +113,98 @@ let () =
     let readlist,_,_ = Unix.select [proc_out] [] [] delay in
       match readlist with
         | [_] ->
-            let len = Unix.read proc_out buf 0 len in
-            let s = String.sub buf 0 len in
-              Printf.printf "Read %S\n%!" s ;
-              Text.configure ~state:`Normal output ;
-              Text.insert ~index:(`End,[]) ~text:s output ;
-              Text.configure ~state:`Disabled output ;
-              f 0.1
+            read_from_process () ;
+            f 0.1
         | _ -> ()
   in
     f startup_delay
+
+let clear_on_read () = clear_on_read := true
+
+(* ********** WRITE TO THE PROCESS ********** *)
+
+let write_process line =
+  let len = String.length line in
+    clear_on_read () ;
+    assert (len = Unix.write proc_in line 0 len)
+
+let eval_command () =
+  (** Find the end of the next command. *)
+  let start = `Linechar (0,0), [] in
+    match
+      try
+        Some (Text.search ~pattern:".\n" ~switches:[]
+                ~start ~stop:(`End,[])
+                after)
+      with _ -> None
+    with
+      | None -> ()
+      | Some (`Linechar (l,c)) ->
+          let command = Text.get after ~start ~stop:(`Linechar (l,c+1),[]) in
+            Text.delete after ~start ~stop:(`Linechar (l+1,0),[]) ;
+            Listbox.insert before ~index:`End ~texts:[command] ;
+            write_process (command^"\n")
+
+let undo () =
+  if Listbox.size before = 0 then false else
+    let command = Listbox.get before ~index:`End in
+      Listbox.delete before ~first:`End ~last:`End ;
+      Text.insert after ~index:(`Linechar (0,0),[]) ~text:(command^"\n") ;
+      write_process "#undo.\n" ;
+      true
+
+let () =
+  List.iter
+    (fun e ->
+       bind after ~events:[e] ~action:(fun _ -> eval_command ()))
+    [`Modified ([`Control],`KeyPressDetail "Down");
+     `Modified ([`Control],`KeyPressDetail "Return")] ;
+  bind after ~events:[`Modified ([`Control],`KeyPressDetail "Up")]
+    ~action:(fun _ -> ignore (undo ()))
+
+(* ********** BUTTONS ********** *)
+
+let on_reset () =
+  while undo () do () done ;
+  reload ()
+
+let warn message f =
+  if
+    1 = Dialog.create ~parent:window ~title:"Warning" ~message
+          ~buttons:["Cancel";"OK"] ~default:0 ()
+  then f ()
+
+let on_load () =
+  while undo () do () done ;
+  reload () ;
+  let file = open_in filename in
+  let len = in_channel_length file in
+  let text = String.make len 'x' in
+    really_input file text 0 len ;
+    let text = Str.global_replace (Str.regexp "\r") "" text in
+      close_in file ;
+      Text.delete after ~start:(`Linechar (0,0),[]) ~stop:(`End,[]) ;
+      Text.insert ~index:(`End,[]) ~text after
+
+let on_save () =
+  while undo () do () done ;
+  reload () ;
+  let text = Text.get ~start:(`Linechar (0,0),[]) ~stop:(`End,[]) after in
+  let file = open_out filename in
+    output_string file text ;
+    close_out file
+
+let () =
+  let load_msg =
+    Printf.sprintf "Reloading %S will loose unsaved changes!" filename
+  in
+  let save_msg =
+    Printf.sprintf "Overwrite %S?" filename
+  in
+    bind reset ~events:[`ButtonPress] ~action:(fun _ -> on_reset ()) ;
+    bind load  ~events:[`ButtonPress] ~action:(fun _ -> warn load_msg on_load) ;
+    bind save  ~events:[`ButtonPress] ~action:(fun _ -> warn save_msg on_save) ;
+    if Sys.file_exists filename then
+      on_load ()
 
 let () = mainLoop ()
