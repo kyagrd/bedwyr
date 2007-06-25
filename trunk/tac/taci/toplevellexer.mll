@@ -20,13 +20,9 @@
           pos_lnum = 1 + lexbuf.lex_curr_p.pos_lnum }
 }
 
-let name = ['A' - 'Z' 'a'-'z' '_' '0'-'9'] +
+let name = ['A' - 'Z' 'a'-'z' '_' '0'-'9' '!'] +
 let blank = ' ' | '\t' | '\r'
-let anything = [^'.' '\n'] *
-let line = [^'.' '\n'] *
 let instring = [^'"'] *
-
-let line = [^'.' '\n'] +
 
 rule command = parse
 | '%' [^'\n'] * '\n' { incrline lexbuf; command lexbuf }
