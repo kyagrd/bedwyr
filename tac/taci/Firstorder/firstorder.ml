@@ -1231,6 +1231,21 @@ Implements a simple first order logic with equality.
       in
       G.makeTactical pretactic
   | _ -> G.invalidArguments "rotate_l"
+
+  let asyncTactical session args = match args with
+      [] ->
+        let allrules = (G.orElseListTactical
+          [andL session [];
+          orR session [];
+          piR session [];
+          impR session [];
+          sigmaL session [];
+          eqL session [];
+          eqR session [];
+          axiomTactical session []]) in
+        (G.repeatTactical allrules)
+    | _ -> G.invalidArguments "async"
+
   (********************************************************************
   *tacticals:
   * The exported table of tacticals.  These tacticals are the only
@@ -1292,6 +1307,7 @@ Implements a simple first order logic with equality.
     let ts = Logic.Table.add "rotate_r" rotateR ts in
     let ts = Logic.Table.add "rotate_l" rotateL ts in
 
+    let ts = Logic.Table.add "async" asyncTactical ts in
     ts
     
   let emptySession =

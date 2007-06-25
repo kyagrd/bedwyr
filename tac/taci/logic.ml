@@ -215,7 +215,7 @@ struct
       *scFirst:
       * Success continuation for first tactical application.  If the 
       * appplication produces no new subgoals, succeeds.  Otherwise
-      * calls
+      * calls second tactical.
       ****************************************************************)
       let rec scFirst newseqs oldseqs builder k =
         let builder' proofs =
