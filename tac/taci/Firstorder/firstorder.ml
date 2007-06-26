@@ -5,9 +5,10 @@ module FOA = Firstorderabsyn
 * Contains a value strictNabla determining whether or not strict nabla
 * comparisons are used in the axiom rule.  Passed to Firstorder
 **********************************************************************)
-module type NablaSig =
+module type ParamSig =
 sig
   val strictNabla : bool
+  val intuitionistic : bool
 end
 
 (**********************************************************************
@@ -15,7 +16,7 @@ end
 * Implements a simple first order logic with equality.  Parameterized
 * so that logics with or without nabla strictness can be constructed.
 **********************************************************************)
-module Firstorder (Nabla : NablaSig) (O : Output.Output) =
+module Firstorder (Param : ParamSig) (O : Output.Output) : Logic.Logic =
 struct
   let name = "First Order Logic"
   let info =
@@ -539,7 +540,7 @@ Implements a simple first order logic with equality.
                   (match lhs with
                     [] -> ()
                   | (i', FOA.AtomicFormula(t'))::ls ->
-                      if (not Nabla.strictNabla) || i = i' then
+                      if (not Param.strictNabla) || i = i' then
                         (match (FOA.rightUnify t t') with
                             FOA.UnifySucceeded -> sc ()
                           | FOA.UnifyFailed -> (unifyList sc ls f)
@@ -623,7 +624,12 @@ Implements a simple first order logic with equality.
                 [] -> fc ()
               | (i, FOA.ImplicationFormula(l,r))::ts ->
                   let lhs' = (List.rev_append lhs ts) in
-                  let s1 = (lvl, lhs', (i,l)::rhs) in
+                  let s1 =
+                    if Param.intuitionistic then
+                      (lvl, lhs', [i,l])
+                    else
+                      (lvl, lhs', (i,l)::rhs)
+                  in
                   let s2 = (lvl, (i,r)::lhs', rhs) in
                   (sc [s1;s2] (makeBuilder "imp_l") fc)
               | t::ts ->
@@ -670,6 +676,48 @@ Implements a simple first order logic with equality.
               | (i, FOA.OrFormula(l,r))::ts ->
                   let rhs' = (List.rev_append rhs ts) in
                   let s = (lvl, lhs, (i,l)::(i,r)::rhs') in
+                  (sc [s] (makeBuilder "or_r") fc)
+              | t::ts ->
+                  (apply lvl ts (t::rhs) lhs)
+          in
+          let lhs = getSequentLHS sequent in
+          let rhs = getSequentRHS sequent in
+          let lvl = getSequentLevel sequent in
+          (apply lvl rhs [] lhs)
+        in
+        G.makeTactical pretactic
+    | _ -> G.invalidArguments "or_r"
+
+  (*  Additive Or Right  *)
+  let orRleft session args = match args with
+      [] ->
+        let pretactic = fun sequent sc fc ->
+          let rec apply lvl terms rhs lhs =
+            match terms with
+                [] -> fc ()
+              | (i, FOA.OrFormula(l,r))::ts ->
+                  let rhs' = (List.rev_append rhs ts) in
+                  let s = (lvl, lhs, (i,l)::rhs') in
+                  (sc [s] (makeBuilder "or_r") fc)
+              | t::ts ->
+                  (apply lvl ts (t::rhs) lhs)
+          in
+          let lhs = getSequentLHS sequent in
+          let rhs = getSequentRHS sequent in
+          let lvl = getSequentLevel sequent in
+          (apply lvl rhs [] lhs)
+        in
+        G.makeTactical pretactic
+    | _ -> G.invalidArguments "or_r"
+  let orRright session args = match args with
+      [] ->
+        let pretactic = fun sequent sc fc ->
+          let rec apply lvl terms rhs lhs =
+            match terms with
+                [] -> fc ()
+              | (i, FOA.OrFormula(l,r))::ts ->
+                  let rhs' = (List.rev_append rhs ts) in
+                  let s = (lvl, lhs, (i,r)::rhs') in
                   (sc [s] (makeBuilder "or_r") fc)
               | t::ts ->
                   (apply lvl ts (t::rhs) lhs)
@@ -754,6 +802,7 @@ Implements a simple first order logic with equality.
         G.makeTactical pretactic
     | _ -> G.invalidArguments "pi_l"
 
+  (* Mu Right *)
   let muR session args = match args with
       Absyn.String(n)::[] -> 
         let pretactic = fun sequent sc fc ->
@@ -784,6 +833,37 @@ Implements a simple first order logic with equality.
         in
         G.makeTactical pretactic
     | _ -> G.invalidArguments "mu_r"
+
+  (*  Mu Left -- does not check monotonicity *)
+  let muL session args = match args with
+      Absyn.String(n)::[] -> 
+        let pretactic = fun sequent sc fc ->
+          let rec apply lvl terms lhs rhs =
+            match terms with
+                [] -> (O.error ("definition '" ^ n ^ "' not found.\n"); fc ())
+              | ((i,FOA.ApplicationFormula(FOA.MuFormula(name,body)as mu,args)) as t)::ts ->
+                  if n = name then
+                    let lhs' = (List.rev_append lhs ts) in
+                    let mu' = FOA.applyFixpoint (fun args -> FOA.ApplicationFormula(mu,args)) body in
+                    let f' = application args mu' in
+                    if Option.isSome f' then
+                      let s = (lvl, (i,Option.get f')::lhs', rhs) in
+                      (sc [s] (makeBuilder "mu_l") fc)
+                    else
+                      (O.error ("'" ^ name ^ "': incorrect number of arguments.");
+                      fc ())
+                  else
+                    (apply lvl ts (t::lhs) rhs)
+              | t::ts ->
+                  (apply lvl ts (t::lhs) rhs)
+          in
+          let lhs = getSequentLHS sequent in
+          let rhs = getSequentRHS sequent in
+          let lvl = getSequentLevel sequent in
+          (apply lvl lhs [] rhs)
+        in
+        G.makeTactical pretactic
+    | _ -> G.invalidArguments "mu_l"
 
   (*  Induction *)
   let inductionTactical session args = match args with
@@ -976,7 +1056,7 @@ Implements a simple first order logic with equality.
                   else
                     fc ()
               | t::ts ->
-                  (apply lvl ts (t::lhs) ts)
+                  (apply lvl ts (t::lhs) rhs)
           in
           let lhs = getSequentLHS sequent in
           let rhs = getSequentRHS sequent in
@@ -1232,19 +1312,21 @@ Implements a simple first order logic with equality.
       G.makeTactical pretactic
   | _ -> G.invalidArguments "rotate_l"
 
-  let asyncTactical session args = match args with
+  let simplifyTactical session args = match args with
       [] ->
-        let allrules = (G.orElseListTactical
-          [andL session [];
-          orR session [];
+        let l = [
+          andL session [];
           piR session [];
           impR session [];
           sigmaL session [];
           eqL session [];
           eqR session [];
-          axiomTactical session []]) in
+          axiomTactical session []]
+        in
+        let l = if Param.intuitionistic then l else (orR session [])::l in
+        let allrules = G.orElseListTactical l in
         (G.repeatTactical allrules)
-    | _ -> G.invalidArguments "async"
+    | _ -> G.invalidArguments "simplify"
 
   (********************************************************************
   *tacticals:
@@ -1267,9 +1349,17 @@ Implements a simple first order logic with equality.
     let ts = Logic.Table.add "and_l" andL ts in
     let ts = Logic.Table.add "and_r" andR ts in
     
-    let ts = Logic.Table.add "or" orTactical ts in
+    let ts =
+      if Param.intuitionistic then ts else Logic.Table.add "or" orTactical ts
+    in
     let ts = Logic.Table.add "or_l" orL ts in
-    let ts = Logic.Table.add "or_r" orR ts in
+    let ts =
+      if Param.intuitionistic then
+        Logic.Table.add "left" orRleft
+          (Logic.Table.add "right" orRright ts)
+      else
+        Logic.Table.add "or_r" orR ts
+    in
     
     let ts = Logic.Table.add "imp" impTactical ts in
     let ts = Logic.Table.add "imp_r" impR ts in
@@ -1295,8 +1385,12 @@ Implements a simple first order logic with equality.
     
     let ts = Logic.Table.add "contract" contractTactical ts in
     let ts = Logic.Table.add "contract_l" contractL ts in
-    let ts = Logic.Table.add "contract_r" contractR ts in
+    let ts =
+      if Param.intuitionistic then ts else
+        Logic.Table.add "contract_r" contractR ts
+    in
     
+    let ts = Logic.Table.add "mu_l" muL ts in
     let ts = Logic.Table.add "mu_r" muR ts in
     let ts = Logic.Table.add "induction" inductionTactical ts in
     
@@ -1307,7 +1401,7 @@ Implements a simple first order logic with equality.
     let ts = Logic.Table.add "rotate_r" rotateR ts in
     let ts = Logic.Table.add "rotate_l" rotateL ts in
 
-    let ts = Logic.Table.add "async" asyncTactical ts in
+    let ts = Logic.Table.add "simplify" simplifyTactical ts in
     ts
     
   let emptySession =
@@ -1323,5 +1417,12 @@ Implements a simple first order logic with equality.
 
 end
 
-module Firstordernonstrict = Firstorder (struct let strictNabla = false end)
-module Firstorderstrict = Firstorder (struct let strictNabla = true end)
+module Firstordernonstrict =
+  Firstorder (struct let strictNabla = false let intuitionistic = false end)
+module Firstorderstrict =
+  Firstorder (struct let strictNabla = true let intuitionistic = false end)
+
+module MuLJstrict =
+  Firstorder (struct let strictNabla = true let intuitionistic = true end)
+module MuLJnonstrict =
+  Firstorder (struct let strictNabla = false let intuitionistic = true end)

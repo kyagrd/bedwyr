@@ -4,3 +4,5 @@ logic(none, Nologic.Nologic);
 logic(propositional, Propositional.Propositional);
 logic(firstorder, Firstorder.Firstorderstrict);
 logic(firstorder-nonstrict, Firstorder.Firstordernonstrict);
+logic(muLJ,Firstorder.MuLJstrict);
+logic(muLJ-nonstrict,Firstorder.MuLJnonstrict);
