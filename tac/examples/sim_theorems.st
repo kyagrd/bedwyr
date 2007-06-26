@@ -1,87 +1,171 @@
-#open "basic_definitions.tac".
+#open "C:\zRXer\Projects\SlimmerSVN\trunk\tac\examples\basic_definitions.tac".
+
 #theorem half "pi x\ (nat x)=>(sigma h\ (half x h))".
-then(pi, imp).
+async.
 induction("nat", "x\ (nat x),(pi y\
 	(leq y x)=>(sigma h\ (half y h)))").
-and.
-pi.
-imp.
+%Proving that the invariant fits.
+async.
+pi_l.
+imp_l.
 mu_r("leq").
-then(or, eq).
+async.
 sigma_l.
 sigma_r.
-axiom.
-or.
-eq.
+async.
+
+%Invariance Proof.
+or_l.
+
+%Zero Case.
+eq_l.
 and.
 mu_r("nat").
-then(or, eq).
-then(pi, imp).
+async.
+async.
 induction("leq", "x\ y\ (x=y);(sigma z\ (y=(s z),(leq x z)))").
 or.
-eq.
+
+%Equality.
+eq_l.
 sigma.
 mu_r("half").
-or.
-and.
-or.
+async.
+and_r.
+async.
 eq.
-eq.
-sigma.
-and.
-eq.
-or.
-or.
-eq.
-eq.
-or.
-sigma_l.
+
+%Absurd Case: Smaller than 0.
+async.
+
+%Justifying the unfolding of leq.
+async.
+async.
+async.
+or_l.
+eq_l.
+eq_r.
 sigma_r.
-and.
-and.
-eq.
-eq.
-eq.
+and_r.
+sigma_l.
+async.
 mu_r("leq").
-or.
-or.
-eq.
-eq.
-sigma.
-and.
-eq.
+async.
 
+%Heredity Step
+async.
+sigma_l.
+and_l.
+eq_l.
+and_l.
+and_r.
 
-
-
-or.
-eq.
-sigma.
-and.
-eq.
-and.
-and.
+%Stable under successor.
 mu_r("nat").
 then(or, sigma).
-
-
-
 and.
 eq.
 axiom.
+
+%Interesting Heredity Case.
 pi_r.
 imp_r.
-imp.
 induction("leq", "x\ y\ (x=y);(sigma z\ (y=(s z),(leq x z)))").
+or.
+
+%Equality Case.
+eq_l.
+induction("nat", "x\ (x=o);(sigma y\ (x=(s y)),(nat y))").
+then(or,async).
+pi_l.
+imp_l.
+mu_r("leq").
+then(or, sigma_r).
+and.
+eq.
+mu_r("leq").
+or.
+eq.
+sigma_l.
+sigma_r.
+
+
+mu_r("half").
+or.
+sigma.
+sigma.
+and.
+and.
+eq.
+eq.
+axiom.
+
+pi_l.
+imp.
+mu_r("leq").
+or.
+eq.
+sigma_l.
+sigma_r.
+mu_r("half").
+or.
+and_r.
+or.
+eq.
+eq.
+or_l.
+async.
+or_r.
+async.
+or.
+eq_l.
+sigma.
+and.
+eq.
+mu_r("nat").
+async.
+async.
+sigma.
+and.
+eq.
+mu_r("nat").
+or.
+sigma_r.
+and.
+eq.
+axiom.
+async.
+pi.
+imp.
+axiom.
+sigma.
+sigma.
+async.
+
+%One More thing.
+async.
+or.
+eq.
+eq.
+async.
 or.
 eq.
 sigma.
-mu_r("half").
+and.
+eq.
+mu_r("leq").
 or.
-
-
-
-
+eq.
+async.
+sigma.
+and.
+eq.
+mu_r("leq").
+or.
+sigma.
+and.
+eq.
+axiom.
 
 
 

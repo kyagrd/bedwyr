@@ -26,8 +26,10 @@ namespace StickyTaci
     public static string INCLUDE = "#include";
     public static string LOGICS = "#logics";
     public static string OPEN = "#open";
+    public static string REDO = "#redo";
     public static string RESET = "#reset";
     public static string TACTICALS = "#tacticals";
+    public static string UNDO = "#undo";
     
     public delegate void IOHandler(Taci instance, string data);
     public event IOHandler Output;

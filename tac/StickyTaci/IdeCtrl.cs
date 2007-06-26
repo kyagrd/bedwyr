@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Collections.Generic;
 using System.Text;
 using System.Windows.Forms;
@@ -68,10 +69,6 @@ namespace StickyTaci
       {
         return m_Taci;
       }
-    }
-
-    public IdeCtrl()
-    {
     }
 
     public void StartTaci(string path, string arguments)
@@ -145,14 +142,22 @@ namespace StickyTaci
         Form.Input(command);
       }
     }
+
     public void OnTacReset()
     {
+      Form.CurrentLine = 0;
       Taci.Write(Taci.RESET + ".");
     }
 
     public void OnTacRestart()
     {
+      Form.CurrentLine = 0;
       Taci.Restart();
+    }
+
+    public void OnShown()
+    {
+      StartTaci(Application.StartupPath + "/taci.exe", " --logic firstorder --output xml");
     }
 
     private bool SaveMessage()
@@ -284,7 +289,10 @@ namespace StickyTaci
       if(Form.GetNextLine(ref line))
       {        
         line = line.Trim();
-        m_Line += line;
+        
+        if(line != "" && line[0] != '%')
+          m_Line += line;
+
         if(m_Line == "" || m_Line[m_Line.Length - 1] != '.')
         {
           return false;
@@ -311,13 +319,28 @@ namespace StickyTaci
       }
     }
 
+    public void OnStart()
+    {
+      OnTacReset();
+    }
+
+    public void OnEnd()
+    {
+      OnAll((uint)Form.Rtf.Lines.Length);
+    }
+
     public void OnPreviousLine()
     {
-      if(CurrentLine > 0)
+      string line = "";
+      if(Form.GetPreviousLine(ref line))
       {
-        uint line = CurrentLine - 1;
-        CurrentLine = 0;
-        OnAll(line);
+        line = line.Trim();
+        if(line == "" || line[0] == '%' || line[line.Length - 1] != '.')
+        {
+          return;
+        }
+        Taci.Write(Taci.UNDO + ".");
+        return;
       };
     }
 
@@ -326,11 +349,11 @@ namespace StickyTaci
       //Reset the environment so everything works as planned.
       OnTacReset();
 
-      //ReColor
-      Form.ColorLines(line);
-
       //Run each line upto the given one.
-      while((CurrentLine <= line) && OnNextLine());      
+      while(CurrentLine < line)
+      {
+        OnNextLine();
+      }
     }
 
     private void Taci_Output(Taci instance, string data)
