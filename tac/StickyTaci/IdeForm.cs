@@ -671,7 +671,9 @@ namespace StickyTaci
 
     private void mainMenuTacReset_Click(object sender, EventArgs e)
     {
+      uint current = CurrentLine;
       Ctrl.OnTacReset();
+      ColorLines(current);
     }
 
     protected override void WndProc(ref Message m)
@@ -717,7 +719,9 @@ namespace StickyTaci
 
     private void mainMenuTacStart_Click(object sender, EventArgs e)
     {
+      uint current = CurrentLine;
       Ctrl.OnStart();
+      ColorLines(current);
     }
 
     private void mainMenuTacEnd_Click(object sender, EventArgs e)

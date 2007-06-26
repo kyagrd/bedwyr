@@ -5,7 +5,9 @@ type term = Term.term
 
 type formula =
     AndFormula of (formula * formula)
+  | LinearAndFormula of (formula * formula)
   | OrFormula of (formula * formula)
+  | LinearOrFormula of (formula * formula)
   | ImplicationFormula of (formula * formula)
   | EqualityFormula of (term * term)
   | PiFormula of formula

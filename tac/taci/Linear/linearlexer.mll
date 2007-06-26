@@ -39,14 +39,15 @@ rule token = parse
 | "(" {LPAREN}
 | ")" {RPAREN}
 
-| "_" {UNDERSCORE}
-| "=" {EQ}
-| "," {AND}
-| "&" {AND}
-| ";" {OR}
-| "=>" {IMP}
-| ":=" {DEF}
-| "\\" {BSLASH}
+| "_"   {UNDERSCORE}
+| "="   {EQ}
+| "/\\"  {ANDL}
+| "\\/"  {ORL}
+| "&"   {AND}
+| "|"   {OR}
+| "=>"  {IMP}
+| ":="  {DEF}
+| "\\"  {BSLASH}
 
 | "pi"      {PI}
 | "sigma"   {SIGMA}

@@ -111,7 +111,7 @@ struct
         | _ -> raise (Failure "split_nth")
     in
     split' i [] l
-    
+
   (********************************************************************
   *makeTactical:
   * Given a tactic, make a tactical that selects the first sequent
@@ -198,7 +198,50 @@ struct
   * Maps a given tactical over a list of sequents, accumulating the
   * result.
   ********************************************************************)
-  let rec mapTactical tac sequents result sc = ()
+  let rec mapTactical tac sequents result sc = ()  
+
+  (********************************************************************
+  *iterateTactical:
+  * Applies the given tactical.  Then applies the given tactical to the
+  * newly created sequents.  Continues to do so until no new sequents
+  * are being generated.
+  *
+  * The returned new sequents should be the collection of all sequents
+  * created.  The returned old sequents are those that were returned by
+  * the first application of the tactical.
+  ********************************************************************)
+  let rec iterateTactical tac =
+    fun sequents sc fc ->
+      (****************************************************************
+      *makeBuilder:
+      ****************************************************************)
+      let makeBuilder oldbuilder builder seqs =
+        match oldbuilder with
+          None -> builder
+        | Some old ->
+            fun proofs ->
+              let l = (List.length proofs) - (List.length seqs) in
+              let (potherseqs, pseqs) = split_nth l proofs in
+              (old potherseqs) @ (builder pseqs)
+      in
+
+      (****************************************************************
+      *sc':
+      * Success continuation for applications.
+      ****************************************************************)
+      let rec sc' oldbuilder realnew rest newseqs oldseqs builder k =
+        let newseqs' = newseqs @ oldseqs in
+        let builder' = Some (makeBuilder oldbuilder builder newseqs') in
+        let realnew' = realnew @ newseqs' in
+
+        match rest with
+            [] -> (sc realnew' [] (Option.get builder') k)
+          | s::ss -> (tac [s] (sc' builder' realnew' ss) fc)
+      in
+      
+      match sequents with
+        [] -> fc ()
+      | s::ss -> (tac [s] (sc' None [] ss) fc)
   
   (********************************************************************
   *wrappedThenTactical:
@@ -218,13 +261,7 @@ struct
       * calls second tactical.
       ****************************************************************)
       let rec scFirst newseqs oldseqs builder k =
-        let builder' proofs =
-          let (pnewseqs, poldseqs) = split_nth (List.length newseqs) proofs in
-          ((builder pnewseqs) @ poldseqs)
-        in
-        match newseqs with
-            [] -> (sc newseqs oldseqs builder' k)
-          | s::ss -> ((tac2 ()) [s] (scRest ss [] oldseqs) k)
+        ((iterateTactical (tac2 ())) newseqs (scRest builder oldseqs) k)
       
       (****************************************************************
       *scRest:
@@ -232,14 +269,13 @@ struct
       * the new sequents and keeps track of the "real" old sequents
       * that were not changed even by the first tactical.
       ****************************************************************)
-      and scRest restseqs realnew realold newseqs oldseqs builder k =
+      and scRest oldbuilder realoldseqs newseqs oldseqs builder k =
         let builder' proofs =
-          let (prealnew, prealold) = split_nth (List.length realnew) proofs in
-          ((builder prealnew) @ prealold)
+          let l = (List.length proofs) - (List.length realoldseqs) in
+          let (pseqs, potherseqs) = split_nth l proofs in
+          oldbuilder ((builder pseqs) @ potherseqs)
         in
-        match restseqs with
-            [] -> (sc (newseqs @ oldseqs @ realnew) realold builder' k)
-          | s::ss -> ((tac2 ()) [s] (scRest ss (newseqs @ oldseqs @ realnew) realold) k)
+        (sc (newseqs @ oldseqs) realoldseqs builder' k)
       in
       (tac1 sequents scFirst fc)
 
@@ -249,61 +285,7 @@ struct
   ********************************************************************)
   let thenTactical tac1 tac2 =
     wrappedThenTactical tac1 (fun () -> tac2)
-  
-  (********************************************************************
-  *iterateTactical:
-  * Applies the given tactical.  Then applies the given tactical to the
-  * newly created sequents.  Continues to do so until no new sequents
-  * are being generated.
-  *
-  * The returned new sequents should be the collection of all sequents
-  * created.  The returned old sequents are those that were returned by
-  * the first application of the tactical.
-  ********************************************************************)
-  let rec iterateTactical tac =
-    fun sequents sc fc ->
-      (****************************************************************
-      *builder':
-      ****************************************************************)
-      let builder' builder newseqs proofs =
-        let (pnewseqs, poldseqs) = split_nth (List.length newseqs) proofs in
-        ((builder pnewseqs) @ poldseqs)
-      in
-      (****************************************************************
-      *scFirst:
-      * Success continuation for first application.  Used to keep track
-      * of the 'real' old sequents.
-      ****************************************************************)
-      let rec scFirst newseqs oldseqs builder k =
-        let builder'' = (builder' builder newseqs) in
-        if (empty newseqs) then
-          (sc newseqs oldseqs builder'' k)
-        else
-          (tac newseqs (scRest [] oldseqs) (failure newseqs oldseqs builder'' k))
 
-      (****************************************************************
-      *scRest:
-      * Success continuation for subsequent applications.
-      ****************************************************************)
-      and scRest realnew realold newseqs oldseqs builder k =
-        let builder'' = (builder' builder newseqs) in
-        let realnew' = (oldseqs @ realnew) in
-        let failure' = (failure (newseqs @ realnew') realold builder'' k) in
-        if (empty newseqs) then
-          (sc realnew' realold builder'' k)
-        else
-          (tac newseqs (scRest realnew' realold) failure')
-      
-      (****************************************************************
-      *failure:
-      * If an application fails simply succeed with the new and old
-      * sequents obtained thus far.
-      ****************************************************************)
-      and failure newseqs oldseqs builder k () =
-        (sc newseqs oldseqs builder k)
-      in
-      (tac sequents scFirst fc)
-  
   (********************************************************************
   *repeatTactical:
   * Applies the given tactical to the list of sequents. Then, for each

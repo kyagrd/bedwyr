@@ -1,4 +1,5 @@
-#open "C:\zRXer\Projects\SlimmerSVN\trunk\tac\examples\basic_definitions.tac".
+#open "C:\zRXer\Projects\SlimmerSVN\trunk\tac\examples
+	\basic_definitions.tac".
 
 #theorem half "pi x\ (nat x)=>(sigma h\ (half x h))".
 async.
@@ -54,11 +55,9 @@ async.
 
 %Heredity Step
 async.
-sigma_l.
-and_l.
-eq_l.
-and_l.
 and_r.
+
+
 
 %Stable under successor.
 mu_r("nat").
