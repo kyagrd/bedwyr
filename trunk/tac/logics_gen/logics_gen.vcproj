@@ -27,7 +27,7 @@
 			<Tool
 				Name="VCCustomBuildTool"
 				Description=""
-				CommandLine="compile.bat &quot;$(TargetPath)&quot;  &quot;$(ProjectDir)bin\$(TargetFilename)&quot;"
+				CommandLine="compile.bat &quot;$(TargetPath)&quot;  &quot;$(ProjectDir)bin\$(TargetFilename)&quot;&#x0D;&#x0A;"
 				Outputs="none"
 			/>
 			<Tool
@@ -205,6 +205,10 @@
 				>
 			</File>
 		</Filter>
+		<File
+			RelativePath=".\bin\Logics.in"
+			>
+		</File>
 	</Files>
 	<Globals>
 	</Globals>

@@ -47,7 +47,8 @@ Tacticals:
   let getSessionTacticals (Session(_,_,t)) = t
   let getSessionSequents (Session(sequents,_,_)) = sequents
   let setSessionSequents sequents (Session(_,b,t)) = (Session(sequents,b,t))
-
+  let setSessionBuilder builder (Session(s,_,t)) = (Session(s,builder,t))
+  
   let string_of_sequent seq =
     let lhs = getSequentLHS seq in
     let rhs = getSequentRHS seq in
@@ -100,8 +101,7 @@ Tacticals:
   let definitions ds session = session
   let operator name fix prec session = session
   let update sequents builder session =
-    let tacs = getSessionTacticals session in
-    (Session(sequents,builder,tacs))
+    (setSessionSequents sequents (setSessionBuilder builder session))
 
   let validSequent session =
     match (getSessionSequents session) with
