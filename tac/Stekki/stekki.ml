@@ -113,7 +113,7 @@ let proc_in,proc_out,reload =
     Text.delete output ~start:(`Linechar (0,0),[]) ~stop:(`End,[]) ;
     Text.configure ~state:`Disabled output ;
     pid := Some (Unix.create_process
-                   "taci" [|"taci";"--logic";"firstorder"|]
+                   "taci" [|"taci";"--logic";"muLJ"|]
                    rin wout Unix.stderr)
   in
     reload () ;
