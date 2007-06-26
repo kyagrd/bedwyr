@@ -53,8 +53,13 @@ namespace StickyTaci
       this.mainMenuTacClear = new System.Windows.Forms.ToolStripMenuItem();
       this.mainMenuTacDebug = new System.Windows.Forms.ToolStripMenuItem();
       this.mainMenuTacInclude = new System.Windows.Forms.ToolStripMenuItem();
+      this.mainMenuTacReset = new System.Windows.Forms.ToolStripMenuItem();
       this.mainMenuTacRestart = new System.Windows.Forms.ToolStripMenuItem();
       this.mainMenuTacTiming = new System.Windows.Forms.ToolStripMenuItem();
+      this.toolStripSeparator7 = new System.Windows.Forms.ToolStripSeparator();
+      this.mainMenuTacNextLine = new System.Windows.Forms.ToolStripMenuItem();
+      this.mainMenuTacPreviousLine = new System.Windows.Forms.ToolStripMenuItem();
+      this.mainMenuTacStart = new System.Windows.Forms.ToolStripMenuItem();
       this.toolStripSeparator6 = new System.Windows.Forms.ToolStripSeparator();
       this.mainMenuTacLogics = new System.Windows.Forms.ToolStripMenuItem();
       this.mainMenuTacTacticals = new System.Windows.Forms.ToolStripMenuItem();
@@ -68,7 +73,7 @@ namespace StickyTaci
       this.outputSplitter = new System.Windows.Forms.SplitContainer();
       this.goalBox = new System.Windows.Forms.RichTextBox();
       this.outputBox = new System.Windows.Forms.RichTextBox();
-      this.mainMenuTacReset = new System.Windows.Forms.ToolStripMenuItem();
+      this.mainMenuTacEnd = new System.Windows.Forms.ToolStripMenuItem();
       mainMenuTacOpen = new System.Windows.Forms.ToolStripMenuItem();
       this.mainMenu.SuspendLayout();
       this.mainSplitter.Panel1.SuspendLayout();
@@ -78,6 +83,15 @@ namespace StickyTaci
       this.outputSplitter.Panel2.SuspendLayout();
       this.outputSplitter.SuspendLayout();
       this.SuspendLayout();
+      // 
+      // mainMenuTacOpen
+      // 
+      mainMenuTacOpen.Name = "mainMenuTacOpen";
+      mainMenuTacOpen.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Alt)
+                  | System.Windows.Forms.Keys.O)));
+      mainMenuTacOpen.Size = new System.Drawing.Size(214, 22);
+      mainMenuTacOpen.Text = "&Open";
+      mainMenuTacOpen.Click += new System.EventHandler(this.mainMenuTacOpen_Click);
       // 
       // mainMenu
       // 
@@ -246,6 +260,11 @@ namespace StickyTaci
             this.mainMenuTacReset,
             this.mainMenuTacRestart,
             this.mainMenuTacTiming,
+            this.toolStripSeparator7,
+            this.mainMenuTacNextLine,
+            this.mainMenuTacPreviousLine,
+            this.mainMenuTacStart,
+            this.mainMenuTacEnd,
             this.toolStripSeparator6,
             this.mainMenuTacLogics,
             this.mainMenuTacTacticals});
@@ -256,7 +275,7 @@ namespace StickyTaci
       // mainMenuTacClear
       // 
       this.mainMenuTacClear.Name = "mainMenuTacClear";
-      this.mainMenuTacClear.Size = new System.Drawing.Size(152, 22);
+      this.mainMenuTacClear.Size = new System.Drawing.Size(214, 22);
       this.mainMenuTacClear.Text = "&Clear";
       this.mainMenuTacClear.Click += new System.EventHandler(this.mainMenuTacClear_Click);
       // 
@@ -264,20 +283,29 @@ namespace StickyTaci
       // 
       this.mainMenuTacDebug.CheckOnClick = true;
       this.mainMenuTacDebug.Name = "mainMenuTacDebug";
-      this.mainMenuTacDebug.Size = new System.Drawing.Size(152, 22);
+      this.mainMenuTacDebug.Size = new System.Drawing.Size(214, 22);
       this.mainMenuTacDebug.Text = "&Debug";
       // 
       // mainMenuTacInclude
       // 
       this.mainMenuTacInclude.Name = "mainMenuTacInclude";
-      this.mainMenuTacInclude.Size = new System.Drawing.Size(152, 22);
+      this.mainMenuTacInclude.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Alt)
+                  | System.Windows.Forms.Keys.I)));
+      this.mainMenuTacInclude.Size = new System.Drawing.Size(214, 22);
       this.mainMenuTacInclude.Text = "&Include";
       this.mainMenuTacInclude.Click += new System.EventHandler(this.mainMenuTacInclude_Click);
+      // 
+      // mainMenuTacReset
+      // 
+      this.mainMenuTacReset.Name = "mainMenuTacReset";
+      this.mainMenuTacReset.Size = new System.Drawing.Size(214, 22);
+      this.mainMenuTacReset.Text = "&Reset";
+      this.mainMenuTacReset.Click += new System.EventHandler(this.mainMenuTacReset_Click);
       // 
       // mainMenuTacRestart
       // 
       this.mainMenuTacRestart.Name = "mainMenuTacRestart";
-      this.mainMenuTacRestart.Size = new System.Drawing.Size(152, 22);
+      this.mainMenuTacRestart.Size = new System.Drawing.Size(214, 22);
       this.mainMenuTacRestart.Text = "Re&start";
       this.mainMenuTacRestart.Click += new System.EventHandler(this.mainMenuTacRestart_Click);
       // 
@@ -285,24 +313,54 @@ namespace StickyTaci
       // 
       this.mainMenuTacTiming.CheckOnClick = true;
       this.mainMenuTacTiming.Name = "mainMenuTacTiming";
-      this.mainMenuTacTiming.Size = new System.Drawing.Size(152, 22);
+      this.mainMenuTacTiming.Size = new System.Drawing.Size(214, 22);
       this.mainMenuTacTiming.Text = "&Timing";
+      // 
+      // toolStripSeparator7
+      // 
+      this.toolStripSeparator7.Name = "toolStripSeparator7";
+      this.toolStripSeparator7.Size = new System.Drawing.Size(211, 6);
+      // 
+      // mainMenuTacNextLine
+      // 
+      this.mainMenuTacNextLine.Name = "mainMenuTacNextLine";
+      this.mainMenuTacNextLine.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Alt)
+                  | System.Windows.Forms.Keys.Down)));
+      this.mainMenuTacNextLine.Size = new System.Drawing.Size(214, 22);
+      this.mainMenuTacNextLine.Text = "&Next Line";
+      this.mainMenuTacNextLine.Click += new System.EventHandler(this.mainMenuTacNextLine_Click);
+      // 
+      // mainMenuTacPreviousLine
+      // 
+      this.mainMenuTacPreviousLine.Name = "mainMenuTacPreviousLine";
+      this.mainMenuTacPreviousLine.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Alt)
+                  | System.Windows.Forms.Keys.Up)));
+      this.mainMenuTacPreviousLine.Size = new System.Drawing.Size(214, 22);
+      this.mainMenuTacPreviousLine.Text = "&Previous Line";
+      this.mainMenuTacPreviousLine.Click += new System.EventHandler(this.mainMenuTacPreviousLine_Click);
+      // 
+      // mainMenuTacStart
+      // 
+      this.mainMenuTacStart.Name = "mainMenuTacStart";
+      this.mainMenuTacStart.Size = new System.Drawing.Size(214, 22);
+      this.mainMenuTacStart.Text = "&Start";
+      this.mainMenuTacStart.Click += new System.EventHandler(this.mainMenuTacStart_Click);
       // 
       // toolStripSeparator6
       // 
       this.toolStripSeparator6.Name = "toolStripSeparator6";
-      this.toolStripSeparator6.Size = new System.Drawing.Size(149, 6);
+      this.toolStripSeparator6.Size = new System.Drawing.Size(211, 6);
       // 
       // mainMenuTacLogics
       // 
       this.mainMenuTacLogics.Name = "mainMenuTacLogics";
-      this.mainMenuTacLogics.Size = new System.Drawing.Size(152, 22);
+      this.mainMenuTacLogics.Size = new System.Drawing.Size(214, 22);
       this.mainMenuTacLogics.Text = "&Logics";
       // 
       // mainMenuTacTacticals
       // 
       this.mainMenuTacTacticals.Name = "mainMenuTacTacticals";
-      this.mainMenuTacTacticals.Size = new System.Drawing.Size(152, 22);
+      this.mainMenuTacTacticals.Size = new System.Drawing.Size(214, 22);
       this.mainMenuTacTacticals.Text = "&Tacticals";
       // 
       // mainMenuHelp
@@ -414,19 +472,12 @@ namespace StickyTaci
       this.outputBox.TabIndex = 0;
       this.outputBox.Text = "";
       // 
-      // mainMenuTacOpen
+      // mainMenuTacEnd
       // 
-      mainMenuTacOpen.Name = "mainMenuTacOpen";
-      mainMenuTacOpen.Size = new System.Drawing.Size(152, 22);
-      mainMenuTacOpen.Text = "&Open";
-      mainMenuTacOpen.Click += new System.EventHandler(this.mainMenuTacOpen_Click);
-      // 
-      // mainMenuTacReset
-      // 
-      this.mainMenuTacReset.Name = "mainMenuTacReset";
-      this.mainMenuTacReset.Size = new System.Drawing.Size(152, 22);
-      this.mainMenuTacReset.Text = "&Reset";
-      this.mainMenuTacReset.Click += new System.EventHandler(this.mainMenuTacReset_Click);
+      this.mainMenuTacEnd.Name = "mainMenuTacEnd";
+      this.mainMenuTacEnd.Size = new System.Drawing.Size(214, 22);
+      this.mainMenuTacEnd.Text = "&End";
+      this.mainMenuTacEnd.Click += new System.EventHandler(this.mainMenuTacEnd_Click);
       // 
       // IdeForm
       // 
@@ -495,6 +546,11 @@ namespace StickyTaci
     private System.Windows.Forms.ToolStripMenuItem mainMenuTacTiming;
     private System.Windows.Forms.ToolStripMenuItem mainMenuTacLogics;
     private System.Windows.Forms.ToolStripMenuItem mainMenuTacReset;
+    private System.Windows.Forms.ToolStripSeparator toolStripSeparator7;
+    private System.Windows.Forms.ToolStripMenuItem mainMenuTacNextLine;
+    private System.Windows.Forms.ToolStripMenuItem mainMenuTacPreviousLine;
+    private System.Windows.Forms.ToolStripMenuItem mainMenuTacStart;
+    private System.Windows.Forms.ToolStripMenuItem mainMenuTacEnd;
   }
 }
 

@@ -233,40 +233,47 @@ struct
   *handleInput:
   ********************************************************************)
   and handleInput input session =
-    match input with
-        Absyn.Exit -> raise (Exit session)
-      | Absyn.Clear -> (O.clear (); session)
-      | Absyn.Help -> (showHelp (); session)
-      | Absyn.Undo(_) -> (undo session)
-      | Absyn.Redo(_) -> (redo session)
-      | Absyn.Reset -> (resetLists (); L.reset ())
-      | Absyn.Theorem(name, t) ->
-          (resetLists ();
-          L.prove name t session)
-      | Absyn.Definitions(ds) ->
-          (L.definitions ds session)
-      | Absyn.Timing(onoff) ->
-          (timing := onoff; session)
-      | Absyn.Debug(onoff) ->
-          (O.showDebug := onoff; session)
-      | Absyn.Include(sl) ->
-          (L.incl sl session)
-      | Absyn.Open(sl) ->
-          (openFiles session sl)
-      | Absyn.Logics -> (showLogics session; session)
-      | Absyn.Logic(s) -> (loadLogic s)
-      | Absyn.Tacticals -> (showTacticals session; session)
-      | Absyn.TacticalDefinition(name, pretactical) ->
-          (defineTactical name pretactical session)
-      | Absyn.PreTactical(pretactical) ->
-          if (L.validSequent session) then
-            (redoList := [];
-            undoList := (session) :: (!undoList);
-            tactical pretactical session)
-          else
-            (O.error "No valid sequent.\n";
-            session)
-      | Absyn.NoCommand -> session
+    let handle input session =
+      match input with
+          Absyn.Exit -> raise (Exit session)
+        | Absyn.Clear -> (O.clear (); (session, true))
+        | Absyn.Help -> (showHelp (); (session, true))
+        | Absyn.Undo(_) -> ((undo session), false)
+        | Absyn.Redo(_) -> ((redo session), false)
+        | Absyn.Reset -> (L.reset (), true)
+        | Absyn.Theorem(name, t) ->
+            (L.prove name t session, true)
+        | Absyn.Definitions(ds) ->
+            (L.definitions ds session, true)
+        | Absyn.Timing(onoff) ->
+            (timing := onoff; (session, true))
+        | Absyn.Debug(onoff) ->
+            (O.showDebug := onoff; (session, true))
+        | Absyn.Include(sl) ->
+            (L.incl sl session, true)
+        | Absyn.Open(sl) ->
+            (openFiles session sl, true)
+        | Absyn.Logics -> (showLogics session; (session, true))
+        | Absyn.Logic(s) -> ((loadLogic s), true)
+        | Absyn.Tacticals -> (showTacticals session; (session, true))
+        | Absyn.TacticalDefinition(name, pretactical) ->
+            (defineTactical name pretactical session, true)
+        | Absyn.PreTactical(pretactical) ->
+            if (L.validSequent session) then
+              (tactical pretactical session, true)
+            else
+              (O.error "No valid sequent.\n";
+              (session, true))
+        | Absyn.NoCommand -> (session,true)
+    in
+ 
+    let (session', save) = handle input session in
+    if save then
+      (undoList := session :: (!undoList);
+      redoList := [];
+      session')
+    else
+      (session')
 
   let onPrompt session =
     (O.prompt ("[tac <" ^ (L.name) ^ ">]- ");
@@ -281,7 +288,7 @@ struct
 
   let onInput session =
     try
-      let input = Toplevel.parseStdinCommand () in      
+      let input = Toplevel.parseStdinCommand () in
       let session' = handleInput input session in
       if L.validSequent session' then
         (O.goal ((L.string_of_sequents (L.sequents session')) ^ "\n");
