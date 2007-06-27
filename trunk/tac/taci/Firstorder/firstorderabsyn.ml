@@ -16,10 +16,8 @@
 * along with this code; if not, write to the Free Software Foundation,*
 * Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA        *
 **********************************************************************)
-
 exception SyntaxError of string
 exception SemanticError of string
-exception InvalidAnonymous of string
 
 type term = Term.term
 
@@ -37,7 +35,6 @@ type formula =
   | ApplicationFormula of formula * term list
   | AtomicFormula of term
   | DBFormula of string * int
-  | AnonymousFormula
 
 type fixpoint =
     Inductive
@@ -64,8 +61,8 @@ let rec getFormulaName = function
 
 and string_of_formula f =
   match f with
-      AndFormula(l,r) -> "(" ^ (string_of_formula l) ^ ", " ^ (string_of_formula r) ^ ")"
-    | OrFormula(l,r) -> "(" ^ (string_of_formula l) ^ "; " ^ (string_of_formula r) ^ ")"
+      AndFormula(l,r) -> "(" ^ (string_of_formula l) ^ " & " ^ (string_of_formula r) ^ ")"
+    | OrFormula(l,r) -> "(" ^ (string_of_formula l) ^ " | " ^ (string_of_formula r) ^ ")"
     | ImplicationFormula(l,r) -> "(" ^ (string_of_formula l) ^ " => " ^ (string_of_formula r) ^ ")"
     | EqualityFormula(l,r) -> "(" ^ (Pprint.term_to_string l) ^ " = " ^ (Pprint.term_to_string r) ^ ")"
     | PiFormula(f) -> "pi " ^ (string_of_formula f)
@@ -80,7 +77,6 @@ and string_of_formula f =
     | AtomicFormula(t) ->
         (Pprint.term_to_string t)
     | DBFormula(n,i) -> n
-    | AnonymousFormula -> "_"
 
 let rec string_of_formula_ast f =
   match f with
@@ -100,11 +96,11 @@ let rec string_of_formula_ast f =
     | AtomicFormula(t) ->
         (Pprint.term_to_string t)
     | DBFormula(n,i) -> "db(" ^ n ^ ", " ^ (string_of_int i) ^ ")"
-    | AnonymousFormula -> "_"
 
 let string_of_fixpoint = function
     Inductive -> "inductive"
   | CoInductive -> "coinductive"
+
 let string_of_definition (Definition(name,arity,body,ind)) =
   (string_of_fixpoint ind) ^ " " ^ (string_of_formula body)
     
@@ -123,7 +119,6 @@ let mapFormula formulafun termfun f =
     | ApplicationFormula(head,tl) -> ApplicationFormula(formulafun head, List.map termfun tl)
     | AtomicFormula(t) -> AtomicFormula(termfun t)
     | DBFormula(n,i) -> f
-    | AnonymousFormula -> raise (InvalidAnonymous "Firstorderabsyn.mapFormula")
 
 
 (**********************************************************************
@@ -141,7 +136,7 @@ let rec abstract name formula =
           let name' = "you_can't_see_me!" in
           AbstractionFormula(n, (abstract name' f'))
         else
-          AbstractionFormula(n,(mapFormula formulaFun termFun f'))
+          AbstractionFormula(n, formulaFun f')
     | MuFormula(_)
     | NuFormula(_) -> f
     | _ -> (mapFormula formulaFun termFun f)
@@ -183,13 +178,9 @@ module Left =
                 let constant_like = Term.Constant
               end)
 
-
 (********************************************************************
 *rightUnify:
-* Performs unification as on the right.  If unification is successful
-* it calls the success continuation with the failure continuation in
-* the place of "continue".  Otherwise, it calls the failure
-* continuation
+* Performs unification on the right of the turnstile.
 ********************************************************************)
 let rightUnify a b =
   let state = Term.save_state () in
@@ -203,21 +194,9 @@ let rightUnify a b =
         (Term.restore_state state; 
         UnifyError ("unification outside of higher-order patterns."))
 
-let unifyList unifier l1 l2 =
-  let rec unify l1 l2 =
-    match (l1,l2) with
-        (l1hd::l1tl, l2hd::l2tl) ->
-          (match (unifier l1hd l2hd) with
-              UnifySucceeded -> unify l1tl l2tl
-            | UnifyFailed -> UnifyFailed
-            | UnifyError _ as u -> u)
-      | ([],[]) -> UnifySucceeded
-      | (_,_) -> UnifyFailed
-  in
-  unify l1 l2
-
 (********************************************************************
 *leftUnify:
+* Performs unification on the left of the turnstile.
 ********************************************************************)
 let leftUnify a b =
   let state = Term.save_state () in    
@@ -231,10 +210,43 @@ let leftUnify a b =
         (Term.restore_state state; 
         UnifyError ("unification outside of higher-order patterns."))
 
+(**********************************************************************
+*unifyList:
+* Given a 2 lists of terms, attempts to unify each term in the first
+* list with the corresponding term in the second using the passed
+* unification function.  If the lists are of different lengths it fails.
+* If any unification fails it fails.
+**********************************************************************)
+let unifyList unifier l1 l2 =
+  let rec unify l1 l2 =
+    match (l1,l2) with
+        (l1hd::l1tl, l2hd::l2tl) ->
+          (match (unifier l1hd l2hd) with
+              UnifySucceeded -> unify l1tl l2tl
+            | UnifyFailed -> UnifyFailed
+            | UnifyError _ as u -> u)
+      | ([],[]) -> UnifySucceeded
+      | (_,_) -> UnifyFailed
+  in
+  unify l1 l2
 
-let anonymousTermTemplate () = (Term.fresh ~tag:Term.Eigen ~lts:0 0)
-let anonymousFormulaTemplate () = AnonymousFormula
 
+(**********************************************************************
+*isAnonymous:
+* Determines whether a term corresponds to an "_".
+**********************************************************************)
+let isAnonymous t =
+  match (Term.observe t) with
+    Term.Var(v) ->
+      (v.Term.print = "_")
+  | _ -> false
+
+
+(**********************************************************************
+*matchFormula:
+* Match a template with a formula.  If the match succeeds, returns true,
+* otherwise returns false.
+**********************************************************************)
 let matchFormula template formula =
   let success ur =
     match ur with
@@ -242,13 +254,16 @@ let matchFormula template formula =
     | _ -> false
   in
   
+  (*  Keep track of binding state to undo it later. *)
   let state = Term.save_state () in
+  
+  (********************************************************************
+  *search:
+  * Recurse over the structure of two formulas.
+  ********************************************************************)
   let rec search template formula =
     match (template, formula) with
-      (AnonymousFormula, _) -> true
-    | (_, AnonymousFormula) -> raise (InvalidAnonymous "Firstorderabsyn.matchFormula")
-    
-    | (AndFormula(l,r), AndFormula(l', r'))
+      (AndFormula(l,r), AndFormula(l', r'))
     | (OrFormula(l,r), OrFormula(l', r'))
     | (ImplicationFormula(l,r), ImplicationFormula(l', r')) ->
         (search l l') && (search r r')
@@ -258,29 +273,35 @@ let matchFormula template formula =
 
     | (AtomicFormula(t), AtomicFormula(t')) ->
         success (rightUnify t t')
+    | (AtomicFormula(t), _)
+    | (_, AtomicFormula(t)) ->
+        (*  If this atomic formula is an underscore, then it matches. *)
+        (isAnonymous t)
+    
+    | (MuFormula(n,_), MuFormula(n',_))
+    | (NuFormula(n,_), NuFormula(n',_)) ->
+        n = n'
 
+    | (AbstractionFormula(n,f), AbstractionFormula(n',f')) ->
+        n = n' && (search f f')
     | (PiFormula(f), PiFormula(f'))
     | (SigmaFormula(f), SigmaFormula(f'))
     | (NablaFormula(f), NablaFormula(f')) ->
         (search f f')
+
     | (_, _) -> false
   in
-  if (search template formula) then
-    (Term.restore_state state;
-    true)
-  else
-    (Term.restore_state state;
-    false)
+  let result = (search template formula) in
+  
+  (*  Restore the binding state so later matches can work,
+      and return the result.  *)
+  (Term.restore_state state;
+  result)
 
-let containsAnonymous f =
-  let tf t = t in
-  let rec ff f = (mapFormula ff tf f) in
-  try
-    let _ = (ff f) in
-    false
-  with
-    InvalidAnonymous _ -> true
-
+(**********************************************************************
+*getTermVarName:
+* Gets the name of the head of a term (if it is a constant).
+**********************************************************************)
 let getTermVarName t =
   match Term.observe t with
     Term.Var(v) ->
@@ -290,6 +311,11 @@ let getTermVarName t =
         failwith "Firstorderabsyn.getTermVarName: invalid term."
   | _ -> failwith "Firstorderabsyn.getTermVarName: invalid term."
 
+(**********************************************************************
+*getTermHeadAndArgs:
+* Gets the head and arguments of a term.  If the term isn't a constant,
+* returns None.
+**********************************************************************)
 let getTermHeadAndArgs t =
   match Term.observe t with
     Term.App(t',args) ->
@@ -307,6 +333,10 @@ let getTermHeadAndArgs t =
         None
   | _ -> None
 
+(**********************************************************************
+*getTermHead:
+* Gets just the head of a term in a similar way to getTermHeadAndArgs.
+**********************************************************************)
 let getTermHead t =
   let result = getTermHeadAndArgs t in
   if Option.isSome result then
@@ -315,6 +345,9 @@ let getTermHead t =
   else
     None
 
+(**********************************************************************
+*renameAbstractions:
+**********************************************************************)
 let renameAbstractions formula =      
   let tf t = t in
   let rec ff f =
@@ -327,7 +360,10 @@ let renameAbstractions formula =
       | _ -> (mapFormula ff tf f)
   in
   ff formula
-  
+
+(**********************************************************************
+*applyFixpoint:
+**********************************************************************)
 let applyFixpoint arg formula =
   let tf t = t in
   let rec ff i f =

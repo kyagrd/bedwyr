@@ -20,6 +20,7 @@
 type tag = Eigen | Constant | Logic
 type id = string
 type var = {
+  print: id  ;
   name : id  ;
   tag  : tag ;
   ts   : int ;

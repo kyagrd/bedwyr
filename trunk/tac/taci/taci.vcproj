@@ -266,35 +266,35 @@
 			Name="ndcore"
 			>
 			<File
-				RelativePath="..\..\bedwyr\src\ndcore\index.ml"
+				RelativePath="ndcore\index.ml"
 				>
 			</File>
 			<File
-				RelativePath="..\..\bedwyr\src\ndcore\index.mli"
+				RelativePath="ndcore\index.mli"
 				>
 			</File>
 			<File
-				RelativePath="..\..\bedwyr\src\ndcore\norm.ml"
+				RelativePath="ndcore\norm.ml"
 				>
 			</File>
 			<File
-				RelativePath="..\..\bedwyr\src\ndcore\pprint.ml"
+				RelativePath="ndcore\pprint.ml"
 				>
 			</File>
 			<File
-				RelativePath="..\..\bedwyr\src\ndcore\term.ml"
+				RelativePath="ndcore\term.ml"
 				>
 			</File>
 			<File
-				RelativePath="..\..\bedwyr\src\ndcore\term.mli"
+				RelativePath="ndcore\term.mli"
 				>
 			</File>
 			<File
-				RelativePath="..\..\bedwyr\src\ndcore\unify.ml"
+				RelativePath="ndcore\unify.ml"
 				>
 			</File>
 			<File
-				RelativePath="..\..\bedwyr\src\ndcore\unify.mli"
+				RelativePath="ndcore\unify.mli"
 				>
 			</File>
 		</Filter>
@@ -410,6 +410,10 @@
 				</File>
 			</Filter>
 		</Filter>
+		<File
+			RelativePath=".\clean.bat"
+			>
+		</File>
 		<File
 			RelativePath=".\compile.bat"
 			>
