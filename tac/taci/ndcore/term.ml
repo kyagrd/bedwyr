@@ -20,6 +20,7 @@
 type tag = Eigen | Constant | Logic
 type id = string
 type var = {
+  print: id  ;
   name : id  ;
   tag  : tag ;
   ts   : int ; (* Always zero for constants in Bedwyr *)
@@ -183,7 +184,7 @@ let fresh =
 let fresh ?(tag=Logic) ?(lts=0) ts =
   let i = fresh () in
   let name = (prefix tag) ^ (string_of_int i) in
-    Ptr (ref (V { name=name ; ts=ts ; lts=lts ; tag=tag }))
+    Ptr (ref (V { print=name ; name=name ; ts=ts ; lts=lts ; tag=tag }))
 
 (* Recursively raise dB indices and abstract over variables
  * selected by [test]. *)
@@ -245,9 +246,9 @@ let copy () =
   * Easy creation of constants and variables, with sharing. *)
 
 let const ?(tag=Constant) ?(lts=0) s n =
-  Ptr (ref (V { name=s; ts=n; lts=lts; tag=tag }))
+  Ptr (ref (V { print=s; name=s; ts=n; lts=lts; tag=tag }))
 let var ?(tag=Logic) ?(lts=0) s n =
-  Ptr (ref (V { name=s; ts=n; lts=lts; tag=tag }))
+  Ptr (ref (V { print=s; name=s; ts=n; lts=lts; tag=tag }))
 
 let tbl = Hashtbl.create 100
 let reset_namespace () = Hashtbl.clear tbl

@@ -52,7 +52,7 @@
     let make name f = Firstorderabsyn.NablaFormula(f) in
     (makeAbstractions make f)
 
-  let anon () = Firstorderabsyn.AnonymousFormula
+  let anon () = failwith "not implemented"
 
   let abstract id f =
     Firstorderabsyn.AbstractionFormula(id, f)
@@ -118,9 +118,7 @@ formula
   | NABLA formula {nabla $2}
   
   | ID BSLASH formula {abstract $1 $3}
-  
-  | ANONYMOUS {anon ()}
-  
+    
   | LPAREN formula RPAREN {$2}
   | term {atom $1}
   ;
@@ -143,6 +141,7 @@ lterm
 primaryterm
   : LPAREN term RPAREN {$2}
   | ID {Term.atom $1}
+  | ANONYMOUS {anon ()}
   | STRING {Term.string $1}
   ;
 %%

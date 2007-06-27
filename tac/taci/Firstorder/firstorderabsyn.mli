@@ -35,7 +35,6 @@ type formula =
   | ApplicationFormula of formula * term list
   | AtomicFormula of term
   | DBFormula of string * int
-  | AnonymousFormula
 
 type fixpoint =
     Inductive
@@ -65,7 +64,6 @@ val string_of_term : term -> string
 val rightUnify : term -> term -> unifyresult
 val leftUnify : term -> term -> unifyresult
 val unifyList : (term -> term -> unifyresult) -> term list -> term list -> unifyresult
-val containsAnonymous : formula -> bool
 val matchFormula : formula -> formula -> bool
 
 

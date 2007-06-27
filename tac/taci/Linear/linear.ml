@@ -34,6 +34,8 @@ Implements a rather strange and sort of linear logic.
 "
   let start = info
   
+  let copy b = ref (!b)
+  
   (********************************************************************
   *Formula:
   * Represent formulae in sequents, with a local context and a flag
@@ -42,7 +44,13 @@ Implements a rather strange and sort of linear logic.
   type formula = Formula of (int * bool ref * LA.formula)
   let string_of_formula (Formula(_,_,t)) = LA.string_of_formula t
   let string_of_formula_ast (Formula(_,_,t)) = LA.string_of_formula_ast t
+  let getFormulaFormula (Formula(_,_,f)) = f
+  let getFormulaFocus (Formula(_,b,_)) = !b
+  let getFormulaFocusRef (Formula(_,b,_)) = b
+  let getFormulaLevel (Formula(i,_,_)) = i
   let makeFormula t = Formula(0, ref false, t)
+  
+  
   let string_of_definition def = LA.string_of_definition def
   
   (********************************************************************
@@ -155,6 +163,7 @@ Implements a rather strange and sort of linear logic.
   * and abstractions are inserted.
   ********************************************************************)
   let replaceApplications defs formula =
+    (*  Produces a list of generated symbols of length i. *)
     let rec makeArgs i =
       if i = 0 then
         []
@@ -162,13 +171,15 @@ Implements a rather strange and sort of linear logic.
         (generateSymbol ()) :: makeArgs (i - 1)
     in
     
+    (*  Given a list of arguments, abstracts a formula over all of
+        the arguments in turn.  *)
     let rec makeAbstractions args formula =
       match args with
         [] -> formula
       | a::aa ->  LA.AbstractionFormula(a, (makeAbstractions aa formula))
     in
       
-
+    (*  main iteration function, used with Linearabsyn.mapFormula.  *)
     let tf t = t in
     let rec ff f =
       match f with
@@ -199,7 +210,11 @@ Implements a rather strange and sort of linear logic.
   
   (********************************************************************
   *application:
-  * Apply arguments.
+  * Given a list of arguments, applies each argument to the formul in
+  * turn.  This application first entails removing a top-level
+  * abstraction for each argument.  If such an abstraction doesn't exists,
+  * an error is raised.  This error corresponds to too many arguments
+  * being applied to a formula.
   ********************************************************************)
   let rec application args formula =
     match args with
@@ -211,13 +226,6 @@ Implements a rather strange and sort of linear logic.
               (application aa (LA.apply [a] f'))
           | _ -> (O.error "expected abstraction.\n"; None))
 
-  (********************************************************************
-  *processFormula:
-  * Replaces applications and then applies abstractions.
-  ********************************************************************)
-  let processFormula defs f =
-    let f' = replaceApplications defs f in
-    f'
     
   (********************************************************************
   *parseFormula:
@@ -227,7 +235,7 @@ Implements a rather strange and sort of linear logic.
   let parseFormula defs t =        
     try
       let formula = Linearparser.toplevel_formula Linearlexer.token (Lexing.from_string t) in
-      Some (processFormula defs formula)
+      Some (replaceApplications defs formula)
     with
         LA.SyntaxError(s) ->
           (O.error (s ^ ".\n");
@@ -344,8 +352,9 @@ Implements a rather strange and sort of linear logic.
           with
             Not_found -> None
         in
-        
-        
+
+        (*  main iteration function, used in conjuction with
+            Linearabsyn.mapFormula.  *)
         let tf t = t in  
         let rec ff abstractions f =
           match f with
@@ -423,7 +432,18 @@ Implements a rather strange and sort of linear logic.
       let defs' = (addDefinitions defs (getSessionDefinitions session)) in
       (setSessionDefinitions defs' session)
 
+  (********************************************************************
+  *operator:
+  * Should update the tactical table, but tacticals aren't allowed in
+  * any position but head as of yet. (No infix tacticals, etc.)
+  ********************************************************************)
   let operator name fix prec session = session
+
+  (********************************************************************
+  *update:
+  * Main update function, called from the interpreter once a "round".
+  * Needs to update the sequents and the session.
+  ********************************************************************)
   let update sequents builder session =
     (setSessionSequents sequents (setSessionBuilder builder session))
 
@@ -458,8 +478,14 @@ Implements a rather strange and sort of linear logic.
     (i, lhs', rhs')
 
 
+  (********************************************************************
+  *makeExistentialVar, makeUniversalVar, makeNablaVar:
+  * Make the corresponding variable type and return necessary levels,
+  * updated if needed.  Specifically, universal variables update the
+  * sequent level, and nabla variables update the formula level.
+  ********************************************************************)
   let makeExistentialVar lvl lts =
-  (lvl, Term.fresh ~tag:Term.Logic ~lts lvl)
+    (lvl, Term.fresh ~tag:Term.Logic ~lts lvl)
 
   let makeUniversalVar lvl lts =
     (lvl + 1, Term.fresh ~tag:Term.Eigen ~lts (lvl + 1))
@@ -485,62 +511,331 @@ Implements a rather strange and sort of linear logic.
     s ^ "(" ^ (String.concat ", " proofs) ^ ")"
 
   (********************************************************************
-  *makeTactical:
+  *findFormula:
+  * Given a template and a list of formulas F, returns the first formula
+  * that matches the template along with a function that, when given
+  * a list of formulas F', returns F with the found formula replaced
+  * with F'.
   ********************************************************************)
-  let makeTactical matcher tactic =
-    let tactic' = fun sequent sc fc ->
-      match (matcher sequent) with
-        
+  let findFormula template formulas =
+    let rec find front formulas =
+      match formulas with
+        [] -> None
+      | formula::fs ->
+          let f = getFormulaFormula formula in
+          if (LA.matchFormula template f) then
+            let zip rest = fun list ->
+              (List.rev_append front list) @ rest
+            in
+            Some(formula, zip fs)
+          else
+            find (formula::front) fs
     in
-    G.makeTactical tactic'
+    find [] formulas
+
+  (********************************************************************
+  *matchLeft, matchRight:
+  * Given a pattern and a sequent, finds the first element on the left
+  * (or right) that matches the pattern, and returns a tuple with:
+  *   the matching formula
+  *   a zipper for the left (or right)
+  *   the whole left
+  *   the whole right
+  ********************************************************************)
+  let matchLeft pattern sequent =
+    let lhs = getSequentLHS sequent in
+    let rhs = getSequentRHS sequent in
+    let result = findFormula pattern lhs in
+    match result with
+      Some(f,zip) -> Some(f,zip,lhs,rhs)
+    | None -> None
+    
+  let matchRight pattern sequent =
+    let lhs = getSequentLHS sequent in
+    let rhs = getSequentRHS sequent in
+    let result = findFormula pattern rhs in
+    match result with
+      Some(f,zip) -> Some(f,zip,lhs,rhs)
+    | None -> None
+
+  (********************************************************************
+  *makeTactical:
+  * Given a matcher and a tactic, creates a tactical that applies
+  * the given tactic to the first formula in the sequent that matches
+  * the tactic.  If none match, it fails.
+  ********************************************************************)
+  let makeTactical name matcher tactic =
+    let tactic' = fun sequent sc fc ->
+      let sc' s = sc s (makeProofBuilder name) fc in
+      match (matcher sequent) with
+        Some(f, zip, lhs, rhs) -> tactic sequent f zip lhs rhs sc' fc
+      | None -> fc ()
+    in
+    (G.makeTactical tactic')
   
+  (********************************************************************
+  *makeBinaryTactical:
+  * Given the name of a tactic, a matcher constructore (either matchLeft or
+  * matchRight), a default template for use if none is specified, and
+  * a tactic, finds a formula to operate on using the matcher and applies
+  * the tactic.
+  ********************************************************************)
+  let makeBinaryTactical name (matchbuilder, defaulttemplate) tactic =
+    fun session args ->
+      let defaulttemplate =
+        parseFormula (getSessionDefinitions session) defaulttemplate in
+      if Option.isSome defaulttemplate then
+        let defaulttemplate = Option.get defaulttemplate in
+        match args with
+            [] -> (makeTactical name (matchbuilder defaulttemplate) tactic)
+          | Absyn.String(s)::[] ->
+              let template = parseFormula (getSessionDefinitions session) s in
+              if (Option.isSome template) &&
+                (LA.matchFormula defaulttemplate (Option.get template)) then
+                (makeTactical name (matchbuilder (Option.get template)) tactic)
+              else
+                (G.invalidArguments (name ^ ": invalid template."))
+          | _ -> (G.invalidArguments (name ^ ": incorrect number of arguments."))
+      else
+        (G.invalidArguments (name ^ ": invalid default template."))
+
   (********************************************************************
   *and:
   ********************************************************************)
-  let andL session args =
-    let tactic f lhs rhs sc fc =
-      let s' = Sequent() in
-      sc [s']
+  let andL =
+    let tactic seq f zip lhs rhs sc fc =
+      let lvl = getSequentLevel seq in
+      match f with
+        Formula(i, b, LA.AndFormula(l,r)) ->
+          let s = Sequent(lvl, zip [Formula(i,copy b,l);Formula(i,copy b, r)], rhs) in
+          sc [s]
+      | _ ->
+          (O.error "invalid formula.\n";
+          fc ())
     in
-    match args with
-      [] -> (makeTactical (matchLeft "_/\_") tactic)
-    | Absyn.String(s)::[] -> (makeTactical (matchLeft s) tactic)
-    | _ -> G.invalidArguments "and_l"
+    (makeBinaryTactical "and_l" (matchLeft,"_/\\_") tactic)
 
-  let andR session args =
-    let tactic f lhs rhs sc fc =
-      let s' = Sequent() in
-      sc [s']
+  let andR =
+    let tactic seq f zip lhs rhs sc fc =
+      let lvl = getSequentLevel seq in
+      match f with
+        Formula(i, b,LA.AndFormula(l,r)) ->
+          let s1 = Sequent(lvl, lhs, zip [Formula(i,copy b,l)]) in
+          let s2 = Sequent(lvl, lhs, zip [Formula(i,copy b,r)]) in
+          sc [s1;s2]
+      | _ ->
+          (O.error "invalid formula.\n";
+          fc ())
     in
-    match args with
-      [] -> (makeTactical (matchRight "_") tactic)
-    | Absyn.String(s)::[] -> (makeTactical (matchRight s) tactic)
-    | _ -> G.invalidArguments "and_l"
+    makeBinaryTactical "and_r" (matchRight,"_/\\_") tactic
 
   let andTactical session args = match args with
       [] -> (G.orElseTactical (andL session []) (andR session []))
     | _ -> G.invalidArguments "and"
 
+  (********************************************************************
+  *or:
+  ********************************************************************)
+  let orL =
+    let tactic seq f zip lhs rhs sc fc =
+      let lvl = getSequentLevel seq in
+      match f with
+        Formula(i, b,LA.OrFormula(l,r)) ->
+          let s1 = Sequent(lvl, zip [Formula(i,copy b,l)], rhs) in
+          let s2 = Sequent(lvl, zip [Formula(i,copy b,r)], rhs) in
+          sc [s1;s2]
+      | _ ->
+          (O.error "invalid formula.\n";
+          fc ())
+    in
+    makeBinaryTactical "or_l" (matchLeft, "_\\/_") tactic
+
+  let orR =
+    let tactic seq f zip lhs rhs sc fc =
+      let lvl = getSequentLevel seq in
+      match f with
+        Formula(i, b, LA.OrFormula(l,r)) ->
+          let rhs' = zip [Formula(i,copy b,l);Formula(i,copy b, r)] in
+          let s = Sequent(lvl, rhs', lhs) in
+          sc [s]
+      | _ ->
+          (O.error "invalid formula.\n";
+          fc ())
+    in
+    (makeBinaryTactical "or_r" (matchRight,"_\\/_") tactic)
+
   let orTactical session args = match args with
       [] -> (G.orElseTactical (orL session []) (orR session []))
     | _ -> G.invalidArguments "or"
+
+  (********************************************************************
+  *implication:
+  ********************************************************************)
+  let impL =
+    let tactic seq f zip lhs rhs sc fc =
+      let lvl = getSequentLevel seq in
+      match f with
+        Formula(i, b, LA.ImplicationFormula(l,r)) ->
+          let rhs' = Formula(i,copy b,l)::rhs in
+          let s1 = Sequent(lvl, lhs, rhs') in
+          let s2 = Sequent(lvl, zip [Formula(i,copy b,r)], rhs) in
+          sc [s1;s2]
+      | _ ->
+          (O.error "invalid formula.\n";
+          fc ())
+    in
+    (makeBinaryTactical "imp_l" (matchLeft,"_=>_") tactic)
+
+  let impR =
+    let tactic seq f zip lhs rhs sc fc =
+      let lvl = getSequentLevel seq in
+      match f with
+        Formula(i, b, LA.ImplicationFormula(l,r)) ->
+          let lhs' = Formula(i,copy b, l)::lhs in
+          let s = Sequent(lvl, lhs', zip [Formula(i, copy b, r)]) in
+          sc [s]
+      | _ ->
+          (O.error "invalid formula.\n";
+          fc ())
+    in
+    (makeBinaryTactical "imp_r" (matchRight,"_=>_") tactic)
 
   let impTactical session args = match args with
       [] -> (G.orElseTactical (impL session []) (impR session []))
     | _ -> G.invalidArguments "imp"
   
+  (********************************************************************
+  *pi:
+  ********************************************************************)
+  let piL =
+    let tactic seq f zip lhs rhs sc fc =
+      let lvl = getSequentLevel seq in
+      match f with
+        Formula(i, b, LA.PiFormula(f)) ->
+          let (lvl',var) = makeExistentialVar lvl i in
+          let f' = application [var] f in
+          if Option.isSome f' then
+            let s = Sequent(lvl', zip [Formula(i, copy b, Option.get f')], rhs) in
+            sc [s]
+          else
+            fc ()
+      | _ ->
+          (O.error "invalid formula.\n";
+          fc ())
+    in
+    (makeBinaryTactical "pi_l" (matchLeft,"pi _") tactic)
+
+  let piR =
+    let tactic seq f zip lhs rhs sc fc =
+      let lvl = getSequentLevel seq in
+      match f with
+        Formula(i, b, LA.PiFormula(f)) ->
+          let (lvl',var) = makeUniversalVar lvl i in
+          let f' = application [var] f in
+          if Option.isSome f' then
+            let s = Sequent(lvl', lhs, zip [Formula(i, copy b, Option.get f')]) in
+            sc [s]
+          else
+            fc ()
+      | _ ->
+          (O.error "invalid formula.\n";
+          fc ())
+    in
+    (makeBinaryTactical "pi_r" (matchRight,"pi _") tactic)
+
   let piTactical session args = match args with
       [] -> (G.orElseTactical (piR session []) (piL session []))
     | _ -> G.invalidArguments "pi"
+
+  (********************************************************************
+  *sigma:
+  ********************************************************************)
+  let sigmaL =
+    let tactic seq f zip lhs rhs sc fc =
+      let lvl = getSequentLevel seq in
+      match f with
+        Formula(i, b, LA.SigmaFormula(f)) ->
+          let (lvl',var) = makeUniversalVar lvl i in
+          let f' = application [var] f in
+          if Option.isSome f' then
+            let s = Sequent(lvl', zip [Formula(i, copy b, Option.get f')], rhs) in
+            sc [s]
+          else
+            fc ()
+      | _ ->
+          (O.error "invalid formula.\n";
+          fc ())
+    in
+    (makeBinaryTactical "sigma_l" (matchLeft,"sigma _") tactic)
+
+  let sigmaR =
+    let tactic seq f zip lhs rhs sc fc =
+      let lvl = getSequentLevel seq in
+      match f with
+        Formula(i, b, LA.SigmaFormula(f)) ->
+          let (lvl',var) = makeExistentialVar lvl i in
+          let f' = application [var] f in
+          if Option.isSome f' then
+            let s = Sequent(lvl', lhs, zip [Formula(i, copy b, Option.get f')]) in
+            sc [s]
+          else
+            fc ()
+      | _ ->
+          (O.error "invalid formula.\n";
+          fc ())
+    in
+    (makeBinaryTactical "sigma_r" (matchRight,"sigma _") tactic)
 
   let sigmaTactical session args = match args with
       [] -> (G.orElseTactical (sigmaL session []) (sigmaR session []))
     | _ -> G.invalidArguments "sigma"
 
+  (********************************************************************
+  *nabla:
+  ********************************************************************)
+  let nablaL =
+    let tactic seq f zip lhs rhs sc fc =
+      let lvl = getSequentLevel seq in
+      match f with
+        Formula(i, b, LA.NablaFormula(f)) ->
+          let (lvl',i',var) = makeNablaVar lvl i in
+          let f' = application [var] f in
+          if Option.isSome f' then
+            let s = Sequent(lvl', zip [Formula(i', copy b, Option.get f')], rhs) in
+            sc [s]
+          else
+            fc ()
+      | _ ->
+          (O.error "invalid formula.\n";
+          fc ())
+    in
+    (makeBinaryTactical "nabla_l" (matchLeft, "nabla _") tactic)
+
+  let nablaR =
+    let tactic seq f zip lhs rhs sc fc =
+      let lvl = getSequentLevel seq in
+      match f with
+        Formula(i, b, LA.NablaFormula(f)) ->
+          let (lvl',i',var) = makeNablaVar lvl i in
+          let f' = application [var] f in
+          if Option.isSome f' then
+            let s = Sequent(lvl', lhs, zip [Formula(i', copy b, Option.get f')]) in
+            sc [s]
+          else
+            fc ()
+      | _ ->
+          (O.error "invalid formula.\n";
+          fc ())
+    in
+    (makeBinaryTactical "nabla_r" (matchRight,"nabla _") tactic)
+
   let nablaTactical session args = match args with
       [] -> (G.orElseTactical (nablaL session []) (nablaR session []))
     | _ -> G.invalidArguments "nabla"
 
+  (********************************************************************
+  *eq:
+  ********************************************************************)
   let eqTactical session args = match args with
       [] -> (G.orElseTactical (eqL session []) (eqR session []))
     | _ -> G.invalidArguments "eq"

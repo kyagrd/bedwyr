@@ -52,7 +52,7 @@ type constraints = { max_vid : int ;
                      eq      : int array ;
                      lts     : int array }
 
-let dummy_var = {Term.name="";Term.lts=0;Term.ts=0;Term.tag=Term.Constant}
+let dummy_var = {Term.print="";Term.name="";Term.lts=0;Term.ts=0;Term.tag=Term.Constant}
 
 exception Found of int
 

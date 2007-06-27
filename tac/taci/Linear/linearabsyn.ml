@@ -63,8 +63,10 @@ let rec getFormulaName = function
 
 and string_of_formula f =
   match f with
-      AndFormula(l,r) -> "(" ^ (string_of_formula l) ^ ", " ^ (string_of_formula r) ^ ")"
-    | OrFormula(l,r) -> "(" ^ (string_of_formula l) ^ "; " ^ (string_of_formula r) ^ ")"
+      AndFormula(l,r) -> "(" ^ (string_of_formula l) ^ " & " ^ (string_of_formula r) ^ ")"
+    | LinearAndFormula(l,r) -> "(" ^ (string_of_formula l) ^ "/\\" ^ (string_of_formula r) ^ ")"
+    | OrFormula(l,r) -> "(" ^ (string_of_formula l) ^ " | " ^ (string_of_formula r) ^ ")"
+    | LinearOrFormula(l,r) -> "(" ^ (string_of_formula l) ^ "\\/" ^ (string_of_formula r) ^ ")"
     | ImplicationFormula(l,r) -> "(" ^ (string_of_formula l) ^ " => " ^ (string_of_formula r) ^ ")"
     | EqualityFormula(l,r) -> "(" ^ (Pprint.term_to_string l) ^ " = " ^ (Pprint.term_to_string r) ^ ")"
     | PiFormula(f) -> "pi " ^ (string_of_formula f)
@@ -83,7 +85,9 @@ and string_of_formula f =
 let rec string_of_formula_ast f =
   match f with
       AndFormula(l,r) -> "and(" ^ (string_of_formula_ast l) ^ ", " ^ (string_of_formula_ast r) ^ ")"
+    | LinearAndFormula(l,r) -> "land(" ^ (string_of_formula_ast l) ^ ", " ^ (string_of_formula_ast r) ^ ")"
     | OrFormula(l,r) -> "or(" ^ (string_of_formula_ast l) ^ ", " ^ (string_of_formula_ast r) ^ ")"
+    | LinearOrFormula(l,r) -> "lor(" ^ (string_of_formula_ast l) ^ ", " ^ (string_of_formula_ast r) ^ ")"
     | ImplicationFormula(l,r) -> "imp(" ^ (string_of_formula_ast l) ^ " -> " ^ (string_of_formula_ast r) ^ ")"
     | EqualityFormula(l,r) -> "eq(" ^ (string_of_term l) ^ ", " ^ (string_of_term r) ^ ")"
     | PiFormula(f) -> "pi(" ^ (string_of_formula_ast f) ^ ")"
@@ -102,13 +106,16 @@ let rec string_of_formula_ast f =
 let string_of_fixpoint = function
     Inductive -> "inductive"
   | CoInductive -> "coinductive"
+
 let string_of_definition (Definition(name,arity,body,ind)) =
   (string_of_fixpoint ind) ^ " " ^ (string_of_formula body)
     
 let mapFormula formulafun termfun f =
   match f with
       AndFormula(l,r) -> AndFormula(formulafun l, formulafun r)
+    | LinearAndFormula(l,r) -> LinearAndFormula(formulafun l, formulafun r)
     | OrFormula(l,r) -> OrFormula(formulafun l, formulafun r)
+    | LinearOrFormula(l,r) -> LinearOrFormula(formulafun l, formulafun r)
     | ImplicationFormula(l,r) -> ImplicationFormula(formulafun l, formulafun r)
     | EqualityFormula(l,r) -> EqualityFormula(termfun l, termfun r)
     | PiFormula(f) -> PiFormula(formulafun f)
@@ -233,6 +240,17 @@ let unifyList unifier l1 l2 =
 
 
 (**********************************************************************
+*isAnonymous:
+* Determines whether a term corresponds to an "_".
+**********************************************************************)
+let isAnonymous t =
+  match (Term.observe t) with
+    Term.Var(v) ->
+      (v.Term.print = "_")
+  | _ -> false
+
+
+(**********************************************************************
 *matchFormula:
 * Match a template with a formula.  If the match succeeds, returns true,
 * otherwise returns false.
@@ -265,13 +283,22 @@ let matchFormula template formula =
 
     | (AtomicFormula(t), AtomicFormula(t')) ->
         success (rightUnify t t')
-    | (AtomicFormula(t), _) ->
+    | (AtomicFormula(t), _)
+    | (_, AtomicFormula(t)) ->
         (*  If this atomic formula is an underscore, then it matches. *)
-        false
+        (isAnonymous t)
+    
+    | (MuFormula(n,_), MuFormula(n',_))
+    | (NuFormula(n,_), NuFormula(n',_)) ->
+        n = n'
+
+    | (AbstractionFormula(n,f), AbstractionFormula(n',f')) ->
+        n = n' && (search f f')
     | (PiFormula(f), PiFormula(f'))
     | (SigmaFormula(f), SigmaFormula(f'))
     | (NablaFormula(f), NablaFormula(f')) ->
         (search f f')
+
     | (_, _) -> false
   in
   let result = (search template formula) in

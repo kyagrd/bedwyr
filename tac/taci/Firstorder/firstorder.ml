@@ -9,7 +9,7 @@
 *                                                                     *
 * This program is distributed in the hope that it will be useful,     *
 * but WITHOUT ANY WARRANTY; without even the implied warranty of      *
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the       *
+* MERCHANTABILITY or FITNESS FOR A PARTICUFOAR PURPOSE.  See the       *
 * GNU General Public License for more details.                        *
 *                                                                     *
 * You should have received a copy of the GNU General Public License   *
@@ -25,6 +25,7 @@ module FOA = Firstorderabsyn
 **********************************************************************)
 module type ParamSig =
 sig
+  val name : string
   val strictNabla : bool
   val intuitionistic : bool
 end
@@ -36,14 +37,8 @@ end
 **********************************************************************)
 module Firstorder (Param : ParamSig) (O : Output.Output) : Logic.Logic =
 struct
-  let name = "First Order Logic"
-  let info =
-"
-First Order Logic v0.0
-
-Implements a simple first order logic with equality.
-  
-"
+  let name = Param.name
+  let info = Param.name
   let start = info
   
   (********************************************************************
@@ -51,6 +46,7 @@ Implements a simple first order logic with equality.
   * Represent formulae in sequents, with a local context.
   ********************************************************************)
   type formula = (int * FOA.formula)
+  let getFormulaFormula (_,f) = f
   let string_of_formula (_,t) = FOA.string_of_formula t
   let string_of_formula_ast (_,t) = FOA.string_of_formula_ast t
   let makeFormula t = (0, t)
@@ -279,12 +275,8 @@ Implements a simple first order logic with equality.
     let f = parseFormula defs t in
     if Option.isSome f then
       let f = Option.get f in
-      if (FOA.containsAnonymous f) then
-        (O.error "formula contains a template.\n";
-        session)
-      else
-        let seq = makeSequent [] [makeFormula f] in
-        (setSessionBuilder Logic.idProofBuilder (setSessionSequents [seq] session))
+      let seq = makeSequent [] [makeFormula f] in
+      (setSessionBuilder Logic.idProofBuilder (setSessionSequents [seq] session))
     else
       session
 
@@ -492,63 +484,104 @@ Implements a simple first order logic with equality.
   end
   module G = Logic.GenericTacticals (FirstorderSig) (O)
   
-  let makeBuilder s = fun proofs ->
+  (********************************************************************
+  *makeProofBuilder:  
+  ********************************************************************)
+  let makeProofBuilder s = fun proofs ->
     s ^ "(" ^ (String.concat ", " proofs) ^ ")"
 
-  let rec findFormula template flist =
-    match flist with
-      [] -> (None, [])
-    | f::fs ->
-        let (_,f') = f in
-        if (FOA.matchFormula template f') then
-          (Some f, fs)
-        else
-          let (r, l) = (findFormula template fs) in
-          (r, f::l)
+  (********************************************************************
+  *findFormula:
+  * Given a template and a list of formulas F, returns the first formula
+  * that matches the template along with a function that, when given
+  * a list of formulas F', returns F with the found formula replaced
+  * with F'.
+  ********************************************************************)
+  let findFormula template formulas =
+    let rec find front formulas =
+      match formulas with
+        [] -> None
+      | formula::fs ->
+          let f = getFormulaFormula formula in
+          if (FOA.matchFormula template f) then
+            let zip rest = fun list ->
+              (List.rev_append front list) @ rest
+            in
+            Some(formula, zip fs)
+          else
+            find (formula::front) fs
+    in
+    find [] formulas
 
-  (*  Contraction Left *)
-  let contractL session args = match args with
-      Absyn.String(s)::[] ->
-        (try
-          let i = int_of_string s in
-          let pretactic = fun sequent sc fc ->
-            try
-              let lhs = getSequentLHS sequent in
-              let rhs = getSequentRHS sequent in
-              let lvl = getSequentLevel sequent in
-              let el = List.nth lhs i in
-              (sc [(lvl, el::lhs, rhs)] (makeBuilder "contract_l") fc)
-            with
-                Failure "nth" -> (O.error "invalid formula.\n"; fc ())
-              | Invalid_argument "List.nth" -> (O.error "invalid formula.\n"; fc ())
-          in
-          G.makeTactical pretactic
-        with
-          Failure "int_of_string" -> (G.invalidArguments "contract_l"))
-    | _ -> (G.invalidArguments "contract_l")
+  (********************************************************************
+  *matchLeft, matchRight:
+  * Given a pattern and a sequent, finds the first element on the left
+  * (or right) that matches the pattern, and returns a tuple with:
+  *   the matching formula
+  *   a zipper for the left (or right)
+  *   the whole left
+  *   the whole right
+  ********************************************************************)
+  let matchLeft pattern sequent =
+    let lhs = getSequentLHS sequent in
+    let rhs = getSequentRHS sequent in
+    let result = findFormula pattern lhs in
+    match result with
+      Some(f,zip) -> Some(f,zip,lhs,rhs)
+    | None -> None
+    
+  let matchRight pattern sequent =
+    let lhs = getSequentLHS sequent in
+    let rhs = getSequentRHS sequent in
+    let result = findFormula pattern rhs in
+    match result with
+      Some(f,zip) -> Some(f,zip,lhs,rhs)
+    | None -> None
 
-  (*  Contraction *)
-  let contractR session args = match args with
-      Absyn.String(s)::[] ->
-        (try
-          let i = int_of_string s in
-          let pretactic = fun sequent sc fc ->
-            try
-              let lhs = getSequentLHS sequent in
-              let rhs = getSequentRHS sequent in
-              let lvl = getSequentLevel sequent in
-              let el = List.nth rhs i in
-              (sc [(lvl, lhs, el::rhs)] (makeBuilder "contract_r") fc)
-            with
-                Failure "nth" -> (O.error "invalid formula.\n"; fc ())
-              | Invalid_argument "List.nth" -> (O.error "invalid formula.\n"; fc ())
-          in
-          G.makeTactical pretactic
-        with
-          Failure "int_of_string" -> (G.invalidArguments "contract_r"))
-    | _ -> (G.invalidArguments "contract_r")
-
-  (*  Axiom *)
+  (********************************************************************
+  *makeTactical:
+  * Given a matcher and a tactic, creates a tactical that applies
+  * the given tactic to the first formula in the sequent that matches
+  * the tactic.  If none match, it fails.
+  ********************************************************************)
+  let makeTactical name matcher tactic =
+    let tactic' = fun sequent sc fc ->
+      let sc' s = sc s (makeProofBuilder name) fc in
+      match (matcher sequent) with
+        Some(f, zip, lhs, rhs) -> tactic sequent f zip lhs rhs sc' fc
+      | None -> fc ()
+    in
+    (G.makeTactical tactic')
+  
+  (********************************************************************
+  *makeBinaryTactical:
+  * Given the name of a tactic, a matcher constructore (either matchLeft or
+  * matchRight), a default template for use if none is specified, and
+  * a tactic, finds a formula to operate on using the matcher and applies
+  * the tactic.
+  ********************************************************************)
+  let makeBinaryTactical name (matchbuilder, defaulttemplate) tactic =
+    fun session args ->
+      let defaulttemplate =
+        parseFormula (getSessionDefinitions session) defaulttemplate in
+      if Option.isSome defaulttemplate then
+        let defaulttemplate = Option.get defaulttemplate in
+        match args with
+            [] -> (makeTactical name (matchbuilder defaulttemplate) tactic)
+          | Absyn.String(s)::[] ->
+              let template = parseFormula (getSessionDefinitions session) s in
+              if (Option.isSome template) &&
+                (FOA.matchFormula defaulttemplate (Option.get template)) then
+                (makeTactical name (matchbuilder (Option.get template)) tactic)
+              else
+                (G.invalidArguments (name ^ ": invalid template."))
+          | _ -> (G.invalidArguments (name ^ ": incorrect number of arguments."))
+      else
+        (G.invalidArguments (name ^ ": invalid default template."))
+  
+  (********************************************************************
+  *axiom:
+  ********************************************************************)
   let axiomTactical session args = match args with
       [] ->
         let pretactic = fun sequent sc fc ->
@@ -604,108 +637,119 @@ Implements a simple first order logic with equality.
           let lhs = getSequentLHS sequent in
           let rhs = getSequentRHS sequent in
           
-          let sc' () = sc [] (makeBuilder "axiom") fc in
+          let sc' () = sc [] (makeProofBuilder "axiom") fc in
           (List.iter (unifyList sc' lhs) rhs;
           fc ())
         in
         G.makeTactical pretactic
     | _ -> (G.invalidArguments "axiom")
   
-  (*  Implication Right *)
-  let impR session args = match args with
-      [] ->
-        let pretactic = fun sequent sc fc ->
-          let rec apply lvl terms rhs lhs =
-            match terms with
-                [] -> fc ()
-              | (i, FOA.ImplicationFormula(l,r))::ts ->
-                  let rhs' = (List.rev_append rhs ts) in
-                  let s = (lvl, (i,l)::lhs, (i,r)::rhs') in
-                  (sc [s] (makeBuilder "imp_r") fc)
-              | t::ts ->
-                  (apply lvl ts (t::rhs) lhs)
-          in
-          let lhs = getSequentLHS sequent in
-          let rhs = getSequentRHS sequent in
-          let lvl = getSequentLevel sequent in
-          (apply lvl rhs [] lhs)
-        in
-        G.makeTactical pretactic
-    | _ -> G.invalidArguments "imp_r"
+  (********************************************************************
+  *and:
+  ********************************************************************)
+  let andL =
+    let tactic seq f zip lhs rhs sc fc =
+      let lvl = getSequentLevel seq in
+      match f with
+        (i, FOA.AndFormula(l,r)) ->
+          let s = (lvl, zip [(i,l);(i, r)], rhs) in
+          sc [s]
+      | _ ->
+          (O.error "invalid formula.\n";
+          fc ())
+    in
+    (makeBinaryTactical "and_l" (matchLeft,"_,_") tactic)
 
-  (*  Implication Left  *)
-  let impL session args = match args with
-      [] ->
-        let pretactic = fun sequent sc fc ->
-          let rec apply lvl terms lhs rhs =
-            match terms with
-                [] -> fc ()
-              | (i, FOA.ImplicationFormula(l,r))::ts ->
-                  let lhs' = (List.rev_append lhs ts) in
-                  let s1 =
-                    if Param.intuitionistic then
-                      (lvl, lhs', [i,l])
-                    else
-                      (lvl, lhs', (i,l)::rhs)
-                  in
-                  let s2 = (lvl, (i,r)::lhs', rhs) in
-                  (sc [s1;s2] (makeBuilder "imp_l") fc)
-              | t::ts ->
-                  (apply lvl ts (t::lhs) rhs)
-          in
-          let lhs = getSequentLHS sequent in
-          let rhs = getSequentRHS sequent in
-          let lvl = getSequentLevel sequent in
-          (apply lvl lhs [] rhs)
-        in
-        G.makeTactical pretactic
-    | _ -> G.invalidArguments "imp_l"
+  let andR =
+    let tactic seq f zip lhs rhs sc fc =
+      let lvl = getSequentLevel seq in
+      match f with
+        (i,FOA.AndFormula(l,r)) ->
+          let s1 = (lvl, lhs, zip [(i,l)]) in
+          let s2 = (lvl, lhs, zip [(i,r)]) in
+          sc [s1;s2]
+      | _ ->
+          (O.error "invalid formula.\n";
+          fc ())
+    in
+    makeBinaryTactical "and_r" (matchRight,"_,_") tactic
 
-  (*  Or Left  *)
-  let orL session args = match args with
-      [] ->
-        let pretactic = fun sequent sc fc ->
-          let rec apply lvl terms lhs rhs =
-            match terms with
-                [] -> fc ()
-              | (i,FOA.OrFormula(l,r))::ts ->
-                  let lhs' = (List.rev_append lhs ts) in
-                  let s1 = (lvl, (i,l)::lhs', rhs) in
-                  let s2 = (lvl, (i,r)::lhs', rhs) in
-                  (sc [s1;s2] (makeBuilder "or_l") fc)
-              | t::ts ->
-                  (apply lvl ts (t::lhs) rhs)
-          in
-          let lhs = getSequentLHS sequent in
-          let rhs = getSequentRHS sequent in
-          let lvl = getSequentLevel sequent in
-          (apply lvl lhs [] rhs)
-        in
-        G.makeTactical pretactic
-    | _ -> G.invalidArguments "or_l"
+  let andTactical session args = match args with
+      [] -> (G.orElseTactical (andL session []) (andR session []))
+    | _ -> G.invalidArguments "and"
 
-  (*  Or Right  *)
-  let orR session args = match args with
-      [] ->
-        let pretactic = fun sequent sc fc ->
-          let rec apply lvl terms rhs lhs =
-            match terms with
-                [] -> fc ()
-              | (i, FOA.OrFormula(l,r))::ts ->
-                  let rhs' = (List.rev_append rhs ts) in
-                  let s = (lvl, lhs, (i,l)::(i,r)::rhs') in
-                  (sc [s] (makeBuilder "or_r") fc)
-              | t::ts ->
-                  (apply lvl ts (t::rhs) lhs)
-          in
-          let lhs = getSequentLHS sequent in
-          let rhs = getSequentRHS sequent in
-          let lvl = getSequentLevel sequent in
-          (apply lvl rhs [] lhs)
-        in
-        G.makeTactical pretactic
-    | _ -> G.invalidArguments "or_r"
+  (********************************************************************
+  *or:
+  ********************************************************************)
+  let orL =
+    let tactic seq f zip lhs rhs sc fc =
+      let lvl = getSequentLevel seq in
+      match f with
+        (i, FOA.OrFormula(l,r)) ->
+          let s1 = (lvl, zip [(i,l)], rhs) in
+          let s2 = (lvl, zip [(i,r)], rhs) in
+          sc [s1;s2]
+      | _ ->
+          (O.error "invalid formula.\n";
+          fc ())
+    in
+    makeBinaryTactical "or_l" (matchLeft, "_;_") tactic
 
+  let orR =
+    let tactic seq f zip lhs rhs sc fc =
+      let lvl = getSequentLevel seq in
+      match f with
+        (i, FOA.OrFormula(l,r)) ->
+          let rhs' = zip [(i,l);(i, r)] in
+          let s = (lvl, rhs', lhs) in
+          sc [s]
+      | _ ->
+          (O.error "invalid formula.\n";
+          fc ())
+    in
+    (makeBinaryTactical "or_r" (matchRight,"_;_") tactic)
+
+  let orTactical session args = match args with
+      [] -> (G.orElseTactical (orL session []) (orR session []))
+    | _ -> G.invalidArguments "or"
+
+  (********************************************************************
+  *implication:
+  ********************************************************************)
+  let impL =
+    let tactic seq f zip lhs rhs sc fc =
+      let lvl = getSequentLevel seq in
+      match f with
+        (i, FOA.ImplicationFormula(l,r)) ->
+          let rhs' = (i,l)::rhs in
+          let s1 = (lvl, lhs, rhs') in
+          let s2 = (lvl, zip [(i,r)], rhs) in
+          sc [s1;s2]
+      | _ ->
+          (O.error "invalid formula.\n";
+          fc ())
+    in
+    (makeBinaryTactical "imp_l" (matchLeft,"_=>_") tactic)
+
+  let impR =
+    let tactic seq f zip lhs rhs sc fc =
+      let lvl = getSequentLevel seq in
+      match f with
+        (i, FOA.ImplicationFormula(l,r)) ->
+          let lhs' = (i, l)::lhs in
+          let s = (lvl, lhs', zip [(i, r)]) in
+          sc [s]
+      | _ ->
+          (O.error "invalid formula.\n";
+          fc ())
+    in
+    (makeBinaryTactical "imp_r" (matchRight,"_=>_") tactic)
+
+  let impTactical session args = match args with
+      [] -> (G.orElseTactical (impL session []) (impR session []))
+    | _ -> G.invalidArguments "imp"
+
+  
   (*  Additive Or Right  *)
   let orRleft session args = match args with
       [] ->
@@ -716,27 +760,7 @@ Implements a simple first order logic with equality.
               | (i, FOA.OrFormula(l,r))::ts ->
                   let rhs' = (List.rev_append rhs ts) in
                   let s = (lvl, lhs, (i,l)::rhs') in
-                  (sc [s] (makeBuilder "or_r") fc)
-              | t::ts ->
-                  (apply lvl ts (t::rhs) lhs)
-          in
-          let lhs = getSequentLHS sequent in
-          let rhs = getSequentRHS sequent in
-          let lvl = getSequentLevel sequent in
-          (apply lvl rhs [] lhs)
-        in
-        G.makeTactical pretactic
-    | _ -> G.invalidArguments "or_r"
-  let orRright session args = match args with
-      [] ->
-        let pretactic = fun sequent sc fc ->
-          let rec apply lvl terms rhs lhs =
-            match terms with
-                [] -> fc ()
-              | (i, FOA.OrFormula(l,r))::ts ->
-                  let rhs' = (List.rev_append rhs ts) in
-                  let s = (lvl, lhs, (i,r)::rhs') in
-                  (sc [s] (makeBuilder "or_r") fc)
+                  (sc [s] (makeProofBuilder "or_r") fc)
               | t::ts ->
                   (apply lvl ts (t::rhs) lhs)
           in
@@ -748,40 +772,16 @@ Implements a simple first order logic with equality.
         G.makeTactical pretactic
     | _ -> G.invalidArguments "or_r"
   
-  (*  And Left  *)
-  let andL session args = match args with
+  let orRright session args = match args with
       [] ->
-        let pretactic = fun sequent sc fc ->
-          let rec apply lvl terms lhs rhs =
-            match terms with
-                [] -> fc ()
-              | (i,FOA.AndFormula(l,r))::ts ->
-                  let lhs' = (List.rev_append lhs ts) in
-                  let s = (lvl,(i,l)::(i,r)::lhs', rhs) in
-                  (sc [s] (makeBuilder "and_l") fc)
-              | t::ts ->
-                  (apply lvl ts (t::lhs) rhs)
-          in
-          let lhs = getSequentLHS sequent in
-          let rhs = getSequentRHS sequent in
-          let lvl = getSequentLevel sequent in
-          (apply lvl lhs [] rhs)
-        in
-        G.makeTactical pretactic
-    | _ -> G.invalidArguments "and_l"
-    
-  (*  And Right *)
-  let andR session args = match args with
-      [] -> 
         let pretactic = fun sequent sc fc ->
           let rec apply lvl terms rhs lhs =
             match terms with
                 [] -> fc ()
-              | (i,FOA.AndFormula(l,r))::ts ->
+              | (i, FOA.OrFormula(l,r))::ts ->
                   let rhs' = (List.rev_append rhs ts) in
-                  let s1 = (lvl, lhs, (i,l)::rhs') in
-                  let s2 = (lvl, lhs, (i,r)::rhs') in
-                  (sc [s1;s2] (makeBuilder "and_r") fc)
+                  let s = (lvl, lhs, (i,r)::rhs') in
+                  (sc [s] (makeProofBuilder "or_r") fc)
               | t::ts ->
                   (apply lvl ts (t::rhs) lhs)
           in
@@ -791,8 +791,8 @@ Implements a simple first order logic with equality.
           (apply lvl rhs [] lhs)
         in
         G.makeTactical pretactic
-    | _ -> G.invalidArguments "and_r"
-
+    | _ -> G.invalidArguments "or_r"
+  
   (*  Pi L  *)
   let piL session args = match args with
       [] ->
@@ -806,7 +806,7 @@ Implements a simple first order logic with equality.
                   let f' = application [var] f in 
                   if Option.isSome f' then
                     let s = (lvl', (i,Option.get f')::lhs', rhs) in
-                    (sc [s] (makeBuilder "pi_l") fc)
+                    (sc [s] (makeProofBuilder "pi_l") fc)
                   else
                     fc ()
               | t::ts ->
@@ -835,7 +835,7 @@ Implements a simple first order logic with equality.
                     let f' = application args mu' in
                     if Option.isSome f' then
                       let s = (lvl, lhs, (i,Option.get f')::rhs') in
-                      (sc [s] (makeBuilder "mu_r") fc)
+                      (sc [s] (makeProofBuilder "mu_r") fc)
                     else
                       (O.error ("'" ^ name ^ "': incorrect number of arguments.");
                       fc ())
@@ -866,7 +866,7 @@ Implements a simple first order logic with equality.
                     let f' = application args mu' in
                     if Option.isSome f' then
                       let s = (lvl, (i,Option.get f')::lhs', rhs) in
-                      (sc [s] (makeBuilder "mu_l") fc)
+                      (sc [s] (makeProofBuilder "mu_l") fc)
                     else
                       (O.error ("'" ^ name ^ "': incorrect number of arguments.");
                       fc ())
@@ -919,7 +919,7 @@ Implements a simple first order logic with equality.
                         if (Option.isSome r) && (Option.isSome mu') then
                           let l = FOA.applyFixpoint (fun alist -> Option.get (application alist s')) (Option.get mu') in
                           let s2 = (lvl', [(i, l)], [(i, Option.get r)]) in
-                          (sc [s1;s2] (makeBuilder "induction") fc)
+                          (sc [s1;s2] (makeProofBuilder "induction") fc)
                         else
                           (O.error ("incorrect number of arguments.\n");
                           fc ())
@@ -955,7 +955,7 @@ Implements a simple first order logic with equality.
                     let f' = application args nu' in
                     if Option.isSome f' then
                       let s = (lvl, (i,Option.get f')::lhs', rhs) in
-                      (sc [s] (makeBuilder "nu_r") fc)
+                      (sc [s] (makeProofBuilder "nu_r") fc)
                     else
                       (O.error ("'" ^ name ^ "': incorrect number of arguments.");
                       fc ())
@@ -1008,7 +1008,7 @@ Implements a simple first order logic with equality.
                         
                         if (Option.isSome r) && (Option.isSome l) then
                           let s2 = (lvl', [(i, Option.get l)], [(i, Option.get r)]) in
-                          (sc [s1;s2] (makeBuilder "coinduction") fc)
+                          (sc [s1;s2] (makeProofBuilder "coinduction") fc)
                         else
                           (O.error ("incorrect number of arguments.\n");
                           fc ())
@@ -1043,7 +1043,7 @@ Implements a simple first order logic with equality.
                   let f' = application [var] f in
                   if Option.isSome f' then
                     let s = (lvl', lhs, (i,Option.get f')::rhs') in
-                    (sc [s] (makeBuilder "pi_r") fc)
+                    (sc [s] (makeProofBuilder "pi_r") fc)
                   else
                     fc ()
               | t::ts ->
@@ -1070,7 +1070,7 @@ Implements a simple first order logic with equality.
                   let f' = application [var] f in
                   if (Option.isSome f') then
                     let s = (lvl', (i,Option.get f')::lhs', rhs) in
-                    (sc [s] (makeBuilder "sigma_l") fc)
+                    (sc [s] (makeProofBuilder "sigma_l") fc)
                   else
                     fc ()
               | t::ts ->
@@ -1097,7 +1097,7 @@ Implements a simple first order logic with equality.
                   let f' = application [var] f in
                   if Option.isSome f' then
                     let s = (lvl', lhs, (i,Option.get f')::rhs') in
-                    (sc [s] (makeBuilder "sigma_r") fc)
+                    (sc [s] (makeProofBuilder "sigma_r") fc)
                   else
                     fc ()
               | t::ts ->
@@ -1124,7 +1124,7 @@ Implements a simple first order logic with equality.
                   let f' = application [var] f in
                   if Option.isSome f' then
                     let s = (lvl', (i',Option.get f')::lhs', rhs) in
-                    (sc [s] (makeBuilder "nabla_l") fc)
+                    (sc [s] (makeProofBuilder "nabla_l") fc)
                   else
                     fc ()
               | t::ts ->
@@ -1151,7 +1151,7 @@ Implements a simple first order logic with equality.
                   let f' = application [var] f in
                   if Option.isSome f' then
                     let s = (lvl', lhs, (i',Option.get f')::rhs') in
-                    (sc [s] (makeBuilder "nabla_r") fc)
+                    (sc [s] (makeProofBuilder "nabla_r") fc)
                   else
                     fc ()
               | t::ts ->
@@ -1174,7 +1174,7 @@ Implements a simple first order logic with equality.
                 [] -> fc ()
               | (i,FOA.EqualityFormula(t1, t2))::ts ->                  
                   (match (FOA.rightUnify t1 t2) with
-                      FOA.UnifySucceeded -> (sc [] (makeBuilder "eq_r") fc)
+                      FOA.UnifySucceeded -> (sc [] (makeProofBuilder "eq_r") fc)
                     | FOA.UnifyFailed -> (apply lvl ts)
                     | FOA.UnifyError(s) ->
                           (O.error (s ^ ".\n");
@@ -1198,11 +1198,11 @@ Implements a simple first order logic with equality.
                 [] -> fc ()
               | (i,FOA.EqualityFormula(t1, t2))::ts ->
                   (match (FOA.leftUnify t1 t2) with
-                      FOA.UnifyFailed -> (sc [] (makeBuilder "eq_l") fc)
+                      FOA.UnifyFailed -> (sc [] (makeProofBuilder "eq_l") fc)
                     | FOA.UnifySucceeded ->
                         let lhs' = (List.rev_append lhs ts) in
                         let s = (lvl, lhs', rhs) in
-                        (sc [s] (makeBuilder "eq_l") fc)
+                        (sc [s] (makeProofBuilder "eq_l") fc)
                     | FOA.UnifyError(s) ->
                         (O.error (s ^ ".\n");
                         fc ()))
@@ -1256,79 +1256,6 @@ Implements a simple first order logic with equality.
             (O.output ("Sequent AST:\n  " ^ slhs ^ "\n----------------------------\n  " ^ srhs ^ "\n");
             (sc [] sequents Logic.idProofBuilder fc))
     | _ -> G.invalidArguments "examine"
-
-  let contractTactical session args = match args with
-      Absyn.String(s)::[] ->
-        let template = parseFormula (getSessionDefinitions session) s in
-        if (Option.isSome template) then
-          let template = Option.get template in
-          let pretactic = fun sequent sc fc ->
-            let lhs = getSequentLHS sequent in
-            let rhs = getSequentRHS sequent in
-            let lvl = getSequentLevel sequent in
-            
-            let (r, rhs') = findFormula template rhs in
-            if Option.isSome r then
-              let s = (lvl, lhs, (Option.get r)::rhs) in
-              (sc [s] (makeBuilder "contract") fc)
-            else
-              let (l, lhs') = findFormula template lhs in
-              if Option.isSome l then
-                let s = (lvl, (Option.get l)::lhs, rhs) in
-                (sc [s] (makeBuilder "contract") fc)
-              else
-                (fc ())
-          in
-          (G.makeTactical pretactic)
-        else
-          G.invalidArguments "contract"
-    | _ -> G.invalidArguments "contract"
-  
-  let prologPiTactical session args = match args with
-    [] ->
-      (G.thenTactical
-        (contractTactical session [Absyn.String("pi _")])
-        (piTactical session []))
-  | _ -> G.invalidArguments "prologpi"
-
-  let prologTactical session args = match args with
-    [] ->
-      (G.iterateTactical
-        (G.orElseTactical
-          (G.iterateTactical
-            (G.orElseListTactical
-              [(axiomTactical session []);
-              (impTactical session []);
-              (andTactical session []);
-              (orTactical session [])]))
-          (prologPiTactical session [])))
-  | _ -> G.invalidArguments "prolog"
-
-  let rotateR session args = match args with
-    [] ->
-      let pretactic = fun sequent sc fc ->
-        let lvl = getSequentLevel sequent in
-        let rhs = (getSequentRHS sequent) in
-        let lhs = (getSequentLHS sequent) in
-        let rhs' = (List.tl rhs)@[(List.hd rhs)] in
-        let s = (lvl, lhs, rhs') in
-        sc [s] (makeBuilder "rotate_r") fc
-      in
-      G.makeTactical pretactic
-  | _ -> G.invalidArguments "rotate_r"
-  
-  let rotateL session args = match args with
-    [] ->
-      let pretactic = fun sequent sc fc ->
-        let lvl = getSequentLevel sequent in
-        let rhs = (getSequentRHS sequent) in
-        let lhs = (getSequentLHS sequent) in
-        let lhs' = (List.tl lhs)@[(List.hd lhs)] in
-        let s = (lvl, lhs', rhs) in
-        sc [s] (makeBuilder "rotate_l") fc
-      in
-      G.makeTactical pretactic
-  | _ -> G.invalidArguments "rotate_l"
 
   let simplifyTactical session args = match args with
       [] ->
@@ -1401,12 +1328,6 @@ Implements a simple first order logic with equality.
     
     let ts = Logic.Table.add "axiom" axiomTactical ts in
     
-    let ts = Logic.Table.add "contract" contractTactical ts in
-    let ts = Logic.Table.add "contract_l" contractL ts in
-    let ts =
-      if Param.intuitionistic then ts else
-        Logic.Table.add "contract_r" contractR ts
-    in
     
     let ts = Logic.Table.add "mu_l" muL ts in
     let ts = Logic.Table.add "mu_r" muR ts in
@@ -1416,8 +1337,6 @@ Implements a simple first order logic with equality.
     let ts = Logic.Table.add "coinduction" coinductionTactical ts in
     
     let ts = Logic.Table.add "examine" examineTactical ts in
-    let ts = Logic.Table.add "rotate_r" rotateR ts in
-    let ts = Logic.Table.add "rotate_l" rotateL ts in
 
     let ts = Logic.Table.add "simplify" simplifyTactical ts in
     ts
@@ -1436,11 +1355,29 @@ Implements a simple first order logic with equality.
 end
 
 module Firstordernonstrict =
-  Firstorder (struct let strictNabla = false let intuitionistic = false end)
+  Firstorder (struct
+    let name = "First Order Classical Logic with Non-Strict Nabla"
+    let strictNabla = false
+    let intuitionistic = false
+  end)
+
 module Firstorderstrict =
-  Firstorder (struct let strictNabla = true let intuitionistic = false end)
+  Firstorder (struct
+    let name = "First Order Classical Logic with Strict Nabla"
+    let strictNabla = true
+    let intuitionistic = false
+  end)
 
 module MuLJstrict =
-  Firstorder (struct let strictNabla = true let intuitionistic = true end)
+  Firstorder (struct
+    let name = "Mu-LJ with Strict Nabla"
+    let strictNabla = true
+    let intuitionistic = true
+  end)
+
 module MuLJnonstrict =
-  Firstorder (struct let strictNabla = false let intuitionistic = true end)
+  Firstorder (struct
+    let name = "Mu-LJ with Non-Strict Nabla"
+    let strictNabla = false
+    let intuitionistic = true
+  end)

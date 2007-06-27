@@ -1,4 +1,4 @@
-(**********************************************************************
+/**********************************************************************
 * Taci                                                                *
 * Copyright (C) 2007 Zach Snow, David Baelde                          *
 *                                                                     *
@@ -15,7 +15,7 @@
 * You should have received a copy of the GNU General Public License   *
 * along with this code; if not, write to the Free Software Foundation,*
 * Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA        *
-**********************************************************************)
+**********************************************************************/
 %{
   let eqFormula f1 f2 = Linearabsyn.EqualityFormula(f1, f2)
   let andFormulaL f1 f2 = Linearabsyn.LinearAndFormula(f1, f2)
@@ -55,13 +55,19 @@
     (makeAbstractions make f)
 
   let atomic f = Linearabsyn.AtomicFormula(f)
-  
+ 
+  (********************************************************************
+  *anon:
+  * Called when an underscore is encountered.  Creates a new logic
+  * variable with an index of max int so that it can unify with anything
+  * anywhere.  It also sets a flag on the
+  ********************************************************************)
   let anon () = failwith "Linearparser.anon: not implemented."
-
+  let atom t = failwith "Linearparser.atom: not implemented."
+  
   let abstract id f =
     Linearabsyn.AbstractionFormula(id, f)
 
-  let atom t = failwith "Linearparser.atom: not implemented."
     
   let application term = 
     match term with
