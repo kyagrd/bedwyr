@@ -65,11 +65,21 @@ struct
 
   (********************************************************************
   *Undo/Redo:
+  * There are two stacks; an undo stack and a redo stack.  Every action
+  * but undo and redo puts a new item on the undo stack and clears the
+  * redo stack.  Undo pops an item off of the undo stack and puts the
+  * given session onto the redo stack.  Redo pops an item off of the
+  * redo stack and pushes the given stack onto the undo stack.
   ********************************************************************)
   let undoList = ref []
   let redoList = ref []
   let resetLists () =
     (undoList := []; redoList := [])
+  
+  let storeSession session =
+    (undoList := session :: (!undoList);
+    redoList := [];
+    ())
 
   let undo session =
     if (List.length (!undoList) > 0) then
@@ -187,7 +197,7 @@ struct
   *showLogics:
   * Lists all logics available.
   ********************************************************************)
-  let showLogics _ =
+  let showLogics session =
     ()
   
   (********************************************************************
@@ -269,8 +279,7 @@ struct
  
     let (session', save) = handle input session in
     if save then
-      (undoList := session :: (!undoList);
-      redoList := [];
+      (storeSession session;
       session')
     else
       (session')
@@ -296,5 +305,12 @@ struct
       else
         session'
     with
-        Absyn.SyntaxError(s) -> (O.error (s ^ ".\n"); session)
+      Absyn.SyntaxError(s) ->
+        (O.error (s ^ ".\n");
+        
+        (*  Store the session if there was a parse error.
+            This ensures that undo will always restore the
+            previous state even in the case of a parse error. *)
+        storeSession session;
+        session)
 end

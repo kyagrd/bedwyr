@@ -180,8 +180,8 @@ namespace StickyTaci
 
     private void Save(string filename)
     {
-      Dirty = false;
       Form.Rtf.SaveFile(filename, RichTextBoxStreamType.PlainText);
+      Dirty = false;
     }
 
     public void OnNew()
@@ -192,7 +192,6 @@ namespace StickyTaci
         Form.Clear();
         OnTacReset();
         Dirty = false;
-
       }
     }
 
@@ -251,14 +250,13 @@ namespace StickyTaci
 
       if(dlg.ShowDialog() == DialogResult.OK)
       {
-        Dirty = false;
         OnTacReset();
         Form.Clear();
         Form.Rtf.LoadFile(dlg.FileName, RichTextBoxStreamType.PlainText);
         FileName = dlg.FileName;
-
-        //ReColor
         Form.ColorLines((uint)Form.Rtf.Lines.Length);
+
+        Dirty = false;
       }
     }
 
