@@ -1,5 +1,5 @@
 /*****************************************************************************
-* StickyTaci                                                                 *
+* StickTaci                                                                  *
 * Copyright (C) 2007 Zach Snow                                               *
 *                                                                            *
 * This program is free software; you can redistribute it and/or modify       *
@@ -18,25 +18,52 @@
 *****************************************************************************/
 using System;
 using System.Collections.Generic;
-using System.Windows.Forms;
+using System.Text;
 
 namespace StickyTaci
 {
-  static class StickyTaci
+  public class Logic : IComparable
   {
-    /// <summary>
-    /// The main entry point for the application.
-    /// </summary>
-    [STAThread]
-    static void Main()
+    private string m_Name = "";
+    public string Name
     {
-      Application.EnableVisualStyles();
-      Application.SetCompatibleTextRenderingDefault(false);
+      get
+      {
+        return m_Name;
+      }
+      set
+      {
+        m_Name = value;
+      }
+    }
 
-      IdeCtrl ctrl = new IdeCtrl();
-      IdeForm frm = new IdeForm(ctrl);
-      ctrl.Form = frm;
-      Application.Run(frm);
+    private string m_Key = "";
+    public string Key
+    {
+      get
+      {
+        return m_Key;
+      }
+      set
+      {
+        m_Key = value;
+      }
+    }
+
+    public Logic(string key, string name)
+    {
+      Key = key;
+      Name = name;
+    }
+
+    public int CompareTo(object o)
+    {
+      if(o is Logic)
+      {
+        Logic other = (Logic)o;
+        return Key.CompareTo(other.Key);
+      }
+      return -1;
     }
   }
 }

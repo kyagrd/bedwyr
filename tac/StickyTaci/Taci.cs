@@ -1,3 +1,21 @@
+/*****************************************************************************
+* StickyTaci                                                                 *
+* Copyright (C) 2007 Zach Snow                                               *
+*                                                                            *
+* This program is free software; you can redistribute it and/or modify       *
+* it under the terms of the GNU General Public License as published by       *
+* the Free Software Foundation; either version 2 of the License, or          *
+* (at your option) any later version.                                        *
+*                                                                            *
+* This program is distributed in the hope that it will be useful,            *
+* but WITHOUT ANY WARRANTY; without even the implied warranty of             *
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the              *
+* GNU General Public License for more details.                               *
+*                                                                            *
+* You should have received a copy of the GNU General Public License          *
+* along with this code; if not, write to the Free Software Foundation,       *
+* Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA               *
+*****************************************************************************/
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -24,6 +42,7 @@ namespace StickyTaci
     public static string EXIT = "#exit";
     public static string HELP = "#help";
     public static string INCLUDE = "#include";
+    public static string LOGIC = "#logic";
     public static string LOGICS = "#logics";
     public static string OPEN = "#open";
     public static string REDO = "#redo";
@@ -31,12 +50,13 @@ namespace StickyTaci
     public static string TACTICALS = "#tacticals";
     public static string UNDO = "#undo";
     
-    public delegate void IOHandler(Taci instance, string data);
-    public event IOHandler Output;
-    public event IOHandler Goal;
-    public event IOHandler Error;
-    public event IOHandler Command;
-    public event IOHandler Tactical;
+    public delegate void IOHandler<T>(Taci instance, T data);
+    public event IOHandler<string> Output;
+    public event IOHandler<string> Goal;
+    public event IOHandler<string> Error;
+    public event IOHandler<string> Command;
+    public event IOHandler<string> Tactical;
+    public event IOHandler<Logic> Logic;
 
     private Process m_Taci = null;
     private string m_Data;
@@ -94,7 +114,7 @@ namespace StickyTaci
    
     public void Write(string s)
     {
-      m_Taci.StandardInput.WriteLine(s);
+      m_Taci.StandardInput.WriteLine(s + "\n");
     }
 
     public void Exit()
@@ -147,10 +167,9 @@ namespace StickyTaci
       foreach(XmlNode output in outputs)
       {
         XmlAttribute type = output.Attributes["type"];
-        XmlAttribute text = output.Attributes["text"];
-        if(type != null && text != null)
+        if(type != null)
         {
-          Notify(type.Value, text.Value);
+          Notify(type.Value, output);
         }
         else
         {
@@ -172,29 +191,51 @@ namespace StickyTaci
       return s;
     }
 
-    private void Notify(string type, string text)
+    private void Notify(string type, XmlNode node)
     {
       if(type == "output" && Output != null)
       {
-        Output(this, Unescape(text));
+        string text = GetAttribute(node, "text");
+        Output(this, text);
       }
       else if(type == "goal" && Goal != null)
       {
-        Goal(this, Unescape(text));
+        string text = GetAttribute(node, "text");
+        Goal(this, text);
       }
       else if(type == "error" && Error != null)
       {
-        Error(this, Unescape(text));
+        string text = GetAttribute(node, "text");
+        Error(this, text);
       }
       else if(type == "command" && Command != null)
       {
-        Command(this, Unescape(text));
+        string text = GetAttribute(node, "text");
+        Command(this, text);
       }
       else if(type == "tactical" && Tactical != null)
       {
-        Tactical(this, Unescape(text));
+        string text = GetAttribute(node, "text");
+        Debug.WriteLine("Tactical: " + text + ".");
+        Tactical(this, text);
+      }
+      else if(type == "logic" && Logic != null)
+      {
+        string key = GetAttribute(node, "key");
+        string name = GetAttribute(node, "name");
+        Debug.WriteLine("Logic: " + key + " : " + name + ".");
+        Logic(this, new Logic(key, name));
       }
     }
 
+    string GetAttribute(XmlNode node, string name)
+    {
+      XmlAttribute attr = node.Attributes[name];
+      if(attr != null)
+      {
+        return Unescape(attr.Value);
+      }
+      return "";
+    }
   }
 }

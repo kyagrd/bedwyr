@@ -49,6 +49,7 @@
     <Compile Include="IdeForm.Designer.cs">
       <DependentUpon>IdeForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="Logic.cs" />
     <Compile Include="StickyTaci.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <EmbeddedResource Include="AboutDlg.resx">

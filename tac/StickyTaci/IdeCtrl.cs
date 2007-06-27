@@ -1,3 +1,21 @@
+/*****************************************************************************
+* StickyTaci                                                                 *
+* Copyright (C) 2007 Zach Snow                                               *
+*                                                                            *
+* This program is free software; you can redistribute it and/or modify       *
+* it under the terms of the GNU General Public License as published by       *
+* the Free Software Foundation; either version 2 of the License, or          *
+* (at your option) any later version.                                        *
+*                                                                            *
+* This program is distributed in the hope that it will be useful,            *
+* but WITHOUT ANY WARRANTY; without even the implied warranty of             *
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the              *
+* GNU General Public License for more details.                               *
+*                                                                            *
+* You should have received a copy of the GNU General Public License          *
+* along with this code; if not, write to the Free Software Foundation,       *
+* Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA               *
+*****************************************************************************/
 using System;
 using System.IO;
 using System.Collections.Generic;
@@ -10,7 +28,21 @@ namespace StickyTaci
   {
     private string m_Line = "";
 
-    List<string> m_Tacticals = new List<string>();
+    private string m_CurrentLogic = "";
+    public string CurrentLogic
+    {
+      get
+      {
+        return m_CurrentLogic;
+      }
+      set
+      {
+        m_CurrentLogic = value;
+      }
+    }
+
+    private List<Logic> m_Logics = new List<Logic>();
+    private List<string> m_Tacticals = new List<string>();
     private bool m_Dirty = false;
     public bool Dirty
     {
@@ -71,21 +103,44 @@ namespace StickyTaci
       }
     }
 
-    public void StartTaci(string path, string arguments)
+    public void StartTaci(string path, string logic)
     {
-      m_Taci = new Taci(path, arguments);
-      m_Taci.Output += new Taci.IOHandler(Taci_Output);
-      m_Taci.Goal += new Taci.IOHandler(Taci_Goal);
-      m_Taci.Error += new Taci.IOHandler(Taci_Error);
-      m_Taci.Command += new Taci.IOHandler(Taci_Command);
-      m_Taci.Tactical += new Taci.IOHandler(Taci_Tactical);
+      m_Taci = new Taci(path, "--output xml --logic " + logic);
+      m_Taci.Output += new Taci.IOHandler<string>(Taci_Output);
+      m_Taci.Goal += new Taci.IOHandler<string>(Taci_Goal);
+      m_Taci.Error += new Taci.IOHandler<string>(Taci_Error);
+      m_Taci.Command += new Taci.IOHandler<string>(Taci_Command);
+      m_Taci.Tactical += new Taci.IOHandler<string>(Taci_Tactical);
+      m_Taci.Logic += new Taci.IOHandler<Logic>(Taci_Logic);
       m_Taci.Restart();
 
-      //Get information.
+      CurrentLogic = logic;
+
+      //Get information.  Yeah, this is dumb.
+      //TODO: Fix Taci parser to leave unparsed input
+      //      in the lexbuf.
+      m_Taci.Write(Taci.LOGICS + ".");
+      System.Threading.Thread.Sleep(100);
       m_Taci.Write(Taci.TACTICALS + ".");
+      System.Threading.Thread.Sleep(100);
       m_Taci.Write(Taci.CLEAR + ".");
+      System.Threading.Thread.Sleep(100);
+      m_Taci.Write(Taci.HELP + ".");
 
       Form.Commands = m_Taci.Commands;
+    }
+
+    void Taci_Logic(Taci instance, Logic data)
+    {
+      if(instance == m_Taci)
+      {
+        if(!m_Logics.Contains(data))
+        {
+          m_Logics.Add(data);
+          m_Logics.Sort();
+          Form.Logics = m_Logics;
+        }
+      }
     }
 
     void Taci_Tactical(Taci instance, string data)
@@ -126,7 +181,7 @@ namespace StickyTaci
     {
       //Get a list of files.
       OpenFileDialog dlg = new OpenFileDialog();
-      dlg.Filter = "Taci Files (*.tac)|*.tac|All Files (*.*)|*.*";
+      dlg.Filter = "All Files (*.*)|*.*";
       dlg.RestoreDirectory = true;
       dlg.Multiselect = true;
 
@@ -157,7 +212,7 @@ namespace StickyTaci
 
     public void OnShown()
     {
-      StartTaci(Application.StartupPath + "/taci.exe", " --logic firstorder --output xml");
+      StartTaci(Application.StartupPath + "/taci.exe", "firstorder");
     }
 
     private bool SaveMessage()
@@ -221,12 +276,13 @@ namespace StickyTaci
     public bool OnSaveAs()
     {
       SaveFileDialog dlg = new SaveFileDialog();
-      dlg.Filter = "StickyTaci Session (*.st)|*.st|All Files (*.*)|*.*";
+      dlg.Filter = "StickyTaci Session (*.tac)|*.tac";
       dlg.RestoreDirectory = true;
 
       if(dlg.ShowDialog() == DialogResult.OK)
       {
-        Save(dlg.FileName);
+        string path = Path.ChangeExtension(dlg.FileName, "." + CurrentLogic + ".tac");
+        Save(path);
         return true;
       }
       else
@@ -246,12 +302,25 @@ namespace StickyTaci
     private void Open()
     {
       OpenFileDialog dlg = new OpenFileDialog();
-      dlg.Filter = "StickyTaci Session (*.st)|*.st|All Files (*.*)|*.*";
+      dlg.Filter = "StickyTaci Session (*.tac)|*.tac|All Files (*.*)|*.*";
 
       if(dlg.ShowDialog() == DialogResult.OK)
       {
         OnTacReset();
         Form.Clear();
+
+        //Get the logic name:
+        string ext = Path.GetExtension(dlg.FileName);
+        if(ext == ".tac")
+        {
+          string name = Path.GetFileNameWithoutExtension(dlg.FileName);
+          ext = Path.GetExtension(name);
+          if(ext != "")
+          {
+            string logic = ext.Substring(1);
+            OnLogic(logic);
+          }
+        }
         Form.Rtf.LoadFile(dlg.FileName, RichTextBoxStreamType.PlainText);
         FileName = dlg.FileName;
         Form.ColorLines((uint)Form.Rtf.Lines.Length);
@@ -273,12 +342,23 @@ namespace StickyTaci
 
     public void OnTacClear()
     {
-      Taci.Write(Taci.CLEAR);
+      Taci.Write(Taci.CLEAR + ".");
     }
 
     public void OnTactical(string tac)
     {
       Form.Input(tac);
+    }
+
+    public void OnLogic(string name)
+    {
+      CurrentLogic = name;
+      Taci.Write(Taci.LOGIC + " " + name + ".");
+      OnTacReset();
+    }
+    public void OnLogic(Logic l)
+    {
+      OnLogic(l.Key);
     }
 
     public bool OnNextLine()

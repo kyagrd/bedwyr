@@ -1,9 +1,28 @@
+(**********************************************************************
+* Taci                                                                *
+* Copyright (C) 2007 Zach Snow, David Baelde                          *
+*                                                                     *
+* This program is free software; you can redistribute it and/or modify*
+* it under the terms of the GNU General Public License as published by*
+* the Free Software Foundation; either version 2 of the License, or   *
+* (at your option) any later version.                                 *
+*                                                                     *
+* This program is distributed in the hope that it will be useful,     *
+* but WITHOUT ANY WARRANTY; without even the implied warranty of      *
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the       *
+* GNU General Public License for more details.                        *
+*                                                                     *
+* You should have received a copy of the GNU General Public License   *
+* along with this code; if not, write to the Free Software Foundation,*
+* Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA        *
+**********************************************************************)
 module type Interpreter =
 sig
   type session
   exception Exit of session
-  exception Logic of string
+  exception Logic of string * session
 
+  val setLogics : (string * string) list -> unit
   val onStart : unit -> session
   val onEnd : session -> unit  
   val onPrompt : session -> session
@@ -15,9 +34,12 @@ struct
   type session = L.session
   type proofbuilder = L.proof Logic.proofbuilder
   exception Exit of session
-  exception Logic of string
+  exception Logic of string * session
   exception Success of session * proofbuilder
   exception Failure
+  
+  let logics = ref []
+  let setLogics l = logics := l
   
   let timing = ref false
   
@@ -198,7 +220,8 @@ struct
   * Lists all logics available.
   ********************************************************************)
   let showLogics session =
-    ()
+    let compare' (_,n) (_,n') = compare n n' in
+    (O.logics (List.sort compare' !logics))
   
   (********************************************************************
   *showTacticals:
@@ -216,8 +239,12 @@ struct
   *loadLogic:
   * Loads the given logic.
   ********************************************************************)
-  let loadLogic l =
-    raise (Logic l)
+  let loadLogic l session =
+    if (List.mem_assoc l !logics) then
+      raise (Logic(l,session))
+    else
+      (O.error ("undefined logic '" ^ l ^ "'.\n");
+      session)
     
   (********************************************************************
   *openFiles:
@@ -238,6 +265,21 @@ struct
       | Absyn.SyntaxError(s) -> (O.error ("in file '" ^ file ^ "': " ^ s ^ ".\n"); session)
     in
     List.fold_left executeFile session files
+
+  (********************************************************************
+  *handleInputList:
+  * Parses a list of commands and handles each in turn.
+  ********************************************************************)
+  and handleInputList inputlist session =
+    let handle' session input =
+      let session' = (handleInput input session) in
+      if L.validSequent session' then
+        (O.goal ((L.string_of_sequents (L.sequents session')) ^ "\n");
+        session')
+      else
+        session'  
+    in
+    List.fold_left handle' session inputlist
 
   (********************************************************************
   *handleInput:
@@ -264,7 +306,7 @@ struct
         | Absyn.Open(sl) ->
             (openFiles session sl, true)
         | Absyn.Logics -> (showLogics session; (session, true))
-        | Absyn.Logic(s) -> ((loadLogic s), true)
+        | Absyn.Logic(s) -> (loadLogic s session, true)
         | Absyn.Tacticals -> (showTacticals session; (session, true))
         | Absyn.TacticalDefinition(name, pretactical) ->
             (defineTactical name pretactical session, true)
@@ -298,12 +340,8 @@ struct
   let onInput session =
     try
       let input = Toplevel.parseStdinCommand () in
-      let session' = handleInput input session in
-      if L.validSequent session' then
-        (O.goal ((L.string_of_sequents (L.sequents session')) ^ "\n");
-        session')
-      else
-        session'
+      let session' = handleInputList [input] session in
+      session'
     with
       Absyn.SyntaxError(s) ->
         (O.error (s ^ ".\n");

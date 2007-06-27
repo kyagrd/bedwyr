@@ -196,6 +196,14 @@
 				>
 			</File>
 			<File
+				RelativePath=".\logics.ml"
+				>
+			</File>
+			<File
+				RelativePath=".\Logics_gen.ml"
+				>
+			</File>
+			<File
 				RelativePath=".\main.ml"
 				>
 			</File>
@@ -231,6 +239,14 @@
 			</File>
 			<File
 				RelativePath=".\logic.mli"
+				>
+			</File>
+			<File
+				RelativePath=".\logics.mli"
+				>
+			</File>
+			<File
+				RelativePath=".\Logics_gen.mli"
 				>
 			</File>
 			<File
@@ -297,22 +313,6 @@
 		<Filter
 			Name="Logics"
 			>
-			<File
-				RelativePath=".\logics.ml"
-				>
-			</File>
-			<File
-				RelativePath=".\logics.mli"
-				>
-			</File>
-			<File
-				RelativePath=".\Logics_gen.ml"
-				>
-			</File>
-			<File
-				RelativePath=".\Logics_gen.mli"
-				>
-			</File>
 			<Filter
 				Name="Firstorder"
 				>
