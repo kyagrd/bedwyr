@@ -100,23 +100,7 @@ namespace StickyTaci
       {
         m_CurrentLine = value;
 
-        //Show current line marker:
-        int line = (int)m_CurrentLine;
-        int y = 0;
-        if(line == Rtf.Lines.Length)
-        {
-          y = 0;
-        }
-        else
-        {
-          Point inc = (Rtf.GetPositionFromCharIndex(Rtf.GetFirstCharIndexFromLine(line)));
-          Point inw = PointToClient(Rtf.PointToScreen(inc));
-          y = inw.Y;
-          y -= Font.Height;
-          y -= Font.Height;
-        }
-        Point p = new Point(1, y);
-        currentLineImagePanel.Location = p;
+        UpdateCurrentLineMarker();
       }
     }
 
@@ -257,6 +241,7 @@ namespace StickyTaci
       Rtf.Font = m_InputFont;
       Rtf.KeyDown += new KeyEventHandler(inputBox_KeyDown);
       Rtf.TextChanged += new EventHandler(inputBox_TextChanged);
+      Rtf.VScroll += new EventHandler(inputBox_VScroll);
 
       m_Ctrl = ctrl;
 
@@ -277,6 +262,11 @@ namespace StickyTaci
 
       TacticalsChanged = true;
       CurrentLine = 0;
+    }
+
+    void inputBox_VScroll(object sender, EventArgs e)
+    {
+      UpdateCurrentLineMarker();
     }
 
     protected override void OnShown(EventArgs e)
@@ -405,11 +395,13 @@ namespace StickyTaci
     public void ColorLines(uint max)
     {
       int state = SaveState();
+      int len = Rtf.SelectionLength;
       for(uint i = 0; i < max; i++)
       {
         ColorLine(i);
       }
       RestoreState(state);
+      Rtf.SelectionLength = len;
     }
 
     private void ColorLine(uint linenum)
@@ -727,6 +719,27 @@ namespace StickyTaci
     private void mainMenuTacEnd_Click(object sender, EventArgs e)
     {
       Ctrl.OnEnd();
+    }
+
+    private void UpdateCurrentLineMarker()
+    {
+      //Show current line marker:
+      int line = (int)m_CurrentLine;
+      int y = 0;
+      if(line == Rtf.Lines.Length)
+      {
+        y = 0;
+      }
+      else
+      {
+        Point inc = (Rtf.GetPositionFromCharIndex(Rtf.GetFirstCharIndexFromLine(line)));
+        Point inw = PointToClient(Rtf.PointToScreen(inc));
+        y = inw.Y;
+        y -= Font.Height;
+        y -= Font.Height;
+      }
+      Point p = new Point(1, y);
+      currentLineImagePanel.Location = p;
     }
   }
 }

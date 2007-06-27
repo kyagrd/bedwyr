@@ -85,7 +85,9 @@ namespace StickyTaci
       m_Taci.EnableRaisingEvents = true;
 
       if(m_Taci.Start())
+      {
         m_Taci.BeginOutputReadLine();
+      }
       return;
     }
 
