@@ -1,3 +1,21 @@
+/*****************************************************************************
+* StickyTaci                                                                 *
+* Copyright (C) 2007 Zach Snow                                               *
+*                                                                            *
+* This program is free software; you can redistribute it and/or modify       *
+* it under the terms of the GNU General Public License as published by       *
+* the Free Software Foundation; either version 2 of the License, or          *
+* (at your option) any later version.                                        *
+*                                                                            *
+* This program is distributed in the hope that it will be useful,            *
+* but WITHOUT ANY WARRANTY; without even the implied warranty of             *
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the              *
+* GNU General Public License for more details.                               *
+*                                                                            *
+* You should have received a copy of the GNU General Public License          *
+* along with this code; if not, write to the Free Software Foundation,       *
+* Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA               *
+*****************************************************************************/
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -15,7 +33,6 @@ namespace StickyTaci
     {
       return s1.Length.CompareTo(s2.Length);
     }
-
     private class TacticalHandler
     {
       private IdeCtrl m_Ctrl = null;
@@ -31,8 +48,36 @@ namespace StickyTaci
         m_Ctrl.OnTactical(m_Tactical);
       }
     }
+    private class LogicHandler
+    {
+      private IdeCtrl m_Ctrl = null;
+      private Logic m_Logic = null;
+      public LogicHandler(IdeCtrl ctrl, Logic l)
+      {
+        m_Ctrl = ctrl;
+        m_Logic = l;
+      }
 
-    private bool m_TacticalsChanged = true;
+      public void OnClick(object instance, EventArgs e)
+      {
+        m_Ctrl.OnLogic(m_Logic);
+      }
+    }
+
+    private bool m_LogicsChanged = false;    //So that they get updated at startup.
+    public bool LogicsChanged
+    {
+      get
+      {
+        return m_LogicsChanged;
+      }
+      set
+      {
+        m_LogicsChanged = value;
+      }
+    }
+
+    private bool m_TacticalsChanged = false; //So that they get updated at startup.
     public bool TacticalsChanged
     {
       get
@@ -61,9 +106,26 @@ namespace StickyTaci
       }
     }
 
+    private List<Logic> m_Logics = null;
+    public List<Logic> Logics
+    {
+      get
+      {
+        return m_Logics;
+      }
+      set
+      {
+        m_Logics = value;
+        LogicsChanged = true;
+      }
+    }
+
     private bool m_Coloring = false;
     private List<string> m_Tacticals = null;
-    private List<string> m_SortedTacticals = null;
+
+    //Sorted by length so that the dumb syntac highlighter uses
+    //the largest match.
+    private List<string> m_SortedTacticals = null; 
     public List<string> Tacticals
     {
       get
@@ -73,6 +135,7 @@ namespace StickyTaci
       set
       {
         m_Tacticals = value;
+
         m_SortedTacticals = value.ConvertAll<string>(new Converter<string, string>(string.Copy));
         m_SortedTacticals.Sort(new Comparison<string>(CompareLength));
 
@@ -248,6 +311,8 @@ namespace StickyTaci
       mainMenuEdit.DropDownOpening += new EventHandler(mainMenuEdit_DropDownOpening);
       mainMenuTacTacticals.DropDownOpening += new EventHandler(mainMenuTacTacticals_DropDownOpening);
       mainMenuTacTacticals.DropDownItems.Add("*dummy*");
+      mainMenuTacLogics.DropDownOpening += new EventHandler(mainMenuTacLogics_DropDownOpening);
+      mainMenuTacLogics.DropDownItems.Add("*dummy*");
 
       mainMenuTacStart.ShortcutKeys =
         ((System.Windows.Forms.Keys)
@@ -273,6 +338,24 @@ namespace StickyTaci
     {
       base.OnShown(e);
       Ctrl.OnShown();
+    }
+
+    void mainMenuTacLogics_DropDownOpening(object sender, EventArgs e)
+    {
+      if(LogicsChanged)
+      {
+        mainMenuTacLogics.DropDownItems.Clear();
+        if(Logics != null)
+        {
+          foreach(Logic l in Logics)
+          {
+            ToolStripItem t = mainMenuTacLogics.DropDownItems.Add(l.Key);
+            LogicHandler h = new LogicHandler(Ctrl, l);
+            t.Click += new EventHandler(h.OnClick);
+          }
+        }
+        LogicsChanged = false;
+      }
     }
 
     void mainMenuTacTacticals_DropDownOpening(object sender, EventArgs e)

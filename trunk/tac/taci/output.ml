@@ -1,3 +1,21 @@
+(**********************************************************************
+* Taci                                                                *
+* Copyright (C) 2007 Zach Snow, David Baelde                          *
+*                                                                     *
+* This program is free software; you can redistribute it and/or modify*
+* it under the terms of the GNU General Public License as published by*
+* the Free Software Foundation; either version 2 of the License, or   *
+* (at your option) any later version.                                 *
+*                                                                     *
+* This program is distributed in the hope that it will be useful,     *
+* but WITHOUT ANY WARRANTY; without even the implied warranty of      *
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the       *
+* GNU General Public License for more details.                        *
+*                                                                     *
+* You should have received a copy of the GNU General Public License   *
+* along with this code; if not, write to the Free Software Foundation,*
+* Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA        *
+**********************************************************************)
 module type Output =
 sig
   val showDebug : bool ref
@@ -23,13 +41,7 @@ struct
       ()
 
   let prompt s = (print_string s; flush stdout)
-  let logics ls =
-    let logic (key,name) =
-      key ^ (String.make (min 0 (20 - (String.length key))) ' ') ^ ":  " ^ name
-    in
-    (print_string ("Logics:\n  " ^ (String.concat "\n  " (List.map logic ls)) ^ "\n");
-    flush stdout)
-
+  
   let error s = (print_string ("Error: " ^ s); flush stdout)
   let output s = (print_string s; flush stdout)
   let goal s = (print_string s; flush stdout)
@@ -41,11 +53,16 @@ struct
       let _ = Sys.command "clear" in
       ()
 
+  let logics ls =
+    let get (key, name) =
+      key ^ (String.make (20 - (String.length key)) ' ') ^ ":  " ^ name
+    in
+    output ("Logics:\n  " ^ (String.concat "\n  " (List.map get ls)) ^ "\n")
+  
   let tacticals sl =
     let o = "Tacticals:\n  " ^ (String.concat "\n  " sl) ^ "\n" in
     (print_string o;
     flush stdout)
-
 end
 
 module XmlOutput =
