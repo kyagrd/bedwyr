@@ -104,16 +104,7 @@ struct
   type logic_pretactic = (L.logic_sequent, L.logic_proof) pretactic
   type logic_tactic = (L.logic_sequent, L.logic_proof) tactic
   type logic_tactical = (L.logic_session, logic_tactic) tactical
-  
-  (********************************************************************
-  *empty:
-  ********************************************************************)
-  let empty = function
-      [] -> true
-    | _::_ -> false
-
-  let id x = x
-  
+    
   (********************************************************************
   *split_nth:
   * Returns a pair (l, r) where l is the first n elements of the given
@@ -169,7 +160,7 @@ struct
   * Returns a tactical that always succeeds the current sequent unchanged.
   ********************************************************************)
   let idTactical =
-    fun sequents sc fc -> (sc [] sequents id fc)
+    fun sequents sc fc -> (sc [] sequents (fun x -> x) fc)
   
   (********************************************************************
   *applyTactical:
@@ -320,7 +311,7 @@ struct
   let completeTactical tac =
     fun sequents sc fc ->
       let sc' newseqs oldseqs builder k =
-        if (empty newseqs) then
+        if (Listutils.empty newseqs) then
           (sc newseqs oldseqs builder k)
         else
           (k ())

@@ -243,7 +243,7 @@ let unifyList unifier l1 l2 =
 *isAnonymous:
 * Determines whether a term corresponds to an "_".
 **********************************************************************)
-let isAnonymous t =
+let isAnonymousTerm t =
   match (Term.observe t) with
     Term.Var(v) ->
       (v.Term.print = "_")
@@ -286,7 +286,7 @@ let matchFormula template formula =
     | (AtomicFormula(t), _)
     | (_, AtomicFormula(t)) ->
         (*  If this atomic formula is an underscore, then it matches. *)
-        (isAnonymous t)
+        (isAnonymousTerm t)
     
     | (MuFormula(n,_), MuFormula(n',_))
     | (NuFormula(n,_), NuFormula(n',_)) ->
@@ -391,3 +391,16 @@ let applyFixpoint arg formula =
       | _ -> (mapFormula (ff i) tf f)
   in
   ff (0) formula
+
+(********************************************************************
+*makeAnonymousTerm:
+********************************************************************)
+let makeAnonymousTerm () =
+  Term.freshWithPrintName "_" ~tag:Term.Logic ~lts:max_int max_int
+
+(********************************************************************
+*makeAnonymousFormula:
+* 
+********************************************************************)
+let makeAnonymousFormula () =
+  AtomicFormula(makeAnonymousTerm ())

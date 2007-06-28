@@ -54,16 +54,14 @@
     let make name f = Linearabsyn.NablaFormula(f) in
     (makeAbstractions make f)
 
-  let atomic f = Linearabsyn.AtomicFormula(f)
- 
-  (********************************************************************
-  *anon:
-  * Called when an underscore is encountered.  Creates a new logic
-  * variable with an index of max int so that it can unify with anything
-  * anywhere.  It also sets a flag on the
-  ********************************************************************)
-  let anon () = failwith "Linearparser.anon: not implemented."
-  let atom t = failwith "Linearparser.atom: not implemented."
+  let atomic t =
+    if Linearabsyn.isAnonymousTerm t then
+      Linearabsyn.makeAnonymousFormula ()
+    else
+      Linearabsyn.AtomicFormula(t)
+
+  let anonymous () = Linearabsyn.makeAnonymousTerm  ()
+  let atom t = Term.atom t
   
   let abstract id f =
     Linearabsyn.AbstractionFormula(id, f)
@@ -154,6 +152,6 @@ primaryterm
   : LPAREN term RPAREN  {$2}
   | ID                  {atom $1}
   | STRING              {Term.string $1}
-  | UNDERSCORE          {anon ()}   
+  | UNDERSCORE          {anonymous ()}   
   ;
 %%
