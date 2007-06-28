@@ -17,10 +17,10 @@
 * Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA        *
 **********************************************************************/
 %{
-  let eq f1 f2 = Firstorderabsyn.EqualityFormula(f1, f2)
-  let conj f1 f2 = Firstorderabsyn.AndFormula(f1, f2)
-  let disj f1 f2 = Firstorderabsyn.OrFormula(f1, f2)
-  let imp f1 f2 = Firstorderabsyn.ImplicationFormula(f1, f2)
+  let eqFormula f1 f2 = Firstorderabsyn.EqualityFormula(f1, f2)
+  let andFormula f1 f2 = Firstorderabsyn.AndFormula(f1, f2)
+  let orFormula f1 f2 = Firstorderabsyn.OrFormula(f1, f2)
+  let impFormula f1 f2 = Firstorderabsyn.ImplicationFormula(f1, f2)
   
   let rec getAbstractions f =
     match f with
@@ -37,8 +37,11 @@
       | name::names ->
           (makeAbs' (names) make (make name (Firstorderabsyn.AbstractionFormula(name,f))))        
     in
-    let (names,f') = getAbstractions f in
-    (makeAbs' names make f')
+    if (Firstorderabsyn.isAnonymousFormula f) then
+      make "" f
+    else
+      let (names,f') = getAbstractions f in
+      (makeAbs' names make f')
 
   let pi f =
     let make name f = Firstorderabsyn.PiFormula(f) in
@@ -52,36 +55,42 @@
     let make name f = Firstorderabsyn.NablaFormula(f) in
     (makeAbstractions make f)
 
-  let anon () = failwith "not implemented"
+  let atomic t =
+    if Firstorderabsyn.isAnonymousTerm t then
+      Firstorderabsyn.makeAnonymousFormula ()
+    else
+      Firstorderabsyn.AtomicFormula(t)
 
+  let anonymous () = Firstorderabsyn.makeAnonymousTerm  ()
+  let atom t = Term.atom t
+  
   let abstract id f =
     Firstorderabsyn.AbstractionFormula(id, f)
 
-  let atom t = Firstorderabsyn.AtomicFormula(t)
     
   let application term = 
     match term with
-        [] -> failwith "Firstorderparser.tterm: invalid lterm."
+        [] -> failwith "Linearparser.tterm: invalid lterm."
       | t::l -> (Term.app t l)
   
 %}
 
-%token BSLASH LPAREN RPAREN DOT SHARP ANONYMOUS
-%token EQ AND OR IMP DEF
-%token PI SIGMA NABLA
+%token BSLASH LPAREN RPAREN DOT SHARP UNDERSCORE
+%token EQ AND ANDL OR ORL IMP DEF
+%token PI SIGMA NABLA MU NU
 %token IND COIND
 %token EOF
 %token <string> ID
 %token <string> STRING
 
-%nonassoc BSLASH PI SIGMA NABLA MU
+%nonassoc BSLASH PI SIGMA NABLA MU NU
 %right IMP
-%left OR
-%left AND
+%left OR ORL
+%left AND ANDL
 %nonassoc EQ
 
-%start toplevel_formula toplevel_term toplevel_definition
-%type <Firstorderabsyn.formula> toplevel_formula
+%start toplevel_formula toplevel_term toplevel_definition toplevel_template
+%type <Firstorderabsyn.formula> toplevel_formula toplevel_template
 %type <Firstorderabsyn.term> toplevel_term
 %type <Firstorderabsyn.predefinition> toplevel_definition
 
@@ -89,6 +98,18 @@
 toplevel_formula
   : formula     {$1}
   | formula EOF {$1}
+  ;
+
+toplevel_template
+  : formula           {$1}
+  | formula EOF       {$1}
+  | template          {$1}
+  | template EOF      {$1}
+  ;
+
+template
+  : MU UNDERSCORE     {Firstorderabsyn.ApplicationFormula(Firstorderabsyn.MuFormula("", atomic (anonymous ())), [])}
+  | NU UNDERSCORE     {Firstorderabsyn.ApplicationFormula(Firstorderabsyn.NuFormula("", atomic (anonymous ())), [])}
   ;
 
 toplevel_definition
@@ -108,19 +129,19 @@ definitionargs
   ;
 
 formula
-  : formula AND formula {conj $1 $3}
-  | formula OR formula {disj $1 $3}
-  | formula IMP formula {imp $1 $3}
-  | term EQ term {eq $1 $3}
+  : formula AND formula {andFormula $1 $3}
+  | formula OR formula {orFormula $1 $3}
+  | formula IMP formula {impFormula $1 $3}
+  | term EQ term {eqFormula $1 $3}
   
   | PI formula {pi $2}
   | SIGMA formula {sigma $2}
   | NABLA formula {nabla $2}
   
   | ID BSLASH formula {abstract $1 $3}
-    
+  
   | LPAREN formula RPAREN {$2}
-  | term {atom $1}
+  | term {atomic $1}
   ;
 
 toplevel_term
@@ -139,9 +160,9 @@ lterm
   ;
 
 primaryterm
-  : LPAREN term RPAREN {$2}
-  | ID {Term.atom $1}
-  | ANONYMOUS {anon ()}
-  | STRING {Term.string $1}
+  : LPAREN term RPAREN  {$2}
+  | ID                  {atom $1}
+  | STRING              {Term.string $1}
+  | UNDERSCORE          {anonymous ()}   
   ;
 %%

@@ -124,6 +124,7 @@ val getAbsName : unit -> string
   * ensures uniqueness. We should attach useful names as well, but this 
   * will do for the moment. *)
 val fresh : ?tag:tag -> ?lts:int -> int -> term
+val freshWithPrintName : string -> ?tag:tag -> ?lts:int -> int -> term
 
 exception NonNormalTerm
 

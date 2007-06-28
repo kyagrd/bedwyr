@@ -38,10 +38,9 @@ rule token = parse
 | "(" {LPAREN}
 | ")" {RPAREN}
 
-| "_" {ANONYMOUS}
+| "_" {UNDERSCORE}
 | "=" {EQ}
 | "," {AND}
-| "&" {AND}
 | ";" {OR}
 | "=>" {IMP}
 | ":=" {DEF}
@@ -50,6 +49,8 @@ rule token = parse
 | "pi"      {PI}
 | "sigma"   {SIGMA}
 | "nabla"   {NABLA}
+| "mu"      {MU}
+| "nu"      {NU}
 
 | "inductive" {IND}
 | "coinductive" {COIND}

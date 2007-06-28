@@ -58,7 +58,11 @@ type unifyresult =
     UnifyFailed
   | UnifySucceeded
   | UnifyError of string
-  
+
+val makeAnonymousFormula : unit -> formula
+val makeAnonymousTerm : unit -> term
+val isAnonymousTerm : term -> bool
+
 val mapFormula : (formula -> formula) -> (term -> term) -> formula -> formula
 val abstract : string -> formula -> formula
 val apply : term list -> formula -> formula

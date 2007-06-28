@@ -326,8 +326,13 @@ struct
     else
       (session')
 
+  let getLogicKey name =
+    let find = fun (_,n) -> n = name in
+    let (k,_) = List.find find !logics in
+    k
+  
   let onPrompt session =
-    (O.prompt ("[tac <" ^ (L.name) ^ ">]- ");
+    (O.prompt ("[tac <" ^ (getLogicKey L.name) ^ ">]- ");
     session)
 
   let onStart () =

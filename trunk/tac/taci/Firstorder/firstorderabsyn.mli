@@ -26,16 +26,19 @@ type formula =
   | OrFormula of (formula * formula)
   | ImplicationFormula of (formula * formula)
   | EqualityFormula of (term * term)
+  
   | PiFormula of formula
   | SigmaFormula of formula
   | NablaFormula of formula
   | MuFormula of string * formula
   | NuFormula of string * formula
+  
   | AbstractionFormula of string * formula
   | ApplicationFormula of formula * term list
+  
   | AtomicFormula of term
   | DBFormula of string * int
-
+  
 type fixpoint =
     Inductive
   | CoInductive
@@ -50,7 +53,12 @@ type unifyresult =
     UnifyFailed
   | UnifySucceeded
   | UnifyError of string
-  
+
+val makeAnonymousFormula : unit -> formula
+val makeAnonymousTerm : unit -> term
+val isAnonymousTerm : term -> bool
+val isAnonymousFormula : formula -> bool
+
 val mapFormula : (formula -> formula) -> (term -> term) -> formula -> formula
 val abstract : string -> formula -> formula
 val apply : term list -> formula -> formula

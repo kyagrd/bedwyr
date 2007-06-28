@@ -38,18 +38,23 @@ end
 module Firstorder (Param : ParamSig) (O : Output.Output) : Logic.Logic =
 struct
   let name = Param.name
-  let info = Param.name
+  let info = Param.name ^ "\n"
   let start = info
   
   (********************************************************************
   *Formula:
   * Represent formulae in sequents, with a local context.
   ********************************************************************)
-  type formula = (int * FOA.formula)
-  let getFormulaFormula (_,f) = f
-  let string_of_formula (_,t) = FOA.string_of_formula t
-  let string_of_formula_ast (_,t) = FOA.string_of_formula_ast t
-  let makeFormula t = (0, t)
+  let copy b = ref (!b)
+  type formula = Formula of (int * bool ref * FOA.formula)
+  let string_of_formula (Formula(_,_,t)) = FOA.string_of_formula t
+  let string_of_formula_ast (Formula(_,_,t)) = FOA.string_of_formula_ast t
+  let getFormulaFormula (Formula(_,_,f)) = f
+  let getFormulaFocus (Formula(_,b,_)) = !b
+  let getFormulaFocusRef (Formula(_,b,_)) = b
+  let getFormulaLevel (Formula(i,_,_)) = i
+  let makeFormula t = Formula(0, ref false, t)
+  
   let string_of_definition def = FOA.string_of_definition def
   
   (********************************************************************
@@ -58,12 +63,12 @@ struct
   * with an index used during unification to determine which variables
   * may bind with what terms.
   ********************************************************************)
-  type sequent = (int * formula list * formula list)
-  let makeSequent l r = (0, l, r)
-  let emptySequent = (0, [], [])
-  let getSequentLevel (l,_,_) = l
-  let getSequentLHS (_,l,_) = l
-  let getSequentRHS (_,_,r) = r
+  type sequent = Sequent of (int * formula list * formula list)
+  let makeSequent l r = Sequent(0, l, r)
+  let emptySequent = Sequent(0, [], [])
+  let getSequentLevel (Sequent(l,_,_)) = l
+  let getSequentLHS (Sequent(_,l,_)) = l
+  let getSequentRHS (Sequent(_,_,r)) = r
 
   (********************************************************************
   *Proof:
@@ -119,7 +124,7 @@ struct
   let string_of_sequents sequents =
     let mainseq = List.hd sequents in
     let seqs = List.tl sequents in
-    if (List.length seqs) > 0 then
+    if not (Listutils.empty seqs) then
       (string_of_sequent mainseq) ^ "\n\n" ^ (String.concat "\n\n" (List.map string_of_sequent_rhs seqs)) ^ "\n"
     else
       (string_of_sequent mainseq) ^ "\n"
@@ -230,6 +235,21 @@ struct
   * Parses the argument into a formula.  If successful, returns Some
   * with the parsed formula, otherwise it returns None.
   ********************************************************************)
+  let parseTemplate defs t =
+    try
+      let formula = Firstorderparser.toplevel_template Firstorderlexer.token (Lexing.from_string t) in
+      Some (processFormula defs formula)
+    with
+        FOA.SyntaxError(s) ->
+          (O.error (s ^ ".\n");
+          None)
+      | FOA.SemanticError(s) ->
+          (O.error (s ^ ".\n");
+          None)
+      | Parsing.Parse_error ->
+          (O.error "Syntax error.\n";
+          None)
+
   let parseFormula defs t =        
     try
       let formula = Firstorderparser.toplevel_formula Firstorderlexer.token (Lexing.from_string t) in
@@ -435,7 +455,7 @@ struct
 
   let validSequent session =
     let sequents = (getSessionSequents session) in
-    (List.length sequents > 0)
+    not (Listutils.empty sequents)
 
   let undo session =
     let undo = getSessionUndo session in
@@ -463,12 +483,15 @@ struct
     let rhs' = List.map (fun (i,f) -> (i, copyFormula f)) rhs in
     (i, lhs', rhs')
 
-
+  let exist ts lvl = Term.fresh ~tag:Term.Logic ~lts:ts lvl
   let makeExistentialVar lvl lts =
-  (lvl, Term.fresh ~tag:Term.Logic ~lts lvl)
+    let var = Term.fresh_atom (exist lts lvl) in
+    (lvl, var)
 
+  let univ ts lvl = Term.fresh ~tag:Term.Eigen ~lts:ts lvl
   let makeUniversalVar lvl lts =
-    (lvl + 1, Term.fresh ~tag:Term.Eigen ~lts (lvl + 1))
+    let var = Term.fresh_atom (univ lts lvl) in
+    (lvl + 1, var)
 
   let makeNablaVar lvl i =
     (lvl, i + 1, Term.nabla (i + 1))
@@ -523,6 +546,7 @@ struct
   *   the whole right
   ********************************************************************)
   let matchLeft pattern sequent =
+    let () = O.debug ("Template: " ^ (FOA.string_of_formula_ast pattern) ^ ".\n") in
     let lhs = getSequentLHS sequent in
     let rhs = getSequentRHS sequent in
     let result = findFormula pattern lhs in
@@ -544,38 +568,45 @@ struct
   * the given tactic to the first formula in the sequent that matches
   * the tactic.  If none match, it fails.
   ********************************************************************)
-  let makeTactical name matcher tactic =
+  let makeTactical name matcher tactic session =
     let tactic' = fun sequent sc fc ->
       let sc' s = sc s (makeProofBuilder name) fc in
       match (matcher sequent) with
-        Some(f, zip, lhs, rhs) -> tactic sequent f zip lhs rhs sc' fc
+        Some(f, zip, lhs, rhs) -> tactic session sequent f zip lhs rhs sc' fc
       | None -> fc ()
     in
     (G.makeTactical tactic')
   
   (********************************************************************
-  *makeBinaryTactical:
-  * Given the name of a tactic, a matcher constructore (either matchLeft or
+  *makeSimpleTactical:
+  * Given the name of a tactic, a matcher constructor (either matchLeft or
   * matchRight), a default template for use if none is specified, and
   * a tactic, finds a formula to operate on using the matcher and applies
   * the tactic.
   ********************************************************************)
-  let makeBinaryTactical name (matchbuilder, defaulttemplate) tactic =
+  let makeSimpleTactical name (matchbuilder, defaulttemplate) tactic =
     fun session args ->
+      (*  If no default template was specified and there is no argument
+          template then bail. *)
+      if defaulttemplate = "" && Listutils.empty args then
+        (G.invalidArguments (name ^ ": incorrect number of arguments."))
+      else
+      
       let defaulttemplate =
-        parseFormula (getSessionDefinitions session) defaulttemplate in
+        parseTemplate (getSessionDefinitions session) defaulttemplate in
       if Option.isSome defaulttemplate then
         let defaulttemplate = Option.get defaulttemplate in
         match args with
-            [] -> (makeTactical name (matchbuilder defaulttemplate) tactic)
+            [] ->
+              (makeTactical name (matchbuilder defaulttemplate) tactic session)
           | Absyn.String(s)::[] ->
-              let template = parseFormula (getSessionDefinitions session) s in
+              let template = parseTemplate (getSessionDefinitions session) s in
               if (Option.isSome template) &&
                 (FOA.matchFormula defaulttemplate (Option.get template)) then
-                (makeTactical name (matchbuilder (Option.get template)) tactic)
+                (makeTactical name (matchbuilder (Option.get template)) tactic session)
               else
-                (G.invalidArguments (name ^ ": invalid template."))
-          | _ -> (G.invalidArguments (name ^ ": incorrect number of arguments."))
+                (G.invalidArguments (name ^ ": invalid template"))
+          | _ -> (G.invalidArguments (name ^ ": incorrect number of arguments"))
       else
         (G.invalidArguments (name ^ ": invalid default template."))
   
@@ -587,10 +618,10 @@ struct
         let pretactic = fun sequent sc fc ->
           let rec unifyList sc lhs f =
             match f with
-                (i, FOA.AtomicFormula(t)) ->
+               Formula(i, b, FOA.AtomicFormula(t)) ->
                   (match lhs with
                     [] -> ()
-                  | (i', FOA.AtomicFormula(t'))::ls ->
+                  | Formula(i', b, FOA.AtomicFormula(t'))::ls ->
                       if (not Param.strictNabla) || i = i' then
                         (match (FOA.rightUnify t t') with
                             FOA.UnifySucceeded -> sc ()
@@ -599,14 +630,14 @@ struct
                               (O.error (s ^ ".\n");
                               fc ()))
                       else
-                        (unifyList sc ls f)
+                        fc ()
                   | _::ls ->
                       (unifyList sc ls f))
-              | (i,FOA.ApplicationFormula(FOA.MuFormula(n1,_),args)) ->
+              | Formula(i,b,FOA.ApplicationFormula(FOA.MuFormula(n1,_),args)) ->
                   (match lhs with
                     [] -> ()
-                  | (i', FOA.ApplicationFormula(FOA.MuFormula(n1',_),args'))::ls ->
-                      if n1 = n1' then
+                  | Formula(i',b,FOA.ApplicationFormula(FOA.MuFormula(n1',_),args'))::ls ->
+                      if ((not Param.strictNabla) || (i = i')) && (n1 = n1') then
                         (match (FOA.unifyList FOA.rightUnify args args') with
                             FOA.UnifySucceeded -> sc ()
                           | FOA.UnifyFailed -> (unifyList sc ls f)
@@ -617,11 +648,11 @@ struct
                         (unifyList sc ls f)
                   | _::ls ->
                       (unifyList sc ls f))
-              | (i,FOA.ApplicationFormula(FOA.NuFormula(n1,_),args)) ->
+              | Formula(i,b,FOA.ApplicationFormula(FOA.NuFormula(n1,_),args)) ->
                   (match lhs with
                     [] -> ()
-                  | (i', FOA.ApplicationFormula(FOA.NuFormula(n1',_),args'))::ls ->
-                      if n1 = n1' then
+                  | Formula(i',b,FOA.ApplicationFormula(FOA.NuFormula(n1',_),args'))::ls ->
+                      if ((not Param.strictNabla) || (i = i')) && (n1 = n1') then
                         (match (FOA.unifyList FOA.rightUnify args args') with
                             FOA.UnifySucceeded -> sc ()
                           | FOA.UnifyFailed -> (unifyList sc ls f)
@@ -638,614 +669,541 @@ struct
           let rhs = getSequentRHS sequent in
           
           let sc' () = sc [] (makeProofBuilder "axiom") fc in
+          (*  TODO: Change to continuations.  *)
           (List.iter (unifyList sc' lhs) rhs;
           fc ())
         in
         G.makeTactical pretactic
     | _ -> (G.invalidArguments "axiom")
-  
+    
   (********************************************************************
   *and:
   ********************************************************************)
   let andL =
-    let tactic seq f zip lhs rhs sc fc =
+    let tactic session seq f zip lhs rhs sc fc =
       let lvl = getSequentLevel seq in
       match f with
-        (i, FOA.AndFormula(l,r)) ->
-          let s = (lvl, zip [(i,l);(i, r)], rhs) in
+        Formula(i, b, FOA.AndFormula(l,r)) ->
+          let s = Sequent(lvl, zip [Formula(i,copy b,l);Formula(i,copy b, r)], rhs) in
           sc [s]
       | _ ->
           (O.error "invalid formula.\n";
           fc ())
     in
-    (makeBinaryTactical "and_l" (matchLeft,"_,_") tactic)
+    (makeSimpleTactical "and_l" (matchLeft,"_,_") tactic)
 
   let andR =
-    let tactic seq f zip lhs rhs sc fc =
+    let tactic session seq f zip lhs rhs sc fc =
       let lvl = getSequentLevel seq in
       match f with
-        (i,FOA.AndFormula(l,r)) ->
-          let s1 = (lvl, lhs, zip [(i,l)]) in
-          let s2 = (lvl, lhs, zip [(i,r)]) in
+        Formula(i, b,FOA.AndFormula(l,r)) ->
+          let s1 = Sequent(lvl, lhs, zip [Formula(i,copy b,l)]) in
+          let s2 = Sequent(lvl, lhs, zip [Formula(i,copy b,r)]) in
           sc [s1;s2]
       | _ ->
           (O.error "invalid formula.\n";
           fc ())
     in
-    makeBinaryTactical "and_r" (matchRight,"_,_") tactic
+    makeSimpleTactical "and_r" (matchRight,"_,_") tactic
 
-  let andTactical session args = match args with
-      [] -> (G.orElseTactical (andL session []) (andR session []))
-    | _ -> G.invalidArguments "and"
+  let andTactical session args =
+    (G.orElseTactical (andL session args) (andR session args))
 
   (********************************************************************
   *or:
   ********************************************************************)
   let orL =
-    let tactic seq f zip lhs rhs sc fc =
+    let tactic session seq f zip lhs rhs sc fc =
       let lvl = getSequentLevel seq in
       match f with
-        (i, FOA.OrFormula(l,r)) ->
-          let s1 = (lvl, zip [(i,l)], rhs) in
-          let s2 = (lvl, zip [(i,r)], rhs) in
+        Formula(i, b,FOA.OrFormula(l,r)) ->
+          let s1 = Sequent(lvl, zip [Formula(i,copy b,l)], rhs) in
+          let s2 = Sequent(lvl, zip [Formula(i,copy b,r)], rhs) in
           sc [s1;s2]
       | _ ->
           (O.error "invalid formula.\n";
           fc ())
     in
-    makeBinaryTactical "or_l" (matchLeft, "_;_") tactic
+    makeSimpleTactical "or_l" (matchLeft, "_;_") tactic
 
   let orR =
-    let tactic seq f zip lhs rhs sc fc =
+    let tactic session seq f zip lhs rhs sc fc =
       let lvl = getSequentLevel seq in
       match f with
-        (i, FOA.OrFormula(l,r)) ->
-          let rhs' = zip [(i,l);(i, r)] in
-          let s = (lvl, rhs', lhs) in
+        Formula(i, b, FOA.OrFormula(l,r)) ->
+          let rhs' = zip [Formula(i,copy b,l);Formula(i,copy b, r)] in
+          let s = Sequent(lvl, rhs', lhs) in
           sc [s]
       | _ ->
           (O.error "invalid formula.\n";
           fc ())
     in
-    (makeBinaryTactical "or_r" (matchRight,"_;_") tactic)
+    (makeSimpleTactical "or_r" (matchRight,"_;_") tactic)
 
   let orTactical session args = match args with
-      [] -> (G.orElseTactical (orL session []) (orR session []))
+      [] -> (G.orElseTactical (orL session args) (orR session args))
     | _ -> G.invalidArguments "or"
 
   (********************************************************************
   *implication:
   ********************************************************************)
   let impL =
-    let tactic seq f zip lhs rhs sc fc =
+    let tactic session seq f zip lhs rhs sc fc =
       let lvl = getSequentLevel seq in
       match f with
-        (i, FOA.ImplicationFormula(l,r)) ->
-          let rhs' = (i,l)::rhs in
-          let s1 = (lvl, lhs, rhs') in
-          let s2 = (lvl, zip [(i,r)], rhs) in
+        Formula(i, b, FOA.ImplicationFormula(l,r)) ->
+          let rhs' = Formula(i,copy b,l)::rhs in
+          let s1 = Sequent(lvl, lhs, rhs') in
+          let s2 = Sequent(lvl, zip [Formula(i,copy b,r)], rhs) in
           sc [s1;s2]
       | _ ->
           (O.error "invalid formula.\n";
           fc ())
     in
-    (makeBinaryTactical "imp_l" (matchLeft,"_=>_") tactic)
+    (makeSimpleTactical "imp_l" (matchLeft,"_=>_") tactic)
 
   let impR =
-    let tactic seq f zip lhs rhs sc fc =
+    let tactic session seq f zip lhs rhs sc fc =
       let lvl = getSequentLevel seq in
       match f with
-        (i, FOA.ImplicationFormula(l,r)) ->
-          let lhs' = (i, l)::lhs in
-          let s = (lvl, lhs', zip [(i, r)]) in
+        Formula(i, b, FOA.ImplicationFormula(l,r)) ->
+          let lhs' = Formula(i,copy b, l)::lhs in
+          let s = Sequent(lvl, lhs', zip [Formula(i, copy b, r)]) in
           sc [s]
       | _ ->
           (O.error "invalid formula.\n";
           fc ())
     in
-    (makeBinaryTactical "imp_r" (matchRight,"_=>_") tactic)
+    (makeSimpleTactical "imp_r" (matchRight,"_=>_") tactic)
 
-  let impTactical session args = match args with
-      [] -> (G.orElseTactical (impL session []) (impR session []))
-    | _ -> G.invalidArguments "imp"
-
+  let impTactical session args =
+    (G.orElseTactical (impL session args) (impR session args))
   
-  (*  Additive Or Right  *)
-  let orRleft session args = match args with
-      [] ->
-        let pretactic = fun sequent sc fc ->
-          let rec apply lvl terms rhs lhs =
-            match terms with
-                [] -> fc ()
-              | (i, FOA.OrFormula(l,r))::ts ->
-                  let rhs' = (List.rev_append rhs ts) in
-                  let s = (lvl, lhs, (i,l)::rhs') in
-                  (sc [s] (makeProofBuilder "or_r") fc)
-              | t::ts ->
-                  (apply lvl ts (t::rhs) lhs)
-          in
-          let lhs = getSequentLHS sequent in
-          let rhs = getSequentRHS sequent in
-          let lvl = getSequentLevel sequent in
-          (apply lvl rhs [] lhs)
-        in
-        G.makeTactical pretactic
-    | _ -> G.invalidArguments "or_r"
-  
-  let orRright session args = match args with
-      [] ->
-        let pretactic = fun sequent sc fc ->
-          let rec apply lvl terms rhs lhs =
-            match terms with
-                [] -> fc ()
-              | (i, FOA.OrFormula(l,r))::ts ->
-                  let rhs' = (List.rev_append rhs ts) in
-                  let s = (lvl, lhs, (i,r)::rhs') in
-                  (sc [s] (makeProofBuilder "or_r") fc)
-              | t::ts ->
-                  (apply lvl ts (t::rhs) lhs)
-          in
-          let lhs = getSequentLHS sequent in
-          let rhs = getSequentRHS sequent in
-          let lvl = getSequentLevel sequent in
-          (apply lvl rhs [] lhs)
-        in
-        G.makeTactical pretactic
-    | _ -> G.invalidArguments "or_r"
-  
-  (*  Pi L  *)
-  let piL session args = match args with
-      [] ->
-        let pretactic = fun sequent sc fc ->
-          let rec apply lvl terms lhs rhs =
-            match terms with
-                [] -> fc ()
-              | (i,FOA.PiFormula(f))::ts ->
-                  let lhs' = (List.rev_append lhs ts) in
-                  let (lvl', var) = makeExistentialVar lvl i in
-                  let f' = application [var] f in 
-                  if Option.isSome f' then
-                    let s = (lvl', (i,Option.get f')::lhs', rhs) in
-                    (sc [s] (makeProofBuilder "pi_l") fc)
-                  else
-                    fc ()
-              | t::ts ->
-                  (apply lvl ts (t::lhs) rhs)
-          in
-          let lhs = getSequentLHS sequent in
-          let rhs = getSequentRHS sequent in
-          let lvl = getSequentLevel sequent in
-          (apply lvl lhs [] rhs)
-        in
-        G.makeTactical pretactic
-    | _ -> G.invalidArguments "pi_l"
+  (********************************************************************
+  *pi:
+  ********************************************************************)
+  let piL =
+    let tactic session seq f zip lhs rhs sc fc =
+      let lvl = getSequentLevel seq in
+      match f with
+        Formula(i, b, FOA.PiFormula(f)) ->
+          let (lvl',var) = makeExistentialVar lvl i in
+          let f' = application [var] f in
+          if Option.isSome f' then
+            let s = Sequent(lvl', zip [Formula(i, copy b, Option.get f')], rhs) in
+            sc [s]
+          else
+            fc ()
+      | _ ->
+          (O.error "invalid formula.\n";
+          fc ())
+    in
+    (makeSimpleTactical "pi_l" (matchLeft,"pi _") tactic)
 
-  (* Mu Right *)
-  let muR session args = match args with
-      Absyn.String(n)::[] -> 
-        let pretactic = fun sequent sc fc ->
-          let rec apply lvl terms rhs lhs =
-            match terms with
-                [] -> (O.error ("definition '" ^ n ^ "' not found.\n"); fc ())
-              | (i,FOA.ApplicationFormula(
-                FOA.MuFormula(name,body) as mu, args) as t)::ts ->
-                  if n = name then
-                    let rhs' = (List.rev_append rhs ts) in
-                    let mu' = FOA.applyFixpoint (fun alist -> FOA.ApplicationFormula(mu,alist)) body in
-                    let f' = application args mu' in
-                    if Option.isSome f' then
-                      let s = (lvl, lhs, (i,Option.get f')::rhs') in
-                      (sc [s] (makeProofBuilder "mu_r") fc)
-                    else
-                      (O.error ("'" ^ name ^ "': incorrect number of arguments.");
-                      fc ())
-                  else
-                    (apply lvl ts (t::rhs) lhs)
-              | t::ts ->
-                  (apply lvl ts (t::rhs) lhs)
-          in
-          let lhs = getSequentLHS sequent in
-          let rhs = getSequentRHS sequent in
-          let lvl = getSequentLevel sequent in
-          (apply lvl rhs [] lhs)
-        in
-        G.makeTactical pretactic
-    | _ -> G.invalidArguments "mu_r"
+  let piR =
+    let tactic session seq f zip lhs rhs sc fc =
+      let lvl = getSequentLevel seq in
+      match f with
+        Formula(i, b, FOA.PiFormula(f)) ->
+          let (lvl',var) = makeUniversalVar lvl i in
+          let f' = application [var] f in
+          if Option.isSome f' then
+            let s = Sequent(lvl', lhs, zip [Formula(i, copy b, Option.get f')]) in
+            sc [s]
+          else
+            fc ()
+      | _ ->
+          (O.error "invalid formula.\n";
+          fc ())
+    in
+    (makeSimpleTactical "pi_r" (matchRight,"pi _") tactic)
 
-  (*  Mu Left -- does not check monotonicity *)
-  let muL session args = match args with
-      Absyn.String(n)::[] -> 
-        let pretactic = fun sequent sc fc ->
-          let rec apply lvl terms lhs rhs =
-            match terms with
-                [] -> (O.error ("definition '" ^ n ^ "' not found.\n"); fc ())
-              | ((i,FOA.ApplicationFormula(FOA.MuFormula(name,body)as mu,args)) as t)::ts ->
-                  if n = name then
-                    let lhs' = (List.rev_append lhs ts) in
-                    let mu' = FOA.applyFixpoint (fun args -> FOA.ApplicationFormula(mu,args)) body in
-                    let f' = application args mu' in
-                    if Option.isSome f' then
-                      let s = (lvl, (i,Option.get f')::lhs', rhs) in
-                      (sc [s] (makeProofBuilder "mu_l") fc)
-                    else
-                      (O.error ("'" ^ name ^ "': incorrect number of arguments.");
-                      fc ())
-                  else
-                    (apply lvl ts (t::lhs) rhs)
-              | t::ts ->
-                  (apply lvl ts (t::lhs) rhs)
-          in
-          let lhs = getSequentLHS sequent in
-          let rhs = getSequentRHS sequent in
-          let lvl = getSequentLevel sequent in
-          (apply lvl lhs [] rhs)
-        in
-        G.makeTactical pretactic
-    | _ -> G.invalidArguments "mu_l"
+  let piTactical session args =
+    (G.orElseTactical (piR session args) (piL session args))
 
-  (*  Induction *)
-  let inductionTactical session args = match args with
-      Absyn.String(n)::Absyn.String(s)::[] ->
-        let pretactic = fun sequent sc fc ->
-          let rec makeArgs lvl lts args =
-            match args with
-              [] -> (lvl, [])
-            | a::aa ->
-                let (lvl', a') = makeUniversalVar lvl lts in
-                let (lvl'', aa') = makeArgs lvl' lts aa in
-                (lvl'',  a'::aa')
-          in
-          
-          let rec apply lvl terms lhs rhs =
-            match terms with
-                [] -> (O.error ("definition '" ^ n ^ "' not found.\n"); fc ())
-              | ((i,FOA.ApplicationFormula(FOA.MuFormula(name,mu),args)) as t)::ts ->
-                  if n = name then
-                    let lhs' = (List.rev_append lhs ts) in
-                    
-                    let s' = parseFormula (getSessionDefinitions session) s in
-                    if Option.isSome s' then
-                      let s' = FOA.renameAbstractions (Option.get s') in
-                      let f' = application args s' in
-                      if Option.isSome f' then
-                        let f' = Option.get f' in
-                        let s1 = (lvl, (i,f')::lhs', rhs) in
+  (********************************************************************
+  *sigma:
+  ********************************************************************)
+  let sigmaL =
+    let tactic session seq f zip lhs rhs sc fc =
+      let lvl = getSequentLevel seq in
+      match f with
+        Formula(i, b, FOA.SigmaFormula(f)) ->
+          let (lvl',var) = makeUniversalVar lvl i in
+          let f' = application [var] f in
+          if Option.isSome f' then
+            let s = Sequent(lvl', zip [Formula(i, copy b, Option.get f')], rhs) in
+            sc [s]
+          else
+            fc ()
+      | _ ->
+          (O.error "invalid formula.\n";
+          fc ())
+    in
+    (makeSimpleTactical "sigma_l" (matchLeft,"sigma _") tactic)
 
-                        let (lvl', args') = makeArgs lvl i args in
-                        
-                        let r = application args' s' in
-                        let mu' = application args' mu in
-                        
-                        if (Option.isSome r) && (Option.isSome mu') then
-                          let l = FOA.applyFixpoint (fun alist -> Option.get (application alist s')) (Option.get mu') in
-                          let s2 = (lvl', [(i, l)], [(i, Option.get r)]) in
-                          (sc [s1;s2] (makeProofBuilder "induction") fc)
-                        else
-                          (O.error ("incorrect number of arguments.\n");
-                          fc ())
-                      else
-                        fc ()
-                    else
-                      (O.error ("unable to parse argument formula: " ^ s ^ ".\n");
-                      fc ())
-                  else
-                    (apply lvl ts (t::lhs) rhs)
-              | t::ts ->
-                  (apply lvl ts (t::lhs) rhs)
-          in
-          let lhs = getSequentLHS sequent in
-          let rhs = getSequentRHS sequent in
-          let lvl = getSequentLevel sequent in
-          (apply lvl lhs [] rhs)
-        in
-        G.makeTactical pretactic
-    | _ -> G.invalidArguments "induction"
+  let sigmaR =
+    let tactic session seq f zip lhs rhs sc fc =
+      let lvl = getSequentLevel seq in
+      match f with
+        Formula(i, b, FOA.SigmaFormula(f)) ->
+          let (lvl',var) = makeExistentialVar lvl i in
+          let f' = application [var] f in
+          if Option.isSome f' then
+            let s = Sequent(lvl', lhs, zip [Formula(i, copy b, Option.get f')]) in
+            sc [s]
+          else
+            fc ()
+      | _ ->
+          (O.error "invalid formula.\n";
+          fc ())
+    in
+    (makeSimpleTactical "sigma_r" (matchRight,"sigma _") tactic)
 
-  (*  Nu Left *)
-  let nuL session args = match args with
-      Absyn.String(n)::[] -> 
-        let pretactic = fun sequent sc fc ->
-          let rec apply lvl terms lhs rhs =
-            match terms with
-                [] -> (O.error ("definition '" ^ n ^ "' not found.\n"); fc ())
-              | ((i,FOA.ApplicationFormula(FOA.NuFormula(name,body)as nu,args)) as t)::ts ->
-                  if n = name then
-                    let lhs' = (List.rev_append lhs ts) in
-                    let nu' = FOA.applyFixpoint (fun args -> FOA.ApplicationFormula(nu,args)) body in
-                    let f' = application args nu' in
-                    if Option.isSome f' then
-                      let s = (lvl, (i,Option.get f')::lhs', rhs) in
-                      (sc [s] (makeProofBuilder "nu_r") fc)
-                    else
-                      (O.error ("'" ^ name ^ "': incorrect number of arguments.");
-                      fc ())
-                  else
-                    (apply lvl ts (t::lhs) rhs)
-              | t::ts ->
-                  (apply lvl ts (t::lhs) rhs)
-          in
-          let lhs = getSequentLHS sequent in
-          let rhs = getSequentRHS sequent in
-          let lvl = getSequentLevel sequent in
-          (apply lvl lhs [] rhs)
-        in
-        G.makeTactical pretactic
-    | _ -> G.invalidArguments "nu_l"
+  let sigmaTactical session args =
+    (G.orElseTactical (sigmaL session args) (sigmaR session args))
 
-  (*  Coinduction *)
-  let coinductionTactical session args = match args with
-      Absyn.String(n)::Absyn.String(s)::[] ->
-        let pretactic = fun sequent sc fc ->
-          let rec makeArgs lvl lts args =
-            match args with
-              [] -> (lvl, [])
-            | a::aa ->
-                let (lvl', a') = makeUniversalVar lvl lts in
-                let (lvl'', aa') = makeArgs lvl' lts aa in
-                (lvl'',  a'::aa')
-          in
-          
-          let rec apply lvl terms rhs lhs =
-            match terms with
-                [] -> (O.error ("definition '" ^ n ^ "' not found.\n"); fc ())
-              | ((i,FOA.ApplicationFormula(FOA.NuFormula(name,nu),args)) as t)::ts ->
-                  if n = name then
-                    let rhs' = (List.rev_append rhs ts) in
-                    
-                    let s' = parseFormula (getSessionDefinitions session) s in
-                    if Option.isSome s' then
-                      let s' = FOA.renameAbstractions (Option.get s') in
-                      let f' = application args s' in
-                      if Option.isSome f' then
-                        let f' = Option.get f' in
-                        let s1 = (lvl, lhs, (i,f')::rhs') in
+  (********************************************************************
+  *nabla:
+  ********************************************************************)
+  let nablaL =
+    let tactic session seq f zip lhs rhs sc fc =
+      let lvl = getSequentLevel seq in
+      match f with
+        Formula(i, b, FOA.NablaFormula(f)) ->
+          let (lvl',i',var) = makeNablaVar lvl i in
+          let f' = application [var] f in
+          if Option.isSome f' then
+            let s = Sequent(lvl', zip [Formula(i', copy b, Option.get f')], rhs) in
+            sc [s]
+          else
+            fc ()
+      | _ ->
+          (O.error "invalid formula.\n";
+          fc ())
+    in
+    (makeSimpleTactical "nabla_l" (matchLeft, "nabla _") tactic)
 
-                        let (lvl', args') = makeArgs lvl i args in
-                        
-                        let l = application args' s' in
-                        let nu' = FOA.applyFixpoint (fun alist -> Option.get (application alist s')) nu in
-                        let r = application args' nu' in
-                        
-                        if (Option.isSome r) && (Option.isSome l) then
-                          let s2 = (lvl', [(i, Option.get l)], [(i, Option.get r)]) in
-                          (sc [s1;s2] (makeProofBuilder "coinduction") fc)
-                        else
-                          (O.error ("incorrect number of arguments.\n");
-                          fc ())
-                      else
-                        fc ()
-                    else
-                      (O.error ("unable to parse argument formula: " ^ s ^ ".\n");
-                      fc ())
-                  else
-                    (apply lvl ts (t::rhs) lhs)
-              | t::ts ->
-                  (apply lvl ts (t::rhs) lhs)
-          in
-          let lhs = getSequentLHS sequent in
-          let rhs = getSequentRHS sequent in
-          let lvl = getSequentLevel sequent in
-          (apply lvl rhs [] lhs)
-        in
-        G.makeTactical pretactic
-    | _ -> G.invalidArguments "coinduction"
+  let nablaR =
+    let tactic session seq f zip lhs rhs sc fc =
+      let lvl = getSequentLevel seq in
+      match f with
+        Formula(i, b, FOA.NablaFormula(f)) ->
+          let (lvl',i',var) = makeNablaVar lvl i in
+          let f' = application [var] f in
+          if Option.isSome f' then
+            let s = Sequent(lvl', lhs, zip [Formula(i', copy b, Option.get f')]) in
+            sc [s]
+          else
+            fc ()
+      | _ ->
+          (O.error "invalid formula.\n";
+          fc ())
+    in
+    (makeSimpleTactical "nabla_r" (matchRight,"nabla _") tactic)
 
-  (*  Pi Right  *)
-  let piR session args = match args with
-      [] -> 
-        let pretactic = fun sequent sc fc ->
-          let rec apply lvl terms rhs lhs =
-            match terms with
-                [] -> fc ()
-              | (i,FOA.PiFormula(f))::ts ->
-                  let rhs' = (List.rev_append rhs ts) in
-                  let (lvl', var) = makeUniversalVar lvl i in
-                  let f' = application [var] f in
-                  if Option.isSome f' then
-                    let s = (lvl', lhs, (i,Option.get f')::rhs') in
-                    (sc [s] (makeProofBuilder "pi_r") fc)
-                  else
-                    fc ()
-              | t::ts ->
-                  (apply lvl ts (t::rhs) lhs)
-          in
-          let lhs = getSequentLHS sequent in
-          let rhs = getSequentRHS sequent in
-          let lvl = getSequentLevel sequent in
-          (apply lvl rhs [] lhs)
-        in
-        G.makeTactical pretactic
-    | _ -> G.invalidArguments "pi_r"
+  let nablaTactical session args =
+    (G.orElseTactical (nablaL session args) (nablaR session args))
+    
+  (********************************************************************
+  *mu:
+  ********************************************************************)
+  let muR =
+    let tactic session seq f zip lhs rhs sc fc =
+      let lvl = getSequentLevel seq in
+      match f with
+        Formula(i, b, FOA.ApplicationFormula(
+          FOA.MuFormula(name,body) as mu, args)) ->
+            let mu' = FOA.applyFixpoint (fun alist -> FOA.ApplicationFormula(mu,alist)) body in
+            let f' = application args mu' in
+            if Option.isSome f' then
+              let s = Sequent(lvl, lhs, zip [Formula(i,copy b,Option.get f')]) in
+              (sc [s])
+            else
+              (O.error ("'" ^ name ^ "': incorrect number of arguments.");
+              fc ())
+      | _ ->
+          (O.error "invalid formula.\n";
+          fc ())
+    in
+    (makeSimpleTactical "mu_r" (matchRight, "mu _") tactic)
 
-  (*  Sigma Left *)
-  let sigmaL session args = match args with
-      [] ->
-        let pretactic = fun sequent sc fc ->
-          let rec apply lvl terms lhs rhs =
-            match terms with
-                [] -> fc ()
-              | (i,FOA.SigmaFormula(f))::ts ->
-                  let lhs' = (List.rev_append lhs ts) in
-                  let (lvl', var) = makeUniversalVar lvl i in
-                  let f' = application [var] f in
-                  if (Option.isSome f') then
-                    let s = (lvl', (i,Option.get f')::lhs', rhs) in
-                    (sc [s] (makeProofBuilder "sigma_l") fc)
-                  else
-                    fc ()
-              | t::ts ->
-                  (apply lvl ts (t::lhs) rhs)
-          in
-          let lhs = getSequentLHS sequent in
-          let rhs = getSequentRHS sequent in
-          let lvl = getSequentLevel sequent in
-          (apply lvl lhs [] rhs)
-        in
-        G.makeTactical pretactic
-    | _ -> G.invalidArguments "sigma_l"
+  let muL =
+    let tactic session seq f zip lhs rhs sc fc =
+      let lvl = getSequentLevel seq in
+      match f with
+        Formula(i, b, FOA.ApplicationFormula(
+          FOA.MuFormula(name,body) as mu, args)) ->
+            let mu' = FOA.applyFixpoint (fun alist -> FOA.ApplicationFormula(mu,alist)) body in
+            let f' = application args mu' in
+            if Option.isSome f' then
+              let s = Sequent(lvl, zip [Formula(i,copy b,Option.get f')], rhs) in
+              (sc [s])
+            else
+              (O.error ("'" ^ name ^ "': incorrect number of arguments.");
+              fc ())
+      | _ ->
+          (O.error "invalid formula.\n";
+          fc ())
+    in
+    (makeSimpleTactical "mu_l" (matchLeft, "mu _") tactic)
 
-  (*  Sigma Right *)
-  let sigmaR session args = match args with
-      [] -> 
-        let pretactic = fun sequent sc fc ->
-          let rec apply lvl terms rhs lhs =
-            match terms with
-                [] -> fc ()
-              | (i,FOA.SigmaFormula(f))::ts ->
-                  let rhs' = (List.rev_append ts rhs) in
-                  let (lvl', var) = makeExistentialVar lvl i in
-                  let f' = application [var] f in
-                  if Option.isSome f' then
-                    let s = (lvl', lhs, (i,Option.get f')::rhs') in
-                    (sc [s] (makeProofBuilder "sigma_r") fc)
-                  else
-                    fc ()
-              | t::ts ->
-                  (apply lvl ts (t::rhs) lhs)
-          in
-          let lhs = getSequentLHS sequent in
-          let rhs = getSequentRHS sequent in
-          let lvl = getSequentLevel sequent in
-          (apply lvl rhs [] lhs)
-        in
-        G.makeTactical pretactic
-    | _ -> G.invalidArguments "sigma_r"
+  let muTactical session args =
+    (G.orElseTactical (muL session args) (muR session args))
 
-  (*  Nabla Left  *)
-  let nablaL session args = match args with
-      [] ->
-        let pretactic = fun sequent sc fc ->
-          let rec apply lvl terms lhs rhs =
-            match terms with
-                [] -> fc ()
-              | (i,FOA.NablaFormula(f))::ts ->
-                  let lhs' = (List.rev_append lhs ts) in
-                  let (lvl', i', var) = makeNablaVar lvl i in
-                  let f' = application [var] f in
-                  if Option.isSome f' then
-                    let s = (lvl', (i',Option.get f')::lhs', rhs) in
-                    (sc [s] (makeProofBuilder "nabla_l") fc)
-                  else
-                    fc ()
-              | t::ts ->
-                  (apply lvl ts (t::lhs) ts)
-          in
-          let lhs = getSequentLHS sequent in
-          let rhs = getSequentRHS sequent in
-          let lvl = getSequentLevel sequent in
-          (apply lvl lhs [] rhs)
-        in
-        G.makeTactical pretactic
-    | _ -> G.invalidArguments "nabla_l"
 
-  (*  Nabla Right *)
-  let nablaR session args = match args with
-      [] -> 
-        let pretactic = fun sequent sc fc ->
-          let rec apply lvl terms rhs lhs =
-            match terms with
-                [] -> fc ()
-              | (i,FOA.NablaFormula(f))::ts ->
-                  let rhs' = (List.rev_append rhs ts) in
-                  let (lvl', i', var) = makeNablaVar lvl i in
-                  let f' = application [var] f in
-                  if Option.isSome f' then
-                    let s = (lvl', lhs, (i',Option.get f')::rhs') in
-                    (sc [s] (makeProofBuilder "nabla_r") fc)
-                  else
-                    fc ()
-              | t::ts ->
-                  (apply lvl ts (t::rhs) lhs)
-          in
-          let lhs = getSequentLHS sequent in
-          let rhs = getSequentRHS sequent in
-          let lvl = getSequentLevel sequent in
-          (apply lvl rhs [] lhs)
-        in
-        G.makeTactical pretactic
-    | _ -> G.invalidArguments "nabla_r"
-  
-  (*  Equality Right *)
-  let eqR session args = match args with
-      [] -> 
-        let pretactic = fun sequent sc fc ->
-          let rec apply lvl terms =
-            match terms with
-                [] -> fc ()
-              | (i,FOA.EqualityFormula(t1, t2))::ts ->                  
-                  (match (FOA.rightUnify t1 t2) with
-                      FOA.UnifySucceeded -> (sc [] (makeProofBuilder "eq_r") fc)
-                    | FOA.UnifyFailed -> (apply lvl ts)
-                    | FOA.UnifyError(s) ->
-                          (O.error (s ^ ".\n");
-                          fc ()))
-              | t::ts ->
-                  (apply lvl ts)
-          in
-          let rhs = getSequentRHS sequent in
-          let lvl = getSequentLevel sequent in
-          (apply lvl rhs)
-        in
-        G.makeTactical pretactic
-    | _ -> G.invalidArguments "eq_r"
+  (******************************************************************
+  *induction:
+  ******************************************************************)
+  let inductionTactical session args =
+    (******************************************************************
+    *makeArgs:
+    * Makes a list the same length as args of logic variables.
+    ******************************************************************)
+    let rec makeArgs lvl lts args =
+      match args with
+        [] -> (lvl, [])
+      | a::aa ->
+          let (lvl', a') = makeUniversalVar lvl lts in
+          let (lvl'', aa') = makeArgs lvl' lts aa in
+          (lvl'',  a'::aa')
+    in
+    
+    (******************************************************************
+    *matchTemplate:
+    * Finds the correct formula to apply induction to and calls
+    * ind on it.
+    ******************************************************************)
+    let rec matchTemplate template inv = fun sequent sc fc ->
+      let lvl = getSequentLevel sequent in
+      (****************************************************************
+      *ind:
+      * Parses the invariant and calls sc with the generated sequents.
+      ****************************************************************)
+      let ind f zip lhs rhs sc fc =
+        match f with
+          Formula(i,b,FOA.ApplicationFormula(FOA.MuFormula(name,mu),args)) ->
+            let s' = parseFormula (getSessionDefinitions session) inv in
+            if Option.isSome s' then
+              let s' = FOA.renameAbstractions (Option.get s') in
+              let f' = application args s' in
+              if Option.isSome f' then
+                let f' = Option.get f' in
+                let s1 = Sequent(lvl, zip [Formula(i,copy b,f')], rhs) in
 
-  (*  Equality Left *)
-  let eqL session args = match args with
-      [] -> 
-        let pretactic = fun sequent sc fc ->
-          let rec apply lvl terms lhs rhs =
-            match terms with
-                [] -> fc ()
-              | (i,FOA.EqualityFormula(t1, t2))::ts ->
-                  (match (FOA.leftUnify t1 t2) with
-                      FOA.UnifyFailed -> (sc [] (makeProofBuilder "eq_l") fc)
-                    | FOA.UnifySucceeded ->
-                        let lhs' = (List.rev_append lhs ts) in
-                        let s = (lvl, lhs', rhs) in
-                        (sc [s] (makeProofBuilder "eq_l") fc)
-                    | FOA.UnifyError(s) ->
-                        (O.error (s ^ ".\n");
-                        fc ()))
-              | t::ts ->
-                  (apply lvl ts (t::lhs) rhs)
-          in
-          let sequent' = copySequent sequent in
-          let lhs = getSequentLHS sequent' in
-          let rhs = getSequentRHS sequent' in
-          let lvl = getSequentLevel sequent' in
-          (apply lvl lhs [] rhs)
-        in
-        G.makeTactical pretactic
-    | _ -> G.invalidArguments "eq_l"
+                let (lvl', args') = makeArgs lvl i args in
+                
+                let r = application args' s' in
+                let mu' = application args' mu in
+                
+                if (Option.isSome r) && (Option.isSome mu') then
+                  let l = FOA.applyFixpoint (fun alist -> Option.get (application alist s')) (Option.get mu') in
+                  let s2 = Sequent(lvl', [Formula(i, copy b, l)], [Formula(i, copy b, Option.get r)]) in
+                  (sc [s1;s2])
+                else
+                  (O.error ("incorrect number of arguments.\n");
+                  fc ())
+              else
+                (O.error ("invariant requires incorrect number of arguments.\n");
+                fc ())
+            else
+              (O.error ("unable to parse invariant: " ^ inv ^ ".\n");
+              fc ())
+        | _ ->
+            (O.error "invalid formula.\n";
+            fc ())
+      in
+      let sc' s = sc s (makeProofBuilder "induction") fc in
+      match (matchLeft template sequent) with
+        Some(f,zip,lhs,rhs) -> (ind f zip lhs rhs sc' fc)
+      | None -> fc ()
+    in
+    
+    match args with
+        [] -> (G.invalidArguments "no invariant specified.")
+      | Absyn.String(inv)::[] ->
+          let template = FOA.ApplicationFormula(FOA.makeAnonymousFormula (), []) in 
+          G.makeTactical (matchTemplate template inv)
+      | Absyn.String(inv)::Absyn.String(template)::[] ->
+          let template = parseFormula (getSessionDefinitions session) template in
+          if (Option.isSome template) then
+            G.makeTactical (matchTemplate (Option.get template) inv)
+          else
+            (O.error "induction: unable to parse template.\n";
+            G.failureTactical)
+      | _ -> G.invalidArguments "induction: incorrect number of arguments."
+  (********************************************************************
+  *nu:
+  ********************************************************************)
+  let nuR =
+    let tactic session seq f zip lhs rhs sc fc =
+      let lvl = getSequentLevel seq in
+      match f with
+        Formula(i, b, FOA.ApplicationFormula(
+          FOA.NuFormula(name,body) as mu, args)) ->
+            let mu' = FOA.applyFixpoint (fun alist -> FOA.ApplicationFormula(mu,alist)) body in
+            let f' = application args mu' in
+            if Option.isSome f' then
+              let s = Sequent(lvl, lhs, zip [Formula(i,copy b,Option.get f')]) in
+              (sc [s])
+            else
+              (O.error ("'" ^ name ^ "': incorrect number of arguments.");
+              fc ())
+      | _ ->
+          (O.error "invalid formula.\n";
+          fc ())
+    in
+    (makeSimpleTactical "nu_r" (matchRight, "nu _") tactic)
 
-  let orTactical session args = match args with
-      [] -> (G.orElseTactical (orL session []) (orR session []))
-    | _ -> G.invalidArguments "or"
+  let nuL =
+    let tactic session seq f zip lhs rhs sc fc =
+      let lvl = getSequentLevel seq in
+      match f with
+        Formula(i, b, FOA.ApplicationFormula(
+          FOA.NuFormula(name,body) as mu, args)) ->
+            let mu' = FOA.applyFixpoint (fun alist -> FOA.ApplicationFormula(mu,alist)) body in
+            let f' = application args mu' in
+            if Option.isSome f' then
+              let s = Sequent(lvl, zip [Formula(i,copy b,Option.get f')], rhs) in
+              (sc [s])
+            else
+              (O.error ("'" ^ name ^ "': incorrect number of arguments.");
+              fc ())
+      | _ ->
+          (O.error "invalid formula.\n";
+          fc ())
+    in
+    (makeSimpleTactical "nu_l" (matchLeft, "nu _") tactic)
 
-  let andTactical session args = match args with
-      [] -> (G.orElseTactical (andL session []) (andR session []))
-    | _ -> G.invalidArguments "and"
+  let nuTactical session args =
+    (G.orElseTactical (nuL session args) (nuR session args))
 
-  let impTactical session args = match args with
-      [] -> (G.orElseTactical (impL session []) (impR session []))
-    | _ -> G.invalidArguments "imp"
-  
-  let piTactical session args = match args with
-      [] -> (G.orElseTactical (piR session []) (piL session []))
-    | _ -> G.invalidArguments "pi"
+  (******************************************************************
+  *induction:
+  ******************************************************************)
+  let coinductionTactical session args =
+    (******************************************************************
+    *makeArgs:
+    * Makes a list the same length as args of logic variables.
+    ******************************************************************)
+    let rec makeArgs lvl lts args =
+      match args with
+        [] -> (lvl, [])
+      | a::aa ->
+          let (lvl', a') = makeUniversalVar lvl lts in
+          let (lvl'', aa') = makeArgs lvl' lts aa in
+          (lvl'',  a'::aa')
+    in
+    
+    (******************************************************************
+    *matchTemplate:
+    * Finds the correct formula to apply induction to and calls
+    * ind on it.
+    ******************************************************************)
+    let rec matchTemplate template inv = fun sequent sc fc ->
+      let lvl = getSequentLevel sequent in
+      (****************************************************************
+      *coind:
+      * Parses the invariant and calls sc with the generated sequents.
+      ****************************************************************)
+      let coind f zip lhs rhs sc fc =
+        match f with
+          Formula(i,b,FOA.ApplicationFormula(FOA.NuFormula(name,mu),args)) ->
+            let s' = parseFormula (getSessionDefinitions session) inv in
+            if Option.isSome s' then
+              let s' = FOA.renameAbstractions (Option.get s') in
+              let f' = application args s' in
+              if Option.isSome f' then
+                let f' = Option.get f' in
+                let s1 = Sequent(lvl, lhs, zip [Formula(i,copy b,f')]) in
 
-  let sigmaTactical session args = match args with
-      [] -> (G.orElseTactical (sigmaL session []) (sigmaR session []))
-    | _ -> G.invalidArguments "sigma"
+                let (lvl', args') = makeArgs lvl i args in
+                
+                let r = application args' s' in
+                let mu' = application args' mu in
+                
+                if (Option.isSome r) && (Option.isSome mu') then
+                  let l = FOA.applyFixpoint (fun alist -> Option.get (application alist s')) (Option.get mu') in
+                  let s2 = Sequent(lvl', [Formula(i, copy b, Option.get r)], [Formula(i, copy b, l)]) in
+                  (sc [s1;s2])
+                else
+                  (O.error ("incorrect number of arguments.\n");
+                  fc ())
+              else
+                (O.error ("invariant requires incorrect number of arguments.\n");
+                fc ())
+            else
+              (O.error ("unable to parse invariant: " ^ inv ^ ".\n");
+              fc ())
+        | _ ->
+            (O.error "invalid formula.\n";
+            fc ())
+      in
+      let sc' s = sc s (makeProofBuilder "induction") fc in
+      match (matchRight template sequent) with
+        Some(f,zip,lhs,rhs) -> (coind f zip lhs rhs sc' fc)
+      | None -> fc ()
+    in
+    
+    match args with
+        [] -> (G.invalidArguments "no invariant specified.")
+      | Absyn.String(inv)::[] ->
+          let template = FOA.ApplicationFormula(FOA.makeAnonymousFormula (), []) in 
+          G.makeTactical (matchTemplate template inv)
+      | Absyn.String(inv)::Absyn.String(template)::[] ->
+          let template = parseFormula (getSessionDefinitions session) template in
+          if (Option.isSome template) then
+            G.makeTactical (matchTemplate (Option.get template) inv)
+          else
+            (O.error "coinduction: unable to parse template.\n";
+            G.failureTactical)
+      | _ -> (G.invalidArguments "coinduction: incorrect number of arguments.")
 
-  let nablaTactical session args = match args with
-      [] -> (G.orElseTactical (nablaL session []) (nablaR session []))
-    | _ -> G.invalidArguments "nabla"
+  (********************************************************************
+  *eq:
+  ********************************************************************)
+  let eqL =
+    let tactic session seq f zip lhs rhs sc fc =
+      let lvl = getSequentLevel seq in
+      match f with
+        Formula(i, b, FOA.EqualityFormula(t1, t2)) ->
+          (match (FOA.leftUnify t1 t2) with
+              FOA.UnifyFailed -> (sc [])
+            | FOA.UnifySucceeded ->
+                let s = Sequent(lvl, zip [], rhs) in
+                (sc [s])
+            | FOA.UnifyError(s) ->
+                (O.error (s ^ ".\n");
+                fc ()))
+      | _ ->
+          (O.error "invalid formula.\n";
+          fc ())
+    in
+    (makeSimpleTactical "eq_l" (matchLeft, "_ = _") tactic)
 
-  let eqTactical session args = match args with
-      [] -> (G.orElseTactical (eqL session []) (eqR session []))
-    | _ -> G.invalidArguments "eq"
+  let eqR =
+    let tactic session seq f zip lhs rhs sc fc =
+      match f with
+        Formula(i, b, FOA.EqualityFormula(t1,t2)) ->
+          (match (FOA.rightUnify t1 t2) with
+              FOA.UnifySucceeded -> (sc [])
+            | FOA.UnifyFailed -> fc ()
+            | FOA.UnifyError(s) ->
+                  (O.error (s ^ ".\n");
+                  fc ()))
+      | _ ->
+          (O.error "invalid formula.\n";
+          fc ())
+    in
+    (makeSimpleTactical "eq_r" (matchRight,"_ = _") tactic)
+    
+  let eqTactical session args =
+      (G.orElseTactical (eqL session args) (eqR session args))
 
+  (********************************************************************
+  *examineTactical:
+  * Prints the ast of all sequents.
+  ********************************************************************)
   let examineTactical session args = match args with
       [] -> fun sequents sc fc ->
             let sequent = List.hd sequents in
@@ -1257,6 +1215,32 @@ struct
             (sc [] sequents Logic.idProofBuilder fc))
     | _ -> G.invalidArguments "examine"
 
+  (********************************************************************
+  *contraction:
+  ********************************************************************)
+  let contractL =
+    let tactic session seq f zip lhs rhs sc fc =
+      let lvl = getSequentLevel seq in
+      let s = Sequent(lvl, (zip [f;f]), rhs) in
+      sc [s]
+    in
+    (makeSimpleTactical "contract_l" (matchLeft, "") tactic)
+  
+  let contractR =
+    let tactic session seq f zip lhs rhs sc fc =
+      let lvl = getSequentLevel seq in
+      let s = Sequent(lvl, lhs, (zip [f;f])) in
+      sc [s]
+    in
+    (makeSimpleTactical "contract_r" (matchRight, "") tactic)
+  
+  let contractTactical session args =
+    (G.orElseTactical (contractL session args) (contractR session args))
+  
+  (********************************************************************
+  *simplify:
+  * Applies all asynchronous rules.
+  ********************************************************************)
   let simplifyTactical session args = match args with
       [] ->
         let l = [
@@ -1273,6 +1257,38 @@ struct
         (G.repeatTactical allrules)
     | _ -> G.invalidArguments "simplify"
 
+  
+  (********************************************************************
+  *Additive Or:
+  ********************************************************************)
+  let orRRight =
+    let tactic session seq f zip lhs rhs sc fc =
+      let lvl = getSequentLevel seq in
+      match f with
+        Formula(i, b, FOA.OrFormula(l,r)) ->
+          let rhs' = zip [Formula(i,copy b, r)] in
+          let s = Sequent(lvl, lhs, rhs') in
+          sc [s]
+      | _ ->
+          (O.error "invalid formula.\n";
+          fc ())
+    in
+    (makeSimpleTactical "right" (matchRight,"_;_") tactic)
+    
+  let orRLeft =
+    let tactic session seq f zip lhs rhs sc fc =
+      let lvl = getSequentLevel seq in
+      match f with
+        Formula(i, b, FOA.OrFormula(l,r)) ->
+          let rhs' = zip [Formula(i,copy b, l)] in
+          let s = Sequent(lvl, lhs, rhs') in
+          sc [s]
+      | _ ->
+          (O.error "invalid formula.\n";
+          fc ())
+    in
+    (makeSimpleTactical "left" (matchRight,"_;_") tactic)
+ 
   (********************************************************************
   *tacticals:
   * The exported table of tacticals.  These tacticals are the only
@@ -1300,8 +1316,8 @@ struct
     let ts = Logic.Table.add "or_l" orL ts in
     let ts =
       if Param.intuitionistic then
-        Logic.Table.add "left" orRleft
-          (Logic.Table.add "right" orRright ts)
+        Logic.Table.add "left" orRLeft
+          (Logic.Table.add "right" orRRight ts)
       else
         Logic.Table.add "or_r" orR ts
     in
@@ -1350,7 +1366,9 @@ struct
   * Provides a new sequent.  This amounts to returning the empty
   * sequent.
   ********************************************************************)
-  let reset () = emptySession
+  let reset () =
+    (Term.reset_namespace ();
+    emptySession)
 
 end
 

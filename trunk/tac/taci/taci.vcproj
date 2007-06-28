@@ -192,6 +192,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\listutils.ml"
+				>
+			</File>
+			<File
 				RelativePath=".\logic.ml"
 				>
 			</File>
@@ -235,6 +239,10 @@
 			</File>
 			<File
 				RelativePath=".\interpreter.mli"
+				>
+			</File>
+			<File
+				RelativePath=".\listutils.mli"
 				>
 			</File>
 			<File

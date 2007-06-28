@@ -174,7 +174,7 @@ let getAbsName () = "x"
   * ensures uniqueness. We should attach useful names as well, but this 
   * will do for the moment. 
   * I hide [varcount] cause resetting it hurts the consistency of the system. *)
-let fresh =
+let fresh' =
   let varcount = ref 0 in
     fun () ->
       let i = !varcount in
@@ -182,9 +182,14 @@ let fresh =
         i
 
 let fresh ?(tag=Logic) ?(lts=0) ts =
-  let i = fresh () in
+  let i = fresh' () in
   let name = (prefix tag) ^ (string_of_int i) in
     Ptr (ref (V { print=name ; name=name ; ts=ts ; lts=lts ; tag=tag }))
+
+let freshWithPrintName pn ?(tag=Logic) ?(lts=0) ts =
+  let i = fresh' () in
+  let name = (prefix tag) ^ (string_of_int i) in
+    Ptr (ref (V { print=pn ; name=name ; ts=ts ; lts=lts ; tag=tag }))
 
 (* Recursively raise dB indices and abstract over variables
  * selected by [test]. *)

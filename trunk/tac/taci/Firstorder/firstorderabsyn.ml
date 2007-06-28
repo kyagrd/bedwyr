@@ -61,8 +61,8 @@ let rec getFormulaName = function
 
 and string_of_formula f =
   match f with
-      AndFormula(l,r) -> "(" ^ (string_of_formula l) ^ " & " ^ (string_of_formula r) ^ ")"
-    | OrFormula(l,r) -> "(" ^ (string_of_formula l) ^ " | " ^ (string_of_formula r) ^ ")"
+      AndFormula(l,r) -> "(" ^ (string_of_formula l) ^ ", " ^ (string_of_formula r) ^ ")"
+    | OrFormula(l,r) -> "(" ^ (string_of_formula l) ^ "; " ^ (string_of_formula r) ^ ")"
     | ImplicationFormula(l,r) -> "(" ^ (string_of_formula l) ^ " => " ^ (string_of_formula r) ^ ")"
     | EqualityFormula(l,r) -> "(" ^ (Pprint.term_to_string l) ^ " = " ^ (Pprint.term_to_string r) ^ ")"
     | PiFormula(f) -> "pi " ^ (string_of_formula f)
@@ -232,13 +232,18 @@ let unifyList unifier l1 l2 =
 
 
 (**********************************************************************
-*isAnonymous:
+*isAnonymousTerm:
 * Determines whether a term corresponds to an "_".
 **********************************************************************)
-let isAnonymous t =
+let isAnonymousTerm t =
   match (Term.observe t) with
     Term.Var(v) ->
       (v.Term.print = "_")
+  | _ -> false
+
+let isAnonymousFormula f =
+  match f with
+    AtomicFormula(t) -> isAnonymousTerm t
   | _ -> false
 
 
@@ -276,8 +281,8 @@ let matchFormula template formula =
     | (AtomicFormula(t), _)
     | (_, AtomicFormula(t)) ->
         (*  If this atomic formula is an underscore, then it matches. *)
-        (isAnonymous t)
-    
+        (isAnonymousTerm t)
+        
     | (MuFormula(n,_), MuFormula(n',_))
     | (NuFormula(n,_), NuFormula(n',_)) ->
         n = n'
@@ -289,6 +294,21 @@ let matchFormula template formula =
     | (NablaFormula(f), NablaFormula(f')) ->
         (search f f')
 
+    | (ApplicationFormula(MuFormula(n,b),args), ApplicationFormula(MuFormula(n',b'),args')) ->
+        if isAnonymousFormula b || isAnonymousFormula b' then
+          true
+        else
+          (n = n') && (List.exists success (List.map2 rightUnify args args'))
+    | (ApplicationFormula(NuFormula(n,b),args), ApplicationFormula(NuFormula(n',b'),args')) ->
+        if isAnonymousFormula b || isAnonymousFormula b' then
+          true
+        else
+          (n = n') && (List.exists success (List.map2 rightUnify args args'))          
+    | (ApplicationFormula(hd,args), ApplicationFormula(hd',args')) ->
+        if (isAnonymousFormula hd) || (isAnonymousFormula hd') then
+          true
+        else
+          (search hd hd') && (List.exists success (List.map2 rightUnify args args'))
     | (_, _) -> false
   in
   let result = (search template formula) in
@@ -381,3 +401,16 @@ let applyFixpoint arg formula =
       | _ -> (mapFormula (ff i) tf f)
   in
   ff (0) formula
+
+(********************************************************************
+*makeAnonymousTerm:
+********************************************************************)
+let makeAnonymousTerm () =
+  Term.freshWithPrintName "_" ~tag:Term.Logic ~lts:max_int max_int
+
+(********************************************************************
+*makeAnonymousFormula:
+* 
+********************************************************************)
+let makeAnonymousFormula () =
+  AtomicFormula(makeAnonymousTerm ())

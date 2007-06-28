@@ -1,10 +1,10 @@
 #open "C:\zRXer\Projects\SlimmerSVN\trunk\tac\examples
-	\basic_definitions.tac".
+	\basic_definitions.def".
 
 #theorem even_or_even_s "pi x\ (nat x)=>(even x); (even (s x))".
 
 simplify.
-induction("nat", "x\ (even x);(even (s x))").
+induction("x\ (even x);(even (s x))").
 or_l.
 then(left,axiom).
 then(right,axiom).
@@ -13,19 +13,18 @@ then(right,axiom).
 or_l.
 
   % Zero case.
-  then(eq_l,then(left,mu_r("even"))).
+  then(eq_l,then(left,mu_r)).
   then(left,eq).
 
   % Heredity.
   simplify.
   or_l.
   right.
-  mu_r("even").
+  mu_r.
   right.
   sigma.
   and.
   eq.
-  or.
   axiom.
   left.
   axiom.
@@ -33,13 +32,13 @@ or_l.
 #theorem half "pi x\ (nat x)=>(sigma h\ (half x h))".
 
 simplify.
-induction("nat", "x\ (nat x),(pi y\ (leq y x)=>(sigma h\ (half y h)))").
+induction("x\ (nat x),(pi y\ (leq y x)=>(sigma h\ (half y h)))").
 
  % Proving that the invariant fits.
  simplify.
  pi_l.
  imp_l.
- mu_r("leq").
+ mu_r.
  left.
  eq_r.
  sigma_l.
@@ -52,17 +51,17 @@ induction("nat", "x\ (nat x),(pi y\ (leq y x)=>(sigma h\ (half y h)))").
   % Zero Case.
   eq_l.
   and.
-  mu_r("nat").
+  mu_r.
   then(left,eq_r).
   simplify.
   % Case analysis on "something"<=zero.
-  mu_l("leq").
+  mu_l.
   or_l.
 
    % Equality case: "something"=0, we know how to divide it by two.
    eq_l.
    sigma.
-   mu_r("half").
+   mu_r.
    left.
    and.
    then(left,eq).
@@ -78,7 +77,7 @@ induction("nat", "x\ (nat x),(pi y\ (leq y x)=>(sigma h\ (half y h)))").
   and_r.
 
   % Nat is stable under successor.
-  mu_r("nat").
+  mu_r.
   right.
   sigma.
   and_r.
@@ -89,17 +88,17 @@ induction("nat", "x\ (nat x),(pi y\ (leq y x)=>(sigma h\ (half y h)))").
   % then it must be true for all nats <= s x.
   simplify.
   % Case analysis on "something" <= s x.
-  mu_l("leq").
+  mu_l.
   or_l.
 
    % Equality Case: we divide (s x) by two.
    eq_l.
    % We need to reduce division to the pre-predecessor.
-   mu_l("nat").
+   mu_l.
    then(or_l,simplify).
    % We know that half 1 0.
    sigma_r.
-   mu_r("half").
+   mu_r.
    then(left,and).
    then(right,eq_r).
    eq_r.
