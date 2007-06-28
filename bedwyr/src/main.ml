@@ -201,15 +201,15 @@ and command lexbuf = function
       if !test then begin
         Format.printf "Checking that %a...\n%!" Pprint.pp_term query ;
         Term.reset_namespace () ;
-        Prover.prove ~level:Prover.One ~local:0 query
-          ~success:ignore ~failure:(fun () -> raise Assertion_failed)
+        Prover.prove ~level:Prover.One ~local:0 ~timestamp:0 query
+          ~success:(fun _ _ -> ()) ~failure:(fun () -> raise Assertion_failed)
       end
   | "assert_not",[query] ->
       if !test then begin
         Format.printf "Checking that %a is false...\n%!" Pprint.pp_term query ;
         Term.reset_namespace () ;
-        Prover.prove ~level:Prover.One ~local:0 query
-          ~success:(fun _ -> raise Assertion_failed) ~failure:ignore
+        Prover.prove ~level:Prover.One ~local:0 ~timestamp:0 query
+          ~success:(fun _ _ -> raise Assertion_failed) ~failure:ignore
       end
   | "assert_raise",[query] ->
       if !test then begin
@@ -218,8 +218,8 @@ and command lexbuf = function
         Term.reset_namespace () ;
         if
           try
-            Prover.prove ~level:Prover.One ~local:0 query
-              ~success:ignore ~failure:ignore ;
+            Prover.prove ~level:Prover.One ~local:0 ~timestamp:0 query
+              ~success:(fun _ _ -> ()) ~failure:ignore ;
             true
           with _ -> false
         then raise Assertion_failed
