@@ -46,7 +46,7 @@ let constant tag =
   tag = Constant || tag = constant_like
 let variable tag =
   tag = instantiatable
-let fresh = Term.fresh ~tag:instantiatable
+let fresh = var ~tag:instantiatable
 
 (* Transforming a term to represent substitutions under abstractions *)
 let rec lift t n = match Term.observe t with
@@ -422,7 +422,7 @@ let makesubst h1 t2 a1 =
           if Term.eq c h1 then raise OccursCheck ;
           let (changed,a1',a2') = raise_and_invert v1 v2 a1 [] lev in
             if changed || ts1<v2.ts || lts1<v2.lts then
-              let h'= fresh ~lts:(min lts1 v2.lts) (min ts1 v2.ts) in
+              let h'= fresh ~lts:(min lts1 v2.lts) ~ts:(min ts1 v2.ts) in
                 Term.bind c (Term.app h' a2') ;
                 Term.app h' a1'
             else
@@ -448,13 +448,13 @@ let makesubst h1 t2 a1 =
                 check_flex_args a2 ts2 lts2 ;
                 let changed,a1',a2' = raise_and_invert v1 v2 a1 a2 lev in
                   if changed then
-                    let h' = fresh ~lts:(min lts1 v2.lts) (min ts1 ts2) in
+                    let h' = fresh ~lts:(min lts1 v2.lts) ~ts:(min ts1 ts2) in
                       Term.bind h2
                         (Term.lambda (List.length a2) (Term.app h' a2')) ;
                       Term.app h' a1'
                   else
                     if ts1<ts2 || lts1<lts2 then
-                      let h' = fresh ~lts:(min lts1 v2.lts) ts1 in
+                      let h' = fresh ~lts:(min lts1 v2.lts) ~ts:ts1 in
                         Term.bind h2 h' ;
                         Term.app h' a1'
                     else 
@@ -489,7 +489,7 @@ let makesubst h1 t2 a1 =
           else begin
             if lts1<v2.lts || ts1<v2.ts then
               Term.bind t2
-                (fresh ~lts:(min lts1 v2.lts) (min ts1 v2.ts)) ;
+                (fresh ~lts:(min lts1 v2.lts) ~ts:(min ts1 v2.ts)) ;
             Term.lambda (lev+n) t2
           end
       (* TODO the following seems harmless, and is sometimes useful..
@@ -504,7 +504,7 @@ let makesubst h1 t2 a1 =
                 check_flex_args a2 ts2 lts2 ;
                 let bindlen = n+lev in
                   if bindlen = List.length a2 then
-                    let h1' = fresh ts1 in
+                    let h1' = fresh ~lts:lts1 ~ts:ts1 in
                     let args = prune_same_var a1 a2 lev bindlen in
                       Term.lambda bindlen (Term.app h1' args)
                   else

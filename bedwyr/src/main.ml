@@ -84,11 +84,18 @@ let position lexbuf =
 
 let rec process ?(interactive=false) parse lexbuf =
   try while true do try
+    let reset_ns =
+      let ns = Term.save_namespace () in
+        fun () -> Term.restore_namespace ns
+    in
     if interactive then Format.printf "?= %!" ;
     begin match parse Lexer.token lexbuf with
       | System.Def (k,h,a,b) -> System.add_clause k h a b
-      | System.Query a       -> Prover.toplevel_prove a
-      | System.Command (c,a) -> command lexbuf (c,a)
+      | System.Query a       -> Prover.toplevel_prove a ; reset_ns ()
+      | System.Command (c,a) ->
+          command lexbuf (c,a) ;
+          if not (List.mem c ["include";"reset";"reload";"session"]) then
+            reset_ns ()
     end ;
     if interactive then flush stdout
   with
@@ -109,11 +116,13 @@ let rec process ?(interactive=false) parse lexbuf =
           (Printexc.to_string e) ;
         exit 1
     | System.Undefined s ->
-        Format.printf "No definition found for %S !\n%!" s
+        Format.printf "No definition found for %a !\n%!" Pprint.pp_term s
     | System.Inconsistent_definition s ->
-        Format.printf "Inconsistent extension of definition %S !\n" s
+        Format.printf "Inconsistent extension of definition %a !\n"
+          Pprint.pp_term s
     | System.Arity_mismatch (s,a) ->
-        Format.printf "Definition %S doesn't have arity %d !\n%!" s a
+        Format.printf "Definition %a doesn't have arity %d !\n%!"
+          Pprint.pp_term s a
     | System.Interrupt ->
         Format.printf "User interruption.\n%!"
     | Prover.Level_inconsistency ->
@@ -154,16 +163,12 @@ and command lexbuf = function
 
   (* Session management *)
   | "include",[f] ->
-      begin match Term.observe f with
-        | Term.Var {Term.name=f} -> input_from_file f
-        | _ -> raise Invalid_command
-      end
+      let f = Term.get_name f in
+        input_from_file f
   | "reset",[] -> session := [] ; load_session ()
   | "reload",[] -> load_session ()
   | "session",l ->
-      session := List.map (fun f -> match Term.observe f with
-                             | Term.Var {Term.name=f} -> f
-                             | _ -> assert false) l ;
+      session := List.map Term.get_name l ;
       load_session ()
 
   (* Turn debugging on/off. *)
@@ -171,10 +176,10 @@ and command lexbuf = function
   | "debug",[d] ->
       System.debug :=
         begin match Term.observe d with
-          | Term.Var {Term.name="on"}
-          | Term.Var {Term.name="true"}  -> true
-          | Term.Var {Term.name="off"}
-          | Term.Var {Term.name="false"} -> false
+          | Term.Var v when v==System.Logic.var_on -> true
+          | Term.Var v when v==System.Logic.var_truth -> true
+          | Term.Var v when v==System.Logic.var_off -> false
+          | Term.Var v when v==System.Logic.var_falsity -> false
           | _ -> raise Invalid_command
         end
 
@@ -182,32 +187,27 @@ and command lexbuf = function
   | "time",[d] ->
       System.time :=
         begin match Term.observe d with
-          | Term.Var {Term.name="on"}
-          | Term.Var {Term.name="true"}  -> true
-          | Term.Var {Term.name="off"}
-          | Term.Var {Term.name="false"} -> false
+          | Term.Var v when v==System.Logic.var_on -> true
+          | Term.Var v when v==System.Logic.var_truth -> true
+          | Term.Var v when v==System.Logic.var_off -> false
+          | Term.Var v when v==System.Logic.var_falsity -> false
           | _ -> raise Invalid_command
         end
 
   (* Print the contents of a table *)
   | "show_table",[p] ->
-      begin match Term.observe p with
-        | Term.Var {Term.name=name} -> System.show_table name
-        | _ -> raise Invalid_command
-      end
+      System.show_table p
 
   (* Testing commands *)
   | "assert",[query] ->
       if !test then begin
         Format.printf "Checking that %a...\n%!" Pprint.pp_term query ;
-        Term.reset_namespace () ;
         Prover.prove ~level:Prover.One ~local:0 ~timestamp:0 query
           ~success:(fun _ _ -> ()) ~failure:(fun () -> raise Assertion_failed)
       end
   | "assert_not",[query] ->
       if !test then begin
         Format.printf "Checking that %a is false...\n%!" Pprint.pp_term query ;
-        Term.reset_namespace () ;
         Prover.prove ~level:Prover.One ~local:0 ~timestamp:0 query
           ~success:(fun _ _ -> raise Assertion_failed) ~failure:ignore
       end
@@ -215,7 +215,6 @@ and command lexbuf = function
       if !test then begin
         Format.printf "Checking that %a causes an error...\n%!"
           Pprint.pp_term query ;
-        Term.reset_namespace () ;
         if
           try
             Prover.prove ~level:Prover.One ~local:0 ~timestamp:0 query

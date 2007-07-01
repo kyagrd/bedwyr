@@ -1,6 +1,6 @@
 (****************************************************************************)
 (* An implemention of Higher-Order Pattern Unification                      *)
-(* Copyright (C) 2006 Nadathur, Linnell, Baelde, Ziegler                    *)
+(* Copyright (C) 2006-2007 Nadathur, Linnell, Baelde, Ziegler               *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -17,129 +17,99 @@
 (* Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA             *)
 (****************************************************************************)
 
-type tag = Eigen | Constant | Logic
-type id = string
-type var = {
-  name : id  ;
-  tag  : tag ;
-  ts   : int ;
-  lts  : int
-}
+(** Representation of higher-order terms. *)
 
-(* Terms. The use of references allow in-place normalization,
- * but is completely hidden by the interface. *)
+type tag = Eigen | Constant | Logic
+type var = { id : int ; tag : tag; ts : int; lts : int; }
 
 type term
 type ptr
 type envitem = Dum of int | Binding of term * int
 type env = envitem list
-
-type rawterm = 
+type rawterm =
   | Var of var
   | DB of int
   | NB of int
   | Lam of int * term
   | App of term * term list
   | Susp of term * int * int * env
-  | Ptr of ptr (* Sorry about this one, hiding it is costly.. *)
+  | Ptr of ptr
 
-(* [observe t] is the way to analyze the structure of a term. *)
+val eq : term -> term -> bool
 val observe : term -> rawterm
 
-(** Creation of terms.
-  * There is probably more to come here. *)
+(** Binding a variable to a term in a destructive way,
+  * saving and restoring previous states of the terms. *)
 
-(* Two const/var/atoms created with the same names are shared except if
- * reset_namespace is called between the two creations. *)
-val reset_namespace : unit -> unit
-val reset_namespace_vars : unit -> unit
+type state
 
-val const : ?tag:tag -> ?lts:int -> string -> int -> term
-val var   : ?tag:tag -> ?lts:int -> string -> int -> term
-
-val atom : ?ts:int -> string -> term
-val fresh_atom : term -> term
-val string : string -> term
-
-val binop : string -> term -> term -> term
-
-val collapse_lam : term -> term
-
-val app : term -> term list -> term
-val susp : term -> int -> int -> env -> term
-val db : int -> term
-val nabla : int -> term
-
-module Notations :
-sig
-  val (%=) : term -> term -> bool
-  val (!!) : term -> rawterm
-  val (//) : int -> term -> term
-  val (^^) : term -> term list -> term
-end
-
-exception NotValidTerm
-
-(* Fast structural equality modulo Ptr.
- * Fast: try to use physical equality first.
- * Structural: no normalization peformed. *)
-val eq : term -> term -> bool
-
-(* Binding a variable to a term. The *contents* of the cell representing the
- * variable is a reference which must be updated. Also the variable must
- * not be made a reference to itself. This can be changed to mimic the
- * Prolog representation of bound variables but then deref will have to
- * work differently. This is the place to introduce trailing.
- * David: What's trailing ? *)
-
-type bind_state
-type subst
-type unsubst
-val save_state : unit -> bind_state
-val restore_state : bind_state -> unit
-val get_subst : bind_state -> subst
-val undo_subst : unsubst -> unit
-val apply_subst : subst -> unsubst
-val where : unit -> unit
+val save_state : unit -> state
+val restore_state : state -> unit
 
 val bind : term -> term -> unit
 
-(* Raise the substitution *)
-val add_dummies : env -> int -> int -> env
+type subst
+type unsubst
 
-(* Add [n] abstractions. *)
+val get_subst   : state -> subst
+val apply_subst : subst -> unsubst
+val undo_subst  : unsubst -> unit
+
+(** Creating terms. *)
+
 val lambda : int -> term -> term
+val string : string -> term
+val binop : string -> term -> term -> term
+val db : int -> term
+val nabla : int -> term
+val app : term -> term list -> term
+val susp : term -> int -> int -> env -> term
 
-(** We try to attach useful names to generated variables.
-  * For that purpose we use prefixes like 'h' or 'x',
-  * freshness is ensured by the suffix. During parsing, one must take care
-  * to rename variables that could conflict with generated ones.
-  * TODO choose a policy here.. use more prefixes depending on the type,
-  * if typing is introduced ? *)
+(** Creating variables, handling variable names. *)
 
-val getAbsName : unit -> string
+type namespace
 
-(** Generating a fresh variable with a given time stamp; the use of ref
-  * ensures uniqueness. We should attach useful names as well, but this 
-  * will do for the moment. *)
-val fresh : ?tag:tag -> ?lts:int -> int -> term
+val save_namespace : unit -> namespace
+val restore_namespace : namespace -> unit
+
+val var : tag:tag -> ts:int -> lts:int -> term
+
+val fresh : name:string -> tag:tag -> lts:int -> ts:int -> term
+val get_var_by_name : tag:tag -> ts:int -> lts:int -> string -> term
+val atom : string -> term
+
+val get_name : term -> string
+
+val get_dummy_name  : ?start:int -> string -> string
+val get_dummy_names : ?start:int -> int -> string -> string list
+
+val free    : string -> unit
+val is_free : string -> bool
+
+(** Other common manipulations. *)
 
 exception NonNormalTerm
 
-(** Abstract [t] over term [v]. *)
-val abstract_var : term -> term -> term
+val abstract : term -> term -> term
 
-(** Abstract [t] over constant or variable named [id]. *)
-val abstract : string -> term -> term
+val get_nablas : term -> int list
 
-(** Find all variables [v] in [ts] which satisfy [test v].
-  * [ts] is assumed to be fully normalized. *)
 val get_vars : (var -> bool) -> term list -> term list
-
-(** Logic variables of [ts], which is assumed to be fully normalized. *)
 val logic_vars : term list -> term list
+val eigen_vars : term list -> term list
 
-(** copy () returns a copier that, when applied to a term,
-    returns a copier term where sharing has been preserved
-    for all calls to the copier *)
+val get_var : term -> var
+
 val copy : unit -> term -> term
+
+module Notations :
+  sig
+    (** Equality *)
+    val ( %= ) : term -> term -> bool
+    (** Observation *)
+    val ( !! ) : term -> rawterm
+    (** Abstraction *)
+    val ( // ) : int -> term -> term
+    (** Application *)
+    val ( ^^ ) : term -> term list -> term
+  end

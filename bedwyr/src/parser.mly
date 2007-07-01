@@ -18,21 +18,28 @@
  ****************************************************************************/
 
 %{
-  let eq   = Term.binop System.Logic.eq
-  let andc = Term.binop System.Logic.andc
-  let orc  = Term.binop System.Logic.orc
-  let imp  = Term.binop System.Logic.imp
+  let eq   a b = Term.app System.Logic.eq   [a;b]
+  let andc a b = Term.app System.Logic.andc [a;b]
+  let orc  a b = Term.app System.Logic.orc  [a;b]
+  let imp  a b = Term.app System.Logic.imp  [a;b]
 
-  let to_string t =
-    match Term.observe t with
-      | Term.Var {Term.name=s;Term.tag=Term.Constant} -> s
-      | _ -> assert false
+  let to_string t = Term.get_name t
 
   let mkdef kind head params body =
     (* Replace the params by fresh variables and
      * put the constraints on the parameters in the body:
      * d (s X) X := body --> d Y X := (Y = s X), body
      * As an input we get: [head] (d) [params] ([s X;X]) and [body]. *)
+
+    (* Free the registered names that are bound in the definition clause.
+     * If one doesn't do that, a logic variable [X] could be left
+     * in the namespace, and persist from one query to another.
+     * There shouldn't be any risk to actually free something that was
+     * allocated before the parsing of that clause. *)
+    let () =
+      let v = Term.logic_vars (body::params) in
+        List.iter (fun v -> Term.free (Term.get_name v)) v
+    in
 
     (* Create the prolog (new equalities added to the body) and the new set
      * of variables used as parameters.
@@ -46,22 +53,21 @@
                  when List.for_all (fun v -> v!=p) new_params ->
                  p::new_params,prolog
              | _  ->
-                 let v = Term.fresh 0 in
+                 let v = Term.var ~ts:0 ~lts:0 ~tag:Term.Logic in
                    (v::new_params, (eq v p)::prolog))
         ([],[])
         params
     in
     (* Add prolog to the body *)
     let body = if prolog = [] then body else
-      Term.app (Term.atom System.Logic.andc) (prolog@[body])
+      Term.app System.Logic.andc (prolog@[body])
     in
     (* Quantify existentially over the initial free variables. *)
     let body =
       List.fold_left
         (fun body v ->
-           if List.mem v new_params then body else
-             Term.app (Term.atom System.Logic.exists)
-               [Term.abstract_var v body])
+           if List.exists (Term.eq v) new_params then body else
+             Term.app System.Logic.exists [Term.abstract v body])
         body
         (Term.logic_vars (body::params))
     in
@@ -69,14 +75,14 @@
     let arity,body =
       if new_params = [] then 0,body else
         let body =
-          List.fold_left (fun body v -> Term.abstract_var v body)
+          List.fold_left (fun body v -> Term.abstract v body)
             body
             new_params
         in match Term.observe body with
           | Term.Lam (n,b) -> n,b
           | _ -> assert false
     in
-      System.Def (kind, to_string head, arity, body)
+      System.Def (kind, head, arity, body)
 
 %}
 
@@ -131,13 +137,20 @@ sexp:
           | t::l -> t,l }
 lexp:
 | aexp          { [$1] }
-| ID BSLASH exp { [Term.abstract $1 $3] }
+| binding exp   { let was_free,name = $1 in
+                  let a = Term.atom name in
+                  let x = Term.abstract a $2 in
+                    if was_free then Term.free name ;
+                    [x] }
 | aexp lexp     { $1::$2 }
+
+binding:
+| ID BSLASH { (Term.is_free $1, $1) }
 
 aexp:
 | LPAREN exp RPAREN { $2 }
-| ID { Term.atom $1 }
-| STRING { Term.string $1 }
+| ID                { Term.atom $1 }
+| STRING            { Term.string $1 }
 
 /* There is redundency here, but ocamlyacc seems to have problems
    with left associativity if we abstract it. */
@@ -155,21 +168,18 @@ iexp:
   * disappear, but this could be changed later.
   * [term_of_file] will recurse through #includes and inline them. *)
 let to_term lexer file =
-  let lam  = Term.const "lam" 0  in
-  let app  = Term.const "app" 0  in
-  let atom = Term.const "atom" 0 in
-  let binder x = match Term.observe x with
-    | Term.Var {Term.name="sigma"}
-    | Term.Var {Term.name="pi"}
-    | Term.Var {Term.name="nabla"} -> true
-    | _ -> false
+  let lam  = Term.atom "lam"  in
+  let app  = Term.atom "app"  in
+  let atom = Term.atom "atom" in
+  let binder x =
+    List.exists
+      (Term.eq x)
+      [System.Logic.forall;System.Logic.exists;System.Logic.nabla]
   in
-  let logic x = match Term.observe x with
-    | Term.Var {Term.name="="}
-    | Term.Var {Term.name="=>"}
-    | Term.Var {Term.name=","}
-    | Term.Var {Term.name=";"} -> true
-    | _ -> false
+  let logic x =
+    List.exists
+      (Term.eq x)
+      [System.Logic.eq;System.Logic.andc;System.Logic.orc;System.Logic.imp]
   in
   let rec split acc = function
     | [] -> assert false
@@ -200,9 +210,9 @@ let to_term lexer file =
                                objectify y ]
       | _ -> Term.app atom [term]
   in
-  let clause  = Term.const "clause"  0 in
-  let query   = Term.const "query"   0 in
-  let command = Term.const "command" 0 in
+  let clause  = Term.atom "clause"  in
+  let query   = Term.atom "query"   in
+  let command = Term.atom "command" in
   let rec list_of_file file list =
     let lexbuf = Lexing.from_channel (open_in file) in
     let rec aux l =
@@ -217,24 +227,21 @@ let to_term lexer file =
               begin match i with
                 | System.Def (_,head,arity,body) ->
                     let body = objectify (Term.lambda arity body) in
-                      aux ((Term.app clause [ Term.const head 0;
+                      aux ((Term.app clause [ head;
                                               body ])::l)
                 | System.Query a -> aux ((Term.app query [a])::l)
                 | System.Command ("include",[file]) ->
-                    begin match Term.observe file with
-                      | Term.Var {Term.name=file} ->
-                          let cwd = Sys.getcwd () in
-                            Sys.chdir (Filename.dirname file) ;
-                            let l = list_of_file file l in
-                              Sys.chdir cwd ;
-                              aux (list_of_file file l)
-                      | _ -> assert false
-                    end
+                    let file = Term.get_name file in
+                    let cwd = Sys.getcwd () in
+                      Sys.chdir (Filename.dirname file) ;
+                      let l = list_of_file file l in
+                        Sys.chdir cwd ;
+                        aux (list_of_file file l)
                 | System.Command ("assert",a) ->
-                    aux ((Term.app command ((Term.const "assert" 0)::
+                    aux ((Term.app command ((Term.atom "assert")::
                                               (List.map objectify a)))::l)
                 | System.Command (c,a) ->
-                    aux ((Term.app command ((Term.const c 0)::a))::l)
+                    aux ((Term.app command ((Term.atom c)::a))::l)
               end
     in
     let cwd = Sys.getcwd () in
@@ -248,4 +255,4 @@ let to_term lexer file =
     | [] -> t
     | hd::tl -> term_of_list (cons hd t) tl
   in
-    term_of_list (Term.const "nil" 0) (list_of_file file [])
+    term_of_list (Term.atom "nil") (list_of_file file [])

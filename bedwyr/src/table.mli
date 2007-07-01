@@ -7,6 +7,6 @@ val add : allow_eigenvar:bool -> t -> Term.term list -> tag ref -> unit
 
 val find : t -> Term.term list -> tag ref option
 
-val print : string -> t -> unit
+val print : Term.term -> t -> unit
 
 val reset : t -> unit

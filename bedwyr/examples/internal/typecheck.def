@@ -15,7 +15,6 @@
 % For now, type information are mandatory.
 % Other analysis could include polymorphic types, mode checking, etc.
 
-test := __typecheck "examples/internal/3bits.def".
 __typecheck File := parse File X, __check (bind true o (bind false o nil)) X.
 
 __check Env nil.
@@ -52,3 +51,6 @@ __typed Env (lam X) (I->O) :=
 __typed Env (app X Y) O := (atom print) = X ;
                            (__typed Env X (I->O), __typed Env Y I).
 __typed Env (atom X) T := __lookup Env X T.
+
+test := __typecheck "examples/internal/3bits.def".
+#assert (__typecheck "3bits.def").

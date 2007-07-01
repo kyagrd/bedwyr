@@ -32,9 +32,12 @@ let rec extract path t =
   let hd,tl = match path with h::t -> h,t | [] -> assert false in
     match !!t with
       | Lam (_,t) when hd = L -> extract tl t
-      | App (_,l) when hd = A -> extract tl (List.nth l 0)
-      | App (t,_) when hd = H -> !!t
-      | _ -> Var {name="notfound";lts=0;ts=0;tag=Constant}
+      | App (_,l) when hd = A -> extract tl (List.hd l)
+      | App (t,_) when hd = H -> t
+      | _ -> atom "not_found"
+
+let var nm ts = fresh ~tag:Logic ~name:nm ~ts:ts ~lts:0
+let const nm ts = fresh ~tag:Constant ~name:nm ~ts:ts ~lts:0
 
 let test =
   "Tests" >:::
@@ -179,8 +182,9 @@ let test =
          unify t1 t2 ;
          let h =
            let x = Norm.hnorm x in
-           match extract [L;H] x with
-             | Var {name=h;ts=1;tag=Logic} -> var h 1
+           let e = extract [L;H] x in
+           match observe e with
+             | Var {ts=1;tag=Logic} -> e
              | _ -> failwith "X should match x\\y\\ H ..."
          in
            equal2
@@ -200,8 +204,9 @@ let test =
          unify (x ^^ [a;b]) (c ^^ [y ^^ [b;c3]]) ;
          let h =
            let x = Norm.hnorm x in
-           match extract [L;A;H] x with
-             | Var {name=h;ts=1;tag=Logic} -> var h 1
+           let e = extract [L;A;H] x in
+           match !!e with
+             | Var {ts=1;tag=Logic} -> e
              | _ -> failwith "X should match x\\y\\ _ H .."
          in
            equal2
@@ -251,8 +256,9 @@ let test =
          unify (x ^^ [a;b;c]) (x ^^ [c;b;a]) ;
          let h =
            let x = Norm.hnorm x in
-           match extract [L;H] x with
-             | Var {name=h;ts=1;tag=Logic} -> var h 1
+           let e = extract [L;H] x in
+           match !!e with
+             | Var {ts=1;tag=Logic} -> e
              | _ -> failwith "X should match x\\y\\z\\ H ..."
          in
            assert_equal (3 // (h^^[db 2])) x) ;
@@ -296,8 +302,9 @@ let test =
          unify (x ^^ [a;b]) (y ^^ [b;c]) ;
          let h =
            let x = Norm.hnorm x in
-           match extract [L;H] x with
-             | Var {name=h;ts=1;tag=Logic} -> var h 1
+           let e = extract [L;H] x in
+           match !!e with
+             | Var {ts=1;tag=Logic} -> e
              | _ -> failwith
                       (Printf.sprintf "X=%s should match Lam (_,(App H _))"
                          (Pprint.term_to_string x))
@@ -317,8 +324,9 @@ let test =
          unify (x ^^ [a;b;c]) (y ^^ [c]) ;
          let h =
            let x = Norm.hnorm x in
-           match extract [L;H] x with
-             | Var {name=h;ts=1;tag=Logic} -> var h 1
+           let e = extract [L;H] x in
+           match !!e with
+             | Var {ts=1;tag=Logic} -> e
              | _ -> failwith "X should match x\\y\\z\\ H ..."
          in
            equal2
@@ -336,8 +344,9 @@ let test =
          unify (x ^^ [a;b]) (a ^^ [y ^^ [b;c]]) ;
          let h =
            let x = Norm.hnorm x in
-           match extract [L;A;H] x with
-             | Var {name=h;ts=1;tag=Logic} -> var h 1
+           let e = extract [L;A;H] x in
+           match !!e with
+             | Var {ts=1;tag=Logic} -> e
              | _ -> failwith "X should match x\\y\\ _ (H ..) .."
          in
            equal2
@@ -361,7 +370,7 @@ let test =
 
     "[a = a]" >::
     (fun () ->
-       unify (const "a" 1) (const "a" 1)) ;
+       unify (atom "a") (atom "a")) ;
 
     "[x\\ a x b = x\\ a x b]" >::
     (fun () ->
@@ -411,7 +420,7 @@ let test =
     "[X1 = y2]" >::
     (fun () ->
        let x = var "X" 1 in
-       let y = var ~tag:Eigen "y" 2 in
+       let y = fresh ~tag:Eigen ~name:"y" ~ts:2 ~lts:0 in
          try unify x y ; assert false with
            | Unify.Error _ -> ()) ;
 
@@ -425,7 +434,7 @@ let test =
     "[X^0 n1 = Y^1]" >::
     (fun () ->
        let x = var "X" 0 in
-       let y = var "Y" ~lts:1 0 in
+       let y = fresh ~name:"Y" ~tag:Logic ~lts:1 ~ts:0 in
          unify (x ^^ [nabla 1]) y ;
          assert_equal y (x ^^ [nabla 1]) ;
          match !!x with
@@ -444,7 +453,7 @@ let test =
     "[X^0 = Y^0/1]" >::
     (fun () ->
        let x = var "X" 0 in
-       let y = var "Y" ~lts:1 0 in
+       let y = fresh ~name:"Y" ~tag:Logic ~lts:1 ~ts:0 in
          unify x y ;
          match !!x,!!y with
            | Var {lts=0}, Var {lts=0} -> ()
@@ -453,8 +462,8 @@ let test =
     "[X^0 = c Y^1]" >::
     (fun () ->
        let x = var "X" 0 in
-       let c = var ~tag:Constant "c" 0 in
-       let y = var "Y" ~lts:1 0 in
+       let c = fresh ~tag:Constant ~name:"c" ~ts:0 ~lts:0 in
+       let y = fresh ~tag:Logic ~name:"Y" ~lts:1 ~ts:0 in
          unify x (c ^^ [y]) ;
          match !!y with
            | Var {lts=0} -> () | _ -> Pprint.print_term y ; assert false) ;
@@ -462,7 +471,7 @@ let test =
     "[X^0 n1 n2 = c Y^2 = c n2]" >::
     (fun () ->
        let x = var "X" 0 in
-       let y = var "Y" ~lts:2 0 in
+       let y = fresh ~tag:Logic ~name:"Y" ~lts:2 ~ts:0 in
        let c = const "c" 0 in
        let t = x ^^ [nabla 1 ; nabla 2] in
          unify t (c ^^ [y]) ;
@@ -494,9 +503,9 @@ let test =
 
     "With eigenvariables" >::
     (fun () ->
-       let x = var ~tag:Eigen "x" 0 in
-       let y = var ~tag:Eigen "y" 0 in
-       let z = var ~tag:Eigen "z" 0 in
+       let x = fresh ~tag:Eigen ~name:"x" ~lts:0 ~ts:0 in
+       let y = fresh ~tag:Eigen ~name:"y" ~lts:0 ~ts:0 in
+       let z = fresh ~tag:Eigen ~name:"z" ~lts:0 ~ts:0 in
        let t1 = (db 1) ^^ [ x ; y ; y ] in
        let t2 = (db 1) ^^ [ y ; y ; y ] in
        let index = Index.add (Index.add Index.empty [t1] 1) [t2] 2 in

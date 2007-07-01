@@ -52,7 +52,8 @@ type constraints = { max_vid : int ;
                      eq      : int array ;
                      lts     : int array }
 
-let dummy_var = {Term.name="";Term.lts=0;Term.ts=0;Term.tag=Term.Constant}
+let dummy_var =
+  {Term.id=(-1);Term.lts=(-1);Term.ts=(-1);Term.tag=Term.Constant}
 
 exception Found of int
 
@@ -118,7 +119,7 @@ let find_leaf map bindings =
 type pattern =
   | DB    of int
   | NB    of int
-  | Cst   of Term.id
+  | Cst   of Term.term*Term.var
   | Var   of int
   | Lam   of int * pattern
   | App   of int * pattern list (* Store the length of the list *)
@@ -149,8 +150,8 @@ let create_node ~allow_eigenvar bindings terms data =
   let rec compile bindings term = match observe term with
     | Term.DB i -> DB i, bindings
     | Term.NB i -> NB i, bindings
-    | Term.Var {Term.tag=Term.Constant;Term.name=id} -> Cst id, bindings
-    | Term.Var var when allow_eigenvar && var.Term.tag = Term.Eigen ->
+    | Term.Var ({Term.tag=Term.Constant} as v) -> Cst (term,v), bindings
+    | Term.Var ({Term.tag=Term.Eigen} as var) when allow_eigenvar ->
         let i,bindings = add bindings var in
           Var i, bindings
     | Term.Lam (i,t) ->
@@ -185,7 +186,7 @@ let superficial_match patterns terms =
     | DB i, Term.DB j
     | NB i, Term.NB j
     | Lam (i,_), Term.Lam (j,_) -> i=j
-    | Cst i, Term.Var {Term.name=j;Term.tag=Term.Constant} -> i=j
+    | Cst (_,v), Term.Var v' -> v==v'
     | Var _, Term.Var {Term.tag=Term.Eigen} -> true
     | App (i,_), Term.App (h,l) -> i = 1 + List.length l
     | Hole, _ -> true
@@ -211,9 +212,9 @@ let update ~allow_eigenvar index terms data =
           (false, DB i, bindings, catches, former_alt)
       | NB i, Term.NB j when i = j ->
           (false, NB i, bindings, catches, former_alt)
-      | Cst c, Term.Var {Term.name=c';Term.tag=Term.Constant} when c=c' ->
-          (false, Cst c, bindings, catches, former_alt)
-      | Var i, Term.Var var when allow_eigenvar && var.Term.tag=Term.Eigen ->
+      | Cst (t,c), Term.Var c' when c==c' ->
+          (false, Cst (t,c), bindings, catches, former_alt)
+      | Var i, Term.Var ({Term.tag=Term.Eigen} as var) when allow_eigenvar ->
           (false, Var i, (i,var)::bindings, catches, former_alt)
       | App (i,patterns), Term.App (h,terms) when i = 1 + List.length terms ->
           let terms = h::terms in
@@ -304,8 +305,8 @@ let rec filter bindings catches pattern term =
   match pattern, observe term with
     | DB i, Term.DB j
     | NB i, Term.NB j when i=j -> bindings,catches
-    | Cst i, Term.Var {Term.name=j;Term.tag=Term.Constant} ->
-        if i=j then bindings,catches else raise Not_found
+    | Cst (_,i), Term.Var j ->
+        if i==j then bindings,catches else raise Not_found
     | Var i, Term.Var var ->
         if var.Term.tag = Term.Eigen then
           (i,var)::bindings,catches
@@ -366,7 +367,7 @@ module MZ : MZ_t =
 struct
 
   type item =
-    | ZNB of int | ZDB of int  | ZCst of Term.id | ZVar of int
+    | ZNB of int | ZDB of int  | ZCst of (Term.term*Term.var) | ZVar of int
     | ZLam of int | ZApp of int
     | ZHole
 
@@ -389,7 +390,7 @@ struct
         (fun (row,subpats) -> function
            | DB i  ->  (ZDB i)::row, subpats
            | NB i  ->  (ZNB i)::row, subpats
-           | Cst c -> (ZCst c)::row, subpats
+           | Cst (t,c) -> (ZCst (t,c))::row, subpats
            | Var i -> (ZVar i)::row, subpats
            | App (n,l) -> (ZApp n)::row, List.rev_append l subpats
            | Lam (n,p) -> (ZLam n)::row, p::subpats
@@ -417,7 +418,7 @@ struct
     let zip_step terms = function
       | ZDB i  -> Term.db i, terms
       | ZNB i  -> Term.nabla i, terms
-      | ZCst c -> Term.const c 0, terms
+      | ZCst (t,_) -> t, terms
       | ZVar i -> table.(i), terms
       | ZApp n ->
           begin match split_at_nth terms n with
@@ -462,22 +463,22 @@ let iter index f =
                for i = 0 to Array.length c.eq - 1 do
                  table.(c.vid.(i)) <-
                    if c.eq.(i) = i then
-                     Term.fresh 0
+                     Term.var ~tag:Term.Eigen ~ts:0 ~lts:0
                    else
                      table.(c.vid.(c.eq.(i))) ;
                  if c.eq.(i) = i then
                    l := table.(c.vid.(i)) :: !l
                done ;
-               let head = Term.fresh 0 in
+               let head = Term.var ~tag:Term.Eigen ~ts:0 ~lts:0 in
                let t = Term.app head (MZ.zip table mz) in
                let l = List.rev !l in
                let t =
                  List.fold_left
-                   (fun t v -> Term.abstract_var v t)
+                   (fun t v -> Term.abstract v t)
                    t
                    l
                in
-                 f (Term.abstract_var head t) v)
+                 f (Term.abstract head t) v)
           map
     | Refine i -> iter_index mz i
 

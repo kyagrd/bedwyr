@@ -172,16 +172,15 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
   in
 
   match Term.observe g with
-  | Var {name=t} when t = "exit" -> exit 0
-  | Var {name=t} when t = Logic.truth -> success timestamp failure
-  | Var {name=t} when t = Logic.falsity -> failure ()
-  | Var {name=d;tag=Constant} -> prove_atom d []
+  | Var v when v == Logic.var_truth -> success timestamp failure
+  | Var v when v == Logic.var_falsity -> failure ()
+  | Var v -> prove_atom g []
   | App (hd,goals) ->
       let goals = List.map Norm.hnorm goals in
       begin match Term.observe hd with
 
         (* Solving an equality *)
-        | Var {name=e} when e = Logic.eq ->
+        | Var v when v == Logic.var_eq ->
             let state = Term.save_state () in
             let failure () = Term.restore_state state ; failure () in
             if unify level (List.hd goals) (List.hd (List.tl goals)) then
@@ -190,7 +189,7 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
               failure ()
 
         (* Proving a conjunction *)
-        | Var {name=a} when a = Logic.andc ->
+        | Var v when v == Logic.var_andc ->
             let rec conj ts failure = function
               | [] -> success ts failure
               | goal::goals ->
@@ -203,7 +202,7 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
               conj timestamp failure goals
 
         (* Proving a disjunction *)
-        | Var {name=o} when o = Logic.orc ->
+        | Var v when v == Logic.var_orc ->
             let rec alt = function
               | [] -> failure ()
               | g::goals ->
@@ -215,14 +214,14 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
               alt goals
 
         (* Level 1: Implication *)
-        | Var {name=i} when i = Logic.imp ->
+        | Var v when v == Logic.var_imp ->
             assert_level_one level ;
             let (a,b) = match goals with [a;b] -> a,b | _ -> assert false in
             let a = Norm.deep_norm a in
             let b = Norm.deep_norm b in
             let check_variables =
-              let eigen = get_vars (fun v -> v.tag = Eigen) [a] in
-              let logic = get_vars (fun v -> v.tag = Logic) [b] in
+              let eigen = eigen_vars [a] in
+              let logic = logic_vars [b] in
               let var v =
                 match Term.observe v with
                   | Var v -> v
@@ -303,7 +302,7 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
                             prove_b timestamp failure !ev_substs)
 
         (* Level 1: Universal quantification *)
-        | Var {name=forall} when forall = Logic.forall ->
+        | Var v when v == Logic.var_forall ->
             assert_level_one level ;
             let goal = match goals with
               | [g] -> g
@@ -311,14 +310,14 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
             in begin match observe goal with
               | Lam (1,_) ->
                   let timestamp = timestamp + 1 in
-                  let var = Term.fresh ~lts:local ~tag:Eigen timestamp in
+                  let var = Term.var ~lts:local ~tag:Eigen ~ts:timestamp in
                   let goal = app goal [var] in
                     prove ~local ~timestamp ~level ~success ~failure goal
               | _ -> assert false
             end
 
         (* Local quantification *)
-        | Var {name=nabla} when nabla = Logic.nabla ->
+        | Var v when v == Logic.var_nabla ->
             let goal = match goals with
               | [g] -> g
               | _ -> assert false
@@ -331,7 +330,7 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
             end
 
         (* Existential quantification *)
-        | Var {name=ex} when ex = Logic.exists ->
+        | Var v when v == Logic.var_exists ->
             let goal = match goals with
               | [g] -> g
               | _ -> assert false
@@ -345,7 +344,7 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
                           timestamp, Logic
                   in
                   let var =
-                    Term.fresh ~lts:local ~tag timestamp
+                    Term.var ~ts:timestamp ~lts:local ~tag
                   in
                     prove ~local ~level ~timestamp
                       ~success ~failure (app goal [var])
@@ -353,16 +352,17 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
             end
 
         (* Output *)
-        | Var {name="print"} ->
+        | Var v when v == Logic.var_print ->
             List.iter (fun t -> printf "%a\n%!" Pprint.pp_term t) goals ;
             success timestamp failure
 
         (* Get an AST *)
-        | Var {name="parse"} ->
+        | Var v when v == Logic.var_parse ->
             begin match goals with
               | [file;t] ->
                   begin match Term.observe file with
-                    | Term.Var {Term.name=file} ->
+                    | Term.Var v ->
+                        let file = Term.get_name file in
                         let state = Term.save_state () in
                         let failure () =
                           Term.restore_state state ; failure ()
@@ -378,7 +378,7 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
             end
 
         (* Check for definitions *)
-        | Var {name=d;tag=Constant} -> prove_atom d goals
+        | Var v -> prove_atom hd goals
 
         (* Invalid goal *)
         | _ ->
@@ -397,7 +397,6 @@ let prove ~success ~failure ~level ~timestamp ~local g =
   with e -> clear_disprovable () ; raise e
 
 let toplevel_prove g =
-  let _ = Term.reset_namespace () in
   let s0 = Term.save_state () in
   let vars = List.map (fun t -> Pprint.term_to_string t, t)
                (List.rev (Term.logic_vars [g])) in
