@@ -22,8 +22,10 @@ open Format
 
 exception Found of int
 
-type assoc = Left | Right | Both | None
+type assoc = Left | Right | Both | Nonassoc
   
+let debug = ref false
+
 (* List of infix operators sorted by priority. *)
 let infix : (string * assoc) list ref = ref []
 let set_infix l = infix := l
@@ -41,29 +43,32 @@ let get_max_priority () = List.length !infix
 
 (* Generic output function *)
 
-let tag2str = function
-  | Constant -> "c"
-  | Eigen -> "e"
-  | Logic -> "l"
-
 let parenthesis x = "(" ^ x ^ ")"
 
-let rec list_range a b =
-  if a > b then [] else a::(list_range (a+1) b)
-
-let term_to_string term =
-  let term = Norm.deep_norm term in
+(** Print a term. Ensures consistent namings, using naming hints when available.
+  * Behaves consistently from one call to another unless Term.reset_namespace
+  * is called between executions.
+  * Two lists of names must be passed for free "bound variables"
+  * and generic variables. These names are assumed not to conflict with any
+  * other name. The good way to ensure that is to use Term.get_dummy_name and
+  * [Term.free].
+  * The input term should be fully normalized. *)
+let term_to_string_full ~generic ~bound term =
   let high_pr = 1 + get_max_priority () in
-  let pre = getAbsName () in
-  let pp_var x = pre ^ (string_of_int x) in
-  let rec pp pr n term =
+  let rec pp ~bound pr term =
     match observe term with
-      | Var v -> Printf.sprintf "%s[%d]" v.name v.ts
-      | NB i -> "n" ^ (string_of_int i)
-      | DB i -> pp_var (n-i+1)
+      | Var v ->
+          let name = Term.get_name term in
+          if !debug then
+            Printf.sprintf "%s[%d/%d]" name v.ts v.lts
+          else
+            name
+      | NB i -> List.nth generic (i-1)
+      | DB i -> List.nth bound (i-1)
       | App (t,ts) ->
           begin match observe t, ts with
-            | Var {name=op; tag=Constant}, [a; b] when is_infix op ->
+            | Var {tag=Constant}, [a; b] when is_infix (get_name t) ->
+                let op = get_name t in
                 let op_p = priority op in
                 let assoc = get_assoc op in
                 let pr_left, pr_right = begin match assoc with
@@ -72,27 +77,62 @@ let term_to_string term =
                   | _ -> op_p, op_p
                   end in
                 let res =
-                  (pp pr_left n a) ^ " " ^ op ^ " " ^ (pp pr_right n b)
+                  (pp ~bound pr_left a)
+                  ^ " " ^ op ^ " " ^
+                  (pp ~bound pr_right b)
                 in
                   if op_p >= pr then res else parenthesis res
             | _ ->
                 let res =
-                  String.concat " " (List.map (pp high_pr n) (t::ts))
+                  String.concat " "
+                    (List.map (pp ~bound high_pr) (t::ts))
                 in
                   if pr = 0 then res else parenthesis res
           end
-      | Lam (0,t) -> assert false
       | Lam (i,t) ->
-          let res = ((String.concat "\\"
-                       (List.map pp_var (list_range (n+1) (n+i)))) ^ "\\" ^
-                      (pp 0 (n+i) t)) in
+          assert (i<>0) ;
+          (* Get [i] more dummy names for the new bound variables.
+           * Release them after the printing of this term. *)
+          let more = Term.get_dummy_names ~start:1 i "x" in
+          let t = pp ~bound:(List.rev_append more bound) 0 t in
+          let res = (String.concat "\\" more)^"\\"^t in
+            List.iter Term.free more ;
             if pr = 0 then res else parenthesis res
-      | Ptr t -> assert false (* observe *)
-      | Susp _ -> assert false (* deep_norm *)
- in
-    pp high_pr 0 term
+      | Susp _ -> raise Term.NonNormalTerm
+      | Ptr  _ -> assert false (* observe *)
+  in
+    pp ~bound high_pr term
 
-let pp_term out term = fprintf out "%s" (term_to_string term)
+let get_generic_names x =
+  let nbs = Term.get_nablas x in
+  let max_nb = List.fold_left max 0 nbs in
+    Term.get_dummy_names ~start:1 max_nb "n"
 
-(* Output to stdout *)
-let print_term term = printf "%s" (term_to_string term)
+let term_to_string ?(bound=[]) term =
+  let term = Norm.deep_norm term in
+  let generic = get_generic_names term in
+  let s = term_to_string_full ~generic ~bound term in
+    List.iter Term.free generic ;
+    s
+
+(** Formatter *)
+let pp_term out term =
+  fprintf out "%s" (term_to_string term)
+
+(** Output to stdout *)
+let print_term ?(bound=[]) term =
+  printf "%s" (term_to_string ~bound term)
+
+(** Utility for tools such as Taci which push down formula-level abstractions
+  * to term level abstractions. Dummy names should be created (and freed)
+  * during the printing of the formula, and passed as the bound names to this
+  * function, which won't display the lambda prefix.
+  * The input term should have at least [List.length bound] abstractions
+  * at toplevel. *)
+let term_to_string_preabstracted ~bound term =
+  let term = Norm.deep_norm term in
+  let len = List.length bound in
+    match observe term with
+      | Lam (n,term) ->
+          term_to_string ~bound (lambda (n-len) term)
+      | _ -> assert false

@@ -9,11 +9,12 @@ let add ~allow_eigenvar table args tag =
 let find table args = Index.find !table args
 
 let print head table =
-  Printf.printf "Table for %s contains (P=Proved, D=Disproved):\n" head ;
-  let d = Term.const head 0 in
+  Format.printf
+    "Table for %a contains (P=Proved, D=Disproved):\n"
+    Pprint.pp_term head ;
   Index.iter !table
     (fun t tag ->
-       let t = Term.app t [d] in
+       let t = Term.app t [head] in
        match !tag with
          | Proved    -> Format.printf " [P] %a\n" Pprint.pp_term t
          | Disproved -> Format.printf " [D] %a\n" Pprint.pp_term t

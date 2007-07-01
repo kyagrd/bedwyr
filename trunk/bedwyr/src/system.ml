@@ -19,32 +19,52 @@
 
 module Logic =
 struct
-  let eq = "="
-  let andc = ","
-  let orc = ";"
-  let imp = "=>"
-  let truth = "true"
-  let falsity = "false"
-  let forall = "pi"
-  let exists = "sigma"
-  let nabla = "nabla"
+  let eq      = Term.atom "="
+  let andc    = Term.atom ","
+  let orc     = Term.atom ";"
+  let imp     = Term.atom "=>"
+  let truth   = Term.atom "true"
+  let falsity = Term.atom "false"
+  let forall  = Term.atom "pi"
+  let exists  = Term.atom "sigma"
+  let nabla   = Term.atom "nabla"
+
+  let print   = Term.atom "print"
+  let parse   = Term.atom "parse"
+  let on      = Term.atom "on"
+  let off     = Term.atom "off"
+
+  let var_eq      = Term.get_var eq
+  let var_andc    = Term.get_var andc
+  let var_orc     = Term.get_var orc
+  let var_imp     = Term.get_var imp
+  let var_truth   = Term.get_var truth
+  let var_falsity = Term.get_var falsity
+  let var_forall  = Term.get_var forall
+  let var_exists  = Term.get_var exists
+  let var_nabla   = Term.get_var nabla
+
+  let var_print   = Term.get_var print
+  let var_parse   = Term.get_var parse
+  let var_on      = Term.get_var on
+  let var_off     = Term.get_var off
 
   let _ =
-    Pprint.set_infix [ (imp, Pprint.Right) ;
+    Pprint.set_infix [ ("=>", Pprint.Right) ;
                        ("->", Pprint.Right);
                        ("<-", Pprint.Left) ;
-                       (andc, Pprint.Both) ;
-                       (orc, Pprint.Both) ;
-                       (eq, Pprint.None) ;
-                       ("+", Pprint.Both) ;
-                       ("-", Pprint.Left) ;
-                       ("*", Pprint.Both) ]
+                       (",",  Pprint.Both) ;
+                       (";",  Pprint.Both) ;
+                       ("=",  Pprint.Nonassoc) ;
+                       ("+",  Pprint.Both) ;
+                       ("-",  Pprint.Left) ;
+                       ("*",  Pprint.Both) ]
 end
 
 type defkind = Normal | Inductive | CoInductive
 
 type input =
-  | Def     of defkind * string * int * Term.term
+  | Def     of defkind * Term.term * int * Term.term
   | Query   of Term.term
   | Command of string * Term.term list
 
@@ -55,17 +75,17 @@ let time  = ref false
 
 (** Definitions *)
 
-exception Inconsistent_definition of string
-exception Undefined of string
-exception Arity_mismatch of string*int
+exception Inconsistent_definition of Term.term
+exception Undefined of Term.term
+exception Arity_mismatch of Term.term*int
 
-type definition = string * int * Term.term
-let defs : (string,(defkind*Term.term*Table.t option)) Hashtbl.t =
+(* type definition = Term.var * int * Term.term *)
+let defs : (Term.var,(defkind*Term.term*Table.t option)) Hashtbl.t =
   Hashtbl.create 100
 
 let reset_defs () = Hashtbl.clear defs
 
-let add_clause kind head arity body =
+let add_clause kind head_tm arity body =
   (* Cleanup all tables.
    * Cleaning only this definition's table is _not_ enough, since other
    * definitions may rely on it.
@@ -76,6 +96,7 @@ let add_clause kind head arity body =
          | _,_,Some t -> Table.reset t
          | _ -> ())
     defs ;
+  let head = Term.get_var head_tm in
   let k,b,t =
     try
       let k,b,t = Hashtbl.find defs head in
@@ -83,12 +104,12 @@ let add_clause kind head arity body =
           | Term.Lam (a,b) ->
               if a=arity && k=kind then
                 k, Term.lambda a
-                     (Term.app (Term.atom Logic.orc) [b;body]), t
+                     (Term.app Logic.orc [b;body]), t
               else
-                raise (Inconsistent_definition head)
+                raise (Inconsistent_definition head_tm)
           | _ when arity=0 && k=kind ->
-              k, Term.app (Term.atom Logic.orc) [b;body], t
-          | _ -> raise (Inconsistent_definition head)
+              k, Term.app Logic.orc [b;body], t
+          | _ -> raise (Inconsistent_definition head_tm)
     with
       | Not_found ->
           kind, (Term.lambda arity body),
@@ -97,9 +118,10 @@ let add_clause kind head arity body =
   let b = Norm.hnorm b in
     Hashtbl.replace defs head (k,b,t) ;
     if !debug then
-      Format.printf "%s := %a\n" head Pprint.pp_term b
+      Format.printf "%a := %a\n" Pprint.pp_term head_tm Pprint.pp_term b
 
-let get_def ?check_arity head =
+let get_def ?check_arity head_tm =
+  let head = Term.get_var head_tm in
   try
     let k,b,t = Hashtbl.find defs head in
       match check_arity with
@@ -107,17 +129,18 @@ let get_def ?check_arity head =
         | Some a ->
             begin match Term.observe b with
               | Term.Lam (n,_) when n=a -> k,b,t
-              | _ -> raise (Arity_mismatch (head,a))
+              | _ -> raise (Arity_mismatch (head_tm,a))
             end
   with
-    | Not_found -> raise (Undefined head)
+    | Not_found -> raise (Undefined head_tm)
 
 let show_table head =
   try
-    let _,_,table = Hashtbl.find defs head in
+    let _,_,table = Hashtbl.find defs (Term.get_var head) in
       match table with
         | Some table -> Table.print head table
-        | None -> failwith ("No table defined for " ^ head)
+        | None ->
+            failwith ("No table defined for " ^ (Pprint.term_to_string head))
   with
     | Not_found -> raise (Undefined head)
 

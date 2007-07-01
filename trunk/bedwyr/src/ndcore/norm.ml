@@ -19,6 +19,12 @@
 
 (* (Lazy Head) Normalization *)
 
+(* Raise the substitution *)
+let rec add_dummies env n m =
+  match n with
+    | 0 -> env
+    | _ -> let n'= n-1 in ((Term.Dum (m+n'))::(add_dummies env n' m))
+
 (** Make an environment appropriate to [n] lambda abstractions applied to
     the arguments in [args]. Return the environment together with any
     remaining lambda abstractions and arguments. (There can not be both
@@ -64,7 +70,7 @@ let rec hnorm term =
                   end
             | Term.Lam(n,t) ->
                 Term.lambda n (hnorm (Term.susp t (ol+n) (nl+n)
-                                       (Term.add_dummies e n nl)))
+                                       (add_dummies e n nl)))
             | Term.App(t,args) ->
                 let wrap x = Term.susp x ol nl e in
                   hnorm (Term.app (wrap t) (List.map wrap args))
