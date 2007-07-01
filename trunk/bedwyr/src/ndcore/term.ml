@@ -226,15 +226,17 @@ let copy () =
 (** {1 Generate and find variables} *)
 
 (** [var_names] is used to attach a naming hint for the pretty printer
-  * to variables, not only those built by the parser. It is a weak table,
-  * so that it doesn't impeach the GC to reclaim an unused variable. *)
-module HashedVar = struct
-  type t = var*string
-  let equal (a,_) (b,_) = a == b
-  let hash (a,_) = Hashtbl.hash a
+  * to variables, not only those built by the parser. It is designed to not
+  * interfere with the GC. *)
+module Hint = struct
+  module M = Map.Make(struct type t = int let compare = compare end)
+  let var_names = ref M.empty
+  let add var name =
+    var_names := M.add var.id name !var_names ;
+    Gc.finalise (fun v -> var_names := M.remove v.id !var_names) var
+  let find var =
+    M.find var.id !var_names
 end
-module Weaktbl = Weak.Make(HashedVar)
-let var_names = Weaktbl.create 500
 
 let fresh_id =
   let c = ref 0 in
@@ -246,7 +248,7 @@ let var ~tag ~ts ~lts = Ptr (ref (V {id=fresh_id();tag=tag;ts=ts;lts=lts}))
 (** Generate a fresh variable, attach a naming hint to it. *)
 let fresh ~name ~tag ~lts ~ts =
   let v = {id=fresh_id();tag=tag;ts=ts;lts=lts} in
-    Weaktbl.add var_names (v,name) ;
+    Hint.add v name ;
     Ptr (ref (V v))
 
 module NS = Map.Make(struct type t = string let compare = compare end)
@@ -298,7 +300,7 @@ let get_name var =
           let prefix =
             try
               (* Get the naming hint. *)
-              snd (Weaktbl.find var_names (v,""))
+              Hint.find v
             with
               | Not_found ->
                   begin match v.tag with
