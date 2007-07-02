@@ -271,42 +271,6 @@
 			</File>
 		</Filter>
 		<Filter
-			Name="ndcore"
-			>
-			<File
-				RelativePath="ndcore\index.ml"
-				>
-			</File>
-			<File
-				RelativePath="ndcore\index.mli"
-				>
-			</File>
-			<File
-				RelativePath="ndcore\norm.ml"
-				>
-			</File>
-			<File
-				RelativePath="ndcore\pprint.ml"
-				>
-			</File>
-			<File
-				RelativePath="ndcore\term.ml"
-				>
-			</File>
-			<File
-				RelativePath="ndcore\term.mli"
-				>
-			</File>
-			<File
-				RelativePath="ndcore\unify.ml"
-				>
-			</File>
-			<File
-				RelativePath="ndcore\unify.mli"
-				>
-			</File>
-		</Filter>
-		<Filter
 			Name="Grammar"
 			>
 			<File
@@ -417,6 +381,50 @@
 					>
 				</File>
 			</Filter>
+		</Filter>
+		<Filter
+			Name="ndcore"
+			>
+			<File
+				RelativePath="..\..\bedwyr\src\ndcore\index.ml"
+				>
+			</File>
+			<File
+				RelativePath="..\..\bedwyr\src\ndcore\index.mli"
+				>
+			</File>
+			<File
+				RelativePath="..\..\bedwyr\src\ndcore\norm.ml"
+				>
+			</File>
+			<File
+				RelativePath="..\..\bedwyr\src\ndcore\norm.mli"
+				>
+			</File>
+			<File
+				RelativePath="..\..\bedwyr\src\ndcore\pprint.ml"
+				>
+			</File>
+			<File
+				RelativePath="..\..\bedwyr\src\ndcore\pprint.mli"
+				>
+			</File>
+			<File
+				RelativePath="..\..\bedwyr\src\ndcore\term.ml"
+				>
+			</File>
+			<File
+				RelativePath="..\..\bedwyr\src\ndcore\term.mli"
+				>
+			</File>
+			<File
+				RelativePath="..\..\bedwyr\src\ndcore\unify.ml"
+				>
+			</File>
+			<File
+				RelativePath="..\..\bedwyr\src\ndcore\unify.mli"
+				>
+			</File>
 		</Filter>
 		<File
 			RelativePath=".\clean.bat"

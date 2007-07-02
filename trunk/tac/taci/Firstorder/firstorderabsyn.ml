@@ -29,8 +29,8 @@ type formula =
   | PiFormula of formula
   | SigmaFormula of formula
   | NablaFormula of formula
-  | MuFormula of string * formula
-  | NuFormula of string * formula
+  | MuFormula of string * string list * formula
+  | NuFormula of string * string list * formula
   | AbstractionFormula of string * formula
   | ApplicationFormula of formula * term list
   | AtomicFormula of term
@@ -50,52 +50,90 @@ type definition =
 let getDefinitionArity (Definition(_,a,_,_)) = a
 let getDefinitionBody (Definition(_,_,b,_)) = b
 
-let string_of_term t =
-  Pprint.term_to_string t
+let getConnective = function
+    AndFormula(_) -> ", "
+  | OrFormula(_) -> "; "
+  | ImplicationFormula(_) -> " => "
+  | EqualityFormula(_) -> " = "
+  | _ -> ""
+
+let getConnectiveName = function
+    AndFormula(_) -> "and"
+  | OrFormula(_) -> "or"
+  | ImplicationFormula(_) -> "imp"
+  | EqualityFormula(_) -> "eq"
+  | _ -> ""
 
 let rec getFormulaName = function
-    MuFormula(name,_) -> name
-  | NuFormula(name,_) -> name
+    MuFormula(name,_,_) -> name
+  | NuFormula(name,_,_) -> name
   | DBFormula(name,_) -> name
   | f -> string_of_formula f
 
-and string_of_formula f =
+and string_of_term names t =
+  Pprint.term_to_string_preabstracted names t
+
+and string_of_term_ast t =
+  Pprint.term_to_string t
+
+and string_of_formula ?(names=[]) f =
   match f with
-      AndFormula(l,r) -> "(" ^ (string_of_formula l) ^ ", " ^ (string_of_formula r) ^ ")"
-    | OrFormula(l,r) -> "(" ^ (string_of_formula l) ^ "; " ^ (string_of_formula r) ^ ")"
-    | ImplicationFormula(l,r) -> "(" ^ (string_of_formula l) ^ " => " ^ (string_of_formula r) ^ ")"
-    | EqualityFormula(l,r) -> "(" ^ (Pprint.term_to_string l) ^ " = " ^ (Pprint.term_to_string r) ^ ")"
-    | PiFormula(f) -> "pi " ^ (string_of_formula f)
-    | SigmaFormula(f) -> "sigma " ^ (string_of_formula f)
-    | NablaFormula(f) -> "nabla " ^ (string_of_formula f)
-    | MuFormula(name, f) -> "(" ^ name ^ " " ^ (string_of_formula f) ^ ")"
-    | NuFormula(name, f) -> "(" ^ name ^ " " ^ (string_of_formula f) ^ ")"
-    | AbstractionFormula(name, f) -> name ^ "\\ " ^ (string_of_formula f)
+      AndFormula(l,r)
+    | OrFormula(l,r)
+    | ImplicationFormula(l,r) ->
+        let s1 = (string_of_formula ~names l) in
+        let s2 = (string_of_formula ~names r) in
+        "(" ^ s1 ^ (getConnective f) ^ s2 ^ ")"
+    | EqualityFormula(l,r) ->
+        let s1 = (string_of_term names l) in
+        let s2 = (string_of_term names r) in
+        "(" ^ s1 ^ " = " ^ s2 ^ ")"
+    | PiFormula(f) -> "pi " ^ (string_of_formula ~names f)
+    | SigmaFormula(f) -> "sigma " ^ (string_of_formula ~names f)
+    | NablaFormula(f) -> "nabla " ^ (string_of_formula ~names f)
+    | MuFormula(name, _, f) -> "(" ^ name ^ " " ^ (string_of_formula ~names f) ^ ")"
+    | NuFormula(name, _, f) -> "(" ^ name ^ " " ^ (string_of_formula ~names f) ^ ")"
+    | AbstractionFormula(hint, f) ->
+        let hint = Term.get_dummy_name hint in
+        let s = hint ^ "\\ " ^ (string_of_formula ~names:(hint::names) f) in
+        (Term.free hint;
+        s)
     | ApplicationFormula(mu,tl) ->
         (getFormulaName mu) ^ " " ^
-          (String.concat " " (List.map (Pprint.term_to_string) tl))
+          (String.concat " " (List.map (string_of_term names) tl))
     | AtomicFormula(t) ->
-        (Pprint.term_to_string t)
+        (string_of_term names t)
     | DBFormula(n,i) -> n
 
-let rec string_of_formula_ast f =
+and string_of_formula_ast f =
   match f with
-      AndFormula(l,r) -> "and(" ^ (string_of_formula_ast l) ^ ", " ^ (string_of_formula_ast r) ^ ")"
-    | OrFormula(l,r) -> "or(" ^ (string_of_formula_ast l) ^ ", " ^ (string_of_formula_ast r) ^ ")"
-    | ImplicationFormula(l,r) -> "imp(" ^ (string_of_formula_ast l) ^ " -> " ^ (string_of_formula_ast r) ^ ")"
-    | EqualityFormula(l,r) -> "eq(" ^ (string_of_term l) ^ ", " ^ (string_of_term r) ^ ")"
+      AndFormula(l,r)
+    | OrFormula(l,r)
+    | ImplicationFormula(l,r) ->
+        let s1 = (string_of_formula_ast l) in
+        let s2 = (string_of_formula_ast r) in
+        (getConnectiveName f) ^ "(" ^ s1 ^ ", " ^ s2 ^ ")"
+    | EqualityFormula(l,r) ->
+        let s1 = (string_of_term [] l) in
+        let s2 = (string_of_term [] r) in
+        "eq(" ^ s1 ^ ", " ^ s2 ^ ")"
     | PiFormula(f) -> "pi(" ^ (string_of_formula_ast f) ^ ")"
     | SigmaFormula(f) -> "sigma(" ^ (string_of_formula_ast f) ^ ")"
     | NablaFormula(f) -> "nabla(" ^ (string_of_formula_ast f) ^ ")"
-    | MuFormula(name, f) -> "mu(" ^ name ^ ", " ^ (string_of_formula_ast f) ^ ")"
-    | NuFormula(name, f) -> "nu(" ^ name ^ ", " ^ (string_of_formula_ast f) ^ ")"
-    | AbstractionFormula(name, f) -> "lambda(" ^ name ^ ", " ^ (string_of_formula_ast f) ^ ")"
+    | MuFormula(name, _, f) -> "mu(" ^ name ^ ", " ^ (string_of_formula_ast f) ^ ")"
+    | NuFormula(name, _, f) -> "nu(" ^ name ^ ", " ^ (string_of_formula_ast f) ^ ")"
+    | AbstractionFormula(hint, f) ->
+        let hint = Term.get_dummy_name hint in
+        let s = "lambda(" ^ hint ^ ", " ^ (string_of_formula_ast f)  ^ ")" in
+        (Term.free hint;
+        s)
     | ApplicationFormula(mu,tl) ->
-        "app(" ^ (string_of_formula_ast mu) ^ ", " ^
-          (String.concat " " (List.map string_of_term tl)) ^ ")"
+        (string_of_formula_ast mu) ^ " " ^
+          (String.concat " " (List.map string_of_term_ast tl))
     | AtomicFormula(t) ->
-        (Pprint.term_to_string t)
-    | DBFormula(n,i) -> "db(" ^ n ^ ", " ^ (string_of_int i) ^ ")"
+        (string_of_term_ast t)
+    | DBFormula(n,i) -> "#" ^ (string_of_int i)
+
 
 let string_of_fixpoint = function
     Inductive -> "inductive"
@@ -113,8 +151,8 @@ let mapFormula formulafun termfun f =
     | PiFormula(f) -> PiFormula(formulafun f)
     | SigmaFormula(f) -> SigmaFormula(formulafun f)
     | NablaFormula(f) -> NablaFormula(formulafun f)
-    | MuFormula(name, f) -> MuFormula(name, formulafun f)
-    | NuFormula(name, f) -> NuFormula(name, formulafun f)
+    | MuFormula(name, args, f) -> MuFormula(name, args, formulafun f)
+    | NuFormula(name, args, f) -> NuFormula(name, args, formulafun f)
     | AbstractionFormula(name, f) -> AbstractionFormula(name, formulafun f)
     | ApplicationFormula(head,tl) -> ApplicationFormula(formulafun head, List.map termfun tl)
     | AtomicFormula(t) -> AtomicFormula(termfun t)
@@ -123,25 +161,12 @@ let mapFormula formulafun termfun f =
 
 (**********************************************************************
 *abstract:
-* Note that this doesn't push a term-level abstraction through
-* mu/nu abstractions.
 **********************************************************************)
 let rec abstract name formula =
   let var = Term.atom name in
-  let rec termFun t = Term.abstract_var var t
-  and formulaFun f =
-    match f with
-      AbstractionFormula(n,f') ->
-        if name = n then
-          let name' = "you_can't_see_me!" in
-          AbstractionFormula(n, (abstract name' f'))
-        else
-          AbstractionFormula(n, formulaFun f')
-    | MuFormula(_)
-    | NuFormula(_) -> f
-    | _ -> (mapFormula formulaFun termFun f)
-  in
-  (formulaFun formula)
+  let rec termFun t = Term.abstract var t
+  and formulaFun f = (mapFormula formulaFun termFun f) in
+  AbstractionFormula(name, (formulaFun formula))
 
 (**********************************************************************
 *apply:
@@ -238,7 +263,7 @@ let unifyList unifier l1 l2 =
 let isAnonymousTerm t =
   match (Term.observe t) with
     Term.Var(v) ->
-      (v.Term.print = "_")
+      (Term.get_hint t = "_")
   | _ -> false
 
 let isAnonymousFormula f =
@@ -283,23 +308,23 @@ let matchFormula template formula =
         (*  If this atomic formula is an underscore, then it matches. *)
         (isAnonymousTerm t)
         
-    | (MuFormula(n,_), MuFormula(n',_))
-    | (NuFormula(n,_), NuFormula(n',_)) ->
+    | (MuFormula(n,_,_), MuFormula(n',_,_))
+    | (NuFormula(n,_,_), NuFormula(n',_,_)) ->
         n = n'
 
     | (AbstractionFormula(n,f), AbstractionFormula(n',f')) ->
-        n = n' && (search f f')
+        (n = n' || n = "_" || n' = "_") && (search f f')
     | (PiFormula(f), PiFormula(f'))
     | (SigmaFormula(f), SigmaFormula(f'))
     | (NablaFormula(f), NablaFormula(f')) ->
         (search f f')
 
-    | (ApplicationFormula(MuFormula(n,b),args), ApplicationFormula(MuFormula(n',b'),args')) ->
+    | (ApplicationFormula(MuFormula(n,_,b),args), ApplicationFormula(MuFormula(n',_,b'),args')) ->
         if isAnonymousFormula b || isAnonymousFormula b' then
           true
         else
           (n = n') && (List.exists success (List.map2 rightUnify args args'))
-    | (ApplicationFormula(NuFormula(n,b),args), ApplicationFormula(NuFormula(n',b'),args')) ->
+    | (ApplicationFormula(NuFormula(n,_,b),args), ApplicationFormula(NuFormula(n',_,b'),args')) ->
         if isAnonymousFormula b || isAnonymousFormula b' then
           true
         else
@@ -323,34 +348,29 @@ let matchFormula template formula =
 * Gets the name of the head of a term (if it is a constant).
 **********************************************************************)
 let getTermVarName t =
-  match Term.observe t with
-    Term.Var(v) ->
-      if v.Term.tag = Term.Constant then
-        (v.Term.name)
-      else
-        failwith "Firstorderabsyn.getTermVarName: invalid term."
-  | _ -> failwith "Firstorderabsyn.getTermVarName: invalid term."
+  Term.get_name t
 
 (**********************************************************************
 *getTermHeadAndArgs:
 * Gets the head and arguments of a term.  If the term isn't a constant,
 * returns None.
 **********************************************************************)
-let getTermHeadAndArgs t =
+let rec getTermHeadAndArgs t =
   match Term.observe t with
     Term.App(t',args) ->
       (match (Term.observe t') with
         Term.Var(v) ->
           if v.Term.tag = Term.Constant then
-            Some (v.Term.name, args)
+            Some (Term.get_name t', args)
           else
             None
       | _ -> None)    
   | Term.Var(v) ->
       if v.Term.tag = Term.Constant then
-        Some (v.Term.name, [])
+        Some (Term.get_name t, [])
       else
         None
+  | Term.Lam(_,t) -> getTermHeadAndArgs t
   | _ -> None
 
 (**********************************************************************
@@ -366,32 +386,16 @@ let getTermHead t =
     None
 
 (**********************************************************************
-*renameAbstractions:
-**********************************************************************)
-let renameAbstractions formula =      
-  let tf t = t in
-  let rec ff f =
-    match f with
-        AbstractionFormula(n,f') ->
-          let f'' = abstract n f' in
-          let var' = Term.fresh_atom (Term.atom n) in
-          let f''' = (apply [var'] f'') in
-          AbstractionFormula(getTermVarName var', (ff f'''))
-      | _ -> (mapFormula ff tf f)
-  in
-  ff formula
-
-(**********************************************************************
 *applyFixpoint:
 **********************************************************************)
 let applyFixpoint arg formula =
   let tf t = t in
   let rec ff i f =
     match f with
-        MuFormula(name,body) ->
-          MuFormula(name, ff (i + 1) body)
-      | NuFormula(name,body) ->
-          NuFormula(name, ff (i + 1) body)
+        MuFormula(name,args,body) ->
+          MuFormula(name,args, ff (i + 1) body)
+      | NuFormula(name,args,body) ->
+          NuFormula(name,args,ff (i + 1) body)
       | ApplicationFormula(DBFormula(n,i'),args) ->
           if i = i' then
             (arg args)
@@ -406,7 +410,7 @@ let applyFixpoint arg formula =
 *makeAnonymousTerm:
 ********************************************************************)
 let makeAnonymousTerm () =
-  Term.freshWithPrintName "_" ~tag:Term.Logic ~lts:max_int max_int
+  Term.fresh ~name:"_" ~tag:Term.Logic ~lts:max_int ~ts:max_int
 
 (********************************************************************
 *makeAnonymousFormula:

@@ -79,6 +79,7 @@ val get_var_by_name : tag:tag -> ts:int -> lts:int -> string -> term
 val atom : string -> term
 
 val get_name : term -> string
+val get_hint : term -> string
 
 val get_dummy_name  : ?start:int -> string -> string
 val get_dummy_names : ?start:int -> int -> string -> string list

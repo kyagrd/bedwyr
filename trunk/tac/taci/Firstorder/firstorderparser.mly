@@ -17,14 +17,16 @@
 * Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA        *
 **********************************************************************/
 %{
-  let eqFormula f1 f2 = Firstorderabsyn.EqualityFormula(f1, f2)
-  let andFormula f1 f2 = Firstorderabsyn.AndFormula(f1, f2)
-  let orFormula f1 f2 = Firstorderabsyn.OrFormula(f1, f2)
-  let impFormula f1 f2 = Firstorderabsyn.ImplicationFormula(f1, f2)
+  module FOA = Firstorderabsyn
+  
+  let eqFormula f1 f2 = FOA.EqualityFormula(f1, f2)
+  let andFormula f1 f2 = FOA.AndFormula(f1, f2)
+  let orFormula f1 f2 = FOA.OrFormula(f1, f2)
+  let impFormula f1 f2 = FOA.ImplicationFormula(f1, f2)
   
   let rec getAbstractions f =
     match f with
-        Firstorderabsyn.AbstractionFormula(name, f') ->
+        FOA.AbstractionFormula(name, f') ->
           let (names,f'') = (getAbstractions f') in
           (name::names, f'')
       | _ -> ([], f)
@@ -32,47 +34,60 @@
   let makeAbstractions make f =
     let rec makeAbs' names make f =
       match names with
-        [] -> raise (Firstorderabsyn.SemanticError ("argument does not have toplevel abstractions: " ^ (Firstorderabsyn.string_of_formula f)))
-      | [name] -> make name (Firstorderabsyn.AbstractionFormula(name,f))
+        [] -> raise (FOA.SemanticError ("argument does not have toplevel abstractions: " ^ (FOA.string_of_formula f)))
+      | [name] -> make name (FOA.AbstractionFormula(name,f))
       | name::names ->
-          (makeAbs' (names) make (make name (Firstorderabsyn.AbstractionFormula(name,f))))        
+          (makeAbs' (names) make (make name (FOA.AbstractionFormula(name,f))))        
     in
-    if (Firstorderabsyn.isAnonymousFormula f) then
+    if (FOA.isAnonymousFormula f) then
       make "" f
     else
       let (names,f') = getAbstractions f in
       (makeAbs' names make f')
 
   let pi f =
-    let make name f = Firstorderabsyn.PiFormula(f) in
+    let make name f = FOA.PiFormula(f) in
     (makeAbstractions make f)
 
   let sigma f =
-    let make name f = Firstorderabsyn.SigmaFormula(f) in
+    let make name f = FOA.SigmaFormula(f) in
     (makeAbstractions make f)
 
   let nabla f =
-    let make name f = Firstorderabsyn.NablaFormula(f) in
+    let make name f = FOA.NablaFormula(f) in
     (makeAbstractions make f)
 
   let atomic t =
-    if Firstorderabsyn.isAnonymousTerm t then
-      Firstorderabsyn.makeAnonymousFormula ()
+    if FOA.isAnonymousTerm t then
+      FOA.makeAnonymousFormula ()
     else
-      Firstorderabsyn.AtomicFormula(t)
+      FOA.AtomicFormula(t)
 
-  let anonymous () = Firstorderabsyn.makeAnonymousTerm  ()
+  let anonymous () = FOA.makeAnonymousTerm  ()
   let atom t = Term.atom t
   
   let abstract id f =
-    Firstorderabsyn.AbstractionFormula(id, f)
-
+    FOA.abstract id f
     
   let application term = 
     match term with
-        [] -> failwith "Linearparser.tterm: invalid lterm."
+        [] -> failwith "Firstorder.tterm: invalid lterm."
       | t::l -> (Term.app t l)
   
+  let definition name args body fix =
+    let (_,argnames) = List.split args in
+    let abstract arg f =
+      FOA.abstract arg f
+    in
+    let free (f,name) =
+      if f then
+        (Term.free name)
+      else
+        ()
+    in
+    let result = FOA.PreDefinition(name,argnames,List.fold_right abstract argnames body,fix) in
+    (List.iter free args;
+    result)
 %}
 
 %token BSLASH LPAREN RPAREN DOT SHARP UNDERSCORE
@@ -108,23 +123,28 @@ toplevel_template
   ;
 
 template
-  : MU UNDERSCORE     {Firstorderabsyn.ApplicationFormula(Firstorderabsyn.MuFormula("", atomic (anonymous ())), [])}
-  | NU UNDERSCORE     {Firstorderabsyn.ApplicationFormula(Firstorderabsyn.NuFormula("", atomic (anonymous ())), [])}
+  : MU UNDERSCORE     {FOA.ApplicationFormula(FOA.MuFormula("", [], atomic (anonymous ())), [])}
+  | NU UNDERSCORE     {FOA.ApplicationFormula(FOA.NuFormula("", [], atomic (anonymous ())), [])}
   ;
 
 toplevel_definition
-  : definition      {$1}
-  | definition EOF  {$1}
+  : def      {$1}
+  | def EOF  {$1}
   ;
 
-definition
-  : ID definitionargs DEF formula   {Firstorderabsyn.PreDefinition($1, $2, $4, Firstorderabsyn.Inductive)}
-  | IND ID definitionargs DEF formula   {Firstorderabsyn.PreDefinition($2, $3, $5, Firstorderabsyn.Inductive)}
-  | COIND ID definitionargs DEF formula   {Firstorderabsyn.PreDefinition($2, $3, $5, Firstorderabsyn.CoInductive)}
+def
+  : ID definitionargs DEF formula         {(definition $1 $2 $4 FOA.Inductive)}
+  | IND ID definitionargs DEF formula     {(definition $2 $3 $5 FOA.Inductive)}
+  | COIND ID definitionargs DEF formula   {(definition $2 $3 $5 FOA.CoInductive)}
   ;
 
 definitionargs
-  : ID definitionargs   {$1::$2}
+  : ID definitionargs   {let free = Term.is_free $1 in
+                        let result = (free, $1) in
+                        if List.exists ((=) result) $2 then
+                          raise (FOA.SemanticError("argument appears more than once"))
+                        else
+                          result::$2}
   |                     {[]}
   ;
 
@@ -138,10 +158,21 @@ formula
   | SIGMA formula {sigma $2}
   | NABLA formula {nabla $2}
   
-  | ID BSLASH formula {abstract $1 $3}
+  | binder formula            {let (free, name) = $1 in
+                              let abs = abstract name $2 in
+                              if (free) then
+                                (Term.free name;
+                                abs)
+                              else
+                                abs}
   
-  | LPAREN formula RPAREN {$2}
-  | term {atomic $1}
+  | LPAREN formula RPAREN     {$2}
+  | term                      {atomic $1}
+  ;
+
+binder
+  : ID BSLASH                 {(Term.is_free $1, $1)}
+  | UNDERSCORE BSLASH         {(false, "_")}
   ;
 
 toplevel_term

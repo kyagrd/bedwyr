@@ -54,6 +54,13 @@ let parenthesis x = "(" ^ x ^ ")"
   * [Term.free].
   * The input term should be fully normalized. *)
 let term_to_string_full ~generic ~bound term =
+  let get_nth list n s =
+    try
+      List.nth list n
+    with
+      Failure _ -> s
+  in
+  
   let high_pr = 1 + get_max_priority () in
   let rec pp ~bound pr term =
     match observe term with
@@ -63,8 +70,8 @@ let term_to_string_full ~generic ~bound term =
             Printf.sprintf "%s[%d/%d]" name v.ts v.lts
           else
             name
-      | NB i -> List.nth generic (i-1)
-      | DB i -> List.nth bound (i-1)
+      | NB i -> get_nth generic (i-1) ("nabla(" ^ (string_of_int (i - 1)) ^ ")")
+      | DB i -> get_nth bound (i-1) ("db(" ^ (string_of_int (i - 1)) ^ ")")
       | App (t,ts) ->
           begin match observe t, ts with
             | Var {tag=Constant}, [a; b] when is_infix (get_name t) ->
@@ -132,7 +139,8 @@ let print_term ?(bound=[]) term =
 let term_to_string_preabstracted ~bound term =
   let term = Norm.deep_norm term in
   let len = List.length bound in
-    match observe term with
-      | Lam (n,term) ->
-          term_to_string ~bound (lambda (n-len) term)
-      | _ -> assert false
+  
+  match observe term with
+    | Lam (n,term) ->
+        term_to_string ~bound (lambda (n-len) term)
+    | _ -> (assert (bound = []); term_to_string term)

@@ -177,7 +177,7 @@ let abstract target t =
     | Var _ -> assert false
     | Susp _ -> raise NonNormalTerm
   in
-    lambda 1 (aux 1 t)
+  lambda 1 (aux 1 t)
 
 (** {1 Extract variables} *)
 
@@ -283,6 +283,14 @@ let atom name =
   in
     get_var_by_name ~ts:0 ~lts:0 ~tag name
 
+let get_var x = match observe x with
+  | Var v -> v
+  | App _ -> assert false
+  | _ -> assert false
+
+let get_hint var =
+  Hint.find (get_var var)
+
 (** Find an unique name for [v] (based on a naming hint if there is one)
   * and registers it in the symbols table. *)
 let get_name var =
@@ -383,11 +391,6 @@ let get_nablas x =
     | Susp _ | Ptr _ -> assert false
   in
     nb [] x
-
-let get_var x = match observe x with
-  | Var v -> v
-  | App _ -> assert false
-  | _ -> assert false
 
 module Notations =
 struct

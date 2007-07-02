@@ -300,7 +300,7 @@ struct
         | Absyn.Timing(onoff) ->
             (timing := onoff; (session, true))
         | Absyn.Debug(onoff) ->
-            (O.showDebug := onoff; (session, true))
+            (Output.showDebug := onoff; (session, true))
         | Absyn.Include(sl) ->
             (L.incl sl session, true)
         | Absyn.Open(sl) ->

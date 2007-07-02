@@ -30,8 +30,8 @@ type formula =
   | PiFormula of formula
   | SigmaFormula of formula
   | NablaFormula of formula
-  | MuFormula of string * formula
-  | NuFormula of string * formula
+  | MuFormula of string * string list * formula
+  | NuFormula of string * string list * formula
   
   | AbstractionFormula of string * formula
   | ApplicationFormula of formula * term list
@@ -62,12 +62,11 @@ val isAnonymousFormula : formula -> bool
 val mapFormula : (formula -> formula) -> (term -> term) -> formula -> formula
 val abstract : string -> formula -> formula
 val apply : term list -> formula -> formula
-val renameAbstractions : formula -> formula
 val applyFixpoint : (term list -> formula) -> formula -> formula
 val string_of_definition : definition -> string
-val string_of_formula : formula -> string
+val string_of_term : string list -> term -> string
+val string_of_formula : ?names:string list -> formula -> string
 val string_of_formula_ast : formula -> string
-val string_of_term : term -> string
 
 val rightUnify : term -> term -> unifyresult
 val leftUnify : term -> term -> unifyresult
