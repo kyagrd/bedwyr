@@ -20,7 +20,7 @@
 (** Representation of higher-order terms. *)
 
 type tag = Eigen | Constant | Logic
-type var = { id : int ; tag : tag; ts : int; lts : int; }
+type var = private { id : int ; tag : tag; ts : int; lts : int; }
 
 type term
 type ptr
