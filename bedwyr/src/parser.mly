@@ -114,6 +114,7 @@ input_def:
 | defkind sexp DOT         { let h,t = $2 in mkdef $1 h t (Term.atom "true") }
 | DEF exp DOT              { System.Query $2 }
 | SHARP sexp DOT           { let h,t = $2 in System.Command (to_string h,t) }
+
 defkind:
 |       { System.Normal      }
 | IND   { System.Inductive   }

@@ -438,7 +438,7 @@ namespace StickyTaci
       }
       else
       {
-        outputBox.Clear();
+        //outputBox.Clear();
         outputBox.SelectionFont = m_OutputFont;
         outputBox.SelectionColor = ErrorColor;
         outputBox.SelectedText = "Error: " + s;

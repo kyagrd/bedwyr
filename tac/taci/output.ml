@@ -16,9 +16,10 @@
 * along with this code; if not, write to the Free Software Foundation,*
 * Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA        *
 **********************************************************************)
+let showDebug = ref false
+
 module type Output =
 sig
-  val showDebug : bool ref
   val prompt : string -> unit
   val error : string -> unit
   val debug : string -> unit
@@ -32,7 +33,6 @@ end
 
 module ConsoleOutput =
 struct
-  let showDebug = ref false
   let debug s =
     if !showDebug then
       (print_string ("Debug: " ^ s);
@@ -70,13 +70,13 @@ struct
   let map =
     let sq = ("'", "&apos;") in
     let dq = ("\"", "&quot;") in
-    let slash = ("\\", "\\\\") in
     let cr = ("\r", "") in    
     let nl = ("\n", "\\n") in
     let amp = ("&", "&amp;") in
     let lt = ("<", "&lt;") in
     let gt = (">", "&gt;") in
-    (List.map (fun (r,s) -> (Str.regexp r, s)) [sq;dq;slash;cr;nl;amp;lt;gt])
+    let slash = ("\\", "\\\\") in
+    (List.map (fun (r,s) -> (Str.regexp r, s)) [sq;dq;cr;nl;amp;lt;gt;slash])
   
   let escape s =
     let rec escape' regexes result =
@@ -88,7 +88,6 @@ struct
     in
     escape' map s
 
-  let showDebug = ref false
   let debug s =
     if !showDebug then
       print_string ("<Output type=\"debug\" text=\"" ^ (escape s) ^ "\"/>")

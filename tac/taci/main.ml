@@ -17,9 +17,13 @@
 * Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA        *
 **********************************************************************)
 
+let debug () =
+  (print_endline "Debugging enabled.";
+  Output.showDebug := true;
+  Pprint.debug := true)
+
 let outputName = ref "console"
-let logicName = ref ""
-let debug = ref false
+let logicName = ref "none"
 let printLogicInformation = ref false
 let printOutputInformation = ref false
 
@@ -29,7 +33,7 @@ let printOutputInformation = ref false
 *parseArgs:
 **********************************************************************)
 let rec printHelp () = (Arg.usage speclist usage; exit 0)
-and speclist = [("--debug", Arg.Set(debug), "enable debugging");
+and speclist = [("--debug", Arg.Unit(debug), "enable debugging");
                 ("-help", Arg.Unit(printHelp), "");
                 ("--help", Arg.Unit(printHelp), "print usage information");
                 ("--logic", Arg.Set_string(logicName), "logic");

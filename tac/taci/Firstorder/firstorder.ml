@@ -92,14 +92,16 @@ struct
     FOA.definition Logic.table *
     sequent list *
     proof Logic.proofbuilder *
-    Term.bind_state * Term.subst)
+    Term.state * Term.subst)
 
   let getSessionSequents (Session(_,_,sequents,_,_,_)) = sequents
   let setSessionSequents sequents (Session(t,d,_,pb,u,r)) = (Session(t,d,sequents,pb,u,r))
   let getSessionBuilder (Session(_,_,_,b,_,_)) = b
   let setSessionBuilder builder (Session(t,d,s,_,u,r)) = (Session(t,d,s,builder,u,r))
   let getSessionUndo (Session(_,_,_,_,u,_)) = u
+  let setSessionUndo undo (Session(t,d,s,b,_,r)) = (Session(t,d,s,b,undo,r))
   let getSessionRedo (Session(_,_,_,_,_,r)) = r
+  let setSessionRedo redo (Session(t,d,s,b,u,_)) = (Session(t,d,s,b,u,redo))
   let getSessionTacticals (Session(t,_,_,_,_,_)) = t
   let setSessionTacticals tacs (Session(_,d,s,pb,u,r)) = (Session(tacs,d,s,pb,u,r))
   let getSessionDefinitions (Session(_,d,_,_,_,_)) = d
@@ -166,6 +168,11 @@ struct
   * and abstractions are inserted.
   ********************************************************************)
   let replaceApplications defs formula =
+    (******************************************************************
+    *makeArgs:
+    * Generates a list of new names of length i.  This is only used
+    * if the incorrect number of arguments were applied to a definition.
+    ******************************************************************)
     let rec makeArgs i =
       if i = 0 then
         []
@@ -173,12 +180,12 @@ struct
         (generateSymbol ()) :: makeArgs (i - 1)
     in
     
+    
     let rec makeAbstractions args formula =
       match args with
         [] -> formula
-      | a::aa ->  FOA.AbstractionFormula(a, (makeAbstractions aa formula))
+      | a::aa ->  FOA.AbstractionFormula(a, (makeAbstractions aa (FOA.abstract a formula)))
     in
-      
 
     let tf t = t in
     let rec ff f =
@@ -215,12 +222,7 @@ struct
   let rec application args formula =
     match args with
       [] -> Some formula
-    | a::aa ->
-        (match formula with
-            FOA.AbstractionFormula(name,f) ->
-              let f' = FOA.abstract name f in
-              (application aa (FOA.apply [a] f'))
-          | _ -> (O.error "expected abstraction.\n"; None))
+    | a::aa -> (application aa (FOA.apply [a] formula))
 
   (********************************************************************
   *processFormula:
@@ -253,6 +255,8 @@ struct
   let parseFormula defs t =        
     try
       let formula = Firstorderparser.toplevel_formula Firstorderlexer.token (Lexing.from_string t) in
+      let () = O.debug ("Firstorder.parseFormula: formula: " ^ (FOA.string_of_formula formula) ^ "\n") in
+      let () = O.debug ("Firstorder.parseFormula: formula ast: " ^ (FOA.string_of_formula_ast formula) ^ "\n") in
       Some (processFormula defs formula)
     with
         FOA.SyntaxError(s) ->
@@ -273,6 +277,8 @@ struct
   let parseDefinition defs t =        
     try
       let FOA.PreDefinition(name,args,body,ind) = Firstorderparser.toplevel_definition Firstorderlexer.token (Lexing.from_string t) in
+      let () = O.debug ("Firstorder.parseDefinition: predefinition ast:" ^ name ^ " " ^ (FOA.string_of_formula_ast body) ^ ".\n") in
+      let () = O.debug ("Firstorder.parseDefinition: predefinition: " ^ name ^ " " ^ (FOA.string_of_formula body) ^ ".\n") in
       Some (FOA.PreDefinition(name,args,(replaceApplications defs body),ind))
     with
         FOA.SyntaxError(s) ->
@@ -314,15 +320,23 @@ struct
     ******************************************************************)
     let processPreDefinitions predefs =
       (****************************************************************
+      *checkMonotonicity:
+      * Determines whether a definition is monotonic.
+      ****************************************************************)
+      let checkMonotonicity f =
+        true
+      in
+      
+      (****************************************************************
       *makeFixpoint:
       * Makes a mu or nu formula based on the combinator type.
       ****************************************************************)
-      let makeFixpoint ind name body =
+      let makeFixpoint ind name argnames body =
         match ind with
             FOA.Inductive ->
-              FOA.MuFormula(name,body)
+              FOA.MuFormula(name,argnames,body)
           | FOA.CoInductive ->
-              FOA.NuFormula(name,body)
+              FOA.NuFormula(name,argnames,body)
       in
       
       (****************************************************************
@@ -385,40 +399,33 @@ struct
                   else
                     let def = findDefinition head predefs in
                     if Option.isSome def then
-                      let FOA.PreDefinition(_,_,f',ind) = (Option.get def) in
-                      (makeFixpoint ind head (ff (head::abstractions) f'))
+                      let FOA.PreDefinition(_,argnames,f',ind) = (Option.get def) in
+                      (makeFixpoint ind head argnames (ff (head::abstractions) f'))
                     else
                       f
                 else
-                  (O.error ("term has no head: " ^ (FOA.string_of_term t));
+                  (O.error ("term has no head: " ^ (FOA.string_of_term [] t) ^ ".\n");
                   f)
             | _ -> (FOA.mapFormula (ff abstractions) tf f)
         in
         (ff abstractions f)
       in
-      
-      (****************************************************************
-      *abstractArguments:
-      * Pushes down the argument abstractions.
-      *****************************************************************)
-      let rec abstractArguments ids formula =
-        match ids with
-          [] -> formula
-        | id::ids' ->
-            FOA.AbstractionFormula(id, (abstractArguments ids' formula))
-      in
-      
+
       (****************************************************************
       *processPreDefinition:
-      * Mu/Nu-abstracts the body of the predefinition, wraps the body
-      * in a Mu/Nu formula, and applies abstractions in the formula.
+      * Mu/Nu-abstracts the body of the predefinition, and wraps the body
+      * in a Mu/Nu formula.
       ****************************************************************)
       let processPreDefinition (FOA.PreDefinition(name, ids, formula, ind)) =
         let formula' = abstractDefinition [name] formula in
-        let formula'' = abstractArguments ids formula' in
-        let formula''' = makeFixpoint ind name formula'' in
+        let formula'' = makeFixpoint ind name ids formula' in
         
-        FOA.Definition(name, List.length ids, formula''', ind)
+        let result = FOA.Definition(name, List.length ids, formula'', ind) in
+        if (checkMonotonicity formula'') then
+          Some(result)
+        else
+          (O.error (name ^ ": non-monotonic definition.\n");
+          None)
       in
       (List.map processPreDefinition predefs)
     in
@@ -436,6 +443,7 @@ struct
             (O.error ("'" ^ name ^ "' already defined.\n");
             table)
           else
+            let () = O.debug ("Firstorder.definitions: definition ast: " ^ (FOA.string_of_formula_ast formula) ^ ".\n") in
             let () = O.output ("Definition: " ^ (string_of_definition def) ^ ".\n") in
             Logic.Table.add name def (addDefinitions ds table)
     in
@@ -446,12 +454,20 @@ struct
       session)
     else
       let defs = processPreDefinitions (List.map (Option.get) predefs) in
-      let defs' = (addDefinitions defs (getSessionDefinitions session)) in
-      (setSessionDefinitions defs' session)
+      if (List.exists (Option.isNone) defs) then
+        (O.error ("definitions contain errors.\n");
+        session)
+      else
+        let defs' = (List.map (Option.get) defs) in
+        let defs'' = (addDefinitions defs' (getSessionDefinitions session)) in
+        (setSessionDefinitions defs'' session)
 
   let operator name fix prec session = session
   let update sequents builder session =
-    (setSessionSequents sequents (setSessionBuilder builder session))
+    let state = Term.save_state () in
+    let subst = Term.get_subst state in
+    let session' = setSessionUndo state (setSessionRedo subst session) in
+    (setSessionSequents sequents (setSessionBuilder builder session'))
 
   let validSequent session =
     let sequents = (getSessionSequents session) in
@@ -483,14 +499,14 @@ struct
     let rhs' = List.map (fun (i,f) -> (i, copyFormula f)) rhs in
     (i, lhs', rhs')
 
-  let exist ts lvl = Term.fresh ~tag:Term.Logic ~lts:ts lvl
-  let makeExistentialVar lvl lts =
-    let var = Term.fresh_atom (exist lts lvl) in
+  
+  let makeExistentialVar hint lvl lts =
+    let hint = String.capitalize hint in
+    let var = Term.fresh ~name:hint ~lts:lts ~ts:lvl ~tag:Term.Logic in
     (lvl, var)
 
-  let univ ts lvl = Term.fresh ~tag:Term.Eigen ~lts:ts lvl
-  let makeUniversalVar lvl lts =
-    let var = Term.fresh_atom (univ lts lvl) in
+  let makeUniversalVar hint lvl lts =
+    let var = Term.fresh ~name:hint ~lts:lts ~ts:lvl ~tag:Term.Eigen in
     (lvl + 1, var)
 
   let makeNablaVar lvl i =
@@ -521,6 +537,8 @@ struct
   * with F'.
   ********************************************************************)
   let findFormula template formulas =
+    let () = O.debug ("Firstorder.findFormula: template: " ^ (FOA.string_of_formula template) ^ "\n") in
+    let () = O.debug ("Firstorder.findFormula: template ast: " ^ (FOA.string_of_formula_ast template) ^ "\n") in
     let rec find front formulas =
       match formulas with
         [] -> None
@@ -633,10 +651,10 @@ struct
                         fc ()
                   | _::ls ->
                       (unifyList sc ls f))
-              | Formula(i,b,FOA.ApplicationFormula(FOA.MuFormula(n1,_),args)) ->
+              | Formula(i,b,FOA.ApplicationFormula(FOA.MuFormula(n1,_,_),args)) ->
                   (match lhs with
                     [] -> ()
-                  | Formula(i',b,FOA.ApplicationFormula(FOA.MuFormula(n1',_),args'))::ls ->
+                  | Formula(i',b,FOA.ApplicationFormula(FOA.MuFormula(n1',_,_),args'))::ls ->
                       if ((not Param.strictNabla) || (i = i')) && (n1 = n1') then
                         (match (FOA.unifyList FOA.rightUnify args args') with
                             FOA.UnifySucceeded -> sc ()
@@ -648,10 +666,10 @@ struct
                         (unifyList sc ls f)
                   | _::ls ->
                       (unifyList sc ls f))
-              | Formula(i,b,FOA.ApplicationFormula(FOA.NuFormula(n1,_),args)) ->
+              | Formula(i,b,FOA.ApplicationFormula(FOA.NuFormula(n1,_,_),args)) ->
                   (match lhs with
                     [] -> ()
-                  | Formula(i',b,FOA.ApplicationFormula(FOA.NuFormula(n1',_),args'))::ls ->
+                  | Formula(i',b,FOA.ApplicationFormula(FOA.NuFormula(n1',_,_),args'))::ls ->
                       if ((not Param.strictNabla) || (i = i')) && (n1 = n1') then
                         (match (FOA.unifyList FOA.rightUnify args args') with
                             FOA.UnifySucceeded -> sc ()
@@ -786,8 +804,8 @@ struct
     let tactic session seq f zip lhs rhs sc fc =
       let lvl = getSequentLevel seq in
       match f with
-        Formula(i, b, FOA.PiFormula(f)) ->
-          let (lvl',var) = makeExistentialVar lvl i in
+        Formula(i, b, FOA.PiFormula(FOA.AbstractionFormula(hint,f))) ->
+          let (lvl',var) = makeExistentialVar hint lvl i in
           let f' = application [var] f in
           if Option.isSome f' then
             let s = Sequent(lvl', zip [Formula(i, copy b, Option.get f')], rhs) in
@@ -804,8 +822,8 @@ struct
     let tactic session seq f zip lhs rhs sc fc =
       let lvl = getSequentLevel seq in
       match f with
-        Formula(i, b, FOA.PiFormula(f)) ->
-          let (lvl',var) = makeUniversalVar lvl i in
+        Formula(i, b, FOA.PiFormula(FOA.AbstractionFormula(hint,f))) ->
+          let (lvl',var) = makeUniversalVar hint lvl i in
           let f' = application [var] f in
           if Option.isSome f' then
             let s = Sequent(lvl', lhs, zip [Formula(i, copy b, Option.get f')]) in
@@ -828,8 +846,8 @@ struct
     let tactic session seq f zip lhs rhs sc fc =
       let lvl = getSequentLevel seq in
       match f with
-        Formula(i, b, FOA.SigmaFormula(f)) ->
-          let (lvl',var) = makeUniversalVar lvl i in
+        Formula(i, b, FOA.SigmaFormula(FOA.AbstractionFormula(hint,f))) ->
+          let (lvl',var) = makeUniversalVar hint lvl i in
           let f' = application [var] f in
           if Option.isSome f' then
             let s = Sequent(lvl', zip [Formula(i, copy b, Option.get f')], rhs) in
@@ -846,8 +864,8 @@ struct
     let tactic session seq f zip lhs rhs sc fc =
       let lvl = getSequentLevel seq in
       match f with
-        Formula(i, b, FOA.SigmaFormula(f)) ->
-          let (lvl',var) = makeExistentialVar lvl i in
+        Formula(i, b, FOA.SigmaFormula(FOA.AbstractionFormula(hint,f))) ->
+          let (lvl',var) = makeExistentialVar hint lvl i in
           let f' = application [var] f in
           if Option.isSome f' then
             let s = Sequent(lvl', lhs, zip [Formula(i, copy b, Option.get f')]) in
@@ -913,7 +931,7 @@ struct
       let lvl = getSequentLevel seq in
       match f with
         Formula(i, b, FOA.ApplicationFormula(
-          FOA.MuFormula(name,body) as mu, args)) ->
+          FOA.MuFormula(name,argnames,body) as mu, args)) ->
             let mu' = FOA.applyFixpoint (fun alist -> FOA.ApplicationFormula(mu,alist)) body in
             let f' = application args mu' in
             if Option.isSome f' then
@@ -933,7 +951,7 @@ struct
       let lvl = getSequentLevel seq in
       match f with
         Formula(i, b, FOA.ApplicationFormula(
-          FOA.MuFormula(name,body) as mu, args)) ->
+          FOA.MuFormula(name,argnames,body) as mu, args)) ->
             let mu' = FOA.applyFixpoint (fun alist -> FOA.ApplicationFormula(mu,alist)) body in
             let f' = application args mu' in
             if Option.isSome f' then
@@ -964,7 +982,7 @@ struct
       match args with
         [] -> (lvl, [])
       | a::aa ->
-          let (lvl', a') = makeUniversalVar lvl lts in
+          let (lvl', a') = makeUniversalVar a lvl lts in
           let (lvl'', aa') = makeArgs lvl' lts aa in
           (lvl'',  a'::aa')
     in
@@ -982,16 +1000,16 @@ struct
       ****************************************************************)
       let ind f zip lhs rhs sc fc =
         match f with
-          Formula(i,b,FOA.ApplicationFormula(FOA.MuFormula(name,mu),args)) ->
+          Formula(i,b,FOA.ApplicationFormula(FOA.MuFormula(name,argnames,mu),args)) ->
             let s' = parseFormula (getSessionDefinitions session) inv in
             if Option.isSome s' then
-              let s' = FOA.renameAbstractions (Option.get s') in
+              let s' = Option.get s' in
               let f' = application args s' in
               if Option.isSome f' then
                 let f' = Option.get f' in
                 let s1 = Sequent(lvl, zip [Formula(i,copy b,f')], rhs) in
 
-                let (lvl', args') = makeArgs lvl i args in
+                let (lvl', args') = makeArgs lvl i argnames in
                 
                 let r = application args' s' in
                 let mu' = application args' mu in
@@ -1040,7 +1058,7 @@ struct
       let lvl = getSequentLevel seq in
       match f with
         Formula(i, b, FOA.ApplicationFormula(
-          FOA.NuFormula(name,body) as mu, args)) ->
+          FOA.NuFormula(name,argnames,body) as mu, args)) ->
             let mu' = FOA.applyFixpoint (fun alist -> FOA.ApplicationFormula(mu,alist)) body in
             let f' = application args mu' in
             if Option.isSome f' then
@@ -1060,7 +1078,7 @@ struct
       let lvl = getSequentLevel seq in
       match f with
         Formula(i, b, FOA.ApplicationFormula(
-          FOA.NuFormula(name,body) as mu, args)) ->
+          FOA.NuFormula(name,argnames,body) as mu, args)) ->
             let mu' = FOA.applyFixpoint (fun alist -> FOA.ApplicationFormula(mu,alist)) body in
             let f' = application args mu' in
             if Option.isSome f' then
@@ -1090,7 +1108,7 @@ struct
       match args with
         [] -> (lvl, [])
       | a::aa ->
-          let (lvl', a') = makeUniversalVar lvl lts in
+          let (lvl', a') = makeUniversalVar a lvl lts in
           let (lvl'', aa') = makeArgs lvl' lts aa in
           (lvl'',  a'::aa')
     in
@@ -1108,16 +1126,16 @@ struct
       ****************************************************************)
       let coind f zip lhs rhs sc fc =
         match f with
-          Formula(i,b,FOA.ApplicationFormula(FOA.NuFormula(name,mu),args)) ->
+          Formula(i,b,FOA.ApplicationFormula(FOA.NuFormula(name,argnames,mu),args)) ->
             let s' = parseFormula (getSessionDefinitions session) inv in
             if Option.isSome s' then
-              let s' = FOA.renameAbstractions (Option.get s') in
+              let s' = (Option.get s') in
               let f' = application args s' in
               if Option.isSome f' then
                 let f' = Option.get f' in
                 let s1 = Sequent(lvl, lhs, zip [Formula(i,copy b,f')]) in
 
-                let (lvl', args') = makeArgs lvl i args in
+                let (lvl', args') = makeArgs lvl i argnames in
                 
                 let r = application args' s' in
                 let mu' = application args' mu in
@@ -1366,8 +1384,9 @@ struct
   * Provides a new sequent.  This amounts to returning the empty
   * sequent.
   ********************************************************************)
+  let initialNamespace = Term.save_namespace ()
   let reset () =
-    (Term.reset_namespace ();
+    (Term.restore_namespace initialNamespace;
     emptySession)
 
 end

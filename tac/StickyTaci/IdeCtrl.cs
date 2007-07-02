@@ -235,6 +235,7 @@ namespace StickyTaci
 
     private void Save(string filename)
     {
+      FileName = filename;
       Form.Rtf.SaveFile(filename, RichTextBoxStreamType.PlainText);
       Dirty = false;
     }
@@ -281,7 +282,11 @@ namespace StickyTaci
 
       if(dlg.ShowDialog() == DialogResult.OK)
       {
-        string path = Path.ChangeExtension(dlg.FileName, "." + CurrentLogic + ".tac");
+        string path = dlg.FileName;
+        if(getLogicName(dlg.FileName) == "")
+        {
+          path = Path.ChangeExtension(dlg.FileName, "." + CurrentLogic + ".tac");
+        }
         Save(path);
         return true;
       }
@@ -310,16 +315,14 @@ namespace StickyTaci
         Form.Clear();
 
         //Get the logic name:
-        string ext = Path.GetExtension(dlg.FileName);
-        if(ext == ".tac")
+        string logic = getLogicName(dlg.FileName);
+        if(logic != "")
         {
-          string name = Path.GetFileNameWithoutExtension(dlg.FileName);
-          ext = Path.GetExtension(name);
-          if(ext != "")
-          {
-            string logic = ext.Substring(1);
-            OnLogic(logic);
-          }
+          OnLogic(logic);
+        }
+        else
+        {
+          MessageBox.Show("Unable to load session logic: logic not specified.", "StickyTaci - Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
         Form.Rtf.LoadFile(dlg.FileName, RichTextBoxStreamType.PlainText);
         FileName = dlg.FileName;
@@ -455,6 +458,21 @@ namespace StickyTaci
       {
         Form.ClearOutput();
       }
+    }
+
+    private string getLogicName(string path)
+    {
+      string ext = Path.GetExtension(path);
+      if(ext == ".tac")
+      {
+        string name = Path.GetFileNameWithoutExtension(path);        
+        ext = Path.GetExtension(name);
+        if(ext.Length > 0)
+          return ext.Substring(1);
+        else
+          return "";
+      }
+      return "";
     }
   }
 }

@@ -16,9 +16,9 @@
 * along with this code; if not, write to the Free Software Foundation,*
 * Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA        *
 **********************************************************************)
+val showDebug : bool ref
 module type Output =
 sig
-  val showDebug : bool ref
   val prompt : string -> unit
   val error : string -> unit
   val debug : string -> unit
