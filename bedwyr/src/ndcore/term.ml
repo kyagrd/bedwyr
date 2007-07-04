@@ -201,6 +201,10 @@ let logic_vars = get_vars (fun v -> v.tag = Logic)
 (** Eigen variables of [ts], assuming that they are normalized. *)
 let eigen_vars = get_vars (fun v -> v.tag = Eigen)
 
+let fresh_id =
+  let c = ref 0 in
+    fun () -> incr c ; !c
+
 (** {1 Copying} *)
 
 (** [copy ()] instantiates a copier, that copies terms,
@@ -212,7 +216,8 @@ let copy () =
     | Var v ->
         begin try Hashtbl.find tbl v with
           | Not_found ->
-              let x = Ptr (ref (V v)) in
+              let v' = { v with id = fresh_id () } in
+              let x = Ptr (ref (V v')) in
                 Hashtbl.add tbl v x ;
                 x
         end
@@ -237,10 +242,6 @@ module Hint = struct
   let find var =
     M.find var.id !var_names
 end
-
-let fresh_id =
-  let c = ref 0 in
-    fun () -> incr c ; !c
 
 (** Generate a fresh variable. *)
 let var ~tag ~ts ~lts = Ptr (ref (V {id=fresh_id();tag=tag;ts=ts;lts=lts}))
