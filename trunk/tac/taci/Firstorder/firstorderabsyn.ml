@@ -218,6 +218,12 @@ let rec abstractVar var formula =
   else
     formula
 
+let dummyvar = Term.var ~ts:0 ~lts:0 ~tag:Term.Constant
+let rec abstractDummyWithoutLambdas formula =
+  let rec termFun t = Term.abstract dummyvar t
+  and formulaFun f = (mapFormula formulaFun termFun f) in
+  (formulaFun formula)
+
 let rec abstractWithoutLambdas name formula =
   let var = Term.atom name in
   let rec termFun t = Term.abstract var t
@@ -228,6 +234,7 @@ let rec abstractVarWithoutLambdas var formula =
   let rec termFun t = Term.abstract var t
   and formulaFun f = (mapFormula formulaFun termFun f) in
   (formulaFun formula)
+
 (**********************************************************************
 *apply:
 **********************************************************************)
@@ -435,7 +442,7 @@ let applyFixpoint argument formula =
   let rec normalizeAbstractions lambdas target arguments =
     let free (name,info) = if info then Term.free name else () in
     let makeFreeInfo name = (name, Term.is_free name) in
-    let makeArg name = Term.fresh ~name:name ~tag:Term.Constant ~lts:0 ~ts:0 in
+    let makeArg name = Term.var ~tag:Term.Constant ~lts:0 ~ts:0 in
     
     (*  Collect info about variable freeness. *)
     let freeInfo = List.map makeFreeInfo lambdas in
@@ -466,7 +473,6 @@ let applyFixpoint argument formula =
       | NuFormula(name,args,body) ->
           NuFormula(name,args, ff lam (db + 1) body)
       | ApplicationFormula(DBFormula(n,db'),args) ->
-          let () = List.iter (fun t -> print_endline (string_of_term_ast t)) args in
           if db = db' then
             (normalizeAbstractions lam argument args)
           else

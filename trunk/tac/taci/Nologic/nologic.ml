@@ -52,12 +52,12 @@ No logic does nothing!
   let validSequent session = true
   let sequent session = Some((), ())
   let sequents session = []
-  let string_of_sequents sequents = "()"
+  let string_of_sequents session = "()"
   let update sequents builder session = ()
   let undo session = session
   let redo session = session
   
   type proof = unit
   let proof _ = fun l -> l
-  let string_of_proofs proofs = "proofs: ()"
+  let string_of_proofs session = "proofs: ()"
 end

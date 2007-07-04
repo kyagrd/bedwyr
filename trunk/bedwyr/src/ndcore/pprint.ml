@@ -73,7 +73,7 @@ let term_to_string_full ~generic ~bound term =
       | NB i -> get_nth generic (i-1) ("nabla(" ^ (string_of_int (i - 1)) ^ ")")
       | DB i -> get_nth bound (i-1) ("db(" ^ (string_of_int (i - 1)) ^ ")")
       | App (t,ts) ->
-          begin match observe t, ts with
+          begin match (observe t, ts) with
             | Var {tag=Constant}, [a; b] when is_infix (get_name t) ->
                 let op = get_name t in
                 let op_p = priority op in

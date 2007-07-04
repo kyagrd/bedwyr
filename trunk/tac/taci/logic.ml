@@ -76,11 +76,11 @@ sig
   type sequent
   val validSequent : session -> bool
   val sequents : session -> sequent list
-  val string_of_sequents : sequent list -> string
+  val string_of_sequents : session -> string
     
   type proof
   val proof : session -> proof proofbuilder
-  val string_of_proofs : proof list -> string
+  val string_of_proofs : session -> string
   
   val update : sequent list -> proof proofbuilder -> session -> session
 
