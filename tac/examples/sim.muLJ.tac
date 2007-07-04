@@ -1,13 +1,12 @@
-#open "C:\zRXer\Projects\SlimmerSVN\trunk\tac\examples
-	\basic_definitions.def".
+#open "basic_definitions.def".
 
 % Simulation is reflexive.
 #theorem ref "pi p\ (sim p p)".
 pi.
 coinduction("p\ q\ (p=q)").
 eq.
+eq.
 repeat(pi).
-eq_l.
 imp.
 sigma.
 and.
@@ -25,13 +24,11 @@ coinduction("p\ r\ (sigma q\ (sim p q),(sim q r))").
 
  % Check the coinvariance of the coinvariant.
  simplify.
- nu_l("sim").
+ nu_l.
  then(repeat(pi_l),imp_l).
  axiom.
  simplify.
- rotate_l.
- rotate_l.
- nu_l("sim").
+ nu_l("sim q q0").
  then(repeat(pi_l),imp_l).
  axiom.
  simplify.
