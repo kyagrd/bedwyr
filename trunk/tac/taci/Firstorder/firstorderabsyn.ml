@@ -33,7 +33,7 @@ type formula =
   | NuFormula of string * string list * formula
   | AbstractionFormula of string * formula
   | ApplicationFormula of formula * term list
-  | AtomicFormula of term
+  | AtomicFormula of string * term list
   | DBFormula of string * int
 
 type fixpoint =
@@ -47,6 +47,26 @@ type definition =
   Definition of (string * int * formula * fixpoint)
 
 
+(**********************************************************************
+*getTermHeadAndArgs:
+* Gets the head and arguments of a term.  If the term isn't a constant,
+* returns None.
+**********************************************************************)
+let getTermHeadAndArgs t =
+  let t' = Term.observe t in
+  match t' with
+    Term.App(t',args) ->
+      (match (Term.observe t') with
+        Term.Var(v) ->
+          if v.Term.tag = Term.Constant then
+            Some (Term.get_name t', args)
+          else
+            None
+      | _ -> None)    
+  | Term.Var(v) ->
+      Some (Term.get_hint t, [])
+  | _ -> None
+  
 let getDefinitionArity (Definition(_,a,_,_)) = a
 let getDefinitionBody (Definition(_,_,b,_)) = b
 
@@ -62,7 +82,15 @@ let getConnectiveName = function
   | OrFormula(_) -> "or"
   | ImplicationFormula(_) -> "imp"
   | EqualityFormula(_) -> "eq"
-  | _ -> ""
+  | PiFormula(_) -> "pi"
+  | SigmaFormula(_) -> "sigma"
+  | NablaFormula(_) -> "nabla"
+  | MuFormula(_) -> "mu"
+  | NuFormula(_) -> "nu"
+  | ApplicationFormula(_) -> "app"
+  | DBFormula(_) -> "db"
+  | AtomicFormula(_) -> "atom"
+  | AbstractionFormula(_) -> "lambda"
 
 let rec getFormulaName = function
     MuFormula(name,_,_) -> name
@@ -99,10 +127,18 @@ and string_of_formula ?(names=[]) f =
         (Term.free hint;
         s)
     | ApplicationFormula(mu,tl) ->
-        (getFormulaName mu) ^ " " ^
-          (String.concat " " (List.map (string_of_term names) tl))
-    | AtomicFormula(t) ->
-        (string_of_term names t)
+        let name = (getFormulaName mu) in
+        let args = (String.concat " " (List.map (string_of_term names) tl)) in
+        if args = "" then
+          name
+        else
+          name ^ " " ^ args
+    | AtomicFormula(head, tl) ->
+        let tl' = String.concat " " (List.map (string_of_term names) tl) in
+        if tl' = "" then
+          head
+        else
+          (head ^ " " ^ tl')
     | DBFormula(n,i) -> n
 
 and string_of_formula_ast f =
@@ -128,10 +164,12 @@ and string_of_formula_ast f =
         (Term.free hint;
         s)
     | ApplicationFormula(mu,tl) ->
-        (string_of_formula_ast mu) ^ " " ^
-          (String.concat " " (List.map string_of_term_ast tl))
-    | AtomicFormula(t) ->
-        (string_of_term_ast t)
+        "app(" ^ (string_of_formula_ast mu) ^ ", " ^
+          (String.concat " " (List.map string_of_term_ast tl)) ^ ")"
+    | AtomicFormula(head,tl) ->
+        let args = (String.concat " " (List.map (string_of_term_ast) tl)) in
+        let args' = if args = "" then "" else ", " ^ args in
+        "atom(" ^ head ^ args' ^ ")"
     | DBFormula(n,i) -> "#" ^ (string_of_int i)
 
 
@@ -142,8 +180,8 @@ let string_of_fixpoint = function
 let string_of_definition (Definition(name,arity,body,ind)) =
   (string_of_fixpoint ind) ^ " " ^ (string_of_formula body)
     
-let mapFormula formulafun termfun f =
-  match f with
+let mapFormula formulafun termfun formula =
+  match formula with
       AndFormula(l,r) -> AndFormula(formulafun l, formulafun r)
     | OrFormula(l,r) -> OrFormula(formulafun l, formulafun r)
     | ImplicationFormula(l,r) -> ImplicationFormula(formulafun l, formulafun r)
@@ -155,12 +193,14 @@ let mapFormula formulafun termfun f =
     | NuFormula(name, args, f) -> NuFormula(name, args, formulafun f)
     | AbstractionFormula(name, f) -> AbstractionFormula(name, formulafun f)
     | ApplicationFormula(head,tl) -> ApplicationFormula(formulafun head, List.map termfun tl)
-    | AtomicFormula(t) -> AtomicFormula(termfun t)
-    | DBFormula(n,i) -> f
+    | AtomicFormula(head, tl) -> AtomicFormula(head, List.map termfun tl)
+    | DBFormula(n,i) -> formula
 
 
 (**********************************************************************
 *abstract:
+* Abstracts the given formula over the given name. Doesn't go through
+* mu/nu abstractions.
 **********************************************************************)
 let rec abstract name formula =
   let var = Term.atom name in
@@ -168,20 +208,45 @@ let rec abstract name formula =
   and formulaFun f = (mapFormula formulaFun termFun f) in
   AbstractionFormula(name, (formulaFun formula))
 
+let rec abstractVar var formula =
+  let rec termFun t = Term.abstract var t
+  and formulaFun f = (mapFormula formulaFun termFun f) in
+  let result = getTermHeadAndArgs var in
+  if (Option.isSome result) then
+    let (name,_) = Option.get result in
+    AbstractionFormula(name, formulaFun formula)
+  else
+    formula
+
+let rec abstractWithoutLambdas name formula =
+  let var = Term.atom name in
+  let rec termFun t = Term.abstract var t
+  and formulaFun f = (mapFormula formulaFun termFun f) in
+  (formulaFun formula)
+
+let rec abstractVarWithoutLambdas var formula =
+  let rec termFun t = Term.abstract var t
+  and formulaFun f = (mapFormula formulaFun termFun f) in
+  (formulaFun formula)
 (**********************************************************************
 *apply:
-* Note that this doesn't push a term-level application through
-* mu/nu abstractions.
 **********************************************************************)
 let rec apply terms formula =
-  let rec termFun t = Term.app t terms
-  and formulaFun f = 
+  let app term f =
+    let rec termFun t = Term.app t [term]
+    and formulaFun f = (mapFormula formulaFun termFun f) in
     match f with
-        MuFormula(_)
-      | NuFormula(_) -> f
-      | _ -> (mapFormula formulaFun termFun f)
+        AbstractionFormula(_,f) -> Some(formulaFun f)
+      | _ -> None
   in
-  (formulaFun formula)
+  match terms with
+      [] -> Some formula
+    | a::aa ->
+        let f' = app a formula in
+        if Option.isSome f' then
+          (apply aa (Option.get f'))
+        else
+          None
 
 type unifyresult =
     UnifyFailed
@@ -268,7 +333,7 @@ let isAnonymousTerm t =
 
 let isAnonymousFormula f =
   match f with
-    AtomicFormula(t) -> isAnonymousTerm t
+    AtomicFormula(head, t) -> (head = "_") && (t = [])
   | _ -> false
 
 
@@ -299,15 +364,14 @@ let matchFormula template formula =
         (search l l') && (search r r')
     
     | (EqualityFormula(t1, t2), EqualityFormula(t1', t2')) ->
-        (success (rightUnify t1 t1')) && (success (rightUnify t1 t1'))
+        (success (rightUnify t1 t1')) && (success (rightUnify t2 t2'))
 
-    | (AtomicFormula(t), AtomicFormula(t')) ->
-        success (rightUnify t t')
-    | (AtomicFormula(t), _)
-    | (_, AtomicFormula(t)) ->
-        (*  If this atomic formula is an underscore, then it matches. *)
-        (isAnonymousTerm t)
-        
+    | (AtomicFormula("_", []), _)
+    | (_, AtomicFormula("_", [])) ->
+        true
+    | (AtomicFormula(head,tl), AtomicFormula(head',tl')) ->
+        (head = head') && (List.exists success (List.map2 rightUnify tl tl'))
+
     | (MuFormula(n,_,_), MuFormula(n',_,_))
     | (NuFormula(n,_,_), NuFormula(n',_,_)) ->
         n = n'
@@ -351,60 +415,73 @@ let getTermVarName t =
   Term.get_name t
 
 (**********************************************************************
-*getTermHeadAndArgs:
-* Gets the head and arguments of a term.  If the term isn't a constant,
-* returns None.
-**********************************************************************)
-let rec getTermHeadAndArgs t =
-  match Term.observe t with
-    Term.App(t',args) ->
-      (match (Term.observe t') with
-        Term.Var(v) ->
-          if v.Term.tag = Term.Constant then
-            Some (Term.get_name t', args)
-          else
-            None
-      | _ -> None)    
-  | Term.Var(v) ->
-      if v.Term.tag = Term.Constant then
-        Some (Term.get_name t, [])
-      else
-        None
-  | Term.Lam(_,t) -> getTermHeadAndArgs t
-  | _ -> None
-
-(**********************************************************************
-*getTermHead:
-* Gets just the head of a term in a similar way to getTermHeadAndArgs.
-**********************************************************************)
-let getTermHead t =
-  let result = getTermHeadAndArgs t in
-  if Option.isSome result then
-    let (h,_) = (Option.get result) in
-    Some h
-  else
-    None
-
-(**********************************************************************
 *applyFixpoint:
+* Substitutes the given argument formula for the DB formulas in the
+* target formula.  If the argument formula has fewer abstractions than
+* the DB formula, new abstractions are added.  These abstractions don't
+* refer to anything in the argument formula, and so "generic" abstractions
+* can be pushed down.
 **********************************************************************)
-let applyFixpoint arg formula =
+exception InvalidFixpointApplication
+let applyFixpoint argument formula =
+  (********************************************************************
+  *normalizeAbstractions:
+  * Creates n new variables (where n is the number of lambdas the DB
+  * is under) and applies them to the arguments.  Then, it applies
+  * the now lambdaless arguments to the target.  It then re-absracts
+  * the result over the same n variables.  Finally it frees the
+  * generated variables.
+  ********************************************************************)
+  let rec normalizeAbstractions lambdas target arguments =
+    let free (name,info) = if info then Term.free name else () in
+    let makeFreeInfo name = (name, Term.is_free name) in
+    let makeArg name = Term.fresh ~name:name ~tag:Term.Constant ~lts:0 ~ts:0 in
+    
+    (*  Collect info about variable freeness. *)
+    let freeInfo = List.map makeFreeInfo lambdas in
+    
+    (*  Make "dummy" variables and apply them to each argument. *)
+    let lambdas' = List.map makeArg lambdas in
+    let lambdalessargs = List.map (fun t -> Term.app t lambdas') arguments in
+    
+    (*  Apply the lambdaless args.  *)
+    let target' = apply lambdalessargs target in
+    
+    (*  Reabstract. *)
+    if (Option.isSome target') then
+      let abstarget = List.fold_right (abstractVarWithoutLambdas) lambdas' (Option.get target') in
+      
+      (*  Free any bound vars (shouldn't be any). *)
+      (List.iter free freeInfo;
+      abstarget)
+    else
+      raise InvalidFixpointApplication
+  in
+
   let tf t = t in
-  let rec ff i f =
+  let rec ff lam db f =
     match f with
         MuFormula(name,args,body) ->
-          MuFormula(name,args, ff (i + 1) body)
+          MuFormula(name,args, ff lam (db + 1) body)
       | NuFormula(name,args,body) ->
-          NuFormula(name,args,ff (i + 1) body)
-      | ApplicationFormula(DBFormula(n,i'),args) ->
-          if i = i' then
-            (arg args)
+          NuFormula(name,args, ff lam (db + 1) body)
+      | ApplicationFormula(DBFormula(n,db'),args) ->
+          let () = List.iter (fun t -> print_endline (string_of_term_ast t)) args in
+          if db = db' then
+            (normalizeAbstractions lam argument args)
           else
             f
-      | DBFormula(_) -> failwith "invalid DB"
-      | _ -> (mapFormula (ff i) tf f)
+      | AbstractionFormula(name,body) ->
+          AbstractionFormula(name, (ff (name::lam) db body))
+      | DBFormula(_) -> failwith "Firstorderabsyn.applyFixpoint: encountered invalid DB."
+      | _ -> (mapFormula (ff lam db) tf f)
   in
-  ff (0) formula
+  try
+    Some(ff [] 0 formula)
+  with
+    InvalidFixpointApplication ->
+      None
+
 
 (********************************************************************
 *makeAnonymousTerm:
@@ -414,7 +491,6 @@ let makeAnonymousTerm () =
 
 (********************************************************************
 *makeAnonymousFormula:
-* 
 ********************************************************************)
 let makeAnonymousFormula () =
-  AtomicFormula(makeAnonymousTerm ())
+  AtomicFormula("_",[])

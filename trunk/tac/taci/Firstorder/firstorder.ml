@@ -184,46 +184,31 @@ struct
     let rec makeAbstractions args formula =
       match args with
         [] -> formula
-      | a::aa ->  FOA.AbstractionFormula(a, (makeAbstractions aa (FOA.abstract a formula)))
+      | a::aa ->  FOA.abstract a (makeAbstractions aa (formula))
     in
 
     let tf t = t in
     let rec ff f =
       match f with
-          FOA.AtomicFormula(t) ->
-            let ha = FOA.getTermHeadAndArgs t in
-            if (Option.isSome ha) then
-              let (head, args) = Option.get ha in
-              let def = Logic.find head defs in
-              if (Option.isSome def) then
-                let def = (Option.get def) in
-                let arity = FOA.getDefinitionArity def in
-                let body = FOA.getDefinitionBody def in
-                if (arity = List.length args) then
-                  FOA.ApplicationFormula(body, args)
-                else if arity > List.length args then
-                  let args' = makeArgs (arity - (List.length args)) in
-                  makeAbstractions args' (FOA.ApplicationFormula(body, args@(List.map (Term.atom) args')))
-                else             
-                  raise (FOA.SemanticError("'" ^ head ^ "' applied to too many arguments"))
-              else
-                f
+          FOA.AtomicFormula(head,args) ->
+            let def = Logic.find head defs in
+            if (Option.isSome def) then
+              let def = (Option.get def) in
+              let arity = FOA.getDefinitionArity def in
+              let body = FOA.getDefinitionBody def in
+              if (arity = List.length args) then
+                FOA.ApplicationFormula(body, args)
+              else if arity > List.length args then
+                let args' = makeArgs (arity - (List.length args)) in
+                makeAbstractions args' (FOA.ApplicationFormula(body, args@(List.map (Term.atom) args')))
+              else             
+                raise (FOA.SemanticError("'" ^ head ^ "' applied to too many arguments"))
             else
               f
         | _ -> (FOA.mapFormula ff tf f)
     in
     (ff formula)
   
-  
-  (********************************************************************
-  *application:
-  * Apply arguments.
-  ********************************************************************)
-  let rec application args formula =
-    match args with
-      [] -> Some formula
-    | a::aa -> (application aa (FOA.apply [a] formula))
-
   (********************************************************************
   *processFormula:
   * Replaces applications and then applies abstractions.
@@ -389,23 +374,17 @@ struct
         let tf t = t in  
         let rec ff abstractions f =
           match f with
-              FOA.AtomicFormula(t) ->
-                let ha = FOA.getTermHeadAndArgs t in
-                if (Option.isSome ha) then
-                  let (head,args) = Option.get ha in
-                  let db = getDB head abstractions in
-                  if Option.isSome db then
-                    FOA.ApplicationFormula(FOA.DBFormula(head, Option.get db), args)
-                  else
-                    let def = findDefinition head predefs in
-                    if Option.isSome def then
-                      let FOA.PreDefinition(_,argnames,f',ind) = (Option.get def) in
-                      (makeFixpoint ind head argnames (ff (head::abstractions) f'))
-                    else
-                      f
+              FOA.AtomicFormula(head, args) ->
+                let db = getDB head abstractions in
+                if Option.isSome db then
+                  FOA.ApplicationFormula(FOA.DBFormula(head, Option.get db), args)
                 else
-                  (O.error ("term has no head: " ^ (FOA.string_of_term [] t) ^ ".\n");
-                  f)
+                  let def = findDefinition head predefs in
+                  if Option.isSome def then
+                    let FOA.PreDefinition(_,argnames,f',ind) = (Option.get def) in
+                    (makeFixpoint ind head argnames (ff (head::abstractions) f'))
+                  else
+                    f
             | _ -> (FOA.mapFormula (ff abstractions) tf f)
         in
         (ff abstractions f)
@@ -541,13 +520,16 @@ struct
     let () = O.debug ("Firstorder.findFormula: template ast: " ^ (FOA.string_of_formula_ast template) ^ "\n") in
     let rec find front formulas =
       match formulas with
-        [] -> None
+        [] ->
+          let () = O.debug "Firstorder.findFormula: not found.\n" in
+          None
       | formula::fs ->
           let f = getFormulaFormula formula in
           if (FOA.matchFormula template f) then
             let zip rest = fun list ->
               (List.rev_append front list) @ rest
             in
+            let () = O.debug ("Firstorder.findFormula: found: " ^ (FOA.string_of_formula f) ^ ".\n") in
             Some(formula, zip fs)
           else
             find (formula::front) fs
@@ -629,6 +611,25 @@ struct
         (G.invalidArguments (name ^ ": invalid default template."))
   
   (********************************************************************
+  *abstractFixpointDefinition:
+  * Given a definition of the form FOA.MuFormula() or FOA.NuFormula(),
+  * creates an abstracted application term that may be passed to 
+  * FOA.applyFixpoint.
+  ********************************************************************)
+  let abstractFixpointDefinition f argnames =
+    match f with
+        FOA.MuFormula(_,_,body)
+      | FOA.NuFormula(_,_,body) ->
+          let args' = List.map
+            (fun n -> Term.fresh ~name:"*" ~lts:0 ~ts:0 ~tag:Term.Constant)
+            argnames in
+          let f' = FOA.ApplicationFormula(f, args') in
+          let f'' = (List.fold_right (FOA.abstractVar) args' f') in
+          let () = O.debug ("Firstorder.abstractFixpointDefinition: " ^ (FOA.string_of_formula_ast f'') ^ "\n") in
+          f''
+      | _ -> failwith "Firstorder.abstractFixpointDefinition: invalid formula."
+
+  (********************************************************************
   *axiom:
   ********************************************************************)
   let axiomTactical session args = match args with
@@ -636,17 +637,20 @@ struct
         let pretactic = fun sequent sc fc ->
           let rec unifyList sc lhs f =
             match f with
-               Formula(i, b, FOA.AtomicFormula(t)) ->
+               Formula(i, b, FOA.AtomicFormula(head,tl)) ->
                   (match lhs with
                     [] -> ()
-                  | Formula(i', b, FOA.AtomicFormula(t'))::ls ->
+                  | Formula(i', b, FOA.AtomicFormula(head',tl'))::ls ->
                       if (not Param.strictNabla) || i = i' then
-                        (match (FOA.rightUnify t t') with
-                            FOA.UnifySucceeded -> sc ()
-                          | FOA.UnifyFailed -> (unifyList sc ls f)
-                          | FOA.UnifyError(s) ->
-                              (O.error (s ^ ".\n");
-                              fc ()))
+                        if head = head' then
+                          (match (FOA.unifyList FOA.rightUnify tl tl') with
+                              FOA.UnifySucceeded -> sc ()
+                            | FOA.UnifyFailed -> (unifyList sc ls f)
+                            | FOA.UnifyError(s) ->
+                                (O.error (s ^ ".\n");
+                                fc ()))
+                        else
+                          (unifyList sc ls f)
                       else
                         fc ()
                   | _::ls ->
@@ -705,7 +709,7 @@ struct
           let s = Sequent(lvl, zip [Formula(i,copy b,l);Formula(i,copy b, r)], rhs) in
           sc [s]
       | _ ->
-          (O.error "invalid formula.\n";
+          (O.impossible "invalid formula.\n";
           fc ())
     in
     (makeSimpleTactical "and_l" (matchLeft,"_,_") tactic)
@@ -719,7 +723,7 @@ struct
           let s2 = Sequent(lvl, lhs, zip [Formula(i,copy b,r)]) in
           sc [s1;s2]
       | _ ->
-          (O.error "invalid formula.\n";
+          (O.impossible "invalid formula.\n";
           fc ())
     in
     makeSimpleTactical "and_r" (matchRight,"_,_") tactic
@@ -739,7 +743,7 @@ struct
           let s2 = Sequent(lvl, zip [Formula(i,copy b,r)], rhs) in
           sc [s1;s2]
       | _ ->
-          (O.error "invalid formula.\n";
+          (O.impossible "invalid formula.\n";
           fc ())
     in
     makeSimpleTactical "or_l" (matchLeft, "_;_") tactic
@@ -750,10 +754,10 @@ struct
       match f with
         Formula(i, b, FOA.OrFormula(l,r)) ->
           let rhs' = zip [Formula(i,copy b,l);Formula(i,copy b, r)] in
-          let s = Sequent(lvl, rhs', lhs) in
+          let s = Sequent(lvl, lhs, rhs') in
           sc [s]
       | _ ->
-          (O.error "invalid formula.\n";
+          (O.impossible "invalid formula.\n";
           fc ())
     in
     (makeSimpleTactical "or_r" (matchRight,"_;_") tactic)
@@ -775,7 +779,7 @@ struct
           let s2 = Sequent(lvl, zip [Formula(i,copy b,r)], rhs) in
           sc [s1;s2]
       | _ ->
-          (O.error "invalid formula.\n";
+          (O.impossible "invalid formula.\n";
           fc ())
     in
     (makeSimpleTactical "imp_l" (matchLeft,"_=>_") tactic)
@@ -789,7 +793,7 @@ struct
           let s = Sequent(lvl, lhs', zip [Formula(i, copy b, r)]) in
           sc [s]
       | _ ->
-          (O.error "invalid formula.\n";
+          (O.impossible "invalid formula.\n";
           fc ())
     in
     (makeSimpleTactical "imp_r" (matchRight,"_=>_") tactic)
@@ -804,16 +808,16 @@ struct
     let tactic session seq f zip lhs rhs sc fc =
       let lvl = getSequentLevel seq in
       match f with
-        Formula(i, b, FOA.PiFormula(FOA.AbstractionFormula(hint,f))) ->
+        Formula(i, b, FOA.PiFormula(FOA.AbstractionFormula(hint,_) as f)) ->
           let (lvl',var) = makeExistentialVar hint lvl i in
-          let f' = application [var] f in
+          let f' = FOA.apply [var] f in
           if Option.isSome f' then
             let s = Sequent(lvl', zip [Formula(i, copy b, Option.get f')], rhs) in
             sc [s]
           else
             fc ()
       | _ ->
-          (O.error "invalid formula.\n";
+          (O.impossible "invalid formula.\n";
           fc ())
     in
     (makeSimpleTactical "pi_l" (matchLeft,"pi _") tactic)
@@ -822,16 +826,16 @@ struct
     let tactic session seq f zip lhs rhs sc fc =
       let lvl = getSequentLevel seq in
       match f with
-        Formula(i, b, FOA.PiFormula(FOA.AbstractionFormula(hint,f))) ->
+        Formula(i, b, FOA.PiFormula(FOA.AbstractionFormula(hint,_) as f)) ->
           let (lvl',var) = makeUniversalVar hint lvl i in
-          let f' = application [var] f in
+          let f' = FOA.apply [var] f in
           if Option.isSome f' then
             let s = Sequent(lvl', lhs, zip [Formula(i, copy b, Option.get f')]) in
             sc [s]
           else
             fc ()
       | _ ->
-          (O.error "invalid formula.\n";
+          (O.impossible "invalid formula.\n";
           fc ())
     in
     (makeSimpleTactical "pi_r" (matchRight,"pi _") tactic)
@@ -846,16 +850,16 @@ struct
     let tactic session seq f zip lhs rhs sc fc =
       let lvl = getSequentLevel seq in
       match f with
-        Formula(i, b, FOA.SigmaFormula(FOA.AbstractionFormula(hint,f))) ->
+        Formula(i, b, FOA.SigmaFormula(FOA.AbstractionFormula(hint,_) as f)) ->
           let (lvl',var) = makeUniversalVar hint lvl i in
-          let f' = application [var] f in
+          let f' = FOA.apply [var] f in
           if Option.isSome f' then
             let s = Sequent(lvl', zip [Formula(i, copy b, Option.get f')], rhs) in
             sc [s]
           else
             fc ()
       | _ ->
-          (O.error "invalid formula.\n";
+          (O.impossible "invalid formula.\n";
           fc ())
     in
     (makeSimpleTactical "sigma_l" (matchLeft,"sigma _") tactic)
@@ -864,16 +868,17 @@ struct
     let tactic session seq f zip lhs rhs sc fc =
       let lvl = getSequentLevel seq in
       match f with
-        Formula(i, b, FOA.SigmaFormula(FOA.AbstractionFormula(hint,f))) ->
+        Formula(i, b, FOA.SigmaFormula(FOA.AbstractionFormula(hint,_) as f)) ->
           let (lvl',var) = makeExistentialVar hint lvl i in
-          let f' = application [var] f in
+          let f' = FOA.apply [var] f in
           if Option.isSome f' then
             let s = Sequent(lvl', lhs, zip [Formula(i, copy b, Option.get f')]) in
             sc [s]
           else
-            fc ()
+            (O.error "invalid number of arguments.";
+            fc ())
       | _ ->
-          (O.error "invalid formula.\n";
+          (O.impossible "invalid formula.\n";
           fc ())
     in
     (makeSimpleTactical "sigma_r" (matchRight,"sigma _") tactic)
@@ -888,16 +893,16 @@ struct
     let tactic session seq f zip lhs rhs sc fc =
       let lvl = getSequentLevel seq in
       match f with
-        Formula(i, b, FOA.NablaFormula(f)) ->
+        Formula(i, b, FOA.NablaFormula(FOA.AbstractionFormula(_) as f)) ->
           let (lvl',i',var) = makeNablaVar lvl i in
-          let f' = application [var] f in
+          let f' = FOA.apply [var] f in
           if Option.isSome f' then
             let s = Sequent(lvl', zip [Formula(i', copy b, Option.get f')], rhs) in
             sc [s]
           else
             fc ()
       | _ ->
-          (O.error "invalid formula.\n";
+          (O.impossible "invalid formula.\n";
           fc ())
     in
     (makeSimpleTactical "nabla_l" (matchLeft, "nabla _") tactic)
@@ -906,16 +911,16 @@ struct
     let tactic session seq f zip lhs rhs sc fc =
       let lvl = getSequentLevel seq in
       match f with
-        Formula(i, b, FOA.NablaFormula(f)) ->
+        Formula(i, b, FOA.NablaFormula(FOA.AbstractionFormula(_) as f)) ->
           let (lvl',i',var) = makeNablaVar lvl i in
-          let f' = application [var] f in
+          let f' = FOA.apply [var] f in
           if Option.isSome f' then
             let s = Sequent(lvl', lhs, zip [Formula(i', copy b, Option.get f')]) in
             sc [s]
           else
             fc ()
       | _ ->
-          (O.error "invalid formula.\n";
+          (O.impossible "invalid formula.\n";
           fc ())
     in
     (makeSimpleTactical "nabla_r" (matchRight,"nabla _") tactic)
@@ -932,16 +937,21 @@ struct
       match f with
         Formula(i, b, FOA.ApplicationFormula(
           FOA.MuFormula(name,argnames,body) as mu, args)) ->
-            let mu' = FOA.applyFixpoint (fun alist -> FOA.ApplicationFormula(mu,alist)) body in
-            let f' = application args mu' in
-            if Option.isSome f' then
-              let s = Sequent(lvl, lhs, zip [Formula(i,copy b,Option.get f')]) in
-              (sc [s])
+            let body' = FOA.applyFixpoint (abstractFixpointDefinition mu argnames) body in
+            if Option.isSome body' then
+              let mu' = FOA.apply args (Option.get body') in
+              if (Option.isSome mu') then
+                let () = O.debug ("muR: after applying arguments: " ^ (FOA.string_of_formula_ast (Option.get mu')) ^ "\n") in
+                let s = Sequent(lvl, lhs, zip [Formula(i,copy b, Option.get mu')]) in
+                (sc [s])
+              else
+                (O.impossible "unable to apply arguments to mu formula.\n";
+                fc ())
             else
-              (O.error ("'" ^ name ^ "': incorrect number of arguments.");
+              (O.impossible "definition has incorrect arity.\n";
               fc ())
       | _ ->
-          (O.error "invalid formula.\n";
+          (O.impossible "invalid formula.\n";
           fc ())
     in
     (makeSimpleTactical "mu_r" (matchRight, "mu _") tactic)
@@ -952,16 +962,20 @@ struct
       match f with
         Formula(i, b, FOA.ApplicationFormula(
           FOA.MuFormula(name,argnames,body) as mu, args)) ->
-            let mu' = FOA.applyFixpoint (fun alist -> FOA.ApplicationFormula(mu,alist)) body in
-            let f' = application args mu' in
-            if Option.isSome f' then
-              let s = Sequent(lvl, zip [Formula(i,copy b,Option.get f')], rhs) in
-              (sc [s])
+            let body' = FOA.applyFixpoint (abstractFixpointDefinition mu argnames) body in
+            if Option.isSome body' then
+              let mu' = FOA.apply args (Option.get body') in
+              if Option.isSome mu' then
+                let s = Sequent(lvl, zip [Formula(i,copy b,Option.get mu')], rhs) in
+                (sc [s])
+              else
+                (O.impossible "unable to apply arguments to nu formula.\n";
+                fc ())
             else
-              (O.error ("'" ^ name ^ "': incorrect number of arguments.");
+              (O.impossible "definition has incorrect arity.\n";
               fc ())
       | _ ->
-          (O.error "invalid formula.\n";
+          (O.impossible "invalid formula.\n";
           fc ())
     in
     (makeSimpleTactical "mu_l" (matchLeft, "mu _") tactic)
@@ -1000,35 +1014,37 @@ struct
       ****************************************************************)
       let ind f zip lhs rhs sc fc =
         match f with
-          Formula(i,b,FOA.ApplicationFormula(FOA.MuFormula(name,argnames,mu),args)) ->
+          Formula(i,b,FOA.ApplicationFormula(FOA.MuFormula(name,argnames,body),args)) ->
             let s' = parseFormula (getSessionDefinitions session) inv in
             if Option.isSome s' then
               let s' = Option.get s' in
-              let f' = application args s' in
+              let f' = FOA.apply args s' in
               if Option.isSome f' then
-                let f' = Option.get f' in
-                let s1 = Sequent(lvl, zip [Formula(i,copy b,f')], rhs) in
+                let s1 = Sequent(lvl, zip [Formula(i,copy b,Option.get f')], rhs) in
 
                 let (lvl', args') = makeArgs lvl i argnames in
                 
-                let r = application args' s' in
-                let mu' = application args' mu in
-                
-                if (Option.isSome r) && (Option.isSome mu') then
-                  let l = FOA.applyFixpoint (fun alist -> Option.get (application alist s')) (Option.get mu') in
-                  let s2 = Sequent(lvl', [Formula(i, copy b, l)], [Formula(i, copy b, Option.get r)]) in
-                  (sc [s1;s2])
+                let r = FOA.apply args' s' in
+                let body' = FOA.applyFixpoint s' body in
+                if (Option.isSome r) && (Option.isSome body') then
+                  let l = FOA.apply args' (Option.get body') in
+                  if (Option.isSome l) then
+                    let s2 = Sequent(lvl', [Formula(i, copy b, Option.get l)], [Formula(i, copy b, Option.get r)]) in
+                    (sc [s1;s2])
+                  else
+                    (O.impossible "unable to apply arguments to mu formula.\n";
+                    fc ())
                 else
-                  (O.error ("incorrect number of arguments.\n");
+                  (O.error "invariant has incorrect arity.\n";
                   fc ())
               else
-                (O.error ("invariant requires incorrect number of arguments.\n");
+                (O.error ("invariant has incorrect arity.\n");
                 fc ())
             else
-              (O.error ("unable to parse invariant: " ^ inv ^ ".\n");
+              (O.error ("unable to parse invariant.\n");
               fc ())
         | _ ->
-            (O.error "invalid formula.\n";
+            (O.impossible "invalid formula.\n";
             fc ())
       in
       let sc' s = sc s (makeProofBuilder "induction") fc in
@@ -1059,16 +1075,20 @@ struct
       match f with
         Formula(i, b, FOA.ApplicationFormula(
           FOA.NuFormula(name,argnames,body) as mu, args)) ->
-            let mu' = FOA.applyFixpoint (fun alist -> FOA.ApplicationFormula(mu,alist)) body in
-            let f' = application args mu' in
-            if Option.isSome f' then
-              let s = Sequent(lvl, lhs, zip [Formula(i,copy b,Option.get f')]) in
-              (sc [s])
+            let body' = FOA.applyFixpoint (abstractFixpointDefinition mu argnames) body in
+            if Option.isSome body' then
+              let mu' = FOA.apply args (Option.get body') in
+              if Option.isSome mu' then
+                let s = Sequent(lvl, lhs, zip [Formula(i,copy b,Option.get mu')]) in
+                (sc [s])
+              else
+                (O.impossible "unable to apply arguments to nu formula.\n";
+                fc ())
             else
-              (O.error ("'" ^ name ^ "': incorrect number of arguments.");
+              (O.impossible "definition has incorrect arity.\n";
               fc ())
       | _ ->
-          (O.error "invalid formula.\n";
+          (O.impossible "invalid formula.\n";
           fc ())
     in
     (makeSimpleTactical "nu_r" (matchRight, "nu _") tactic)
@@ -1079,16 +1099,20 @@ struct
       match f with
         Formula(i, b, FOA.ApplicationFormula(
           FOA.NuFormula(name,argnames,body) as mu, args)) ->
-            let mu' = FOA.applyFixpoint (fun alist -> FOA.ApplicationFormula(mu,alist)) body in
-            let f' = application args mu' in
-            if Option.isSome f' then
-              let s = Sequent(lvl, zip [Formula(i,copy b,Option.get f')], rhs) in
-              (sc [s])
+            let body' = FOA.applyFixpoint (abstractFixpointDefinition mu argnames) body in
+            if Option.isSome body' then
+              let mu' = FOA.apply args (Option.get body') in
+              if Option.isSome mu' then
+                let s = Sequent(lvl, zip [Formula(i,copy b,Option.get mu')], rhs) in
+                (sc [s])
+              else
+                (O.impossible "unable to apply arguments to nu formula.\n";
+                fc ())
             else
-              (O.error ("'" ^ name ^ "': incorrect number of arguments.");
+              (O.impossible ("definition has incorrect arity.\n");
               fc ())
       | _ ->
-          (O.error "invalid formula.\n";
+          (O.impossible "invalid formula.\n";
           fc ())
     in
     (makeSimpleTactical "nu_l" (matchLeft, "nu _") tactic)
@@ -1126,38 +1150,41 @@ struct
       ****************************************************************)
       let coind f zip lhs rhs sc fc =
         match f with
-          Formula(i,b,FOA.ApplicationFormula(FOA.NuFormula(name,argnames,mu),args)) ->
+          Formula(i,b,FOA.ApplicationFormula(FOA.NuFormula(name,argnames,body),args)) ->
             let s' = parseFormula (getSessionDefinitions session) inv in
             if Option.isSome s' then
               let s' = (Option.get s') in
-              let f' = application args s' in
+              let f' = FOA.apply args s' in
               if Option.isSome f' then
-                let f' = Option.get f' in
-                let s1 = Sequent(lvl, lhs, zip [Formula(i,copy b,f')]) in
+                let s1 = Sequent(lvl, lhs, zip [Formula(i,copy b,Option.get f')]) in
 
                 let (lvl', args') = makeArgs lvl i argnames in
                 
-                let r = application args' s' in
-                let mu' = application args' mu in
+                let l = FOA.apply args' s' in
+                let r = FOA.applyFixpoint s' body in
                 
-                if (Option.isSome r) && (Option.isSome mu') then
-                  let l = FOA.applyFixpoint (fun alist -> Option.get (application alist s')) (Option.get mu') in
-                  let s2 = Sequent(lvl', [Formula(i, copy b, Option.get r)], [Formula(i, copy b, l)]) in
-                  (sc [s1;s2])
+                if (Option.isSome l) && (Option.isSome r) then
+                  let r' = FOA.apply args' (Option.get r) in
+                  if Option.isSome r' then
+                    let s2 = Sequent(lvl', [Formula(i, copy b, Option.get l)], [Formula(i, copy b, Option.get r')]) in
+                    (sc [s1;s2])
+                  else
+                    (O.impossible "unable to apply arguments to nu formula.\n";
+                    fc ())
                 else
-                  (O.error ("incorrect number of arguments.\n");
+                  (O.error "coinvariant has incorrect arity.\n";
                   fc ())
               else
-                (O.error ("invariant requires incorrect number of arguments.\n");
+                (O.error "coinvariant has incorrect arity.\n";
                 fc ())
             else
-              (O.error ("unable to parse invariant: " ^ inv ^ ".\n");
+              (O.error ("unable to parse coinvariant: " ^ inv ^ ".\n");
               fc ())
         | _ ->
-            (O.error "invalid formula.\n";
+            (O.impossible "invalid formula.\n";
             fc ())
       in
-      let sc' s = sc s (makeProofBuilder "induction") fc in
+      let sc' s = sc s (makeProofBuilder "coinduction") fc in
       match (matchRight template sequent) with
         Some(f,zip,lhs,rhs) -> (coind f zip lhs rhs sc' fc)
       | None -> fc ()
@@ -1194,7 +1221,7 @@ struct
                 (O.error (s ^ ".\n");
                 fc ()))
       | _ ->
-          (O.error "invalid formula.\n";
+          (O.impossible "invalid formula.\n";
           fc ())
     in
     (makeSimpleTactical "eq_l" (matchLeft, "_ = _") tactic)
@@ -1210,7 +1237,7 @@ struct
                   (O.error (s ^ ".\n");
                   fc ()))
       | _ ->
-          (O.error "invalid formula.\n";
+          (O.impossible "invalid formula.\n";
           fc ())
     in
     (makeSimpleTactical "eq_r" (matchRight,"_ = _") tactic)
@@ -1288,7 +1315,7 @@ struct
           let s = Sequent(lvl, lhs, rhs') in
           sc [s]
       | _ ->
-          (O.error "invalid formula.\n";
+          (O.impossible "invalid formula.\n";
           fc ())
     in
     (makeSimpleTactical "right" (matchRight,"_;_") tactic)
@@ -1302,7 +1329,7 @@ struct
           let s = Sequent(lvl, lhs, rhs') in
           sc [s]
       | _ ->
-          (O.error "invalid formula.\n";
+          (O.impossible "invalid formula.\n";
           fc ())
     in
     (makeSimpleTactical "left" (matchRight,"_;_") tactic)
@@ -1327,11 +1354,12 @@ struct
     let ts = Logic.Table.add "and" andTactical ts in
     let ts = Logic.Table.add "and_l" andL ts in
     let ts = Logic.Table.add "and_r" andR ts in
+
+    let ts = Logic.Table.add "or_l" orL ts in
     
     let ts =
       if Param.intuitionistic then ts else Logic.Table.add "or" orTactical ts
     in
-    let ts = Logic.Table.add "or_l" orL ts in
     let ts =
       if Param.intuitionistic then
         Logic.Table.add "left" orRLeft

@@ -1,9 +1,10 @@
-#open "basic_definitions.tac".
+#open "C:\zRXer\Projects\SlimmerSVN\trunk\tac\examples
+	\basic_definitions.def".
 
 % Simulation is reflexive.
 #theorem ref "pi p\ (sim p p)".
 pi.
-coinduction("sim", "p\ q\ (p=q)").
+coinduction("p\ q\ (p=q)").
 eq.
 repeat(pi).
 eq_l.
@@ -16,7 +17,7 @@ eq.
 % Simulation is transitive.
 #theorem trans "pi p\ q\ r\ (sim p q)=>((sim q r)=>(sim p r))".
 simplify.
-coinduction("sim", "p\ r\ (sigma q\ (sim p q),(sim q r))").
+coinduction("p\ r\ (sigma q\ (sim p q),(sim q r))").
 
  % Check that the coinvariant is satisfied.
  sigma.

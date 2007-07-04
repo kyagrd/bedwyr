@@ -20,6 +20,7 @@ val showDebug : bool ref
 module type Output =
 sig
   val prompt : string -> unit
+  val impossible : string -> unit
   val error : string -> unit
   val debug : string -> unit
   val output : string -> unit
