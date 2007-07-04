@@ -35,44 +35,46 @@
     let rec makeAbs' names make f =
       match names with
         [] -> raise (FOA.SemanticError ("argument does not have toplevel abstractions: " ^ (FOA.string_of_formula f)))
-      | [name] -> make name (FOA.AbstractionFormula(name,f))
+      | [name] -> make (FOA.AbstractionFormula(name,f))
       | name::names ->
-          (makeAbs' (names) make (make name (FOA.AbstractionFormula(name,f))))        
+          make (FOA.AbstractionFormula(name, makeAbs' (names) make f))
     in
     if (FOA.isAnonymousFormula f) then
-      make "" f
+      make f
     else
       let (names,f') = getAbstractions f in
       (makeAbs' names make f')
 
   let pi f =
-    let make name f = FOA.PiFormula(f) in
+    let make f = FOA.PiFormula(f) in
     (makeAbstractions make f)
 
   let sigma f =
-    let make name f = FOA.SigmaFormula(f) in
+    let make f = FOA.SigmaFormula(f) in
     (makeAbstractions make f)
 
   let nabla f =
-    let make name f = FOA.NablaFormula(f) in
+    let make f = FOA.NablaFormula(f) in
     (makeAbstractions make f)
 
   let atomic t =
-    if FOA.isAnonymousTerm t then
-      FOA.makeAnonymousFormula ()
+    let result = FOA.getTermHeadAndArgs t in
+    if (Option.isSome result) then
+      let (head,args) = Option.get result in
+      FOA.AtomicFormula(head, args)
     else
-      FOA.AtomicFormula(t)
+      raise (FOA.SemanticError("term is neither a first order application nor an atom"))
 
-  let anonymous () = FOA.makeAnonymousTerm  ()
+  let anonymous () = FOA.makeAnonymousTerm ()
   let atom t = Term.atom t
   
   let abstract id f =
     FOA.abstract id f
     
-  let application term = 
-    match term with
-        [] -> failwith "Firstorder.tterm: invalid lterm."
-      | t::l -> (Term.app t l)
+  let application tlist =
+    match tlist with
+        [] -> failwith "Firstorder.application: invalid lterm."
+      | head::tl -> Term.app head tl
   
   let definition name args body fix =
     let (_,argnames) = List.split args in
@@ -123,8 +125,8 @@ toplevel_template
   ;
 
 template
-  : MU UNDERSCORE     {FOA.ApplicationFormula(FOA.MuFormula("", [], atomic (anonymous ())), [])}
-  | NU UNDERSCORE     {FOA.ApplicationFormula(FOA.NuFormula("", [], atomic (anonymous ())), [])}
+  : MU UNDERSCORE     {FOA.ApplicationFormula(FOA.MuFormula("_", [], FOA.makeAnonymousFormula  ()), [])}
+  | NU UNDERSCORE     {FOA.ApplicationFormula(FOA.NuFormula("_", [], FOA.makeAnonymousFormula  ()), [])}
   ;
 
 toplevel_definition
@@ -154,7 +156,7 @@ formula
   | formula IMP formula {impFormula $1 $3}
   | term EQ term {eqFormula $1 $3}
   
-  | PI formula {pi $2}
+  | PI formula    {pi $2}
   | SIGMA formula {sigma $2}
   | NABLA formula {nabla $2}
   

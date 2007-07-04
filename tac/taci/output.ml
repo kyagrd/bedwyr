@@ -21,6 +21,7 @@ let showDebug = ref false
 module type Output =
 sig
   val prompt : string -> unit
+  val impossible : string -> unit
   val error : string -> unit
   val debug : string -> unit
   val output : string -> unit
@@ -41,7 +42,7 @@ struct
       ()
 
   let prompt s = (print_string s; flush stdout)
-  
+  let impossible s = (print_string ("Impossible: " ^ s); flush stdout)
   let error s = (print_string ("Error: " ^ s); flush stdout)
   let output s = (print_string s; flush stdout)
   let goal s = (print_string s; flush stdout)
@@ -108,6 +109,7 @@ struct
     (print_string (String.concat "" (List.map tac sl));
     flush stdout)
 
+  let impossible s = print_endline ("<Output type=\"error\" text=\"" ^ (escape s) ^ "\"/>")
   let error s = print_endline ("<Output type=\"error\" text=\"" ^ (escape s) ^ "\"/>")
   let output s = print_endline ("<Output type=\"output\" text=\"" ^ (escape s) ^ "\"/>")
   let goal s = print_endline ("<Output type=\"goal\" text=\"" ^ (escape s) ^ "\"/>")

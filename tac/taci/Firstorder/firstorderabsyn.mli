@@ -36,7 +36,7 @@ type formula =
   | AbstractionFormula of string * formula
   | ApplicationFormula of formula * term list
   
-  | AtomicFormula of term
+  | AtomicFormula of string * term list
   | DBFormula of string * int
   
 type fixpoint =
@@ -61,8 +61,9 @@ val isAnonymousFormula : formula -> bool
 
 val mapFormula : (formula -> formula) -> (term -> term) -> formula -> formula
 val abstract : string -> formula -> formula
-val apply : term list -> formula -> formula
-val applyFixpoint : (term list -> formula) -> formula -> formula
+val abstractVar : term -> formula -> formula
+val apply : term list -> formula -> formula option
+val applyFixpoint : formula -> formula -> formula option
 val string_of_definition : definition -> string
 val string_of_term : string list -> term -> string
 val string_of_formula : ?names:string list -> formula -> string
@@ -73,9 +74,7 @@ val leftUnify : term -> term -> unifyresult
 val unifyList : (term -> term -> unifyresult) -> term list -> term list -> unifyresult
 val matchFormula : formula -> formula -> bool
 
-
-val getTermHead : term -> string option
-val getTermHeadAndArgs : term -> (string * term list) option
-
 val getDefinitionArity : definition -> int
 val getDefinitionBody : definition -> formula
+
+val getTermHeadAndArgs : term -> (string * term list) option
