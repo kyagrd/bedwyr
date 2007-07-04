@@ -52,9 +52,7 @@ Tacticals:
   *Proof:
   ********************************************************************)
   type proof = string
-  let string_of_proofs proofs =
-    "\t" ^ (String.concat "\n\t" proofs) ^ "\n"
-
+  
   (********************************************************************
   *Session:
   * A session is just the current list of sequents.  A session is
@@ -65,9 +63,13 @@ Tacticals:
 
   let getSessionTacticals (Session(_,_,t)) = t
   let getSessionSequents (Session(sequents,_,_)) = sequents
+  let getSessionBuilder (Session(_,b,_)) = b
   let setSessionSequents sequents (Session(_,b,t)) = (Session(sequents,b,t))
   let setSessionBuilder builder (Session(s,_,t)) = (Session(s,builder,t))
   
+  let string_of_proofs session =
+    "\t" ^ (String.concat "\n\t" (getSessionBuilder session [])) ^ "\n"
+
   let string_of_sequent seq =
     let lhs = getSequentLHS seq in
     let rhs = getSequentRHS seq in
@@ -80,7 +82,8 @@ Tacticals:
     let bottom = (String.concat ", " (List.map (Propositionalabsyn.string_of_term) rhs)) in
     ((String.make (max (min (String.length bottom) 72) 16) '-') ^ "\n" ^ bottom)
 
-  let string_of_sequents sequents =
+  let string_of_sequents session =
+    let sequents = getSessionSequents session in
     let mainseq = List.hd sequents in
     let seqs = List.tl sequents in
     if (List.length seqs) > 0 then

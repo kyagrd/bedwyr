@@ -74,8 +74,6 @@ struct
   *Proof:
   ********************************************************************)
   type proof = string
-  let string_of_proofs proofs =
-    "\t" ^ (String.concat "\n\t" proofs) ^ "\n"
 
   (********************************************************************
   *Session:
@@ -92,22 +90,33 @@ struct
     FOA.definition Logic.table *
     sequent list *
     proof Logic.proofbuilder *
-    Term.state * Term.subst)
+    Term.state * Term.subst * (Term.namespace * Term.namespace))
 
-  let getSessionSequents (Session(_,_,sequents,_,_,_)) = sequents
-  let setSessionSequents sequents (Session(t,d,_,pb,u,r)) = (Session(t,d,sequents,pb,u,r))
-  let getSessionBuilder (Session(_,_,_,b,_,_)) = b
-  let setSessionBuilder builder (Session(t,d,s,_,u,r)) = (Session(t,d,s,builder,u,r))
-  let getSessionUndo (Session(_,_,_,_,u,_)) = u
-  let setSessionUndo undo (Session(t,d,s,b,_,r)) = (Session(t,d,s,b,undo,r))
-  let getSessionRedo (Session(_,_,_,_,_,r)) = r
-  let setSessionRedo redo (Session(t,d,s,b,u,_)) = (Session(t,d,s,b,u,redo))
-  let getSessionTacticals (Session(t,_,_,_,_,_)) = t
-  let setSessionTacticals tacs (Session(_,d,s,pb,u,r)) = (Session(tacs,d,s,pb,u,r))
-  let getSessionDefinitions (Session(_,d,_,_,_,_)) = d
-  let setSessionDefinitions defs (Session(t,_,s,pb,u,r)) = (Session(t,defs,s,pb,u,r))
+  let getSessionSequents (Session(_,_,sequents,_,_,_,_)) = sequents
+  let setSessionSequents sequents (Session(t,d,_,pb,u,r,ns)) = (Session(t,d,sequents,pb,u,r,ns))
+  let getSessionBuilder (Session(_,_,_,b,_,_,_)) = b
+  let setSessionBuilder builder (Session(t,d,s,_,u,r,ns)) = (Session(t,d,s,builder,u,r,ns))
+  let getSessionUndo (Session(_,_,_,_,u,_,_)) = u
+  let setSessionUndo undo (Session(t,d,s,b,_,r,ns)) = (Session(t,d,s,b,undo,r,ns))
+  let getSessionRedo (Session(_,_,_,_,_,r,_)) = r
+  let setSessionRedo redo (Session(t,d,s,b,u,_,ns)) = (Session(t,d,s,b,u,redo,ns))
+  let getSessionTacticals (Session(t,_,_,_,_,_,_)) = t
+  let setSessionTacticals tacs (Session(_,d,s,pb,u,r,ns)) = (Session(tacs,d,s,pb,u,r,ns))
+  let getSessionDefinitions (Session(_,d,_,_,_,_,_)) = d
+  let setSessionDefinitions defs (Session(t,_,s,pb,u,r,ns)) = (Session(t,defs,s,pb,u,r,ns))
+  let setSessionNamespaces ns (Session(t,defs,s,pb,u,r,_)) = (Session(t,defs,s,pb,u,r,ns))
+  let getSessionProofNamespace (Session(_,_,_,_,_,_,(_,pns))) = pns
+  let setSessionProofNamespace pns (Session(t,defs,s,pb,u,r,(ins,_))) = (Session(t,defs,s,pb,u,r,(ins,pns)))
+  let getSessionInitialNamespace (Session(_,_,_,_,_,_,(ins,_))) = ins
+  let setSessionInitialNamespace ins (Session(t,defs,s,pb,u,r,(_,pns))) = (Session(t,defs,s,pb,u,r,(ins,pns)))
+  
+  let restoreNamespace ns = Term.restore_namespace ns
   
   let proof session = getSessionBuilder session
+
+  let string_of_proofs session =
+    let proofs = (getSessionBuilder session) [] in
+    "\t" ^ (String.concat "\n\t" proofs) ^ "\n"
   
   let string_of_sequent seq =
     let lhs = getSequentLHS seq in
@@ -123,7 +132,9 @@ struct
     let bottom = (String.concat "\n" (List.map string_of_formula rhs)) in
     ((string_of_int lvl) ^ ": " ^ (String.make (max (min (String.length bottom) 72) 16) '-') ^ "\n" ^ bottom)
     
-  let string_of_sequents sequents =
+  let string_of_sequents session =
+    let sequents = getSessionSequents session in
+    let () = restoreNamespace (getSessionProofNamespace session) in
     let mainseq = List.hd sequents in
     let seqs = List.tl sequents in
     if not (Listutils.empty seqs) then
@@ -180,6 +191,12 @@ struct
         (generateSymbol ()) :: makeArgs (i - 1)
     in
     
+    (******************************************************************
+    *abstractReplacement:
+    ******************************************************************)
+    let abstractReplacement lambdas f =
+      List.fold_left (fun f _ -> FOA.abstractDummyWithoutLambdas f) f lambdas
+    in
     
     let rec makeAbstractions args formula =
       match args with
@@ -188,7 +205,7 @@ struct
     in
 
     let tf t = t in
-    let rec ff f =
+    let rec ff lambdas f =
       match f with
           FOA.AtomicFormula(head,args) ->
             let def = Logic.find head defs in
@@ -197,17 +214,21 @@ struct
               let arity = FOA.getDefinitionArity def in
               let body = FOA.getDefinitionBody def in
               if (arity = List.length args) then
-                FOA.ApplicationFormula(body, args)
+                (FOA.ApplicationFormula(abstractReplacement lambdas body, args))
               else if arity > List.length args then
-                let args' = makeArgs (arity - (List.length args)) in
-                makeAbstractions args' (FOA.ApplicationFormula(body, args@(List.map (Term.atom) args')))
+                let argnames = makeArgs (arity - (List.length args)) in
+                let args' = args @ (List.map (Term.atom) argnames) in
+                let f = (FOA.ApplicationFormula(abstractReplacement lambdas body, args')) in
+                makeAbstractions argnames f
               else             
                 raise (FOA.SemanticError("'" ^ head ^ "' applied to too many arguments"))
             else
               f
-        | _ -> (FOA.mapFormula ff tf f)
+        | FOA.AbstractionFormula(n,body) ->
+            FOA.AbstractionFormula(n, (ff (n::lambdas) body))
+        | _ -> (FOA.mapFormula (ff lambdas) tf f)
     in
-    (ff formula)
+    (ff [] formula)
   
   (********************************************************************
   *processFormula:
@@ -282,12 +303,16 @@ struct
   * prove the formula.
   ********************************************************************)
   let prove name t session =
+    let () = restoreNamespace (getSessionInitialNamespace session) in
+    let initialNamespace = Term.save_namespace () in
     let defs = getSessionDefinitions session in
     let f = parseFormula defs t in
+    let proofNamespace = Term.save_namespace () in
     if Option.isSome f then
       let f = Option.get f in
       let seq = makeSequent [] [makeFormula f] in
-      (setSessionBuilder Logic.idProofBuilder (setSessionSequents [seq] session))
+      (setSessionNamespaces (initialNamespace, proofNamespace)
+        (setSessionBuilder Logic.idProofBuilder (setSessionSequents [seq] session)))
     else
       session
 
@@ -1121,7 +1146,7 @@ struct
     (G.orElseTactical (nuL session args) (nuR session args))
 
   (******************************************************************
-  *induction:
+  *coinduction:
   ******************************************************************)
   let coinductionTactical session args =
     (******************************************************************
@@ -1161,12 +1186,15 @@ struct
                 let (lvl', args') = makeArgs lvl i argnames in
                 
                 let l = FOA.apply args' s' in
-                let r = FOA.applyFixpoint s' body in
+                let body' = FOA.applyFixpoint s' body in
                 
-                if (Option.isSome l) && (Option.isSome r) then
-                  let r' = FOA.apply args' (Option.get r) in
-                  if Option.isSome r' then
-                    let s2 = Sequent(lvl', [Formula(i, copy b, Option.get l)], [Formula(i, copy b, Option.get r')]) in
+                if (Option.isSome l) && (Option.isSome body') then
+                  let () = O.debug ("coinduction: apply fixpoint result: " ^ (FOA.string_of_formula_ast (Option.get body')) ^ "\n") in
+
+                  let r = FOA.apply args' (Option.get body') in
+                  if Option.isSome r then
+                    let () = O.debug ("coinduction: result: " ^ (FOA.string_of_formula_ast (Option.get r)) ^ "\n") in
+                    let s2 = Sequent(lvl', [Formula(i, copy b, Option.get l)], [Formula(i, copy b, Option.get r)]) in
                     (sc [s1;s2])
                   else
                     (O.impossible "unable to apply arguments to nu formula.\n";
@@ -1405,7 +1433,9 @@ struct
     
   let emptySession =
     let state = Term.save_state () in
-    Session(pervasiveTacticals, Logic.Table.empty, [], Logic.idProofBuilder, state, Term.get_subst state)
+      Session(pervasiveTacticals, Logic.Table.empty, [],
+      Logic.idProofBuilder, state, Term.get_subst state,
+      (Term.save_namespace (), Term.save_namespace ()))
 
   (********************************************************************
   *reset:

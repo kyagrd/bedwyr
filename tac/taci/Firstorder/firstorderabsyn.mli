@@ -61,6 +61,7 @@ val isAnonymousFormula : formula -> bool
 
 val mapFormula : (formula -> formula) -> (term -> term) -> formula -> formula
 val abstract : string -> formula -> formula
+val abstractDummyWithoutLambdas : formula -> formula
 val abstractVar : term -> formula -> formula
 val apply : term list -> formula -> formula option
 val applyFixpoint : formula -> formula -> formula option

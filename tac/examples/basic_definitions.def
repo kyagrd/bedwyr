@@ -7,6 +7,7 @@
 #define "half x h := (((x=o);(x=(s o))),(h=o)); (sigma xx\ hh\ (x=(s (s xx)),h=(s hh), (half xx hh)))".
 
 #define "coinductive sim p q := pi a\ p'\ ((step p a p') => (sigma q'\ (step q a q'),(sim p' q')))".
+#define "simi p q := pi a\ p'\ ((step p a p') => (sigma q'\ (step q a q'),(simi p' q')))".
 
 #define "empty x := (x = nil)".
 #define "list x := (x=nil);(sigma y\ z\ (x=(cons y z),list z))".

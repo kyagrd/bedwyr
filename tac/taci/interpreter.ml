@@ -35,7 +35,7 @@ struct
   type proofbuilder = L.proof Logic.proofbuilder
   exception Exit of session
   exception Logic of string * session
-  exception Success of session * proofbuilder
+  exception Success of session
   exception Failure
   
   let logics = ref []
@@ -167,7 +167,7 @@ struct
       let currentProof = L.proof session in
       let proof' = (Logic.composeProofBuilders proofBuilder currentProof) in
       let session' = L.update (newSequents @ oldSequents) proof' session in
-      raise (Success(session', proof'))
+      raise (Success(session'))
     in
     
     (******************************************************************
@@ -188,10 +188,10 @@ struct
         Absyn.SyntaxError(s) ->
           (O.error (s ^ ".\n");
           session)
-      | Success(s, pb) ->
+      | Success(s) ->
           (O.output "Success.\n";
           if not (L.validSequent s) then
-            (O.output ("Proved:\n" ^ (L.string_of_proofs (pb [])) ^ "\n");
+            (O.output ("Proved:\n" ^ (L.string_of_proofs s) ^ "\n");
             O.goal "";
             s)
           else
@@ -274,7 +274,7 @@ struct
     let handle' session input =
       let session' = (handleInput input session) in
       if L.validSequent session' then
-        (O.goal ((L.string_of_sequents (L.sequents session')) ^ "\n");
+        (O.goal ((L.string_of_sequents session') ^ "\n");
         session')
       else
         session'  
