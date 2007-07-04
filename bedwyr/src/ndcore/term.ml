@@ -201,33 +201,6 @@ let logic_vars = get_vars (fun v -> v.tag = Logic)
 (** Eigen variables of [ts], assuming that they are normalized. *)
 let eigen_vars = get_vars (fun v -> v.tag = Eigen)
 
-let fresh_id =
-  let c = ref 0 in
-    fun () -> incr c ; !c
-
-(** {1 Copying} *)
-
-(** [copy ()] instantiates a copier, that copies terms,
-  * preserving sharing inside the set of copied terms.
-  * Input terms should be normalized. *)
-let copy () =
-  let tbl = Hashtbl.create 100 in
-  let rec cp tm = match observe tm with
-    | Var v ->
-        begin try Hashtbl.find tbl v with
-          | Not_found ->
-              let v' = { v with id = fresh_id () } in
-              let x = Ptr (ref (V v')) in
-                Hashtbl.add tbl v x ;
-                x
-        end
-    | App (a,l) -> App (cp a, List.map cp l)
-    | Lam (n,b) -> Lam (n, cp b)
-    | NB i | DB i as x -> x
-    | Susp _ | Ptr _ -> assert false
-  in
-    cp
-
 (** {1 Generate and find variables} *)
 
 (** [var_names] is used to attach a naming hint for the pretty printer
@@ -242,6 +215,10 @@ module Hint = struct
   let find var =
     M.find var.id !var_names
 end
+
+let fresh_id =
+  let c = ref 0 in
+    fun () -> incr c ; !c
 
 (** Generate a fresh variable. *)
 let var ~tag ~ts ~lts = Ptr (ref (V {id=fresh_id();tag=tag;ts=ts;lts=lts}))
@@ -365,6 +342,30 @@ let is_free name =
 
 let free n =
   symbols := NS.remove n !symbols
+
+(** {1 Copying} *)
+
+(** [copy ()] instantiates a copier, that copies terms,
+  * preserving sharing inside the set of copied terms.
+  * Input terms should be normalized. *)
+let copy () =
+  let tbl = Hashtbl.create 100 in
+  let rec cp tm = match observe tm with
+    | Var v ->
+        begin try Hashtbl.find tbl v with
+          | Not_found ->
+              let v' = { v with id = fresh_id () } in
+              let x = Ptr (ref (V v')) in
+                begin try Hint.add v' (Hint.find v) with _ -> () end ;
+                Hashtbl.add tbl v x ;
+                x
+        end
+    | App (a,l) -> App (cp a, List.map cp l)
+    | Lam (n,b) -> Lam (n, cp b)
+    | NB i | DB i as x -> x
+    | Susp _ | Ptr _ -> assert false
+  in
+    cp
 
 (** {1 Convenience} *)
 
