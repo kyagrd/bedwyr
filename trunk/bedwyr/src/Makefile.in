@@ -5,9 +5,9 @@ all: bedwyr
 
 cmo = @cmo@
 cma = @cma@
-OCAMLC = @OCAMLC@ -c -I ndcore
+OCAMLC = @OCAMLC@ -c -I ndcore -I ndcore/tests
 OCAMLL = @OCAMLC@
-OCAMLDEP = @OCAMLDEP@ -I ndcore
+OCAMLDEP = @OCAMLDEP@ -I ndcore -I ndcore/tests
 OCAMLDOC = ocamldoc
 OCAMLYACC = @OCAMLYACC@ -v
 OCAMLLEX = @OCAMLLEX@
@@ -16,7 +16,7 @@ OCAMLLEX = @OCAMLLEX@
 
 CORE_ML    = ndcore/term.ml ndcore/norm.ml ndcore/pprint.ml ndcore/unify.ml \
              ndcore/index.ml
-TEST_ML    = ndcore/oUnit.ml ndcore/test.ml
+TEST_ML    = ndcore/tests/oUnit.ml ndcore/tests/test.ml
 BEDWYR_ML  = table.ml system.ml parser.ml lexer.ml prover.ml main.ml
 
 CORE_SRC   = $(CORE_ML)   $(wildcard $(CORE_ML:.ml=.mli))

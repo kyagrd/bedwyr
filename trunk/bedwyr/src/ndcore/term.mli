@@ -101,7 +101,7 @@ val eigen_vars : term list -> term list
 
 val get_var : term -> var
 
-val copy : unit -> term -> term
+val copy_eigen : unit -> term -> term
 
 module Notations :
   sig
