@@ -12,6 +12,12 @@ let filename =
   end else
     Sys.argv.(1)
 
+let logic =
+  if Str.string_match (Str.regexp ".*\\.\\(.*\\)\\.tac") filename 0 then
+    Str.matched_group 1 filename
+  else
+    "muLJ"
+
 (* ********** GENERAL TK CONFIG ********** *)
 
 open Tk
@@ -113,7 +119,7 @@ let proc_in,proc_out,reload =
     Text.delete output ~start:(`Linechar (0,0),[]) ~stop:(`End,[]) ;
     Text.configure ~state:`Disabled output ;
     pid := Some (Unix.create_process
-                   "taci" [|"taci";"--logic";"muLJ"|]
+                   "taci" [|"taci";"--logic";logic|]
                    rin wout Unix.stderr)
   in
     reload () ;
