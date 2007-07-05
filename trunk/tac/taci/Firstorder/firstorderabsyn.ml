@@ -376,8 +376,7 @@ let matchFormula template formula =
     | (_, AtomicFormula("_", [])) ->
         true
     | (AtomicFormula(head,tl), AtomicFormula(head',tl')) ->
-        (head = head') && (List.exists success (List.map2 rightUnify tl tl'))
-
+        (head = head') && (List.for_all success (List.map2 rightUnify tl tl'))
     | (MuFormula(n,_,_), MuFormula(n',_,_))
     | (NuFormula(n,_,_), NuFormula(n',_,_)) ->
         n = n'
