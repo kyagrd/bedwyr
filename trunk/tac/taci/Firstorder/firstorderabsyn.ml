@@ -392,7 +392,7 @@ let matchFormula template formula =
         if isAnonymousFormula b || isAnonymousFormula b' then
           true
         else
-          (n = n') && (List.exists success (List.map2 rightUnify args args'))
+          (n = n') && (List.for_all success (List.map2 rightUnify args args'))
     | (ApplicationFormula(NuFormula(n,_,b),args), ApplicationFormula(NuFormula(n',_,b'),args')) ->
         if isAnonymousFormula b || isAnonymousFormula b' then
           true
