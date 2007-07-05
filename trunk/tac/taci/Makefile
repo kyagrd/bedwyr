@@ -6,7 +6,8 @@ OCAMLC=ocamlopt
 OCAMLYACC=ocamlyacc
 OCAMLLEX=ocamllex
 
-SOURCE= absyn.ml output.ml option.ml logic.ml propositionalabsyn.ml \
+SOURCE= listutils.ml absyn.ml output.ml option.ml \
+	logic.ml propositionalabsyn.ml \
 	Nologic/nologic.ml \
 	Propositional/propositionalparser.ml \
 	Propositional/propositionallexer.ml \

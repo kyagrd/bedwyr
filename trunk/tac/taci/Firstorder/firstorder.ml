@@ -488,7 +488,7 @@ struct
 
   let sequents session = (getSessionSequents session)
       
-  let copyFormula ?(copier=(Term.copy ())) (Formula(i,b,f)) =
+  let copyFormula ?(copier=(Term.copy_eigen ())) (Formula(i,b,f)) =
     let copyTerm t = copier t in
     let rec copyFormula f = FOA.mapFormula copyFormula copyTerm f in
     (Formula(i,copy b,copyFormula f))
@@ -499,7 +499,7 @@ struct
   * introduce invalid unifiers.
   ********************************************************************)
   let copySequent (i,lhs,rhs) =
-    let copier = Term.copy () in
+    let copier = Term.copy_eigen () in
     let lhs' = List.map (copyFormula ~copier) lhs in
     let rhs' = List.map (copyFormula ~copier) rhs in
     (i,lhs',rhs')
@@ -1238,7 +1238,7 @@ struct
   ********************************************************************)
   let eqL =
     let tactic session seq f zip lhs rhs sc fc =
-      let copier = Term.copy () in
+      let copier = Term.copy_eigen () in
       let zip' = List.map (copyFormula ~copier) (zip []) in
       let rhs' = List.map (copyFormula ~copier) rhs in
       let f' = copyFormula ~copier f in
