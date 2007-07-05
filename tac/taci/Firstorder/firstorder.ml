@@ -1365,6 +1365,8 @@ struct
       [] ->
         let l = [
           andL session [];
+          nablaR session [];
+          nablaL session [];
           piR session [];
           impR session [];
           sigmaL session [];
