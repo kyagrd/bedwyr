@@ -105,34 +105,44 @@ namespace StickyTaci
 
     public void StartTaci(string path, string logic)
     {
-      m_Taci = new Taci(path, "--output xml --logic " + logic);
-      m_Taci.Output += new Taci.IOHandler<string>(Taci_Output);
-      m_Taci.Goal += new Taci.IOHandler<string>(Taci_Goal);
-      m_Taci.Error += new Taci.IOHandler<string>(Taci_Error);
-      m_Taci.Command += new Taci.IOHandler<string>(Taci_Command);
-      m_Taci.Tactical += new Taci.IOHandler<string>(Taci_Tactical);
-      m_Taci.Logic += new Taci.IOHandler<Logic>(Taci_Logic);
-      m_Taci.Restart();
+      if(Taci == null)
+      {
+        m_Taci = new Taci(path, "--output xml --logic " + logic);
 
-      CurrentLogic = logic;
+        Taci.Output += new Taci.IOHandler<string>(Taci_Output);
+        Taci.Goal += new Taci.IOHandler<string>(Taci_Goal);
+        Taci.Error += new Taci.IOHandler<string>(Taci_Error);
+        Taci.Command += new Taci.IOHandler<string>(Taci_Command);
+        Taci.Tactical += new Taci.IOHandler<string>(Taci_Tactical);
+        Taci.Logic += new Taci.IOHandler<Logic>(Taci_Logic);
+        Taci.Exit += new Taci.ExitHandler(Taci_Exit);
+        Taci.Restart();
 
+        CurrentLogic = logic;
+
+        UpdateInfo();
+
+        Form.Commands = Taci.Commands;
+      }
+    }
+
+    private void UpdateInfo()
+    {
       //Get information.  Yeah, this is dumb.
       //TODO: Fix Taci parser to leave unparsed input
       //      in the lexbuf.
-      m_Taci.Write(Taci.LOGICS + ".");
       System.Threading.Thread.Sleep(100);
-      m_Taci.Write(Taci.TACTICALS + ".");
+      Taci.Write(Taci.LOGICS + ".");
       System.Threading.Thread.Sleep(100);
-      m_Taci.Write(Taci.CLEAR + ".");
+      Taci.Write(Taci.TACTICALS + ".");
       System.Threading.Thread.Sleep(100);
-      m_Taci.Write(Taci.HELP + ".");
-
-      Form.Commands = m_Taci.Commands;
+      Taci.Write(Taci.CLEAR + ".");
+      System.Threading.Thread.Sleep(100);
+      Taci.Write(Taci.HELP + ".");
     }
-
     void Taci_Logic(Taci instance, Logic data)
     {
-      if(instance == m_Taci)
+      if(instance == Taci)
       {
         if(!m_Logics.Contains(data))
         {
@@ -145,7 +155,7 @@ namespace StickyTaci
 
     void Taci_Tactical(Taci instance, string data)
     {
-      if(instance == m_Taci)
+      if(instance == Taci)
       {
         if(!m_Tacticals.Contains(data))
         {
@@ -256,7 +266,14 @@ namespace StickyTaci
       if((Dirty && SaveMessage()) || !Dirty)
       {
         Taci.Write(Taci.EXIT + ".");
-        Taci.Exit();
+        Taci.Shutdown();
+      }
+    }
+
+    public void Taci_Exit(object instance)
+    {
+      if(instance == Taci)
+      {
         Form.Close();
       }
     }
@@ -357,6 +374,7 @@ namespace StickyTaci
     {
       CurrentLogic = name;
       Taci.Write(Taci.LOGIC + " " + name + ".");
+      UpdateInfo();
       OnTacReset();
     }
     public void OnLogic(Logic l)

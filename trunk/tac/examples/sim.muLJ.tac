@@ -1,4 +1,5 @@
-#open "basic_definitions.def".
+#open "C:\zRXer\Projects\SlimmerSVN\trunk\tac\examples
+	\basic_definitions.def".
 
 % Simulation is reflexive.
 #theorem ref "pi p\ (sim p p)".
@@ -39,9 +40,4 @@ coinduction("p\ r\ (sigma q\ (sim p q),(sim q r))").
  and.
  axiom.
  axiom.
-
-
-
-
-
 

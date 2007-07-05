@@ -51,12 +51,27 @@ namespace StickyTaci
     public static string UNDO = "#undo";
     
     public delegate void IOHandler<T>(Taci instance, T data);
+    public delegate void ExitHandler(Taci instance);
+    public event ExitHandler Exit;
     public event IOHandler<string> Output;
     public event IOHandler<string> Goal;
     public event IOHandler<string> Error;
     public event IOHandler<string> Command;
     public event IOHandler<string> Tactical;
     public event IOHandler<Logic> Logic;
+
+    private bool m_Exiting = false;
+    public bool Exiting
+    {
+      get
+      {
+        return m_Exiting;
+      }
+      set
+      {
+        m_Exiting = value;
+      }
+    }
 
     private Process m_Taci = null;
     private string m_Data;
@@ -117,12 +132,13 @@ namespace StickyTaci
       m_Taci.StandardInput.WriteLine(s + "\n");
     }
 
-    public void Exit()
+    public void Shutdown()
     {
-      m_Taci.EnableRaisingEvents = false;
-      m_Taci.Close();
+      Exiting = true;
+      m_Taci.CloseMainWindow();
       return;
     }
+
 
     private void Taci_Exited(object sender, EventArgs e)
     {
@@ -130,7 +146,18 @@ namespace StickyTaci
       {
         m_Taci.Close();
         m_Taci = null;
-        Restart();
+
+        if(Exiting)
+        {
+          if(Exit != null)
+          {
+            Exit(this);
+          }
+        }
+        else
+        {
+          Restart();
+        }
       }
     }
 

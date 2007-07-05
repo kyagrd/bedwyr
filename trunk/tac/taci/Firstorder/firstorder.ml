@@ -303,7 +303,6 @@ struct
   * prove the formula.
   ********************************************************************)
   let prove name t session =
-    let () = restoreNamespace (getSessionInitialNamespace session) in
     let initialNamespace = Term.save_namespace () in
     let defs = getSessionDefinitions session in
     let f = parseFormula defs t in
@@ -489,6 +488,11 @@ struct
 
   let sequents session = (getSessionSequents session)
       
+  let copyFormula ?(copier=(Term.copy ())) (Formula(i,b,f)) =
+    let copyTerm t = copier t in
+    let rec copyFormula f = FOA.mapFormula copyFormula copyTerm f in
+    (Formula(i,copy b,copyFormula f))
+
   (********************************************************************
   *copySequent:
   * Copy the terms in a sequent so that left-unification doesn't
@@ -496,14 +500,11 @@ struct
   ********************************************************************)
   let copySequent (i,lhs,rhs) =
     let copier = Term.copy () in
-    let copyTerm t = copier t in
-    let rec copyFormula f = FOA.mapFormula copyFormula copyTerm f in
-    
-    let lhs' = List.map (fun (i,f) -> (i, copyFormula f)) lhs in
-    let rhs' = List.map (fun (i,f) -> (i, copyFormula f)) rhs in
-    (i, lhs', rhs')
+    let lhs' = List.map (copyFormula ~copier) lhs in
+    let rhs' = List.map (copyFormula ~copier) rhs in
+    (i,lhs',rhs')
 
-  
+
   let makeExistentialVar hint lvl lts =
     let hint = String.capitalize hint in
     let var = Term.fresh ~name:hint ~lts:lts ~ts:lvl ~tag:Term.Logic in
@@ -800,7 +801,7 @@ struct
       match f with
         Formula(i, b, FOA.ImplicationFormula(l,r)) ->
           let rhs' = Formula(i,copy b,l)::rhs in
-          let s1 = Sequent(lvl, lhs, rhs') in
+          let s1 = Sequent(lvl, zip [], rhs') in
           let s2 = Sequent(lvl, zip [Formula(i,copy b,r)], rhs) in
           sc [s1;s2]
       | _ ->
@@ -1237,13 +1238,17 @@ struct
   ********************************************************************)
   let eqL =
     let tactic session seq f zip lhs rhs sc fc =
+      let copier = Term.copy () in
+      let zip' = List.map (copyFormula ~copier) (zip []) in
+      let rhs' = List.map (copyFormula ~copier) rhs in
+      let f' = copyFormula ~copier f in
       let lvl = getSequentLevel seq in
-      match f with
+      match f' with
         Formula(i, b, FOA.EqualityFormula(t1, t2)) ->
           (match (FOA.leftUnify t1 t2) with
               FOA.UnifyFailed -> (sc [])
             | FOA.UnifySucceeded ->
-                let s = Sequent(lvl, zip [], rhs) in
+                let s = Sequent(lvl, zip', rhs') in
                 (sc [s])
             | FOA.UnifyError(s) ->
                 (O.error (s ^ ".\n");

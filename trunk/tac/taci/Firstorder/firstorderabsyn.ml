@@ -172,7 +172,6 @@ and string_of_formula_ast f =
         "atom(" ^ head ^ args' ^ ")"
     | DBFormula(n,i) -> "#" ^ (string_of_int i)
 
-
 let string_of_fixpoint = function
     Inductive -> "inductive"
   | CoInductive -> "coinductive"
