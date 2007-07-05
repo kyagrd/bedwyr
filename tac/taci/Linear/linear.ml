@@ -468,7 +468,7 @@ Implements a rather strange and sort of linear logic.
   * introduce invalid unifiers.
   ********************************************************************)
   let copySequent (i,lhs,rhs) =
-    let copier = Term.copy () in
+    let copier = Term.copy_eigen () in
     let copyTerm t = copier t in
     let rec copyFormula f = LA.mapFormula copyFormula copyTerm f in
     
