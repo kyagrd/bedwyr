@@ -1296,6 +1296,24 @@ struct
     | _ -> G.invalidArguments "examine"
 
   (********************************************************************
+  *false/true:
+  ********************************************************************)
+  let falseL =
+    let tactic session seq f zip lhs rhs sc fc =
+      sc []
+    in
+    (makeSimpleTactical "false" (matchLeft, "false") tactic)
+
+  let trueR =
+    let tactic session seq f zip lhs rhs sc fc =
+      sc []
+    in
+    (makeSimpleTactical "true" (matchRight, "true") tactic)
+
+  let trivialTactical session args =
+    (G.orElseTactical (trueR session args) (falseL session args))
+  
+  (********************************************************************
   *contraction:
   ********************************************************************)
   let contractL =
@@ -1304,7 +1322,7 @@ struct
       let s = Sequent(lvl, (zip [f;f]), rhs) in
       sc [s]
     in
-    (makeSimpleTactical "contract_l" (matchLeft, "") tactic)
+    (makeSimpleTactical "contract_l" (matchLeft, "_") tactic)
   
   let contractR =
     let tactic session seq f zip lhs rhs sc fc =
@@ -1312,10 +1330,32 @@ struct
       let s = Sequent(lvl, lhs, (zip [f;f])) in
       sc [s]
     in
-    (makeSimpleTactical "contract_r" (matchRight, "") tactic)
+    (makeSimpleTactical "contract_r" (matchRight, "_") tactic)
   
   let contractTactical session args =
     (G.orElseTactical (contractL session args) (contractR session args))
+  
+  (********************************************************************
+  *weakening:
+  ********************************************************************)
+  let weakL =
+    let tactic session seq f zip lhs rhs sc fc =
+      let lvl = getSequentLevel seq in
+      let s = Sequent(lvl, (zip []), rhs) in
+      sc [s]
+    in
+    (makeSimpleTactical "weak_l" (matchLeft, "_") tactic)
+  
+  let weakR =
+    let tactic session seq f zip lhs rhs sc fc =
+      let lvl = getSequentLevel seq in
+      let s = Sequent(lvl, lhs, (zip [])) in
+      sc [s]
+    in
+    (makeSimpleTactical "weak_r" (matchRight, "_") tactic)
+  
+  let weakTactical session args =
+    (G.orElseTactical (weakL session args) (weakR session args))
   
   (********************************************************************
   *simplify:
@@ -1436,7 +1476,23 @@ struct
     let ts = Logic.Table.add "examine" examineTactical ts in
 
     let ts = Logic.Table.add "simplify" simplifyTactical ts in
-    ts
+
+    let ts =
+      Logic.Table.add "true" trueR
+        (Logic.Table.add "false" falseL
+           (Logic.Table.add "trivial" trivialTactical ts))
+    in
+
+    let ts =
+      Logic.Table.add "weak_l" weakL
+        (Logic.Table.add "contract_l" contractL
+           (if Param.intuitionistic then
+              Logic.Table.add "weak_r" weakR
+                (Logic.Table.add "contract_r" contractR ts)
+            else
+              ts))
+    in
+      ts
     
   let emptySession =
     let state = Term.save_state () in
