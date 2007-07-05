@@ -1010,6 +1010,8 @@ struct
     (G.orElseTactical (muL session args) (muR session args))
 
 
+  (*  TODO: Induction and coinduction should check for an invariant
+      with too GREAT an arity as well as too little.  *)
   (******************************************************************
   *induction:
   ******************************************************************)
