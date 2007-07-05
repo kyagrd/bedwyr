@@ -169,6 +169,7 @@ namespace StickyTaci
 
     private delegate void IOHandler(string s);
     private delegate void ClearHandler();
+    private delegate void CloseHandler();
 
     private Image m_CurrentLineImage = null;
     private Font m_InputFont = new Font("Courier New", 10, FontStyle.Regular);
@@ -400,6 +401,19 @@ namespace StickyTaci
       }
     }
 
+    new public void Close()
+    {
+      if(this.InvokeRequired)
+      {
+        CloseHandler h = new CloseHandler(Close);
+        Invoke(h);
+      }
+      else
+      {
+        //Real close.
+        ((Form)this).Close();
+      }
+    }
     public void Output(string s)
     {
       if(outputBox.InvokeRequired)
