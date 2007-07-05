@@ -1,5 +1,4 @@
-#open "C:\zRXer\Projects\SlimmerSVN\trunk\tac\examples
-	\basic_definitions.def".
+#open "examples/basic_definitions.def".
 
 #theorem even_or_even_s "pi x\ (nat x)=>(even x); (even (s x))".
 
@@ -106,13 +105,13 @@ induction("x\ (nat x),(pi y\ (leq y x)=>(sigma h\ (half y h)))").
    % and use the induction hypothesis on it.
    pi_l.
    imp_l.
-   mu_r("leq").
+   mu_r.
    then(right, then(sigma_r,and)).
    eq_r.
-   then(mu_r("leq"),then(left,eq)).
+   then(mu_r,then(left,eq)).
    sigma_l.
    sigma_r.
-   mu_r("half").
+   mu_r.
    right.
    repeat(sigma_r).
    repeat(and).
@@ -127,4 +126,3 @@ induction("x\ (nat x),(pi y\ (leq y x)=>(sigma h\ (half y h)))").
    axiom.
    simplify.
    then(sigma_r,axiom).
-
