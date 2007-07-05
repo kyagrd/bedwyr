@@ -348,10 +348,10 @@ let free n =
 (** [copy ()] instantiates a copier, that copies terms,
   * preserving sharing inside the set of copied terms.
   * Input terms should be normalized. *)
-let copy () =
+let copy_eigen () =
   let tbl = Hashtbl.create 100 in
   let rec cp tm = match observe tm with
-    | Var v ->
+    | Var v when v.tag = Eigen ->
         begin try Hashtbl.find tbl v with
           | Not_found ->
               let v' = { v with id = fresh_id () } in
@@ -360,6 +360,7 @@ let copy () =
                 Hashtbl.add tbl v x ;
                 x
         end
+    | Var v -> tm
     | App (a,l) -> App (cp a, List.map cp l)
     | Lam (n,b) -> Lam (n, cp b)
     | NB i | DB i as x -> x
