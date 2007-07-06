@@ -1,0 +1,79 @@
+
+===== 1. Subprojects
+
+The tac directory contains several subprojects in their own subdirectories:
+ * taci is a command-line tool
+ * StickyTaci is an advanced C#/WinForms interface to taci
+   It currently only works on Windows. It builds on linux using Mono but 
+   doesn't run.
+ * Stekki is a rough OCaml/Tk interface to taci
+   It builds on linux and it's still nice to use than the command-line.
+
+===== 2. Building taci and stekki on UNIX
+
+You only need OCaml, with labltk for stekki.
+
+You first have to make sure that the ndcore library inside Bedwyr is compiled:
+tac $ make -C ../bedwyr
+
+Then you can build taci and stekki:
+tac $ make -C taci
+tac $ make -C Stekki
+
+===== 3. How to use taci
+
+Taci is a command-line tool that allows you to interactively build proofs in 
+various logics. You can get the list of available logics using --logics:
+tac $ taci/taci --logics
+
+Propositional logic doesn't have terms. Firstorder, muLJ and their variations 
+are first-order logic, featuring higher-order terms, nabla and fixed points. 
+The muLJ* logics are intuitionistic while firstorder* are classical. The 
+*-nonstrict variations are slightly sloppier than LINC when checking the axiom 
+rule: they do not check for generic context equality, but since variables are 
+represented by indices which cannot be renumbered it's still pretty far from 
+LG.
+
+Let's start taci on muLJ. You should get something like:
+tac $ taci/taci --logic muLJ
+Mu-LJ with Strict Nabla
+[tac <muLJ>]- #define "nat x := (x=o);(sigma y\ (x=(s y),(nat y)))".
+Definition: inductive (nat x\ ((x = o); sigma y\ ((x = (s y)), nat y))).
+[tac <muLJ>]- #theorem my_theorem "pi x\ nat x => nat (s x)".
+--------------------------
+pi x\ (nat x => nat (s x))
+[tac <muLJ>]- pi_r.
+--------------------
+(nat x => nat (s x))
+
+Then you can type in "imp_r." to introduce the implication. Then, type "#undo." 
+twice, and you should come back at the first step. Type "simplify." and the 
+universal quantification as well as the implication will get introduced in one 
+step. You can now unfold nat on the right (mu_r), choose the right of the 
+disjunction (or_r), introduce the existential and split the conjunction 
+(then(sigma_r,and_r)). You get two goals. You can finish the first one using 
+"eq_r", the second one using "axiom".
+
+Exit using Control-C.
+
+Find more definitions and proof scripts in examples. The example files are no 
+more than a sequence of taci inputs. They can be conveniently used from the 
+graphical interfaces, which allow loading/saving and undo/redo in a more
+natural way.
+
+===== 4. Using stekki
+
+Stekki runs on a (possibly unexistent) file, which extension specifies the 
+logic to use. By default, muLJ is used.
+
+tac $ Stekki/stekki examples/arithmetic.muLJ.tac
+
+Using Alt-Down and Alt-Up you can do/undo a command from the file. The command 
+then moves in a blocked area where you can't edit it. You should undo it before 
+editing.
+
+Sometimes undo breaks and you loose synchronization between the interface and 
+taci. You can then use the Reset button.
+
+The Load and Save button reload and save the file. In both cases, it also 
+undoes all inputs and resets taci.
