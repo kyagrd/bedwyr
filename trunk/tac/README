@@ -78,20 +78,3 @@ taci. You can then use the Reset button.
 The Load and Save button reload and save the file. In both cases, it also 
 undoes all inputs and resets taci.
 
-
---
-email:
-
-Hey man.  This is the theorem prover.  You can use either the command line interface "taci.exe" or the GUI "StickyTaci.exe".  The most important thing to check is to see if it even runs!  Anyway, I don't know if you have had any experience with theorem proving, but the basic idea is that you enter any definitions you like, and then a theorem you wish to prove.  An example (that uses no definitions) is:
-
-(a,b)=>a
-
-Which says "A and B implies A".
-
-To prove this, you can enter the following tacticals:
-
-imp.
-and.
-axiom.
-
-Which first breaks the implication into two parts, then splits the conjunction (the comma) into two parts, and then applies the axiom rule.
