@@ -82,7 +82,7 @@ command
   | TACTICALS             {Absyn.Tacticals}
   | TACTICAL ID tactical  {Absyn.TacticalDefinition($2, $3)}
   
-  | LOGIC ID              {Absyn.Logic($2)}
+  | LOGIC STRING          {Absyn.Logic($2)}
   | LOGICS                {Absyn.Logics}
   ;
 

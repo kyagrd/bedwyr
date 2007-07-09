@@ -373,7 +373,7 @@ namespace StickyTaci
     public void OnLogic(string name)
     {
       CurrentLogic = name;
-      Taci.Write(Taci.LOGIC + " " + name + ".");
+      Taci.Write(Taci.LOGIC + " \"" + name + "\".");
       UpdateInfo();
       OnTacReset();
     }

@@ -59,21 +59,23 @@ struct
 
 #clear.                     : Clear the screen.
 #debug <on | off>.          : Turn debugging on or off.
-#define <definition>.       : Add the given definition to the current session.
+#define <definition>.       : Add the given quoted definition to the current session.
 #exit.                      : Exit Taci.
 #help.                      : Show this message.
 #include <files>            : Add the definitions in the given files to the
-                              current session.  File names should be surrounded
-                              by quotes and separated by spaces.
+                              current session.  File names should be quoted and
+                              space separated.
+#logic <name>.              : Load the specified logic.  The logic name should
+                              be quoted.
+#logics.                    : List all available logics.
 #open <files>               : Read each line in the given files as a command.
-                              File names should be surrounded by quotes and
-                              separated by spaces.
+                              File names should be quoted and space separated.
 #redo                       : Redo.
 #reset.                     : Reset the current session, removing all definitions
                               and removing all sequents.
 #tactical <name> <tactical> : Define a tactical with the given name and body.
 #tacticals.                 : List all available tacticals.
-#theorem <name> <theorem>.  : Prove the given theorem in the current logic.
+#theorem <name> <theorem>.  : Prove the given quoted theorem in the current logic.
 #time <on | off>.           : Turn timing on or off.
 #undo.                      : Undo.
 "
