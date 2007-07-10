@@ -34,7 +34,7 @@ Implements a rather strange and sort of linear logic.
 "
   let start = info
   
-  let copy b = ref (!b)
+  let b = ref (!b)
   
   (********************************************************************
   *Formula:
@@ -675,7 +675,7 @@ Implements a rather strange and sort of linear logic.
       let lvl = getSequentLevel seq in
       match f with
         Formula(i, b, LA.AndFormula(l,r)) ->
-          let s = Sequent(lvl, zip [Formula(i,copy b,l);Formula(i,copy b, r)], rhs) in
+          let s = Sequent(lvl, zip [Formula(i,b,l);Formula(i,b, r)], rhs) in
           sc [s]
       | _ ->
           (O.error "invalid formula.\n";
@@ -688,8 +688,8 @@ Implements a rather strange and sort of linear logic.
       let lvl = getSequentLevel seq in
       match f with
         Formula(i, b,LA.AndFormula(l,r)) ->
-          let s1 = Sequent(lvl, lhs, zip [Formula(i,copy b,l)]) in
-          let s2 = Sequent(lvl, lhs, zip [Formula(i,copy b,r)]) in
+          let s1 = Sequent(lvl, lhs, zip [Formula(i,b,l)]) in
+          let s2 = Sequent(lvl, lhs, zip [Formula(i,b,r)]) in
           sc [s1;s2]
       | _ ->
           (O.error "invalid formula.\n";
@@ -708,8 +708,8 @@ Implements a rather strange and sort of linear logic.
       let lvl = getSequentLevel seq in
       match f with
         Formula(i, b,LA.OrFormula(l,r)) ->
-          let s1 = Sequent(lvl, zip [Formula(i,copy b,l)], rhs) in
-          let s2 = Sequent(lvl, zip [Formula(i,copy b,r)], rhs) in
+          let s1 = Sequent(lvl, zip [Formula(i,b,l)], rhs) in
+          let s2 = Sequent(lvl, zip [Formula(i,b,r)], rhs) in
           sc [s1;s2]
       | _ ->
           (O.error "invalid formula.\n";
@@ -722,7 +722,7 @@ Implements a rather strange and sort of linear logic.
       let lvl = getSequentLevel seq in
       match f with
         Formula(i, b, LA.OrFormula(l,r)) ->
-          let rhs' = zip [Formula(i,copy b,l);Formula(i,copy b, r)] in
+          let rhs' = zip [Formula(i,b,l);Formula(i,b, r)] in
           let s = Sequent(lvl, rhs', lhs) in
           sc [s]
       | _ ->
@@ -743,9 +743,9 @@ Implements a rather strange and sort of linear logic.
       let lvl = getSequentLevel seq in
       match f with
         Formula(i, b, LA.ImplicationFormula(l,r)) ->
-          let rhs' = Formula(i,copy b,l)::rhs in
+          let rhs' = Formula(i,b,l)::rhs in
           let s1 = Sequent(lvl, lhs, rhs') in
-          let s2 = Sequent(lvl, zip [Formula(i,copy b,r)], rhs) in
+          let s2 = Sequent(lvl, zip [Formula(i,b,r)], rhs) in
           sc [s1;s2]
       | _ ->
           (O.error "invalid formula.\n";
@@ -758,8 +758,8 @@ Implements a rather strange and sort of linear logic.
       let lvl = getSequentLevel seq in
       match f with
         Formula(i, b, LA.ImplicationFormula(l,r)) ->
-          let lhs' = Formula(i,copy b, l)::lhs in
-          let s = Sequent(lvl, lhs', zip [Formula(i, copy b, r)]) in
+          let lhs' = Formula(i,b, l)::lhs in
+          let s = Sequent(lvl, lhs', zip [Formula(i, b, r)]) in
           sc [s]
       | _ ->
           (O.error "invalid formula.\n";
@@ -781,7 +781,7 @@ Implements a rather strange and sort of linear logic.
           let (lvl',var) = makeExistentialVar lvl i in
           let f' = application [var] f in
           if Option.isSome f' then
-            let s = Sequent(lvl', zip [Formula(i, copy b, Option.get f')], rhs) in
+            let s = Sequent(lvl', zip [Formula(i, b, Option.get f')], rhs) in
             sc [s]
           else
             fc ()
@@ -799,7 +799,7 @@ Implements a rather strange and sort of linear logic.
           let (lvl',var) = makeUniversalVar lvl i in
           let f' = application [var] f in
           if Option.isSome f' then
-            let s = Sequent(lvl', lhs, zip [Formula(i, copy b, Option.get f')]) in
+            let s = Sequent(lvl', lhs, zip [Formula(i, b, Option.get f')]) in
             sc [s]
           else
             fc ()
@@ -823,7 +823,7 @@ Implements a rather strange and sort of linear logic.
           let (lvl',var) = makeUniversalVar lvl i in
           let f' = application [var] f in
           if Option.isSome f' then
-            let s = Sequent(lvl', zip [Formula(i, copy b, Option.get f')], rhs) in
+            let s = Sequent(lvl', zip [Formula(i, b, Option.get f')], rhs) in
             sc [s]
           else
             fc ()
@@ -841,7 +841,7 @@ Implements a rather strange and sort of linear logic.
           let (lvl',var) = makeExistentialVar lvl i in
           let f' = application [var] f in
           if Option.isSome f' then
-            let s = Sequent(lvl', lhs, zip [Formula(i, copy b, Option.get f')]) in
+            let s = Sequent(lvl', lhs, zip [Formula(i, b, Option.get f')]) in
             sc [s]
           else
             fc ()
@@ -865,7 +865,7 @@ Implements a rather strange and sort of linear logic.
           let (lvl',i',var) = makeNablaVar lvl i in
           let f' = application [var] f in
           if Option.isSome f' then
-            let s = Sequent(lvl', zip [Formula(i', copy b, Option.get f')], rhs) in
+            let s = Sequent(lvl', zip [Formula(i', b, Option.get f')], rhs) in
             sc [s]
           else
             fc ()
@@ -883,7 +883,7 @@ Implements a rather strange and sort of linear logic.
           let (lvl',i',var) = makeNablaVar lvl i in
           let f' = application [var] f in
           if Option.isSome f' then
-            let s = Sequent(lvl', lhs, zip [Formula(i', copy b, Option.get f')]) in
+            let s = Sequent(lvl', lhs, zip [Formula(i', b, Option.get f')]) in
             sc [s]
           else
             fc ()
@@ -908,7 +908,7 @@ Implements a rather strange and sort of linear logic.
             let mu' = LA.applyFixpoint (fun alist -> LA.ApplicationFormula(mu,alist)) body in
             let f' = application args mu' in
             if Option.isSome f' then
-              let s = Sequent(lvl, lhs, zip [Formula(i,copy b,Option.get f')]) in
+              let s = Sequent(lvl, lhs, zip [Formula(i,b,Option.get f')]) in
               (sc [s])
             else
               (O.error ("'" ^ name ^ "': incorrect number of arguments.");
@@ -928,7 +928,7 @@ Implements a rather strange and sort of linear logic.
             let mu' = LA.applyFixpoint (fun alist -> LA.ApplicationFormula(mu,alist)) body in
             let f' = application args mu' in
             if Option.isSome f' then
-              let s = Sequent(lvl, zip [Formula(i,copy b,Option.get f')], rhs) in
+              let s = Sequent(lvl, zip [Formula(i,b,Option.get f')], rhs) in
               (sc [s])
             else
               (O.error ("'" ^ name ^ "': incorrect number of arguments.");
@@ -980,7 +980,7 @@ Implements a rather strange and sort of linear logic.
               let f' = application args s' in
               if Option.isSome f' then
                 let f' = Option.get f' in
-                let s1 = Sequent(lvl, zip [Formula(i,copy b,f')], rhs) in
+                let s1 = Sequent(lvl, zip [Formula(i,b,f')], rhs) in
 
                 let (lvl', args') = makeArgs lvl i args in
                 
@@ -989,7 +989,7 @@ Implements a rather strange and sort of linear logic.
                 
                 if (Option.isSome r) && (Option.isSome mu') then
                   let l = LA.applyFixpoint (fun alist -> Option.get (application alist s')) (Option.get mu') in
-                  let s2 = Sequent(lvl', [Formula(i, copy b, l)], [Formula(i, copy b, Option.get r)]) in
+                  let s2 = Sequent(lvl', [Formula(i, b, l)], [Formula(i, b, Option.get r)]) in
                   (sc [s1;s2])
                 else
                   (O.error ("incorrect number of arguments.\n");
@@ -1035,7 +1035,7 @@ Implements a rather strange and sort of linear logic.
             let mu' = LA.applyFixpoint (fun alist -> LA.ApplicationFormula(mu,alist)) body in
             let f' = application args mu' in
             if Option.isSome f' then
-              let s = Sequent(lvl, lhs, zip [Formula(i,copy b,Option.get f')]) in
+              let s = Sequent(lvl, lhs, zip [Formula(i,b,Option.get f')]) in
               (sc [s])
             else
               (O.error ("'" ^ name ^ "': incorrect number of arguments.");
@@ -1055,7 +1055,7 @@ Implements a rather strange and sort of linear logic.
             let mu' = LA.applyFixpoint (fun alist -> LA.ApplicationFormula(mu,alist)) body in
             let f' = application args mu' in
             if Option.isSome f' then
-              let s = Sequent(lvl, zip [Formula(i,copy b,Option.get f')], rhs) in
+              let s = Sequent(lvl, zip [Formula(i,b,Option.get f')], rhs) in
               (sc [s])
             else
               (O.error ("'" ^ name ^ "': incorrect number of arguments.");
@@ -1106,7 +1106,7 @@ Implements a rather strange and sort of linear logic.
               let f' = application args s' in
               if Option.isSome f' then
                 let f' = Option.get f' in
-                let s1 = Sequent(lvl, zip [Formula(i,copy b,f')], rhs) in
+                let s1 = Sequent(lvl, zip [Formula(i,b,f')], rhs) in
 
                 let (lvl', args') = makeArgs lvl i args in
                 
@@ -1115,7 +1115,7 @@ Implements a rather strange and sort of linear logic.
                 
                 if (Option.isSome r) && (Option.isSome mu') then
                   let l = LA.applyFixpoint (fun alist -> Option.get (application alist s')) (Option.get mu') in
-                  let s2 = Sequent(lvl', [Formula(i, copy b, l)], [Formula(i, copy b, Option.get r)]) in
+                  let s2 = Sequent(lvl', [Formula(i, b, l)], [Formula(i, b, Option.get r)]) in
                   (sc [s1;s2])
                 else
                   (O.error ("incorrect number of arguments.\n");
