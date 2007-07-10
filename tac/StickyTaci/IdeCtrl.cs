@@ -265,7 +265,6 @@ namespace StickyTaci
     {
       if((Dirty && SaveMessage()) || !Dirty)
       {
-        Taci.Write(Taci.EXIT + ".");
         Taci.Shutdown();
       }
     }
@@ -445,13 +444,13 @@ namespace StickyTaci
 
     public void OnAll(uint line)
     {
-      //Reset the environment so everything works as planned.
-      OnTacReset();
-
       //Run each line upto the given one.
-      while(CurrentLine < line)
+      int i = 0;
+      int maxIterations = Form.Rtf.Lines.Length + 1;
+      while(CurrentLine < line && i < maxIterations)
       {
         OnNextLine();
+        i++;
       }
     }
 

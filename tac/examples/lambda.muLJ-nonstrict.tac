@@ -139,3 +139,4 @@ induction("G\M\T\ (context G => pi T'\ (typeof G M T' => (T = T')))").
    axiom.
    false.
 
+%Yay.
