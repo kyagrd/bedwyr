@@ -135,7 +135,7 @@ namespace StickyTaci
     public void Shutdown()
     {
       Exiting = true;
-      m_Taci.CloseMainWindow();
+      Write(Taci.EXIT + ".");
       return;
     }
 
