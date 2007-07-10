@@ -100,7 +100,8 @@
 %token <string> ID
 %token <string> STRING
 
-%nonassoc BSLASH PI SIGMA NABLA MU NU
+%nonassoc BSLASH
+%nonassoc PI SIGMA NABLA MU NU
 %right IMP
 %left OR ORL
 %left AND ANDL
@@ -155,19 +156,17 @@ formula
   | formula OR formula {orFormula $1 $3}
   | formula IMP formula {impFormula $1 $3}
   | term EQ term {eqFormula $1 $3}
-  
+
   | PI formula    {pi $2}
   | SIGMA formula {sigma $2}
   | NABLA formula {nabla $2}
-  
-  | binder formula            {let (free, name) = $1 in
-                              let abs = abstract name $2 in
-                              if (free) then
-                                (Term.free name;
-                                abs)
-                              else
-                                abs}
-  
+
+  | binder formula %prec BSLASH
+                  { let (free, name) = $1 in
+                    let abs = abstract name $2 in
+                      if free then Term.free name ;
+                      abs }
+
   | LPAREN formula RPAREN     {$2}
   | term                      {atomic $1}
   ;
@@ -197,5 +196,10 @@ primaryterm
   | ID                  {atom $1}
   | STRING              {Term.string $1}
   | UNDERSCORE          {anonymous ()}   
+  | LPAREN binder term RPAREN
+                        {let (free,name) = $2 in
+                         let abs = Term.abstract (Term.atom name) $3 in
+                           if free then Term.free name ;
+                           abs}
   ;
 %%
