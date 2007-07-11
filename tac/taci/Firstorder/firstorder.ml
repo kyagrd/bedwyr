@@ -9,7 +9,7 @@
 *                                                                     *
 * This program is distributed in the hope that it will be useful,     *
 * but WITHOUT ANY WARRANTY; without even the implied warranty of      *
-* MERCHANTABILITY or FITNESS FOR A PARTICUFOAR PURPOSE.  See the       *
+* MERCHANTABILITY or FITNESS FOR A PARTICUFOAR PURPOSE.  See the      *
 * GNU General Public License for more details.                        *
 *                                                                     *
 * You should have received a copy of the GNU General Public License   *
@@ -50,13 +50,18 @@ struct
     | Nonfocused
     | Frozen
 
-  type formula = Formula of (int * marktype * FOA.formula)
+  type polarity =
+      Positive
+    | Negative
+
+  type formula = Formula of (int * (marktype * polarity) * FOA.formula)
   let string_of_formula (Formula(_,_,t)) = FOA.string_of_formula t
   let string_of_formula_ast (Formula(_,_,t)) = FOA.string_of_formula_ast t
   let getFormulaFormula (Formula(_,_,f)) = f
-  let getFormulaFocus (Formula(_,b,_)) = b
+  let getFormulaMarker (Formula(_,(b,_),_)) = b
+  let getFormulaPolarity (Formula(_,(_,p),_)) = p
   let getFormulaLevel (Formula(i,_,_)) = i
-  let makeFormula t = Formula(0, Nonfocused, t)
+  let makeFormula t = Formula(0, (Nonfocused,Positive), t)
   
   let string_of_definition def = FOA.string_of_definition def
   
@@ -95,23 +100,42 @@ struct
     proof Logic.proofbuilder *
     Term.state * Term.subst * (Term.namespace * Term.namespace))
 
+
   let getSessionSequents (Session(_,_,sequents,_,_,_,_)) = sequents
-  let setSessionSequents sequents (Session(t,d,_,pb,u,r,ns)) = (Session(t,d,sequents,pb,u,r,ns))
+  let setSessionSequents sequents (Session(t,d,_,pb,u,r,ns)) =
+    (Session(t,d,sequents,pb,u,r,ns))
+
   let getSessionBuilder (Session(_,_,_,b,_,_,_)) = b
-  let setSessionBuilder builder (Session(t,d,s,_,u,r,ns)) = (Session(t,d,s,builder,u,r,ns))
+  let setSessionBuilder builder (Session(t,d,s,_,u,r,ns)) =
+    (Session(t,d,s,builder,u,r,ns))
+
+
   let getSessionUndo (Session(_,_,_,_,u,_,_)) = u
-  let setSessionUndo undo (Session(t,d,s,b,_,r,ns)) = (Session(t,d,s,b,undo,r,ns))
+  let setSessionUndo undo (Session(t,d,s,b,_,r,ns)) =
+    (Session(t,d,s,b,undo,r,ns))
+
   let getSessionRedo (Session(_,_,_,_,_,r,_)) = r
-  let setSessionRedo redo (Session(t,d,s,b,u,_,ns)) = (Session(t,d,s,b,u,redo,ns))
+  let setSessionRedo redo (Session(t,d,s,b,u,_,ns)) =
+    (Session(t,d,s,b,u,redo,ns))
+
   let getSessionTacticals (Session(t,_,_,_,_,_,_)) = t
-  let setSessionTacticals tacs (Session(_,d,s,pb,u,r,ns)) = (Session(tacs,d,s,pb,u,r,ns))
+  let setSessionTacticals tacs (Session(_,d,s,pb,u,r,ns)) =
+    (Session(tacs,d,s,pb,u,r,ns))
+
   let getSessionDefinitions (Session(_,d,_,_,_,_,_)) = d
-  let setSessionDefinitions defs (Session(t,_,s,pb,u,r,ns)) = (Session(t,defs,s,pb,u,r,ns))
-  let setSessionNamespaces ns (Session(t,defs,s,pb,u,r,_)) = (Session(t,defs,s,pb,u,r,ns))
+  let setSessionDefinitions defs (Session(t,_,s,pb,u,r,ns)) =
+    (Session(t,defs,s,pb,u,r,ns))
+
+  let setSessionNamespaces ns (Session(t,defs,s,pb,u,r,_)) =
+    (Session(t,defs,s,pb,u,r,ns))
+
   let getSessionProofNamespace (Session(_,_,_,_,_,_,(_,pns))) = pns
-  let setSessionProofNamespace pns (Session(t,defs,s,pb,u,r,(ins,_))) = (Session(t,defs,s,pb,u,r,(ins,pns)))
+  let setSessionProofNamespace pns (Session(t,defs,s,pb,u,r,(ins,_))) =
+    (Session(t,defs,s,pb,u,r,(ins,pns)))
+
   let getSessionInitialNamespace (Session(_,_,_,_,_,_,(ins,_))) = ins
-  let setSessionInitialNamespace ins (Session(t,defs,s,pb,u,r,(_,pns))) = (Session(t,defs,s,pb,u,r,(ins,pns)))
+  let setSessionInitialNamespace ins (Session(t,defs,s,pb,u,r,(_,pns))) =
+    (Session(t,defs,s,pb,u,r,(ins,pns)))
   
   let restoreNamespace ns = Term.restore_namespace ns
   
@@ -127,13 +151,17 @@ struct
     let lvl = getSequentLevel seq in
     let top = (String.concat "\n" (List.map string_of_formula lhs)) in
     let bottom = (String.concat "\n" (List.map string_of_formula rhs)) in
-    (top ^ "\n" ^ (string_of_int lvl) ^ ": " ^ (String.make (max (min (String.length bottom) 72) 16) '-') ^ "\n" ^ bottom)
+    (top ^ "\n" ^ (string_of_int lvl) ^ ": " ^
+      (String.make (max (min (String.length bottom) 72) 16) '-') ^
+      "\n" ^ bottom)
 
   let string_of_sequent_rhs seq =
     let rhs = getSequentRHS seq in
     let lvl = getSequentLevel seq in
     let bottom = (String.concat "\n" (List.map string_of_formula rhs)) in
-    ((string_of_int lvl) ^ ": " ^ (String.make (max (min (String.length bottom) 72) 16) '-') ^ "\n" ^ bottom)
+    ((string_of_int lvl) ^ ": " ^
+      (String.make (max (min (String.length bottom) 72) 16) '-') ^
+      "\n" ^ bottom)
     
   let string_of_sequents session =
     let sequents = getSessionSequents session in
@@ -141,7 +169,9 @@ struct
     let mainseq = List.hd sequents in
     let seqs = List.tl sequents in
     if not (Listutils.empty seqs) then
-      (string_of_sequent mainseq) ^ "\n\n" ^ (String.concat "\n\n" (List.map string_of_sequent_rhs seqs)) ^ "\n"
+      (string_of_sequent mainseq) ^ "\n\n" ^
+        (String.concat "\n\n" (List.map string_of_sequent_rhs seqs))        
+        ^ "\n"
     else
       (string_of_sequent mainseq) ^ "\n"
 
@@ -247,9 +277,36 @@ struct
   * with the parsed formula, otherwise it returns None.
   ********************************************************************)
   let parseTemplate defs t =
+    (*  focused: checks whether the template string is surrounded in
+        brackets. *)
+    let focused s =
+      let len = String.length s in
+      if len > 1 then
+        s.[0] = '[' && s.[len - 1] = ']'
+      else
+        false
+    in
+
+    (*  strip: removes surrounding brackets.  *)
+    let strip s =
+      let len = String.length s in
+      if len > 1 then
+        String.sub s 1 (len - 2)
+      else
+        (O.impossible "Firstorder.parseTemplate: invalid focused template.\n";
+        s)
+    in
+
     try
+      let (t, focus) =
+        if focused t then
+          ((strip t), Focused)
+        else
+          (t, Nonfocused)
+      in
+
       let formula = Firstorderparser.toplevel_template Firstorderlexer.token (Lexing.from_string t) in
-      Some (processFormula defs formula)
+      Some (processFormula defs formula, focus)
     with
         FOA.SyntaxError(s) ->
           (O.error (s ^ ".\n");
@@ -544,7 +601,7 @@ struct
   * a list of formulas F', returns F with the found formula replaced
   * with F'.
   ********************************************************************)
-  let findFormula template formulas =
+  let findFormula template marker formulas =
     let () = O.debug ("Firstorder.findFormula: template: " ^ (FOA.string_of_formula template) ^ "\n") in
     let () = O.debug ("Firstorder.findFormula: template ast: " ^ (FOA.string_of_formula_ast template) ^ "\n") in
     let rec find front formulas =
@@ -553,13 +610,16 @@ struct
           let () = O.debug "Firstorder.findFormula: not found.\n" in
           None
       | formula::fs ->
-          let f = getFormulaFormula formula in
-          if (FOA.matchFormula template f) then
-            let zip rest = fun list ->
-              (List.rev_append front list) @ rest
-            in
-            let () = O.debug ("Firstorder.findFormula: found: " ^ (FOA.string_of_formula f) ^ ".\n") in
-            Some(formula, zip fs)
+          if (getFormulaMarker formula) = marker then
+            let f = getFormulaFormula formula in
+            if (FOA.matchFormula template f) then
+              let zip rest = fun list ->
+                (List.rev_append front list) @ rest
+              in
+              let () = O.debug ("Firstorder.findFormula: found: " ^ (FOA.string_of_formula f) ^ ".\n") in
+              Some(formula, zip fs)
+            else
+              find (formula::front) fs
           else
             find (formula::front) fs
     in
@@ -574,19 +634,19 @@ struct
   *   the whole left
   *   the whole right
   ********************************************************************)
-  let matchLeft pattern sequent =
+  let matchLeft pattern marker sequent =
     let () = O.debug ("Template: " ^ (FOA.string_of_formula_ast pattern) ^ ".\n") in
     let lhs = getSequentLHS sequent in
     let rhs = getSequentRHS sequent in
-    let result = findFormula pattern lhs in
+    let result = findFormula pattern marker lhs in
     match result with
       Some(f,zip) -> Some(f,zip,lhs,rhs)
     | None -> None
     
-  let matchRight pattern sequent =
+  let matchRight pattern marker sequent =
     let lhs = getSequentLHS sequent in
     let rhs = getSequentRHS sequent in
-    let result = findFormula pattern rhs in
+    let result = findFormula pattern marker rhs in
     match result with
       Some(f,zip) -> Some(f,zip,lhs,rhs)
     | None -> None
@@ -623,18 +683,22 @@ struct
       
       let defaulttemplate =
         parseTemplate (getSessionDefinitions session) defaulttemplate in
+      
       if Option.isSome defaulttemplate then
-        let defaulttemplate = Option.get defaulttemplate in
+        let (defaulttemplate, focus) = Option.get defaulttemplate in
         match args with
             [] ->
-              (makeTactical name (matchbuilder defaulttemplate) tactic session)
+              (makeTactical name (matchbuilder defaulttemplate focus) tactic session)
           | Absyn.String(s)::[] ->
               let template = parseTemplate (getSessionDefinitions session) s in
-              if (Option.isSome template) &&
-                (FOA.matchFormula defaulttemplate (Option.get template)) then
-                (makeTactical name (matchbuilder (Option.get template)) tactic session)
+              if (Option.isSome template) then
+                let (template, _) = Option.get template in
+                if (FOA.matchFormula defaulttemplate template) then
+                  (makeTactical name (matchbuilder template Nonfocused) tactic session)
+                else
+                  (G.invalidArguments (name ^ ": invalid template"))
               else
-                (G.invalidArguments (name ^ ": invalid template"))
+                  (G.invalidArguments (name ^ ": invalid template"))
           | _ -> (G.invalidArguments (name ^ ": incorrect number of arguments"))
       else
         (G.invalidArguments (name ^ ": invalid default template."))
@@ -763,10 +827,9 @@ struct
   (********************************************************************
   *or:
   ********************************************************************)
-  let orL =
-    let tactic session seq f zip lhs rhs sc fc =
-      let lvl = getSequentLevel seq in
-      match f with
+  let orL session seq f zip lhs rhs sc fc =
+    let lvl = getSequentLevel seq in
+    match f with
         Formula(i, b,FOA.OrFormula(l,r)) ->
           let s1 = Sequent(lvl, zip [Formula(i,b,l)], rhs) in
           let s2 = Sequent(lvl, zip [Formula(i,b,r)], rhs) in
@@ -774,44 +837,45 @@ struct
       | _ ->
           (O.impossible "invalid formula.\n";
           fc ())
-    in
-    makeSimpleTactical "or_l" (matchLeft, "_;_") tactic
 
-  let orR =
-    let tactic session seq f zip lhs rhs sc fc =
-      let lvl = getSequentLevel seq in
-      match f with
-        Formula(i, b, FOA.OrFormula(l,r)) ->
-          let rhs' = zip [Formula(i,b,l);Formula(i,b, r)] in
-          let s = Sequent(lvl, lhs, rhs') in
-          sc [s]
-      | _ ->
-          (O.impossible "invalid formula.\n";
-          fc ())
-    in
-    (makeSimpleTactical "or_r" (matchRight,"_;_") tactic)
+  let orLTactical =
+    makeSimpleTactical "or_l" (matchLeft, "_;_") orL
+
+  let orR session seq f zip lhs rhs sc fc =
+    let lvl = getSequentLevel seq in
+    match f with
+      Formula(i, b, FOA.OrFormula(l,r)) ->
+        let rhs' = zip [Formula(i,b,l);Formula(i,b, r)] in
+        let s = Sequent(lvl, lhs, rhs') in
+        sc [s]
+    | _ ->
+        (O.impossible "invalid formula.\n";
+        fc ())
+
+  let orRTactical =
+    (makeSimpleTactical "or_r" (matchRight,"_;_") orR)
 
   let orTactical session args = match args with
-      [] -> (G.orElseTactical (orL session args) (orR session args))
+      [] -> (G.orElseTactical (orLTactical session args) (orRTactical session args))
     | _ -> G.invalidArguments "or"
 
   (********************************************************************
   *implication:
   ********************************************************************)
-  let impL =
-    let tactic session seq f zip lhs rhs sc fc =
-      let lvl = getSequentLevel seq in
-      match f with
-        Formula(i, b, FOA.ImplicationFormula(l,r)) ->
-          let rhs' = Formula(i,b,l)::rhs in
-          let s1 = Sequent(lvl, zip [], rhs') in
-          let s2 = Sequent(lvl, zip [Formula(i,b,r)], rhs) in
-          sc [s1;s2]
-      | _ ->
-          (O.impossible "invalid formula.\n";
-          fc ())
-    in
-    (makeSimpleTactical "imp_l" (matchLeft,"_=>_") tactic)
+  let impL session seq f zip lhs rhs sc fc =
+    let lvl = getSequentLevel seq in
+    match f with
+      Formula(i, b, FOA.ImplicationFormula(l,r)) ->
+        let rhs' = Formula(i,b,l)::rhs in
+        let s1 = Sequent(lvl, zip [], rhs') in
+        let s2 = Sequent(lvl, zip [Formula(i,b,r)], rhs) in
+        sc [s1;s2]
+    | _ ->
+        (O.impossible "invalid formula.\n";
+        fc ())
+  
+  let impLTactical =
+    (makeSimpleTactical "imp_l" (matchLeft,"_=>_") impL)
 
   let impR =
     let tactic session seq f zip lhs rhs sc fc =
@@ -828,28 +892,28 @@ struct
     (makeSimpleTactical "imp_r" (matchRight,"_=>_") tactic)
 
   let impTactical session args =
-    (G.orElseTactical (impL session args) (impR session args))
+    (G.orElseTactical (impLTactical session args) (impR session args))
   
   (********************************************************************
   *pi:
   ********************************************************************)
-  let piL =
-    let tactic session seq f zip lhs rhs sc fc =
-      let lvl = getSequentLevel seq in
-      match f with
-        Formula(i, b, FOA.PiFormula(FOA.AbstractionFormula(hint,_) as f)) ->
-          let (lvl',var) = makeExistentialVar hint lvl i in
-          let f' = FOA.apply [var] f in
-          if Option.isSome f' then
-            let s = Sequent(lvl', zip [Formula(i, b, Option.get f')], rhs) in
-            sc [s]
-          else
-            fc ()
-      | _ ->
-          (O.impossible "invalid formula.\n";
-          fc ())
-    in
-    (makeSimpleTactical "pi_l" (matchLeft,"pi _") tactic)
+  let piL session seq f zip lhs rhs sc fc =
+    let lvl = getSequentLevel seq in
+    match f with
+      Formula(i, b, FOA.PiFormula(FOA.AbstractionFormula(hint,_) as f)) ->
+        let (lvl',var) = makeExistentialVar hint lvl i in
+        let f' = FOA.apply [var] f in
+        if Option.isSome f' then
+          let s = Sequent(lvl', zip [Formula(i, b, Option.get f')], rhs) in
+          sc [s]
+        else
+          fc ()
+    | _ ->
+        (O.impossible "invalid formula.\n";
+        fc ())
+
+  let piLTactical =
+    (makeSimpleTactical "pi_l" (matchLeft,"pi _") piL)
 
   let piR =
     let tactic session seq f zip lhs rhs sc fc =
@@ -870,7 +934,7 @@ struct
     (makeSimpleTactical "pi_r" (matchRight,"pi _") tactic)
 
   let piTactical session args =
-    (G.orElseTactical (piR session args) (piL session args))
+    (G.orElseTactical (piR session args) (piLTactical session args))
 
   (********************************************************************
   *sigma:
@@ -893,27 +957,26 @@ struct
     in
     (makeSimpleTactical "sigma_l" (matchLeft,"sigma _") tactic)
 
-  let sigmaR =
-    let tactic session seq f zip lhs rhs sc fc =
-      let lvl = getSequentLevel seq in
-      match f with
-        Formula(i, b, FOA.SigmaFormula(FOA.AbstractionFormula(hint,_) as f)) ->
-          let (lvl',var) = makeExistentialVar hint lvl i in
-          let f' = FOA.apply [var] f in
-          if Option.isSome f' then
-            let s = Sequent(lvl', lhs, zip [Formula(i, b, Option.get f')]) in
-            sc [s]
-          else
-            (O.error "invalid number of arguments.";
-            fc ())
-      | _ ->
-          (O.impossible "invalid formula.\n";
+  let sigmaR session seq f zip lhs rhs sc fc =
+    let lvl = getSequentLevel seq in
+    match f with
+      Formula(i, b, FOA.SigmaFormula(FOA.AbstractionFormula(hint,_) as f)) ->
+        let (lvl',var) = makeExistentialVar hint lvl i in
+        let f' = FOA.apply [var] f in
+        if Option.isSome f' then
+          let s = Sequent(lvl', lhs, zip [Formula(i, b, Option.get f')]) in
+          sc [s]
+        else
+          (O.error "invalid number of arguments.";
           fc ())
-    in
-    (makeSimpleTactical "sigma_r" (matchRight,"sigma _") tactic)
+    | _ ->
+        (O.impossible "invalid formula.\n";
+        fc ())
+  let sigmaRTactical = 
+    (makeSimpleTactical "sigma_r" (matchRight,"sigma _") sigmaR)
 
   let sigmaTactical session args =
-    (G.orElseTactical (sigmaL session args) (sigmaR session args))
+    (G.orElseTactical (sigmaL session args) (sigmaRTactical session args))
 
   (********************************************************************
   *nabla:
@@ -1079,7 +1142,7 @@ struct
             fc ())
       in
       let sc' s = sc s (makeProofBuilder "induction") fc in
-      match (matchLeft template sequent) with
+      match (matchLeft template Nonfocused sequent) with
         Some(f,zip,lhs,rhs) -> (ind f zip lhs rhs sc' fc)
       | None -> fc ()
     in
@@ -1219,7 +1282,7 @@ struct
             fc ())
       in
       let sc' s = sc s (makeProofBuilder "coinduction") fc in
-      match (matchRight template sequent) with
+      match (matchRight template Nonfocused sequent) with
         Some(f,zip,lhs,rhs) -> (coind f zip lhs rhs sc' fc)
       | None -> fc ()
     in
@@ -1264,24 +1327,24 @@ struct
     in
     (makeSimpleTactical "eq_l" (matchLeft, "_ = _") tactic)
 
-  let eqR =
-    let tactic session seq f zip lhs rhs sc fc =
-      match f with
-        Formula(i, b, FOA.EqualityFormula(t1,t2)) ->
-          (match (FOA.rightUnify t1 t2) with
-              FOA.UnifySucceeded -> (sc [])
-            | FOA.UnifyFailed -> fc ()
-            | FOA.UnifyError(s) ->
-                  (O.error (s ^ ".\n");
-                  fc ()))
-      | _ ->
-          (O.impossible "invalid formula.\n";
-          fc ())
-    in
-    (makeSimpleTactical "eq_r" (matchRight,"_ = _") tactic)
+  let eqR session seq f zip lhs rhs sc fc =
+    match f with
+      Formula(i, b, FOA.EqualityFormula(t1,t2)) ->
+        (match (FOA.rightUnify t1 t2) with
+            FOA.UnifySucceeded -> (sc [])
+          | FOA.UnifyFailed -> fc ()
+          | FOA.UnifyError(s) ->
+                (O.error (s ^ ".\n");
+                fc ()))
+    | _ ->
+        (O.impossible "invalid formula.\n";
+        fc ())
+
+  let eqRTactical =
+    (makeSimpleTactical "eq_r" (matchRight,"_ = _") eqR)
     
   let eqTactical session args =
-      (G.orElseTactical (eqL session args) (eqR session args))
+      (G.orElseTactical (eqL session args) (eqRTactical session args))
 
   (********************************************************************
   *examineTactical:
@@ -1374,10 +1437,10 @@ struct
           impR session [];
           sigmaL session [];
           eqL session [];
-          eqR session [];
+          eqRTactical session [];
           axiomTactical session []]
         in
-        let l = if Param.intuitionistic then l else (orR session [])::l in
+        let l = if Param.intuitionistic then l else (orRTactical session [])::l in
         let allrules = G.orElseListTactical l in
         (G.repeatTactical allrules)
     | _ -> G.invalidArguments "simplify"
@@ -1387,82 +1450,50 @@ struct
   (********************************************************************
   *Additive Or:
   ********************************************************************)
-  let orRight =
-    let tactic session seq f zip lhs rhs sc fc =
-      let lvl = getSequentLevel seq in
-      match f with
-        Formula(i, b, FOA.OrFormula(l,r)) ->
-          let rhs' = zip [Formula(i,b, r)] in
-          let s = Sequent(lvl, lhs, rhs') in
-          sc [s]
-      | _ ->
-          (O.impossible "invalid formula.\n";
-          fc ())
-    in
-    (makeSimpleTactical "right" (matchRight,"_;_") tactic)
+  let orRight session seq f zip lhs rhs sc fc =
+    let lvl = getSequentLevel seq in
+    match f with
+      Formula(i, b, FOA.OrFormula(l,r)) ->
+        let rhs' = zip [Formula(i,b, r)] in
+        let s = Sequent(lvl, lhs, rhs') in
+        sc [s]
+    | _ ->
+        (O.impossible "invalid formula.\n";
+        fc ())
+
+  let orRightTactical =
+    (makeSimpleTactical "right" (matchRight,"_;_") orRight)
     
-  let orLeft =
-    let tactic session seq f zip lhs rhs sc fc =
-      let lvl = getSequentLevel seq in
-      match f with
-        Formula(i, b, FOA.OrFormula(l,r)) ->
-          let rhs' = zip [Formula(i,b, l)] in
-          let s = Sequent(lvl, lhs, rhs') in
-          sc [s]
-      | _ ->
-          (O.impossible "invalid formula.\n";
-          fc ())
-    in
-    (makeSimpleTactical "left" (matchRight,"_;_") tactic)
- 
-  let additiveOrTactical args session =
-    (G.orElseTactical
-      (orLeft args session)
-      (orRight args session))
+  let orLeft session seq f zip lhs rhs sc fc =
+    let lvl = getSequentLevel seq in
+    match f with
+      Formula(i, b, FOA.OrFormula(l,r)) ->
+        let rhs' = zip [Formula(i,b, l)] in
+        let s = Sequent(lvl, lhs, rhs') in
+        sc [s]
+    | _ ->
+        (O.impossible "invalid formula.\n";
+        fc ())
 
-  (********************************************************************
-  *async:
-  * The asynchronous phase of focused proof search.
-  ********************************************************************)
-  let asyncTactical args session =
-    match args with
-        [] ->
-          (G.repeatTactical
-            (G.orElseListTactical
-              [andR args session;
-              andL args session;
-              orL args session;
-              impR args session;
-              eqL args session
-              piR args session;
-              sigmaL args session;
-              nablaL args session;
-              nablaR args session]))
-      | _ -> G.invalidArguments "async"
-
-  (********************************************************************
-  *sync:
-  * The synchronous phase of focused proof search.
-  ********************************************************************)
-  let syncTactical args session =
-    match args with
-        [] ->
-          G.repeatTactical (focusedTactical args session)
-      | _ -> G.invalidArguments "sync"
-  
+  let orLeftTactical =
+    (makeSimpleTactical "left" (matchRight,"_;_") orLeft)
+   
   (********************************************************************
   *focus:
   * Focuses on a formula with a toplevel connective that has a
-  * synchronous inference rule.
+  * synchronous inference rule.  Assumes that such a formula exists.
   ********************************************************************)
-  let focusTactical args session =
+  let focusTactical session args =
     let focusL =
       let tactic session seq f zip lhs rhs sc fc =
         let lvl = getSequentLevel seq in
         match f with
-            Formula(i, Nonfocused, FOA.PiFormula(_) as f')
-          | Formula(i, Nonfocused, FOA.ImpliciationFormula(_) as f') ->
-              let s = Sequent(lvl, zip [Formula(i, Focused, f')], rhs) in
+            Formula(i, (Nonfocused,p), (FOA.PiFormula(_) as f'))
+          | Formula(i, (Nonfocused,p), (FOA.ImplicationFormula(_) as f')) ->
+              let s = Sequent(lvl, zip [Formula(i, (Focused,p), f')], rhs) in
+              sc [s]
+	  | Formula(i, (Nonfocused, Negative), (FOA.AtomicFormula(_) as f')) ->
+              let s = Sequent(lvl, zip [Formula(i, (Focused, Negative), f')], rhs) in
               sc [s]
           | _ -> 
               (O.impossible "invalid formula.\n";
@@ -1473,12 +1504,15 @@ struct
     
     let focusR =
       let tactic session seq f zip lhs rhs sc fc =
-      let lvl = getSequentLevel seq in
+	let lvl = getSequentLevel seq in
         match f with
-            Formula(i, Nonfocused, FOA.SigmaFormula(_) as f')
-          | Formula(i, Nonfocused, FOA.OrFormula(_) as f')
-          | Formula(i, Nonfocused, FOA.EqualityFormula(_) as f') ->
-              let s = Sequent(lvl, lhs, zip [Formula(i, Focused, f')]) in
+            Formula(i, (Nonfocused,p), (FOA.SigmaFormula(_) as f'))
+          | Formula(i, (Nonfocused,p), (FOA.OrFormula(_) as f'))
+          | Formula(i, (Nonfocused,p), (FOA.EqualityFormula(_) as f')) ->
+              let s = Sequent(lvl, lhs, zip [Formula(i, (Focused,p), f')]) in
+              sc [s]
+	  | Formula(i, (Nonfocused, Positive), (FOA.AtomicFormula(_) as f')) ->
+              let s = Sequent(lvl, zip [Formula(i, (Focused, Positive), f')], rhs) in
               sc [s]
           | _ ->
               (O.impossible "invalid formula.\n";
@@ -1488,7 +1522,7 @@ struct
     in
     
     match args with
-      [] -> G.orElseTactical (focusL args session) (focusR args session)
+      [] -> G.orElseTactical (focusL session args) (focusR session args)
     | _ -> G.invalidArguments "focus"
 
   (********************************************************************
@@ -1496,16 +1530,29 @@ struct
   * Finds the focused formula in a sequent and performs a synchronous
   * rule on it.  Fails if there is no such formula, or if the formula
   * is not on the "correct" side.
+  *
+  * focusedL/R can safely assume that no pattern will be passed to
+  * match on and that the default template will get used.
   ********************************************************************)
-  let focusedTactical args session =
+  let focusedTactical session args =
     (*  focusedR: Handles focused formulas on the right. *)
     let focusedR =
       let tactic session seq f zip lhs rhs sc fc =
         match f with
-          Formula(i, Focused, FOA.SigmaFormula(f)) ->
-            (orRCore session seq f zip lhs rhs sc fc)
-        | Formula(i, Focused, FOA.OrFormula(l,r)) ->
-        | Formula(i, Focused, FOA.EqualityFormula(l,r)) ->
+          Formula(i, (Focused,_), FOA.SigmaFormula(_)) ->
+            sigmaR session seq f zip lhs rhs sc fc
+        | Formula(i, (Focused,_), FOA.OrFormula(_)) ->
+            if Param.intuitionistic then
+              let fc' () =
+                orLeft session seq f zip lhs rhs sc fc
+              in
+              orRight session seq f zip lhs rhs sc fc'
+            else
+              orR session seq f zip lhs rhs sc fc
+        | Formula(i, (Focused,_), FOA.EqualityFormula(_)) ->
+	    eqR session seq f zip lhs rhs sc fc
+        | Formula(i, (Focused,Positive), FOA.AtomicFormula(_)) ->
+            axiomR session seq f zip lhs rhs sc fc
         | _ ->
             (O.impossible "invalid formula.\n";
             fc ())
@@ -1517,8 +1564,10 @@ struct
     let focusedL =
       let tactic session seq f zip lhs rhs sc fc =
         match f with
-          Formula(i, Focused, FOA.PiFormula(f)) ->
-        | Formula(i, Focused, FOA.ImplicationFormula(l,r)) ->
+          Formula(i, (Focused,_), FOA.PiFormula(_)) ->
+	    piL session seq f zip lhs rhs sc fc
+        | Formula(i, (Focused,_), FOA.ImplicationFormula(_)) ->
+	    impL session seq f zip lhs rhs sc fc
         | _ ->
             (O.impossible "invalid formula.\n";
             fc ())
@@ -1527,24 +1576,56 @@ struct
     in
     match args with
         [] ->
-        G.orElseTactical (focusedL args session) (focusedR args session)
+        G.orElseTactical (focusedL session args) (focusedR session args)
       | _ ->
         G.invalidArguments "focused"
 
+
+  (********************************************************************
+  *async:
+  * The asynchronous phase of focused proof search.
+  ********************************************************************)
+  let asyncTactical session args =
+    match args with
+        [] ->
+          (G.repeatTactical
+            (G.orElseListTactical
+              [andR session args;
+              andL session args;
+              orLTactical session args;
+              impR session args;
+              eqL session args;
+              piR session args;
+              sigmaL session args;
+              nablaL session args;
+              nablaR session args]))
+      | _ -> G.invalidArguments "async"
+
+  (********************************************************************
+  *sync:
+  * The synchronous phase of focused proof search.
+  ********************************************************************)
+  let syncTactical session args =
+    match args with
+        [] ->
+          G.repeatTactical (focusedTactical session args)
+      | _ -> G.invalidArguments "sync"
+
   (********************************************************************
   *proveTactical:
-  * Attempts to completely prove the current sequent using focusing.
+  * Attempts to completely prove the current sequent using focused
+  * proof search.
   ********************************************************************)
-  let proveTactical args session =
+  let proveTactical session args =
     match args with
         [] ->
           (G.completeTactical
             (G.repeatTactical
               (G.thenTactical
-                (asyncTactical args session)
+                (asyncTactical session args)
                 (G.thenTactical
-                  (focusTactical args session)
-                  (syncTactical args session)))))
+                  (focusTactical session args)
+                  (syncTactical session args)))))
       | _ ->
           G.invalidArguments "prove"
 
@@ -1569,32 +1650,32 @@ struct
     let ts = Logic.Table.add "and_l" andL ts in
     let ts = Logic.Table.add "and_r" andR ts in
 
-    let ts = Logic.Table.add "or_l" orL ts in
+    let ts = Logic.Table.add "or_l" orLTactical ts in
     
     (*  Choose which disjunction tacticals to supply based
         on whether the logic is intuitionistic or not.  *)
     let ts =
       if Param.intuitionistic then
-        let ts = Logic.Table.add "left" orLeft ts in
-        let ts = Logic.Table.add "right" orRight ts in
+        let ts = Logic.Table.add "left" orLeftTactical ts in
+        let ts = Logic.Table.add "right" orRightTactical ts in
         ts
       else
-        let ts = Logic.Table.add "or_r" orR ts in
-        let ts = Logic.Table.add "or" orTactical in
+        let ts = Logic.Table.add "or_r" orRTactical ts in
+        let ts = Logic.Table.add "or" orTactical ts in
         ts
     in
     
     let ts = Logic.Table.add "imp" impTactical ts in
     let ts = Logic.Table.add "imp_r" impR ts in
-    let ts = Logic.Table.add "imp_l" impL ts in
+    let ts = Logic.Table.add "imp_l" impLTactical ts in
 
     let ts = Logic.Table.add "pi" piTactical ts in
-    let ts = Logic.Table.add "pi_l" piL ts in
+    let ts = Logic.Table.add "pi_l" piLTactical ts in
     let ts = Logic.Table.add "pi_r" piR ts in
     
     let ts = Logic.Table.add "sigma" sigmaTactical ts in
     let ts = Logic.Table.add "sigma_l" sigmaL ts in
-    let ts = Logic.Table.add "sigma_r" sigmaR ts in
+    let ts = Logic.Table.add "sigma_r" sigmaRTactical ts in
     
     let ts = Logic.Table.add "nabla" nablaTactical ts in
     let ts = Logic.Table.add "nabla_l" nablaL ts in
@@ -1602,7 +1683,7 @@ struct
     
     let ts = Logic.Table.add "eq" eqTactical ts in
     let ts = Logic.Table.add "eq_l" eqL ts in
-    let ts = Logic.Table.add "eq_r" eqR ts in
+    let ts = Logic.Table.add "eq_r" eqRTactical ts in
     
     let ts = Logic.Table.add "axiom" axiomTactical ts in
     
@@ -1634,6 +1715,7 @@ struct
         ts
     in
 
+    let ts = Logic.Table.add "prove" proveTactical ts in
     ts
 
   (*  The empty session starts with the expected empty list of sequents
