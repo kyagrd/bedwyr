@@ -49,9 +49,10 @@ type predefinition =
 type definition =
   Definition of (string * int * formula * fixpoint)
 
+type state
 type unifyresult =
     UnifyFailed
-  | UnifySucceeded
+  | UnifySucceeded of state
   | UnifyError of string
 
 val makeAnonymousFormula : unit -> formula
@@ -70,6 +71,7 @@ val string_of_term : string list -> term -> string
 val string_of_formula : ?names:string list -> formula -> string
 val string_of_formula_ast : formula -> string
 
+val undoUnify : state -> unit
 val rightUnify : term -> term -> unifyresult
 val leftUnify : term -> term -> unifyresult
 val unifyList : (term -> term -> unifyresult) -> term list -> term list -> unifyresult
