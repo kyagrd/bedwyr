@@ -110,6 +110,7 @@ sig
   val orElseListTactical : logic_tactic list -> logic_tactic
   val thenTactical : logic_tactic -> logic_tactic -> logic_tactic
   val repeatTactical : logic_tactic -> logic_tactic
+  val firstTactical : logic_tactic -> logic_tactic
   val iterateTactical : logic_tactic -> logic_tactic
   val tryTactical : logic_tactic -> logic_tactic
   val completeTactical : logic_tactic -> logic_tactic

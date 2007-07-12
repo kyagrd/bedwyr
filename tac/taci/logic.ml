@@ -97,6 +97,20 @@ sig
 end
 
 (**********************************************************************
+*Ctrl-C Handler:
+**********************************************************************)
+let interrupt = ref false
+exception Interrupt
+let _ = Sys.set_signal Sys.sigint
+  (Sys.Signal_handle (fun _ -> interrupt := true))
+
+let checkInterrupt () =
+  if !interrupt then
+    (interrupt := false ; true)
+  else
+    false
+  
+(**********************************************************************
 *Standard Tacticals:
 **********************************************************************)
 module GenericTacticals (L : LogicSig) (O : Output.Output) =
@@ -160,7 +174,7 @@ struct
   * Returns a tactical that always succeeds the current sequent unchanged.
   ********************************************************************)
   let idTactical =
-    fun sequents sc fc -> (sc [] sequents (fun x -> x) fc)
+    fun sequents sc fc -> (sc sequents [] (fun x -> x) fc)
   
   (********************************************************************
   *applyTactical:
@@ -181,6 +195,26 @@ struct
         (tac2 sequents sc fc)
       in
       (tac1 sequents sc fc')
+
+  (********************************************************************
+  *first:
+  * Applies the given tactical to only the first sequent.
+  ********************************************************************)
+  let firstTactical tac =
+    fun sequents sc fc ->
+      match sequents with
+          [] -> failureTactical sequents sc fc
+        | [a] -> tac sequents sc fc
+        | a::aa ->
+            let sc' newseqs oldseqs pb k =
+              let pb' proofs =
+                let l = (List.length newseqs + List.length oldseqs) in
+                let (pnew,pold) = split_nth l proofs in
+                (pb pnew) @ pold
+              in
+              sc newseqs (oldseqs @ aa) pb' k
+            in
+            (tac [a] sc' fc)
 
   (********************************************************************
   *orElseListTactical:
@@ -243,12 +277,15 @@ struct
 
         match rest with
             [] -> (sc realnew' [] (Option.get builder') k)
-          | s::ss -> (tac [s] (sc' builder' realnew' ss) fc)
+          | s::ss -> (tac [s] (sc' builder' realnew' ss) k)
       in
       
-      match sequents with
-        [] -> fc ()
-      | s::ss -> (tac [s] (sc' None [] ss) fc)
+      if checkInterrupt () then
+        raise Interrupt
+      else
+        match sequents with
+          [] -> sc [] [] idProofBuilder fc
+        | s::ss -> (tac [s] (sc' None [] ss) fc)
   
   (********************************************************************
   *wrappedThenTactical:
@@ -263,9 +300,7 @@ struct
     fun sequents sc fc ->
       (****************************************************************
       *scFirst:
-      * Success continuation for first tactical application.  If the 
-      * appplication produces no new subgoals, succeeds.  Otherwise
-      * calls second tactical.
+      * Success continuation for first tactical application.
       ****************************************************************)
       let rec scFirst newseqs oldseqs builder k =
         ((iterateTactical (tac2 ())) newseqs (scRest builder oldseqs) k)
@@ -302,7 +337,7 @@ struct
   let rec repeatTactical tac =
     let wrapper () = (repeatTactical tac) in
     (orElseTactical (wrappedThenTactical tac wrapper) idTactical)
-
+    
   (********************************************************************
   *completeTactical:
   * Applies the given tactical and succeeds only if the goal generated
@@ -382,6 +417,11 @@ struct
         (completeTactical tac)
     | _ -> invalidArguments "complete"
 
+  let firstInterface session args = match args with
+      Absyn.Tactical(tac)::[] ->
+        (firstTactical tac)
+    | _ -> invalidArguments "first"
+
   let tacticals =
     let ts = Table.add "apply" applyInterface Table.empty in
     let ts = Table.add "id" idInterface ts in
@@ -397,5 +437,6 @@ struct
     let ts = Table.add "iterate" iterateInterface ts in
     
     let ts = Table.add "rotate" rotateInterface ts in
+    let ts = Table.add "first" firstInterface ts in
     ts
 end

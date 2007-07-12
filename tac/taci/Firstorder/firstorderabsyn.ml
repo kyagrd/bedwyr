@@ -254,9 +254,10 @@ let rec apply terms formula =
         else
           None
 
+type state = Term.state
 type unifyresult =
     UnifyFailed
-  | UnifySucceeded
+  | UnifySucceeded of state
   | UnifyError of string
 
 (********************************************************************
@@ -275,6 +276,11 @@ module Left =
               end)
 
 (********************************************************************
+*undoUnify:
+********************************************************************)
+let undoUnify s = Term.restore_state s
+
+(********************************************************************
 *rightUnify:
 * Performs unification on the right of the turnstile.
 ********************************************************************)
@@ -282,7 +288,7 @@ let rightUnify a b =
   let state = Term.save_state () in
   try
     (Right.pattern_unify a b;
-    UnifySucceeded)
+    UnifySucceeded(state))
   with
       Unify.Error _ -> (Term.restore_state state; UnifyFailed)
     | Failure s -> (Term.restore_state state; UnifyError s)
@@ -298,7 +304,7 @@ let leftUnify a b =
   let state = Term.save_state () in    
   try
     (Left.pattern_unify a b;
-    UnifySucceeded)
+    UnifySucceeded(state))
   with
       Unify.Error _ -> (Term.restore_state state; UnifyFailed)
     | Failure s -> (Term.restore_state state; UnifyError s)
@@ -314,14 +320,15 @@ let leftUnify a b =
 * If any unification fails it fails.
 **********************************************************************)
 let unifyList unifier l1 l2 =
+  let state = Term.save_state () in
   let rec unify l1 l2 =
     match (l1,l2) with
         (l1hd::l1tl, l2hd::l2tl) ->
           (match (unifier l1hd l2hd) with
-              UnifySucceeded -> unify l1tl l2tl
+              UnifySucceeded(_) -> unify l1tl l2tl
             | UnifyFailed -> UnifyFailed
             | UnifyError _ as u -> u)
-      | ([],[]) -> UnifySucceeded
+      | ([],[]) -> UnifySucceeded(state)
       | (_,_) -> UnifyFailed
   in
   unify l1 l2
@@ -351,7 +358,9 @@ let isAnonymousFormula f =
 let matchFormula template formula =
   let success ur =
     match ur with
-      UnifySucceeded -> true
+      UnifySucceeded(s) ->
+        (undoUnify s;
+        true)
     | _ -> false
   in
   
@@ -362,8 +371,8 @@ let matchFormula template formula =
   *search:
   * Recurse over the structure of two formulas.
   ********************************************************************)
-  let rec search template formula =
-    match (template, formula) with
+  let rec search template' formula' =
+    match (template', formula') with
       (AndFormula(l,r), AndFormula(l', r'))
     | (OrFormula(l,r), OrFormula(l', r'))
     | (ImplicationFormula(l,r), ImplicationFormula(l', r')) ->
@@ -372,10 +381,11 @@ let matchFormula template formula =
     | (EqualityFormula(t1, t2), EqualityFormula(t1', t2')) ->
         (success (rightUnify t1 t1')) && (success (rightUnify t2 t2'))
 
-    | (AtomicFormula("_", []), _)
-    | (_, AtomicFormula("_", [])) ->
+    | (AtomicFormula("_", []), _) ->
         true
     | (AtomicFormula(head,tl), AtomicFormula(head',tl')) ->
+        (* let () = print_endline ("Pattern: " ^ (string_of_formula_ast template)) in
+        let () = print_endline ("Formula: " ^ (string_of_formula_ast formula)) in *)
         (head = head') && (List.for_all success (List.map2 rightUnify tl tl'))
     | (MuFormula(n,_,_), MuFormula(n',_,_))
     | (NuFormula(n,_,_), NuFormula(n',_,_)) ->
