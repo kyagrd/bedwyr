@@ -35,8 +35,8 @@ struct
   type proofbuilder = L.proof Logic.proofbuilder
   exception Exit of session
   exception Logic of string * session
-  exception Success of session
-  exception Failure
+  exception TacticalSuccess of session
+  exception TacticalFailure
   
   let logics = ref []
   let setLogics l = logics := l
@@ -169,7 +169,7 @@ struct
       let currentProof = L.proof session in
       let proof' = (Logic.composeProofBuilders proofBuilder currentProof) in
       let session' = L.update (newSequents @ oldSequents) proof' session in
-      raise (Success(session'))
+      raise (TacticalSuccess(session'))
     in
     
     (******************************************************************
@@ -177,7 +177,7 @@ struct
     * The toplevel failure continuation.
     ******************************************************************)
     let failure () =
-      raise Failure
+      raise TacticalFailure
     in
     
     try
@@ -190,7 +190,7 @@ struct
         Absyn.SyntaxError(s) ->
           (O.error (s ^ ".\n");
           session)
-      | Success(s) ->
+      | TacticalSuccess(s) ->
           (O.output "Success.\n";
           if not (L.validSequent s) then
             (O.output ("Proved:\n" ^ (L.string_of_proofs s) ^ "\n");
@@ -198,9 +198,10 @@ struct
             s)
           else
             s)
-      | Failure ->
+      | TacticalFailure ->
           (O.output "Failure.\n";
           session)
+      | Failure s -> (O.error ("Internal Failure: " ^ s ^ ".\n"); session)
       | Logic.Interrupt ->
           (O.output "Interrupted.\n";
           session)
