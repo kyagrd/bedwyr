@@ -201,6 +201,9 @@ struct
       | Failure ->
           (O.output "Failure.\n";
           session)
+      | Logic.Interrupt ->
+          (O.output "Interrupted.\n";
+          session)
 
   (********************************************************************
   *makeTactical:

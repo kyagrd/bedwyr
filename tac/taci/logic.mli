@@ -16,6 +16,7 @@
 * along with this code; if not, write to the Free Software Foundation,*
 * Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA        *
 **********************************************************************)
+exception Interrupt
 
 module Table : Map.S with type key = String.t
 type 'a table = 'a Table.t
