@@ -358,9 +358,7 @@ let isAnonymousFormula f =
 let matchFormula template formula =
   let success ur =
     match ur with
-      UnifySucceeded(s) ->
-        (undoUnify s;
-        true)
+      UnifySucceeded(s) -> true
     | _ -> false
   in
   

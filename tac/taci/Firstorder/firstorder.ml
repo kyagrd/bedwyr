@@ -167,10 +167,12 @@ struct
     ((string_of_int lvl) ^ ": " ^
       (String.make (max (min (String.length bottom) 72) 16) '-') ^
       "\n" ^ bottom)
-    
-  let string_of_sequents session =
-    let sequents = getSessionSequents session in
-    let () = restoreNamespace (getSessionProofNamespace session) in
+      
+  let string_of_sequents' sequents =
+    if (Listutils.empty sequents) then
+      ""
+    else
+
     let mainseq = List.hd sequents in
     let seqs = List.tl sequents in
     if not (Listutils.empty seqs) then
@@ -179,6 +181,11 @@ struct
         ^ "\n"
     else
       (string_of_sequent mainseq) ^ "\n"
+
+  let string_of_sequents session =
+    let sequents = getSessionSequents session in
+    let () = restoreNamespace (getSessionProofNamespace session) in
+    string_of_sequents' sequents
 
   (********************************************************************
   *incl:
@@ -671,17 +678,31 @@ struct
   * If the application succeedes, the whole tactical succeeds. If none
   * match, it fails.
   ********************************************************************)
+  let indent = ref 0
+  let ind i = String.make (max 0 i) ' '
+  
   let makeTactical name matcher tactic session =
     let tactic' = fun sequent sc fc ->
-      let sc' k s = sc s (makeProofBuilder name) k in
+      let sc' k s =
+        (*
+        let () = O.output
+          ((ind !indent) ^ name ^ ":\n" ^ (string_of_sequents' s) ^ "\n") in
+        *)
+        sc s (makeProofBuilder name) k
+      in
       let rec fc' left right () =
         match (matcher right sequent) with
           Some(f, left', right', lhs, rhs) ->
             let left'' = left @ left' in
             let zip l = (left'' @ l @ right') in
-            let fc'' = (fc' (left'' @ [f]) (Some right')) in
+            let fc'' () =
+              ((* decr indent;  *)
+              (fc' (left'' @ [f]) (Some right')) ())
+            in
+            (*  let () = incr indent in *)
             tactic session sequent f zip lhs rhs sc' fc''
-        | None -> fc ()
+        | None ->
+            fc ()
       in
       fc' [] None ()
     in
@@ -706,11 +727,11 @@ struct
           | Absyn.String(s)::[] ->
               let template = parseTemplate (getSessionDefinitions session) s in
               if (Option.isSome template) then
-                let (template, _) = Option.get template in
-                if (FOA.matchFormula defaulttemplate template) then
-                  (makeTactical name (matchbuilder template Nonfocused) tactic session)
+                let (template, focus') = Option.get template in
+                if (FOA.matchFormula defaulttemplate template) && (focus = focus') then
+                  (makeTactical name (matchbuilder template focus) tactic session)
                 else
-                  (G.invalidArguments (name ^ ": invalid template"))
+                  (G.invalidArguments (name ^ ": template does not match default"))
               else
                   (G.invalidArguments (name ^ ": invalid template"))
           | _ -> (G.invalidArguments (name ^ ": incorrect number of arguments"))
@@ -1609,10 +1630,7 @@ struct
       in
       (makeSimpleTactical "focus_r" (matchRight, "_") tactic)
     in
-    
-    match args with
-      [] -> G.orElseTactical (focusL session args) (focusR session args)
-    | _ -> G.invalidArguments "focus"
+    G.orElseTactical (focusL session args) (focusR session args)
 
   (********************************************************************
   *unfocus:
@@ -1622,7 +1640,15 @@ struct
     let unfocusL session seq f zip lhs rhs sc fc =
       let lvl = getSequentLevel seq in
       match f with
-          Formula(i, (Focused,p), f') ->
+          Formula(i, (Focused,Negative), FOA.AtomicFormula(_)) ->
+            fc ()
+        | Formula(i, (Focused,Negative), FOA.ApplicationFormula(_)) ->
+            fc ()
+        | Formula(i, (Focused,_), FOA.PiFormula(_)) ->
+            fc ()
+        | Formula(i, (Focused,_), FOA.ImplicationFormula(_)) ->
+            fc ()
+        | Formula(i, (Focused,p), f') ->
             sc [Sequent(lvl, zip [Formula(i,(Nonfocused,p),f')], rhs)]
         | _ ->
             fc ()
@@ -1634,20 +1660,29 @@ struct
     let unfocusR session seq f zip lhs rhs sc fc =
       let lvl = getSequentLevel seq in
       match f with
-          Formula(i, (Focused,p), f') ->
+          Formula(_, (Focused,Positive), FOA.AtomicFormula(_)) ->
+            fc ()
+        | Formula(_, (Focused,Positive), FOA.ApplicationFormula(_)) ->
+            fc ()
+        | Formula(_, (Focused,_), FOA.SigmaFormula(_)) ->
+            fc ()
+        | Formula(_, (Focused,_), FOA.OrFormula(_)) ->
+            fc ()
+        | Formula(_, (Focused,_), FOA.EqualityFormula(_)) ->
+            fc ()
+        | Formula(i, (Focused,p), f') ->
             sc [Sequent(lvl, lhs, zip [Formula(i,(Nonfocused,p),f')])]
         | _ ->
             fc ()
     in
     let unfocusRTactical =
-      makeSimpleTactical "unfocus_l" (matchRight, "[_]") unfocusR
+      makeSimpleTactical "unfocus_r" (matchRight, "[_]") unfocusR
     in
     match args with
         [] ->
-          (G.repeatTactical
-            (G.orElseTactical
-              (unfocusLTactical session args)
-              (unfocusRTactical session args)))
+          (G.orElseTactical
+            (unfocusLTactical session args)
+            (unfocusRTactical session args))
       | _ -> G.invalidArguments "unfocus"
 
   
@@ -1725,22 +1760,32 @@ struct
   * proof search.
   ********************************************************************)
   let proveTactical session args =
+    let () = indent := 0 in
     match args with
         [] ->
+          let restorer () =
+            let s = Term.save_state () in
+            fun () -> Term.restore_state s
+          in
+          
+          let repasync =(G.repeatTactical (asyncTactical session args)) in
+          let repsync =
+            (G.thenTactical
+              (syncTactical session args)
+              (G.repeatTactical
+                (syncTactical session args))) in
+          
           (G.firstTactical
             (G.completeTactical
               (G.repeatTactical
-                (G.thenTactical
-                  (G.repeatTactical
-                    (asyncTactical session args))
+                (G.cutThenTactical
+                  restorer
+                  repasync
                   (G.thenTactical
+                    (focusTactical session args)
                     (G.thenTactical
-                      (focusTactical session args)
-                      (G.thenTactical
-                        (syncTactical session args)
-                        (G.repeatTactical
-                          (syncTactical session args))))
-                    (unfocusTactical session args))))))
+                      repsync
+                      (unfocusTactical session args)))))))
       | _ ->
           G.invalidArguments "prove"
 

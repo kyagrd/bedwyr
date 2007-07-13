@@ -106,7 +106,8 @@ let _ = Sys.set_signal Sys.sigint
 
 let checkInterrupt () =
   if !interrupt then
-    (interrupt := false ; true)
+    (interrupt := false;
+    true)
   else
     false
   
@@ -296,14 +297,15 @@ struct
   * The second tactical is wrapped so that recursive tacticals
   * (like repeatTactical) work correctly and don't blow the stack.
   ********************************************************************)
-  let wrappedThenTactical tac1 tac2 =
+  let wrappedThenTactical cut tac1 tac2 =
     fun sequents sc fc ->
       (****************************************************************
       *scFirst:
       * Success continuation for first tactical application.
       ****************************************************************)
       let rec scFirst newseqs oldseqs builder k =
-        ((iterateTactical (tac2 ())) newseqs (scRest builder oldseqs) k)
+        let fc' = if cut then fc else k in
+        ((iterateTactical (tac2 ())) newseqs (scRest builder oldseqs) fc')
       
       (****************************************************************
       *scRest:
@@ -326,7 +328,19 @@ struct
   * Exported nterface to wrapped version.
   ********************************************************************)
   let thenTactical tac1 tac2 =
-    wrappedThenTactical tac1 (fun () -> tac2)
+    wrappedThenTactical false tac1 (fun () -> tac2)
+
+  (********************************************************************
+  *cutThenTactical:
+  * Exported nterface to wrapped version.
+  ********************************************************************)
+  let cutThenTactical f tac1 tac2 =
+    fun sequents sc fc ->
+      let f' = f () in
+      let fc' () =
+        (f' (); fc ())
+      in
+      (wrappedThenTactical true tac1 (fun () -> tac2)) sequents sc fc'
 
   (********************************************************************
   *repeatTactical:
@@ -336,8 +350,8 @@ struct
   ********************************************************************)
   let rec repeatTactical tac =
     let wrapper () = (repeatTactical tac) in
-    (orElseTactical (wrappedThenTactical tac wrapper) idTactical)
-    
+    (orElseTactical (wrappedThenTactical false tac wrapper) idTactical)
+
   (********************************************************************
   *completeTactical:
   * Applies the given tactical and succeeds only if the goal generated
