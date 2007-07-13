@@ -597,7 +597,10 @@ struct
   *makeProofBuilder:  
   ********************************************************************)
   let makeProofBuilder s = fun proofs ->
-    s ^ "(" ^ (String.concat ", " proofs) ^ ")"
+    if (Listutils.empty proofs) then
+      s
+    else
+      s ^ "(" ^ (String.concat ", " proofs) ^ ")"
 
   (********************************************************************
   *findFormula:
@@ -783,7 +786,7 @@ struct
             if Option.isSome template then
               let (t,_) = Option.get template in
               let matcher = (matchLeft t Nonfocused) in
-              let tac = (makeTactical "axiom_r" matcher tactic session) in
+              let tac = (makeTactical ("axiom_r<" ^ (string_of_formula f) ^ ">") matcher tactic session) in
               (tac [seq] (fun l _ _ _ -> sc l) fc)
             else
               (O.impossible "Firstorder.axiomR: unable to parse template.\n";
@@ -791,13 +794,17 @@ struct
           else
             fc ()
 
-  (*  TODO: Copy above to here. *)
   let axiomL polarity session seq f zip lhs rhs sc fc =
     match f with
-        Formula(i,(m,polarity'),FOA.AtomicFormula(name,args)) ->
+        Formula(i,(m,polarity'),_) ->
           let tactic session seq f' zip lhs rhs sc fc =
-            (match f' with
-                Formula(i',b',FOA.AtomicFormula(name',args')) ->
+            (match (f,f') with
+                (Formula(i,b,FOA.AtomicFormula(name,args)),
+                Formula(i',b',FOA.AtomicFormula(name',args')))
+              | (Formula(i,b,FOA.ApplicationFormula(FOA.MuFormula(name,_,_),args)),
+                Formula(i',b',FOA.ApplicationFormula(FOA.MuFormula(name',_,_),args')))
+              | (Formula(i,b,FOA.ApplicationFormula(FOA.NuFormula(name,_,_),args)),
+                Formula(i',b',FOA.ApplicationFormula(FOA.NuFormula(name',_,_),args'))) ->
                   if name = name' then
                     (match (FOA.unifyList FOA.rightUnify args args') with
                         FOA.UnifySucceeded(s) ->
@@ -812,101 +819,24 @@ struct
                           fc ()))
                   else
                     fc ()
-              | Formula(i',b',FOA.ApplicationFormula(_)) ->
-                  fc ()
               | _ ->
-                  (O.impossible "Firstorder.axiomL: invalid formula on right.\n";
-                  fc ()))
+                  fc ())
           in
           if polarity = polarity' then
-            let template = parseTemplate (getSessionDefinitions session) name in
+            let template = parseTemplate (getSessionDefinitions session) "_" in
             if Option.isSome template then
               let (t,_) = Option.get template in
               let matcher = (matchRight t Nonfocused) in
-              let tac = (makeTactical "axiom_l" matcher tactic session) in
+              let tac = (makeTactical ("axiom_l<" ^ (string_of_formula f) ^ ">") matcher tactic session) in
               (tac [seq] (fun l _ _ _ -> sc l) fc)
             else
-              (O.impossible "Firstorder.axiomR: unable to parse template.\n";
+              (O.impossible "Firstorder.axiomL: unable to parse template.\n";
               fc ())
           else
             fc ()
-      | _ ->
-          fc ()
 
-  let axiomTactical session args = match args with
-      [] ->
-        let pretactic = fun sequent sc fc ->
-          let rec unifyList sc lhs f =
-            match f with
-               Formula(i, b, FOA.AtomicFormula(head,tl)) ->
-                  (match lhs with
-                    [] -> ()
-                  | Formula(i', b, FOA.AtomicFormula(head',tl'))::ls ->
-                      if (not Param.strictNabla) || i = i' then
-                        if head = head' then
-                          (match (FOA.unifyList FOA.rightUnify tl tl') with
-                              FOA.UnifySucceeded(s) ->
-                                sc (string_of_formula f) s
-                            | FOA.UnifyFailed -> (unifyList sc ls f)
-                            | FOA.UnifyError(s) ->
-                                (O.error (s ^ ".\n");
-                                fc ()))
-                        else
-                          (unifyList sc ls f)
-                      else
-                        fc ()
-                  | _::ls ->
-                      (unifyList sc ls f))
-              | Formula(i,b,FOA.ApplicationFormula(FOA.MuFormula(n1,_,_),args)) ->
-                  (match lhs with
-                    [] -> ()
-                  | Formula(i',b,FOA.ApplicationFormula(FOA.MuFormula(n1',_,_),args'))::ls ->
-                      if ((not Param.strictNabla) || (i = i')) && (n1 = n1') then
-                        (match (FOA.unifyList FOA.rightUnify args args') with
-                            FOA.UnifySucceeded(s) -> sc (string_of_formula f) s
-                          | FOA.UnifyFailed -> (unifyList sc ls f)
-                          | FOA.UnifyError(s) ->
-                              (O.error (s ^ ".\n");
-                              fc ()))
-                      else
-                        (unifyList sc ls f)
-                  | _::ls ->
-                      (unifyList sc ls f))
-              | Formula(i,b,FOA.ApplicationFormula(FOA.NuFormula(n1,_,_),args)) ->
-                  (match lhs with
-                    [] -> ()
-                  | Formula(i',b,FOA.ApplicationFormula(FOA.NuFormula(n1',_,_),args'))::ls ->
-                      if ((not Param.strictNabla) || (i = i')) && (n1 = n1') then
-                        (match (FOA.unifyList FOA.rightUnify args args') with
-                            FOA.UnifySucceeded(s) -> sc (string_of_formula f) s
-                          | FOA.UnifyFailed -> (unifyList sc ls f)
-                          | FOA.UnifyError(s) ->
-                              (O.error (s ^ ".\n");
-                              fc ()))
-                      else
-                        (unifyList sc ls f)
-                  | _::ls ->
-                      (unifyList sc ls f))
-              | _ -> ()
-          in
-          let lhs = getSequentLHS sequent in
-          let rhs = getSequentRHS sequent in
-          
-          (*  Build a new sc with the correct proof builder and undo info.  *)
-          let sc' name s =
-            let fc' () =
-              (FOA.undoUnify s;
-              fc ())
-            in
-            sc [] (makeProofBuilder ("axiom<" ^ name ^ ">")) fc'
-          in
-          
-          (*  TODO: Change to continuations.  *)
-          (List.iter (unifyList sc' lhs) rhs;
-          fc ())
-        in
-        G.makeTactical pretactic
-    | _ -> (G.invalidArguments "axiom")
+  let axiomTactical =
+    makeSimpleTactical "axiom" (matchLeft, "_") (axiomL Positive)
 
   (********************************************************************
   *cut:
@@ -1871,7 +1801,6 @@ struct
     let ts = Logic.Table.add "eq_r" eqRTactical ts in
     
     let ts = Logic.Table.add "axiom" axiomTactical ts in
-    
     
     let ts = Logic.Table.add "mu_l" muL ts in
     let ts = Logic.Table.add "mu_r" muR ts in
