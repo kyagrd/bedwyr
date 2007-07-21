@@ -82,20 +82,25 @@ let position lexbuf =
     else
       Format.sprintf ": file %s, line %d, character %d" file line char
 
+let do_cleanup f x clean =
+  try let y = f x in clean () ; y with e -> clean () ; raise e
+
 let rec process ?(interactive=false) parse lexbuf =
   try while true do try
-    let reset_ns =
+    let reset =
+      let s = Term.save_state () in
       let ns = Term.save_namespace () in
-        fun () -> Term.restore_namespace ns
+        fun () -> Term.restore_state s ; Term.restore_namespace ns
     in
     if interactive then Format.printf "?= %!" ;
     begin match parse Lexer.token lexbuf with
       | System.Def (k,h,a,b) -> System.add_clause k h a b
-      | System.Query a       -> Prover.toplevel_prove a ; reset_ns ()
+      | System.Query a       -> do_cleanup Prover.toplevel_prove a reset
       | System.Command (c,a) ->
-          command lexbuf (c,a) ;
           if not (List.mem c ["include";"reset";"reload";"session"]) then
-            reset_ns ()
+            do_cleanup (command lexbuf) (c,a) reset
+          else
+            command lexbuf (c,a)
     end ;
     if interactive then flush stdout
   with
