@@ -272,10 +272,18 @@ let get_hint var =
 (** Find an unique name for [v] (based on a naming hint if there is one)
   * and registers it in the symbols table. *)
 let get_name var =
+  let var = deref var in
   let existing_name =
     NS.fold
       (fun key value x ->
-         if eq value var then Some key else x)
+         (* Do NOT use [eq] instead of [=] here, otherwise it will follow
+          * references -- notice that the term in the table has been changed by
+          * bindings too.
+          * Suppose you bind Y to 1,
+          * the initial value representing Y would be [eq] to 1,
+          * and could thus take the name 1, depending on the order in which the
+          * table is traversed. *)
+         if value = var then Some key else x)
       !symbols
       None
   in
