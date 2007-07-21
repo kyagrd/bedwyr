@@ -86,7 +86,7 @@ let rec deep_norm t =
       | Term.Lam (n,t) -> Term.lambda n (deep_norm t)
       | Term.App (a,b) ->
             begin match Term.observe a with
-              | Term.Var _ | Term.DB _ ->
+              | Term.Var _ | Term.DB _ | Term.NB _ ->
                     Term.app a (List.map deep_norm b)
               | _ -> deep_norm (Term.app (deep_norm a) (List.map deep_norm b))
             end
