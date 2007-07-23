@@ -1,0 +1,16 @@
+
+A few things that would be useful...
+
+* [David] Better syntax for higher-order terms
+  Currently, (x\y\ ..) is not allowed, only (x\(y\ ..)).
+* [Zach] Monotonicity checking.
+* Type checking.
+* Generate "simple" invariants from the context.
+  In a second time, generate the most general set of equalities describing
+  the relationship between parameters. E.g., for the coinductive proof of
+  (sim p p) then invariant is (p\q\ p=q). Sometimes, generalizing by relaxing
+  an equality might be needed to complete the proof. I don't know if that is to
+  be considered here.
+* Tactic for instantiating logic variables.
+* Displaying the generic context would be much more comfortable.
+* Support for anonymous fixed points.
