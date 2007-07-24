@@ -16,6 +16,12 @@
 * along with this code; if not, write to the Free Software Foundation,*
 * Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA        *
 **********************************************************************)
+(**********************************************************************
+* Firstorder
+***********************************************************************
+* This module defines 4 different first order logics.  Each logic
+* has equality, and definitions in the form of fixed point combinators.
+**********************************************************************)
 module Firstordernonstrict : functor (O : Output.Output) -> Logic.Logic
 module Firstorderstrict    : functor (O : Output.Output) -> Logic.Logic
 module MuLJstrict          : functor (O : Output.Output) -> Logic.Logic

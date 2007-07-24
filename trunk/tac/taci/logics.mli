@@ -17,6 +17,16 @@
 * Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA        *
 **********************************************************************)
 
+(**********************************************************************
+* Logics
+***********************************************************************
+* This module is intended to act as an interface to the generated module
+* Logics_gen (see logics_gen.mli).  It contains functions for determining
+* whether a particular logic or output module has been registered with
+* Taci, for printing information about the registered modules, a table
+* of the registered logics, and a function to construct an interpreter
+* function based on a logic name and output module name. 
+**********************************************************************)
 val logicExists : string -> bool
 val outputExists : string -> bool
 

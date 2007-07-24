@@ -16,6 +16,16 @@
 * along with this code; if not, write to the Free Software Foundation,*
 * Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA        *
 **********************************************************************)
+(**********************************************************************
+* Logic
+***********************************************************************
+* This module contains the signature Logic that every logic must
+* implement in order to be able to be used by Taci.  This signature is
+* explained in detain in tac/taci/README.  Additionally a functor that
+* creates a module with a set of generic tacticals (tacticals that any
+* logic will be able to use provided it implements the Logic signature)
+* is included.
+**********************************************************************)
 exception Interrupt
 
 module Table : Map.S with type key = String.t
@@ -56,7 +66,7 @@ val idProofBuilder : 'a proofbuilder
 *Logic:
 * This module signature provides an interface for all logics.  For more
 * information regarding the assumptions made about the types and functions
-* contained in this signature, see "tac/taci/README".
+* contained in this signature, see tac/taci/README.
 **********************************************************************)
 module type Logic =
 sig
@@ -88,7 +98,25 @@ sig
 end
 
 (**********************************************************************
-*Standard Tacticals:
+*LogicSig:
+* Due to the way O'Caml deals with recursive modules (or rather, the
+* way it more or less doesn't) a logic can only make use of the
+* generic tacticals defined in the GenericTacticals functor by creating
+* a structure implementing the below signature and then applying the
+* functor to it.
+*
+* In general, to do so a logic will have lines similar to the following,
+* assuming it has already defined the required types session, sequent,
+* and proof:
+*
+*   module Sig =
+*   struct
+*     type logic_session = session
+*     type logic_sequent = sequent
+*     type logic_proof = proof
+*   end
+*   module G = Logic.GenericTacticals
+*
 **********************************************************************)
 module type LogicSig =
 sig
