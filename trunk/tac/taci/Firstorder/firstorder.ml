@@ -559,7 +559,8 @@ struct
               FOA.AtomicFormula(head, args) ->
                 let db = getDB head abstractions in
                 if Option.isSome db then
-                  FOA.ApplicationFormula(FOA.DBFormula(head, Option.get db), args)
+                  FOA.ApplicationFormula
+                    (FOA.DBFormula(0,head, Option.get db), args)
                 else
                   let def = findDefinition head predefs in
                   if Option.isSome def then
@@ -975,6 +976,8 @@ struct
               let matcher = (matchLeft t Nonfocused) in
               let tac = (makeTactical ("axiom_r<" ^ (string_of_formula f) ^ ">") matcher tactic session) in
               (tac [seq] (fun l _ _ _ -> sc l) fc)
+                (* TODO the fix on axiomL was not done here,
+                 * is that fine ? *)
             else
               (O.impossible "Firstorder.axiomR: unable to parse template.\n";
               fc ())
@@ -992,7 +995,9 @@ struct
                 Formula(i',b',FOA.ApplicationFormula(FOA.MuFormula(name',_,_),args')))
               | (Formula(i,b,FOA.ApplicationFormula(FOA.NuFormula(name,_,_),args)),
                 Formula(i',b',FOA.ApplicationFormula(FOA.NuFormula(name',_,_),args'))) ->
-                  if name = name' then
+                  if name = name' &&
+                     (not Param.strictNabla || i=i')
+                  then
                     (match (FOA.unifyList FOA.rightUnify args args') with
                         FOA.UnifySucceeded(s) ->
                           let fc' () =
@@ -1989,6 +1994,164 @@ struct
       | _ ->
           G.invalidArguments "prove"
 
+  let abstractTactical session args =
+    let rec n_downto_1 = function
+      | 0 -> []
+      | n -> n :: n_downto_1 (n-1)
+    in
+    let rec range_downto m n =
+      if m>n then m :: range_downto (m-1) n else []
+    in
+    let abstract (Sequent(level,lhs,rhs)) =
+      (* Compute the normal form of (nabla tv_1..tv_n\ form).
+       * The list [tv] contains only nabla indices, but not necessarily
+       * contiguous ones.
+       * The list [pv] associates to one bound predicate name the local level
+       * up to which it has already been raised. *)
+      let rec f pv tv lts form =
+        Printf.printf "Working on %s...\n"
+          (FOA.string_of_formula_ast ~generic:[] form) ;
+        (* Abstract term [t] over variables [tv]. *)
+        let tf t =
+          Norm.deep_norm (List.fold_right Term.abstract tv t)
+        in
+        let g = f pv tv lts in
+          match form with
+            | FOA.AndFormula (a,b)         -> FOA.AndFormula (g a, g b)
+            | FOA.OrFormula  (a,b)         -> FOA.OrFormula  (g a, g b)
+            | FOA.ImplicationFormula (a,b) -> FOA.ImplicationFormula (g a, g b)
+            | FOA.EqualityFormula (u,v)    -> FOA.EqualityFormula (tf u, tf v)
+            | FOA.PiFormula    f -> FOA.PiFormula    (g f)
+            | FOA.SigmaFormula f -> FOA.SigmaFormula (g f)
+            | FOA.AbstractionFormula (name,_) ->
+                (* This should be used only immediately below a PI or SIGMA. *)
+                let name =
+                  List.fold_left (fun name _ -> name^"'") name tv
+                in
+                let lts = lts+1 in
+                let head = Term.nabla lts in
+                let x = Term.app head tv in
+                  begin match FOA.apply [x] form with
+                    | None ->
+                        failwith
+                          (Printf.sprintf "cannot apply: %s"
+                             (FOA.string_of_formula_ast ~generic:[] form))
+                    | Some form ->
+                        let form = f pv tv lts form in
+                        let form = FOA.abstractVarWithoutLambdas head form in
+                          FOA.AbstractionFormula (name,form)
+                  end
+            | FOA.NablaFormula form ->
+                let lts = lts+1 in
+                let head = Term.nabla lts in
+                let tv = tv @ [head] in
+                  begin match FOA.apply [head] form with
+                    | None -> failwith "not a formula"
+                    | Some form -> f pv tv lts form
+                  end
+            | FOA.AtomicFormula (n,terms) when n="true" || n="false" -> form
+            | FOA.AtomicFormula (name,terms) ->
+                let terms = List.map tf terms in
+                let name =
+                  List.fold_left (fun name _ -> "lift:"^name) name tv
+                in
+                  FOA.AtomicFormula (name, terms)
+            | FOA.ApplicationFormula (head,terms) ->
+                let terms = List.map tf terms in
+                  begin match head with
+                    | FOA.MuFormula (name,argnames,body) ->
+                        let name =
+                          List.fold_left (fun name _ -> "lift:"^name) name tv
+                        in
+                        let argnames =
+                          List.map
+                            (fun name ->
+                               List.fold_left (fun name _ -> "lift:"^name)
+                                 name tv)
+                            argnames
+                        in
+                        let lts,heads =
+                          List.fold_left
+                            (fun (lts,heads) _ ->
+                               let lts = lts+1 in
+                               let heads = Term.nabla lts :: heads in
+                                 lts, heads)
+                            (lts,[])
+                            argnames
+                        in
+                        let params = List.map (fun h -> Term.app h tv) heads in
+                        let pv = List.length tv :: pv in
+                          begin match FOA.apply params body with
+                            | None -> failwith "not a formula"
+                            | Some body ->
+                                let body = f pv tv lts body in
+                                let body =
+                                  List.fold_right2
+                                    (fun h name body ->
+                                       FOA.AbstractionFormula
+                                         (name,
+                                          FOA.abstractVarWithoutLambdas h body))
+                                    heads argnames body
+                                in
+                                  FOA.ApplicationFormula
+                                    (FOA.MuFormula (name,argnames,body),
+                                     terms)
+                          end
+                    | FOA.DBFormula (liftings,name,i) ->
+                        (* Number of nabla quantifications which have been
+                         * pushed down inside that fixed-point. *)
+                        let raisings = List.nth pv i in
+                        (* Number of nabla which have been pushed down from
+                         * within the fixed point. *)
+                        let inside_raisings = List.length tv - raisings in
+                        (* The values applied to that DBForm are of type
+                         *   t1 -> .. -> tm -> t'1 .. -> t'n ->
+                         *   o1 -> .. op -> alpha
+                         * where m is [raisings], [n] is the number of nablas
+                         * which have been pushed down from within the
+                         * fixed-point, and [p] is [liftings].
+                         * We should re-order the parameters of these values
+                         * in order to make them suitable for [liftings DB..]
+                         * which now has type
+                         *   (t'1 -> .. t'n -> o1 -> .. -> op ->
+                         *    t1 -> .. -> tm -> alpha) -> o *)
+                        let wrap t =
+                          let indices =
+                            (range_downto raisings 1) @
+                            (range_downto
+                               (raisings + inside_raisings + liftings)
+                               (raisings + 1))
+                          in
+                          let indices = List.map Term.nabla indices in
+                            Term.lambda (raisings + inside_raisings + liftings)
+                              (Term.app t indices)
+                        in
+                        let wrap t = Norm.deep_norm (wrap t) in
+                          FOA.ApplicationFormula
+                            (FOA.DBFormula (liftings+inside_raisings,name,i),
+                             List.map wrap terms)
+                    | _ -> failwith "not yet supported"
+                  end
+            | FOA.DBFormula _ | FOA.MuFormula _ | FOA.NuFormula _ ->
+                failwith "not a ground formula"
+      in
+      (* Compute the normal form of every formula in the sequent.
+       * it may be more convenient to be able to target a specific one. *)
+      let abstract (Formula(i,m,form)) =
+        Printf.printf "at local level %d\n" i ;
+        let tv = List.map Term.nabla (List.rev (n_downto_1 i)) in
+        let form = f [] tv i form in
+          Printf.printf "abstracted into %s\n"
+            (FOA.string_of_formula_ast ~generic:[] form) ;
+          Formula(0,m,form)
+      in
+        Sequent (level,List.map abstract lhs, List.map abstract rhs)
+    in
+    fun seqs sc fc ->
+      match seqs with
+        | s::tl -> sc [abstract s] tl (fun proofs -> proofs) fc
+        | _ -> fc ()
+
   (********************************************************************
   *tacticals:
   * The exported table of tacticals.  These tacticals are the only
@@ -2059,6 +2222,8 @@ struct
         ++ ("sync", syncTactical)
         ++ ("focus", focusTactical)
         ++ ("unfocus", unfocusTactical)
+
+        ++ ("abstract", abstractTactical)
     in
 
     (** Which structural rules to admit. *)

@@ -44,7 +44,7 @@ type formula =
   | ApplicationFormula of formula * term list
   
   | AtomicFormula of string * term list
-  | DBFormula of string * int
+  | DBFormula of int * string * int (* lifts, name, index *)
   
 type fixpoint =
     Inductive
@@ -71,6 +71,7 @@ val mapFormula : (formula -> formula) -> (term -> term) -> formula -> formula
 val abstract : string -> formula -> formula
 val abstractDummyWithoutLambdas : formula -> formula
 val abstractVar : term -> formula -> formula
+val abstractVarWithoutLambdas : term -> formula -> formula
 val apply : term list -> formula -> formula option
 val applyFixpoint : formula -> formula -> formula option
 val string_of_definition : definition -> string
