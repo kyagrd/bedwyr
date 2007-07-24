@@ -1899,82 +1899,94 @@ struct
     setSessionTacticals ts' session
 
   let pervasiveTacticals =
-    let ts = G.tacticals in    
-    let ts = Logic.Table.add "and" andTactical ts in
-    let ts = Logic.Table.add "and_l" andL ts in
-    let ts = Logic.Table.add "and_r" andR ts in
+    let (++) t (a,b) = Logic.Table.add a b t in
 
-    let ts = Logic.Table.add "or_l" orLTactical ts in
-    
+    let ts =
+      G.tacticals
+        ++ ("and",andTactical)
+        ++ ("and_l", andL)
+        ++ ("and_r", andR)
+
+        ++ ("imp", impTactical)
+        ++ ("imp_r", impR)
+        ++ ("imp_l", impLTactical)
+
+        ++ ("pi", piTactical)
+        ++ ("pi_l", piLTactical)
+        ++ ("pi_r", piR)
+
+        ++ ("sigma", sigmaTactical)
+        ++ ("sigma_l", sigmaL)
+        ++ ("sigma_r", sigmaRTactical)
+
+        ++ ("nabla", nablaTactical)
+        ++ ("nabla_l", nablaL)
+        ++ ("nabla_r", nablaR)
+
+        ++ ("eq", eqTactical)
+        ++ ("eq_l", eqL)
+        ++ ("eq_r", eqRTactical)
+
+        ++ ("axiom", axiomTactical)
+
+        ++ ("mu_l", muL)
+        ++ ("mu_r", muR)
+        ++ ("induction", inductionTactical)
+
+        ++ ("nu_l", nuL)
+        ++ ("coinduction", coinductionTactical)
+
+        ++ ("examine", examineTactical)
+
+        ++ ("simplify", simplifyTactical)
+
+        ++ ("true", trueR)
+        ++ ("false", falseL)
+        ++ ("trivial", trivialTactical)
+
+        ++ ("weak_l", weakL)
+        ++ ("contract_l", contractL)
+
+        ++ ("cut", cutTactical)
+        ++ ("prove", proveTactical)
+        ++ ("async", asyncTactical)
+        ++ ("sync", syncTactical)
+        ++ ("focus", focusTactical)
+        ++ ("unfocus", unfocusTactical)
+    in
+
+    (** Which structural rules to admit. *)
+    let ts =
+      let ts =
+        if Param.intuitionistic then
+          ts
+        else
+          ts
+            ++ ("weak_r", weakR)
+            ++ ("contract_r", contractR)
+      in
+        ts
+          ++ ("weak_l", weakL)
+          ++ ("contract_l", contractL)
+    in
+
     (*  Choose which disjunction tacticals to supply based
         on whether the logic is intuitionistic or not.  *)
     let ts =
-      if Param.intuitionistic then
-        let ts = Logic.Table.add "left" orLeftTactical ts in
-        let ts = Logic.Table.add "right" orRightTactical ts in
-        ts
-      else
-        let ts = Logic.Table.add "or_r" orRTactical ts in
-        let ts = Logic.Table.add "or" orTactical ts in
-        ts
-    in
-    
-    let ts = Logic.Table.add "imp" impTactical ts in
-    let ts = Logic.Table.add "imp_r" impR ts in
-    let ts = Logic.Table.add "imp_l" impLTactical ts in
-
-    let ts = Logic.Table.add "pi" piTactical ts in
-    let ts = Logic.Table.add "pi_l" piLTactical ts in
-    let ts = Logic.Table.add "pi_r" piR ts in
-    
-    let ts = Logic.Table.add "sigma" sigmaTactical ts in
-    let ts = Logic.Table.add "sigma_l" sigmaL ts in
-    let ts = Logic.Table.add "sigma_r" sigmaRTactical ts in
-    
-    let ts = Logic.Table.add "nabla" nablaTactical ts in
-    let ts = Logic.Table.add "nabla_l" nablaL ts in
-    let ts = Logic.Table.add "nabla_r" nablaR ts in
-    
-    let ts = Logic.Table.add "eq" eqTactical ts in
-    let ts = Logic.Table.add "eq_l" eqL ts in
-    let ts = Logic.Table.add "eq_r" eqRTactical ts in
-    
-    let ts = Logic.Table.add "axiom" axiomTactical ts in
-    
-    let ts = Logic.Table.add "mu_l" muL ts in
-    let ts = Logic.Table.add "mu_r" muR ts in
-    let ts = Logic.Table.add "induction" inductionTactical ts in
-    
-    let ts = Logic.Table.add "nu_l" nuL ts in
-    let ts = Logic.Table.add "coinduction" coinductionTactical ts in
-    
-    let ts = Logic.Table.add "examine" examineTactical ts in
-
-    let ts = Logic.Table.add "simplify" simplifyTactical ts in
-
-    let ts = Logic.Table.add "true" trueR ts in
-    let ts = Logic.Table.add "false" falseL ts in
-    let ts = Logic.Table.add "trivial" trivialTactical ts in
-
-    let ts = Logic.Table.add "weak_l" weakL ts in
-    let ts = Logic.Table.add "contract_l" contractL ts in
-    
-    let ts =
-      if Param.intuitionistic then
-        let ts = Logic.Table.add "weak_r" weakR ts in
-        let ts = Logic.Table.add "contract_r" contractR ts in
-        ts
-      else
-        ts
+      let ts =
+        if Param.intuitionistic then
+          ts
+            ++ ("left", orLeftTactical)
+            ++ ("right", orRightTactical)
+        else
+          ts
+            ++ ("or_r", orRTactical)
+            ++ ("or", orTactical)
+      in
+        ts ++ ("or_l", orLTactical)
     in
 
-    let ts = Logic.Table.add "cut" cutTactical ts in
-    let ts = Logic.Table.add "prove" proveTactical ts in
-    let ts = Logic.Table.add "async" asyncTactical ts in
-    let ts = Logic.Table.add "sync" syncTactical ts in
-    let ts = Logic.Table.add "focus" focusTactical ts in
-    let ts = Logic.Table.add "unfocus" unfocusTactical ts in
-    ts
+      ts
 
   (*  The empty session starts with the expected empty list of sequents
       and initial list of tacticals, as well as an empty definition table.
