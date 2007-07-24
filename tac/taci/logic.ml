@@ -257,12 +257,12 @@ struct
       (****************************************************************
       *makeBuilder:
       ****************************************************************)
-      let makeBuilder oldbuilder builder seqs =
+      let makeBuilder oldbuilder builder nseqs =
         match oldbuilder with
           None -> builder
         | Some old ->
             fun proofs ->
-              let l = (List.length proofs) - (List.length seqs) in
+              let l = (List.length proofs) - nseqs in
               let (potherseqs, pseqs) = split_nth l proofs in
               (old potherseqs) @ (builder pseqs)
       in
@@ -273,7 +273,9 @@ struct
       ****************************************************************)
       let rec sc' oldbuilder realnew rest newseqs oldseqs builder k =
         let newseqs' = newseqs @ oldseqs in
-        let builder' = Some (makeBuilder oldbuilder builder newseqs') in
+        let builder' =
+          Some (makeBuilder oldbuilder builder (List.length newseqs'))
+        in
         let realnew' = realnew @ newseqs' in
 
         match rest with
@@ -306,7 +308,7 @@ struct
       let rec scFirst newseqs oldseqs builder k =
         let fc' = if cut then fc else k in
         ((iterateTactical (tac2 ())) newseqs (scRest builder oldseqs) fc')
-      
+
       (****************************************************************
       *scRest:
       * Success continuation for subsequent applications.  Accumulates
@@ -314,8 +316,9 @@ struct
       * that were not changed even by the first tactical.
       ****************************************************************)
       and scRest oldbuilder realoldseqs newseqs oldseqs builder k =
+        let n = List.length realoldseqs in
         let builder' proofs =
-          let l = (List.length proofs) - (List.length realoldseqs) in
+          let l = (List.length proofs) - n in
           let (pseqs, potherseqs) = split_nth l proofs in
           oldbuilder ((builder pseqs) @ potherseqs)
         in
