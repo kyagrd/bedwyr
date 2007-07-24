@@ -583,8 +583,9 @@ struct
     (lvl, var)
 
   let makeUniversalVar hint lvl lts =
+    let lvl = lvl+1 in
     let var = Term.fresh ~name:hint ~lts:lts ~ts:lvl ~tag:Term.Eigen in
-    (lvl + 1, var)
+    (lvl, var)
 
   let makeNablaVar lvl i =
     (lvl, i + 1, Term.nabla (i + 1))
