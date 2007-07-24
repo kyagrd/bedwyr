@@ -157,27 +157,40 @@ let lambda n t =
 
 exception NonNormalTerm
 
-(** [abstract var t] computes the abstraction of [t] over the variable [var]. *)
+(** [abstract var t] computes the abstraction of [t] over [var],
+  * which may be either a variable or a nabla index.
+  * This function is not destructive and hence breaks the sharing. *)
 let abstract target t =
-  let target =
-    match observe target with
-      | Var v -> v
-      | App _ -> assert false
-      | _ -> assert false
-  in
-  (* Recursively raise dB indices and abstract over [target]. *)
-  let rec aux n t = match t with
-    | NB i -> t
-    | DB i -> if i>=n then DB (i+1) else t
-    | App (h,ts) ->
-        App ((aux n h), (List.map (aux n) ts))
-    | Lam (m,s) -> Lam (m, aux (n+m) s)
-    | Ptr {contents=T t} -> Ptr (ref (T (aux n t)))
-    | Ptr {contents=V v} -> if v==target then DB n else t
-    | Var _ -> assert false
-    | Susp _ -> raise NonNormalTerm
-  in
-  lambda 1 (aux 1 t)
+  match observe target with
+    | Var target ->
+        (* Recursively raise dB indices and abstract over [target]. *)
+        let rec aux n t = match t with
+          | NB i -> t
+          | DB i -> if i>=n then DB (i+1) else t
+          | App (h,ts) ->
+              App ((aux n h), (List.map (aux n) ts))
+          | Lam (m,s) -> Lam (m, aux (n+m) s)
+          | Ptr {contents=T t} -> Ptr {contents=T (aux n t)}
+          | Ptr {contents=V v} -> if v==target then DB n else t
+          | Var _ -> assert false
+          | Susp _ -> raise NonNormalTerm
+        in
+          lambda 1 (aux 1 t)
+    | NB target ->
+        (* Recursively raise dB indices and abstract over [target]. *)
+        let rec aux n t = match t with
+          | NB i -> if i=target then DB n else t
+          | DB i -> if i>=n then DB (i+1) else t
+          | App (h,ts) ->
+              App ((aux n h), (List.map (aux n) ts))
+          | Lam (m,s) -> Lam (m, aux (n+m) s)
+          | Ptr {contents=T t} -> Ptr {contents=T (aux n t)}
+          | Ptr {contents=V v} -> t
+          | Var _ -> assert false
+          | Susp _ -> raise NonNormalTerm
+        in
+          lambda 1 (aux 1 t)
+    | _ -> assert false
 
 (** {1 Extract variables} *)
 
