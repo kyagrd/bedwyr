@@ -4,7 +4,7 @@ A few things that would be useful...
 * [David] Better syntax for higher-order terms
   Currently, (x\y\ ..) is not allowed, only (x\(y\ ..)).
 
-* [Zach] Monotonicity checking.
+X [Zach] Monotonicity checking.
 
 * Type checking.
 
@@ -20,6 +20,6 @@ A few things that would be useful...
 
 * Tactic for instantiating logic variables.
 
-* Displaying the generic context would be much more comfortable.
+X Displaying the generic context would be much more comfortable.
 
 * Support for anonymous fixed points.
