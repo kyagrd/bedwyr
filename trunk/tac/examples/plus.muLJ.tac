@@ -1,5 +1,5 @@
 %Proof of the commutativity of plus.
-#open "C:\zRXer\Projects\SlimmerSVN\trunk\tac\examples\basic_definitions.def".
+#open "basic_definitions.def".
 
 %Theorem: x + y = z => y + x = z.
 #theorem plus_com "pi x\ y\ z\ (nat x, nat y, plus x y z) =>
@@ -32,7 +32,6 @@ induction("x\ pi y\ z\
   plus y x z", "nat x").
 
 prove.
-simplify.
 then(or_l, simplify).
 mu_l("plus _ _ _").
 prove.
