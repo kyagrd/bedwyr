@@ -4,13 +4,22 @@
  * ocamlopt -I +labltk str.cmxa unix.cmxa labltk.cmxa stekki.ml -o stekki    * 
  *****************************************************************************)
 
+let debug = ref false
+let filename = ref None
+
+let () =
+  Arg.parse
+    [ "--debug", Arg.Set debug, "Turn debugging on." ]
+    (fun f -> filename := Some f)
+    "Usage: stekki [--debug] <filename>"
+
 let filename =
-  if Array.length Sys.argv = 1 then begin
-    Printf.printf "Usage: stekki <filename>\n" ;
-    Printf.printf "The file is used to load/save the script.\n" ;
-    exit 1
-  end else
-    Sys.argv.(1)
+  match !filename with
+    | None ->
+        Printf.printf "Usage: stekki <filename>\n" ;
+        Printf.printf "The file is used to load/save the script.\n" ;
+        exit 1
+    | Some f -> f
 
 let logic =
   if Str.string_match (Str.regexp ".*\\.\\(.*\\)\\.tac") filename 0 then
@@ -119,7 +128,11 @@ let proc_in,proc_out,reload =
     Text.delete output ~start:(`Linechar (0,0),[]) ~stop:(`End,[]) ;
     Text.configure ~state:`Disabled output ;
     pid := Some (Unix.create_process
-                   "taci" [|"taci";"--logic";logic|]
+                   "taci"
+                   (if !debug then
+                      [|"taci";"--debug";"--logic";logic|]
+                    else
+                      [|"taci";"--logic";logic|])
                    rin wout Unix.stderr)
   in
     reload () ;
