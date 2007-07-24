@@ -38,13 +38,19 @@ struct
   exception TacticalSuccess of session
   exception TacticalFailure
   
+  (*  This list stores all logic names.  It is used to ensure the logic
+      actually exists that when a user tries to change to a new logic
+      before raising the appropriate exception. *)
   let logics = ref []
   let setLogics l = logics := l
   
+  (*  A flag to determine whether timing is enabled.  *)
   let timing = ref false
   
   (********************************************************************
   *findTactical:
+  * Given a tactical name and a session, retrieves the tactical from
+  * the session's tactical table if it exists.
   ********************************************************************)
   let findTactical name session =
     try
@@ -127,17 +133,24 @@ struct
 
   (********************************************************************
   *applyTactical:
+  * Given a abstract syntax tactical applyTactical extracts the sequents
+  * from the current session and applies the tactical to the sequents
+  * along with the given success continuation.
   ********************************************************************)
-  let applyTactical tactical session sc =
+  let applyTactical tactical session sc fc =
     match tactical with
         Absyn.Tactical(tac) ->
           let seqs = L.sequents session in
-          tac seqs (sc session)
-      | Absyn.String(_) -> failwith "invalid quoted string"
+          tac seqs (sc session) fc
+      | Absyn.String(_) ->
+          O.impossible "Interpreter.applyTactical: invalid quoted string"
     
   (********************************************************************
   *buildTactical:
-  * Constructs a tactical from an absyn pretactical.
+  * Constructs a tactical from an absyn pretactical.  A pretactical
+  * has the form of either a quoted or unquoted string.  A tactical
+  * should have at its head only an ApplicationTactical (an unquoted
+  * tactical name), and any kind of argument.
   ********************************************************************)
   let rec buildTactical tac session =
     let buildArg tac =
@@ -158,12 +171,23 @@ struct
       
   (********************************************************************
   *tactical:
-  * Attempts to apply the given pretactical.
+  * Attempts to apply the given pretactical. A success continuation is
+  * created that, when called, raises the TacticalSuccess exception to
+  * return control to the toplevel loop.  A failure continuation that
+  * raises TacticalFailure is also created.  Then, the tactical is
+  * constructed from the pretactical.  Finally it is applied to the current
+  * sequents.  The call to applyTactical never returns; instead one
+  * of the continuations is called.  This ensures that the stack doesn't
+  * get blown.
   ********************************************************************)
   let tactical pretactical session =
     (******************************************************************
     *success:
-    * The toplevel success continuation.
+    * The toplevel success continuation.  Note that, along with raising
+    * the success exception, this updates the current proof builder by
+    * composing the current and new builders, and updates the current
+    * sequents by concatenating the new and old sequents.  For more
+    * information about what new and old sequents are see Logic.mli.
     ******************************************************************)
     let success session newSequents oldSequents proofBuilder continue =
       let currentProof = L.proof session in
@@ -174,7 +198,8 @@ struct
     
     (******************************************************************
     *failure:
-    * The toplevel failure continuation.
+    * The toplevel failure continuation.  This simply raises the failure
+    * exception.
     ******************************************************************)
     let failure () =
       raise TacticalFailure
@@ -208,12 +233,21 @@ struct
 
   (********************************************************************
   *makeTactical:
+  * Given a tactical name and a abstract syntax tactical, this function
+  * wraps the tactical so that it has the type of a logic tactical.
+  * This will allow it to be entered into the session tactical table.
   ********************************************************************)
-  let makeTactical name t session args =
+  let makeTactical name t = fun session args ->
     match args with
       [] -> fun sequents sc fc -> (t sequents sc fc)
     | _ -> fun _ _ fc -> (O.error (name ^ ": invalid arguments.\n"); fc ())
 
+  (********************************************************************
+  *defineTactical:
+  * Given a tactical name and an absyn pretactical, this function
+  * creates a logic tactical from the pretactical and then enters it
+  * into the session tactical table under the given name.
+  ********************************************************************)
   let defineTactical name pretactical session =
     match (buildTactical pretactical session) with
         Absyn.Tactical(t) ->
@@ -242,12 +276,11 @@ struct
     O.tacticals tacticals'
 
   (********************************************************************
-  *findFile:
-  * First tries absolute, then relative.
-  ********************************************************************)
-  (********************************************************************
   *loadLogic:
-  * Loads the given logic.
+  * Loads the given logic.  It first ensures that said logic exists,
+  * then raises the Logic exception which tells the interface to stop
+  * the main loop and tell the driver to load a new interface (see
+  * main.ml).
   ********************************************************************)
   let loadLogic l session =
     if (List.mem_assoc l !logics) then
@@ -258,7 +291,8 @@ struct
     
   (********************************************************************
   *openFiles:
-  * Open each file and read each command in it.
+  * Open each file and read each command in it.  If any error is
+  * encountered the given session is returned unchanged.
   ********************************************************************)
   let rec openFiles session files =
     let executeCommand session command =
@@ -293,6 +327,12 @@ struct
 
   (********************************************************************
   *handleInput:
+  * Given an absyn command, executes it and returns the new session.
+  * Special care is taken to ensure that all functions except undo and
+  * redo add the current session to the undo stack.  Undo and redo
+  * do not change the stack in this way so that they work correctly:
+  * if undo were to place the current session on the undo stack, it
+  * only one level of undo would work.
   ********************************************************************)
   and handleInput input session =
     let handle input session =
@@ -329,6 +369,8 @@ struct
         | Absyn.NoCommand -> (session,true)
     in
  
+    (*  Handle the input and then save the session in the undo stack
+        only when it is not undo or redo. *)
     let (session', save) = handle input session in
     if save then
       (storeSession session;
@@ -336,22 +378,53 @@ struct
     else
       (session')
 
+  (********************************************************************
+  *getLogicKey:
+  * Given the print name of a logic, retrieves its associated key name.
+  ********************************************************************)
   let getLogicKey name =
     let find = fun (_,n) -> n = name in
     let (k,_) = List.find find !logics in
     k
   
+  (********************************************************************
+  *onPrompt:
+  * This function is called by the interface (see interface.ml) to print
+  * the appropriate prompt.  In the console case it prints a prompt
+  * indicating the current logic by key name.
+  ********************************************************************)
   let onPrompt session =
     (O.prompt ("[tac <" ^ (getLogicKey L.name) ^ ">]- ");
     session)
 
+  (********************************************************************
+  *onStart:
+  * This function is called by the interface (see interface.ml) when
+  * a logic is first loaded.  It shows startup information and clears
+  * the undo and redo lists, as well as creating and returning a new
+  * session.
+  ********************************************************************)
   let onStart () =
     (showStartup ();
     resetLists ();
     L.reset ())
   
+  (********************************************************************
+  *onEnd:
+  * This function is called by the interface (see interface.ml) when
+  * a logic is unloaded.  It is provided to allow a logic to clean itself
+  * up if necessary, though as of now no cleanup function is provided by
+  * the Logic.Logic module (see logic.mli).
+  ********************************************************************)
   let onEnd session = ()
 
+  (********************************************************************
+  *onInput:
+  * This function is called once per iteration of the toplevel loop by
+  * the interface (see interface.ml).  It reads an absyn command from
+  * stdin and then handles it with respect to the given session,
+  * returning the new session.
+  ********************************************************************)
   let onInput session =
     try
       let input = Toplevel.parseStdinCommand () in

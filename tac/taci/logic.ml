@@ -67,7 +67,6 @@ sig
   type session
   val incl : string list -> session -> session
   val reset : unit -> session
-  val operator : string -> string -> int -> session -> session
   val prove : string -> string -> session -> session
   val definitions : string list -> session -> session
   val undo : session -> session

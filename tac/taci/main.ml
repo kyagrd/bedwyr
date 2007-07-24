@@ -30,9 +30,22 @@ let printOutputInformation = ref false
 
 
 (**********************************************************************
-*parseArgs:
+*printHelp:
+* Simply prints the usage information based on the speclist.
 **********************************************************************)
 let rec printHelp () = (Arg.usage speclist usage; exit 0)
+
+(**********************************************************************
+parseArgs:
+* Parse the command line arguments, seting any necessary flags.
+* The supported flags are:
+*   debug: sets the global debug flag (see output.mli)
+*   help: prints help/usage information
+*   logic: specifies the logic to load
+*   logics: lists all logics
+*   output: specifies the output module to load
+*   outputs: lists all output modules
+**********************************************************************)
 and speclist = [("--debug", Arg.Unit(debug), "enable debugging");
                 ("-help", Arg.Unit(printHelp), "");
                 ("--help", Arg.Unit(printHelp), "print usage information");
@@ -41,10 +54,17 @@ and speclist = [("--debug", Arg.Unit(debug), "enable debugging");
                 ("--output", Arg.Set_string(outputName), "output");
                 ("--outputs", Arg.Set(printOutputInformation), "list outputs")]
 and usage = "Usage: taci --logic \"logic name\"\n\nOptions:"
-
 let parseArgs output =
     (Arg.parse speclist (fun s -> ()) usage)
 
+(**********************************************************************
+*interpret:
+* Calls the interpreter with the list of logics.  If the interpreter
+* returns it simply returns 0 (success).  If the logic raises an
+* Interface.Logic exception (see interface.mli) it loads the specified
+* logic and the recursively calls itself.  This allows the user to load
+* a logic from the toplevel loop.
+**********************************************************************)
 let rec interpret interp =
   try
     (interp Logics.logics;
@@ -60,10 +80,18 @@ let rec interpret interp =
 
 (**********************************************************************
 *main:
+* Main driver function.  Parses the arguments.  If the user wants a list
+* of logics or outputs they are printed and 0 (success) is returned.
+* If an undefined output module or logic is specified an error is
+* raised.  Otherwise it loads the appropriate interpreter based on the
+* logic and output name and calls the interpret function with the loaded
+* interpreter.
 **********************************************************************)
 let main () =
   (*  Parse the command line arguments. *)
   let _ = parseArgs () in
+  
+  (*  List outputs and logics if requested. *)
   if !printLogicInformation || !printOutputInformation then
     (if !printLogicInformation then
       Logics.printLogics (print_string)
@@ -80,6 +108,7 @@ let main () =
       1)
     else
     
+    (*  Ensure the output module exists.  *)
     if not (Logics.outputExists !outputName) then
       (print_endline ("Error: undefined output '" ^ !outputName ^ "'.");
       1)
@@ -90,11 +119,13 @@ let main () =
       1)
     else
     
+    (*  Ensure the logic module exists. *)
     if not (Logics.logicExists !logicName) then
       (print_endline ("Error: undefined logic '" ^ !logicName ^ "'.");
       1)
     else
     
+    (*  Load the requested logic's interpreted and start it up. *)
     let interp = Logics.getLogicInterpreter (!outputName) (!logicName) in
     if (Option.isSome interp) then
       (interpret (Option.get interp))

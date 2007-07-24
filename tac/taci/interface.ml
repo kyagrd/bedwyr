@@ -24,6 +24,19 @@ sig
 end
 module Make (I : Interpreter.Interpreter) =
 struct
+  (********************************************************************
+  *interpret:
+  * The main interface function, when invoked interpret first sets the
+  * logic list of the given interpreter (necessary to avoid cyclic module
+  * dependencies) and then creates a new session by calling the given
+  * interpreter's onStart function (see interpreter.mli).  It loops,
+  * calling onPrompt and then onInput in turn and always "threading"
+  * the session through.  The loop ends only when either the Exit or Logic
+  * exceptions are raised.  If Exit is raised the logic is terminated and
+  * unit is returned.  If Logic is raised the logic is terminated and then
+  * another exception is raised so that the main driver loop (see main.ml)
+  * can load a new interface and interpreter.
+  ********************************************************************)
   let interpret logics =
     let rec interp session =
       try

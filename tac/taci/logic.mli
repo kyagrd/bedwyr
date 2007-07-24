@@ -54,7 +54,9 @@ val idProofBuilder : 'a proofbuilder
 
 (**********************************************************************
 *Logic:
-* This module signature provides an interface for all logics.
+* This module signature provides an interface for all logics.  For more
+* information regarding the assumptions made about the types and functions
+* contained in this signature, see "tac/taci/README".
 **********************************************************************)
 module type Logic =
 sig
@@ -65,7 +67,6 @@ sig
   type session
   val incl : string list -> session -> session
   val reset : unit -> session
-  val operator : string -> string -> int -> session -> session
   val prove : string -> string -> session -> session
   val definitions : string list -> session -> session
   val undo : session -> session
