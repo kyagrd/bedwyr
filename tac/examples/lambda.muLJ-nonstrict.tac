@@ -65,7 +65,8 @@ induction("G\M\T\ (context G => pi T'\ (typeof G M T' => (T = T')))").
    then(or_l,simplify).
    prove.
    weak_l("pi _").
-   % TODO prove.
+   % TODO prove doesn't work.
+   prove.
    then(repeat(pi_l),repeat(imp_l)).
    axiom.
    axiom("bind _ _ t").
@@ -104,15 +105,8 @@ induction("G\M\T\ (context G => pi T'\ (typeof G M T' => (T = T')))").
    false.
    then(or_l,simplify).
    mu_l.
-   then(or_l,simplify).
-   eq_l.
-   eq_l.
+   prove.
    mu_l("bind (cons _ _) _ _").
-   then(or_l,simplify).
-   eq_l.
-   imp_l.
-   axiom.
-   false.
-
+   prove.
 %Yay.
 
