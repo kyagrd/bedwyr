@@ -67,9 +67,8 @@ val abstractVar : term -> formula -> formula
 val apply : term list -> formula -> formula option
 val applyFixpoint : formula -> formula -> formula option
 val string_of_definition : definition -> string
-val string_of_term : string list -> term -> string
-val string_of_formula : ?names:string list -> formula -> string
-val string_of_formula_ast : formula -> string
+val string_of_formula : generic:string list -> formula -> string
+val string_of_formula_ast : generic:string list -> formula -> string
 
 val undoUnify : state -> unit
 val rightUnify : term -> term -> unifyresult
