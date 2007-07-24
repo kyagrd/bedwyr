@@ -16,6 +16,10 @@
 * along with this code; if not, write to the Free Software Foundation,*
 * Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA        *
 **********************************************************************)
+
+(**********************************************************************
+*Accessor functions.
+**********************************************************************)
 let isSome = function
     Some _ -> true
   | None -> false
@@ -28,6 +32,12 @@ let get = function
     Some value -> value
   | None -> failwith "Option.get: Invalid option"
 
+(**********************************************************************
+*string_of_option:
+* Produces a printable string representation of the enclosed object
+* by applying the given printer to it, if it exists, or by simply 
+* returning "None" if the option is empty.
+**********************************************************************)
 let string_of_option v p =
   match v with
     Some a -> p a

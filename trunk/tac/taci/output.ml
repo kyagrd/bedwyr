@@ -31,7 +31,6 @@ sig
   val tacticals : string list -> unit
 end
 
-
 module ConsoleOutput =
 struct
   let debug s =
@@ -46,6 +45,12 @@ struct
   let error s = (print_string ("Error: " ^ s); flush stdout)
   let output s = (print_string s; flush stdout)
   let goal s = (print_string s; flush stdout)
+  
+  (**********************************************************************
+  *clear:
+  * The simplest way I could figure out to clear the screen; O'Caml seems
+  * not to have a standard way.
+  **********************************************************************)
   let clear () =
     if Sys.os_type = "Win32" then
       let _ = Sys.command "cls" in

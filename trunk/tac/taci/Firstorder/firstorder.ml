@@ -37,6 +37,9 @@ end
 **********************************************************************)
 module Firstorder (Param : ParamSig) (O : Output.Output) : Logic.Logic =
 struct
+  exception NonMonotonic
+
+
   let name = Param.name
   let info = Param.name ^ "\n"
   let start = info
@@ -426,10 +429,29 @@ struct
     let processPreDefinitions predefs =
       (****************************************************************
       *checkMonotonicity:
-      * Determines whether a definition is monotonic.
+      * Determines whether a definition is monotonic.  A definition is
+      * monotonic if none of its DB indices occur under an odd number
+      * of negations.
       ****************************************************************)
-      let checkMonotonicity f =
-        true
+      let checkMonotonicity body =
+        let tf t = t in
+        let rec ff i f =
+          match f with
+              FOA.ImplicationFormula(l,r) ->
+                (ff (i + 1) l)
+            | FOA.DBFormula(_) ->
+                if (i mod 2) <> 0 then
+                  raise NonMonotonic
+                else
+                  f
+            | _ -> FOA.mapFormula (ff i) tf f
+        in
+
+        try
+          (ignore (ff 0 body);
+          true)
+        with
+          NonMonotonic -> false
       in
       
       (****************************************************************
@@ -523,8 +545,8 @@ struct
         if (checkMonotonicity formula'') then
           Some(result)
         else
-          (O.error (name ^ ": non-monotonic definition.\n");
-          None)
+          (O.output ("Warning: " ^ name ^ ": non-monotonic definition.\n");
+          Some(result))
       in
       (List.map processPreDefinition predefs)
     in
@@ -735,10 +757,10 @@ struct
             let left'' = left @ left' in
             let zip l = (left'' @ l @ right') in
             let fc'' () =
-              ((* decr indent;  *)
+              (decr indent;
               (fc' (left'' @ [f]) (Some right')) ())
             in
-            (*  let () = incr indent in *)
+            let () = incr indent in
             tactic session sequent f zip lhs rhs sc' fc''
         | None ->
             fc ()
@@ -891,7 +913,7 @@ struct
               let (t,_) = Option.get template in
               let matcher = (matchRight t Nonfocused) in
               let tac = (makeTactical ("axiom_l<" ^ (string_of_formula f) ^ ">") matcher tactic session) in
-              (tac [seq] (fun l _ _ _ -> sc l) fc)
+              (tac [seq] (fun l _ _ k -> sc k l) fc)
             else
               (O.impossible "Firstorder.axiomL: unable to parse template.\n";
               fc ())
@@ -899,7 +921,7 @@ struct
             fc ()
 
   let axiomTactical =
-    makeSimpleTactical "axiom" (matchLeft, "_") (axiomL Positive)
+    makeGeneralTactical "axiom" (matchLeft, "_") (axiomL Positive)
 
   (********************************************************************
   *cut:
@@ -1671,6 +1693,9 @@ struct
           | Formula(i, (Nonfocused, Negative), (FOA.AtomicFormula(_) as f')) ->
               let s = Sequent(lvl, zip [Formula(i, (Focused, Negative), f')], rhs) in
               sc [s]
+          | Formula(i, (Nonfocused, Negative), (FOA.ApplicationFormula(_) as f')) ->
+              let s = Sequent(lvl, zip [Formula(i, (Focused, Negative), f')], rhs) in
+              sc [s]
           | _ -> 
               (O.debug "Firstoder.focusL: no formula to focus on.\n";
               fc ()) 
@@ -1775,15 +1800,15 @@ struct
     
     let fPiL = makeSimpleTactical "focused_pi_l" (matchLeft, "[pi _]") piL in
     let fImpL = makeSimpleTactical "focused_imp_l" (matchLeft, "[_=>_]") impL in
-    let fAtomL = makeSimpleTactical "focused_axiom_l" (matchLeft, "[_]") (axiomL Negative) in
+    let fAtomL = makeGeneralTactical "focused_axiom_l" (matchLeft, "[_]") (axiomL Negative) in
 
     let tacticals = 
-      [fPiL session args;
-      fImpL session args;
-      fAtomL session args;
-      fSigmaR session args;
+      [fAtomL session args;
+      fAtomR session args;
       fEqR session args;
-      fAtomR session args] in
+      fSigmaR session args;
+      fPiL session args;
+      fImpL session args] in
     
     let tacticals =
       if Param.intuitionistic then
