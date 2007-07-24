@@ -32,4 +32,4 @@ val print_term : ?bound:string list -> Term.term -> unit
 val pp_term : Format.formatter -> Term.term -> unit
 
 val term_to_string_preabstracted :
-  bound:string list -> Term.term -> string
+  generic:string list -> bound:string list -> Term.term -> string

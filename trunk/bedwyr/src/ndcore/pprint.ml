@@ -136,11 +136,10 @@ let print_term ?(bound=[]) term =
   * function, which won't display the lambda prefix.
   * The input term should have at least [List.length bound] abstractions
   * at toplevel. *)
-let term_to_string_preabstracted ~bound term =
+let term_to_string_preabstracted ~generic ~bound term =
   let term = Norm.deep_norm term in
   let len = List.length bound in
-  
-  match observe term with
-    | Lam (n,term) ->
-        term_to_string ~bound (lambda (n-len) term)
-    | _ -> (assert (bound = []); term_to_string term)
+    match observe term with
+      | Lam (n,term) ->
+          term_to_string_full ~generic ~bound (lambda (n-len) term)
+      | _ -> assert (bound = []); term_to_string_full ~generic ~bound term
