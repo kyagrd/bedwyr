@@ -16,6 +16,13 @@
 * along with this code; if not, write to the Free Software Foundation,*
 * Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA        *
 **********************************************************************)
+(**********************************************************************
+* Firstorderabsyn
+***********************************************************************
+* This module defines the abstract syntax of formulas for the logics
+* defined in Firstorder (see firstorder.mli).  Terms within formulas
+* are represented using the ndcore library (see ndcore/term.mli).
+**********************************************************************)
 exception SyntaxError of string
 exception SemanticError of string
 

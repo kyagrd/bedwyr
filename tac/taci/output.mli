@@ -16,6 +16,17 @@
 * along with this code; if not, write to the Free Software Foundation,*
 * Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA        *
 **********************************************************************)
+
+(**********************************************************************
+* Output
+***********************************************************************
+* This module provides the Output signature that output modules must
+* match, as well as two default output modules, ConsoleOutput and
+* XmlOutput.  Several functors in Taci are paramaterized by the Output
+* signature (see interface.mli, interpreter.mli, logic.mli) so that
+* output may be formatted in different ways based on the way Taci is
+* being used.
+**********************************************************************)
 val showDebug : bool ref
 module type Output =
 sig
@@ -30,5 +41,19 @@ sig
   val tacticals : string list -> unit
 end
 
+(**********************************************************************
+* ConsoleOutput
+***********************************************************************
+* The ConsoleOutput module a default output module that is intended to
+* handle output when Taci is being used from the command line.
+**********************************************************************)
 module ConsoleOutput : Output
+
+(**********************************************************************
+* XmlOutput
+***********************************************************************
+* The XmlOutput module is intended to handle output when Taci is being
+* used in conjunction with StickyTaci.  It annotates output using XML
+* so that it is easy to parse with an external tool.
+**********************************************************************)
 module XmlOutput : Output

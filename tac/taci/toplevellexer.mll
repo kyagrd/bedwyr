@@ -16,6 +16,15 @@
 * along with this code; if not, write to the Free Software Foundation,*
 * Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA        *
 **********************************************************************)
+
+(**********************************************************************
+* Toplevellexer
+***********************************************************************
+* This is the ocamllex specification for the toplevel lexer.  In general
+* it recognizes 4 classes of token: commands (those that must be preceeded
+* by a #), tacticals (unquoted identifiers), logic terms (quoted strings),
+* and punctuation.
+**********************************************************************)
 {
   open Toplevelparser
   open Lexing

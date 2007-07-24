@@ -17,6 +17,14 @@
 * Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA        *
 **********************************************************************/
 
+/**********************************************************************
+* Toplevelparser
+***********************************************************************
+* This is the ocamlyacc specification for the toplevel parser.  The
+* parser is straightforward, the only thing to note being that it handles
+* the end of file token explicitly.  All access to the generated parser
+* is done through the Toplevel module (see toplevel.mli).
+**********************************************************************/
 %{
 %}
 

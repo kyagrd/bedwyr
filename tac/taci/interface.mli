@@ -18,7 +18,8 @@
 **********************************************************************)
 
 (**********************************************************************
-*Interface:
+* Interface
+***********************************************************************
 * This functor contructs a toplevel interface using the given
 * interpreter.  The interface implements the toplevel loop, reading
 * input and passing it to the interpreter for processing.
@@ -26,12 +27,6 @@
 exception Logic of string
 module type Interface =
 sig
-  (********************************************************************
-  *interpret:
-  * This is the toplevel loop.  It returns only when the interpreter
-  * exits.  It raises Logic s if the user asks to load a logic s.  The
-  * assumption is that s exists.
-  ********************************************************************)
   val interpret : (string * string) list -> unit
 end
 module Make : functor (I : Interpreter.Interpreter) -> Interface

@@ -16,6 +16,26 @@
 * along with this code; if not, write to the Free Software Foundation,*
 * Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA        *
 **********************************************************************/
+/**********************************************************************
+* Firstorderparser
+***********************************************************************
+* This is the ocamlyacc specification for the first order logic grammar.
+* It is by no means a well put together grammar, but it seems to work
+* well enough.
+*
+* The grammar has a special case for quantification: a formula may
+* be quantified over a number of variables very easily by simply stringing
+* lambdas together.  That is, the following two lines are equivalent.
+*   sigma x\ y\ z\ ...
+*   sigma x\ sigma y\ sigma z\ ...
+* The same holds for pi and nabla.
+*
+* Templates are handled in a relatively tricky way: underscores indicate
+* "holes" in a formula level pattern, but are indicated by term-level
+* variables.  Furthermore, explicit mu.nu quantification patterns are allowed
+* as well, in order to allow the user to write templates that match only
+* mu/nu application formulas.
+**********************************************************************/
 %{
   module FOA = Firstorderabsyn
   
@@ -24,6 +44,11 @@
   let orFormula f1 f2 = FOA.OrFormula(f1, f2)
   let impFormula f1 f2 = FOA.ImplicationFormula(f1, f2)
   
+  (********************************************************************
+  *getAbstractions:
+  * Returns a list of the toplevel abstractions on a formula, and the
+  * formula immediately beneath said abstractions.
+  ********************************************************************)
   let rec getAbstractions f =
     match f with
         FOA.AbstractionFormula(name, f') ->
@@ -31,6 +56,13 @@
           (name::names, f'')
       | _ -> ([], f)
 
+  (********************************************************************
+  *makeAbstractions:
+  * Given a constructor function and a formula, peels all toplevel
+  * abstractions from the formula and then reapplies them with the
+  * correct quantification formula "on top of" each abstraction.  The
+  * quantification is made by the constructor function.
+  ********************************************************************)
   let makeAbstractions make f =
     let rec makeAbs' names make f =
       match names with
@@ -60,6 +92,11 @@
     let make f = FOA.NablaFormula(f) in
     (makeAbstractions make f)
 
+  (********************************************************************
+  *atomic:
+  * Constructs an atomic formula from a term by splitting the term
+  * into a head (a string) and a list of arguments (terms).
+  ********************************************************************)
   let atomic t =
     let result = FOA.getTermHeadAndArgs t in
     if (Option.isSome result) then
@@ -79,6 +116,11 @@
         [] -> failwith "Firstorder.application: invalid lterm."
       | head::tl -> Term.app head tl
   
+  (********************************************************************
+  *definition:
+  * Creates a predefinition with a body that has already been abstracted
+  * over the argument names.
+  ********************************************************************)
   let definition name args body fix =
     let (_,argnames) = List.split args in
     let abstract arg f =
