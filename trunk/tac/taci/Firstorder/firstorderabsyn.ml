@@ -92,19 +92,44 @@ let getConnectiveName = function
   | AtomicFormula(_) -> "atom"
   | AbstractionFormula(_) -> "lambda"
 
-let rec getFormulaName = function
+let getFormulaName = function
     MuFormula(name,_,_) -> name
   | NuFormula(name,_,_) -> name
   | DBFormula(name,_) -> name
-  | f -> string_of_formula f
+  | AtomicFormula(name,args) ->
+      (* This actually happens, the pattern "_ ..." matches any application,
+       * not only atoms but also fixed points, and is thus represented by
+       * App(Atom("_",[]),...). *)
+      assert (name="_"&& args=[]) ;
+      name
+  | _ -> assert false
 
-and string_of_term names t =
-  Pprint.term_to_string_preabstracted names t
+let mapFormula formulafun termfun formula =
+  match formula with
+      AndFormula(l,r) -> AndFormula(formulafun l, formulafun r)
+    | OrFormula(l,r) -> OrFormula(formulafun l, formulafun r)
+    | ImplicationFormula(l,r) -> ImplicationFormula(formulafun l, formulafun r)
+    | EqualityFormula(l,r) -> EqualityFormula(termfun l, termfun r)
+    | PiFormula(f) -> PiFormula(formulafun f)
+    | SigmaFormula(f) -> SigmaFormula(formulafun f)
+    | NablaFormula(f) -> NablaFormula(formulafun f)
+    | MuFormula(name, args, f) -> MuFormula(name, args, formulafun f)
+    | NuFormula(name, args, f) -> NuFormula(name, args, formulafun f)
+    | AbstractionFormula(name, f) -> AbstractionFormula(name, formulafun f)
+    | ApplicationFormula(head,tl) ->
+        ApplicationFormula(formulafun head, List.map termfun tl)
+    | AtomicFormula(head, tl) -> AtomicFormula(head, List.map termfun tl)
+    | DBFormula(n,i) -> formula
 
-and string_of_term_ast t =
-  Pprint.term_to_string t
+let rec string_of_term ~generic names t =
+  Pprint.term_to_string_preabstracted ~generic ~bound:names t
 
-and string_of_formula ?(names=[]) f =
+and string_of_term_ast ~generic t =
+  Pprint.term_to_string_full ~generic ~bound:[] t
+
+and string_of_formula ~generic ~names f =
+  let string_of_formula = string_of_formula ~generic in
+  let string_of_term = string_of_term ~generic in
   match f with
       AndFormula(l,r)
     | OrFormula(l,r)
@@ -119,13 +144,15 @@ and string_of_formula ?(names=[]) f =
     | PiFormula(f) -> "pi " ^ (string_of_formula ~names f)
     | SigmaFormula(f) -> "sigma " ^ (string_of_formula ~names f)
     | NablaFormula(f) -> "nabla " ^ (string_of_formula ~names f)
-    | MuFormula(name, _, f) -> "(" ^ name ^ " " ^ (string_of_formula ~names f) ^ ")"
-    | NuFormula(name, _, f) -> "(" ^ name ^ " " ^ (string_of_formula ~names f) ^ ")"
+    | MuFormula(name, _, f) ->
+        "(" ^ name ^ " " ^ (string_of_formula ~names f) ^ ")"
+    | NuFormula(name, _, f) ->
+        "(" ^ name ^ " " ^ (string_of_formula ~names f) ^ ")"
     | AbstractionFormula(hint, f) ->
         let hint = Term.get_dummy_name hint in
         let s = hint ^ "\\ " ^ (string_of_formula ~names:(hint::names) f) in
-        (Term.free hint;
-        s)
+        Term.free hint;
+        s
     | ApplicationFormula(mu,tl) ->
         let name = (getFormulaName mu) in
         let args = (String.concat " " (List.map (string_of_term names) tl)) in
@@ -141,7 +168,9 @@ and string_of_formula ?(names=[]) f =
           (head ^ " " ^ tl')
     | DBFormula(n,i) -> n
 
-and string_of_formula_ast f =
+and string_of_formula_ast ~generic f =
+  let string_of_formula_ast = string_of_formula_ast ~generic in
+  let string_of_term_ast = string_of_term_ast ~generic in
   match f with
       AndFormula(l,r)
     | OrFormula(l,r)
@@ -150,14 +179,16 @@ and string_of_formula_ast f =
         let s2 = (string_of_formula_ast r) in
         (getConnectiveName f) ^ "(" ^ s1 ^ ", " ^ s2 ^ ")"
     | EqualityFormula(l,r) ->
-        let s1 = (string_of_term [] l) in
-        let s2 = (string_of_term [] r) in
+        let s1 = (string_of_term_ast l) in
+        let s2 = (string_of_term_ast r) in
         "eq(" ^ s1 ^ ", " ^ s2 ^ ")"
     | PiFormula(f) -> "pi(" ^ (string_of_formula_ast f) ^ ")"
     | SigmaFormula(f) -> "sigma(" ^ (string_of_formula_ast f) ^ ")"
     | NablaFormula(f) -> "nabla(" ^ (string_of_formula_ast f) ^ ")"
-    | MuFormula(name, _, f) -> "mu(" ^ name ^ ", " ^ (string_of_formula_ast f) ^ ")"
-    | NuFormula(name, _, f) -> "nu(" ^ name ^ ", " ^ (string_of_formula_ast f) ^ ")"
+    | MuFormula(name, _, f) ->
+        "mu(" ^ name ^ ", " ^ (string_of_formula_ast f) ^ ")"
+    | NuFormula(name, _, f) ->
+        "nu(" ^ name ^ ", " ^ (string_of_formula_ast f) ^ ")"
     | AbstractionFormula(hint, f) ->
         let hint = Term.get_dummy_name hint in
         let s = "lambda(" ^ hint ^ ", " ^ (string_of_formula_ast f)  ^ ")" in
@@ -172,30 +203,16 @@ and string_of_formula_ast f =
         "atom(" ^ head ^ args' ^ ")"
     | DBFormula(n,i) -> "#" ^ (string_of_int i)
 
+let string_of_formula ~generic f =
+  string_of_formula ~generic ~names:[] f
+
 let string_of_fixpoint = function
     Inductive -> "inductive"
   | CoInductive -> "coinductive"
 
 let string_of_definition (Definition(name,arity,body,ind)) =
-  (string_of_fixpoint ind) ^ " " ^ (string_of_formula body)
+  (string_of_fixpoint ind) ^ " " ^ (string_of_formula ~generic:[] body)
     
-let mapFormula formulafun termfun formula =
-  match formula with
-      AndFormula(l,r) -> AndFormula(formulafun l, formulafun r)
-    | OrFormula(l,r) -> OrFormula(formulafun l, formulafun r)
-    | ImplicationFormula(l,r) -> ImplicationFormula(formulafun l, formulafun r)
-    | EqualityFormula(l,r) -> EqualityFormula(termfun l, termfun r)
-    | PiFormula(f) -> PiFormula(formulafun f)
-    | SigmaFormula(f) -> SigmaFormula(formulafun f)
-    | NablaFormula(f) -> NablaFormula(formulafun f)
-    | MuFormula(name, args, f) -> MuFormula(name, args, formulafun f)
-    | NuFormula(name, args, f) -> NuFormula(name, args, formulafun f)
-    | AbstractionFormula(name, f) -> AbstractionFormula(name, formulafun f)
-    | ApplicationFormula(head,tl) -> ApplicationFormula(formulafun head, List.map termfun tl)
-    | AtomicFormula(head, tl) -> AtomicFormula(head, List.map termfun tl)
-    | DBFormula(n,i) -> formula
-
-
 (**********************************************************************
 *abstract:
 * Abstracts the given formula over the given name. Doesn't go through

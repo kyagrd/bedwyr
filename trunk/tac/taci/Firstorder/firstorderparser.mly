@@ -34,7 +34,10 @@
   let makeAbstractions make f =
     let rec makeAbs' names make f =
       match names with
-        [] -> raise (FOA.SemanticError ("argument does not have toplevel abstractions: " ^ (FOA.string_of_formula f)))
+        [] ->
+          let f = FOA.string_of_formula ~generic:[] f in
+          let msg = "argument does not have toplevel abstractions: " ^ f in
+            raise (FOA.SemanticError msg)
       | [name] -> make (FOA.AbstractionFormula(name,f))
       | name::names ->
           make (FOA.AbstractionFormula(name, makeAbs' (names) make f))

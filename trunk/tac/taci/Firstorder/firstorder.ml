@@ -55,13 +55,20 @@ struct
     | Negative
 
   type formula = Formula of (int * (marktype * polarity) * FOA.formula)
-  let string_of_formula (Formula(_,_,t)) = FOA.string_of_formula t
-  let string_of_formula_ast (Formula(_,(m,p),t)) =
-    let result = FOA.string_of_formula_ast t in
-    if m == Focused then
-      "[" ^ result ^ "]"
-    else
-      result
+  let string_of_formula (Formula(local,_,t)) =
+    let generic = Term.get_dummy_names ~start:1 local "n" in
+    let result = FOA.string_of_formula ~generic t in
+      List.iter Term.free generic ;
+      (String.concat "," generic) ^ ">> " ^ result
+  let string_of_formula_ast (Formula(local,(m,_),t)) =
+    let generic = Term.get_dummy_names ~start:1 local "n" in
+    let result = FOA.string_of_formula_ast ~generic t in
+      List.iter Term.free generic ;
+      (String.concat "," generic) ^ ">> " ^
+      if m == Focused then
+        "[" ^ result ^ "]"
+      else
+        result
   let getFormulaFormula (Formula(_,_,f)) = f
   let getFormulaMarker (Formula(_,(b,_),_)) = b
   let getFormulaPolarity (Formula(_,(_,p),_)) = p
@@ -332,9 +339,18 @@ struct
 
   let parseFormula defs t =        
     try
-      let formula = Firstorderparser.toplevel_formula Firstorderlexer.token (Lexing.from_string t) in
-      let () = O.debug ("Firstorder.parseFormula: formula: " ^ (FOA.string_of_formula formula) ^ "\n") in
-      let () = O.debug ("Firstorder.parseFormula: formula ast: " ^ (FOA.string_of_formula_ast formula) ^ "\n") in
+      let formula =
+        Firstorderparser.toplevel_formula
+          Firstorderlexer.token (Lexing.from_string t)
+      in
+      let () =
+        O.debug ("Firstorder.parseFormula: formula: " ^
+                 (FOA.string_of_formula ~generic:[] formula) ^ "\n")
+      in
+      let () =
+        O.debug ("Firstorder.parseFormula: formula ast: " ^
+                 (FOA.string_of_formula_ast ~generic:[] formula) ^ "\n")
+      in
       Some (processFormula defs formula)
     with
         FOA.SyntaxError(s) ->
@@ -355,8 +371,16 @@ struct
   let parseDefinition defs t =        
     try
       let FOA.PreDefinition(name,args,body,ind) = Firstorderparser.toplevel_definition Firstorderlexer.token (Lexing.from_string t) in
-      let () = O.debug ("Firstorder.parseDefinition: predefinition ast:" ^ name ^ " " ^ (FOA.string_of_formula_ast body) ^ ".\n") in
-      let () = O.debug ("Firstorder.parseDefinition: predefinition: " ^ name ^ " " ^ (FOA.string_of_formula body) ^ ".\n") in
+      let () =
+        O.debug ("Firstorder.parseDefinition: predefinition ast:" ^
+                 name ^ " " ^ (FOA.string_of_formula_ast ~generic:[] body) ^
+                 ".\n")
+      in
+      let () =
+        O.debug ("Firstorder.parseDefinition: predefinition: " ^
+                 name ^ " " ^ (FOA.string_of_formula ~generic:[] body) ^
+                 ".\n")
+      in
       Some (FOA.PreDefinition(name,args,(replaceApplications defs body),ind))
     with
         FOA.SyntaxError(s) ->
@@ -518,8 +542,13 @@ struct
             (O.error ("'" ^ name ^ "' already defined.\n");
             table)
           else
-            let () = O.debug ("Firstorder.definitions: definition ast: " ^ (FOA.string_of_formula_ast formula) ^ ".\n") in
-            let () = O.output ("Definition: " ^ (string_of_definition def) ^ ".\n") in
+            let () =
+              O.debug ("Firstorder.definitions: definition ast: " ^
+                       (FOA.string_of_formula_ast ~generic:[] formula) ^ ".\n")
+            in
+            let () =
+              O.output ("Definition: " ^ (string_of_definition def) ^ ".\n")
+            in
             Logic.Table.add name def (addDefinitions ds table)
     in
         
@@ -618,18 +647,27 @@ struct
   * with F'.
   ********************************************************************)
   let findFormula template marker formulas =
-    let () = O.debug ("Firstorder.findFormula: template: " ^ (FOA.string_of_formula template) ^ "\n") in
-    let () = O.debug ("Firstorder.findFormula: template ast: " ^ (FOA.string_of_formula_ast template) ^ "\n") in
+    let () =
+      O.debug ("Firstorder.findFormula: template: " ^
+               (FOA.string_of_formula ~generic:[] template) ^ "\n")
+    in
+    let () =
+      O.debug ("Firstorder.findFormula: template ast: " ^
+               (FOA.string_of_formula_ast ~generic:[] template) ^ "\n")
+    in
     let rec find front formulas =
       match formulas with
         [] ->
           let () = O.debug "Firstorder.findFormula: not found.\n" in
           None
       | formula::fs ->
-          let f = getFormulaFormula formula in
-          let marker' = getFormulaMarker formula in
-          if ((marker = Nonfocused) || marker = marker') && (FOA.matchFormula template f) then
-            let () = O.debug ("Firstorder.findFormula: found: " ^ (FOA.string_of_formula f) ^ ".\n") in
+          let Formula(i,(marker',_),f) = formula in
+          if (marker = Nonfocused || marker = marker') &&
+             FOA.matchFormula template f then
+            let () =
+              O.debug ("Firstorder.findFormula: found: " ^
+                       (string_of_formula formula) ^ ".\n")
+            in
             Some(formula, List.rev front, fs)
           else
             find (formula::front) fs
@@ -646,7 +684,7 @@ struct
   *   the whole right
   ********************************************************************)
   let matchLeft pattern marker after sequent =
-    let () = O.debug ("Template: " ^ (FOA.string_of_formula_ast pattern) ^ ".\n") in
+    let () = O.debug ("Template: " ^ (FOA.string_of_formula_ast ~generic:[] pattern) ^ ".\n") in
     let lhs = 
       if Option.isSome after then
         Option.get after
@@ -659,7 +697,7 @@ struct
     | None -> None
 
   let matchRight pattern marker after sequent =
-    let () = O.debug ("Template: " ^ (FOA.string_of_formula_ast pattern) ^ ".\n") in
+    let () = O.debug ("Template: " ^ (FOA.string_of_formula_ast ~generic:[] pattern) ^ ".\n") in
     let lhs = getSequentLHS sequent in
     let rhs =
       if Option.isSome after then
@@ -768,7 +806,10 @@ struct
             argnames in
           let f' = FOA.ApplicationFormula(f, args') in
           let f'' = (List.fold_right (FOA.abstractVar) args' f') in
-          let () = O.debug ("Firstorder.abstractFixpointDefinition: " ^ (FOA.string_of_formula_ast f'') ^ "\n") in
+          let () =
+            O.debug ("Firstorder.abstractFixpointDefinition: " ^
+                     (FOA.string_of_formula_ast ~generic:[] f'') ^ "\n")
+          in
           f''
       | _ -> failwith "Firstorder.abstractFixpointDefinition: invalid formula."
 
@@ -962,7 +1003,8 @@ struct
           if Param.intuitionistic then
             [Formula(i,b,l)]
           else
-            Formula(i,b,l)::rhs in
+            Formula(i,b,l)::rhs
+        in
         let s1 = Sequent(lvl, zip [], rhs') in
         let s2 = Sequent(lvl, zip [Formula(i,b,r)], rhs) in
         sc [s1;s2]
@@ -1126,12 +1168,18 @@ struct
       match f with
         Formula(i, b, FOA.ApplicationFormula(
           FOA.MuFormula(name,argnames,body) as mu, args)) ->
-            let body' = FOA.applyFixpoint (abstractFixpointDefinition mu argnames) body in
+            let body' =
+              FOA.applyFixpoint (abstractFixpointDefinition mu argnames) body
+            in
             if Option.isSome body' then
               let mu' = FOA.apply args (Option.get body') in
               if (Option.isSome mu') then
-                let () = O.debug ("muR: after applying arguments: " ^ (FOA.string_of_formula_ast (Option.get mu')) ^ "\n") in
-                let s = Sequent(lvl, lhs, zip [Formula(i,b, Option.get mu')]) in
+                let formula = Formula(i,b,(Option.get mu')) in
+                let () =
+                  O.debug ("muR: after applying arguments: " ^
+                           (string_of_formula_ast formula) ^ "\n")
+                in
+                let s = Sequent(lvl, lhs, zip [formula]) in
                 (sc [s])
               else
                 (O.impossible "unable to apply arguments to mu formula.\n";
@@ -1343,12 +1391,15 @@ struct
       ****************************************************************)
       let coind f zip lhs rhs sc fc =
         match f with
-          Formula(i,b,FOA.ApplicationFormula(FOA.NuFormula(name,argnames,body),args)) ->
+        | Formula(i,b,
+            FOA.ApplicationFormula(FOA.NuFormula(name,argnames,body),args))
+          ->
             let s' = parseFormula (getSessionDefinitions session) inv in
             if Option.isSome s' then
               let s' = (Option.get s') in
               let f' = FOA.apply args s' in
               if Option.isSome f' then
+                (* Conclusion premise *)
                 let s1 = Sequent(lvl, lhs, zip [Formula(i,b,Option.get f')]) in
 
                 let (lvl', args') = makeArgs lvl i argnames in
@@ -1357,12 +1408,25 @@ struct
                 let body' = FOA.applyFixpoint s' body in
                 
                 if (Option.isSome l) && (Option.isSome body') then
-                  let () = O.debug ("coinduction: apply fixpoint result: " ^ (FOA.string_of_formula_ast (Option.get body')) ^ "\n") in
-
-                  let r = FOA.apply args' (Option.get body') in
+                  let l = Option.get l in
+                  let body' = Option.get body' in
+                  let () =
+                    O.debug ("coinduction: apply fixpoint result: " ^
+                    (string_of_formula_ast
+                       (Formula(0,(Nonfocused,Positive),body'))) ^ "\n")
+                  in
+                  let r = FOA.apply args' body' in
                   if Option.isSome r then
-                    let () = O.debug ("coinduction: result: " ^ (FOA.string_of_formula_ast (Option.get r)) ^ "\n") in
-                    let s2 = Sequent(lvl', [Formula(i, b, Option.get l)], [Formula(i, b, Option.get r)]) in
+                    let r = Option.get r in
+                    (* Coinvariance premise *)
+                    let s2 =
+                      Sequent(lvl', [Formula(0, b, l)],
+                                    [Formula(0, b, r)])
+                    in
+                    O.debug (Printf.sprintf
+                               "coinduction: result: %s\n"
+                               (string_of_formula_ast
+                                  (Formula(0,(Nonfocused,Positive),r))));
                     (sc [s1;s2])
                   else
                     (O.impossible "unable to apply arguments to nu formula.\n";
@@ -1377,24 +1441,28 @@ struct
               (O.error ("unable to parse coinvariant: " ^ inv ^ ".\n");
               fc ())
         | _ ->
-            (O.impossible "invalid formula.\n";
-            fc ())
+            O.impossible "invalid formula.\n";
+            fc ()
       in
       let sc' s = sc s (makeProofBuilder "coinduction") fc in
-      match (matchRight template Nonfocused None sequent) with
-        Some(f,before,after,lhs,rhs) ->
-          let zip l = before @ l @ after in
-          (coind f zip lhs rhs sc' fc)
-      | None -> fc ()
+        match (matchRight template Nonfocused None sequent) with
+        | Some(f,before,after,lhs,rhs) ->
+            let zip l = before @ l @ after in
+              coind f zip lhs rhs sc' fc
+        | None -> fc ()
     in
     
     match args with
         [] -> (G.invalidArguments "no invariant specified.")
       | Absyn.String(inv)::[] ->
-          let template = FOA.ApplicationFormula(FOA.makeAnonymousFormula (), []) in 
+          let template =
+            FOA.ApplicationFormula(FOA.makeAnonymousFormula (), [])
+          in 
           G.makeTactical (matchTemplate template inv)
       | Absyn.String(inv)::Absyn.String(template)::[] ->
-          let template = parseFormula (getSessionDefinitions session) template in
+          let template =
+            parseFormula (getSessionDefinitions session) template
+          in
           if (Option.isSome template) then
             G.makeTactical (matchTemplate (Option.get template) inv)
           else
