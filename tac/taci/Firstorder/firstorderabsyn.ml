@@ -34,7 +34,7 @@ type formula =
   | AbstractionFormula of string * formula
   | ApplicationFormula of formula * term list
   | AtomicFormula of string * term list
-  | DBFormula of string * int
+  | DBFormula of int * string * int
 
 type fixpoint =
     Inductive
@@ -95,7 +95,7 @@ let getConnectiveName = function
 let getFormulaName = function
     MuFormula(name,_,_) -> name
   | NuFormula(name,_,_) -> name
-  | DBFormula(name,_) -> name
+  | DBFormula(_,name,_) -> name
   | AtomicFormula(name,args) ->
       (* This actually happens, the pattern "_ ..." matches any application,
        * not only atoms but also fixed points, and is thus represented by
@@ -119,7 +119,7 @@ let mapFormula formulafun termfun formula =
     | ApplicationFormula(head,tl) ->
         ApplicationFormula(formulafun head, List.map termfun tl)
     | AtomicFormula(head, tl) -> AtomicFormula(head, List.map termfun tl)
-    | DBFormula(n,i) -> formula
+    | DBFormula(_,n,i) -> formula
 
 let rec string_of_term ~generic names t =
   Pprint.term_to_string_preabstracted ~generic ~bound:names t
@@ -166,7 +166,8 @@ and string_of_formula ~generic ~names f =
           head
         else
           (head ^ " " ^ tl')
-    | DBFormula(n,i) -> n
+    | DBFormula(l,n,i) ->
+        let rec name l = if l=0 then n else "lift:" ^ name (l-1) in name l 
 
 and string_of_formula_ast ~generic f =
   let string_of_formula_ast = string_of_formula_ast ~generic in
@@ -201,7 +202,11 @@ and string_of_formula_ast ~generic f =
         let args = (String.concat " " (List.map (string_of_term_ast) tl)) in
         let args' = if args = "" then "" else ", " ^ args in
         "atom(" ^ head ^ args' ^ ")"
-    | DBFormula(n,i) -> "#" ^ (string_of_int i)
+    | DBFormula(l,n,i) -> 
+        let rec name l =
+          if l=0 then "#" ^ (string_of_int i) else "lift:" ^ name (l-1)
+        in
+          name l 
 
 let string_of_formula ~generic f =
   string_of_formula ~generic ~names:[] f
@@ -495,14 +500,15 @@ let applyFixpoint argument formula =
           MuFormula(name,args, ff lam (db + 1) body)
       | NuFormula(name,args,body) ->
           NuFormula(name,args, ff lam (db + 1) body)
-      | ApplicationFormula(DBFormula(n,db'),args) ->
+      | ApplicationFormula(DBFormula(lifts,n,db'),args) ->
           if db = db' then
-            (normalizeAbstractions lam argument args)
+            (assert (lifts = 0) ; normalizeAbstractions lam argument args)
           else
             f
       | AbstractionFormula(name,body) ->
           AbstractionFormula(name, (ff (name::lam) db body))
-      | DBFormula(_) -> failwith "Firstorderabsyn.applyFixpoint: encountered invalid DB."
+      | DBFormula(_) ->
+          failwith "Firstorderabsyn.applyFixpoint: encountered invalid DB."
       | _ -> (mapFormula (ff lam db) tf f)
   in
   try
