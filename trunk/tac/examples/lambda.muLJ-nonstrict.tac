@@ -31,76 +31,51 @@
 	(typeof G M T) =>
 	(context G) =>
 	(pi T'\ (typeof G M T') => (T = T'))".
-repeat(pi).
-imp.
+then(repeat(pi),imp).
 induction("G\M\T\ (context G => pi T'\ (typeof G M T' => (T = T')))").
 
 % Invariant => Goal.
-  simplify.
-  imp_l.
-  axiom.
-  then(pi_l,imp_l).
-  % TODO Two goals.
-  axiom.
-  then(eq_l,eq_r).
+  prove.
 
 % Invariant is invariant.
-  repeat(or_l).
+  then(repeat(or_l),simplify).
 
   % VAR.
-   simplify.
    then(mu_l("typeof _ _ _"),then(repeat(or_l),simplify)).
-   % TODO simplify should have done the job of the next tactic.
-   iterate(try(eq_l)).
-   induction("G\ bind G h T' => bind G h T0 => T0=T'",
+   induction("G\ pi h\t\t'\ bind G h t => bind G h t' => t=t'",
              "context _").
    % Goal IS the invariant.
+   repeat(pi_l).
    imp_l.
    axiom.
    imp_l.
-   axiom.
+   axiom("bind G h1 T").
    then(eq_l,eq_r).
    % VAR/mu(context): Invariance.
    then(or_l,simplify).
    mu_l.
-   then(or_l,then(repeat(orelse(sigma_l,and_l)),eq_l("nil = cons _ _"))).
-   % TODO repeat(eq_l) is bugged.
+   then(or_l,simplify).
    % Cons case of induction over ctxt.
    mu_l("bind _ _ _").
    then(or_l,simplify).
    mu_l.
    then(or_l,simplify).
-   eq_r.
-   then(pi_l,imp_l).
-   axiom.
-   false.
+   prove.
    mu_l("bind (cons _ _) _ _").
    then(or_l,simplify).
-   then(pi_l,imp_l).
+   prove.
+   weak_l("pi _").
+   % TODO prove.
+   then(repeat(pi_l),repeat(imp_l)).
    axiom.
-   false.
-   imp_l.
-   axiom.
-   imp_l.
-   axiom.
+   axiom("bind _ _ t").
    then(eq_l,eq_r).
 
   % APP.
-   simplify.
    mu_l("typeof _ _ _").
-   then(repeat(or_l),simplify).
-   eq_l.
-   imp_l.
-   axiom.
-   pi_l.
-   imp_l.
-   axiom.
-   eq_l.
-   eq_r.
-   eq_l.
+   prove.
 
   % LAM.
-   simplify.
    mu_l("typeof _ _ _").
    then(repeat(or_l),simplify).
    eq_l.
@@ -140,3 +115,4 @@ induction("G\M\T\ (context G => pi T'\ (typeof G M T' => (T = T')))").
    false.
 
 %Yay.
+
