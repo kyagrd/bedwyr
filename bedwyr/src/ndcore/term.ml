@@ -279,6 +279,7 @@ let get_var x = match observe x with
   | App _ -> assert false
   | _ -> assert false
 
+(** Raise Not_found if not naming hint is attached to the variable. *)
 let get_hint var =
   Hint.find (get_var var)
 
