@@ -4,27 +4,20 @@
 
 simplify.
 induction("x\ (even x);(even (s x))").
-or_l.
-then(left,axiom).
-then(right,axiom).
+prove.
 
 % Now for the proper proof of invariance.
-or_l.
+then(or_l,simplify).
 
   % Zero case.
-  then(eq_l,then(left,mu_r)).
+  then(left,mu_r).
   then(left,eq).
 
   % Heredity.
-  simplify.
   or_l.
   right.
   mu_r.
-  right.
-  sigma.
-  and.
-  eq.
-  axiom.
+  prove.
   left.
   axiom.
 
@@ -126,3 +119,4 @@ induction("x\ (nat x),(pi y\ (leq y x)=>(sigma h\ (half y h)))").
    axiom.
    simplify.
    then(sigma_r,axiom).
+
