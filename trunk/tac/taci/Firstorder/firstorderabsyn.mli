@@ -78,6 +78,8 @@ val string_of_definition : definition -> string
 val string_of_formula : generic:string list -> formula -> string
 val string_of_formula_ast : generic:string list -> formula -> string
 
+val eliminateNablas : term list -> formula -> formula
+
 val undoUnify : state -> unit
 val rightUnify : term -> term -> unifyresult
 val leftUnify : term -> term -> unifyresult

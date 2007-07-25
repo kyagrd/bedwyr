@@ -167,7 +167,7 @@ and string_of_formula ~generic ~names f =
         else
           (head ^ " " ^ tl')
     | DBFormula(l,n,i) ->
-        let rec name l = if l=0 then n else "lift:" ^ name (l-1) in name l 
+        let rec name l = if l=0 then n else "lift_" ^ name (l-1) in name l 
 
 and string_of_formula_ast ~generic f =
   let string_of_formula_ast = string_of_formula_ast ~generic in
@@ -204,7 +204,7 @@ and string_of_formula_ast ~generic f =
         "atom(" ^ head ^ args' ^ ")"
     | DBFormula(l,n,i) -> 
         let rec name l =
-          if l=0 then "#" ^ (string_of_int i) else "lift:" ^ name (l-1)
+          if l=0 then "#" ^ (string_of_int i) else "lift_" ^ name (l-1)
         in
           name l 
 
@@ -229,6 +229,7 @@ let rec abstract name formula =
   and formulaFun f = (mapFormula formulaFun termFun f) in
   AbstractionFormula(name, (formulaFun formula))
 
+(** The [var] should have a naming hint attached to it. *)
 let rec abstractVar var formula =
   let rec termFun t = Term.abstract var t
   and formulaFun f = (mapFormula formulaFun termFun f) in
@@ -237,7 +238,7 @@ let rec abstractVar var formula =
     let (name,_) = Option.get result in
     AbstractionFormula(name, formulaFun formula)
   else
-    formula
+    failwith "un-named variable"
 
 let dummyvar = Term.var ~ts:0 ~lts:0 ~tag:Term.Constant
 let rec abstractDummyWithoutLambdas formula =
@@ -281,6 +282,152 @@ type unifyresult =
     UnifyFailed
   | UnifySucceeded of state
   | UnifyError of string
+
+(**********************************************************************
+*nabla elimination:
+* Compute the normal form of (nabla tv_1..tv_n\ form).
+* The formula is not passed as an abstraction, but has been applied to [tv].
+* The list [tv] contains only nabla indices, but not necessarily
+* contiguous ones.
+* The list [pv] associates to one bound predicate name the local level
+* up to which it has already been raised.
+**********************************************************************)
+let eliminateNablas tv form =
+  let rec range_downto m n =
+    if m>n then m :: range_downto (m-1) n else []
+  in
+  let rec f pv tv form =
+    Printf.printf "Working on %s...\n"
+      (string_of_formula_ast ~generic:[] form) ;
+    let fresh () = Term.var ~ts:0 ~lts:0 ~tag:Term.Constant in
+    (* Abstract term [t] over variables [tv]. *)
+    let tf t =
+      Norm.deep_norm (List.fold_right Term.abstract tv t)
+    in
+    let g = f pv tv in
+      match form with
+        | AndFormula (a,b)         -> AndFormula (g a, g b)
+        | OrFormula  (a,b)         -> OrFormula  (g a, g b)
+        | ImplicationFormula (a,b) -> ImplicationFormula (g a, g b)
+        | EqualityFormula (u,v)    -> EqualityFormula (tf u, tf v)
+        | PiFormula    f -> PiFormula    (g f)
+        | SigmaFormula f -> SigmaFormula (g f)
+        | AbstractionFormula (name,_) ->
+            (* This should be used only immediately below a PI or SIGMA. *)
+            let name =
+              List.fold_left (fun name _ -> name^"'") name tv
+            in
+            let head = fresh () in
+            let x = Term.app head tv in
+              begin match apply [x] form with
+                | None ->
+                    failwith
+                      (Printf.sprintf "cannot apply: %s"
+                         (string_of_formula_ast ~generic:[] form))
+                | Some form ->
+                    let form = f pv tv form in
+                    let form = abstractVarWithoutLambdas head form in
+                      AbstractionFormula (name,form)
+              end
+        | NablaFormula form ->
+            let head = fresh () in
+            let tv = tv @ [head] in
+              begin match apply [head] form with
+                | None -> failwith "not a formula"
+                | Some form -> f pv tv form
+              end
+        | AtomicFormula (n,terms) when n="true" || n="false" -> form
+        | AtomicFormula (name,terms) ->
+            (* For undefined atoms, the only thing we can do
+              * is lifting the name.. *)
+            let terms = List.map tf terms in
+            let name =
+              List.fold_left (fun name _ -> "lift_"^name) name tv
+            in
+              AtomicFormula (name, terms)
+        | ApplicationFormula (head,terms) ->
+            let terms = List.map tf terms in
+              begin match head with
+                | MuFormula (name,argnames,body) ->
+                    let name =
+                      List.fold_left (fun name _ -> "lift_"^name) name tv
+                    in
+                    let argnames =
+                      List.map
+                        (fun name ->
+                           List.fold_left (fun name _ -> name^"'")
+                             name tv)
+                        argnames
+                    in
+                    let heads =
+                      List.fold_left
+                        (fun heads _ -> fresh () :: heads)
+                        [] argnames
+                    in
+                    (* Keep track the number of raisings that have occured
+                     * on that fixed point. *)
+                    let params = List.map (fun h -> Term.app h tv) heads in
+                    let pv = List.length tv :: pv in
+                      begin match apply params body with
+                        | None -> failwith "not a formula"
+                        | Some body ->
+                            let body = f pv tv body in
+                            let body =
+                              List.fold_right2
+                                (fun h name body ->
+                                   AbstractionFormula
+                                     (name,
+                                      abstractVarWithoutLambdas h body))
+                                heads argnames body
+                            in
+                              ApplicationFormula
+                                (MuFormula (name,argnames,body),
+                                 terms)
+                      end
+                | DBFormula (liftings,name,i) ->
+                    (* Number of nabla quantifications which have been
+                     * pushed down inside that fixed-point. *)
+                    let raisings = List.nth pv i in
+                    (* Number of nabla which have been pushed down from
+                     * within the fixed point. *)
+                    let inside_raisings = List.length tv - raisings in
+                    (* The values applied to that DBForm are of type
+                     *   t1 -> .. -> tm -> t'1 .. -> t'n ->
+                     *   o1 -> .. op -> alpha
+                     * where m is [raisings], [n] is the number of nablas
+                     * which have been pushed down from within the
+                     * fixed-point, and [p] is [liftings].
+                     * We should re-order the parameters of these values
+                     * in order to make them suitable for [liftings DB..]
+                     * which now has type
+                     *   (t'1 -> .. t'n -> o1 -> .. -> op ->
+                     *    t1 -> .. -> tm -> alpha) -> o *)
+                    let wrap t =
+                      Printf.printf "rai %d insi %d lift %d\n"
+                        raisings inside_raisings liftings ;
+                      let indices =
+                        (range_downto raisings 1) @
+                        (range_downto
+                           (raisings + inside_raisings + liftings)
+                           (raisings + 1))
+                      in
+                      Printf.printf "indices %s\n"
+                      (String.concat "::" (List.map string_of_int indices)) ;
+                      (* map nabla ?? *)
+                      let indices = List.map Term.db indices in
+                        Term.lambda (raisings + inside_raisings + liftings)
+                          (Term.app t indices)
+                    in
+                    let wrap t = Norm.deep_norm (wrap t) in
+                      ApplicationFormula
+                        (DBFormula (liftings+inside_raisings,name,i),
+                         List.map wrap terms)
+                | _ -> failwith "not yet supported"
+              end
+        | DBFormula _ | MuFormula _ | NuFormula _ ->
+            failwith "not a ground formula"
+  in
+    f [] tv form
 
 (********************************************************************
 *Right, Left:
@@ -502,7 +649,29 @@ let applyFixpoint argument formula =
           NuFormula(name,args, ff lam (db + 1) body)
       | ApplicationFormula(DBFormula(lifts,n,db'),args) ->
           if db = db' then
-            (assert (lifts = 0) ; normalizeAbstractions lam argument args)
+            (* We are computing
+             *   lambdas \ ... (lift lift p) args
+             * where p has to be replaced by argument,
+             * and the args have the (lambdas \ ..) prefix pushed down. *)
+            let argument =
+              if lifts = 0 then argument else
+              let fresh _ = Term.var ~ts:0 ~lts:0 ~tag:Term.Constant in
+              let heads = List.map fresh args in
+              let generics =
+                let rec mk = function 0 -> [] | n -> fresh () :: mk (n-1) in
+                  mk lifts
+              in
+              let args = List.map (fun h -> Term.app h generics) heads in
+              let abstractVar v f =
+                AbstractionFormula("x",abstractVarWithoutLambdas v f)
+              in
+                match apply args argument with
+                  | Some m ->
+                      List.fold_right abstractVar heads
+                        (eliminateNablas generics m)
+                  | None -> failwith "could not apply"
+            in
+              normalizeAbstractions lam argument args
           else
             f
       | AbstractionFormula(name,body) ->
