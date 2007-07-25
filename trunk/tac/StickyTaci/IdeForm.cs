@@ -351,6 +351,7 @@ namespace StickyTaci
           foreach(Logic l in Logics)
           {
             ToolStripItem t = mainMenuTacLogics.DropDownItems.Add(l.Key);
+            t.ToolTipText = l.Name;
             LogicHandler h = new LogicHandler(Ctrl, l);
             t.Click += new EventHandler(h.OnClick);
           }

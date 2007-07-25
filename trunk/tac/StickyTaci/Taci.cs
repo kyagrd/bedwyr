@@ -77,12 +77,25 @@ namespace StickyTaci
     private string m_Data;
     private string m_Path;
     private string m_Arguments;
-    
-    public Taci(string path, string arguments)
+    private string m_CurrentLogic = "";
+    public string CurrentLogic
     {
-      System.Diagnostics.Debug.WriteLine("Executing '" + path + arguments + "'.");
+      get
+      {
+        return m_CurrentLogic;
+      }
+      set
+      {
+        m_CurrentLogic = value;
+        m_Arguments = " --logic " + value + " --output xml";
+      }
+    }
+    
+    public Taci(string path, string logic)
+    {
       m_Path = path;
-      m_Arguments = arguments;
+      CurrentLogic = logic;
+      System.Diagnostics.Debug.WriteLine("Executing '" + path + m_Arguments + "'.");
 
       m_Commands.Add("#clear");
       m_Commands.Add("#debug");

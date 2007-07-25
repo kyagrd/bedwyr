@@ -28,16 +28,15 @@ namespace StickyTaci
   {
     private string m_Line = "";
 
-    private string m_CurrentLogic = "";
     public string CurrentLogic
     {
       get
       {
-        return m_CurrentLogic;
+        return Taci.CurrentLogic;
       }
       set
       {
-        m_CurrentLogic = value;
+        Taci.CurrentLogic = value;
       }
     }
 
@@ -108,6 +107,7 @@ namespace StickyTaci
       if(Taci == null)
       {
         m_Taci = new Taci(path, "--output xml --logic " + logic);
+        CurrentLogic = logic;
 
         Taci.Output += new Taci.IOHandler<string>(Taci_Output);
         Taci.Goal += new Taci.IOHandler<string>(Taci_Goal);
@@ -118,8 +118,7 @@ namespace StickyTaci
         Taci.Exit += new Taci.ExitHandler(Taci_Exit);
         Taci.Restart();
 
-        CurrentLogic = logic;
-
+        
         UpdateInfo();
 
         Form.Commands = Taci.Commands;
@@ -129,8 +128,7 @@ namespace StickyTaci
     private void UpdateInfo()
     {
       //Get information.  Yeah, this is dumb.
-      //TODO: Fix Taci parser to leave unparsed input
-      //      in the lexbuf.
+      //TODO: Fix Taci parser to leave unparsed input in the lexbuf.
       System.Threading.Thread.Sleep(100);
       Taci.Write(Taci.LOGICS + ".");
       System.Threading.Thread.Sleep(100);
@@ -140,6 +138,7 @@ namespace StickyTaci
       System.Threading.Thread.Sleep(100);
       Taci.Write(Taci.HELP + ".");
     }
+
     void Taci_Logic(Taci instance, Logic data)
     {
       if(instance == Taci)
@@ -372,7 +371,7 @@ namespace StickyTaci
     public void OnLogic(string name)
     {
       CurrentLogic = name;
-      Taci.Write(Taci.LOGIC + " \"" + name + "\".");
+      Taci.Restart();
       UpdateInfo();
       OnTacReset();
     }

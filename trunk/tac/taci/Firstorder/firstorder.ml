@@ -1031,6 +1031,42 @@ struct
     makeGeneralTactical "axiom" (matchLeft, "_") (axiomL Positive)
 
   (********************************************************************
+  *force:
+  * Force unification between two terms.
+  ********************************************************************)
+  let forceTactical session args =
+    match args with
+        Absyn.String(seq)::Absyn.String(term)::[] ->
+            let seqterm = parseTerm seq in
+            let unterm = parseTerm term in
+            if Option.isSome seqterm && Option.isSome unterm then
+              let seqterm = Option.get seqterm in
+              let unterm = Option.get unterm in
+              (* pretactic: simply unifies the two terms. *)
+              let pretactic = fun seq sc fc ->
+                match FOA.rightUnify seqterm unterm with
+                    FOA.UnifySucceeded(s) ->
+                      let fc' () =
+                        (FOA.undoUnify s;
+                        fc ())
+                      in
+                      sc [seq] (makeProofBuilder "force") fc'
+                  | FOA.UnifyFailed -> fc ()
+                  | FOA.UnifyError(s) ->
+                      (O.error (s ^ ".\n");
+                      fc ())
+              in
+              G.makeTactical pretactic
+            
+            else
+              (if Option.isNone seqterm then O.error "invalid sequent term.\n"
+              else ();
+              if Option.isNone unterm then O.error "invalid unification term.\n"
+              else ();
+              G.failureTactical)
+      | _ -> (G.invalidArguments "unify")
+
+  (********************************************************************
   *cut:
   ********************************************************************)
   let cutTactical session args =
@@ -2217,6 +2253,7 @@ struct
         ++ ("contract_l", contractL)
 
         ++ ("cut", cutTactical)
+        ++ ("force", forceTactical)
         ++ ("prove", proveTactical)
         ++ ("async", asyncTactical)
         ++ ("sync", syncTactical)

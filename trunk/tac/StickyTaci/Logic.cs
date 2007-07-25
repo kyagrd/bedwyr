@@ -22,7 +22,7 @@ using System.Text;
 
 namespace StickyTaci
 {
-  public class Logic : IComparable
+  public class Logic : IComparable<Logic>, IEquatable<Logic>
   {
     private string m_Name = "";
     public string Name
@@ -56,14 +56,13 @@ namespace StickyTaci
       Name = name;
     }
 
-    public int CompareTo(object o)
+    public bool Equals(Logic o)
     {
-      if(o is Logic)
-      {
-        Logic other = (Logic)o;
-        return Key.CompareTo(other.Key);
-      }
-      return -1;
+      return Key.Equals(o.Key);
+    }
+    public int CompareTo(Logic o)
+    {
+      return Key.CompareTo(o.Key);
     }
   }
 }
