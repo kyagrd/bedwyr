@@ -1,0 +1,106 @@
+Tac::taci
+
+  taci is the command line interface to the Tac system.  
+
+Usage:
+  taci may be invoked as follows:
+  
+    taci --logic logicname --output outputname
+
+  Where logicname is the name of the logic to load and outputname is the
+  name of the output module to use.  In general, when using taci from
+  the command line, one will not specify the output module; it will default
+  to the console output module.
+  
+  A list of available logics and output modules may be obtained as follows:
+  
+    taci --logics
+    taci --outputs
+  
+
+Logics:
+  There are 6 logics available in the Tac system.  The first of these,
+  "nologic", is a default module that only has stub functionality.  It is
+  intended
+
+
+
+Implementing a Logic:
+  Tac is a 2 level system that makes it easy to interact with a logic using
+  tactics and tacticals by automating those parts of the system that are common
+  to all logics.  The first level of the system is the "driver" that runs the
+  top-level interactive loop and encapsulates all access to the current logic.
+  The second level is the logic module itself.
+
+  The driver layer of the system is responsible for parsing toplevel input
+  from the command line and then interacting with the logic based on said input.
+  This level implements the input/output loop.  It parses the input using a
+  lexer/parser that is oblivious to the grammar of the current logic.  For this
+  reason any terms that are in the syntax of the logic must be quoted; these
+  terms can then be parsed by the logic in a context-specific manner.
+
+  Each logic is a module that matches a given interface.  
+
+  Implementing a new logic is as straightforward as creating a module that
+  implements a specific interface.  The interface that must be met is named
+  "Logic" and is specified in the file "tac/taci/logic.mli".  Essentially,
+  implementing a module that corresponds to this interface comes down to
+  defining the type of a "session", a "sequent", and a "proof", along with
+  various accessor functions that operate on these types, and a few values.
+
+  Types:
+    Session:
+      A session in Taci corresponds to the state of the logic.  That is to say,
+      the session should encapsulate all aspects of a logic that might change.
+      Constants need not be contained in the session.
+
+      A session should in general be considered a purely functional piece of data.
+      That is, a session should always be "valid"; if a session must be modified,
+      a new session should be constructed that reflects this modification.  Note
+      that because a session is expected to represent all aspects of a logic, any
+      change to the logic must necessarily be applicative.  However, because of
+      the way certain aspects of many logics are often represented (particularly
+      unification of logic or eigen variables) using destructive modification, a
+      session is allowed to permit referential updates provided that it can be put
+      back into a valid, unchanged state when needed. This is discussed more  
+      fully when the "undo" and "redo" functions are introduced.  
+
+    Sequent:
+      The sequent type represents a sequent in the logic being defined.  There
+      are no requirements placed on the type of the sequent, except in as far as
+      sequents are an aspect of a logic that must be reflected in the current
+      session.
+  
+    Proof:
+      The proof type represents a proof of a sequent in the logic being defined.
+      A proof must meet the same requirements as a sequent.
+
+  Values:
+    name: The "print" name of the logic.
+    info:
+      Information corresponding to the use of this logic.  This information is
+      displayed whenever the user uses the "#help." command.
+    start:
+      Information about the logic that should be displayed once at startup.
+    
+  Functions:
+    incl:
+      This function is invoked with the current session and a list of files
+      to include.  These included files are expected to contain logic-specific
+      syntax introducing, for example, new definitions.  They might also define
+      operator precedences if a logic supports such things.  The result of this
+      function should be a new session that reflects the new definitions, etc.
+      The given session should still be valid, and should still represent exactly the
+      session as it was before the function was called (see the description of the
+      session type).
+
+    reset:
+      This function is invoked with the current session.  It should generate a
+      new session that reflects the initial state (that is, one without a current
+      theorem, etc).  The given session again must remain unchanged.
+
+    
+  Once a logic has been implemented it must be registered with Tac.  To do
+  this an entry for the logic must be added to the logics_gen input file.
+  More information about how to accomplish this can be found in
+  "tac/logics_gen/README".
