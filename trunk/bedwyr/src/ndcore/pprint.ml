@@ -141,5 +141,6 @@ let term_to_string_preabstracted ~generic ~bound term =
   let len = List.length bound in
     match observe term with
       | Lam (n,term) ->
+          assert (len <= n) ;
           term_to_string_full ~generic ~bound (lambda (n-len) term)
       | _ -> assert (bound = []); term_to_string_full ~generic ~bound term
