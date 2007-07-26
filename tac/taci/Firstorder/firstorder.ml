@@ -479,7 +479,7 @@ struct
           match f with
               FOA.ImplicationFormula(l,r) ->
                 (ff (i + 1) l)
-            | FOA.DBFormula(_) ->
+            | FOA.DBFormula(_,_,0) ->
                 if (i mod 2) <> 0 then
                   raise NonMonotonic
                 else

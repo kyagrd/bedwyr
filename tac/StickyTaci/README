@@ -1,6 +1,10 @@
+===============================================================================
+
 Tac::StickyTaci
 
-  StickyTaci is a graphical user interface to the taci command line
+===============================================================================
+
+StickyTaci is a graphical user interface to the taci command line
 tool.  It is written in C# 2.0 using Windows Forms.  It has only been
 test on Windows XP.  It communicates with taci via pipes.
 

@@ -86,7 +86,7 @@ sig
   val validSequent : session -> bool
   val sequents : session -> sequent list
   val string_of_sequents : session -> string
-    
+
   type proof
   val proof : session -> proof proofbuilder
   val string_of_proofs : session -> string
@@ -103,7 +103,7 @@ end
 * way it more or less doesn't) a logic can only make use of the
 * generic tacticals defined in the GenericTacticals functor by creating
 * a structure implementing the below signature and then applying the
-* functor to it.
+* functor to it.  A better way should really be found.
 *
 * In general, to do so a logic will have lines similar to the following,
 * assuming it has already defined the required types session, sequent,
@@ -125,6 +125,10 @@ sig
   type logic_proof
 end
 
+(**********************************************************************
+*GenericTacticals:
+* A number of tacticals that are logic independent.
+**********************************************************************)
 module GenericTacticals : functor (L : LogicSig) -> functor (O : Output.Output) ->
 sig
   type logic_pretactic = (L.logic_sequent, L.logic_proof) pretactic
