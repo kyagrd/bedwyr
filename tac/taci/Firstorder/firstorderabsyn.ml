@@ -167,7 +167,7 @@ and string_of_formula ~generic ~names f =
         else
           (head ^ " " ^ tl')
     | DBFormula(l,n,i) ->
-        let rec name l = if l=0 then n else "lift_" ^ name (l-1) in name l 
+        let rec name l = if l=0 then n else "↑" ^ name (l-1) in name l 
 
 and string_of_formula_ast ~generic f =
   let string_of_formula_ast = string_of_formula_ast ~generic in
@@ -204,7 +204,7 @@ and string_of_formula_ast ~generic f =
         "atom(" ^ head ^ args' ^ ")"
     | DBFormula(l,n,i) -> 
         let rec name l =
-          if l=0 then "#" ^ (string_of_int i) else "lift_" ^ name (l-1)
+          if l=0 then "#" ^ (string_of_int i) else "↑" ^ name (l-1)
         in
           name l 
 
@@ -294,7 +294,7 @@ type unifyresult =
 **********************************************************************)
 let eliminateNablas tv form =
   let rec range_downto m n =
-    if m>n then m :: range_downto (m-1) n else []
+    if m>=n then m :: range_downto (m-1) n else []
   in
   let rec f pv tv form =
     Printf.printf "Working on %s...\n"
@@ -342,7 +342,7 @@ let eliminateNablas tv form =
               * is lifting the name.. *)
             let terms = List.map tf terms in
             let name =
-              List.fold_left (fun name _ -> "lift_"^name) name tv
+              List.fold_left (fun name _ -> "↑"^name) name tv
             in
               AtomicFormula (name, terms)
         | ApplicationFormula (head,terms) ->
@@ -350,7 +350,7 @@ let eliminateNablas tv form =
               begin match head with
                 | MuFormula (name,argnames,body) ->
                     let name =
-                      List.fold_left (fun name _ -> "lift_"^name) name tv
+                      List.fold_left (fun name _ -> "↑"^name) name tv
                     in
                     let argnames =
                       List.map
@@ -403,7 +403,8 @@ let eliminateNablas tv form =
                      *   (t'1 -> .. t'n -> o1 -> .. -> op ->
                      *    t1 -> .. -> tm -> alpha) -> o *)
                     let wrap t =
-                      Printf.printf "rai %d insi %d lift %d\n"
+                      Printf.printf
+                      "raisings\t%d\ninside_raisings\t%d\nliftings\t%d\n"
                         raisings inside_raisings liftings ;
                       let indices =
                         (range_downto raisings 1) @
@@ -411,9 +412,11 @@ let eliminateNablas tv form =
                            (raisings + inside_raisings + liftings)
                            (raisings + 1))
                       in
-                      Printf.printf "indices %s\n"
-                      (String.concat "::" (List.map string_of_int indices)) ;
-                      (* map nabla ?? *)
+                      Printf.printf "indices\t\t[%s]\n"
+                        (String.concat "::" (List.map string_of_int indices)) ;
+                      (* map nabla ??
+                       * TODO using lambda is stupid, indices have to be
+                       * updated inside t *)
                       let indices = List.map Term.db indices in
                         Term.lambda (raisings + inside_raisings + liftings)
                           (Term.app t indices)
