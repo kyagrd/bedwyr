@@ -475,20 +475,23 @@ struct
       ****************************************************************)
       let checkMonotonicity body =
         let tf t = t in
-        let rec ff i f =
+        let rec ff db neg f =
           match f with
               FOA.ImplicationFormula(l,r) ->
-                (ff (i + 1) l)
-            | FOA.DBFormula(_,_,0) ->
-                if (i mod 2) <> 0 then
+                (ff db (neg + 1) l)
+            | FOA.MuFormula(_,_,body)
+            | FOA.NuFormula(_,_,body) ->
+                (ff (db + 1) neg body)
+            | FOA.DBFormula(_,_,db') ->
+                if (db = db') && (neg mod 2) <> 0 then
                   raise NonMonotonic
                 else
                   f
-            | _ -> FOA.mapFormula (ff i) tf f
+            | _ -> FOA.mapFormula (ff db neg) tf f
         in
 
         try
-          (ignore (ff 0 body);
+          (ignore (ff 0 0 body);
           true)
         with
           NonMonotonic -> false
@@ -731,16 +734,17 @@ struct
   * list of the proofs (strings) of the arguments (arg1...argN) to the
   * inference rule and returns a proof of the rule thusly:
   *
-  *   rule(arg1,arg2,...,argN)
+  *   rule<sequent>(arg1,arg2,...,argN)
   *
   * Unfortunately it doesn't do any tabbing or suchlike, so the output
   * is really ugly.
   ********************************************************************)
-  let makeProofBuilder s = fun proofs ->
+  let makeProofBuilder name sequent = fun proofs ->
+    let seq = string_of_sequent sequent in
     if (Listutils.empty proofs) then
-      s
+      name ^ "<" ^ seq ^ ">"
     else
-      s ^ "(" ^ (String.concat ", " proofs) ^ ")"
+      name ^ "<" ^ seq ^ ">" ^ "(" ^ (String.concat ", " proofs) ^ ")"
 
   (********************************************************************
   *findFormula:
@@ -830,7 +834,7 @@ struct
         let () = O.output
           ((ind !indent) ^ name ^ ":\n" ^ (string_of_sequents' s) ^ "\n") in
         *)
-        sc s (makeProofBuilder name) k
+        sc s (makeProofBuilder name sequent) k
       in
       let rec fc' left right () =
         match (matcher right sequent) with
@@ -1036,8 +1040,8 @@ struct
   ********************************************************************)
   let forceTactical session args =
     match args with
-        Absyn.String(seq)::Absyn.String(term)::[] ->
-            let seqterm = parseTerm seq in
+        Absyn.String(seqstring)::Absyn.String(term)::[] ->
+            let seqterm = parseTerm seqstring in
             let unterm = parseTerm term in
             if Option.isSome seqterm && Option.isSome unterm then
               let seqterm = Option.get seqterm in
@@ -1050,7 +1054,10 @@ struct
                         (FOA.undoUnify s;
                         fc ())
                       in
-                      sc [seq] (makeProofBuilder "force") fc'
+                      let pb =
+                        makeProofBuilder
+                          ("force<\"" ^ seqstring ^ "\", \"" ^ term ^ "\">") seq in 
+                      sc [seq] pb fc'
                   | FOA.UnifyFailed -> fc ()
                   | FOA.UnifyError(s) ->
                       (O.error (s ^ ".\n");
@@ -1081,7 +1088,8 @@ struct
               let rhs = getSequentRHS sequent in
               let s1 = Sequent(lvl, lhs, [f']) in
               let s2 = Sequent(lvl, lhs @ [f'], rhs) in
-              sc [s1; s2] (makeProofBuilder ("cut<" ^ (string_of_formula f') ^ ">")) fc
+              let pb = makeProofBuilder ("cut<" ^ s ^ ">") sequent in
+              sc [s1; s2] pb fc
             in
             G.makeTactical pretactic
           else
@@ -1434,7 +1442,7 @@ struct
                   let l = FOA.apply args' (Option.get body') in
                   if (Option.isSome l) then
                     let s2 = Sequent(lvl', [Formula(i, b, Option.get l)], [Formula(i, b, Option.get r)]) in
-                    (sc [s1;s2])
+                    sc [s1;s2] sequent
                   else
                     (O.impossible "unable to apply arguments to mu formula.\n";
                     fc ())
@@ -1451,7 +1459,8 @@ struct
             (O.impossible "invalid formula.\n";
             fc ())
       in
-      let sc' s = sc s (makeProofBuilder "induction") fc in
+      let sc' s seq = sc s (makeProofBuilder ("induction<" ^ inv ^ ">") seq) fc in
+
       match (matchLeft template Nonfocused None sequent) with
         Some(f,before,after,lhs,rhs) ->
           let zip l = before @ l @ after in
@@ -1557,8 +1566,7 @@ struct
       let coind f zip lhs rhs sc fc =
         match f with
         | Formula(i,b,
-            FOA.ApplicationFormula(FOA.NuFormula(name,argnames,body),args))
-          ->
+            FOA.ApplicationFormula(FOA.NuFormula(name,argnames,body),args)) ->
             let s' = parseFormula (getSessionDefinitions session) inv in
             if Option.isSome s' then
               let s' = (Option.get s') in
@@ -1592,7 +1600,7 @@ struct
                                "coinduction: result: %s\n"
                                (string_of_formula_ast
                                   (Formula(0,(Nonfocused,Positive),r))));
-                    (sc [s1;s2])
+                    (sc [s1;s2] sequent)
                   else
                     (O.impossible "unable to apply arguments to nu formula.\n";
                     fc ())
@@ -1609,11 +1617,13 @@ struct
             O.impossible "invalid formula.\n";
             fc ()
       in
-      let sc' s = sc s (makeProofBuilder "coinduction") fc in
-        match (matchRight template Nonfocused None sequent) with
-        | Some(f,before,after,lhs,rhs) ->
+
+      let sc' s seq = sc s (makeProofBuilder ("coinduction<" ^ inv ^ ">") seq) fc in
+      
+      match (matchRight template Nonfocused None sequent) with
+          Some(f,before,after,lhs,rhs) ->
             let zip l = before @ l @ after in
-              coind f zip lhs rhs sc' fc
+            coind f zip lhs rhs sc' fc
         | None -> fc ()
     in
     
