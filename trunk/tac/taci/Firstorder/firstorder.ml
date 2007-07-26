@@ -739,12 +739,18 @@ struct
   * Unfortunately it doesn't do any tabbing or suchlike, so the output
   * is really ugly.
   ********************************************************************)
-  let makeProofBuilder name sequent = fun proofs ->
+  let makeProofBuilder name formula sequent = fun proofs ->
     let seq = string_of_sequent sequent in
+    let f =
+      if Option.isSome formula then
+        (string_of_formula (Option.get formula))
+      else
+        "" in
+
     if (Listutils.empty proofs) then
-      name ^ "<" ^ seq ^ ">"
+      name ^ "<" ^ f ^ "><" ^ seq ^ ">"
     else
-      name ^ "<" ^ seq ^ ">" ^ "(" ^ (String.concat ", " proofs) ^ ")"
+      name ^ "<" ^ f ^ "><" ^ seq ^ ">" ^ "(" ^ (String.concat ", " proofs) ^ ")"
 
   (********************************************************************
   *findFormula:
@@ -829,12 +835,12 @@ struct
   
   let makeTactical name matcher tactic session =
     let tactic' = fun sequent sc fc ->
-      let sc' k s =
+      let sc' formula k s =
         (*
         let () = O.output
           ((ind !indent) ^ name ^ ":\n" ^ (string_of_sequents' s) ^ "\n") in
         *)
-        sc s (makeProofBuilder name sequent) k
+        sc s (makeProofBuilder name (Some formula) sequent) k
       in
       let rec fc' left right () =
         match (matcher right sequent) with
@@ -846,7 +852,7 @@ struct
               (fc' (left'' @ [f]) (Some right')) ())
             in
             let () = incr indent in
-            tactic session sequent f zip lhs rhs sc' fc''
+            tactic session sequent f zip lhs rhs (sc' f) fc''
         | None ->
             fc ()
       in
@@ -978,7 +984,7 @@ struct
             if Option.isSome template then
               let (t,_) = Option.get template in
               let matcher = (matchLeft t Nonfocused) in
-              let tac = (makeTactical ("axiom_r<" ^ (string_of_formula f) ^ ">") matcher tactic session) in
+              let tac = (makeTactical ("axiom_r") matcher tactic session) in
               (tac [seq] (fun l _ _ _ -> sc l) fc)
                 (* TODO the fix on axiomL was not done here,
                  * is that fine ? *)
@@ -1056,7 +1062,9 @@ struct
                       in
                       let pb =
                         makeProofBuilder
-                          ("force<\"" ^ seqstring ^ "\", \"" ^ term ^ "\">") seq in 
+                          ("force<\"" ^ seqstring ^ "\", \"" ^ term ^ "\">")
+                          None
+                          seq in 
                       sc [seq] pb fc'
                   | FOA.UnifyFailed -> fc ()
                   | FOA.UnifyError(s) ->
@@ -1088,7 +1096,7 @@ struct
               let rhs = getSequentRHS sequent in
               let s1 = Sequent(lvl, lhs, [f']) in
               let s2 = Sequent(lvl, lhs @ [f'], rhs) in
-              let pb = makeProofBuilder ("cut<" ^ s ^ ">") sequent in
+              let pb = makeProofBuilder ("cut<" ^ s ^ ">") None sequent in
               sc [s1; s2] pb fc
             in
             G.makeTactical pretactic
@@ -1442,7 +1450,7 @@ struct
                   let l = FOA.apply args' (Option.get body') in
                   if (Option.isSome l) then
                     let s2 = Sequent(lvl', [Formula(i, b, Option.get l)], [Formula(i, b, Option.get r)]) in
-                    sc [s1;s2] sequent
+                    sc [s1;s2] f sequent
                   else
                     (O.impossible "unable to apply arguments to mu formula.\n";
                     fc ())
@@ -1459,7 +1467,8 @@ struct
             (O.impossible "invalid formula.\n";
             fc ())
       in
-      let sc' s seq = sc s (makeProofBuilder ("induction<" ^ inv ^ ">") seq) fc in
+      let sc' s f seq =
+        sc s (makeProofBuilder ("induction<" ^ inv ^ ">") (Some f) seq) fc in
 
       match (matchLeft template Nonfocused None sequent) with
         Some(f,before,after,lhs,rhs) ->
@@ -1600,7 +1609,7 @@ struct
                                "coinduction: result: %s\n"
                                (string_of_formula_ast
                                   (Formula(0,(Nonfocused,Positive),r))));
-                    (sc [s1;s2] sequent)
+                    (sc [s1;s2] f sequent)
                   else
                     (O.impossible "unable to apply arguments to nu formula.\n";
                     fc ())
@@ -1618,7 +1627,8 @@ struct
             fc ()
       in
 
-      let sc' s seq = sc s (makeProofBuilder ("coinduction<" ^ inv ^ ">") seq) fc in
+      let sc' s f seq =
+        sc s (makeProofBuilder ("coinduction<" ^ inv ^ ">") (Some f) seq) fc in
       
       match (matchRight template Nonfocused None sequent) with
           Some(f,before,after,lhs,rhs) ->
