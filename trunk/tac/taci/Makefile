@@ -28,6 +28,7 @@ logics_gen.ml: ../logics_gen/bin/Logics.in
 	../logics_gen/logics_gen --input $(<) --output logics_gen
 
 clean:
+	make -C ../logics_gen clean
 	rm -f *.cm* Nologic/*.cm* Propositional/*.cm* Firstorder/*.cm*
 	rm -f *.o Nologic/*.o Propositional/*.o Firstorder/*.o
 	rm -f toplevellexer.ml toplevelparser.ml toplevelparser.mli
