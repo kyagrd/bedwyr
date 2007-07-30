@@ -297,8 +297,8 @@ let eliminateNablas tv form =
     if m>=n then m :: range_downto (m-1) n else []
   in
   let rec f pv tv form =
-    Printf.printf "Working on %s...\n"
-      (string_of_formula_ast ~generic:[] form) ;
+    (* Printf.printf "Working on %s...\n"
+      (string_of_formula_ast ~generic:[] form) ; *)
     let fresh () = Term.var ~ts:0 ~lts:0 ~tag:Term.Constant in
     (* Abstract term [t] over variables [tv]. *)
     let tf t =
@@ -392,7 +392,8 @@ let eliminateNablas tv form =
                      * within the fixed point. *)
                     let inside_raisings = List.length tv - raisings in
                     (* The values applied to that DBForm are of type
-                     *   t1 -> .. -> tm -> t'1 .. -> t'n ->
+                     *   t1 -> .. -> tm ->
+                     *   t'1 .. -> t'n ->
                      *   o1 -> .. op -> alpha
                      * where m is [raisings], [n] is the number of nablas
                      * which have been pushed down from within the
@@ -402,24 +403,16 @@ let eliminateNablas tv form =
                      * which now has type
                      *   (t'1 -> .. t'n -> o1 -> .. -> op ->
                      *    t1 -> .. -> tm -> alpha) -> o *)
+                    let rec init n =
+                      (* Create a list of [n] fresh variables. *)
+                      if n = 0 then [] else fresh () :: init (n-1)
+                    in
+                    let outside = init raisings in
+                    let inside = init (inside_raisings+liftings) in
+                    let dst = inside@outside in
+                    let src = outside@inside in
                     let wrap t =
-                      Printf.printf
-                      "raisings\t%d\ninside_raisings\t%d\nliftings\t%d\n"
-                        raisings inside_raisings liftings ;
-                      let indices =
-                        (range_downto raisings 1) @
-                        (range_downto
-                           (raisings + inside_raisings + liftings)
-                           (raisings + 1))
-                      in
-                      Printf.printf "indices\t\t[%s]\n"
-                        (String.concat "::" (List.map string_of_int indices)) ;
-                      (* map nabla ??
-                       * TODO using lambda is stupid, indices have to be
-                       * updated inside t *)
-                      let indices = List.map Term.db indices in
-                        Term.lambda (raisings + inside_raisings + liftings)
-                          (Term.app t indices)
+                      List.fold_right Term.abstract dst (Term.app t src)
                     in
                     let wrap t = Norm.deep_norm (wrap t) in
                       ApplicationFormula
