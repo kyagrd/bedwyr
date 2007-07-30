@@ -2059,11 +2059,8 @@ struct
       (* Compute the nabla-normal form of every formula in the sequent.
        * it may be more convenient to be able to target a specific one. *)
       let abstract (Formula(i,m,form)) =
-        Printf.printf "at local level %d\n" i ;
         let tv = List.map Term.nabla (List.rev (n_downto_1 i)) in
         let form = FOA.eliminateNablas tv form in
-          Printf.printf "abstracted into %s\n"
-            (FOA.string_of_formula_ast ~generic:[] form) ;
           Formula(0,m,form)
       in
         Sequent (level,List.map abstract lhs, List.map abstract rhs)
