@@ -8,6 +8,19 @@ let debug = ref false
 let filename = ref None
 
 let () =
+  let path =
+    let s = Sys.getenv "PATH" in
+      Str.split (Str.regexp_string ":") s
+  in
+    try
+      ignore (List.find Sys.file_exists (List.map (fun d -> d^"/taci") path))
+    with
+      | Not_found ->
+          Printf.eprintf "Didn't find \"taci\" in $PATH!" ;
+          exit 1
+
+
+let () =
   Arg.parse
     [ "--debug", Arg.Set debug, "Turn debugging on." ]
     (fun f -> filename := Some f)
