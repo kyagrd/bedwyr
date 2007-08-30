@@ -59,12 +59,41 @@ let get_font ~size tag choices =
 let window =
   let w = openTk () in
 
-    (* Some general settings *)
+    (* Some general settings.
+     * Thanks to the de-uglification guide for the style:
+     * http://matt.gushee.net/rg/items/4 *)
     Encoding.system_set "utf-8" ;
     ignore (get_font "guifont" ~size:8
               ["sans"; "verdana"; "lucida"; "bitstream vera sans"]) ;
-    Option.add ~path:"*Label.font" "guifont" ;
-    Option.add ~path:"*Button.font" "guifont" ;
+    ignore (get_font "textfont" ~size:9
+              ["lettergothic"; "lucida typewriter";
+               "bitstream vera sans mono"; "courier"]) ;
+
+    Option.add ~path:"*Menu.font" "guifont";
+    Option.add ~path:"*Label.font" "guifont";
+    Option.add ~path:"*Message.font" "guifont";
+    Option.add ~path:"*Button.font" "textfont";
+    Option.add ~path:"*Radiobutton.font" "guifont";
+    Option.add ~path:"*Checkbutton.font" "guifont";
+    Option.add ~path:"*Text.font" "textfont";
+    Option.add ~path:"*Canvas.font" "textfont";
+    Option.add ~path:"*Listbox.font" "textfont";
+    Option.add ~path:"*Entry.font" "textfont";
+
+    Option.add ~path:"*Text.borderWidth" "1";
+    Option.add ~path:"*Canvas.borderWidth" "1";
+    Option.add ~path:"*Button.borderWidth" "1";
+    Option.add ~path:"*Scrollbar.borderWidth" "1";
+    Option.add ~path:"*Entry.borderWidth" "1";
+    Option.add ~path:"*Listbox.borderWidth" "1";
+    Option.add ~path:"*Menu.borderWidth" "1";
+    Option.add ~path:"*Menu.activeBorderWidth" "1";
+    Option.add ~path:"*Menu.tearOff" "false";
+    Option.add ~path:"*Listbox.selectBorderWidth" "0";
+    Option.add ~path:"*Listbox.selectBackground" "#0000a0";
+    Option.add ~path:"*Listbox.selectForeground" "#ffffff";
+    Option.add ~path:"*Listbox.background" "#eeeeee" ;
+    Option.add ~path:"*Text.background" "#eeeeee" ;
 
     Wm.title_set w (Printf.sprintf "Stekki: %s" filename) ;
     w
