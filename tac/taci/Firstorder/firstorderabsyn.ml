@@ -167,7 +167,7 @@ and string_of_formula ~generic ~names f =
         else
           (head ^ " " ^ tl')
     | DBFormula(l,n,i) ->
-        let rec name l = if l=0 then n else "↑" ^ name (l-1) in name l 
+        let rec name l = if l=0 then n else "lift_" ^ name (l-1) in name l 
 
 and string_of_formula_ast ~generic f =
   let string_of_formula_ast = string_of_formula_ast ~generic in
@@ -204,7 +204,7 @@ and string_of_formula_ast ~generic f =
         "atom(" ^ head ^ args' ^ ")"
     | DBFormula(l,n,i) -> 
         let rec name l =
-          if l=0 then "#" ^ (string_of_int i) else "↑" ^ name (l-1)
+          if l=0 then "#" ^ (string_of_int i) else "lift_" ^ name (l-1)
         in
           name l 
 
@@ -342,7 +342,7 @@ let eliminateNablas tv form =
               * is lifting the name.. *)
             let terms = List.map tf terms in
             let name =
-              List.fold_left (fun name _ -> "↑"^name) name tv
+              List.fold_left (fun name _ -> "lift_"^name) name tv
             in
               AtomicFormula (name, terms)
         | ApplicationFormula (head,terms) ->
@@ -350,7 +350,7 @@ let eliminateNablas tv form =
               begin match head with
                 | MuFormula (name,argnames,body) ->
                     let name =
-                      List.fold_left (fun name _ -> "↑"^name) name tv
+                      List.fold_left (fun name _ -> "lift_"^name) name tv
                     in
                     let argnames =
                       List.map
