@@ -705,12 +705,22 @@ struct
   ********************************************************************)
   let makeExistentialVar hint lvl lts =
     let hint = String.capitalize hint in
-    let var = Term.fresh ~name:hint ~lts:lts ~ts:lvl ~tag:Term.Logic in
+    let var = Term.fresh ~name:hint ~lts:0 ~ts:lvl ~tag:Term.Logic in
+    let rec raise_over x n =
+      if n = 0 then x else
+        Term.app (raise_over x (n-1)) [Term.nabla n]
+    in
+    let var = raise_over var lts in
     (lvl, var)
 
   let makeUniversalVar hint lvl lts =
     let lvl = lvl+1 in
-    let var = Term.fresh ~name:hint ~lts:lts ~ts:lvl ~tag:Term.Eigen in
+    let var = Term.fresh ~name:hint ~lts:0 ~ts:lvl ~tag:Term.Eigen in
+    let rec raise_over x n =
+      if n = 0 then x else
+        Term.app (raise_over x (n-1)) [Term.nabla n]
+    in
+    let var = raise_over var lts in
     (lvl, var)
 
   let makeNablaVar lvl i =
@@ -1753,6 +1763,14 @@ struct
     in
     (makeSimpleTactical "contract_l" (matchLeft, "_") tactic)
   
+  let rotateL session params seqs success failure =
+    match seqs with
+      | [] -> failure ()
+      | (Sequent (i,l::ltl,r))::tl ->
+          success [Sequent (i,ltl@[l],r)] tl (fun p -> p) failure
+
+  let rotateR = rotateL
+
   let contractR =
     let tactic session seq f zip lhs rhs sc fc =
       let lvl = getSequentLevel seq in
@@ -2154,10 +2172,12 @@ struct
           ts
             ++ ("weak_r", weakR)
             ++ ("contract_r", contractR)
+            ++ ("rotate_r", rotateR)
       in
         ts
           ++ ("weak_l", weakL)
           ++ ("contract_l", contractL)
+          ++ ("rotate_l", rotateL)
     in
 
     (*  Choose which disjunction tacticals to supply based
