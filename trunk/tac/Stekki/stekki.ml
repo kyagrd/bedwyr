@@ -137,16 +137,17 @@ let before,after,output,reset,load,save =
     Text.configure ~state:`Disabled output ;
 
     (* Pack the output on the right. *)
-    pack ~side:`Right ~fill:`Y ~expand:true [output_scroll] ;
-    pack ~side:`Right ~fill:`Both ~expand:true [output] ;
+    pack ~side:`Right ~expand:false ~fill:`Y    [output_scroll] ;
+    pack ~side:`Right ~expand:true  ~fill:`Both [output] ;
 
     (* Pack in the left frame. *)
-    pack ~side:`Right ~expand:true ~fill:`Y    [before_scroll] ;
-    pack ~side:`Right ~expand:true ~fill:`Both [before] ;
-    pack ~side:`Top   ~expand:true ~fill:`X [before_frame] ;
-    pack ~side:`Right ~expand:true ~fill:`Y    [after_scroll] ;
-    pack ~side:`Right ~expand:true ~fill:`Both [after] ;
-    pack ~side:`Top   ~expand:true ~fill:`Both [after_frame] ;
+    pack ~side:`Right ~expand:false ~fill:`Y    [before_scroll] ;
+    pack ~side:`Right ~expand:true  ~fill:`Both [before] ;
+    pack ~side:`Top   ~expand:false ~fill:`X    [before_frame] ;
+
+    pack ~side:`Right ~expand:false ~fill:`Y    [after_scroll] ;
+    pack ~side:`Right ~expand:true  ~fill:`Both [after] ;
+    pack ~side:`Top   ~expand:true  ~fill:`Both [after_frame] ;
 
     pack ~side:`Left [reset;load;save] ;
     pack [buttons] ;
