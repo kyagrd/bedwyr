@@ -3,266 +3,286 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
   <head>
     <title>SLIMMER</title>
-    <link href="style.css" rel="stylesheet" type="text/css"/>
-  </head>
+    <link href="slimmer.css" rel="stylesheet" type="text/css"/>
+</head>
 
-  <body>
-    <div id="header">
-      <h1 class="title">SLIMMER</h1>
-      <h2 class="subtitle">Sophisticated Logic Implementations for Modeling and Mechanical Reasoning</h2>
-    </div>
+<body>
+<h1 align=center>SLIMMER: <br/>
+Sophisticated Logic Implementations for Modeling and Mechanical Reasoning</h1>
 
-    <div class="section">
-      <h2 class="title">
-        The SLIMMER Project
-      </h2>
+<h5 align=center>
+<b>Contents:</b>
+<a href="#description">description</a> /
+<a href="#people">people</a> /
+<a href="#funding">funding</a> /
+<a href="#code">code</a> /
+<a href="#publications">publications</a> /
+<a href="#links">links</a> /
+<a href="#events">events</a>
+</h4>
 
-      <p class="body">
-      SLIMMER is a collaborative project between INRIA, France and the 
-      University of Minnesota. This project concerns applications of proof
-      search broadly construed&#8212;SLIMMER is an acronym for "Sophisticated 
-      Logic Implementations for Modeling and MEchanical Reasoning."  The
-      current focus of the research is on developing and implementing a
-      formal framework for the specification of various kinds of
-      computational systems and for formally reasoning about properties of
-      these specifications. Target specification languages are those that
-      typically involve high-levels of abstraction and symbolic
-      computation. Recent work has illustrated that while logic can be used
-      to both specify and reason about computation systems, specification
-      and reasoning demand different support from underlying
-      implementations. This project brings together researchers who are
-      actively designing specification and reasoning systems as well as
-      developing implementation of such logics.  
-      </p>
-    </div>
 
-    <div class="section">
-      <h2 class="title">
-        Funding
-      </h2>
+<h2><a name="description">Description</a></h2>
 
-      <p class="body">
-      Financial support for the project has been obtained from INRIA (for
-      the French side) and the National Science Foundation (for the
-      U.S. side). This funding is 
-      presently in the form of grants that support travel for the
-      project personnel between the two sites. The support from INRIA is
-      provided via its "Equipes Associ&eacute;es" program, with the
-      recognition of SLIMMER as an Associated Teams project. The
-      National Science Foundation support
-      derives from the CISE Directorate and the Office of International
-      Science and Engineering under Grant No. 0429572. Of course, the
-      opinions, findings, and conclusions or recommendations expressed
-      in this material are those of the project participants and do not
-      necessarily reflect the views of INRIA or the National Science
-      Foundation. 
-      </p>
-    </div>
+<p>
+The SLIMMER project is currently focused on developing and
+implementing formal frameworks for the specification of various kinds
+of computational systems and for formally reasoning about properties
+of these specifications.
+Target specification languages are those that typically involve
+high-levels of abstraction and symbolic computation.
+When symbolic computations require bindings within linguistic
+expressions, the <em>lambda-tree syntax</em> approach to
+<em>higher-order abstract syntax</em> is used.
+The project is also focusing on the relational style of specifications
+that are commonly used to specify <em>structured operational
+semantics</em> and <em>typing judgments.</em>
+System building within this project have typically involved the
+implication of <em>higher-order pattern unification</em> and of
+backtracking proof search engines (as is found in, for example, in
+<a href="http://www.lix.polytechnique.fr/Labo/Dale.Miller/lProlog/">&lambda;Prolog</a>.
+</p>
 
-    <div class="section">
-      <h2 class="title">Personnel</h2>
+<p>
+One use of the systems that we are building is the mechanization of
+metatheory and its use in reasoning about programming and
+specification languages.  Such system may be useful in addressing the <a
+href="http://alliance.seas.upenn.edu/~plclub/cgi-bin/poplmark/index.php?title=The_POPLmark_Challenge">POPLmark
+Challenge</a>.  An approach to mechanizing metatheory that is related
+to the perspective we take here can be found in the 2002 ACM ToCL
+paper by McDowell and Miller (see reference <a href="#publications">below</a>).
+</p>
+
+<h2><a name="people">People</a></h2>
+<ul>
+<li>From the Australian National University: <a
+href="http://users.rsise.anu.edu.au/~tiu/">Alwen Tiu</a>.</li> 
+
+<li> From the INRIA project-team <a
+href="http://www.lix.polytechnique.fr/Labo/Dale.Miller/parsifal/">Parsifal</a>:
+<a href="http://www.lix.polytechnique.fr/~dbaelde">David Baelde</a>, 
+<a href="http://www.lix.polytechnique.fr/Labo/Dale.Miller/">Dale Miller</a>,
+<a href="http://www.eleves.ens.fr/home/saurin/">Alexis Saurin</a>.
+</li>
+
+<li> From the University of Minnesota <a href="http://teyjus.cs.umn.edu/">Teyjus</a>
+team: 
+<a href="http://www.cs.umn.edu/~agacek/">Andrew Gacek</a>, 
+<a href="http://www.cs.umn.edu/~gopalan/">Gopalan Nadathur</a>, 
+Zachary Snow, and 
+<a href="http://www.cs.umn.edu/~xqi/">Xiaochu Qi</a>.
+</li> 
+</ul>
+
+<div class="section">
+<h2><a name="funding">Funding</a></h2>
+
+<p class="body">
+Financial support for the project has been obtained from INRIA via its
+``Equipes Associ&eacute;es'' program.  Matching funds have been
+contributed by the National Science Foundation (CISE Directorate and
+the Office of International Science and Engineering, Grant
+No. 0429572).  The opinions, findings, and conclusions or
+recommendations expressed in this material are those of the project
+participants and do not necessarily reflect the views of INRIA or the
+National Science Foundation.
+</p>
+</div>
+
+<div class="section">
+<h2><a name="code">Code</a></h2>
+
+<p class="body">
+<ul>
+
+<li>
+Version 1.1 of <a href="bedwyr">Bedwyr</a> was released in February
+2007 (following the initial release of Version 1.0 in November 2006).
+This open source system is hosted on INRIA's GForge system under the
+<a href="http://gforge.inria.fr/scm/?group_id=367">Slimmer project<a/>.
+This OCaml system was developed by David Baelde and Andrew Gacek with
+help from Axelle Ziegler and code for pattern unification code
+extracted from the Teyjus system.  <a href="bedwyr">Read more</a>.
+</li>
+
+<li>
+During the summer of 2007, the two graduate students David Baelde
+(France) and Zachary Snow (USA), worked together to develop the Taci
+system.  This system is intended as a flexible tactical style prover
+in which a range of logics and proof systems could be specified and
+explored.  A couple of user interfaces were also developed (one using
+C# and the other Tk/Tcl).  While these system are intended for
+``in-house'' prototyping, the code is available via <a
+href="http://gforge.inria.fr/plugins/scmsvn/viewcvs.php/trunk/tac/?root=slimmer">svn</a>.
+</li>
+
+
+<li>
+Gopalan Nadathur and Natalie Linnell (University of Minnesota) have
+posted their <a
+href="http://www-users.cs.umn.edu/~gopalan/code/ho-pattern-unif.tar.gz"
+>code</a>
+for <em>An implementation of Higher-Order Pattern Unification in
+SML</em>.
+</li>
+
+<li>
+Alwen Tiu's SML code for the <a
+href="http://www.lix.polytechnique.fr/~tiu/lincproject/download.htm">Level
+0/1</a> prover.  This system has largely been superseded by the Bedwyr
+system.
+</li>
+</ul>
+</p>
+</div>
+
+
+<h2><a name="publications">Publications</a></h2>
+
+<ul>
+<div class=even>
+<li> Raymond
+McDowell and Dale Miller, <b>Reasoning with
+Higher-Order Abstract Syntax in a Logical Framework,</b> ACM
+Transactions on Computational Logic, 3(1) (January 2002), 80 - 136 (<a
+href="mcdowell01.pdf">pdf</a>).  An early reference for mechanizing
+the meta-theory of simple programming languages.
+</div>
+
+<div class=odd>
+<li>Gopalan Nadathur and Xiaochu Qi, <b>Optimizing the Runtime Processing
+of Types in a Higher-Order Logic Programming Language</b>. LPAR'05. (<a href
+="http://www-users.cs.umn.edu/~gopalan/papers/runtime-types-05.pdf"
+>PDF</a>, <a href=
+"http://www-users.cs.umn.edu/~gopalan/papers/runtime-types-05.ps"
+>PS</a>)
+</div>
+
+<div class=even>
+<li>Gopalan Nadathur and Natalie Linnell, <b>Practical Higher-Order
+Pattern Unification With On-the-Fly Raising</b>, ICLP'05 (<a
+href="http://www-users.cs.umn.edu/~gopalan/papers/pattern-unif.pdf"
+>PDF</a>,
+<a
+href="http://www-users.cs.umn.edu/~gopalan/papers/pattern-unif.ps"
+>PS</a>).  The algorithms and code described in this system play an
+important role in our implemented systems.
+</div>
+
+<div class=odd>
+<li> David Baelde, Andrew Gacek, Dale Miller, Gopalan Nadathur, and
+Alwen Tiu.  <b>A User Guide to Bedwyr</b>, November 2006.
+[ <a href="./select2006-bib.html#baelde06manual">bib</a> | 
+<a href="http://gforge.inria.fr/docman/view.php/367/705/userguide.pdf">.pdf</a> ]
+</div>
+
+<div class=even>
+<li>Dale Miller and Alwen Tiu, <b>A Proof Theory for Generic
+Judgments</b>. ACM Transactions on
+Computational Logic, 6(4), pp. 749--783, October 2005. 
+(<a href="tocl-nabla.dvi">dvi</a>,
+ <a href="tocl-nabla.ps" >ps</a>,
+ <a href="tocl-nabla.pdf">pdf</a>).  The first comprehensive account
+ of the &nabla;-quantifier.
+</div>
+
+<div class=odd>
+<li>Alwen Tiu, <b>A Logical Framework for Reasoning about Logical
+Specifications</b>, PhD, Pennsylvania State University, May 2004.  (<a
+href="http://www.lix.polytechnique.fr/Labo/Alwen.Tiu/etd.pdf">pdf</a>).
+This thesis presents the LINC logic that is behind much of this effort.
+</div>
+
+<div class=even>
+<li>Alwen Tiu and Gopalan Nadathur and Dale Miller, <b>Mixing Finite
+Success and Finite Failure in an Automated Prover.</b> 
+In <i>Proceedings of ESHOL'05: Empirically Successful Automated
+Reasoning in Higher-Order Logics</i>, pages 79 - 98, December 2005.
+(<a
+href="http://www.lix.polytechnique.fr/Labo/Dale.Miller/papers/eshol05sub.pdf"
+>pdf</a>)
+</div>
+
+<div class=odd>
+<li> David Baelde, Andrew Gacek, Dale Miller, Gopalan Nadathur, and
+Alwen Tiu.  <b>The Bedwyr system for model checking over syntactic
+expressions</b>
+<i>CADE 2007</a>: 21th Conference on Automated Deduction</i>, LNAI
+4603, pages 391-397. Springer, 2007.  (<a 
+href="http://www.lix.polytechnique.fr/Labo/Dale.Miller/papers/cade2007.pdf">pdf</a>)
+</ul>
+
+
+<h2><a name="links">Related Sites and Other Relevant Systems</a></h2>
 
       <ul>
-        <li>From Australian National University: <a
-        href="http://users.rsise.anu.edu.au/~tiu/">Alwen Tiu</a>.</li> 
-
-        <li> From the <a
-        href="http://www.lix.polytechnique.fr/Labo/Dale.Miller/parsifal/">Parsifal</a>
-        team: <a href="http://www.lix.polytechnique.fr/~dbaelde">David
-        Baelde</a>, <a href="http://www.lix.polytechnique.fr/Labo/Dale.Miller/">Dale
-        Miller</a>.</li>
-
-       <li> From the <a href="http://teyjus.cs.umn.edu/">Teyjus</a>
-       team: <a href="http://www.cs.umn.edu/~agacek/">Andrew
-       Gacek</a>, <a href="http://www.cs.umn.edu/~gopalan/">Gopalan
-       Nadathur</a>, <a href="http://www.cs.umn.edu/~xqi/">Xiaochu
-       Qi</a>.
-       </li> 
-     </ul>
-    </div>
-
-    <div class="section">
-      <h2 class="title">
-        Publications
-      </h2>
-
-      <p class="body">
-      The following papers by project personnel have a bearing on the
-      collaborative research:
-      <ul>
-        <li>Gopalan Nadathur and Xiaochu Qi,
-        Optimizing the Runtime Processing of Types in
-        a Higher-Order Logic Programming Language, amended version
-        to appear in LPAR'05. (<a
-        href
-        ="http://www-users.cs.umn.edu/~gopalan/papers/runtime-types-05.pdf"
-        >PDF</a>)
-        (<a
-        href=
-        "http://www-users.cs.umn.edu/~gopalan/papers/runtime-types-05.ps"
-        >PS</a>)</li> 
-
-        <li>Gopalan Nadathur and Natalie Linnell, Practical Higher-Order
-        Pattern Unification With On-the-Fly Raising,
-        amended version to appear
-        in ICLP'05 (<a
-        href="http://www-users.cs.umn.edu/~gopalan/papers/pattern-unif.pdf"
-        >PDF</a>)
-        (<a
-        href="http://www-users.cs.umn.edu/~gopalan/papers/pattern-unif.ps"
-        >PS</a>)
-        </li>
-
-        <li>Alwen Tiu and Gopalan Nadathur and Dale Miller, Mixing Finite
-        Success and Finite Failure in an Automated Prover. Submitted 28
-        September 2005. (<a
-f="http://www.lix.polytechnique.fr/Labo/Dale.Miller/papers/eshol05sub.pdf"
-        >pdf</a>) 
-        </li>
-      </ul>
-      </p>
-    </div>
-
-    <div class="section">
-      <h2 class="title">
-        Code
-      </h2>
-
-      <p class="body">
-      <ul>
-        <li>
-        Level 0/1 is now <a href="bedwyr">Bedwyr</a>. It has been 
-        translated to OCaml by Axelle Ziegler and David Baelde,
-        some bugs were fixed and many
-        optimizations have been done. It is currently under work by
-        David Baelde and Andrew Gacek.
-        Contains an OCaml version of the pattern unification code
-        from Minnesota.
-        </li>
-
-        <li>
-        Gopalan Nadathur and Natalie Linnell (University of Minnesota) have
-        posted their <a
-  href="http://www-users.cs.umn.edu/~gopalan/code/ho-pattern-unif.tar.gz"
-          >code</a>
-        for <em>An implementation of Higher-Order Pattern Unification in
-          SML</em>.
-        </li>
-
-        <li>
-        Alwen Tiu's SML code for the <a
-          href="http://www.lix.polytechnique.fr/~tiu/lincproject/download.htm">Level
-          0/1</a> prover.  This code uses the unification code from Minnesota.
-        </li>
-      </ul>
-      </p>
-    </div>
-
-    <div class="section">
-      <h2 class="title">
-        Related Sites and Other Relevant Systems
-      </h2>
-
-      <p class="body">
-      <ul>
-        <li><a href="http://www.lix.polytechnique.fr/Labo/Dale.Miller/lProlog/">Lambda
-        Prolog</a> - a higher-order logic programming language</li>
+        <li><a
+ href="http://www.lix.polytechnique.fr/Labo/Dale.Miller/lProlog/">&lambda;Prolog</a>
+        - a higher-order logic programming language</li>  
         <li><a href="http://teyjus.cs.umn.edu/">Teyjus</a> - An implementation
         of Lambda Prolog</li>
         <li><a href="http://www.lix.polytechnique.fr/~tiu/lincproject/index.htm">
           LINC</a> - Including the Level 0/1 Prover (the predecessor
-        of the Bedwyr system.</li>
+        of the Bedwyr system).</li>
       </ul>
-      </p>
-    </div>
 
-    <div class="section">
-      <h2 class="title">
-        Future Plans
-      </h2>
+<h2><a name="events">Events</a></h2>
 
-      <p class="body">
-      This project was initially designed to bring together the Parsifal and
-      Teyjus teams with the objective of exploring the use of the modern day
-      understanding of proof search in building sophisticated systems for
-      modelling and reasoning about models. We hope to expand the present
-      scope of this project both by diversifying its personnel pool and by
-      expanding its resources. We invite interested potential partners and
-      participants to contact Dale Miller or Gopalan Nadathur.
-      </p>
-    </div>
+<p>
+Bedwyr V1.0 was announced on various mailing lists on 1 Nov 2006.
+Nadathur described the foundations and architecture of the system
+(actually, an earlier prototype) at ESHOL'05 in December 2005.  Miller gave a <a
+href="http://www.ccs.neu.edu/home/guttman/csfw_five_minute_talks.html">short
+presentation</a> on Bedwyr at <a
+href="http://www.dsi.unive.it/CSFW19/">CSFW'06</a>.  Baelde presented
+a paper on Bedwyr in June 2007 at CADE-21.  Bedwyr V1.1 was released
+15 February 2007.
+</p>
 
-    <div class="section">
-      <h2 class="title">
-        Events
-      </h2>
+<p>
+During <a
+href="http://www.lix.polytechnique.fr/Labo/Dale.Miller/parsifal/summer2006.html">June
+2006</a> and <a
+href="http://www.lix.polytechnique.fr/Labo/Dale.Miller/parsifal/summer2007.html">June
+2007</a>, a number of researchers visited LIX in France to discuss a
+number of topics.  a prominent theme during these months concerned
+the Slimmer project.
+</p>
 
-      <p class="body">
-      <ul>
-        <li><i>July 5 2006</i><br>
-        Dale Miller will give a 
-        <a
-        href="http://www.ccs.neu.edu/home/guttman/csfw_five_minute_talks.html">short
-        presentation</a> on Bedwyr at <a href="http://www.dsi.unive.it/CSFW19/">CSFW'06</a>.
-        </li>
+<p> During 26-28 May 2007, Baelde, Miller, and Tiu presented their
+work related to Slimmer at the workshop on Mathematical Theories of
+Abstraction, Substitution and Naming in Computer Science at ICMS in
+Edinburgh.
+</p>
 
-        <li><i>June 25-July 1 2006</i><br>
-        Gopalan Nadathur will visit LIX.
-        </li>
+<p>
+During 30 June - 1 July 2005, Gacek and Nadathur organized 
+<a href="http://wips.cs.umn.edu/">WIPS 2005</a>: Workshop on
+Implementations of Proof Search at the <a
+href="http://www.dtc.umn.edu">Digital Technology Center</a> at the
+University of Minnesota.
+</p>
 
-        <li><i>June-July 2006</i><br>
-        Andrew Gacek is visiting LIX, to attend an informal workshop on
-        proof theory and proof-search held there and work on Bedwyr.
-        </li>
+<p>
+Several exchanges of people between the University of Minnesota, LIX,
+and Canberra, Australia have taken place.  Only visits of longer than
+a week are listed below.
+<p>
 
-        <li><i>May 13-25, 2006</i><br>
-        David Baelde visited the University of Minnesota to discuss
-        new techniques for the implementation of Bedwyr.
-        </li>
+<ul>
+<li><i>15 May - 31 July 2007</i> : Zach Snow, a graduate student at the
+University of Minnesota, was an intern at LIX.
 
-        <li><i>October 22-29, 2005</i><br>
-        Dale Miller visited the University of Minnesota. During this time
-        he worked with Gopalan Nadathur on a book related to Lambda Prolog
-        and continued discussions on reasoning about specifications
-        written in this language.
-        </li>
+<li><i>June-July 2006</i> :
+Andrew Gacek, a graduate student at the University of Minnestoa,
+was an intern at LIX for two months.
+</li>
 
-        <li><i>October 5, 2005</i><br>
-        The <a href="http://babel.ls.fi.upm.es/movelog05/">MoVeLog'05</a>
-        workshop took place at Sitges, Spain. Several of SLIMMER
-        participants attended this workshop that has intersecting
-        themes.
-        </li>
-
-        <li><i>September 25-October 1, 2005</i><br>
-        Andrew Gacek, a Ph.D. student at the University of Minneasota,
-        visited Ecole Polytechnique and INRIA. Andrew is working on
-        a Master's thesis related to explicit substitutions and has
-        a longer term interest in systems for reasoning about
-        specifications. 
-        </li>
-  
-        <li><i>June 30 - July 1, 2005</i><br>
-        <a href="http://wips.cs.umn.edu/">WIPS 2005</a>: Workshop on
-        Implementations of Proof Search was held at the <a
-          href="http://www.dtc.umn.edu">Digital Technology Center</a> at the
-        University of Minnesota. 
-        </li>
-  
-        <li><i>April 16-23, 2005</i><br>
-        Dale Miller spent a week at the University of Minnesota. During this
-        time he held research discussions with several people interested in
-        the broad goals of the SLIMMER project, collaborated with Nadathur on
-        a book related to Lambda Prolog, gave a talk in the seminar series of
-        the <a href="http://www.umsec.umn.edu">University of Minnesota
-          Software Engineering Center</a> and participated in the Ph.D. oral
-        exam of Xiaochu Qi.
-        </li>
-      </p>
-    </div>
-  
-    <div id="footer">
-    </div>
+<li><i>May 13-25, 2006</i> :
+David Baelde, a graduate student at LIX/Ecole Polytechnique, visited
+the University of Minnesota for two weeks. 
+</li>
+</ul>
 
     <script src="http://www.google-analytics.com/urchin.js"
             type="text/javascript">
