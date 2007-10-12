@@ -176,7 +176,13 @@ let proc_in,proc_out,reload =
                       [|"taci";"--debug";"--logic";logic|]
                     else
                       [|"taci";"--logic";logic|])
-                   rin wout Unix.stderr)
+                   rin wout Unix.stderr) ;
+    let line =
+      Printf.sprintf "#proof_output \"%s.out.xml\".\n"
+        (Filename.chop_extension filename)
+    in
+    let len = String.length line in
+      assert (len = Unix.write win line 0 len)
   in
     reload () ;
     win,rout,reload

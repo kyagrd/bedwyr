@@ -74,11 +74,13 @@ struct
     | Negative
 
   type formula = Formula of (int * (marktype * polarity) * FOA.formula)
+
   let string_of_formula (Formula(local,_,t)) =
     let generic = Term.get_dummy_names ~start:1 local "n" in
     let result = FOA.string_of_formula ~generic t in
       List.iter Term.free generic ;
       (String.concat "," generic) ^ ">> " ^ result
+
   let string_of_formula_ast (Formula(local,(m,_),t)) =
     let generic = Term.get_dummy_names ~start:1 local "n" in
     let result = FOA.string_of_formula_ast ~generic t in
@@ -88,6 +90,16 @@ struct
         "[" ^ result ^ "]"
       else
         result
+
+  let xml_of_formula (Formula(local,_,t)) = 
+    let generic = Term.get_dummy_names ~start:1 local "n" in
+    let result = FOA.string_of_formula ~generic t in
+      List.iter Term.free generic ;
+      Printf.sprintf "<formula>%s%s</formula>"
+        (if generic = [] then "" else
+           "<generic>" ^ String.concat "," generic ^ "</generic>")
+        result
+
   let getFormulaFormula (Formula(_,_,f)) = f
   let getFormulaMarker (Formula(_,(b,_),_)) = b
   let getFormulaPolarity (Formula(_,(_,p),_)) = p
@@ -185,6 +197,16 @@ struct
     (top ^ "\n" ^ (string_of_int lvl) ^ ": " ^
       (String.make (max (min (String.length bottom) 72) 16) '-') ^
       "\n" ^ bottom)
+
+  let xml_of_sequent seq =
+    let lhs = getSequentLHS seq in
+    let rhs = getSequentRHS seq in
+    let lvl = getSequentLevel seq in
+    let top = (String.concat "\n" (List.map xml_of_formula lhs)) in
+    let bottom = (String.concat "\n" (List.map xml_of_formula rhs)) in
+      Printf.sprintf
+        "<sequent><level>%d</level><lhs>%s</lhs><rhs>%s</rhs></sequent>"
+        lvl top bottom
 
   let string_of_sequent_rhs seq =
     let rhs = getSequentRHS seq in
@@ -738,7 +760,7 @@ struct
   module G = Logic.GenericTacticals (FirstorderSig) (O)
   
   (********************************************************************
-  *makeProofBuilder:
+  *makeProofBuilder rule_name ~p:rule_params ~f:formula seq:
   * Makes a proof builder for a simple inference rule.  Given the name
   * of the inference rule ('rule'), constructs a function that takes a
   * list of the proofs (strings) of the arguments (arg1...argN) to the
@@ -749,18 +771,23 @@ struct
   * Unfortunately it doesn't do any tabbing or suchlike, so the output
   * is really ugly.
   ********************************************************************)
-  let makeProofBuilder name formula sequent = fun proofs ->
-    let seq = string_of_sequent sequent in
-    let f =
-      if Option.isSome formula then
-        (string_of_formula (Option.get formula))
-      else
-        "" in
-
-    if (Listutils.empty proofs) then
-      name ^ "<" ^ f ^ "><" ^ seq ^ ">"
-    else
-      name ^ "<" ^ f ^ "><" ^ seq ^ ">" ^ "(" ^ (String.concat ", " proofs) ^ ")"
+  let makeProofBuilder name ?(p=[]) ?f seq =
+    let s = Printf.sprintf "<rule><name>%s</name>\n" name in
+    let p =
+      List.map
+        (fun (k,v) -> Printf.sprintf "<key>%s</key><value>%s</value>\n" k v)
+        p
+    in
+    let s = List.fold_left (^) s p in
+    let s =
+      s ^ xml_of_sequent seq
+    in
+    let s = match f with
+      | None -> s
+      | Some f -> s ^ xml_of_formula f
+    in
+      fun proofs ->
+        s ^ "<sub>" ^ List.fold_left (^) "" proofs ^ "</sub>\n</rule>\n"
 
   (********************************************************************
   *findFormula:
@@ -850,7 +877,7 @@ struct
         let () = O.output
           ((ind !indent) ^ name ^ ":\n" ^ (string_of_sequents' s) ^ "\n") in
         *)
-        sc s (makeProofBuilder name (Some formula) sequent) k
+        sc s (makeProofBuilder name ~f:formula sequent) k
       in
       let rec fc' left right () =
         match (matcher right sequent) with
@@ -1070,11 +1097,7 @@ struct
                         (FOA.undoUnify s;
                         fc ())
                       in
-                      let pb =
-                        makeProofBuilder
-                          ("force<\"" ^ seqstring ^ "\", \"" ^ term ^ "\">")
-                          None
-                          seq in 
+                      let pb = List.hd in
                       sc [seq] pb fc'
                   | FOA.UnifyFailed -> fc ()
                   | FOA.UnifyError(s) ->
@@ -1096,23 +1119,23 @@ struct
   ********************************************************************)
   let cutTactical session args =
     match args with
-        Absyn.String(s)::[] ->
+      | Absyn.String(s)::[] ->
           let f = parseFormula (getSessionDefinitions session) s in
-          if (Option.isSome f) then
-            let pretactic = fun sequent sc fc ->
-              let f' = Formula(0, (Nonfocused, Positive), Option.get f) in
-              let lvl = getSequentLevel sequent in
-              let lhs = getSequentLHS sequent in
-              let rhs = getSequentRHS sequent in
-              let s1 = Sequent(lvl, lhs, [f']) in
-              let s2 = Sequent(lvl, lhs @ [f'], rhs) in
-              let pb = makeProofBuilder ("cut<" ^ s ^ ">") None sequent in
-              sc [s1; s2] pb fc
-            in
-            G.makeTactical pretactic
-          else
-            (O.error "unable to parse lemma.\n";
-            G.failureTactical)
+            begin match f with
+              | None -> O.error "unable to parse lemma.\n" ; G.failureTactical
+              | Some f ->
+                  let pretactic = fun sequent sc fc ->
+                    let f' = Formula(0, (Nonfocused, Positive), f) in
+                    let lvl = getSequentLevel sequent in
+                    let lhs = getSequentLHS sequent in
+                    let rhs = getSequentRHS sequent in
+                    let s1 = Sequent(lvl, lhs, [f']) in
+                    let s2 = Sequent(lvl, lhs @ [f'], rhs) in
+                    let pb = makeProofBuilder "cut" ~p:["formula",s] sequent in
+                      sc [s1; s2] pb fc
+                  in
+                    G.makeTactical pretactic
+            end
       | _ -> G.invalidArguments "cut"
     
   (********************************************************************
@@ -1478,7 +1501,8 @@ struct
             fc ())
       in
       let sc' s f seq =
-        sc s (makeProofBuilder ("induction<" ^ inv ^ ">") (Some f) seq) fc in
+        sc s (makeProofBuilder "induction" ~p:["invariant",inv] ~f seq) fc
+      in
 
       match (matchLeft template Nonfocused None sequent) with
         Some(f,before,after,lhs,rhs) ->
@@ -1638,7 +1662,8 @@ struct
       in
 
       let sc' s f seq =
-        sc s (makeProofBuilder ("coinduction<" ^ inv ^ ">") (Some f) seq) fc in
+        sc s (makeProofBuilder "coinduction" ~p:["coinvariant",inv] ~f seq) fc
+      in
       
       match (matchRight template Nonfocused None sequent) with
           Some(f,before,after,lhs,rhs) ->
@@ -1768,6 +1793,7 @@ struct
       | [] -> failure ()
       | (Sequent (i,l::ltl,r))::tl ->
           success [Sequent (i,ltl@[l],r)] tl (fun p -> p) failure
+      | _ -> assert false
 
   let rotateR = rotateL
 
@@ -1781,7 +1807,7 @@ struct
   
   let contractTactical session args =
     (G.orElseTactical (contractL session args) (contractR session args))
-  
+
   (********************************************************************
   *weakening:
   ********************************************************************)
@@ -1792,7 +1818,7 @@ struct
       sc [s]
     in
     (makeSimpleTactical "weak_l" (matchLeft, "_") tactic)
-  
+
   let weakR =
     let tactic session seq f zip lhs rhs sc fc =
       let lvl = getSequentLevel seq in
@@ -1800,10 +1826,10 @@ struct
       sc [s]
     in
     (makeSimpleTactical "weak_r" (matchRight, "_") tactic)
-  
+
   let weakTactical session args =
     (G.orElseTactical (weakL session args) (weakR session args))
-  
+
   (********************************************************************
   *simplify:
   * Applies all asynchronous rules.

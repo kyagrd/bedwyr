@@ -68,6 +68,7 @@ rule command = parse
 | "exit"    {EXIT}
 | "undo"    {UNDO}
 | "redo"    {REDO}
+| "proof_output" {PROOF_OUTPUT}
 
 | "help"  {HELP}
 

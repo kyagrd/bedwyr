@@ -21,7 +21,7 @@ SOURCE= listutils.ml absyn.ml output.ml option.ml \
 OBJ= $(SOURCE:.ml=$(O))
 
 taci: $(OBJ)
-	$(OCAMLC) $(I) str$(A) term$(O) norm$(O) unify$(O) pprint$(O) $(OBJ) -o $@
+	$(OCAMLC) $(I) unix$(A) str$(A) term$(O) norm$(O) unify$(O) pprint$(O) $(OBJ) -o $@
 
 logics_gen.ml: ../logics_gen/bin/Logics.in
 	make -C ../logics_gen
