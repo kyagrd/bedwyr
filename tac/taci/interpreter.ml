@@ -47,6 +47,41 @@ struct
   (*  A flag to determine whether timing is enabled.  *)
   let timing = ref false
   
+  let proof_output = ref stdout
+  let () =
+    at_exit (fun () -> if !proof_output != stdout then begin
+               output_string !proof_output "</proofs>\n" ;
+               close_out !proof_output
+             end)
+  let theorem_name = ref "" (* This is quick & ugly & limited.. TODO *)
+
+  let home_unrelate =
+    let home =
+      try Some (Sys.getenv "HOME") with Not_found -> None
+    in
+    let unrel s =
+      let len = String.length s in
+        if len < 2 then
+          match home with Some h when s = "~" -> h | _ -> s
+        else
+          match home, (s.[0] = '~'), (s.[1] = '/') with
+            | Some home, true, true ->  (* Something like ~/data/file *)
+                Filename.concat home (String.sub s 2 (len - 2))
+            | _, true, false ->         (* Something like ~bob/data/file *)
+                let index =
+                  try String.index s '/' with Not_found -> len
+                in
+                let user = String.sub s 1 (index - 1) in
+                  begin try
+                    let home = (Unix.getpwnam user).Unix.pw_dir in
+                      Filename.concat home (String.sub s index (len - index))
+                  with
+                    | Not_found -> s
+                  end
+            | _ -> s
+    in
+      unrel
+
   (********************************************************************
   *findTactical:
   * Given a tactical name and a session, retrieves the tactical from
@@ -65,6 +100,7 @@ struct
 
 #clear.                     : Clear the screen.
 #debug <on | off>.          : Turn debugging on or off.
+#proof_output <file>        : Print proofs to <file>.
 #define <definition>.       : Add the given quoted definition to the current session.
 #exit.                      : Exit Taci.
 #help.                      : Show this message.
@@ -104,12 +140,12 @@ struct
   let undoList = ref []
   let redoList = ref []
   let resetLists () =
-    (undoList := []; redoList := [])
+    undoList := []; redoList := []
   
   let storeSession session =
-    (undoList := session :: (!undoList);
+    undoList := session :: (!undoList);
     redoList := [];
-    ())
+    ()
 
   let undo session =
     if (List.length (!undoList) > 0) then
@@ -206,30 +242,39 @@ struct
     in
     
     try
-      let () = O.debug ("Pretactical: " ^ (Absyn.string_of_pretactical pretactical) ^ ".\n") in
+      O.debug (Printf.sprintf "Pretactical: %s.\n"
+                 (Absyn.string_of_pretactical pretactical)) ;
       let tactical = buildTactical pretactical session in
       let () = O.debug ("Built tactical.\n") in
       let () = (applyTactical tactical session success failure) in
       session
     with
-        Absyn.SyntaxError(s) ->
-          (O.error (s ^ ".\n");
-          session)
-      | TacticalSuccess(s) ->
-          (O.output "Success.\n";
-          if not (L.validSequent s) then
-            (O.output ("Proved:\n" ^ (L.string_of_proofs s) ^ "\n");
-            O.goal "";
-            s)
-          else
-            s)
+        Absyn.SyntaxError s ->
+          O.error (s ^ ".\n");
+          session
+      | TacticalSuccess s ->
+          O.output "Success.\n";
+          if L.validSequent s then s else
+            let proof = L.string_of_proofs s in
+            let out = output_string !proof_output in
+              O.output "Proof completed.\n" ;
+              out (Printf.sprintf "<proof><name>%s</name>\n" !theorem_name) ;
+              out proof ;
+              out "</proof>\n" ;
+              flush !proof_output ;
+              (* TODO append the proof to a file <script>.out
+               * together with the name of the theorem *)
+              O.goal "" ;
+              s
       | TacticalFailure ->
-          (O.output "Failure.\n";
-          session)
-      | Failure s -> (O.error ("Internal Failure: " ^ s ^ ".\n"); session)
+          O.output "Failure.\n";
+          session
+      | Failure s ->
+          O.error (Printf.sprintf "Internal Failure: %s.\n" s);
+          session
       | Logic.Interrupt ->
-          (O.output "Interrupted.\n";
-          session)
+          O.output "Interrupted.\n";
+          session
 
   (********************************************************************
   *makeTactical:
@@ -343,14 +388,19 @@ struct
         | Absyn.Undo(_) -> ((undo session), false)
         | Absyn.Redo(_) -> ((redo session), false)
         | Absyn.Reset -> (L.reset (), true)
+        | Absyn.Proof_Output name ->
+            proof_output := open_out (home_unrelate name) ;
+            output_string !proof_output "<proofs>\n" ;
+            (session, true)
         | Absyn.Theorem(name, t) ->
-            (L.prove name t session, true)
+            theorem_name := name ;
+            L.prove name t session, true
         | Absyn.Definitions(ds) ->
-            (L.definitions ds session, true)
+            L.definitions ds session, true
         | Absyn.Timing(onoff) ->
-            (timing := onoff; (session, true))
+            timing := onoff; (session, true)
         | Absyn.Debug(onoff) ->
-            (Output.showDebug := onoff; (session, true))
+            Output.showDebug := onoff; (session, true)
         | Absyn.Include(sl) ->
             (L.incl sl session, true)
         | Absyn.Open(sl) ->

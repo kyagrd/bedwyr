@@ -53,7 +53,8 @@ type ('a, 'b) pretactic =
 
 (*  Tactics *)
 type 'a proofbuilder = 'a list -> 'a list
-type ('a, 'b) success = 'a list -> 'a list -> 'b proofbuilder -> continue -> unit
+type ('a, 'b) success =
+  'a list -> 'a list -> 'b proofbuilder -> continue -> unit
 type ('a, 'b) tactic = 'a list -> ('a, 'b) success -> failure -> unit
 
 (*  Tacticals *)
@@ -73,7 +74,7 @@ sig
   val name : string
   val info : string
   val start : string
-  
+
   type session
   val incl : string list -> session -> session
   val reset : unit -> session
@@ -81,7 +82,7 @@ sig
   val definitions : string list -> session -> session
   val undo : session -> session
   val redo : session -> session
-  
+
   type sequent
   val validSequent : session -> bool
   val sequents : session -> sequent list
@@ -90,11 +91,12 @@ sig
   type proof
   val proof : session -> proof proofbuilder
   val string_of_proofs : session -> string
-  
+
   val update : sequent list -> proof proofbuilder -> session -> session
 
   val tacticals : session -> (session, (sequent, proof) tactic) tactical table
-  val defineTactical : string -> (session, (sequent, proof) tactic) tactical -> session -> session
+  val defineTactical :
+   string -> (session, (sequent, proof) tactic) tactical -> session -> session
 end
 
 (**********************************************************************

@@ -29,7 +29,7 @@
 %}
 
 %token DOT SHARP LPAREN RPAREN COMMA
-%token HELP EXIT RESET OPEN INCLUDE TIME DEBUG
+%token HELP EXIT RESET OPEN INCLUDE TIME DEBUG PROOF_OUTPUT
 %token ON OFF CLEAR THEOREM
 %token TACTICAL TACTICALS LOGIC LOGICS
 %token DEFINE UNDO REDO
@@ -72,8 +72,9 @@ tactical_list
 command
   : EXIT                {Absyn.Exit}
   | RESET               {Absyn.Reset}
-  | OPEN stringlist     {Absyn.Open($2)}
-  | INCLUDE stringlist  {Absyn.Include($2)}
+  | OPEN stringlist     {Absyn.Open $2}
+  | INCLUDE stringlist  {Absyn.Include $2}
+  | PROOF_OUTPUT STRING {Absyn.Proof_Output $2}
   
   | CLEAR       {Absyn.Clear}
   

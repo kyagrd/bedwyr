@@ -35,10 +35,11 @@ type command =
   | Clear
   | Undo of int
   | Redo of int
-  
+  | Proof_Output of string
+
   | Theorem of string * string
   | Definitions of string list
-  
+
   | Tacticals
   | TacticalDefinition of string * pretactical
 
@@ -48,7 +49,7 @@ type command =
 
   | Logic of string  
   | Logics
-  
+
   | NoCommand
 
 let rec string_of_pretactical tac =
@@ -56,5 +57,7 @@ let rec string_of_pretactical tac =
       ApplicationPreTactical(name, []) ->
         name
     | ApplicationPreTactical(name, args) ->
-        name ^ "(" ^ (String.concat ", " (List.map string_of_pretactical args)) ^ ")"
+        Printf.sprintf "%s(%s)"
+          name
+          (String.concat ", " (List.map string_of_pretactical args))
     | StringPreTactical(s) -> "\"" ^ s ^ "\""
