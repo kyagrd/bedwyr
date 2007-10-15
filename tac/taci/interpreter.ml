@@ -47,13 +47,12 @@ struct
   (*  A flag to determine whether timing is enabled.  *)
   let timing = ref false
   
-  let proof_output = ref stdout
-  let () =
-    at_exit (fun () -> if !proof_output != stdout then begin
-               output_string !proof_output "</proofs>\n" ;
-               close_out !proof_output
-             end)
-  let theorem_name = ref "" (* This is quick & ugly & limited.. TODO *)
+  (* If set, indicates a directory in which proofs should be stored. *)
+  let proof_output = ref None
+
+  (* Name of the current theorem.
+   * This is quick, ugly & limited.. TODO: Ask Zach how to make it clean. *)
+  let theorem_name = ref ""
 
   let home_unrelate =
     let home =
@@ -100,7 +99,7 @@ struct
 
 #clear.                     : Clear the screen.
 #debug <on | off>.          : Turn debugging on or off.
-#proof_output <file>        : Print proofs to <file>.
+#proof_output <dir>         : Print proofs to <dir/proof.xml>.
 #define <definition>.       : Add the given quoted definition to the current session.
 #exit.                      : Exit Taci.
 #help.                      : Show this message.
@@ -254,18 +253,19 @@ struct
           session
       | TacticalSuccess s ->
           O.output "Success.\n";
-          if L.validSequent s then s else
-            let proof = L.string_of_proofs s in
-            let out = output_string !proof_output in
-              O.output "Proof completed.\n" ;
-              out (Printf.sprintf "<proof><name>%s</name>\n" !theorem_name) ;
-              out proof ;
-              out "</proof>\n" ;
-              flush !proof_output ;
-              (* TODO append the proof to a file <script>.out
-               * together with the name of the theorem *)
-              O.goal "" ;
-              s
+          if not (L.validSequent s) then begin
+            O.output "Proof completed.\n" ;
+            O.goal "" ;
+            match !proof_output with
+              | None -> ()
+              | Some dir ->
+                  let name     = !theorem_name in
+                  let filename = Printf.sprintf "%s/%s.xml" dir name in
+                  let chan     = open_out filename in
+                    output_string chan (L.string_of_proofs s) ;
+                    close_out chan
+          end ;
+          s
       | TacticalFailure ->
           O.output "Failure.\n";
           session
@@ -389,8 +389,7 @@ struct
         | Absyn.Redo(_) -> ((redo session), false)
         | Absyn.Reset -> (L.reset (), true)
         | Absyn.Proof_Output name ->
-            proof_output := open_out (home_unrelate name) ;
-            output_string !proof_output "<proofs>\n" ;
+            proof_output := Some (home_unrelate name) ;
             (session, true)
         | Absyn.Theorem(name, t) ->
             theorem_name := name ;
