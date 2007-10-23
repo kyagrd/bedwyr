@@ -147,6 +147,7 @@ sig
   val cutThenTactical : (unit -> unit -> unit) -> logic_tactic -> logic_tactic -> logic_tactic
   val thenTactical : logic_tactic -> logic_tactic -> logic_tactic
   val repeatTactical : logic_tactic -> logic_tactic
+  val cutRepeatTactical : (unit -> unit -> unit) -> logic_tactic -> logic_tactic
   val firstTactical : logic_tactic -> logic_tactic
   val iterateTactical : logic_tactic -> logic_tactic
   val tryTactical : logic_tactic -> logic_tactic

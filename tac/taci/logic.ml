@@ -336,13 +336,11 @@ struct
   *cutThenTactical:
   * Exported nterface to wrapped version.
   ********************************************************************)
-  let cutThenTactical f tac1 tac2 =
+  let cutThenTactical save tac1 tac2 =
     fun sequents sc fc ->
-      let f' = f () in
-      let fc' () =
-        (f' (); fc ())
-      in
-      (wrappedThenTactical true tac1 (fun () -> tac2)) sequents sc fc'
+      let restore = save () in
+      let fc () = restore () ; fc () in
+        wrappedThenTactical true tac1 (fun () -> tac2) sequents sc fc
 
   (********************************************************************
   *repeatTactical:
@@ -352,7 +350,16 @@ struct
   ********************************************************************)
   let rec repeatTactical tac =
     let wrapper () = (repeatTactical tac) in
-    (orElseTactical (wrappedThenTactical false tac wrapper) idTactical)
+      orElseTactical (wrappedThenTactical false tac wrapper) idTactical
+
+  let rec cutRepeatTactical tac =
+    let wrapper () = (cutRepeatTactical tac) in
+      orElseTactical (wrappedThenTactical true tac wrapper) idTactical
+  let cutRepeatTactical save tac =
+    fun sequents sc fc ->
+      let restore = save () in
+      let fc () = restore () ; fc () in
+        cutRepeatTactical tac sequents sc fc
 
   (********************************************************************
   *completeTactical:
