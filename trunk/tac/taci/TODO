@@ -1,5 +1,7 @@
-
 A few things that would be useful...
+
+* Output modules shouldn't take strings but formatters, in order to allow
+  thinks like: O.debug "%s: invalid level %d" bla bli
 
 * [David] Better syntax for higher-order terms
   Currently, (x\y\ ..) is not allowed, only (x\(y\ ..)).
