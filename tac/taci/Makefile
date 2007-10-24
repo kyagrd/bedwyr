@@ -2,7 +2,7 @@
 O=.cmx
 A=.cmxa
 I=-I Nologic -I Propositional -I Firstorder -I ../../bedwyr/src/ndcore
-OCAMLC=ocamlopt -p
+OCAMLC=ocamlopt
 OCAMLYACC=ocamlyacc
 OCAMLLEX=ocamllex
 
