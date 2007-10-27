@@ -20,11 +20,7 @@ abstract.
 then(repeat(or_l),simplify).
 induction("a\b\l\ nabla c\ assoc (a c c) (b c c) (l c c)").
 abstract.
-then(mu_r,prove).
-simplify.
-then(mu_r,prove).
-then(mu_r,prove).
-then(mu_r,prove).
+iterate(prove).
 % Qed.
 
 #define "cp gamma m n := assoc m n gamma
@@ -39,10 +35,9 @@ simplify.
 induction("g\m\n\ eq g m n").
  % The inner induction shows that eq implies equality.
  induction("g\m\n\ (pi a\b\ assoc a b g => a=b) => m=n").
- then(imp_l,simplify).
- then(mu_l,simplify).
+  prove.
   % Inner invariance proof.
-  then(repeat(or_l),then(simplify,try(prove))).
+  then(repeat(or_l),then(simplify,try(prove("1")))).
   abstract.
   then(imp_l("_ => (x1\ _ x1) = (x1\ _ x1)"),simplify).
   then(mu_l,then(simplify,then(or_l,simplify))).
@@ -50,14 +45,9 @@ induction("g\m\n\ eq g m n").
   induction("m'\n'\g'\ pi g\ (x\g' x) = (x\g)
              => sigma m\n\ (x\m' x)=(x\m), (x\n' x)=(x\n), assoc m n g").
   prove.
-  then(simplify,then(or_l,simplify)).
-  then(repeat(sigma),then(repeat(and),orelse(eq,then(mu_r,prove)))).
-  then(pi_l,then(imp_l,try(eq_r))).
-  simplify.
-  then(repeat(sigma),then(repeat(and),try(eq))).
-  then(mu_r,prove).
+  prove.
 % Outer invariance.
-then(repeat(or_l),then(simplify,try(then(mu_r,prove)))).
+then(repeat(or_l),then(simplify,try(then(mu_r,prove("1"))))).
 then(mu_r,right).
 then(repeat(sigma_r),then(repeat(and_r),try(eq_r))).
 % This is the "main lemma" that we proved first.
@@ -69,10 +59,5 @@ abstract.
 then(repeat(or_l),simplify).
 induction("a\b\l\ nabla c\ assoc (a c c) (b c c) (l c c)").
 abstract.
-then(mu_r,prove).
-simplify.
-then(mu_r,prove).
-then(mu_r,prove).
-then(mu_r,prove).
+iterate(prove).
 % Qed.
-

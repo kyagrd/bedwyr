@@ -39,29 +39,29 @@ induction("g\x\t\
            typeof g x t, (context g => pi t'\ (typeof g x t' => (t = t')))").
 prove.
 and.
-then(mu_r,prove).
+then(mu_r,prove("1")).
 then(repeat(or_l),simplify).
 
 % ******** Initial-rule case.
 then(mu_l("context _"),prove).
 
 % ******** App.
-% The judgement is an instance of the initial rule.
 then(mu_l("typeof _ _ _"),then(repeat(or_l),simplify)).
+% The judgement is an instance of the initial rule.
 cut("typeof G (app h1 h2) T0").
-then(mu_r,prove).
-then(mu_l("context _"),prove).
+then(mu_r,prove("1")).
+then(mu_l("context _"),prove("1")).
 % The real app-rule case is easy.
 prove.
 
 % ******** Lambda.
-% The judgement is an instance of the initial rule.
 then(mu_l("typeof _ _ _"),then(repeat(or_l),simplify)).
+% The judgement is an instance of the initial rule.
 cut("typeof G (lambda h2 h3) (arrow h2 h4)").
-then(mu_r,prove).
-then(mu_l("context _"),prove).
+then(mu_r,prove("1")).
+then(mu_l("context _"),prove("1")).
 % The real lambda-rule case.
-then(cut("context G => nabla x\ context (cons (pair x h) G)"),try(prove)).
+then(cut("context G => nabla x\ context (cons (pair x h) G)"),try(prove("1"))).
 repeat(weak_l).
 
 % The HUGE lemma: Well-formedness of the extended context.
@@ -109,4 +109,5 @@ then(mu_l,then(or_l,simplify)).
  then(repeat(sigma),then(repeat(and_r),try(eq))).
  abstract.
  then(repeat(pi_l),then(repeat(imp_l),try(eq))).
+
 
