@@ -34,6 +34,10 @@ let filename =
         exit 1
     | Some f -> f
 
+let filename =
+  Unix.chdir (Filename.dirname filename) ;
+  Filename.basename filename
+
 let logic =
   if Str.string_match (Str.regexp ".*\\.\\(.*\\)\\.tac") filename 0 then
     Str.matched_group 1 filename
