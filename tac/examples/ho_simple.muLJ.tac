@@ -1,3 +1,5 @@
+#proof_output "/tmp".
+
 % =========== MEMBERSHIP =================.
 
 #define "mem x l := sigma hd\tl\ l = cons hd tl, (x=hd ; mem x tl)".
@@ -13,9 +15,7 @@
 simplify.
 abstract.
 % We need a dummy "fresh" variable.
-induction("x'\l'\ mem (x' dummy) (l' dummy)").
-axiom.
-then(mu_r,prove).
+then(induction("x'\l'\ mem (x' dummy) (l' dummy)"),prove).
 % QED.
 
 % ********** .
@@ -23,21 +23,17 @@ then(mu_r,prove).
 #theorem mem_w "pi x\l\ (nabla n\ mem x l) => (mem x l)".
 simplify.
 abstract.
-induction("x'\l'\ pi x\l\ (x'=(a\x), l'=(a\l)) => mem x l").
-prove.
-simplify.
-then(or_l,then(mu_r,prove)).
+then(induction("x'\l'\ pi x\l\ (x'=(a\x), l'=(a\l)) => mem x l"),prove).
 % QED.
 
 % ********** .
 % It is also possible to weaken nabla around the negation of mem.
 % That's much easier.
-#theorem notmem_w "(nabla n\ mem x l => false) => (mem x l => false)".
+#theorem notmem_w "pi x\l\ (nabla n\ mem x l => false) => (mem x l => false)".
 simplify.
 abstract.
-then(imp_l,try(prove)).
-then(induction("x\l\ nabla n\ mem x l"),then(abstract,simplify)).
-then(mu_r,prove).
+then(imp_l,simplify).
+then(induction("x\l\ nabla n\ mem x l"),then(abstract,prove)).
 % QED.
 
 % ============ CONTEXT ============.
@@ -59,12 +55,13 @@ abstract.
 induction("l'\ pi l\ l' = (x\l) => ctxt l").
 prove.
 then(or_l,simplify).
-then(mu_r,prove).
+prove.
 then(mu_r,then(right,then(repeat(sigma),and))).
 prove.
 then(imp_r,then(imp_l,simplify)).
 then(induction("x\l\ nabla a\ mem x l"),then(abstract,simplify)).
-then(or_l,then(mu_r,prove)).
+prove.
+prove.
 % QED.
 
 % ============ LAMBDA-TERMS ============== .
@@ -81,11 +78,7 @@ abstract.
 induction("c'\t'\ pi c\t\ (c'=(x\c), t'=(x\t)) => term c t").
 prove.
 then(repeat(or_l),simplify).
-induction("x'\l'\ pi x\l\ (x'=(a\x), l'=(a\l)) => mem x l").
-then(mu_r,prove).
-simplify.
-then(or_l,then(mu_r,prove)).
-then(mu_r,prove).
-then(mu_r,then(abstract,prove)).
+then(induction("x'\l'\ pi x\l\ (x'=(a\x), l'=(a\l)) => mem x l"),prove).
+prove.
+then(abstract,prove).
 % QED.
-
