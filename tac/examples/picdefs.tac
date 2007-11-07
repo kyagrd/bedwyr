@@ -16,9 +16,9 @@
   ; (sigma M\ sigma X\ sigma N\ V = (rx M), W = (resp (up X) N), nabla y\ one (M y) (res (up X y) (N y)))
   ; (sigma P\ sigma Q\ sigma M\ sigma N\ sigma R\ sigma T\ sigma X\ sigma Y\ sigma M\ V = (par P Q), W = (res tau (par R T)), one P (resp (dn X) M), one Q (res (up X Y) T), R = (M Y))
   ; (sigma P\ sigma Q\ sigma M\ sigma N\ sigma R\ sigma T\ sigma X\ sigma Y\ sigma M\ V = (par P Q), W = (res tau (par R T)), one Q (resp (dn X) M), one P (res (up X Y) R), T = (M Y))
-  ; (sigma P\ sigma Q\ sigma A\ sigma W'\ V = (rx P), W = (resp A W'), W' = (y\ (rx (Q y))), nabla x\ one (P x) (resp A Q))
-  ; (sigma P\ sigma Q\ sigma M\ sigma N\ sigma X\ sigma W'\ V = (par P Q), W = (res tau (rx W')), W' = (y\ par (M y) (N y)), one P (resp (dn X) M), one Q (resp (up X) N))
-  ; (sigma P\ sigma Q\ sigma M\ sigma N\ sigma X\ sigma W'\ V = (par P Q), W = (res tau (rx W')), W' = (y\ par (M y) (N y)), one P (resp (up X) M), one Q (resp (dn X) N))
+  ; (sigma P\ sigma Q\ sigma A\ V = (rx P), W = (resp A (y\ (rx (Q y)))), nabla x\ one (P x) (resp A Q))
+  ; (sigma P\ sigma Q\ sigma M\ sigma N\ sigma X\ V = (par P Q), W = (res tau (rx (y\ par (M y) (N y)))), one P (resp (dn X) M), one Q (resp (up X) N))
+  ; (sigma P\ sigma Q\ sigma M\ sigma N\ sigma X\ V = (par P Q), W = (res tau (rx (y\ par (M y) (N y)))), one P (resp (up X) M), one Q (resp (dn X) N))
   ".
 
 %% It seems that the following clauses causes a parse error in the current system.  Why?
