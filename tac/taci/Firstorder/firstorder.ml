@@ -156,13 +156,9 @@ struct
     let separator = String.make (max (min (String.length bottom) 72) 16) '-' in
       Printf.sprintf "%d: %s\n%s" seq.lvl separator bottom
 
-  let bound_reached = function
-    | {bound = None} -> false
-    | {bound = Some b} as seq ->
-        if debug && b > 0 then
-          Format.printf "@[<hov 2>Bound %d@ %a@]\n%!" b ppxml_sequent seq ;
-        assert (b >= 0) ;
-        b = 0
+  let out_of_bound = function
+    | None -> false
+    | Some b -> b < 0
 
   (********************************************************************
   *Proof:
@@ -1044,6 +1040,36 @@ struct
             O.impossible "cannot parse (co)invariant.\n";
             None
 
+  (* TODO get rid of this temporary hard-coding...
+   * NOTE: logic variables are never "rigid", even though they might be
+   * substituted for "rigid" terms. *)
+  let normalize = Str.global_replace (Str.regexp "lift_") ""
+  let unfolding_progresses name args =
+    let name = normalize name in
+    let rec rigid t = match Term.observe (Norm.hnorm t) with
+      | Term.Lam (_,t) -> rigid t
+      | Term.App (t,_) -> rigid t
+      | Term.Var v when v.Term.tag = Term.Constant -> true
+      | _ -> false
+    in
+      if List.mem name ["nat";"even";"odd";"plus";"list";"half";
+                        "mem";"bind";"context";"ctxt"] then
+        rigid (List.hd args) (* first-arg based *)
+      else if List.mem name ["cp";"eq";"typeof"] then
+        rigid (List.nth args 2)
+      else if List.mem name ["leq";"assoc"] then
+        rigid (List.hd (List.rev args)) (* last-arg based *)
+      else if List.mem name ["permute";"empty"] then
+        true (* non-recursive *)
+      else
+        false
+
+  let unfolding_progresses n a = let r = unfolding_progresses n a in
+    if debug then
+      Printf.printf "Progress %s %s = %b\n%!"
+        n (String.concat "::" (List.map Pprint.term_to_string a)) r ;
+      r
+
   type internal_sc =
     ?k:(unit -> unit) -> ?b:(Term.term list) -> string -> sequent list -> unit
 
@@ -1135,26 +1161,40 @@ struct
             if p = "false" then sc "false" [] else
               atomic_init i p params (fun k -> sc "init" [] ~k) fc seq.rhs
         | FOA.ApplicationFormula (p,args) ->
-            let mkseq f =
-              [{ seq with bound = update_bound seq ;
-                          lhs = zip [Formula(i,b,f)] }]
+            let unfold_fixpoint rule_name name args body argnames sc fc =
+              (* TODO
+               * The "rigidity" test should only be used on particular
+               * arguments of particular fixed points, not blindly as here.
+               * This is already needed to handle "leq". *)
+              let bound =
+                if unfolding_progresses name args then
+                  seq.bound
+                else
+                  update_bound seq
+              in
+              let mkseq f =
+                [{ seq with bound = bound ;
+                            lhs = zip [Formula(i,b,f)] }]
+              in
+                if out_of_bound bound then fc () else
+                  unfold_fixpoint rule_name p args body argnames mkseq sc fc
             in
-            if bound_reached seq then fc () else begin match p with
+            begin match p with
               | FOA.NuFormula (name,argnames,body) ->
                   (* This is synchronous. *)
                   begin match arg with
                     | Some "unfold" ->
-                        unfold_fixpoint "nu_l" p args body argnames mkseq sc fc
+                        unfold_fixpoint "nu_l" name args body argnames sc fc
                     | Some "init" ->
                         fixpoint_init i p args
-                          (fun k -> sc "nu_mu" [] ~k)
+                          (fun k -> sc "init_nu" [] ~k)
                           fc seq.rhs
                     | None ->
                         fixpoint_init i p args
-                          (fun k -> sc "nu_mu" [] ~k)
+                          (fun k -> sc "init_nu" [] ~k)
                           (fun () ->
                              unfold_fixpoint "nu_l"
-                               p args body argnames mkseq sc fc)
+                               name args body argnames sc fc)
                           seq.rhs
                     | s -> assert false
                   end
@@ -1164,11 +1204,9 @@ struct
                    * invariant, otherwise try mu_l or infer an invariant. *)
                   begin match arg with
                     | Some "unfold" ->
-                        unfold_fixpoint
-                          "mu_l" p args body argnames mkseq sc
-                          fc
+                        unfold_fixpoint "mu_l" name args body argnames sc fc
                     | Some s ->
-                        begin match
+                        (* TODO bound check *) begin match
                           fixpoint_St_St'_BSt'
                             ~session ~lvl:seq.lvl ~i
                             ~body ~argnames ~s ~t:args
@@ -1184,10 +1222,8 @@ struct
                                 ]
                           | None -> fc ()
                         end
-                    | None -> (* TODO: automatic mode *)
-                        unfold_fixpoint
-                          "mu_l" p args body argnames mkseq sc
-                          fc
+                    | None -> (* TODO: automatic induction *)
+                        unfold_fixpoint "mu_l" name args body argnames sc fc
                   end
               | _ -> assert false
             end
@@ -1272,35 +1308,65 @@ struct
             if p = "true" then sc "true" [] else
               atomic_init i p params (fun k -> sc "init" [] ~k) fc seq.lhs
         | FOA.ApplicationFormula (p,args) ->
-            let mkseq f =
-              [{ seq with bound = update_bound seq ;
-                          rhs = zip [Formula(i,b,f)] }]
+            let unfold_fixpoint rule_name name args body argnames sc fc =
+              (* TODO
+               * The "rigidity" test should only be used on particular
+               * arguments of particular fixed points, not blindly as here. *)
+              let bound =
+                if unfolding_progresses name args then
+                  seq.bound
+                else
+                  update_bound seq
+              in
+              let mkseq f =
+                [{ seq with bound = bound ;
+                            rhs = zip [Formula(i,b,f)] }]
+              in
+                if out_of_bound bound then fc () else
+                  unfold_fixpoint rule_name p args body argnames mkseq sc fc
             in
-            if bound_reached seq then fc () else begin match p with
+            begin match p with
               | FOA.MuFormula (name,argnames,body) ->
                   (* This is synchronous. *)
                   begin match arg with
                     | Some "unfold" ->
-                        unfold_fixpoint "mu_r" p args body argnames mkseq sc fc
+                        unfold_fixpoint "mu_r" name args body argnames sc fc
                     | Some "init" ->
                         fixpoint_init i p args
-                          (fun k -> sc "mu_nu" [] ~k)
+                          (fun k -> sc "init_mu" [] ~k)
                           fc seq.lhs
                     | None ->
                         fixpoint_init i p args
-                          (fun k -> sc "mu_nu" [] ~k)
+                          (fun k -> sc "init_mu" [] ~k)
                           (fun () ->
                              unfold_fixpoint "mu_r"
-                               p args body argnames mkseq sc fc)
+                               name args body argnames sc fc)
                           seq.lhs
                     | s -> assert false
                   end
               | FOA.NuFormula (_,argnames,body) -> (* nu body args *)
                   begin match arg with
-                    | None ->
-                        unfold_fixpoint
-                          "nu_r" p args body argnames mkseq sc fc
-                    | Some _ -> failwith "TODO: coinduction"
+                    | Some "unfold" ->
+                        unfold_fixpoint "nu_r" name args body argnames sc fc
+                    | Some s ->
+                        begin match (* TODO bound check/update *)
+                          fixpoint_St_St'_BSt'
+                            ~session ~lvl:seq.lvl ~i
+                            ~body ~argnames ~s ~t:args
+                        with
+                          | Some (st,lvl',st',bst') ->
+                              let st   = Formula (i,b,st) in
+                              let st'  = Formula (0,b,st') in
+                              let bst' = Formula (0,b,bst') in
+                                sc "coinduction" [
+                                  { seq with rhs = zip [st] } ;
+                                  { seq with lvl = lvl' ;
+                                             lhs = [st'] ; rhs = [bst'] }
+                                ]
+                          | None -> fc ()
+                        end
+                    | None -> (* TODO automatic mode *)
+                        unfold_fixpoint "nu_r" name args body argnames sc fc
                   end
               | _ -> assert false
             end
@@ -1361,6 +1427,8 @@ struct
           specialize ?arg side (findFormula template focus) session args
       | None -> assert false
 
+  (* {1 Specialized basic manual tactics} *)
+
   let orLeft  = pattern_tac `Right "_;_" ~arg:"left"
   let orRight = pattern_tac `Right "_;_" ~arg:"right"
   let orR   = pattern_tac `Right "_;_" (* tries both in intuitionistic mode *)
@@ -1386,12 +1454,16 @@ struct
   let nuR = pattern_tac `Right "nu _" ~arg:"unfold"
 
   let inductionTactical session = function
-    | [] -> pattern_tac `Left  "mu _" ~arg:"" session []
-    | [Absyn.String i] -> pattern_tac `Left  "mu _" ~arg:i session []
-    | [Absyn.String i; Absyn.String p] -> pattern_tac `Left  p ~arg:i session []
+    | [] -> pattern_tac `Left "mu _" ~arg:"" session []
+    | [Absyn.String i] -> pattern_tac `Left "mu _" ~arg:i session []
+    | [Absyn.String i; Absyn.String p] -> pattern_tac `Left p ~arg:i session []
+    | _ -> (fun _ _ fc -> O.error "Invalid arguments.\n" ; fc ())
+  let coinductionTactical session = function
+    | [] -> pattern_tac `Right "nu _" ~arg:"" session []
+    | [Absyn.String i] -> pattern_tac `Right "nu _" ~arg:i session []
+    | [Absyn.String i; Absyn.String p] -> pattern_tac `Right p ~arg:i session []
     | _ -> (fun _ _ fc -> O.error "Invalid arguments.\n" ; fc ())
 
-  let coinductionTactical = pattern_tac `Right "nu _" ~arg:""
   let axiom_atom  =
     specialize `Right (make_matcher
                          (function
@@ -1552,14 +1624,62 @@ struct
             (intro `Right simplify_matcher_r session None))
     | _ -> G.invalidArguments "simplify"
 
+  (** {1 Nabla elimination}
+    * The abstract tactic implements the reduction of nabla to liftings. *)
+  let abstractTactical session args =
+    let rec n_downto_1 = function
+      | 0 -> []
+      | n -> n :: n_downto_1 (n-1)
+    in
+    let abstract seq =
+      (* Compute the nabla-normal form of every formula in the sequent.
+       * it may be more convenient to be able to target a specific one. *)
+      let abstract (Formula(i,m,form)) =
+        let tv = List.map Term.nabla (List.rev (n_downto_1 i)) in
+        let form = FOA.eliminateNablas tv form in
+          Formula(0,m,form)
+      in
+        { seq with lhs = List.map abstract seq.lhs ;
+                   rhs = List.map abstract seq.rhs }
+    in
+    fun seqs sc fc ->
+      match seqs with
+        | s::tl -> sc [abstract s] tl (fun proofs -> proofs) fc
+        | _ -> fc ()
+
+  (** {1 Debugging}
+    * The examine tactic is useful for debugging. *)
+  let examineTactical session args = match args with
+    | [] ->
+        fun sequents sc fc ->
+          let seq = List.hd sequents in
+          let lhs =
+            String.concat "\n  " (List.map string_of_formula_ast seq.lhs)
+          in
+          let rhs =
+            String.concat "\n  " (List.map string_of_formula_ast seq.rhs)
+          in
+            O.output
+              (Printf.sprintf
+                 "Sequent AST:\n  %s\n----------------------------\n  %s\n"
+                 lhs rhs) ;
+            sc [] sequents Logic.idProofBuilder fc
+    | _ -> G.invalidArguments "examine"
+
   (** {1 Focusing strategy} *)
+
+  (** AtomicFormula includes the units (true/false).
+    * The Negative polarity is actually never used, and the whole polarity
+    * design is too weak as the polarity is set only at toplevel and not on
+    * subformulas.
+    * Hence, the "polarity" of mu/nu is currently fixed to resp. pos/neg. *)
 
   let sync_on_l pol f =
     match f with
       (* | FOA.AndFormula _ -> true *)
       | FOA.PiFormula _ | FOA.ImplicationFormula _ -> true
-      | FOA.AtomicFormula _  (* Negative polarities actually never occur.. *)
-      | FOA.ApplicationFormula _ when pol = Negative -> true
+      | FOA.AtomicFormula _  when pol = Negative -> true
+      | FOA.ApplicationFormula (FOA.NuFormula _, _) -> true
       | _ -> false
 
   let sync_on_r pol f =
@@ -1567,8 +1687,8 @@ struct
       | FOA.AndFormula _ -> true
       | FOA.OrFormula _ when Param.intuitionistic -> true
       | FOA.SigmaFormula _ | FOA.EqualityFormula _ -> true
-      | FOA.AtomicFormula _ (* This includes "true" and "false"! *)
-      | FOA.ApplicationFormula _ when pol = Positive -> true
+      | FOA.AtomicFormula _  when pol = Positive -> true
+      | FOA.ApplicationFormula (FOA.MuFormula _, _) -> true
       | _ -> false
 
   let fixpoint = function
@@ -1664,7 +1784,8 @@ struct
            | Some (f,before,after) ->
                if debug then
                Printf.printf "%sRelease left %s\n%s\n%!"
-                 (String.make (match seq.bound with Some b -> b | None -> 0) ' ')
+                 (String.make
+                    (match seq.bound with Some b -> b | None -> 0) ' ')
                  (string_of_formula f)
                  (xml_of_sequent seq) ;
                Some { seq with lhs = before @ [ unfocus f ] @ after }
@@ -1673,7 +1794,8 @@ struct
                  | Some (f,before,after) ->
                      if debug then
                      Printf.printf "%sRelease right %s\n%s\n%!"
-                       (String.make (match seq.bound with Some b -> b | None -> 0) ' ')
+                       (String.make
+                          (match seq.bound with Some b -> b | None -> 0) ' ')
                        (string_of_formula f)
                        (xml_of_sequent seq) ;
                      Some { seq with rhs = before @ [ unfocus f ] @ after }
@@ -1804,55 +1926,14 @@ struct
          sc [{seq with bound = Some n}] tl (fun proofs -> proofs) fc
      | [] -> fc ()
 
-  (** Combine all that. The tricky bit is to limit backtracking,
-    * and still perform the state restorations (cf. the restorer function). *)
   let proveTactical session args =
-    (* Set a bound to the number of unfoldings
-     * which by the way restricts our attention to the first sequent,
-     * and require that "prove" completely proves it. *)
+    (* Set a bound to the number of unfoldings,
+     * which by the way restricts our attention to the first sequent.
+     * There is no need to force full_async to complete, since it never returns
+     * partial successes by design. *)
     G.thenTactical (set_bound session args) full_async
 
-  (** {1 Nabla elimination}
-    * The abstract tactic implements the reduction of nabla to liftings. *)
-  let abstractTactical session args =
-    let rec n_downto_1 = function
-      | 0 -> []
-      | n -> n :: n_downto_1 (n-1)
-    in
-    let abstract seq =
-      (* Compute the nabla-normal form of every formula in the sequent.
-       * it may be more convenient to be able to target a specific one. *)
-      let abstract (Formula(i,m,form)) =
-        let tv = List.map Term.nabla (List.rev (n_downto_1 i)) in
-        let form = FOA.eliminateNablas tv form in
-          Formula(0,m,form)
-      in
-        { seq with lhs = List.map abstract seq.lhs ;
-                   rhs = List.map abstract seq.rhs }
-    in
-    fun seqs sc fc ->
-      match seqs with
-        | s::tl -> sc [abstract s] tl (fun proofs -> proofs) fc
-        | _ -> fc ()
-
-  (** {1 Debugging}
-    * The examine tactic is useful for debugging. *)
-  let examineTactical session args = match args with
-    | [] ->
-        fun sequents sc fc ->
-          let seq = List.hd sequents in
-          let lhs =
-            String.concat "\n  " (List.map string_of_formula_ast seq.lhs)
-          in
-          let rhs =
-            String.concat "\n  " (List.map string_of_formula_ast seq.rhs)
-          in
-            O.output
-              (Printf.sprintf
-                 "Sequent AST:\n  %s\n----------------------------\n  %s\n"
-                 lhs rhs) ;
-            sc [] sequents Logic.idProofBuilder fc
-    | _ -> G.invalidArguments "examine"
+  (** {1 Tactic table} Export tactics to the user. *)
 
   let pervasiveTacticals =
     let (++) t (a,b) = Logic.Table.add a b t in
@@ -1914,7 +1995,7 @@ struct
         ++ ("abstract", abstractTactical)
     in
 
-    (** Which structural rules to admit. *)
+    (* Which structural rules to admit. *)
     let ts =
       let ts =
         if Param.intuitionistic then
@@ -1931,8 +2012,7 @@ struct
           ++ ("rotate_l", rotateL)
     in
 
-    (*  Choose which disjunction tacticals to supply based
-        on whether the logic is intuitionistic or not.  *)
+    (* Which disjunction tactics are meaningful. *)
     let ts =
       let ts =
         if Param.intuitionistic then

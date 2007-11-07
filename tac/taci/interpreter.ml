@@ -215,7 +215,7 @@ struct
   * of the continuations is called.  This ensures that the stack doesn't
   * get blown.
   ********************************************************************)
-  let tactical pretactical session =
+  let tactical pretactical session = (* TODO timing *)
     (******************************************************************
     *success:
     * The toplevel success continuation.  Note that, along with raising
