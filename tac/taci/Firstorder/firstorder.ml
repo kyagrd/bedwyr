@@ -1053,7 +1053,7 @@ struct
       | _ -> false
     in
       if List.mem name ["nat";"even";"odd";"plus";"list";"half";
-                        "mem";"bind";"context";"ctxt"] then
+                        "mem";"bind";"context";"ctxt";"one"] then
         rigid (List.hd args) (* first-arg based *)
       else if List.mem name ["cp";"eq";"typeof"] then
         rigid (List.nth args 2)
