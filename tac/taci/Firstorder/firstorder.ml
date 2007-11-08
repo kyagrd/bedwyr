@@ -86,13 +86,14 @@ struct
       else
         result
 
+  let escape_term = Str.global_replace (Str.regexp "=>") "=&gt;"
+
   let xml_of_formula (Formula(local,(m,p),t)) = 
     let generic = Term.get_dummy_names ~start:1 local "n" in
-    let result = FOA.string_of_formula ~generic t in
+    let result = escape_term (FOA.string_of_formula ~generic t) in
     let quasi_atomic = function
       | FOA.ApplicationFormula _ | FOA.AtomicFormula _ -> true | _ -> false
     in
-      (* TODO turn => into =&gt; *)
       List.iter Term.free generic ;
       Printf.sprintf "<formula%s%s>%s%s</formula>"
         (match m with
@@ -163,7 +164,14 @@ struct
   (********************************************************************
   *Proof:
   ********************************************************************)
-  type proof = string
+  type proof = {
+    rule : string ;
+    formula : formula option ;
+    sequent : sequent ;
+    params : ((string*string) list) ;
+    bindings : Term.term list ;
+    subs : proof list
+  }
 
   (********************************************************************
   *Session:
@@ -224,9 +232,35 @@ struct
       { session with state = state ; diff = subst ;
                      sequents = sequents ; builder = builder }
 
+  let rec string_of_proof proof =
+    let s = Printf.sprintf "<rule><name>%s</name>\n" proof.rule in
+    let p =
+      List.map
+        (fun (k,v) -> Printf.sprintf "<key>%s</key><value>%s</value>\n" k v)
+        proof.params
+    in
+    let s = List.fold_left (^) s p in
+    let s =
+      s ^ xml_of_sequent proof.sequent
+    in
+    let s = match proof.formula with
+      | None -> s
+      | Some f -> s ^ xml_of_formula f
+    in
+    let proofs = List.map string_of_proof proof.subs in
+      (* Allow the re-use of variables' names in other branches. *)
+      List.iter
+        (fun b ->
+           Format.printf "%s binding %a\n%!" proof.rule Pprint.pp_term b ;
+           if match Term.observe b with Term.Var _ -> true | _ -> false then
+             Term.free (Term.get_name b)
+           (* else we should be smart and free some subvars but not all *))
+        proof.bindings ;
+      s ^ "<sub>" ^ List.fold_left (^) "" proofs ^ "</sub>\n</rule>\n"
+
   let string_of_proofs session =
     Term.restore_namespace session.proof_namespace ;
-    let proofs = session.builder [] in
+    let proofs = List.map string_of_proof (session.builder []) in
       String.concat "" proofs
 
   (** This is called by the interface to print the currently open leafs.
@@ -755,26 +789,9 @@ struct
   * Unfortunately it doesn't do any tabbing or suchlike, so the output
   * is really ugly.
   ********************************************************************)
-  (* TODO implement the ~b declaration to enhance display
-   * the parallel bottom-up building of the proof is incompatible with that
-   * => first build a tree, then print it using depth-first parsing,
-   *    freeing the names of bound variables. *)
   let makeProofBuilder name ?(b=[]) ?(p=[]) ?f seq = fun proofs ->
-    let s = Printf.sprintf "<rule><name>%s</name>\n" name in
-    let p =
-      List.map
-        (fun (k,v) -> Printf.sprintf "<key>%s</key><value>%s</value>\n" k v)
-        p
-    in
-    let s = List.fold_left (^) s p in
-    let s =
-      s ^ xml_of_sequent seq
-    in
-    let s = match f with
-      | None -> s
-      | Some f -> s ^ xml_of_formula f
-    in
-      s ^ "<sub>" ^ List.fold_left (^) "" proofs ^ "</sub>\n</rule>\n"
+    { rule = name ; params = p ; bindings = b ; formula = f ; sequent = seq ;
+      subs = proofs }
 
   (********************************************************************
   *findFormula:
