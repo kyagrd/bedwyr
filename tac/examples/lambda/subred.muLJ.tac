@@ -50,21 +50,28 @@ induction("G\M\T\ (context G => pi T'\ (typeof G M T' => (T = T')))").
    prove.
 
   % LAM.
-   mu_l("typeof _ _ _").
-   then(repeat(or_l),simplify).
-   then(imp_l,try(prove("1"))).
+   then(mu_l("typeof _ _ _"),then(repeat(or_l),simplify)).
+   imp_l.
    % The context extended with a fresh variable is still a context.
    mu_r.
    right.
    repeat(sigma_r).
    repeat(and).
    eq.
-   rotate.
-   % NOTE This axiom only works in non-strict.
-   axiom.
    simplify.
    % The fresh variable can't be bound in G.
-   induction("G\ nabla n\ bind G n (T' n) => false","context G").
+   then(induction("G\ nabla n\ bind G n (T' n) => false","context G"),
+     then(abstract,prove)).
+   induction("G\ nabla x\ context G","context _").
+   prove.
+   then(repeat(or_l),simplify).
+   prove.
+   abstract.
+   then(mu_r,right).
+   then(repeat(sigma),then(repeat(and),simplify)).
+   then(induction("l'\x'\t'\
+     pi l\ l'=(x\l) => sigma x\t\ x'=(a\x), t'=(a\t), bind l x t"),prove).
    prove.
    prove.
 % Yay.
+
