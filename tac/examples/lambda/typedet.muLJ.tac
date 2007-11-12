@@ -1,29 +1,6 @@
 #debug off.
 #proof_output "/tmp".
 
-%Inductive definitions for lambda calculus.
-
-#define "bind G V T :=
-	(sigma G'\ G = (cons (pair V T) G'));
-	(sigma G'\ V'\ T'\ G = (cons (pair V' T') G'), (bind G' V T))".
-
-#define "typeof G M T :=
-	(bind G M T);
-	(sigma a\ m1\ m2\
-		M = (app m1 m2),
-		(typeof G m1 (arrow a T)),
-		(typeof G m2 a));
-	(sigma a\ b\ f\
-		(M = (lambda a f)),
-		(T = (arrow a b)),
-		(nabla x\ (typeof (cons (pair x a) G) (f x) b)))".
-
-#define "context G := pi x\t\ bind G x t => pi t'\ typeof G x t' => t=t'".
-
-#define "permute a b :=
-   (pi m\t\ bind a m t => bind b m t), (pi m\t\ bind b m t => bind a m t)
-".
-
 #theorem permute_example "
  pi a\b\ta\tb\l\la\
    permute (cons (pair a ta) l) la =>
@@ -114,6 +91,9 @@ prove("0").
 simplify.
 prove("0").
 % Qed.
+
+% Note that this notion of well-formed context is stronger than usual.
+#define "context G := pi x\t\ bind G x t => pi t'\ typeof G x t' => t=t'".
 
 #theorem type_determinacy
   "pi g\x\t\ typeof g x t => context g => pi t'\ typeof g x t' => t=t'".

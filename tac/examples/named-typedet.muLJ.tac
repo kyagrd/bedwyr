@@ -1,9 +1,9 @@
-% Inductive definitions for lambda calculus.
+% Inductive definitions for lambda calculus, defined in a named way.
 
 #define "term X :=
 	(sigma y\ X = (var y));
 	(sigma m\ n\ X = (app m n), (term m), (term n));
-	(sigma m\ t\ X = (lambda t m), nabla x\ (term m x))".
+	(sigma m\ t\ X = (lambda t m), nabla x\ term (m (var x))".
 
 #define "bind G V T :=
 	(sigma G'\ G = (cons (pair V T) G'));
@@ -28,7 +28,7 @@
 		(nabla x\ (typeof (cons (pair x a) G) (f (var x)) b)))".
 
 
-#theorem sr "pi G\ M\ T\
+#theorem determinacy "pi G\ M\ T\
 	(typeof G M T) =>
 	(context G) =>
 	(pi T'\ (typeof G M T') => (T = T'))".
@@ -73,5 +73,6 @@ induction("G\M\T\ (context G => pi T'\ (typeof G M T' => (T = T')))").
      pi l\ l'=(x\l) => sigma x\t\ x'=(a\x), t'=(a\t), bind l x t"),prove).
    prove.
    prove.
-% Yay.
+% Qed.
+
 
