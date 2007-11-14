@@ -104,7 +104,7 @@ let window =
 
 (* ********** LAYOUT ********** *)
 
-let before,after,output,reset,load,save =
+let before,after,output,sigint,reset,load,save =
   let output  =
     Text.create ~width:80 window in
 
@@ -116,6 +116,7 @@ let before,after,output,reset,load,save =
   let after   = Text.create ~width:80 after_frame in
 
   let buttons = Frame.create left in
+  let sigint  = Button.create ~text:"Interrupt" buttons in
   let reset   = Button.create ~text:"Reset" buttons in
   let load    = Button.create ~text:"Load" buttons in
   let save    = Button.create ~text:"Save" buttons in
@@ -153,16 +154,16 @@ let before,after,output,reset,load,save =
     pack ~side:`Right ~expand:true  ~fill:`Both [after] ;
     pack ~side:`Top   ~expand:true  ~fill:`Both [after_frame] ;
 
-    pack ~side:`Left [reset;load;save] ;
+    pack ~side:`Left [sigint;reset;load;save] ;
     pack [buttons] ;
 
     pack ~side:`Left ~fill:`Both ~expand:true [left] ;
 
-    before,after,output,reset,load,save
+    before,after,output,sigint,reset,load,save
 
 (* ********** EXTERNAL PROCESS ********** *)
 
-let proc_in,proc_out,reload =
+let proc_in,proc_out,interrupt,reload =
   let rin,win = Unix.pipe () in
   let rout,wout = Unix.pipe () in
   let pid = ref None in
@@ -182,8 +183,12 @@ let proc_in,proc_out,reload =
                       [|"taci";"--logic";logic|])
                    rin wout Unix.stderr)
   in
+  let interrupt () =
+    (* Send SIGINT to taci *)
+    match !pid with None -> () | Some p -> Unix.kill p 2
+  in
     reload () ;
-    win,rout,reload
+    win,rout,interrupt,reload
 
 (* ********** READ FROM THE PROCESS ********** *)
 
@@ -272,7 +277,7 @@ let on_reset () =
   while undo () do () done ;
   reload ()
 
-let warn message f =
+let warn message f () =
   if
     1 = Dialog.create ~parent:window ~title:"Warning" ~message
           ~buttons:["Cancel";"OK"] ~default:0 ()
@@ -305,9 +310,13 @@ let () =
   let save_msg =
     Printf.sprintf "Overwrite %S?" filename
   in
-    bind reset ~events:[`ButtonPress] ~action:(fun _ -> on_reset ()) ;
-    bind load  ~events:[`ButtonPress] ~action:(fun _ -> warn load_msg on_load) ;
-    bind save  ~events:[`ButtonPress] ~action:(fun _ -> warn save_msg on_save) ;
+  let bind btn action =
+    bind btn ~events:[`ButtonPress] ~action:(fun _ -> action ())
+  in
+    bind sigint interrupt ;
+    bind reset  on_reset ;
+    bind load   (warn load_msg on_load) ;
+    bind save   (warn save_msg on_save) ;
     if Sys.file_exists filename then
       on_load ()
 
