@@ -1,0 +1,30 @@
+winner W (c W (c W (c W (c A (c B (c C (c D (c E (c F nil))))))))).
+winner W (c A (c B (c C (c W (c W (c W (c D (c E (c F nil))))))))).
+winner W (c A (c B (c C (c D (c E (c F (c W (c W (c W nil))))))))).
+winner W (c W (c A (c B (c W (c C (c D (c W (c E (c F nil))))))))).
+winner W (c A (c W (c B (c C (c W (c D (c E (c W (c F nil))))))))).
+winner W (c A (c B (c W (c C (c D (c W (c E (c F (c W nil))))))))).
+winner W (c W (c A (c B (c C (c W (c D (c E (c F (c W nil))))))))).
+winner W (c A (c B (c W (c C (c W (c D (c W (c E (c F nil))))))))).
+
+nowinner B := pi X\ winner X B => X = b.
+
+move (c b L) W (c W L).
+move (c X L) W (c X K) := move L W K.
+
+xwins L := winner x L ;
+           pi K\ move L o K => (nowinner K, sigma M\ move K x M, xwins M).
+
+flip (c A (c B (c C (c D (c E (c F (c G (c H (c I nil)))))))))
+     (c G (c H (c I (c D (c E (c F (c A (c B (c C nil))))))))).
+
+Theorems:
+
+  pi b1\ pi b2\ pi b3\ flip b1 b2, flip b2 b3 => b1 = b3.
+
+  pi b1\ pi b2\ flip b1 b2 => flip b2 b1.
+
+  pi b1\ pi b2\ pi w\ winner w b1, flip b1 b2 => winner w b2.
+
+  pi b1\ pi b2\ pi w\ xwins b1, flip b1 b2 => wins b2.
+
