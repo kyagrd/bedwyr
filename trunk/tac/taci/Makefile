@@ -1,12 +1,13 @@
 
 O=.cmx
 A=.cmxa
-I=-I Nologic -I Propositional -I Firstorder -I ../../bedwyr/src/ndcore
+I=-I Nologic -I Propositional -I Firstorder -I ndcore
 OCAMLC=ocamlopt
 OCAMLYACC=ocamlyacc
 OCAMLLEX=ocamllex
 
-SOURCE= listutils.ml absyn.ml output.ml option.ml \
+SOURCE= ndcore/term.ml ndcore/norm.ml ndcore/unify.ml ndcore/pprint.ml \
+	listutils.ml absyn.ml output.ml option.ml \
 	logic.ml propositionalabsyn.ml \
 	Nologic/nologic.ml \
 	Propositional/propositionalparser.ml \
@@ -21,7 +22,7 @@ SOURCE= listutils.ml absyn.ml output.ml option.ml \
 OBJ= $(SOURCE:.ml=$(O))
 
 taci: $(OBJ)
-	$(OCAMLC) $(I) unix$(A) str$(A) term$(O) norm$(O) unify$(O) pprint$(O) $(OBJ) -o $@
+	$(OCAMLC) $(I) unix$(A) str$(A) $(OBJ) -o $@
 
 logics_gen.ml: ../logics_gen/bin/Logics.in
 	make -C ../logics_gen
@@ -29,8 +30,9 @@ logics_gen.ml: ../logics_gen/bin/Logics.in
 
 clean:
 	make -C ../logics_gen clean
-	rm -f *.cm* Nologic/*.cm* Propositional/*.cm* Firstorder/*.cm*
-	rm -f *.o Nologic/*.o Propositional/*.o Firstorder/*.o
+	for dir in . Nologic Propositional Firstorder ndcore ; do \
+	  rm -f $$dir/*.cm* $$dir/*.o ; \
+	done
 	rm -f toplevellexer.ml toplevelparser.ml toplevelparser.mli
 	rm -f logics_gen.*
 
