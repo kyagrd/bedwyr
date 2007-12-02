@@ -296,132 +296,102 @@ let eliminateNablas tv form =
   let rec range_downto m n =
     if m>=n then m :: range_downto (m-1) n else []
   in
+  let lift_pname tv name =
+    List.fold_left (fun name _ -> "lift_"^name) name tv
+  in
+  let lift_tname tv name =
+    List.fold_left (fun name _ -> name^"'") name tv
+  in
+
+  (** [f pv tv form] computes [form'] such that [pv⊢ rev(tv)▹form ~> form'].
+    * The (formula-wise) inner generic variable is at the head of the list. *)
   let rec f pv tv form =
-    (* Printf.printf "Working on %s...\n"
-      (string_of_formula_ast ~generic:[] form) ; *)
+    (* Printf.printf "...%s\n" (string_of_formula_ast ~generic:[] form) ; *)
     let fresh () = Term.var ~ts:0 ~lts:0 ~tag:Term.Constant in
+
     (* Abstract term [t] over variables [tv]. *)
     let tf t =
       Norm.deep_norm (List.fold_right Term.abstract tv t)
     in
+
+    (* Abstract a fixed point body. *)
+    let abstract_body name argnames body =
+
+      (* Cosmetic name annotations. *)
+      let name = lift_pname tv name in
+      let argnames = List.map (lift_tname tv) argnames in
+
+      (* Create eigenvariables for the parameters. *)
+      let heads = List.map (fun _ -> fresh ()) argnames in
+      let params = List.map (fun h -> Term.app h tv) heads in
+        begin match apply params body with
+          | None -> failwith "not a formula"
+          | Some body ->
+              (* Keep track the number of raisings that have occured
+               * above the introduction of that fixed point. *)
+              let pv   = List.length tv :: pv in
+              let body = f pv tv body in
+              let body =
+                (* Abstract on the raised parameters' variables. *)
+                List.fold_right2
+                  (fun h name body ->
+                     AbstractionFormula
+                       (name,
+                        abstractVarWithoutLambdas h body))
+                  heads argnames body
+              in
+                (name,argnames,body)
+        end
+    in
+
     let g = f pv tv in
+
       match form with
+        (** Generic abstraction commutes with all connectives. *)
+        | AtomicFormula (n,terms) when n="true" || n="false" -> form
         | AndFormula (a,b)         -> AndFormula (g a, g b)
         | OrFormula  (a,b)         -> OrFormula  (g a, g b)
         | ImplicationFormula (a,b) -> ImplicationFormula (g a, g b)
-        | EqualityFormula (u,v)    -> EqualityFormula (tf u, tf v)
+        | EqualityFormula    (u,v) -> EqualityFormula (tf u, tf v)
         | PiFormula    f -> PiFormula    (g f)
         | SigmaFormula f -> SigmaFormula (g f)
+        | NablaFormula form ->
+            let head = fresh () in
+            let tv = head :: tv in
+              begin match apply [head] form with
+                | None -> failwith "not a formula"
+                | Some form -> f pv tv form
+              end
+        | AtomicFormula (name,terms) ->
+            (* For undefined atoms, the only thing we can do
+             * is lifting the name.. *)
+            let terms = List.map tf terms in
+              AtomicFormula (lift_pname tv name, terms)
+        | ApplicationFormula (head,terms) ->
+            ApplicationFormula (g head, List.map tf terms)
+        (** Interesting cases: first and second-order abstractions. *)
         | AbstractionFormula (name,_) ->
-            (* This should be used only immediately below a PI or SIGMA. *)
-            let name =
-              List.fold_left (fun name _ -> name^"'") name tv
-            in
+            let name = lift_tname tv name in
             let head = fresh () in
             let x = Term.app head tv in
               begin match apply [x] form with
-                | None ->
-                    failwith
-                      (Printf.sprintf "cannot apply: %s"
-                         (string_of_formula_ast ~generic:[] form))
+                | None -> failwith "invalid formula: cannot apply" 
                 | Some form ->
                     let form = f pv tv form in
                     let form = abstractVarWithoutLambdas head form in
                       AbstractionFormula (name,form)
               end
-        | NablaFormula form ->
-            let head = fresh () in
-            let tv = tv @ [head] in
-              begin match apply [head] form with
-                | None -> failwith "not a formula"
-                | Some form -> f pv tv form
-              end
-        | AtomicFormula (n,terms) when n="true" || n="false" -> form
-        | AtomicFormula (name,terms) ->
-            (* For undefined atoms, the only thing we can do
-              * is lifting the name.. *)
-            let terms = List.map tf terms in
-            let name =
-              List.fold_left (fun name _ -> "lift_"^name) name tv
-            in
-              AtomicFormula (name, terms)
-        | ApplicationFormula (head,terms) ->
-            let terms = List.map tf terms in
-              begin match head with
-                | MuFormula (name,argnames,body) ->
-                    let name =
-                      List.fold_left (fun name _ -> "lift_"^name) name tv
-                    in
-                    let argnames =
-                      List.map
-                        (fun name ->
-                           List.fold_left (fun name _ -> name^"'")
-                             name tv)
-                        argnames
-                    in
-                    let heads =
-                      List.fold_left
-                        (fun heads _ -> fresh () :: heads)
-                        [] argnames
-                    in
-                    (* Keep track the number of raisings that have occured
-                     * on that fixed point. *)
-                    let params = List.map (fun h -> Term.app h tv) heads in
-                    let pv = List.length tv :: pv in
-                      begin match apply params body with
-                        | None -> failwith "not a formula"
-                        | Some body ->
-                            let body = f pv tv body in
-                            let body =
-                              List.fold_right2
-                                (fun h name body ->
-                                   AbstractionFormula
-                                     (name,
-                                      abstractVarWithoutLambdas h body))
-                                heads argnames body
-                            in
-                              ApplicationFormula
-                                (MuFormula (name,argnames,body),
-                                 terms)
-                      end
-                | DBFormula (liftings,name,i) ->
-                    (* Number of nabla quantifications which have been
-                     * pushed down inside that fixed-point. *)
-                    let raisings = List.nth pv i in
-                    (* Number of nabla which have been pushed down from
-                     * within the fixed point. *)
-                    let inside_raisings = List.length tv - raisings in
-                    (* The values applied to that DBForm are of type
-                     *   t1 -> .. -> tm ->
-                     *   t'1 .. -> t'n ->
-                     *   o1 -> .. op -> alpha
-                     * where m is [raisings], [n] is the number of nablas
-                     * which have been pushed down from within the
-                     * fixed-point, and [p] is [liftings].
-                     * We should re-order the parameters of these values
-                     * in order to make them suitable for [liftings DB..]
-                     * which now has type
-                     *   (t'1 -> .. t'n -> o1 -> .. -> op ->
-                     *    t1 -> .. -> tm -> alpha) -> o *)
-                    let rec init n =
-                      (* Create a list of [n] fresh variables. *)
-                      if n = 0 then [] else fresh () :: init (n-1)
-                    in
-                    let outside = init raisings in
-                    let inside = init (inside_raisings+liftings) in
-                    let dst = inside@outside in
-                    let src = outside@inside in
-                    let wrap t =
-                      List.fold_right Term.abstract dst (Term.app t src)
-                    in
-                    let wrap t = Norm.deep_norm (wrap t) in
-                      ApplicationFormula
-                        (DBFormula (liftings+inside_raisings,name,i),
-                         List.map wrap terms)
-                | _ -> failwith "not yet supported"
-              end
-        | DBFormula _ | MuFormula _ | NuFormula _ ->
-            failwith "not a ground formula"
+        | MuFormula (name,argnames,body) ->
+            let n,a,b = abstract_body name argnames body in
+              MuFormula (n,a,b)
+        | NuFormula (name,argnames,body) ->
+            let n,a,b = abstract_body name argnames body in
+              NuFormula (n,a,b)
+        | DBFormula (liftings,name,i) ->
+            (* Number of nabla which have been pushed down from
+             * within the fixed point (not from above). *)
+            let inside_raisings = List.length tv - List.nth pv i in
+              DBFormula (liftings+inside_raisings,name,i)
   in
     f [] tv form
 
@@ -602,6 +572,11 @@ let getTermVarName t =
 **********************************************************************)
 exception InvalidFixpointApplication
 let applyFixpoint argument formula =
+  (* Normalizing the argument must be done first, before the normalization
+   * that might occur during instantiation. The downside is that even if you
+   * never abstracted anything your invariant gets abstracted here. TODO *)
+  let argument = eliminateNablas [] argument in
+
   (********************************************************************
   *normalizeAbstractions:
   * Creates n new variables (where n is the number of lambdas the DB
@@ -627,7 +602,11 @@ let applyFixpoint argument formula =
     
     (*  Reabstract. *)
     if (Option.isSome target') then
-      let abstarget = List.fold_right (abstractVarWithoutLambdas) lambdas' (Option.get target') in
+      let abstarget =
+        List.fold_right
+          (abstractVarWithoutLambdas)
+          lambdas' (Option.get target')
+      in
       
       (*  Free any bound vars (shouldn't be any). *)
       (List.iter free freeInfo;
@@ -639,45 +618,30 @@ let applyFixpoint argument formula =
   let tf t = t in
   let rec ff lam db f =
     match f with
-        MuFormula(name,args,body) ->
+      | MuFormula(name,args,body) ->
           MuFormula(name,args, ff lam (db + 1) body)
       | NuFormula(name,args,body) ->
           NuFormula(name,args, ff lam (db + 1) body)
       | ApplicationFormula(DBFormula(lifts,n,db'),args) ->
-          if db = db' then
-            (* We are computing
-             *   lambdas \ ... (lift lift p) args
-             * where p has to be replaced by argument,
-             * and the args have the (lambdas \ ..) prefix pushed down. *)
+          if db <> db' then f else
             let argument =
               if lifts = 0 then argument else
-              let fresh _ = Term.var ~ts:0 ~lts:0 ~tag:Term.Constant in
-              let heads = List.map fresh args in
-              let generics =
-                let rec mk = function 0 -> [] | n -> fresh () :: mk (n-1) in
-                  mk lifts
-              in
-              let args = List.map (fun h -> Term.app h generics) heads in
-              let abstractVar v f =
-                AbstractionFormula("x",abstractVarWithoutLambdas v f)
-              in
-                match apply args argument with
-                  | Some m ->
-                      List.fold_right abstractVar heads
-                        (eliminateNablas generics m)
-                  | None -> failwith "could not apply"
+                let fresh _ = Term.var ~ts:0 ~lts:0 ~tag:Term.Constant in
+                let generics =
+                  let rec mk = function 0 -> [] | n -> fresh () :: mk (n-1) in
+                    mk lifts
+                in
+                  eliminateNablas generics argument
             in
               normalizeAbstractions lam argument args
-          else
-            f
       | AbstractionFormula(name,body) ->
           AbstractionFormula(name, (ff (name::lam) db body))
       | DBFormula(_) ->
           failwith "Firstorderabsyn.applyFixpoint: encountered invalid DB."
-      | _ -> (mapFormula (ff lam db) tf f)
+      | _ -> mapFormula (ff lam db) tf f
   in
   try
-    Some(ff [] 0 formula)
+    Some (ff [] 0 formula)
   with
     InvalidFixpointApplication ->
       None
