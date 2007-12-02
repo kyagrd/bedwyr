@@ -21,7 +21,4 @@ mu_r.
 sigma_r.
 and_r.
 eq.
-% STUCK.
-% Not the implementation's fault, the equations might be wrong,
-% or need a better understanding.
-
+axiom.

@@ -82,3 +82,16 @@ then(induction("x'\l'\ pi x\l\ (x'=(a\x), l'=(a\l)) => mem x l"),prove).
 prove.
 then(abstract,prove).
 % QED.
+
+#theorem term_m "pi c\t\ (nabla a\b\ term (c a b) (t a b)) =>
+                         (nabla a\   term (c a a) (t a a))".
+simplify.
+abstract.
+then(induction("c\t\ nabla a\ term (c a a) (t a a)"),abstract).
+prove.
+then(repeat(or_l),simplify).
+then(induction("x\l\ nabla a\ mem (x a a) (l a a)"),
+  then(abstract,prove)).
+prove.
+prove.
+% QED.

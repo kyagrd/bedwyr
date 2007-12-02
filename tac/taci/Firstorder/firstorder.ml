@@ -247,15 +247,21 @@ struct
       | None -> s
       | Some f -> s ^ xml_of_formula f
     in
+    let s =
+      s ^ "<bound>" ^
+      String.concat " " (List.map Pprint.term_to_string proof.bindings)
+      ^ "</bound>"
+    in
     let proofs = List.map string_of_proof proof.subs in
       (* Allow the re-use of variables' names in other branches. *)
-      List.iter
+      (* List.iter
         (fun b ->
-           Format.printf "%s binding %a\n%!" proof.rule Pprint.pp_term b ;
            if match Term.observe b with Term.Var _ -> true | _ -> false then
              Term.free (Term.get_name b)
            (* else we should be smart and free some subvars but not all *))
-        proof.bindings ;
+        proof.bindings ; *)
+      List.iter (fun b -> Term.free (Term.get_name b))
+        (Term.get_vars (fun _ -> true) proof.bindings) ;
       s ^ "<sub>" ^ List.fold_left (^) "" proofs ^ "</sub>\n</rule>\n"
 
   let string_of_proofs session =
@@ -404,19 +410,19 @@ struct
   ********************************************************************)
   let abstractFixpointDefinition f argnames =
     match f with
-        FOA.MuFormula(_,_,body)
+      | FOA.MuFormula(_,_,body)
       | FOA.NuFormula(_,_,body) ->
           let args' = List.map
             (fun n -> Term.fresh ~name:"*" ~lts:0 ~ts:0 ~tag:Term.Constant)
             argnames in
           let f' = FOA.ApplicationFormula(f, args') in
           let f'' = (List.fold_right (FOA.abstractVar) args' f') in
-          let () =
+          (* let () =
             O.debug ("Firstorder.abstractFixpointDefinition: " ^
                      (FOA.string_of_formula_ast ~generic:[] f'') ^ "\n")
-          in
+          in *)
           f''
-      | _ -> failwith "Firstorder.abstractFixpointDefinition: invalid formula."
+      | _ -> assert false
 
   (********************************************************************
   *parseTemplate:
@@ -1652,7 +1658,7 @@ struct
       (* Compute the nabla-normal form of every formula in the sequent.
        * it may be more convenient to be able to target a specific one. *)
       let abstract (Formula(i,m,form)) =
-        let tv = List.map Term.nabla (List.rev (n_downto_1 i)) in
+        let tv = List.map Term.nabla (n_downto_1 i) in
         let form = FOA.eliminateNablas tv form in
           Formula(0,m,form)
       in
