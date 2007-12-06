@@ -150,7 +150,10 @@ binding:
 
 aexp:
 | LPAREN exp RPAREN { $2 }
-| ID                { Term.atom $1 }
+| ID                { if $1="_" then
+                        Term.fresh ~name:"_" ~tag:Term.Logic ~ts:0 ~lts:0
+                      else
+                        Term.atom $1 }
 | STRING            { Term.string $1 }
 
 /* There is redundency here, but ocamlyacc seems to have problems
