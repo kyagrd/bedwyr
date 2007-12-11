@@ -303,15 +303,14 @@ let eliminateNablas tv form =
     List.fold_left (fun name _ -> name^"'") name tv
   in
 
-  (** [f pv tv form] computes [form'] such that [pv⊢ rev(tv)▹form ~> form'].
-    * The (formula-wise) inner generic variable is at the head of the list. *)
+  (** [f pv tv form] computes [φ^pv_{rev(tv)}(form)]. *)
   let rec f pv tv form =
     (* Printf.printf "...%s\n" (string_of_formula_ast ~generic:[] form) ; *)
     let fresh () = Term.var ~ts:0 ~lts:0 ~tag:Term.Constant in
 
     (* Abstract term [t] over variables [tv]. *)
     let tf t =
-      Norm.deep_norm (List.fold_right Term.abstract tv t)
+      Norm.deep_norm (List.fold_left (fun a b -> Term.abstract b a) t tv)
     in
 
     (* Abstract a fixed point body. *)
@@ -323,7 +322,7 @@ let eliminateNablas tv form =
 
       (* Create eigenvariables for the parameters. *)
       let heads = List.map (fun _ -> fresh ()) argnames in
-      let params = List.map (fun h -> Term.app h tv) heads in
+      let params = List.map (fun h -> Term.app h (List.rev tv)) heads in
         begin match apply params body with
           | None -> failwith "not a formula"
           | Some body ->
@@ -367,13 +366,35 @@ let eliminateNablas tv form =
              * is lifting the name.. *)
             let terms = List.map tf terms in
               AtomicFormula (lift_pname tv name, terms)
+        | ApplicationFormula (DBFormula (liftings,name,i),terms) ->
+            let s   = List.nth pv i in
+            let s'  = List.length tv - s in
+            let s'' = liftings in
+              (* Computing φ_{ss'}^{p:s}( φ_{s''}(p) (s''\tss's'') )
+               *         = φ_{s's''}(p) (s's''s\tss's'')       *)
+              ApplicationFormula
+                (DBFormula (liftings+s',name,i),
+                 let rec init n =
+                   (* Create a list of [n] fresh variables. *)
+                   if n = 0 then [] else fresh () :: init (n-1)
+                 in
+                 let s = init s in
+                 let s's'' = init (s'+s'') in
+                 let src = s@s's'' in
+                 let dst = s's''@s in
+                 let wrap t =
+                   let t = tf t in
+                     List.fold_right Term.abstract dst (Term.app t src)
+                 in
+                 let wrap t = Norm.deep_norm (wrap t) in
+                   List.map wrap terms)
         | ApplicationFormula (head,terms) ->
             ApplicationFormula (g head, List.map tf terms)
         (** Interesting cases: first and second-order abstractions. *)
         | AbstractionFormula (name,_) ->
             let name = lift_tname tv name in
             let head = fresh () in
-            let x = Term.app head tv in
+            let x = Term.app head (List.rev tv) in
               begin match apply [x] form with
                 | None -> failwith "invalid formula: cannot apply" 
                 | Some form ->
@@ -387,11 +408,7 @@ let eliminateNablas tv form =
         | NuFormula (name,argnames,body) ->
             let n,a,b = abstract_body name argnames body in
               NuFormula (n,a,b)
-        | DBFormula (liftings,name,i) ->
-            (* Number of nabla which have been pushed down from
-             * within the fixed point (not from above). *)
-            let inside_raisings = List.length tv - List.nth pv i in
-              DBFormula (liftings+inside_raisings,name,i)
+        | DBFormula _ -> assert false
   in
     f [] tv form
 
