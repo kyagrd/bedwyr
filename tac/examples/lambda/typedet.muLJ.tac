@@ -1,5 +1,6 @@
 #debug off.
 #proof_output "/tmp".
+#open "definitions.muLJ.tac".
 
 #theorem permute_example "
  pi a\b\ta\tb\l\la\
@@ -72,7 +73,7 @@ abstract.
 then(pi_l,then(pi_l,then(imp_l,try(axiom)))).
 then(induction("x\y\z\ nabla b\ nabla a\ bind (x a) (y a) (z a)"),
   then(abstract,prove("0"))).
-prove.
+then(abstract,prove).
 % ===> .
 induction("l''\m''\t''\ pi l'\ l''=(a\l') =>
   sigma m'\t'\ m''=(a\m'), t''=(a\t'), nabla a\ bind (l' a) (m' a) (t' a)").
@@ -82,7 +83,7 @@ weak_l("pi _").
 then(pi_l,then(pi_l,then(imp_l,try(axiom)))).
 then(induction("x\y\z\ nabla b\ nabla a\ bind (x a) (y a) (z a)"),
   then(abstract,prove("0"))).
-prove.
+then(abstract,prove).
 % This is permute_example lifted twice, (used to be) ouch.
 weak_l.
 then(mu_r,then(mu_l,then(and_r,simplify))).
@@ -157,6 +158,7 @@ then(mu_l,then(or_l,simplify)).
   sigma t\ t'=(a\t), typeof tl x t").
  prove.
  rotate.
+
 
 
 

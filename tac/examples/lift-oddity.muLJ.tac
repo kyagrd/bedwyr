@@ -1,10 +1,11 @@
 
+% Just checking the abstraction order.
 #theorem test "(nabla x1\x2\x3\ p x2 x3) => (nabla x1\x2\x3\ p x2 x3)".
 imp.
 repeat(nabla_l).
 abstract.
 axiom.
-% Qed, the prefix is treated in the right order.
+% Qed.
 
 #define "term x := sigma y\ x = abs y, nabla a\ term (y a)".
 
@@ -22,3 +23,4 @@ sigma_r.
 and_r.
 eq.
 axiom.
+
