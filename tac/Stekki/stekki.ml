@@ -13,10 +13,12 @@ let () =
       Str.split (Str.regexp_string ":") s
   in
     try
-      ignore (List.find Sys.file_exists (List.map (fun d -> d^"/taci") path))
+      Printf.printf
+        "Using %S.\n%!"
+        (List.find Sys.file_exists (List.map (fun d -> d^"/taci") path))
     with
       | Not_found ->
-          Printf.eprintf "Didn't find \"taci\" in $PATH!" ;
+          Printf.eprintf "Didn't find \"taci\" in $PATH!\n%!" ;
           exit 1
 
 
