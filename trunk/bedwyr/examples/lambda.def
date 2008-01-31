@@ -56,7 +56,7 @@ test :=
 
 % If we had written the wt predicate using a pi instead of the nabla then:
 % (1) it would have been on Level 1 instead of 0;
-% (2) it would have been wrong, as shown by the (notest 0).
+% (2) it would have been wrong, as shown by the last assert_not.
 
 % =============================================================================
 % The following is just an attempt to think about more complex problems,
