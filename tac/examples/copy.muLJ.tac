@@ -14,13 +14,11 @@
  => (nabla   a\ eq (cons (pair a a) gamma) (m a) (n a))".
 simplify.
 abstract.
-induction("g\m\n\ nabla a\ eq (g a a) (m a a) (n a a)").
-abstract.
+then(induction("g\m\n\ nabla a\ eq (g a a) (m a a) (n a a)"),abstract).
 axiom.
-abstract.
 then(repeat(or_l),simplify).
-induction("a\b\l\ nabla c\ assoc (a c c) (b c c) (l c c)").
-abstract.
+then(induction("a\b\l\ nabla c\ assoc (a c c) (b c c) (l c c)"),abstract).
+% These are all trivial.
 iterate(prove("1")).
 % Qed.
 
@@ -53,14 +51,10 @@ then(mu_r,right).
 then(repeat(sigma_r),then(repeat(and_r),try(eq_r))).
 % This is the "main lemma" that we proved first.
 abstract.
-induction("g\m\n\ nabla a\ eq (g a a) (m a a) (n a a)").
-abstract.
+then(induction("g\m\n\ nabla a\ eq (g a a) (m a a) (n a a)"),abstract).
 axiom.
-abstract.
 then(repeat(or_l),simplify).
-induction("a\b\l\ nabla c\ assoc (a c c) (b c c) (l c c)").
-abstract.
+then(induction("a\b\l\ nabla c\ assoc (a c c) (b c c) (l c c)"),abstract).
+% These are all trivial.
 iterate(prove("1")).
 % Qed.
-
-

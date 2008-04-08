@@ -28,6 +28,7 @@
 		(T = (arrow a b)),
 		(nabla x\ (typeof (cons (pair x a) G) (f x) b)))".
 
+% The permute definition is useful to work on a list modulo permutation.
 #define "permute a b :=
    (pi m\t\ bind a m t => bind b m t), (pi m\t\ bind b m t => bind a m t)
 ".

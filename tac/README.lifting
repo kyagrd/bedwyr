@@ -1,0 +1,92 @@
+
+
+                      Experimenting with nabla in Taci
+
+                                 David Baelde
+
+Contents:
+  I. Commented list of examples
+ II. How to use a very experimental tool
+
+I. Commented list of examples
+=============================
+
+Examples of interest here:
+
+ * examples/ho_simple.muLJ.tac:
+     Simple examples to get used to the system. One might at first be surprised
+     by the invariants used there, but they eventually make sense. Better: they 
+     could be automatically generated from the context using classic 
+     heuristics.
+
+ * examples/copy.muLJ.tac:
+     A simple striking example, where the induction is used to establish an 
+     unusual property of the generic context in that case: two variables can be 
+     merged. This leads to a very concise proof.
+
+ * examples/lift-oddity.muLJ.tac:
+     The unfortunate aspect of the lifting approach: it does not commute with 
+     unfolding. This means that the correspondency between the original and the
+     abstracted-out nabla is only up-to name re-ordering -- which is logically 
+     sound.
+
+ * examples/lambda/typedet.muLJ.tac:
+     A proof of type determinacy for the "traditional" specification of simply 
+     typed lambda calculus found in examples/lambda/definitions.muLJ.tac.
+     It makes use of a quite strong invariant. (Don't mind the comments
+     about tweaks of the automated tactic "prove".)
+
+ * examples/lambda/subred.muLJ.tac:
+     Subject reduction for simply typed lambda calculus as specified in 
+     examples/lambda/definitions.muLJ.tac. The proof leaves a lemma unproved,
+     that is established in examples/lambda/bonus.muLJ.tac.
+     TODO why does it have unification failures just like the "named" approach
+     TODO bonus doesn't pass
+
+ * examples/lambda/named-typedet.muLJ.tac:
+     Proofs of type determinacy and almost subject reduction for an alternative 
+     specification of simply typed lambda calculus.
+
+II. How to use a very experimental tool
+=======================================
+
+The abstract tactic implements lifting. It is experimental and has a couple 
+unfriendly features:
+
+ * Lifting is not automatically done as in the theoretical presentation of the 
+   logic. It has to be done explicitely by calling the tactic "abstract".
+
+ * The lift_* predicate names do not exist: these names are displayed for 
+   convenience, but you can't type them in. The system would understand that as 
+   an atom. If you want to refer to a lifted version of a predicate, type in 
+   some nabla quantifications, and abstract the result explicitely.
+
+ * The lift_* predicate names matter, in that equality of fixed points (on 
+   which the initial rule is built) relies on names and does not compare the 
+   fixed points' bodies. It's the users' duty to not introduce a predicate that 
+   would conflict with these.
+
+Keep in mind other general weaknesses of our prototype:
+
+ * It has very little automation and high-level tactics,
+   hence leaves many boring details to the user.
+
+ * Variable names' management is not always so natural, and is not stable:
+   it is likely that you'll find examples refering to variables that would have 
+   to be updated. It's not unlikely that you might have to edit your own script
+   after resetting taci.
+   TODO check that it doesn't depend on the choice of ocamlc/ocamlopt
+   
+ * In general, taci still has some bugs that make undo and redo not exactly
+   inverses of each other. Tactics should be submitted one by one,
+   waiting for the previous one to complete before asking for more:
+   for mysterious reasongs, taci goes out of sync if put under pressure.
+   In any case, don't hesitate to reset if anything weird happens.
+   Also, having a CPU-meter is useful when using Stekki, which does not show 
+   obviously when taci is computing or not.
+   TODO is it caused by excessive flush: easy testing can be done when taci
+     outputs XML trees
+
+ * Taci has currently no support for lemmas. Often, we work on lemmas 
+   separately for convenience, but then paste the script corresponding to the 
+   proof of the lemma in the proof of the main theorem.

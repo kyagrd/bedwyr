@@ -3,6 +3,9 @@
 % instead of having a context of "free variables" as in other files.
 % As a consequence the notion of "valid context" is more usual,
 % and doesn't require as much work in the proof.
+% On the other hand, this style of specification does not support
+% substitution as immediately as the other, and reasoning about it
+% can involve unification problems outside of the higher-order patterns.
 
 #define "nat X := X=0 ; sigma Y\ X = s Y, nat Y".
 
@@ -96,6 +99,14 @@ induction("G\M\T\ (context G => pi T'\ (typeof G M T' => (T = T')))").
    prove.
 % Qed.
 
+% Subject reduction shows a weakness of this approach: it requires several
+% unification outside of the higher-order patterns fragment.
+% As a result we have to do a lot more by hand, and eventually get stuck.
+% (And we get all these warnings about abortions due to unhandled unifications.)
+% Note, however, that a more powerful unification algorithm could be used to
+% carry out the proof: this in not a problem of the logic, but a problem
+% of its implementation -- although a serious one in our opinion.
+
 #theorem subject_reduction "
   pi m\n\ one m n => pi g\t\ typeof g m t => typeof g n t
 ".
@@ -136,4 +147,5 @@ nabla.
 then(mu_l("bind _ _ _"),then(or_l,simplify)).
 % One non-llambda shy of completing.
 rotate.
-% Non-llambda everwhere:(.
+% Not quite Qed.
+

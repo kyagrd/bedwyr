@@ -22,5 +22,6 @@ mu_r.
 sigma_r.
 and_r.
 eq.
+% Lifting and unfolding do not commute, hence the axiom does not apply.
 axiom.
-
+% Not qued.
