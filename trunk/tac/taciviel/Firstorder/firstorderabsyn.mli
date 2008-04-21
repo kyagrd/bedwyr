@@ -68,6 +68,7 @@ val isAnonymousTerm : term -> bool
 val isAnonymousFormula : formula -> bool
 
 val mapFormula : (formula -> formula) -> (term -> term) -> formula -> formula
+val termsFormula : formula -> term list
 val abstract : string -> formula -> formula
 val abstractDummyWithoutLambdas : formula -> formula
 val abstractVar : term -> formula -> formula

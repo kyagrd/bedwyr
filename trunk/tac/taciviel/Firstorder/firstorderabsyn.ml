@@ -64,7 +64,7 @@ let getTermHeadAndArgs t =
             None
       | _ -> None)    
   | Term.Var(v) ->
-      Some (Term.get_hint t, [])
+      Some (try Term.get_hint t, [] with _ -> "x$",[])
   | _ -> None
   
 let getDefinitionArity (Definition(_,a,_,_)) = a
@@ -120,6 +120,22 @@ let mapFormula formulafun termfun formula =
         ApplicationFormula(formulafun head, List.map termfun tl)
     | AtomicFormula(head, tl) -> AtomicFormula(head, List.map termfun tl)
     | DBFormula(_,n,i) -> formula
+
+let termsFormula = let rec t formula =  
+  match formula with
+      AndFormula(l,r)  
+    | OrFormula(l,r)  
+    | ImplicationFormula(l,r) -> (t l)@(t r)
+    | EqualityFormula(l,r) -> [l;r]
+    | PiFormula(f)  
+    | SigmaFormula(f)  
+    | NablaFormula(f) -> t f 
+    | MuFormula(name, args, f)  
+    | NuFormula(name, args, f) -> t f 
+    | AbstractionFormula(name, f) -> t f
+    | ApplicationFormula(head,tl) -> tl 
+    | AtomicFormula(head, tl) -> tl
+    | DBFormula(_,n,i) -> [] in t
 
 let rec string_of_term ~generic names t =
   Pprint.term_to_string_preabstracted ~generic ~bound:names t
