@@ -278,7 +278,7 @@ let rec abstractVarWithoutLambdas var formula =
 **********************************************************************)
 let rec apply terms formula =
   let app term f =
-    let rec termFun t = Term.app t [term]
+    let rec termFun t = Norm.deep_norm (Term.app t [term])
     and formulaFun f = (mapFormula formulaFun termFun f) in
     match f with
         AbstractionFormula(_,f) -> Some(formulaFun f)
