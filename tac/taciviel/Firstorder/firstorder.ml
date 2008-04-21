@@ -18,6 +18,7 @@
 **********************************************************************)
 
 let debug = false
+let debug2= true
 
 (**********************************************************************
 *NablaSig:
@@ -70,11 +71,14 @@ struct
   (** A formula has a local level, and an annotation. *)
   type formula = Formula of (int * (marktype * polarity) * FOA.formula)
 
-  let string_of_formula (Formula(local,_,t)) =
+  let string_of_polarity p = match p with Positive -> "+" |Negative -> "-"
+  let string_of_marktype m = match m with Focused -> "#" |Frozen -> "/" |Nonfocused -> " "
+
+  let string_of_formula (Formula(local,(m,p),t)) =
     let generic = Term.get_dummy_names ~start:1 local "n" in
     let result = FOA.string_of_formula ~generic t in
       List.iter Term.free generic ;
-      (String.concat "," generic) ^ ">> " ^ result
+      (String.concat "," generic) ^ ">> " ^ (string_of_marktype m) ^ (string_of_polarity p) ^ " " ^ result
 
   let string_of_formula_ast (Formula(local,(m,_),t)) =
     let generic = Term.get_dummy_names ~start:1 local "n" in
@@ -1013,10 +1017,10 @@ struct
     in
       attempts
 
-  let unfold_fixpoint rulename p args body argnames mkseq sc fc =
+  let unfold_fixpoint rulename name args body argnames mkseq sc fc =
     match (* body (mu body) *)
       FOA.applyFixpoint
-        (abstractFixpointDefinition p argnames) body
+        (abstractFixpointDefinition name argnames) body
     with
      | Some p' ->
          begin match FOA.apply args p' with
@@ -1067,7 +1071,7 @@ struct
    * NOTE: logic variables are never "rigid", even though they might be
    * substituted for "rigid" terms. *)
   let normalize = Str.global_replace (Str.regexp "lift_") ""
-  let unfolding_progresses name args =
+  let unfolding_progresses name args = 
     let name = normalize name in
     let rec rigid t = match Term.observe (Norm.hnorm t) with
       | Term.Lam (_,t) -> rigid t
@@ -1075,7 +1079,7 @@ struct
       | Term.Var v when v.Term.tag = Term.Constant -> true
       | _ -> false
     in
-      if List.mem name ["nat";"even";"odd";"plus";"list";"half";
+      if List.mem name ["nat";"even";"odd";"plus";"mult";"list";"half";
                         "mem";"bind";"context";"ctxt";"one"] then
         rigid (List.hd args) (* first-arg based *)
       else if List.mem name ["cp";"eq";"typeof"] then
@@ -1085,13 +1089,13 @@ struct
       else if List.mem name ["permute";"empty"] then
         true (* non-recursive *)
       else
-        false
+        false 
 
-  let unfolding_progresses n a = let r = unfolding_progresses n a in
-    if debug then
+(*  let unfolding_progresses n a = let r = unfolding_progresses n a in
+    if debug2 then
       Printf.printf "Progress %s %s = %b\n%!"
         n (String.concat "::" (List.map Pprint.term_to_string a)) r ;
-      r
+      r *)
 
   type internal_sc =
     ?k:(unit -> unit) -> ?b:(Term.term list) -> string -> sequent list -> unit
@@ -1246,7 +1250,24 @@ struct
                           | None -> fc ()
                         end
                     | None -> (* TODO: automatic induction *)
-                        unfold_fixpoint "mu_l" name args body argnames sc fc
+			let fresh n = Term.fresh ~name:n ~ts:0 ~lts:0 ~tag:Term.Eigen in
+			let rhs = let rec s l = match l with [] -> assert false |[f] -> getFormulaFormula f |f::l -> FOA.OrFormula(getFormulaFormula f,s l) in s seq.rhs in 
+			let lrhs = let rec s l = match l with [] -> rhs | f::l -> if getFormulaMarker f = Nonfocused then FOA.ImplicationFormula(getFormulaFormula f,s l) else s l in s (zip []) in
+			let fv,elrhs = let rec e lan la  = match lan,la with [],[] -> [],lrhs 
+			  |an::lan,a::la -> let lv,f = e lan la in let v = fresh an in v::lv,FOA.ImplicationFormula(FOA.EqualityFormula (v,a),f) 
+			  |_ -> assert false in e argnames (List.rev args) in
+			let getenv = Term.eigen_vars ((FOA.termsFormula lrhs)@args) in
+			let getenv2= Term.logic_vars ((FOA.termsFormula lrhs)@args) in
+			let aelrhs = List.fold_left (fun f v -> FOA.SigmaFormula (FOA.abstractVar v f)) elrhs getenv2 in
+			let aelrhs = List.fold_left (fun f v -> FOA.PiFormula (FOA.abstractVar v f)) aelrhs getenv in
+			let formula = List.fold_left (fun f v -> FOA.abstractVar v f) aelrhs fv in
+                        match FOA.applyFixpoint formula body with Some f ->
+			  (match FOA.apply args f with Some f ->
+			     let bound = update_bound seq in if out_of_bound bound then fc () else 		
+				 sc "induction" [{ seq with bound = bound ; lhs = zip [Formula(i,b,f)]}]
+			  | None -> fc ()) | None -> fc ()
+
+(*		  unfold_fixpoint "mu_l" name args body argnames sc fc *)
                   end
               | _ -> assert false
             end
@@ -1477,7 +1498,7 @@ struct
   let nuR = pattern_tac `Right "nu _" ~arg:"unfold"
 
   let inductionTactical session = function
-    | [] -> pattern_tac `Left "mu _" ~arg:"" session []
+    | [] -> pattern_tac `Left "mu _" session []
     | [Absyn.String i] -> pattern_tac `Left "mu _" ~arg:i session []
     | [Absyn.String i; Absyn.String p] -> pattern_tac `Left p ~arg:i session []
     | _ -> (fun _ _ fc -> O.error "Invalid arguments.\n" ; fc ())
@@ -1749,47 +1770,51 @@ struct
   (** The decide rule focuses on a synchronous formula.
     * This tactic takes a single sequent and its successes are single sequents
     * too. *)
-  let focus =
-    let matcher_l =
-      make_matcher
-        (fun (Formula(i,(m,p),f)) -> m=Nonfocused && sync_on_l p f)
+
+
+
+  let focus,freeze1 =
+    let matcher_l fl =
+      make_matcher (fun (Formula(i,(m,p),f)) -> fl m p f)
     in
-    let matcher_r =
-      make_matcher
-        (fun (Formula(i,(m,p),f)) -> m=Nonfocused && sync_on_r p f)
+    let matcher_r fr =
+      make_matcher (fun (Formula(i,(m,p),f)) -> fr m p f)
     in
     let focus (Formula(i,(_,p),f)) = Formula (i,(Focused,p),f) in
-    let rec tac_r before after seq sc fc =
-      match matcher_r after with
+    let freeze (Formula(i,(m,p),f)) = Formula (i,(Frozen,p),f) in
+    let rec tac_r before after seq sc fc focus fl fr =
+      match matcher_r fr after with
         | Some (f,before',after) ->
             let before = before @ before' in
-              if debug then
-              Format.printf "%s@[<hov 2>Focus right@ %s@ %a@]\n%!"
-                (String.make (match seq.bound with Some b -> b | None -> 0)
+              if debug2 then
+              Format.printf "%s@[<hov 2>Focus right@ %s@]\n%!"
+                (String.make (match seq.bound with Some b -> max 0 b | None -> 0)
                    ' ')
                 (string_of_formula f)
-                ppxml_sequent seq ;
+                (* ppxml_sequent seq *);
               sc
                 { seq with rhs = before @ [ focus f ] @ after }
-                (fun () -> tac_r (before@[f]) after seq sc fc)
+                (fun () -> tac_r (before@[f]) after seq sc fc focus fl fr)
         | None -> fc ()
     in
-    let rec tac_l before after seq sc fc =
-      match matcher_l after with
+    let rec tac_l before after seq sc fc focus fl fr =
+      match matcher_l fl after with
         | Some (f,before',after) ->
             let before = before @ before' in
-              if debug then
-              Format.printf "%s@[<hov 2>Focus left@ %s@ %a@]\n%!"
-                (String.make (match seq.bound with Some b -> b | None -> 0)
+              if debug2 then
+              Format.printf "%s@[<hov 2>Focus left@ %s@]\n%!"
+                (String.make (match seq.bound with Some b -> max 0 b | None -> 0)
                    ' ')
                 (string_of_formula f)
-                ppxml_sequent seq ;
+                (* ppxml_sequent seq *) ;
               sc
                 { seq with lhs = before @ [ focus f ] @ after }
-                (fun () -> tac_l (before@[f]) after seq sc fc)
-        | None -> tac_r [] seq.rhs seq sc fc
+                (fun () -> tac_l (before@[f]) after seq sc fc focus fl fr)
+        | None -> tac_r [] seq.rhs seq sc fc focus fl fr
     in
-      fun seq sc fc -> tac_l [] seq.lhs seq sc fc
+      (fun seq sc fc -> tac_l [] seq.lhs seq sc fc focus (fun m p f -> m=Nonfocused && sync_on_l p f) (fun m p f -> m=Nonfocused && sync_on_r p f)), 
+      (fun seq sc fc -> tac_l [] seq.lhs seq sc fc freeze (fun m p f -> m=Nonfocused && fixpoint f) (fun m p f -> m=Nonfocused && fixpoint f)) 
+
 
   (** The reaction rule removes the focus from an asynchronous formula. *)
   let unfocus =
@@ -1805,22 +1830,22 @@ struct
       (fun seq ->
          match matcher_l seq.lhs with
            | Some (f,before,after) ->
-               if debug then
-               Printf.printf "%sRelease left %s\n%s\n%!"
+               if debug2 then
+               Printf.printf "%sRelease left %s\n%!"
                  (String.make
-                    (match seq.bound with Some b -> b | None -> 0) ' ')
+                    (match seq.bound with Some b -> max 0 b | None -> 0) ' ')
                  (string_of_formula f)
-                 (xml_of_sequent seq) ;
+                 (* (xml_of_sequent seq) *);
                Some { seq with lhs = before @ [ unfocus f ] @ after }
            | None ->
                begin match matcher_r seq.rhs with
                  | Some (f,before,after) ->
-                     if debug then
-                     Printf.printf "%sRelease right %s\n%s\n%!"
+                     if debug2 then
+                     Printf.printf "%sRelease right %s\n%!"
                        (String.make
-                          (match seq.bound with Some b -> b | None -> 0) ' ')
+                          (match seq.bound with Some b -> max 0 b | None -> 0) ' ')
                        (string_of_formula f)
-                       (xml_of_sequent seq) ;
+                       (* (xml_of_sequent seq) *) ;
                      Some { seq with rhs = before @ [ unfocus f ] @ after }
                  | None -> None
                end)
@@ -1839,26 +1864,26 @@ struct
                               not (fixpoint f || sync_on_r (snd b) f)))))
 
     (* TODO use polarity rather than mu/nu *)
-    let left_matcher =
+    let left_matcher b =
       make_matcher
         (fun (Formula(i,(m,_),f)) ->
            match f with
-             | FOA.ApplicationFormula (FOA.MuFormula _, _) ->
-                 m <> Frozen
+             | FOA.ApplicationFormula (FOA.MuFormula (name,_,_), args) ->
+                 m <> Frozen && (b (unfolding_progresses name args))
              | _ -> false)
-    let right_matcher =
+    let right_matcher b =
       make_matcher
         (fun (Formula(i,(m,_),f)) ->
            match f with
-             | FOA.ApplicationFormula (FOA.NuFormula _, _) ->
-                 m <> Frozen
+             | FOA.ApplicationFormula (FOA.NuFormula (name,_,_), args) ->
+                 m <> Frozen && (b (unfolding_progresses name args))
              | _ -> false)
     (* Unfold the first available asynchronous fixed point.
      * This will (eventually) include trying simple (co)inductions. *)
-    let unfold =
-        G.orElseTactical
-          (automatic_intro `Left left_matcher)
-          (automatic_intro `Right right_matcher)
+
+    let unfold_ind = G.orElseTactical (automatic_intro `Left (left_matcher not)) (automatic_intro `Right (right_matcher not))
+    let unfold_unf = G.orElseTactical (intro `Left (left_matcher (fun x->x)) dummy_session (Some "unfold")) (automatic_intro `Right (right_matcher (fun _->true)))
+    let unfold = G.orElseTactical (automatic_intro `Left (left_matcher (fun _->true))) unfold_unf
 
     (** Apply a rule on the focused formula if it is synchronous. *)
     let sync_step =
@@ -1880,45 +1905,65 @@ struct
     let async = cutThenTactical finite freeze in
     match sequents with
       | [seq] ->
-          begin match left_matcher seq.lhs with
+          begin match left_matcher (fun x->x) seq.lhs with
             | Some (Formula(i,(_,p),f), before, after) ->
-                G.orElseTactical
-                  (fun _ ->
-                     if debug then
-                     Format.printf "%s@[<hov 2>Freeze@ %s@ %a@]\n%!"
+		  (G.thenTactical (fun _ ->
+                      if debug2 then
+                     Format.printf "%s@[<hov 2>Unfold left@ %s@]\n%!"
                        (String.make
-                          (match seq.bound with Some b -> b | None -> 0)
+                          (match seq.bound with Some b -> max 0 b | None -> 0)
                           ' ')
-                       (string_of_formula (Formula(i,(Nonfocused,p),f)))
-                       ppxml_sequent seq ;
+                       (string_of_formula (Formula(i,(Nonfocused,p),f))) ;
+                     unfold_unf [seq])  async)
+                    [(*stub*)] sc fc
+	    | None -> begin match right_matcher (fun x->x) seq.rhs with
+		| Some (Formula(i,(_,p),f), before, after) ->
+		  (G.thenTactical (fun _ ->
+                      if debug2 then
+                     Format.printf "%s@[<hov 2>Unfold right@ %s@]\n%!"
+                       (String.make
+                          (match seq.bound with Some b -> max 0 b | None -> 0)
+                          ' ')
+                       (string_of_formula (Formula(i,(Nonfocused,p),f))) ;
+                     unfold_unf [seq])  async)
+                    [(*stub*)] sc fc
+		| None -> begin match left_matcher not seq.lhs with
+		    | Some (Formula(i,(_,p),f), before, after) ->
+			G.orElseTactical (fun _ ->
+                     if debug2 then
+                     Format.printf "%s@[<hov 2>Freeze@ %s@]\n%!"
+                       (String.make
+                          (match seq.bound with Some b -> max 0 b | None -> 0)
+                          ' ')
+                       (string_of_formula (Formula(i,(Nonfocused,p),f)));
                      freeze
                        [{seq with lhs =
                            before@[Formula(i,(Frozen,p),f)]@after }])
-                  (G.thenTactical (fun _ ->
-                     if debug then
-                     Format.printf "%s@[<hov 2>Unfold@ %s@ %a@]\n%!"
+		  (G.thenTactical (fun _ ->
+                      if debug2 then
+                     Format.printf "%s@[<hov 2>Induction@ %s@]\n%!"
                        (String.make
-                          (match seq.bound with Some b -> b | None -> 0)
+                          (match seq.bound with Some b -> max 0 b | None -> 0)
                           ' ')
-                       (string_of_formula (Formula(i,(Nonfocused,p),f)))
-                       ppxml_sequent seq ;
-                     unfold [seq])
-                     async)
+                       (string_of_formula (Formula(i,(Nonfocused,p),f))) 
+                        (* ppxml_sequent seq *) ;
+                     unfold_ind [seq])  async)
                   [(*stub*)] sc fc
-            | None ->
-                begin match right_matcher seq.rhs with
+		    | None -> begin match right_matcher not seq.rhs with
                   | Some (Formula(i,(_,p),f), before, after) ->
                       G.orElseTactical
                         (fun _ -> freeze
                            [{seq with rhs =
                                before@[Formula(i,(Frozen,p),f)]@after }])
-                        (G.thenTactical (fun _ -> unfold [seq]) async)
-                        [(*stub*)] sc fc
+                        (G.thenTactical (fun _ -> unfold_unf [seq]) async)
+                       [(*stub*)] sc fc
                   | None ->
                       (* Don't wait to collect all results of the async phase,
                        * check each immediately. *)
                       full_sync seq sc fc
-                end
+		      end
+		  end
+	      end
           end
       | _ -> assert false
 
@@ -2013,6 +2058,11 @@ struct
         ++ ("cut", cutTactical)
         ++ ("force", forceTactical)
         ++ ("prove", proveTactical)
+        ++ ("async", fun _ _ -> finite)
+        ++ ("focus", fun _ _ -> G.makeTactical (fun seq sc fc -> focus seq (fun s k -> sc [s] List.hd k) fc))
+        ++ ("freeze", fun _ _ -> G.makeTactical (fun seq sc fc -> freeze1 seq (fun s k -> sc [s] List.hd k) fc))
+        ++ ("unfocus", fun _ _ -> G.makeTactical (fun seq sc fc -> match unfocus seq with Some s -> sc [s] List.hd fc |None -> fc ()))
+        ++ ("sync", fun _ _ -> sync_step) 
         ++ ("set_bound", set_bound)
 
         ++ ("abstract", abstractTactical)
