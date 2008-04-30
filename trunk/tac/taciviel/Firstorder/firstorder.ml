@@ -1082,7 +1082,7 @@ struct
       if List.mem name ["nat";"even";"odd";"plus";"mult";"list";"half";
                         "mem";"bind";"context";"ctxt";"one"] then
         rigid (List.hd args) (* first-arg based *)
-      else if List.mem name ["cp";"eq";"typeof"] then
+      else if List.mem name ["cp";"eq";"typeof";"move"] then
         rigid (List.nth args 2)
       else if List.mem name ["leq";"assoc"] then
         rigid (List.hd (List.rev args)) (* last-arg based *)
@@ -1257,8 +1257,8 @@ struct
 			  |an::lan,a::la -> let lv,f = e lan la in let v = fresh an in v::lv,FOA.ImplicationFormula(FOA.EqualityFormula (v,a),f) 
 			  |_ -> assert false in e argnames (List.rev args) in
 			let getenv = Term.eigen_vars ((FOA.termsFormula lrhs)@args) in
-			let getenv2= Term.logic_vars ((FOA.termsFormula lrhs)@args) in
-			let aelrhs = List.fold_left (fun f v -> FOA.SigmaFormula (FOA.abstractVar v f)) elrhs getenv2 in
+	(*		let getenv2= Term.logic_vars ((FOA.termsFormula lrhs)@args) in *)
+	(*		let aelrhs = List.fold_left (fun f v -> FOA.SigmaFormula (FOA.abstractVar v f)) elrhs getenv2 in *)
 			let aelrhs = List.fold_left (fun f v -> FOA.PiFormula (FOA.abstractVar v f)) aelrhs getenv in
 			let formula = List.fold_left (fun f v -> FOA.abstractVar v f) aelrhs fv in
                         match FOA.applyFixpoint formula body with Some f ->
@@ -1773,7 +1773,7 @@ struct
 
 
 
-  let focus,freeze1 =
+  let focus,focusr,freeze1 =
     let matcher_l fl =
       make_matcher (fun (Formula(i,(m,p),f)) -> fl m p f)
     in
@@ -1781,8 +1781,9 @@ struct
       make_matcher (fun (Formula(i,(m,p),f)) -> fr m p f)
     in
     let focus (Formula(i,(_,p),f)) = Formula (i,(Focused,p),f) in
-    let freeze (Formula(i,(m,p),f)) = Formula (i,(Frozen,p),f) in
-    let rec tac_r before after seq sc fc focus fl fr =
+    let freeze (Formula(i,(_,p),f)) = Formula (i,(Frozen,p),f) in
+
+    let rec tac_r before after seq sc fc focus fl fr b =
       match matcher_r fr after with
         | Some (f,before',after) ->
             let before = before @ before' in
@@ -1794,10 +1795,10 @@ struct
                 (* ppxml_sequent seq *);
               sc
                 { seq with rhs = before @ [ focus f ] @ after }
-                (fun () -> tac_r (before@[f]) after seq sc fc focus fl fr)
-        | None -> fc ()
-    in
-    let rec tac_l before after seq sc fc focus fl fr =
+                (fun () -> tac_r (before@[f]) after seq sc fc focus fl fr b)
+        | None -> if b then tac_l [] seq.lhs seq sc fc focus fl fr (not b) else fc ()
+
+    and tac_l before after seq sc fc focus fl fr b =
       match matcher_l fl after with
         | Some (f,before',after) ->
             let before = before @ before' in
@@ -1809,11 +1810,12 @@ struct
                 (* ppxml_sequent seq *) ;
               sc
                 { seq with lhs = before @ [ focus f ] @ after }
-                (fun () -> tac_l (before@[f]) after seq sc fc focus fl fr)
-        | None -> tac_r [] seq.rhs seq sc fc focus fl fr
+                (fun () -> tac_l (before@[f]) after seq sc fc focus fl fr b)
+        | None -> if b then tac_r [] seq.rhs seq sc fc focus fl fr (not b) else fc ()
     in
-      (fun seq sc fc -> tac_l [] seq.lhs seq sc fc focus (fun m p f -> m=Nonfocused && sync_on_l p f) (fun m p f -> m=Nonfocused && sync_on_r p f)), 
-      (fun seq sc fc -> tac_l [] seq.lhs seq sc fc freeze (fun m p f -> m=Nonfocused && fixpoint f) (fun m p f -> m=Nonfocused && fixpoint f)) 
+      (fun seq sc fc -> tac_l [] seq.lhs seq sc fc focus (fun m p f -> m=Nonfocused && sync_on_l p f) (fun m p f -> m=Nonfocused && sync_on_r p f) true), 
+      (fun seq sc fc -> tac_r [] seq.rhs seq sc fc focus (fun m p f -> m=Nonfocused && sync_on_l p f) (fun m p f -> m=Nonfocused && sync_on_r p f) true), 
+      (fun seq sc fc -> tac_l [] seq.lhs seq sc fc freeze (fun m p f -> m=Nonfocused && fixpoint f) (fun m p f -> m=Nonfocused && fixpoint f) true) 
 
 
   (** The reaction rule removes the focus from an asynchronous formula. *)
@@ -2060,6 +2062,7 @@ struct
         ++ ("prove", proveTactical)
         ++ ("async", fun _ _ -> finite)
         ++ ("focus", fun _ _ -> G.makeTactical (fun seq sc fc -> focus seq (fun s k -> sc [s] List.hd k) fc))
+        ++ ("focus_r", fun _ _ -> G.makeTactical (fun seq sc fc -> focusr seq (fun s k -> sc [s] List.hd k) fc))
         ++ ("freeze", fun _ _ -> G.makeTactical (fun seq sc fc -> freeze1 seq (fun s k -> sc [s] List.hd k) fc))
         ++ ("unfocus", fun _ _ -> G.makeTactical (fun seq sc fc -> match unfocus seq with Some s -> sc [s] List.hd fc |None -> fc ()))
         ++ ("sync", fun _ _ -> sync_step) 
