@@ -39,22 +39,21 @@
 %{
   module FOA = Firstorderabsyn
   
-  let eqFormula f1 f2 = FOA.EqualityFormula(f1, f2)
-  let andFormula f1 f2 = FOA.AndFormula(f1, f2)
-  let orFormula f1 f2 = FOA.OrFormula(f1, f2)
-  let impFormula f1 f2 = FOA.ImplicationFormula(f1, f2)
+  let eqFormula t1 t2 = (FOA.Synchronous,FOA.`EqualityFormula(t1, t2))
+  let connFormula p c f1 f2 = (p,FOA.`BinaryFormula(c,f1,f2)
   
   (********************************************************************
   *getAbstractions:
   * Returns a list of the toplevel abstractions on a formula, and the
   * formula immediately beneath said abstractions.
   ********************************************************************)
-  let rec getAbstractions f =
+  let rec getAbstractions (f : ('a,'b) FOA._abstraction) =
     match f with
-        FOA.AbstractionFormula(name, f') ->
+        FOA.`AbstractionFormula(name, f') ->
           let (names,f'') = (getAbstractions f') in
           (name::names, f'')
       | _ -> ([], f)
+(* |`Wildcard -> ([],`Wildcard)*)
 
   (********************************************************************
   *makeAbstractions:
@@ -70,13 +69,13 @@
           let f = FOA.string_of_formula ~generic:[] f in
           let msg = "argument does not have toplevel abstractions: " ^ f in
             raise (FOA.SemanticError msg)
-      | [name] -> make (FOA.AbstractionFormula(name,f))
+      | [name] -> make (FOA.`AbstractionFormula(name,f))
       | name::names ->
-          make (FOA.AbstractionFormula(name, makeAbs' (names) make f))
+          make (`FOA.AbstractionFormula(name, makeAbs' (names) make f))
     in
-    if (FOA.isAnonymousFormula f) then
+(*    if (FOA.isAnonymousFormula f) then
       make f
-    else
+    else *)
       let (names,f') = getAbstractions f in
       (makeAbs' names make f')
 
