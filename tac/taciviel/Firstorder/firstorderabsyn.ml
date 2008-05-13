@@ -122,20 +122,20 @@ let getPredicateName = function
   | `DBFormula(_,name,_) 
   | `AtomicPredicate(name) -> name 
 
-let mapFormula (formulafun,appformulafun,absformulafun) termfun =
-  let formulafun (polarity,formula) = (polarity,formulafun formula) in
-  ((function 
-      `BinaryFormula(c,l,r) -> `BinaryFormula(c,formulafun l, formulafun r)
-    | `EqualityFormula(l,r) -> `EqualityFormula(termfun l, termfun r)
-    | `QuantifiedFormula(q,f) -> `QuantifiedFormula(q,absformulafun f)
-    | `ApplicationFormula(f,tl) -> `ApplicationFormula(appformulafun f,List.map termfun tl)),
+let mapFormula (polfun,predfun,absfun,formfun) termfun =
+  ((function (p,f) -> (p,formfun f),
    (function 
-      `FixpointFormula(fix,(name,args,f)) -> `FixpointFormula (fix,(name,args,absformulafun f))
+      `FixpointFormula(fix,(name,args,f)) -> `FixpointFormula (fix,(name,args,absfun f))
     | `AtomicPredicate(name) -> `AtomicPredicate(name)
     | `DBFormula(a,b,c) -> `DBFormula(a,b,c)),
    (function 
-      `AbstractionFormula(name,f) -> `AbstractionFormula(name,absformulafun f)
-    | `AbstractionBody f -> `AbstractionBody (formulafun f))) 
+      `AbstractionFormula(name,f) -> `AbstractionFormula(name,absfun f)
+    | `AbstractionBody f -> `AbstractionBody (polfun f)),
+   (function 
+      `BinaryFormula(c,l,r) -> `BinaryFormula(c,polfun l, polfun r)
+    | `EqualityFormula(l,r) -> `EqualityFormula(termfun l, termfun r)
+    | `QuantifiedFormula(q,f) -> `QuantifiedFormula(q,absfun f)
+    | `ApplicationFormula(f,tl) -> `ApplicationFormula(appfun f,List.map termfun tl)))
 
 let termsFormula = 
   let rec f =
@@ -242,11 +242,11 @@ let abstractDummyWithoutLambdas = abstract0 dummyvar
 let abstractWithoutLambdas name = abstract0 (Term.atom name)
 let abstractVarWithoutLambdas var = abstract0 var
 
-let abstract name = let (f,appf,absf) = abstractWithoutLambdas name in
-  (fun (polarity,formula) ->
-  `AbstractionFormula (name, `AbstractionBody(polarity,f formula))),
-  (fun absformula ->
-  `AbstractionFormula (name, absf absformula))
+let abstract name = let (polfun,prefun,absfun,formfun) = abstractWithoutLambdas name in
+  (fun polf ->
+  `AbstractionFormula (name, `AbstractionBody(polfun polf))),
+  (fun absf ->
+  `AbstractionFormula (name, absfun absf))
 
 (** The [var] should have a naming hint attached to it. *)
 let abstractVar var  =
@@ -263,9 +263,9 @@ let abstractVar var  =
 let rec apply (terms : term list) (formula : 'a abstraction) =
   let app term =
     let rec termFun t = Norm.deep_norm (Term.app t [term])
-    and formulaFun = (mapFormula formulaFun termFun) in
-    let (_,_,absf) = formulaFun in 
-    function `AbstractionFormula(_,f) -> Some (absf f)
+    and mapfun = (mapFormula mapfun termFun) in
+    let (_,_,absfun,_) = mapfun in 
+    function `AbstractionFormula(_,f) -> Some (absfun f)
       | `AbstractionBody _ -> None
   in
 
@@ -294,7 +294,7 @@ type unifyresult =
 * up to which it has already been raised.
 **********************************************************************)
 let eliminateNablas  =
-  let abstractVarWithoutLambdas var = let (_,_,f) = abstractVarWithoutLambdas var in f in
+  let abstractVarWithoutLambdas var = let (_,absf,_,_) = abstractVarWithoutLambdas var in absf in
   let rec range_downto m n =
     if m>=n then m :: range_downto (m-1) n else []
   in
@@ -316,7 +316,7 @@ let eliminateNablas  =
     in
 
     (* Abstract a fixed point body. *)
-    let abstract_body name argnames body =
+    let abstract_body name argnames (body : 'a abstraction) =
 
       (* Cosmetic name annotations. *)
       let name = lift_pname tv name in
@@ -612,7 +612,9 @@ let applyFixpoint (argument : 'a abstraction) =
                 in
                   eliminateNablas generics argument
             in
-              normalizeAbstractions lam argument args
+              (match (normalizeAbstractions lam argument args) with
+		|`AbstractionBody(_,f) -> f
+		|_ -> failwith "Firstorderabsyn.applyFixpoint: ill-formed fixpoint.")
        |_ -> formf f),
      (fun (f : 'a predicate) -> match f with
 	| `FixpointFormula (i,(name,args,body)) -> 
@@ -640,5 +642,4 @@ let makeAnonymousTerm () =
 (********************************************************************
 *makeAnonymousFormula:
 ********************************************************************)
-let makeAnonymousFormula () =
-  AtomicFormula("_",[])
+let makeAnonymousFormula () = `Wildcard
