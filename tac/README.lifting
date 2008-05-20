@@ -77,15 +77,8 @@ Keep in mind other general weaknesses of our prototype:
    after resetting taci.
    TODO check that it doesn't depend on the choice of ocamlc/ocamlopt
    
- * In general, taci still has some bugs that make undo and redo not exactly
-   inverses of each other. Tactics should be submitted one by one,
-   waiting for the previous one to complete before asking for more:
-   for mysterious reasongs, taci goes out of sync if put under pressure.
-   In any case, don't hesitate to reset if anything weird happens.
-   Also, having a CPU-meter is useful when using Stekki, which does not show 
-   obviously when taci is computing or not.
-   TODO is it caused by excessive flush: easy testing can be done when taci
-     outputs XML trees
+ * In general, taci might still has some bugs that make undo and redo
+   not exactly inverses of each other.
 
  * Taci has currently no support for lemmas. Often, we work on lemmas 
    separately for convenience, but then paste the script corresponding to the 
