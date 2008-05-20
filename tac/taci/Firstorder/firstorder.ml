@@ -216,6 +216,7 @@ struct
 
   let undo session =
     Term.restore_state session.state ;
+    Term.restore_namespace session.proof_namespace ;
     session
 
   let redo session =
@@ -277,7 +278,7 @@ struct
     * can rely on what has been displayed. *)
   let string_of_sequents session =
     let sequents = session.sequents in
-      Term.restore_namespace session.proof_namespace ;
+      (* Term.restore_namespace session.proof_namespace  ; *)
       match sequents with
         | [] -> ""
         | mainseq::seqs ->
