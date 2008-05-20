@@ -73,8 +73,8 @@ let parseFile s =
 *parseStdinCommand:
 * Parse a command from stdin.
 **********************************************************************)
+let l = Lexing.from_channel stdin
 let parseStdinCommand () =
-  let l = Lexing.from_channel stdin in
   (parseCommand l "")
 
 (**********************************************************************
