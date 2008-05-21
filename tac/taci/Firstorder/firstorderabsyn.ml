@@ -66,6 +66,22 @@ let getTermHeadAndArgs t =
   | Term.Var(v) ->
       Some (Term.get_hint t, [])
   | _ -> None
+
+let termsFormula = 
+  let rec f = function
+    AndFormula(l,r)
+  | OrFormula(l,r)
+  | ImplicationFormula(l,r) -> (f l)@(f r)
+  | EqualityFormula(l,r) -> [l;r]
+  | AbstractionFormula(_,l)
+  | PiFormula(l)  
+  | SigmaFormula(l)
+  | NablaFormula(l) -> f l
+  | AtomicFormula(_,l)
+  | ApplicationFormula(_,l) -> l
+  | MuFormula(_) 
+  | NuFormula(_) 
+  | DBFormula(_) -> [] in f
   
 let getDefinitionArity (Definition(_,a,_,_)) = a
 let getDefinitionBody (Definition(_,_,b,_)) = b
