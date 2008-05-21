@@ -220,6 +220,7 @@ struct
 
   let undo session =
     Term.restore_state session.state ;
+    Term.restore_namespace session.proof_namespace ;
     session
 
   let redo session =
@@ -234,6 +235,7 @@ struct
     let state = Term.save_state () in
     let subst = Term.get_subst state in
       { session with state = state ; diff = subst ;
+                     proof_namespace = Term.save_namespace () ;
                      sequents = sequents ; builder = builder }
 
   let rec string_of_proof proof =
@@ -281,7 +283,7 @@ struct
     * can rely on what has been displayed. *)
   let string_of_sequents session =
     let sequents = session.sequents in
-      Term.restore_namespace session.proof_namespace ;
+      (* Term.restore_namespace session.proof_namespace  ; *)
       match sequents with
         | [] -> ""
         | mainseq::seqs ->
