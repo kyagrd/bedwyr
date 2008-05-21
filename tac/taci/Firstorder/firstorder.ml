@@ -231,6 +231,7 @@ struct
     let state = Term.save_state () in
     let subst = Term.get_subst state in
       { session with state = state ; diff = subst ;
+                     proof_namespace = Term.save_namespace () ;
                      sequents = sequents ; builder = builder }
 
   let rec string_of_proof proof =
