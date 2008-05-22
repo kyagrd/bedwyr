@@ -40,7 +40,7 @@ Logics:
   of fixed point combinators.  The muLJ-* logics are intuitionistic, and the
   firstorder* logics are classical.  The *-nonstrict logics are logics in which
   the axiom rule is slightly "sloppy" with respect to generic context: they do
-  not check for equality.  They are therefore less restrive than LINC, but more
+  not check for equality.  They are therefore less restrictive than LINC, but more
   restrictive than LG.
   
 Tactics and Tacticals:
