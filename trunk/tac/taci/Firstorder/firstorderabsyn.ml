@@ -64,7 +64,11 @@ let getTermHeadAndArgs t =
             None
       | _ -> None)    
   | Term.Var(v) ->
-      Some (Term.get_hint t, [])
+      (try
+        let h = Term.get_hint t in
+        Some(h, [])
+      with
+        Not_found -> Some(Term.get_name t, []))
   | _ -> None
 
 let termsFormula = 

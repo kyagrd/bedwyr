@@ -49,6 +49,7 @@ namespace StickyTaci
     public static string RESET = "#reset";
     public static string TACTICALS = "#tacticals";
     public static string UNDO = "#undo";
+    public static string PROOF_OUTPUT = "#proof_output";
     
     public delegate void IOHandler<T>(Taci instance, T data);
     public delegate void ExitHandler(Taci instance);
@@ -104,6 +105,7 @@ namespace StickyTaci
       m_Commands.Add("#logic");
       m_Commands.Add("#logics");
       m_Commands.Add("#open");
+      m_Commands.Add("#proof_output");
       m_Commands.Add("#redo");
       m_Commands.Add("#reset");
       m_Commands.Add("#tactical");
@@ -142,6 +144,7 @@ namespace StickyTaci
    
     public void Write(string s)
     {
+      Debug.WriteLine("Taci: " + s);
       m_Taci.StandardInput.WriteLine(s + "\n");
     }
 
