@@ -123,7 +123,7 @@ namespace StickyTaci
     private bool m_Coloring = false;
     private List<string> m_Tacticals = null;
 
-    //Sorted by length so that the dumb syntac highlighter uses
+    //Sorted by length so that the dumb syntax highlighter uses
     //the largest match.
     private List<string> m_SortedTacticals = null; 
     public List<string> Tacticals
@@ -175,6 +175,19 @@ namespace StickyTaci
     private Font m_InputFont = new Font("Courier New", 10, FontStyle.Regular);
     private Font m_OutputFont = new Font("Courier New", 8, FontStyle.Regular);
     private Font m_GoalFont = new Font("Courier New", 10, FontStyle.Regular);
+
+    private Color m_StringColor = Color.Maroon;
+    public Color StringColor
+    {
+      get
+      {
+        return m_StringColor;
+      }
+      set
+      {
+        m_StringColor = value;
+      }
+    }
 
     private Color m_TacticalColor = Color.Blue;
     public Color TacticalColor
@@ -504,6 +517,7 @@ namespace StickyTaci
 
     private void ColorLine(uint linenum)
     {
+      int index = -1;
       if(linenum < 0 || linenum > (Rtf.Lines.Length - 1))
         return;
 
@@ -539,7 +553,7 @@ namespace StickyTaci
       {
         foreach(string tactical in m_SortedTacticals)
         {
-          int index = line.IndexOf(tactical);
+          index = line.IndexOf(tactical);
           while(index != -1)
           {
             Rtf.Select(start + index, tactical.Length);
@@ -553,13 +567,32 @@ namespace StickyTaci
       {
         foreach(string command in m_SortedCommands)
         {
-          int index = line.IndexOf(command);
+          index = line.IndexOf(command);
           while(index != -1)
           {
             Rtf.Select(start + index, command.Length);
             Rtf.SelectionColor = CommandColor;
             index = line.IndexOf(command, index + 1);
           }
+        }
+      }
+
+      //Color quoted strings.
+      index = line.IndexOf("\"");
+      while(index != -1)
+      {
+        int nextIndex = line.IndexOf("\"", index + 1);
+        if(nextIndex == -1)
+        {
+          Rtf.Select(start + index, line.Length - index);
+          Rtf.SelectionColor = StringColor;
+          index = -1;
+        }
+        else
+        {
+          Rtf.Select(start + index, nextIndex - index + 1);
+          Rtf.SelectionColor = StringColor;
+          index = line.IndexOf("\"", nextIndex + 1);
         }
       }
     }

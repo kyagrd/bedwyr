@@ -298,7 +298,7 @@ namespace StickyTaci
       if(dlg.ShowDialog() == DialogResult.OK)
       {
         string path = dlg.FileName;
-        if(getLogicName(dlg.FileName) == "")
+        if(GetLogicName(dlg.FileName) == "")
         {
           path = Path.ChangeExtension(dlg.FileName, "." + CurrentLogic + ".tac");
         }
@@ -330,7 +330,7 @@ namespace StickyTaci
         Form.Clear();
 
         //Get the logic name:
-        string logic = getLogicName(dlg.FileName);
+        string logic = GetLogicName(dlg.FileName);
         if(logic != "")
         {
           OnLogic(logic);
@@ -476,7 +476,7 @@ namespace StickyTaci
       }
     }
 
-    private string getLogicName(string path)
+    private string GetLogicName(string path)
     {
       string ext = Path.GetExtension(path);
       if(ext == ".tac")

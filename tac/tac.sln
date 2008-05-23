@@ -1,6 +1,6 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 9.00
-# Visual Studio 2005
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "taci", "taci\taci.vcproj", "{860A3D7B-A103-4A53-9DAA-3E1A9B0F0067}"
 	ProjectSection(ProjectDependencies) = postProject
 		{E7390A1F-6CD3-4FFF-9A65-E3B147EE8222} = {E7390A1F-6CD3-4FFF-9A65-E3B147EE8222}
@@ -8,6 +8,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "taci", "taci\taci.vcproj", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StickyTaci", "StickyTaci\StickyTaci.csproj", "{A720FAD9-07CF-40EB-9F49-79CB50527CB8}"
 	ProjectSection(ProjectDependencies) = postProject
+		{E7390A1F-6CD3-4FFF-9A65-E3B147EE8222} = {E7390A1F-6CD3-4FFF-9A65-E3B147EE8222}
 		{860A3D7B-A103-4A53-9DAA-3E1A9B0F0067} = {860A3D7B-A103-4A53-9DAA-3E1A9B0F0067}
 	EndProjectSection
 EndProject
