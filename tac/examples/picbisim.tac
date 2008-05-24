@@ -1,5 +1,4 @@
 #open "picdefs.tac".
-#time on.
 
 #theorem one "bisim z (rx (x\ out x x z))".
 prove.
@@ -11,8 +10,4 @@ prove.
 
 #theorem three "(bisim (out a a z) (rx (x\ out x x z))) => false".
 prove.
-% STUCK.
-
-#tactical somesyn
-   repeat(orelse(left, orelse(right, orelse(sigma_r, orelse(and_r,eq_r))))).
-
+% Qed.
