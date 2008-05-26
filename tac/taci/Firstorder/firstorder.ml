@@ -1094,7 +1094,7 @@ struct
    * NOTE: logic variables are never "rigid", even though they might be
    * substituted for "rigid" terms. *)
   let normalize = Str.global_replace (Str.regexp "lift_") ""
-  let unfolding_progresses name args = 
+  let unfolding_progresses name args =
     let name = normalize name in
     let rec rigid t = match Term.observe (Norm.hnorm t) with
       | Term.Lam (_,t) -> rigid t
@@ -1103,7 +1103,7 @@ struct
       | _ -> false
     in
       if List.mem name ["nat";"even";"odd";"plus";"mult";"list";"half";
-                        "mem";"bind";"context";"ctxt";"one"] then
+                        "mem";"bind";"context";"ctxt";"one";"step"] then
         rigid (List.hd args) (* first-arg based *)
       else if List.mem name ["cp";"eq";"typeof";"move"] then
         rigid (List.nth args 2)
@@ -1113,12 +1113,6 @@ struct
         true (* non-recursive *)
       else
         false 
-
-(*  let unfolding_progresses n a = let r = unfolding_progresses n a in
-    if proofSearchDebug then
-      Printf.printf "Progress %s %s = %b\n%!"
-        n (String.concat "::" (List.map Pprint.term_to_string a)) r ;
-      r *)
 
   type internal_sc =
     ?k:(unit -> unit) -> ?b:(Term.term list) -> string -> sequent list -> unit
@@ -1251,7 +1245,7 @@ struct
               | FOA.MuFormula (name,argnames,body) ->
                   (* This is asynchronous.
                    * If [arg] is "unfold", do mu_l, otherwise treat it as an
-                   * invariant, otherwise try mu_l or infer an invariant. *)
+                   * invariant, otherwise infer an invariant. *)
                   begin match arg with
                     | Some "unfold" ->
                         unfold_fixpoint "mu_l" name args body argnames sc fc
@@ -1272,25 +1266,74 @@ struct
                                 ]
                           | None -> fc ()
                         end
-                    | None -> (* TODO: automatic induction *)
-			let fresh n = Term.fresh ~name:n ~ts:0 ~lts:0 ~tag:Term.Eigen in
-			let rhs = let rec s l = match l with [] -> assert false |[f] -> getFormulaFormula f |f::l -> FOA.OrFormula(getFormulaFormula f,s l) in s seq.rhs in 
-			let lrhs = let rec s l = match l with [] -> rhs | f::l -> if getFormulaMarker f = Nonfocused then FOA.ImplicationFormula(getFormulaFormula f,s l) else s l in s (zip []) in
-			let fv,elrhs = let rec e lan la  = match lan,la with [],[] -> [],lrhs 
-			  |an::lan,a::la -> let lv,f = e lan la in let v = fresh an in v::lv,FOA.ImplicationFormula(FOA.EqualityFormula (v,a),f) 
-			  |_ -> assert false in e argnames (List.rev args) in
-			let getenv = Term.eigen_vars ((FOA.termsFormula lrhs)@args) in
-	(*		let getenv2= Term.logic_vars ((FOA.termsFormula lrhs)@args) in *)
-	(*		let aelrhs = List.fold_left (fun f v -> FOA.SigmaFormula (FOA.abstractVar v f)) elrhs getenv2 in *)
-			let aelrhs = List.fold_left (fun f v -> FOA.PiFormula (FOA.abstractVar v f)) elrhs getenv in
-			let formula = List.fold_left (fun f v -> FOA.abstractVar v f) aelrhs fv in
-                        match FOA.applyFixpoint formula body with Some f ->
-			  (match FOA.apply args f with Some f ->
-			     let bound = update_bound seq in if out_of_bound bound then fc () else 		
-				 sc "induction" [{ seq with bound = bound ; lhs = zip [Formula(i,b,f)]}]
-			  | None -> fc ()) | None -> fc ()
-
-(*		  unfold_fixpoint "mu_l" name args body argnames sc fc *)
+                    | None ->
+			let fresh n =
+                          Term.fresh ~name:n ~ts:0 ~lts:0 ~tag:Term.Eigen
+                        in
+			let rhs =
+                          (* ... |- H1,..,Hn becomes H1\/..\/Hn *)
+                          let rec s = function
+                            | [] -> assert false
+                            | [f] -> getFormulaFormula f
+                            | f::l -> FOA.OrFormula (getFormulaFormula f, s l)
+                          in s seq.rhs
+                        in
+			let lrhs =
+                          (* H1, ..., Hn |- rhs becomes H1 => .. => Hn => rhs *)
+                          let rec s = function
+                            | [] -> rhs
+                            | f::l ->
+                                (* TODO Removing frozen formulas as here
+                                 * makes sense to avoid loops,
+                                 * but leaving them frozen would be best. *)
+                                if getFormulaMarker f = Nonfocused then
+                                  FOA.ImplicationFormula
+                                    (getFormulaFormula f,s l)
+                                else
+                                  s l
+                          in s (zip [])
+                        in
+			let fv,elrhs =
+                          (* Essentially form
+                           * fv1\..fvn\ fv1=arg1 => .. fvn=argn => lrhs *)
+                          let rec e lan la =
+                            match lan,la with
+                              | [],[] -> [],lrhs 
+                              | an::lan,a::la ->
+                                  let lv,f = e lan la in
+                                  let v = fresh an in
+                                    v::lv,
+                                    FOA.ImplicationFormula
+                                      (FOA.EqualityFormula (v,a), f) 
+                              |_ -> assert false
+                          in
+                            e argnames (List.rev args)
+                        in
+                        (* Abstract universally over eigenvariables. *)
+			let getenv =
+                          Term.eigen_vars ((FOA.termsFormula lrhs)@args)
+                        in
+			let aelrhs =
+                          List.fold_left
+                            (fun f v -> FOA.PiFormula (FOA.abstractVar v f))
+                            elrhs getenv
+                        in
+                        (* Abstract out the fv1..fvn. *)
+			let formula =
+                          List.fold_left
+                            (fun f v -> FOA.abstractVar v f) aelrhs fv
+                        in
+                        match FOA.applyFixpoint formula body with
+                         | Some f ->
+			     (match FOA.apply args f with
+                               | Some f ->
+                                   let bound = update_bound seq in
+                                   if out_of_bound bound then fc () else
+                                     sc "induction"
+                                       [{ seq with bound = bound ;
+                                                   lhs = zip [Formula(i,b,f)]}]
+                               | None -> fc ())
+                         | None -> fc ()
                   end
               | _ -> assert false
             end
@@ -1588,7 +1631,7 @@ struct
 
   let rotateL session params seqs success failure =
     match seqs with
-      | [] -> failure ()
+      | { lhs = [] } :: _ | [] -> failure ()
       | ({ lhs = l::ltl } as seq)::tl ->
           success [{ seq with lhs = ltl@[l] }] tl (fun p -> p) failure
       | _ -> assert false
@@ -1825,7 +1868,7 @@ struct
     * impossible.
     * A better strategy would be to start the focusing phase as soon as one goal
     * is produced and fail earlier (at the level of the first choice to unfold
-    * nat). *)
+    * nat). TODO remove this comment I think I fixed this -- david *)
 
   (** In automatic mode, intro doesn't really need a session. *)
   let automatic_intro side matcher = intro side matcher dummy_session None
@@ -1834,48 +1877,71 @@ struct
     * This tactic takes a single sequent and its successes are single sequents
     * too. *)
   let focus,focusr,freeze1 =
-    let matcher_l fl =
+    let matcher fl =
       make_matcher (fun (Formula(i,(m,p),f)) -> fl m p f)
-    in
-    let matcher_r fr =
-      make_matcher (fun (Formula(i,(m,p),f)) -> fr m p f)
     in
     let focus (Formula(i,(_,p),f)) = Formula (i,(Focused,p),f) in
     let freeze (Formula(i,(_,p),f)) = Formula (i,(Frozen,p),f) in
 
+    (* Find a formula on the right satisfying fr,
+     * succeed with the sequent resulting of the application of focus to it.
+     * On failure, if b, keep searching on the left with tac_l and fl. *)
     let rec tac_r before after seq sc fc focus fl fr b =
-      match matcher_r fr after with
+      match matcher fr after with
         | Some (f,before',after) ->
             let before = before @ before' in
               if proofSearchDebug then
-              Format.printf "%s@[<hov 2>Focus right@ %s@]\n%!"
-                (String.make (match seq.bound with Some b -> max 0 b | None -> 0)
-                   ' ')
-                (string_of_formula f)
-                (* ppxml_sequent seq *);
+                Format.printf "%s@[<hov 2>Focus right@ %s@]\n%!"
+                  (String.make
+                     (match seq.bound with Some b -> max 0 b | None -> 0)
+                     ' ')
+                  (string_of_formula f) ;
               sc
                 { seq with rhs = before @ [ focus f ] @ after }
                 (fun () -> tac_r (before@[f]) after seq sc fc focus fl fr b)
-        | None -> if b then tac_l [] seq.lhs seq sc fc focus fl fr (not b) else fc ()
+        | None ->
+            if b then
+              tac_l [] seq.lhs seq sc fc focus fl fr false
+            else
+              fc ()
 
     and tac_l before after seq sc fc focus fl fr b =
-      match matcher_l fl after with
+      match matcher fl after with
         | Some (f,before',after) ->
             let before = before @ before' in
             if proofSearchDebug then
               Format.printf "%s@[<hov 2>Focus left@ %s@]\n%!"
-                (String.make (match seq.bound with Some b -> max 0 b | None -> 0)
+                (String.make
+                   (match seq.bound with Some b -> max 0 b | None -> 0)
                    ' ')
-                (string_of_formula f)
-                (* ppxml_sequent seq *) ;
+                (string_of_formula f) ;
             sc
               { seq with lhs = before @ [ focus f ] @ after }
               (fun () -> tac_l (before@[f]) after seq sc fc focus fl fr b)
-        | None -> if b then tac_r [] seq.rhs seq sc fc focus fl fr (not b) else fc ()
+        | None ->
+            if b then
+              tac_r [] seq.rhs seq sc fc focus fl fr false
+            else
+              fc ()
     in
-      (fun seq sc fc -> tac_l [] seq.lhs seq sc fc focus (fun m p f -> m=Nonfocused && sync_on_l p f) (fun m p f -> m=Nonfocused && sync_on_r p f) true), 
-      (fun seq sc fc -> tac_r [] seq.rhs seq sc fc focus (fun m p f -> m=Nonfocused && sync_on_l p f) (fun m p f -> m=Nonfocused && sync_on_r p f) true), 
-      (fun seq sc fc -> tac_l [] seq.lhs seq sc fc freeze (fun m p f -> m=Nonfocused && fixpoint f) (fun m p f -> m=Nonfocused && fixpoint f) true) 
+      (fun seq sc fc ->
+         tac_l
+           [] seq.lhs seq sc fc focus
+           (fun m p f -> m=Nonfocused && sync_on_l p f)
+           (fun m p f -> m=Nonfocused && sync_on_r p f)
+           true),
+      (fun seq sc fc ->
+         tac_r
+           [] seq.rhs seq sc fc focus
+           (fun m p f -> m=Nonfocused && sync_on_l p f)
+           (fun m p f -> m=Nonfocused && sync_on_r p f)
+           true),
+      (fun seq sc fc ->
+         tac_l
+           [] seq.lhs seq sc fc freeze
+           (fun m p f -> m=Nonfocused && fixpoint f)
+           (fun m p f -> m=Nonfocused && fixpoint f)
+           true)
 
 
   (** The reaction rule removes the focus from an asynchronous formula. *)
@@ -1905,7 +1971,8 @@ struct
                      if proofSearchDebug then
                      Printf.printf "%sRelease right %s\n%!"
                        (String.make
-                          (match seq.bound with Some b -> max 0 b | None -> 0) ' ')
+                          (match seq.bound with Some b -> max 0 b | None -> 0)
+                          ' ')
                        (string_of_formula f)
                        (* (xml_of_sequent seq) *) ;
                      Some { seq with rhs = before @ [ unfocus f ] @ after }
@@ -1914,38 +1981,55 @@ struct
 
     (** "Finite" async connectives can be introduced eagerly without backtrack.
       * For the fixed points (mu on the left, nu on the right) there is a choice
-      * of "opening" or "freezing", over which backtrack should be possible. *)
+      * of "opening" or "freezing", over which backtrack should be possible.
+      * However we treat specially fixed points for which unfolding progresses,
+      * since their unfolding is not a commitment and cannot yield loops. *)
     let finite =
-      cutRepeatTactical (* TODO this one might be useless... but doesn't hurt *)
-        (G.orElseTactical
-           (automatic_intro `Left
-             (make_matcher (fun (Formula(i,b,f)) ->
-                              not (fixpoint f || sync_on_l (snd b) f))))
-           (automatic_intro `Right
-             (make_matcher (fun (Formula(i,b,f)) ->
-                              not (fixpoint f || sync_on_r (snd b) f)))))
+      cutRepeatTactical
+        (G.orElseListTactical
+           [ automatic_intro `Left
+               (make_matcher (fun (Formula(i,b,f)) ->
+                                not (fixpoint f || sync_on_l (snd b) f))) ;
+             automatic_intro `Right
+               (make_matcher (fun (Formula(i,b,f)) ->
+                                not (fixpoint f || sync_on_r (snd b) f))) ;
+             intro `Left
+               (make_matcher (function
+                                | Formula(i,b,
+                                    FOA.ApplicationFormula(
+                                      FOA.MuFormula(name,_,_),args)) ->
+                                    fst b <> Frozen &&
+                                    unfolding_progresses name args
+                                | _ -> false))
+               dummy_session (Some "unfold") ;
+             automatic_intro `Right
+               (make_matcher (function
+                                | Formula(i,b,
+                                    FOA.ApplicationFormula(
+                                      FOA.NuFormula(name,_,_),args)) ->
+                                    fst b <> Frozen &&
+                                    unfolding_progresses name args
+                                | _ -> false)) ])
+                                
+    (* TODO note that the treatment of fixed points is not based on polarities
+     * but the roles of mu/nu are hardcoded. *)
 
-    (* TODO use polarity rather than mu/nu *)
-    let left_matcher b =
+    (** Matchers for fixed points without a progressing unfolding. *)
+
+    let left_no_progress =
       make_matcher
         (fun (Formula(i,(m,_),f)) ->
            match f with
              | FOA.ApplicationFormula (FOA.MuFormula (name,_,_), args) ->
-                 m <> Frozen && (b (unfolding_progresses name args))
+                 m <> Frozen && not (unfolding_progresses name args)
              | _ -> false)
-    let right_matcher b =
+    let right_no_progress =
       make_matcher
         (fun (Formula(i,(m,_),f)) ->
            match f with
              | FOA.ApplicationFormula (FOA.NuFormula (name,_,_), args) ->
-                 m <> Frozen && (b (unfolding_progresses name args))
+                 m <> Frozen && not (unfolding_progresses name args)
              | _ -> false)
-
-    (* Unfold the first available asynchronous fixed point.
-     * This will (eventually) include trying simple (co)inductions. *)
-    let unfold_ind = G.orElseTactical (automatic_intro `Left (left_matcher not)) (automatic_intro `Right (right_matcher not))
-    let unfold_unf = G.orElseTactical (intro `Left (left_matcher (fun x->x)) dummy_session (Some "unfold")) (automatic_intro `Right (right_matcher (fun _->true)))
-    let unfold = G.orElseTactical (automatic_intro `Left (left_matcher (fun _->true))) unfold_unf
 
     (** Apply a rule on the focused formula if it is synchronous. *)
     let sync_step =
@@ -1959,75 +2043,61 @@ struct
 
   (** Focused proof-search, starting with the async phase. *)
   let rec full_async s sc fc =
-    (cutThenTactical finite freeze) s sc fc
+    cutThenTactical finite freeze s sc fc
 
   (* Freeze the first available asynchronous fixed point,
-   * takes care of calling "unfold" and re-calling "finite". *)
+   * takes care of unfoldings and re-calling full_async when needed. *)
   and freeze sequents sc fc =
     let async = cutThenTactical finite freeze in
-    match sequents with
-      | [seq] ->
-          begin match left_matcher (fun x->x) seq.lhs with
-            | Some (Formula(i,(_,p),f), before, after) ->
-		  (G.thenTactical (fun _ ->
-                      if proofSearchDebug then
-                     Format.printf "%s@[<hov 2>Unfold left@ %s@]\n%!"
-                       (String.make
-                          (match seq.bound with Some b -> max 0 b | None -> 0)
-                          ' ')
-                       (string_of_formula (Formula(i,(Nonfocused,p),f))) ;
-                     unfold_unf [seq])  async)
-                    [(*stub*)] sc fc
-	    | None -> begin match right_matcher (fun x->x) seq.rhs with
-		| Some (Formula(i,(_,p),f), before, after) ->
-		  (G.thenTactical (fun _ ->
-                      if proofSearchDebug then
-                     Format.printf "%s@[<hov 2>Unfold right@ %s@]\n%!"
-                       (String.make
-                          (match seq.bound with Some b -> max 0 b | None -> 0)
-                          ' ')
-                       (string_of_formula (Formula(i,(Nonfocused,p),f))) ;
-                     unfold_unf [seq])  async)
-                    [(*stub*)] sc fc
-		| None -> begin match left_matcher not seq.lhs with
-		    | Some (Formula(i,(_,p),f), before, after) ->
-			G.orElseTactical (fun _ ->
-                     if proofSearchDebug then
-                     Format.printf "%s@[<hov 2>Freeze@ %s@]\n%!"
-                       (String.make
-                          (match seq.bound with Some b -> max 0 b | None -> 0)
-                          ' ')
-                       (string_of_formula (Formula(i,(Nonfocused,p),f)));
-                     freeze
-                       [{seq with lhs =
-                           before@[Formula(i,(Frozen,p),f)]@after }])
-		  (G.thenTactical (fun _ ->
-                      if proofSearchDebug then
+    let seq = match sequents with [seq] -> seq | _ -> assert false in
+      match left_no_progress seq.lhs with
+       | Some (Formula(i,(_,p),f), before, after) ->
+           (* We can do induction, and unfolding doesn't progress.
+            * So we'll only try freezing, then induction.
+            * Unfolding might sometimes yield simpler proofs,
+            * but trying it everytime seems costly... *)
+           G.orElseTactical
+             (fun _ ->
+                if proofSearchDebug then
+                  Format.printf "%s@[<hov 2>Freeze@ %s@]\n%!"
+                    (String.make
+                       (match seq.bound with Some b -> max 0 b | None -> 0)
+                       ' ')
+                    (string_of_formula (Formula(i,(Nonfocused,p),f)));
+                freeze
+                  [{seq with lhs =
+                               before@[Formula(i,(Frozen,p),f)]@after }])
+             (cutThenTactical
+                (* The cut is needed here so that auto_intro doesn't try
+                 * to induct on another Mu on the left. *)
+                (fun _ ->
+                   if proofSearchDebug then
                      Format.printf "%s@[<hov 2>Induction@ %s@]\n%!"
                        (String.make
                           (match seq.bound with Some b -> max 0 b | None -> 0)
                           ' ')
-                       (string_of_formula (Formula(i,(Nonfocused,p),f))) 
-                        (* ppxml_sequent seq *) ;
-                     unfold_ind [seq])  async)
-                  [(*stub*)] sc fc
-		    | None -> begin match right_matcher not seq.rhs with
-                  | Some (Formula(i,(_,p),f), before, after) ->
-                      G.orElseTactical
-                        (fun _ -> freeze
-                           [{seq with rhs =
-                               before@[Formula(i,(Frozen,p),f)]@after }])
-                        (G.thenTactical (fun _ -> unfold_unf [seq]) async)
-                       [(*stub*)] sc fc
-                  | None ->
-                      (* Don't wait to collect all results of the async phase,
-                       * check each immediately. *)
-                      full_sync seq sc fc
-		      end
-		  end
-	      end
-          end
-      | _ -> assert false
+                       (string_of_formula (Formula(i,(Nonfocused,p),f))) ;
+                   automatic_intro `Left left_no_progress [seq])
+                async)
+             [(*stub*)] sc fc
+       | None ->
+           begin match right_no_progress seq.rhs with
+             | Some (Formula(i,(_,p),f), before, after) ->
+                 G.orElseTactical
+                   (fun _ ->
+                      freeze
+                        [{seq with rhs =
+                                     before@[Formula(i,(Frozen,p),f)]@after }])
+                   (cutThenTactical
+                     (fun _ ->
+                        automatic_intro `Right right_no_progress [seq])
+                     async)
+                   [(*stub*)] sc fc
+             | None ->
+                 (* Don't wait to collect all results of the async phase,
+                  * check each immediately. *)
+                 full_sync seq sc fc
+           end
 
   (** Complete focused proof-search starting with a decide rule. *)
   and full_sync seq sc fc =
@@ -2136,10 +2206,26 @@ struct
         ++ ("force", forceTactical)
         ++ ("prove", proveTactical)
         ++ ("async", fun _ _ -> finite)
-        ++ ("focus", fun _ _ -> G.makeTactical (fun seq sc fc -> focus seq (fun s k -> sc [s] List.hd k) fc))
-        ++ ("focus_r", fun _ _ -> G.makeTactical (fun seq sc fc -> focusr seq (fun s k -> sc [s] List.hd k) fc))
-        ++ ("freeze", fun _ _ -> G.makeTactical (fun seq sc fc -> freeze1 seq (fun s k -> sc [s] List.hd k) fc))
-        ++ ("unfocus", fun _ _ -> G.makeTactical (fun seq sc fc -> match unfocus seq with Some s -> sc [s] List.hd fc |None -> fc ()))
+        ++ ("focus",
+            fun _ _ ->
+              G.makeTactical
+                (fun seq sc fc -> focus seq (fun s k -> sc [s] List.hd k) fc))
+        ++ ("focus_r",
+            fun _ _ ->
+              G.makeTactical
+                  (fun seq sc fc ->
+                     focusr seq (fun s k -> sc [s] List.hd k) fc))
+        ++ ("freeze",
+            fun _ _ ->
+              G.makeTactical
+                (fun seq sc fc -> freeze1 seq (fun s k -> sc [s] List.hd k) fc))
+        ++ ("unfocus",
+              fun _ _ ->
+                G.makeTactical
+                  (fun seq sc fc ->
+                     match unfocus seq with
+                       | Some s -> sc [s] List.hd fc
+                       | None -> fc ()))
         ++ ("sync", fun _ _ -> sync_step) 
         ++ ("set_bound", set_bound)
 
