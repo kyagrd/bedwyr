@@ -44,11 +44,14 @@ No logic does nothing!
   let prove name s session =
     (print_endline ("No Logic can't prove '" ^ name ^ "': " ^ s ^ ".");
     session)
+    
+  let proved session = session
   let definitions ds session = session
-  let operator name fix prec session =
-    session
+  let operator name fix prec session = session
 
   type sequent = unit
+  let theorem_name session = ""
+
   let validSequent session = true
   let sequent session = Some((), ())
   let sequents session = []

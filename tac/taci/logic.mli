@@ -79,6 +79,7 @@ sig
   val incl : string list -> session -> session
   val reset : unit -> session
   val prove : string -> string -> session -> session
+  val proved : session -> session
   val definitions : string list -> session -> session
   val undo : session -> session
   val redo : session -> session
@@ -87,6 +88,8 @@ sig
   val validSequent : session -> bool
   val sequents : session -> sequent list
   val string_of_sequents : session -> string
+
+  val theorem_name : session -> string
 
   type proof
   val proof : session -> proof proofbuilder
@@ -141,7 +144,8 @@ sig
   val invalidArguments : string -> logic_tactic
   val failureTactical : logic_tactic
   val idTactical : logic_tactic
-  val applyTactical : logic_tactic -> logic_tactic
+  val admitTactical : (L.logic_sequent -> L.logic_proof) -> logic_tactic
+  (*  val applyTactical : logic_tactic -> logic_tactic  *)
   val orElseTactical : logic_tactic -> logic_tactic -> logic_tactic
   val orElseListTactical : logic_tactic list -> logic_tactic
   val cutThenTactical : (unit -> unit -> unit) -> logic_tactic -> logic_tactic -> logic_tactic

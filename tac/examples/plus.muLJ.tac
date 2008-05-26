@@ -1,11 +1,13 @@
 % Proof of the commutativity of plus.
 #open "basic_definitions.def".
+#proof_output ".\".
 
 % Theorem: x + y = z => y + x = z.
 #theorem plus_com "pi x\ y\ z\ (nat x, nat y, plus x y z) =>
 	(plus y x z)".
 prove.
 % Qed.
+
 
 % Theorem: (x + y) + z = x + (y + z).
 #theorem plus_trans "pi r\ x\ y\ z\

@@ -40,8 +40,9 @@ Logics:
   of fixed point combinators.  The muLJ-* logics are intuitionistic, and the
   firstorder* logics are classical.  The *-nonstrict logics are logics in which
   the axiom rule is slightly "sloppy" with respect to generic context: they do
-  not check for equality.  They are therefore less restrictive than LINC, but more
-  restrictive than LG.
+  not check for equality.  They are therefore less restrictive than LINC, but
+  more restrictive than LG.  The usefulness of these logics has mostly been
+  subsumed by the 'abstract' tactical in muLJ.
   
 Tactics and Tacticals:
   In Tac one interacts with a logic by the application of tactics to a list
@@ -117,6 +118,8 @@ Implementing a Logic:
   corresponds to this interface comes down to defining the type of a "session", a
   "sequent", and a "proof", along with various accessor functions that operate on
   these types, and a few values.
+
+  Note: the following list may be incomplete!
 
   Types:
     Session:
