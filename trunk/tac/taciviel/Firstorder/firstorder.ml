@@ -1261,7 +1261,7 @@ struct
 			let getenv = Term.eigen_vars ((FOA.termsFormula lrhs)@args) in
 	(*		let getenv2= Term.logic_vars ((FOA.termsFormula lrhs)@args) in *)
 	(*		let aelrhs = List.fold_left (fun f v -> FOA.SigmaFormula (FOA.abstractVar v f)) elrhs getenv2 in *)
-			let aelrhs = List.fold_left (fun f v -> FOA.PiFormula (FOA.abstractVar v f)) aelrhs getenv in
+			let aelrhs = List.fold_left (fun f v -> FOA.PiFormula (FOA.abstractVar v f)) elrhs getenv in
 			let formula = List.fold_left (fun f v -> FOA.abstractVar v f) aelrhs fv in
                         match FOA.applyFixpoint formula body with Some f ->
 			  (match FOA.apply args f with Some f ->
