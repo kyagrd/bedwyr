@@ -1739,7 +1739,7 @@ struct
   ********************************************************************)
   let applyTactical session args = match args with
       Absyn.String(s)::[] ->
-        try
+        (try
           let (_,formula,proof) = List.find (fun (s',_,_) -> s = s') session.lemmas in
           let pretactic = fun sequent sc fc ->
             let seq = { sequent with lhs = sequent.lhs @ [formula] } in
@@ -1751,7 +1751,7 @@ struct
           in
             G.makeTactical pretactic
         with
-          Not_found -> (O.error "undefined lemma.\n" ; G.failureTactical)
+          Not_found -> (O.error "undefined lemma.\n" ; G.failureTactical))
     | _ -> G.invalidArguments "apply"
 
   (** {1 Debugging}
