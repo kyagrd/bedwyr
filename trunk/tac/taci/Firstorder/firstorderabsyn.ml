@@ -51,6 +51,10 @@ type definition =
 *getTermHeadAndArgs:
 * Gets the head and arguments of a term.  If the term isn't a constant,
 * returns None.
+*
+* Note the hackery with get_hint: this is used to check if the head is
+* an underscore (an anonymous formula/term).  Hint must be used, because
+* name could be something ugly like "_7", etc.
 **********************************************************************)
 let getTermHeadAndArgs t =
   let t' = Term.observe t in

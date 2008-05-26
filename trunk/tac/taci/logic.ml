@@ -16,7 +16,6 @@
 * along with this code; if not, write to the Free Software Foundation,*
 * Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA        *
 **********************************************************************)
-
 module Table = Map.Make(String)
 type 'a table = 'a Table.t
 let contains el table =
@@ -68,6 +67,7 @@ sig
   val incl : string list -> session -> session
   val reset : unit -> session
   val prove : string -> string -> session -> session
+  val proved : session -> session
   val definitions : string list -> session -> session
   val undo : session -> session
   val redo : session -> session
@@ -76,7 +76,9 @@ sig
   val validSequent : session -> bool
   val sequents : session -> sequent list
   val string_of_sequents : session -> string
-    
+  
+  val theorem_name : session -> string
+  
   type proof
   val proof : session -> proof proofbuilder
   val string_of_proofs : session -> string
@@ -171,7 +173,8 @@ struct
 
   (********************************************************************
   *idTactical:
-  * Returns a tactical that always succeeds the current sequent unchanged.
+  * Returns a tactical that always succeeds, leaving the current
+  * sequent unchanged.
   ********************************************************************)
   let idTactical =
     fun sequents sc fc -> (sc sequents [] (fun x -> x) fc)
@@ -181,9 +184,11 @@ struct
   * Simpy returns the given tactical.  Has no real use; used during
   * testing.
   ********************************************************************)
+  (*
   let applyTactical tac =
     tac
-
+  *)
+  
   (********************************************************************
   *orElseTactic:
   * Returns a tactical that tries the first tactical, and if it fails,
@@ -215,6 +220,18 @@ struct
               sc newseqs (oldseqs @ aa) pb' k
             in
             (tac [a] sc' fc)
+
+  (********************************************************************
+  *admitTactical:
+  * Kills the current (first) sequent automagically.
+  ********************************************************************)
+  let admitTactical pb =
+    let admit = fun sequents sc fc ->
+      match sequents with
+          [seq] -> (sc [] [] (fun _ -> [pb seq]) fc)
+        | _ -> failureTactical sequents sc fc
+    in
+    (firstTactical admit)
 
   (********************************************************************
   *orElseListTactical:
@@ -394,10 +411,12 @@ struct
   (********************************************************************
   * Interfaces for Tacticals
   ********************************************************************)
+  (*
   let applyInterface session args = match args with
       Absyn.Tactical(tac)::[] -> tac
     | _ -> invalidArguments "apply"
-
+  *)
+  
   let orElseInterface session args = match args with
       Absyn.Tactical(tac1)::Absyn.Tactical(tac2)::[] ->
         (orElseTactical tac1 tac2)
@@ -420,6 +439,10 @@ struct
   let idInterface session args = match args with
       [] -> (idTactical)
     | _ -> invalidArguments "id"
+
+  let admitInterface proof session args = match args with
+      [] -> admitTactical proof
+    | _ -> invalidArguments "admit"
   
   let repeatInterface session args = match args with
       Absyn.Tactical(tac)::[] ->
@@ -446,8 +469,8 @@ struct
     | _ -> invalidArguments "first"
 
   let tacticals =
-    let ts = Table.add "apply" applyInterface Table.empty in
-    let ts = Table.add "id" idInterface ts in
+    let ts = Table.add "id" idInterface Table.empty in
+    (*  let ts = Table.add "apply" applyInterface ts in  *)
     let ts = Table.add "fail" failureInterface ts in
     
     let ts = Table.add "orelse" orElseInterface ts in

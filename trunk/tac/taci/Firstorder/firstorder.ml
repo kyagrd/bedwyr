@@ -18,7 +18,7 @@
 **********************************************************************)
 
 let debug = false
-let debug2= true
+let proofSearchDebug = true
 
 (**********************************************************************
 *NablaSig:
@@ -169,14 +169,16 @@ struct
   *Proof:
   ********************************************************************)
   type proof = {
-    rule : string ;
-    formula : formula option ;
-    sequent : sequent ;
-    params : ((string*string) list) ;
-    bindings : Term.term list ;
+    rule : string;
+    formula : formula option;
+    sequent : sequent;
+    params : (string * string) list;
+    bindings : Term.term list;
     subs : proof list
   }
 
+  type lemma = string * formula * proof
+  
   (********************************************************************
   *Session:
   * A session is:
@@ -186,6 +188,7 @@ struct
   *   proof builder
   *   undo info
   *   redo info
+  *   lemmas
   ********************************************************************)  
   type session = {
     tactics :
@@ -196,7 +199,10 @@ struct
     state : Term.state ;
     diff : Term.subst ;
     initial_namespace : Term.namespace ;
-    proof_namespace   : Term.namespace
+    proof_namespace   : Term.namespace ;
+    theorem_name : string option ;
+    theorem : FOA.formula option ;
+    lemmas : lemma list
   }
 
   let dummy_session = {
@@ -205,6 +211,9 @@ struct
     state = Term.save_state () ; diff = Term.get_subst (Term.save_state ()) ;
     initial_namespace = Term.save_namespace () ;
     proof_namespace = Term.save_namespace () ;
+    theorem_name = None ;
+    theorem = None ;
+    lemmas = []
   }
 
   let sequents session = session.sequents
@@ -558,8 +567,24 @@ struct
                   proof_namespace = proofNamespace ;
                   builder = Logic.idProofBuilder ;
                   sequents = [{ bound = None ;
-                                lvl=0 ; lhs=[] ; rhs=[makeFormula f] }] }
+                                lvl=0 ; lhs=[] ; rhs=[makeFormula f] }] ;
+                  theorem_name = Some name;
+                  theorem = Some f}
         | None -> session
+
+  let theorem_name session = Option.get session.theorem_name
+  let proved session =
+    match (session.builder []) with
+        [proof] ->
+        let lemmas' =
+          (Option.get session.theorem_name,
+            makeFormula (Option.get session.theorem),
+            proof) ::
+          session.lemmas
+        in
+        {session with lemmas = lemmas'}
+      | _ ->
+        failwith ("invalid proof of theorem '" ^ (Option.get session.theorem_name) ^ "'")
 
   (********************************************************************
   *definitions:
@@ -794,12 +819,8 @@ struct
   * Makes a proof builder for a simple inference rule.  Given the name
   * of the inference rule ('rule'), constructs a function that takes a
   * list of the proofs (strings) of the arguments (arg1...argN) to the
-  * inference rule and returns a proof of the rule thusly:
-  *
-  *   rule<sequent>(arg1,arg2,...,argN)
-  *
-  * Unfortunately it doesn't do any tabbing or suchlike, so the output
-  * is really ugly.
+  * inference rule and returns a proof of the rule that can be printed
+  * in XML form easily.
   ********************************************************************)
   let makeProofBuilder name ?(b=[]) ?(p=[]) ?f seq = fun proofs ->
     { rule = name ; params = p ; bindings = b ; formula = f ; sequent = seq ;
@@ -1094,7 +1115,7 @@ struct
         false 
 
 (*  let unfolding_progresses n a = let r = unfolding_progresses n a in
-    if debug2 then
+    if proofSearchDebug then
       Printf.printf "Progress %s %s = %b\n%!"
         n (String.concat "::" (List.map Pprint.term_to_string a)) r ;
       r *)
@@ -1693,6 +1714,46 @@ struct
         | s::tl -> sc [abstract s] tl (fun proofs -> proofs) fc
         | _ -> fc ()
 
+  (********************************************************************
+  *lemmasTactical:
+  * Just prints the list of proved lemmas.
+  ********************************************************************)
+  let lemmasTactical session args = match args with
+      [] ->
+        let output =
+          "Lemmas:\n" ^
+          (String.concat "\n" (List.map (fun (s,_,_) -> "  " ^ s) session.lemmas)) ^
+          "\n"
+          in
+        O.output output;
+        G.idTactical
+    | _ -> G.invalidArguments "lemmas"
+
+  (********************************************************************
+  *applyTactical:
+  * Searches the list of lemmas and adds the lemma of the given name
+  * to the hypotheses.  Additionally modifies the proof builder to insert
+  * the proof of the lemma in the appropriate place.
+  *
+  * TODO: fix the proof builder!
+  ********************************************************************)
+  let applyTactical session args = match args with
+      Absyn.String(s)::[] ->
+        try
+          let (_,formula,proof) = List.find (fun (s',_,_) -> s = s') session.lemmas in
+          let pretactic = fun sequent sc fc ->
+            let seq = { sequent with lhs = sequent.lhs @ [formula] } in
+            let pb = fun proofs ->
+              { rule = "apply" ; params = ["lemma", s] ; bindings = [] ; formula = Some formula ; sequent = seq ;
+              subs = proof::proofs }
+            in
+            sc [seq] pb fc
+          in
+            G.makeTactical pretactic
+        with
+          Not_found -> (O.error "undefined lemma.\n" ; G.failureTactical)
+    | _ -> G.invalidArguments "apply"
+
   (** {1 Debugging}
     * The examine tactic is useful for debugging. *)
   let examineTactical session args = match args with
@@ -1772,9 +1833,6 @@ struct
   (** The decide rule focuses on a synchronous formula.
     * This tactic takes a single sequent and its successes are single sequents
     * too. *)
-
-
-
   let focus,focusr,freeze1 =
     let matcher_l fl =
       make_matcher (fun (Formula(i,(m,p),f)) -> fl m p f)
@@ -1789,7 +1847,7 @@ struct
       match matcher_r fr after with
         | Some (f,before',after) ->
             let before = before @ before' in
-              if debug2 then
+              if proofSearchDebug then
               Format.printf "%s@[<hov 2>Focus right@ %s@]\n%!"
                 (String.make (match seq.bound with Some b -> max 0 b | None -> 0)
                    ' ')
@@ -1804,15 +1862,15 @@ struct
       match matcher_l fl after with
         | Some (f,before',after) ->
             let before = before @ before' in
-              if debug2 then
+            if proofSearchDebug then
               Format.printf "%s@[<hov 2>Focus left@ %s@]\n%!"
                 (String.make (match seq.bound with Some b -> max 0 b | None -> 0)
                    ' ')
                 (string_of_formula f)
                 (* ppxml_sequent seq *) ;
-              sc
-                { seq with lhs = before @ [ focus f ] @ after }
-                (fun () -> tac_l (before@[f]) after seq sc fc focus fl fr b)
+            sc
+              { seq with lhs = before @ [ focus f ] @ after }
+              (fun () -> tac_l (before@[f]) after seq sc fc focus fl fr b)
         | None -> if b then tac_r [] seq.rhs seq sc fc focus fl fr (not b) else fc ()
     in
       (fun seq sc fc -> tac_l [] seq.lhs seq sc fc focus (fun m p f -> m=Nonfocused && sync_on_l p f) (fun m p f -> m=Nonfocused && sync_on_r p f) true), 
@@ -1834,7 +1892,7 @@ struct
       (fun seq ->
          match matcher_l seq.lhs with
            | Some (f,before,after) ->
-               if debug2 then
+               if proofSearchDebug then
                Printf.printf "%sRelease left %s\n%!"
                  (String.make
                     (match seq.bound with Some b -> max 0 b | None -> 0) ' ')
@@ -1844,7 +1902,7 @@ struct
            | None ->
                begin match matcher_r seq.rhs with
                  | Some (f,before,after) ->
-                     if debug2 then
+                     if proofSearchDebug then
                      Printf.printf "%sRelease right %s\n%!"
                        (String.make
                           (match seq.bound with Some b -> max 0 b | None -> 0) ' ')
@@ -1882,9 +1940,9 @@ struct
              | FOA.ApplicationFormula (FOA.NuFormula (name,_,_), args) ->
                  m <> Frozen && (b (unfolding_progresses name args))
              | _ -> false)
+
     (* Unfold the first available asynchronous fixed point.
      * This will (eventually) include trying simple (co)inductions. *)
-
     let unfold_ind = G.orElseTactical (automatic_intro `Left (left_matcher not)) (automatic_intro `Right (right_matcher not))
     let unfold_unf = G.orElseTactical (intro `Left (left_matcher (fun x->x)) dummy_session (Some "unfold")) (automatic_intro `Right (right_matcher (fun _->true)))
     let unfold = G.orElseTactical (automatic_intro `Left (left_matcher (fun _->true))) unfold_unf
@@ -1912,7 +1970,7 @@ struct
           begin match left_matcher (fun x->x) seq.lhs with
             | Some (Formula(i,(_,p),f), before, after) ->
 		  (G.thenTactical (fun _ ->
-                      if debug2 then
+                      if proofSearchDebug then
                      Format.printf "%s@[<hov 2>Unfold left@ %s@]\n%!"
                        (String.make
                           (match seq.bound with Some b -> max 0 b | None -> 0)
@@ -1923,7 +1981,7 @@ struct
 	    | None -> begin match right_matcher (fun x->x) seq.rhs with
 		| Some (Formula(i,(_,p),f), before, after) ->
 		  (G.thenTactical (fun _ ->
-                      if debug2 then
+                      if proofSearchDebug then
                      Format.printf "%s@[<hov 2>Unfold right@ %s@]\n%!"
                        (String.make
                           (match seq.bound with Some b -> max 0 b | None -> 0)
@@ -1934,7 +1992,7 @@ struct
 		| None -> begin match left_matcher not seq.lhs with
 		    | Some (Formula(i,(_,p),f), before, after) ->
 			G.orElseTactical (fun _ ->
-                     if debug2 then
+                     if proofSearchDebug then
                      Format.printf "%s@[<hov 2>Freeze@ %s@]\n%!"
                        (String.make
                           (match seq.bound with Some b -> max 0 b | None -> 0)
@@ -1944,7 +2002,7 @@ struct
                        [{seq with lhs =
                            before@[Formula(i,(Frozen,p),f)]@after }])
 		  (G.thenTactical (fun _ ->
-                      if debug2 then
+                      if proofSearchDebug then
                      Format.printf "%s@[<hov 2>Induction@ %s@]\n%!"
                        (String.make
                           (match seq.bound with Some b -> max 0 b | None -> 0)
@@ -2005,8 +2063,19 @@ struct
      * partial successes by design. *)
     G.thenTactical (set_bound session args) full_async
 
-  (** {1 Tactic table} Export tactics to the user. *)
+  (*  admitTactical: a tactical that proves everything! *)
+  let admitTactical session args = match args with
+        [] ->
+          (G.admitTactical (fun seq ->
+            {rule="admit"; 
+            formula=None;
+            sequent=seq;
+            params=[];
+            bindings=[];
+            subs=[]}))
+      | _ -> G.invalidArguments "admit"
 
+  (** {1 Tactic table} Export tactics to the user. *)
   let pervasiveTacticals =
     let (++) t (a,b) = Logic.Table.add a b t in
     let (||) a b =
@@ -2015,10 +2084,14 @@ struct
 
     let ts =
       G.tacticals
+        ++ ("admit", admitTactical)
         ++ ("and", andL||andR)
         ++ ("and_l", andL)
         ++ ("and_r", andR)
 
+        ++ ("apply", applyTactical)
+        ++ ("lemmas", lemmasTactical)
+        
         ++ ("imp", impL||impR)
         ++ ("imp_l", impL)
         ++ ("imp_r", impR)
@@ -2118,7 +2191,10 @@ struct
       { tactics = pervasiveTacticals ; definitions = Logic.Table.empty ;
         sequents = [] ; builder = Logic.idProofBuilder ;
         state = state ; diff = Term.get_subst state ;
-        initial_namespace = ns ; proof_namespace = ns }
+        initial_namespace = ns ; proof_namespace = ns;
+        theorem_name = None;
+        theorem = None;
+        lemmas = []}
 
   (********************************************************************
   *reset:

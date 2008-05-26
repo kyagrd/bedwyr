@@ -61,6 +61,7 @@ Tacticals:
   type session = Session of (sequent list * proof Logic.proofbuilder *
     (session, (sequent, proof) Logic.tactic) Logic.tactical Logic.table)
 
+  let theorem_name session = ""
   let getSessionTacticals (Session(_,_,t)) = t
   let getSessionSequents (Session(sequents,_,_)) = sequents
   let getSessionBuilder (Session(_,b,_)) = b
@@ -119,7 +120,8 @@ Tacticals:
       (setSessionSequents [([], [Option.get term])] session)
     else
       session
-
+  
+  let proved session = session
   let definitions ds session = session
   let operator name fix prec session = session
   let update sequents builder session =

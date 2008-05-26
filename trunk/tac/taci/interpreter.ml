@@ -50,10 +50,6 @@ struct
   (* If set, indicates a directory in which proofs should be stored. *)
   let proof_output = ref None
 
-  (* Name of the current theorem.
-   * This is quick, ugly & limited.. TODO: Ask Zach how to make it clean. *)
-  let theorem_name = ref ""
-
   let home_unrelate =
     let home =
       try Some (Sys.getenv "HOME") with Not_found -> None
@@ -253,19 +249,23 @@ struct
           session
       | TacticalSuccess s ->
           O.output "Success.\n";
-          if not (L.validSequent s) then begin
-            O.output "Proof completed.\n" ;
+          if not (L.validSequent s) then
+            (O.output "Proof completed.\n" ;
             O.goal "" ;
-            match !proof_output with
+            
+            (*  Save the proof output.  *)
+            (match !proof_output with
               | None -> ()
               | Some dir ->
-                  let name     = !theorem_name in
+                  let name = L.theorem_name s in
+                  let name = if name = "" then "proof" else name in
                   let filename = Printf.sprintf "%s/%s.xml" dir name in
-                  let chan     = open_out filename in
-                    output_string chan (L.string_of_proofs s) ;
-                    close_out chan
-          end ;
-          s
+                  let chan = open_out filename in
+                  output_string chan (L.string_of_proofs s) ;
+                  close_out chan) ;
+            L.proved s)
+          else
+            s
       | TacticalFailure ->
           O.output "Failure.\n";
           session
@@ -389,10 +389,11 @@ struct
         | Absyn.Redo(_) -> ((redo session), false)
         | Absyn.Reset -> (L.reset (), true)
         | Absyn.Proof_Output name ->
-            proof_output := Some (home_unrelate name) ;
-            (session, true)
+            let dir = (home_unrelate name) in
+            (O.output ("Proof output set to '" ^ dir ^ "'");
+            proof_output := Some dir;
+            (session, true))
         | Absyn.Theorem(name, t) ->
-            theorem_name := name ;
             L.prove name t session, true
         | Absyn.Definitions(ds) ->
             L.definitions ds session, true
