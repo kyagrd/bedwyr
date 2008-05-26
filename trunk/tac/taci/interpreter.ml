@@ -390,7 +390,7 @@ struct
         | Absyn.Reset -> (L.reset (), true)
         | Absyn.Proof_Output name ->
             let dir = (home_unrelate name) in
-            (O.output ("Proof output set to '" ^ dir ^ "'");
+            (O.output ("Proof output set to '" ^ dir ^ "'\n");
             proof_output := Some dir;
             (session, true))
         | Absyn.Theorem(name, t) ->
