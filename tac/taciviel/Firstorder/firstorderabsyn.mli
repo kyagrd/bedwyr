@@ -28,33 +28,49 @@ exception SemanticError of string
 
 type term = Term.term
 
-type formula =
-    AndFormula of (formula * formula)
-  | OrFormula of (formula * formula)
-  | ImplicationFormula of (formula * formula)
-  | EqualityFormula of (term * term)
-  
-  | PiFormula of formula
-  | SigmaFormula of formula
-  | NablaFormula of formula
-  | MuFormula of string * string list * formula
-  | NuFormula of string * string list * formula
-  
-  | AbstractionFormula of string * formula
-  | ApplicationFormula of formula * term list
-  
-  | AtomicFormula of string * term list
-  | DBFormula of int * string * int (* lifts, name, index *)
-  
 type fixpoint =
     Inductive
   | CoInductive
+(*
+type polarity =
+    Synchronous
+  | Asynchronous
+*)
+type quantifier =
+    Pi
+  | Sigma
+  | Nabla
 
-type predefinition =
-  PreDefinition of (string * string list * formula * fixpoint)
+type connective =
+    And
+  | Or 
+  | Imp
 
-type definition =
-  Definition of (string * int * formula * fixpoint)
+type 'a polarized = ('a * 'a formula)
+
+and 'a predicate = 
+    FixpointFormula of (fixpoint * (string * string list * 'a abstraction))
+  | DBFormula of int * string * int
+  | AtomicFormula of string
+
+and 'a abstraction = 
+    AbstractionFormula of (string * 'a abstraction)
+  | AbstractionBody of 'a polarized
+
+and 'a formula =
+    BinaryFormula of (connective * 'a polarized * 'a polarized)
+  | EqualityFormula of (term * term)
+  | QuantifiedFormula of (quantifier * 'a abstraction)
+  | ApplicationFormula of ('a predicate * term list)
+
+type 'a predefinition =
+  PreDefinition of (string * string list * 'a polarized * fixpoint)
+
+type 'a definition =
+  Definition of (string * int * 'a polarized * fixpoint)
+
+
+type ('a,'b,'c,'d,'e) mapf = {polf : 'a polarized -> 'b ; predf : 'a predicate -> 'c ; abstf : 'a abstraction -> 'd ; formf : 'a formula -> 'e}
 
 type state
 type unifyresult =
@@ -62,32 +78,37 @@ type unifyresult =
   | UnifySucceeded of state
   | UnifyError of string
 
-val makeAnonymousFormula : unit -> formula
+(*val makeAnonymousFormula : unit -> 'a weak
+val isAnonymousFormula : formula -> bool *)
+
+val isAnonymousTerm : term -> bool 
 val makeAnonymousTerm : unit -> term
-val isAnonymousTerm : term -> bool
-val isAnonymousFormula : formula -> bool
 
-val mapFormula : (formula -> formula) -> (term -> term) -> formula -> formula
-val termsFormula : formula -> term list
-val abstract : string -> formula -> formula
-val abstractDummyWithoutLambdas : formula -> formula
-val abstractVar : term -> formula -> formula
-val abstractVarWithoutLambdas : term -> formula -> formula
-val apply : term list -> formula -> formula option
-val applyFixpoint : formula -> formula -> formula option
-val string_of_definition : definition -> string
-val string_of_formula : generic:string list -> formula -> string
-val string_of_formula_ast : generic:string list -> formula -> string
+val mapFormula : (unit -> ('a,'a polarized,'a predicate,'a abstraction,'a formula) mapf) -> (term -> term) -> ('a,'a polarized,'a predicate,'a abstraction,'a formula) mapf
+val terms_polarized : 'a polarized -> term list
+val abstract : string -> ('a, 'a abstraction, unit, 'a abstraction, unit) mapf
+val abstractDummyWithoutLambdas : unit -> ('a,'a polarized,'a predicate,'a abstraction,'a formula) mapf
+val abstractVar : term -> ('a, 'a abstraction, unit, 'a abstraction, unit) mapf 
+val abstractVarWithoutLambdas : term -> unit -> ('a,'a polarized,'a predicate,'a abstraction,'a formula) mapf
 
-val eliminateNablas : term list -> formula -> formula
+val apply : term list -> 'a abstraction -> 'a abstraction option
+val eliminateNablas : term list -> ('a, 'a polarized, term list -> 'a formula, 'a abstraction, 'a formula) mapf
+
+val applyFixpoint : 'a abstraction -> ('a, 'a polarized option, 'a predicate option, 'a abstraction option, 'a formula option) mapf
+
+val string_of_definition : 'a definition -> string
+val string_of_formula : generic:string list -> (* names:string list -> *) ('a,string,string,string,string) mapf
+val string_of_formula_ast : generic:string list -> ('a,string,string,string,string) mapf
+
 
 val undoUnify : state -> unit
 val rightUnify : term -> term -> unifyresult
 val leftUnify : term -> term -> unifyresult
 val unifyList : (term -> term -> unifyresult) -> term list -> term list -> unifyresult
-val matchFormula : formula -> formula -> bool
+(* val matchFormula : 'a w_polarized -> 'a polarized -> bool *)
 
-val getDefinitionArity : definition -> int
-val getDefinitionBody : definition -> formula
+val getDefinitionArity : 'a definition -> int
+val getDefinitionBody : 'a definition -> 'a polarized
 
 val getTermHeadAndArgs : term -> (string * term list) option
+
