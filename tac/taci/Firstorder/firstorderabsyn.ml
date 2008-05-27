@@ -21,30 +21,57 @@ exception SemanticError of string
 
 type term = Term.term
 
-type formula =
-    AndFormula of (formula * formula)
-  | OrFormula of (formula * formula)
-  | ImplicationFormula of (formula * formula)
-  | EqualityFormula of (term * term)
-  | PiFormula of formula
-  | SigmaFormula of formula
-  | NablaFormula of formula
-  | MuFormula of string * string list * formula
-  | NuFormula of string * string list * formula
-  | AbstractionFormula of string * formula
-  | ApplicationFormula of formula * term list
-  | AtomicFormula of string * term list
-  | DBFormula of int * string * int
-
 type fixpoint =
     Inductive
   | CoInductive
 
-type predefinition =
-  PreDefinition of (string * string list * formula * fixpoint)
+type quantifier =
+    Pi
+  | Sigma
+  | Nabla
 
-type definition =
-  Definition of (string * int * formula * fixpoint)
+type connective =
+    And
+  | Or
+  | Imp
+
+
+type polarity = Positive | Negative
+type freezing = Frozen | Unfrozen
+type control  = Normal | Focused | Delayed
+type junk     = Clean | Dirty of (unit -> unit)
+type annotation = {
+  polarity : polarity ;
+  freezing : freezing ;
+  control  : control ;
+  junk     : junk
+}
+
+type 'a polarized = ('a * 'a formula)
+
+and 'a predicate = 
+    FixpointFormula of (fixpoint * (string * string list * 'a abstraction))
+  | DBFormula of int * string * int
+  | AtomicFormula of string
+
+and 'a abstraction = 
+    AbstractionFormula of (string * 'a abstraction)
+  | AbstractionBody of 'a polarized
+
+and 'a formula =
+    BinaryFormula of (connective * 'a polarized * 'a polarized)
+  | EqualityFormula of (term * term)
+  | QuantifiedFormula of (quantifier * 'a abstraction)
+  | ApplicationFormula of ('a predicate * term list)
+
+type 'a predefinition =
+  PreDefinition of (string * string list * 'a polarized * fixpoint)
+
+type 'a definition =
+  Definition of (string * int * 'a polarized * fixpoint)
+
+
+type ('a,'b,'c,'d,'e) mapf = {polf : 'a polarized -> 'b ; predf : 'a predicate -> 'c ; abstf : 'a abstraction -> 'd ; formf : 'a formula -> 'e}
 
 
 (**********************************************************************
@@ -66,232 +93,196 @@ let getTermHeadAndArgs t =
             Some (Term.get_name t', args)
           else
             None
-      | _ -> None)    
+      | _ -> None)
   | Term.Var(v) ->
       (try
         let h = Term.get_hint t in
         Some(h, [])
       with
-        Not_found -> Some(Term.get_name t, []))
+        Not_found -> Some (Term.get_name t, []))
   | _ -> None
-
-let termsFormula = 
-  let rec f = function
-    AndFormula(l,r)
-  | OrFormula(l,r)
-  | ImplicationFormula(l,r) -> (f l)@(f r)
-  | EqualityFormula(l,r) -> [l;r]
-  | AbstractionFormula(_,l)
-  | PiFormula(l)  
-  | SigmaFormula(l)
-  | NablaFormula(l) -> f l
-  | AtomicFormula(_,l)
-  | ApplicationFormula(_,l) -> l
-  | MuFormula(_) 
-  | NuFormula(_) 
-  | DBFormula(_) -> [] in f
   
 let getDefinitionArity (Definition(_,a,_,_)) = a
 let getDefinitionBody (Definition(_,_,b,_)) = b
 
 let getConnective = function
-    AndFormula(_) -> ", "
-  | OrFormula(_) -> "; "
-  | ImplicationFormula(_) -> " => "
-  | EqualityFormula(_) -> " = "
-  | _ -> ""
+    And -> ", "
+  | Or -> "; "
+  | Imp -> " => "
 
-let getConnectiveName = function
-    AndFormula(_) -> "and"
-  | OrFormula(_) -> "or"
-  | ImplicationFormula(_) -> "imp"
-  | EqualityFormula(_) -> "eq"
-  | PiFormula(_) -> "pi"
-  | SigmaFormula(_) -> "sigma"
-  | NablaFormula(_) -> "nabla"
-  | MuFormula(_) -> "mu"
-  | NuFormula(_) -> "nu"
-  | ApplicationFormula(_) -> "app"
+let getQuantifierName = function 
+    Pi -> "pi" 
+  | Sigma -> "sigma" 
+  | Nabla -> "nabla"
+
+let getFixpointName = function 
+    Inductive -> "mu" 
+  | CoInductive -> "nu"
+
+let getApplicationKind = function
+    FixpointFormula(fix,_) -> getFixpointName fix
   | DBFormula(_) -> "db"
   | AtomicFormula(_) -> "atom"
-  | AbstractionFormula(_) -> "lambda"
 
-let getFormulaName = function
-    MuFormula(name,_,_) -> name
-  | NuFormula(name,_,_) -> name
+let getConnectiveName = function
+    And -> "and"
+  | Or -> "or"
+  | Imp -> "imp"
+
+let getApplicationName = function
+    FixpointFormula(_,(name,_,_))
   | DBFormula(_,name,_) -> name
-  | AtomicFormula(name,args) ->
-      (* This actually happens, the pattern "_ ..." matches any application,
-       * not only atoms but also fixed points, and is thus represented by
-       * App(Atom("_",[]),...). *)
-      assert (name="_"&& args=[]) ;
-      name
-  | _ -> assert false
+  | AtomicFormula(name) -> name
 
-let mapFormula formulafun termfun formula =
-  match formula with
-      AndFormula(l,r) -> AndFormula(formulafun l, formulafun r)
-    | OrFormula(l,r) -> OrFormula(formulafun l, formulafun r)
-    | ImplicationFormula(l,r) -> ImplicationFormula(formulafun l, formulafun r)
-    | EqualityFormula(l,r) -> EqualityFormula(termfun l, termfun r)
-    | PiFormula(f) -> PiFormula(formulafun f)
-    | SigmaFormula(f) -> SigmaFormula(formulafun f)
-    | NablaFormula(f) -> NablaFormula(formulafun f)
-    | MuFormula(name, args, f) -> MuFormula(name, args, formulafun f)
-    | NuFormula(name, args, f) -> NuFormula(name, args, formulafun f)
-    | AbstractionFormula(name, f) -> AbstractionFormula(name, formulafun f)
-    | ApplicationFormula(head,tl) ->
-        ApplicationFormula(formulafun head, List.map termfun tl)
-    | AtomicFormula(head, tl) -> AtomicFormula(head, List.map termfun tl)
-    | DBFormula(_,n,i) -> formula
+let mapFormula x termsf = {
+  polf = (fun (p,f) -> p,(x ()).formf f) ; 
+  predf = (function 
+      FixpointFormula(fix,(name,args,f)) -> FixpointFormula (fix,(name,args,(x ()).abstf f))
+    | AtomicFormula(head) -> AtomicFormula(head)
+    | DBFormula(a,b,c) -> DBFormula(a,b,c)) ;
+  abstf = (function
+      AbstractionFormula(name,f) -> AbstractionFormula(name,(x ()).abstf f)
+    | AbstractionBody(f) -> AbstractionBody((x ()).polf f)) ;
+  formf = (function 
+      BinaryFormula(c,l,r) -> BinaryFormula(c,(x ()).polf l, (x ()).polf r)
+    | EqualityFormula(l,r) -> EqualityFormula(termsf l, termsf r)
+    | QuantifiedFormula(q,f) -> QuantifiedFormula(q,(x ()).abstf f)
+    | ApplicationFormula(f,tl) -> ApplicationFormula((x ()).predf f,List.map termsf tl))}
 
-let rec string_of_term ~generic names t =
+let rec terms_polarized (p,f) = terms_formula f
+and terms_abstraction = function  
+    AbstractionFormula(_,f) -> terms_abstraction f
+  | AbstractionBody(f) -> terms_polarized f
+ and terms_formula = function
+     BinaryFormula(_,l,r) -> (terms_polarized l)@(terms_polarized r)
+   | EqualityFormula(l,r) -> [l;r]
+   | QuantifiedFormula(_,f) -> terms_abstraction f
+   | ApplicationFormula(_,tl) -> tl
+
+let string_of_term ~generic names t =
   Pprint.term_to_string_preabstracted ~generic ~bound:names t
 
-and string_of_term_ast ~generic t =
+let rec string_of_formula ~generic ~names =
+  let s = string_of_formula ~generic in
+
+ { polf = (fun (p,f) -> (s ~names).formf f) ;
+
+   predf = (function
+		FixpointFormula(_,(name,_,_))
+	      | AtomicFormula(name) -> name
+	      | DBFormula(l,n,i) -> 
+		  let rec name l = if l=0 then n else "lift_" ^ name (l-1) in name l) ;
+
+   abstf = (function
+		AbstractionFormula (hint,f) -> let hint = Term.get_dummy_name hint in 
+		let s = hint ^ "\\ " ^ ((s ~names:(hint::names)).abstf f) in 
+		  (Term.free hint; s)
+	      | AbstractionBody (f) -> (s ~names).polf f) ; 
+
+   formf = (function
+		BinaryFormula(c,l,r) ->
+		  let s1 = ((s ~names).polf l) in
+		  let s2 = ((s ~names).polf r) in
+		    "(" ^ s1 ^ (getConnective c) ^ s2 ^ ")"
+	      | EqualityFormula(l,r) ->
+		  let s1 = (string_of_term ~generic names l) in
+		  let s2 = (string_of_term ~generic names r) in
+		    "(" ^ s1 ^ " = " ^ s2 ^ ")"
+	      | QuantifiedFormula(q,f) -> 
+		  let s1 = getQuantifierName q and 
+		      s2 = (s ~names).abstf f in 
+		    (s1 ^ s2)
+	      | ApplicationFormula(f,tl) ->
+		  let args = (String.concat " " (List.map (string_of_term ~generic names) tl)) in
+		  let name = (s ~names).predf f in
+		    if args = "" then name else name ^ " " ^ args)}
+  
+let string_of_term_ast ~generic t =
   Pprint.term_to_string_full ~generic ~bound:[] t
 
-and string_of_formula ~generic ~names f =
-  let string_of_formula = string_of_formula ~generic in
-  let string_of_term = string_of_term ~generic in
-  match f with
-      AndFormula(l,r)
-    | OrFormula(l,r)
-    | ImplicationFormula(l,r) ->
-        let s1 = (string_of_formula ~names l) in
-        let s2 = (string_of_formula ~names r) in
-        "(" ^ s1 ^ (getConnective f) ^ s2 ^ ")"
-    | EqualityFormula(l,r) ->
-        let s1 = (string_of_term names l) in
-        let s2 = (string_of_term names r) in
-        "(" ^ s1 ^ " = " ^ s2 ^ ")"
-    | PiFormula(f) -> "pi " ^ (string_of_formula ~names f)
-    | SigmaFormula(f) -> "sigma " ^ (string_of_formula ~names f)
-    | NablaFormula(f) -> "nabla " ^ (string_of_formula ~names f)
-    | MuFormula(name, _, f) ->
-        "(" ^ name ^ " " ^ (string_of_formula ~names f) ^ ")"
-    | NuFormula(name, _, f) ->
-        "(" ^ name ^ " " ^ (string_of_formula ~names f) ^ ")"
-    | AbstractionFormula(hint, f) ->
-        let hint = Term.get_dummy_name hint in
-        let s = hint ^ "\\ " ^ (string_of_formula ~names:(hint::names) f) in
-        Term.free hint;
-        s
-    | ApplicationFormula(mu,tl) ->
-        let name = (getFormulaName mu) in
-        let args = (String.concat " " (List.map (string_of_term names) tl)) in
-        if args = "" then
-          name
-        else
-          name ^ " " ^ args
-    | AtomicFormula(head, tl) ->
-        let tl' = String.concat " " (List.map (string_of_term names) tl) in
-        if tl' = "" then
-          head
-        else
-          (head ^ " " ^ tl')
-    | DBFormula(l,n,i) ->
-        let rec name l = if l=0 then n else "lift_" ^ name (l-1) in name l 
+let rec string_of_formula_ast ~generic =
+  let s=string_of_formula_ast in 
+    { polf = (fun (p,f) -> (s ~generic).formf f) ;
 
-and string_of_formula_ast ~generic f =
-  let string_of_formula_ast = string_of_formula_ast ~generic in
-  let string_of_term_ast = string_of_term_ast ~generic in
-  match f with
-      AndFormula(l,r)
-    | OrFormula(l,r)
-    | ImplicationFormula(l,r) ->
-        let s1 = (string_of_formula_ast l) in
-        let s2 = (string_of_formula_ast r) in
-        (getConnectiveName f) ^ "(" ^ s1 ^ ", " ^ s2 ^ ")"
-    | EqualityFormula(l,r) ->
-        let s1 = (string_of_term_ast l) in
-        let s2 = (string_of_term_ast r) in
-        "eq(" ^ s1 ^ ", " ^ s2 ^ ")"
-    | PiFormula(f) -> "pi(" ^ (string_of_formula_ast f) ^ ")"
-    | SigmaFormula(f) -> "sigma(" ^ (string_of_formula_ast f) ^ ")"
-    | NablaFormula(f) -> "nabla(" ^ (string_of_formula_ast f) ^ ")"
-    | MuFormula(name, _, f) ->
-        "mu(" ^ name ^ ", " ^ (string_of_formula_ast f) ^ ")"
-    | NuFormula(name, _, f) ->
-        "nu(" ^ name ^ ", " ^ (string_of_formula_ast f) ^ ")"
-    | AbstractionFormula(hint, f) ->
-        let hint = Term.get_dummy_name hint in
-        let s = "lambda(" ^ hint ^ ", " ^ (string_of_formula_ast f)  ^ ")" in
-        (Term.free hint;
-        s)
-    | ApplicationFormula(mu,tl) ->
-        "app(" ^ (string_of_formula_ast mu) ^ ", " ^
-          (String.concat " " (List.map string_of_term_ast tl)) ^ ")"
-    | AtomicFormula(head,tl) ->
-        let args = (String.concat " " (List.map (string_of_term_ast) tl)) in
-        let args' = if args = "" then "" else ", " ^ args in
-        "atom(" ^ head ^ args' ^ ")"
-    | DBFormula(l,n,i) -> 
-        let rec name l =
-          if l=0 then "#" ^ (string_of_int i) else "lift_" ^ name (l-1)
-        in
-          name l 
+      predf = (function
+		   FixpointFormula(i,(name,_,f)) -> 
+		     (getFixpointName i) ^ "[" ^ name ^ ": " ^ ((s ~generic).abstf f) ^ "]"
+		 | AtomicFormula(name) -> 
+		     "atom["^name^"]"
+		 | DBFormula(l,n,i) -> 
+		     let rec name l = if l=0 then "#" ^ (string_of_int i) else "lift_" ^ name (l-1) in name l) ;
 
-let string_of_formula ~generic f =
-  string_of_formula ~generic ~names:[] f
-
+      abstf = (function
+		   AbstractionFormula (hint,f) -> 
+		     let hint = Term.get_dummy_name hint in 
+		     let s = "lambda(" ^ hint ^ ", " ^ ((s ~generic).abstf f) ^")" in 
+		       (Term.free hint; s)
+		 | AbstractionBody (f) -> (s ~generic).polf f) ;
+      
+      formf = (function
+	  BinaryFormula(c,l,r) ->
+            let s1 = ((s ~generic).polf l) in
+            let s2 = ((s ~generic).polf r) in
+              (getConnectiveName c) ^ "(" ^ s1 ^ ", " ^ s2 ^ ")"
+	| EqualityFormula(l,r) ->
+            let s1 = (string_of_term_ast ~generic l) in
+            let s2 = (string_of_term_ast ~generic r) in
+              "eq(" ^ s1 ^ ", " ^ s2 ^ ")"
+	| QuantifiedFormula(q,f) ->
+	    let s1 = getQuantifierName q and 
+		s2 = (s ~generic).abstf f in  
+	      (s1 ^ "(" ^ s2  ^ ")")
+	| ApplicationFormula(f,tl) ->
+            let args = (String.concat " " (List.map (string_of_term_ast ~generic) tl)) in
+            let args = if args = "" then "" else "(" ^ args ^")" in
+              ((s ~generic).predf f) ^ args)}
+	    
 let string_of_fixpoint = function
     Inductive -> "inductive"
   | CoInductive -> "coinductive"
 
+let string_of_formula = string_of_formula ~names:[]
+
 let string_of_definition (Definition(name,arity,body,ind)) =
-  (string_of_fixpoint ind) ^ " " ^ (string_of_formula ~generic:[] body)
+  (string_of_fixpoint ind) ^ " " ^ ((string_of_formula ~generic:[]).polf body)
     
 (**********************************************************************
 *abstract:
 * Abstracts the given formula over the given name. Doesn't go through
 * mu/nu abstractions.
 **********************************************************************)
-let rec abstract name formula =
-  let var = Term.atom name in
-  let rec termFun t = Term.abstract var t
-  and formulaFun f = (mapFormula formulaFun termFun f) in
-  AbstractionFormula(name, (formulaFun formula))
 
-(** The [var] should have a naming hint attached to it. *)
-let rec abstractVar var formula =
-  let rec termFun t = Term.abstract var t
-  and formulaFun f = (mapFormula formulaFun termFun f) in
+let abstract0 var = let rec x () = mapFormula x (Term.abstract var) in x
+let dummyvar = Term.var ~ts:0 ~lts:0 ~tag:Term.Constant
+let abstractDummyWithoutLambdas () = abstract0 dummyvar () 
+let abstractWithoutLambdas name = abstract0 (Term.atom name) 
+let abstractVarWithoutLambdas var = abstract0 var
+let abstractVarWithoutLambas = abstract0
+let abstract name = {polf = (fun f -> AbstractionFormula(name, AbstractionBody((abstractWithoutLambdas name ()).polf f))) ;
+		     abstf = (fun f -> AbstractionFormula(name, (abstractWithoutLambdas name ()).abstf f)) ;
+		     formf = (fun _ -> ()) ; 
+		     predf = (fun _ -> ())}
+let abstractVar var = 
   let result = getTermHeadAndArgs var in
   if (Option.isSome result) then
-    let (name,_) = Option.get result in
-    AbstractionFormula(name, formulaFun formula)
+    let (name,_) = Option.get result in abstract name
   else
     failwith "un-named variable"
 
-let dummyvar = Term.var ~ts:0 ~lts:0 ~tag:Term.Constant
-let rec abstractDummyWithoutLambdas formula =
-  let rec termFun t = Term.abstract dummyvar t
-  and formulaFun f = (mapFormula formulaFun termFun f) in
-  (formulaFun formula)
-
-let rec abstractWithoutLambdas name formula =
-  let var = Term.atom name in
-  let rec termFun t = Term.abstract var t
-  and formulaFun f = (mapFormula formulaFun termFun f) in
-  (formulaFun formula)
-
-let rec abstractVarWithoutLambdas var formula =
-  let rec termFun t = Term.abstract var t
-  and formulaFun f = (mapFormula formulaFun termFun f) in
-  (formulaFun formula)
+(** The [var] should have a naming hint attached to it. *)
 
 (**********************************************************************
 *apply:
 **********************************************************************)
 let rec apply terms formula =
-  let app term f =
-    let rec termFun t = Norm.deep_norm (Term.app t [term])
-    and formulaFun f = (mapFormula formulaFun termFun f) in
-    match f with
-        AbstractionFormula(_,f) -> Some(formulaFun f)
-      | _ -> None
+  let app term =
+    let termFun t = Norm.deep_norm (Term.app t [term]) in
+    let rec appfun () = mapFormula appfun termFun in
+    function 
+	AbstractionFormula(_,f) -> Some ((appfun ()).abstf f)
+      | AbstractionBody _ -> None
   in
+
   match terms with
       [] -> Some formula
     | a::aa ->
@@ -316,7 +307,9 @@ type unifyresult =
 * The list [pv] associates to one bound predicate name the local level
 * up to which it has already been raised.
 **********************************************************************)
-let eliminateNablas tv form =
+
+let eliminateNablas tv =
+
   let rec range_downto m n =
     if m>=n then m :: range_downto (m-1) n else []
   in
@@ -328,7 +321,7 @@ let eliminateNablas tv form =
   in
 
   (** [f pv tv form] computes [φ^pv_{rev(tv)}(form)]. *)
-  let rec f pv tv form =
+  let rec f pv tv =
     (* Printf.printf "...%s\n" (string_of_formula_ast ~generic:[] form) ; *)
     let fresh () = Term.var ~ts:0 ~lts:0 ~tag:Term.Constant in
 
@@ -353,44 +346,62 @@ let eliminateNablas tv form =
               (* Keep track the number of raisings that have occured
                * above the introduction of that fixed point. *)
               let pv   = List.length tv :: pv in
-              let body = f pv tv body in
+              let body = (f pv tv).abstf body in
               let body =
                 (* Abstract on the raised parameters' variables. *)
                 List.fold_right2
                   (fun h name body ->
                      AbstractionFormula
                        (name,
-                        abstractVarWithoutLambdas h body))
+                        (abstractVarWithoutLambdas h ()).abstf body))
                   heads argnames body
               in
                 (name,argnames,body)
         end
     in
 
-    let g = f pv tv in
+      {polf = (fun (p,form) -> (p,(f pv tv).formf form)) ;
 
-      match form with
+       formf = (function
         (** Generic abstraction commutes with all connectives. *)
-        | AtomicFormula (n,terms) when n="true" || n="false" -> form
-        | AndFormula (a,b)         -> AndFormula (g a, g b)
-        | OrFormula  (a,b)         -> OrFormula  (g a, g b)
-        | ImplicationFormula (a,b) -> ImplicationFormula (g a, g b)
+        | BinaryFormula (c,a,b)    -> BinaryFormula (c, (f pv tv).polf a, (f pv tv).polf b)
         | EqualityFormula    (u,v) -> EqualityFormula (tf u, tf v)
-        | PiFormula    f -> PiFormula    (g f)
-        | SigmaFormula f -> SigmaFormula (g f)
-        | NablaFormula form ->
+	| QuantifiedFormula(q,form) -> begin match q with
+	      Pi
+	    | Sigma -> QuantifiedFormula(q,(f pv tv).abstf form)
+            | Nabla ->
             let head = fresh () in
             let tv = head :: tv in
               begin match apply [head] form with
                 | None -> failwith "not a formula"
-                | Some form -> f pv tv form
+                | Some (AbstractionBody (form)) -> snd ((f pv tv).polf form) 
+						(* A nabla's polarity has to be the same as the polarity behind it *)
+		| Some (AbstractionFormula form) -> failwith "nabla elimination was incomplete"
               end
-        | AtomicFormula (name,terms) ->
+	    end
+        | ApplicationFormula (form,terms) -> (f pv tv).predf form terms) ;
+ 
+      abstf = (function
+          AbstractionFormula (name,_) as form ->
+            let name = lift_tname tv name in
+            let head = fresh () in
+            let x = Term.app head (List.rev tv) in
+              begin match apply [x] form with
+                | None -> failwith "invalid formula: cannot apply" 
+                | Some form ->
+                    let form = (f pv tv).abstf form in
+                    let form = (abstractVarWithoutLambdas head ()).abstf form in
+                      AbstractionFormula (name,form)
+              end
+	| AbstractionBody form -> AbstractionBody ((f pv tv).polf form)) ;
+
+      predf = (fun form terms -> match form with
+          AtomicFormula (name) when name="true" || name="false" -> ApplicationFormula(form,terms)
+        | AtomicFormula (name) -> 
             (* For undefined atoms, the only thing we can do
              * is lifting the name.. *)
-            let terms = List.map tf terms in
-              AtomicFormula (lift_pname tv name, terms)
-        | ApplicationFormula (DBFormula (liftings,name,i),terms) ->
+            let terms = List.map tf terms in ApplicationFormula(AtomicFormula(lift_pname tv name), terms)
+	| DBFormula (liftings,name,i) ->
             let s   = List.nth pv i in
             let s'  = List.length tv - s in
             let s'' = liftings in
@@ -412,29 +423,12 @@ let eliminateNablas tv form =
                  in
                  let wrap t = Norm.deep_norm (wrap t) in
                    List.map wrap terms)
-        | ApplicationFormula (head,terms) ->
-            ApplicationFormula (g head, List.map tf terms)
-        (** Interesting cases: first and second-order abstractions. *)
-        | AbstractionFormula (name,_) ->
-            let name = lift_tname tv name in
-            let head = fresh () in
-            let x = Term.app head (List.rev tv) in
-              begin match apply [x] form with
-                | None -> failwith "invalid formula: cannot apply" 
-                | Some form ->
-                    let form = f pv tv form in
-                    let form = abstractVarWithoutLambdas head form in
-                      AbstractionFormula (name,form)
-              end
-        | MuFormula (name,argnames,body) ->
-            let n,a,b = abstract_body name argnames body in
-              MuFormula (n,a,b)
-        | NuFormula (name,argnames,body) ->
-            let n,a,b = abstract_body name argnames body in
-              NuFormula (n,a,b)
-        | DBFormula _ -> assert false
+        | FixpointFormula (i,(name,argnames,body)) ->
+	    let n,a,b = abstract_body name argnames body in
+            ApplicationFormula (FixpointFormula(i,(n,a,b)), List.map tf terms))}
+
   in
-    f [] tv form
+  f [] tv
 
 (********************************************************************
 *Right, Left:
@@ -522,79 +516,8 @@ let isAnonymousTerm t =
 
 let isAnonymousFormula f =
   match f with
-    AtomicFormula(head, t) -> (head = "_") && (t = [])
+    AtomicFormula(head) -> (head = "_") (* && (t = []) *)
   | _ -> false
-
-
-(**********************************************************************
-*matchFormula:
-* Match a template with a formula.  If the match succeeds, returns true,
-* otherwise returns false.
-**********************************************************************)
-let matchFormula template formula =
-  let success ur =
-    match ur with
-      UnifySucceeded(s) -> true
-    | _ -> false
-  in
-  
-  (*  Keep track of binding state to undo it later. *)
-  let state = Term.save_state () in
-  
-  (********************************************************************
-  *search:
-  * Recurse over the structure of two formulas.
-  ********************************************************************)
-  let rec search template' formula' =
-    match (template', formula') with
-      (AndFormula(l,r), AndFormula(l', r'))
-    | (OrFormula(l,r), OrFormula(l', r'))
-    | (ImplicationFormula(l,r), ImplicationFormula(l', r')) ->
-        (search l l') && (search r r')
-    
-    | (EqualityFormula(t1, t2), EqualityFormula(t1', t2')) ->
-        (success (rightUnify t1 t1')) && (success (rightUnify t2 t2'))
-
-    | (AtomicFormula("_", []), _) ->
-        true
-    | (AtomicFormula(head,tl), AtomicFormula(head',tl')) ->
-        (* let () = print_endline ("Pattern: " ^ (string_of_formula_ast template)) in
-        let () = print_endline ("Formula: " ^ (string_of_formula_ast formula)) in *)
-        (head = head') && (List.for_all success (List.map2 rightUnify tl tl'))
-    | (MuFormula(n,_,_), MuFormula(n',_,_))
-    | (NuFormula(n,_,_), NuFormula(n',_,_)) ->
-        n = n'
-
-    | (AbstractionFormula(n,f), AbstractionFormula(n',f')) ->
-        (n = n' || n = "_" || n' = "_") && (search f f')
-    | (PiFormula(f), PiFormula(f'))
-    | (SigmaFormula(f), SigmaFormula(f'))
-    | (NablaFormula(f), NablaFormula(f')) ->
-        (search f f')
-
-    | (ApplicationFormula(MuFormula(n,_,b),args), ApplicationFormula(MuFormula(n',_,b'),args')) ->
-        if isAnonymousFormula b || isAnonymousFormula b' then
-          true
-        else
-          (n = n') && (List.for_all success (List.map2 rightUnify args args'))
-    | (ApplicationFormula(NuFormula(n,_,b),args), ApplicationFormula(NuFormula(n',_,b'),args')) ->
-        if isAnonymousFormula b || isAnonymousFormula b' then
-          true
-        else
-          (n = n') && (List.exists success (List.map2 rightUnify args args'))          
-    | (ApplicationFormula(hd,args), ApplicationFormula(hd',args')) ->
-        if (isAnonymousFormula hd) || (isAnonymousFormula hd') then
-          true
-        else
-          (search hd hd') && (List.exists success (List.map2 rightUnify args args'))
-    | (_, _) -> false
-  in
-  let result = (search template formula) in
-  
-  (*  Restore the binding state so later matches can work,
-      and return the result.  *)
-  (Term.restore_state state;
-  result)
 
 (**********************************************************************
 *getTermVarName:
@@ -612,11 +535,12 @@ let getTermVarName t =
 * can be pushed down.
 **********************************************************************)
 exception InvalidFixpointApplication
-let applyFixpoint argument formula =
+let applyFixpoint argument =
   (* Normalizing the argument must be done first, before the normalization
    * that might occur during instantiation. The downside is that even if you
    * never abstracted anything your invariant gets abstracted here. TODO *)
-  let argument = eliminateNablas [] argument in
+
+  let argument = (eliminateNablas []).abstf argument in
 
   (********************************************************************
   *normalizeAbstractions:
@@ -645,7 +569,7 @@ let applyFixpoint argument formula =
     if (Option.isSome target') then
       let abstarget =
         List.fold_right
-          (abstractVarWithoutLambdas)
+          (fun x -> (abstractVarWithoutLambdas x ()).abstf)
           lambdas' (Option.get target')
       in
       
@@ -657,13 +581,22 @@ let applyFixpoint argument formula =
   in
 
   let tf t = t in
-  let rec ff lam db f =
-    match f with
-      | MuFormula(name,args,body) ->
-          MuFormula(name,args, ff lam (db + 1) body)
-      | NuFormula(name,args,body) ->
-          NuFormula(name,args, ff lam (db + 1) body)
-      | ApplicationFormula(DBFormula(lifts,n,db'),args) ->
+
+  let rec ff lam db () =
+
+    {polf = (fun (p,f) -> (p,(ff lam db ()).formf f)) ;
+
+     predf = (function
+	 FixpointFormula (i,(name,args,body)) -> FixpointFormula(i,(name,args,(ff lam (db+1) ()).abstf body))
+       | DBFormula(_) -> failwith "Firstorderabsyn.applyFixpoint: encountered invalid DB."
+       | AtomicFormula(name) -> AtomicFormula(name)) ;
+
+     abstf = (function
+	 AbstractionFormula(name,body) -> AbstractionFormula(name,(ff (name::lam) db ()).abstf body)
+       | AbstractionBody(f) -> AbstractionBody((ff lam db ()).polf f)) ;
+
+     formf = (fun f -> match f with
+         ApplicationFormula(DBFormula(lifts,n,db'),args) ->
           if db <> db' then f else
             let argument =
               if lifts = 0 then argument else
@@ -672,20 +605,17 @@ let applyFixpoint argument formula =
                   let rec mk = function 0 -> [] | n -> fresh () :: mk (n-1) in
                     mk lifts
                 in
-                  eliminateNablas generics argument
+                  (eliminateNablas generics).abstf argument
             in
-              normalizeAbstractions lam argument args
-      | AbstractionFormula(name,body) ->
-          AbstractionFormula(name, (ff (name::lam) db body))
-      | DBFormula(_) ->
-          failwith "Firstorderabsyn.applyFixpoint: encountered invalid DB."
-      | _ -> mapFormula (ff lam db) tf f
+              (match (normalizeAbstractions lam argument args) with
+		  AbstractionBody(_,f) -> f
+		| AbstractionFormula(_) -> failwith "Firstorderabsyn.applyFixpoint: ill-formed fixpoint.")
+	| _ -> (mapFormula (ff lam db) tf).formf f)}
   in
-  try
-    Some (ff [] 0 formula)
-  with
-    InvalidFixpointApplication ->
-      None
+
+  let catch f x = try Some (f x) with InvalidFixpointApplication -> None in
+  let mapf = ff [] 0 () in
+    {polf = catch mapf.polf ; predf = catch mapf.predf ; abstf = catch mapf.abstf ; formf = catch mapf.formf}
 
 
 (********************************************************************
@@ -693,9 +623,3 @@ let applyFixpoint argument formula =
 ********************************************************************)
 let makeAnonymousTerm () =
   Term.fresh ~name:"_" ~tag:Term.Logic ~lts:max_int ~ts:max_int
-
-(********************************************************************
-*makeAnonymousFormula:
-********************************************************************)
-let makeAnonymousFormula () =
-  AtomicFormula("_",[])
