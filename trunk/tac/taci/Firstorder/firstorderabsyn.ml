@@ -21,6 +21,10 @@ exception SemanticError of string
 
 type term = Term.term
 
+type progress =
+    Progressing
+  | Unknown
+
 type fixpoint =
     Inductive
   | CoInductive
@@ -35,7 +39,7 @@ type connective =
   | Or
   | Imp
 
-
+(*  Annotations *)
 type polarity = Positive | Negative
 type freezing = Frozen | Unfrozen
 type control  = Normal | Focused | Delayed
@@ -47,16 +51,13 @@ type annotation = {
   junk     : junk
 }
 
+(*  Formulas  *)
 type 'a polarized = ('a * 'a formula)
 
 and 'a predicate = 
-    FixpointFormula of (fixpoint * (string * string list * 'a abstraction))
+    FixpointFormula of fixpoint * string * (progress * string) list * 'a abstraction
   | DBFormula of int * string * int
   | AtomicFormula of string
-
-and 'a abstraction = 
-    AbstractionFormula of (string * 'a abstraction)
-  | AbstractionBody of 'a polarized
 
 and 'a formula =
     BinaryFormula of (connective * 'a polarized * 'a polarized)
@@ -64,15 +65,43 @@ and 'a formula =
   | QuantifiedFormula of (quantifier * 'a abstraction)
   | ApplicationFormula of ('a predicate * term list)
 
+and 'a abstraction =
+    AbstractionFormula of string * 'a abstraction
+  | AbstractionBody of 'a polarized
+
+(*  mapf: mapping over formulas.  *)
+type ('a,'b,'c,'d,'e) mapf =
+  {polf : 'a polarized -> 'b ;
+  predf : 'a predicate -> 'c ;
+  abstf : 'a abstraction -> 'd ;
+  formf : 'a formula -> 'e}
+
+(*  Patterns  *)
+type fixpoint_pattern =
+    InductivePattern
+  | CoinductivePattern
+  | AnonymousFixpoint
+
+type 'a polarized_pattern = 'a * 'a formula_pattern
+
+and 'a predicate_pattern =
+    AnonymousPredicate
+  | AtomicPattern of string
+
+and 'a formula_pattern =
+    BinaryPattern of connective * 'a polarized_pattern * 'a polarized_pattern
+  | EqualityPattern of term * term
+  | QuantifiedPattern of quantifier * 'a abstraction_pattern
+  | ApplicationPattern of 'a predicate_pattern * term list
+  | AnonymousFormula
+
+and 'a abstraction_pattern = unit
+
 type 'a predefinition =
-  PreDefinition of (string * string list * 'a polarized * fixpoint)
+  PreDefinition of (string * (string * progress) list * 'a polarized * fixpoint)
 
 type 'a definition =
   Definition of (string * int * 'a polarized * fixpoint)
-
-
-type ('a,'b,'c,'d,'e) mapf = {polf : 'a polarized -> 'b ; predf : 'a predicate -> 'c ; abstf : 'a abstraction -> 'd ; formf : 'a formula -> 'e}
-
 
 (**********************************************************************
 *getTermHeadAndArgs:
@@ -95,13 +124,9 @@ let getTermHeadAndArgs t =
             None
       | _ -> None)
   | Term.Var(v) ->
-      (try
-        let h = Term.get_hint t in
-        Some(h, [])
-      with
-        Not_found -> Some (Term.get_name t, []))
+      Some (Term.get_name t, [])
   | _ -> None
-  
+
 let getDefinitionArity (Definition(_,a,_,_)) = a
 let getDefinitionBody (Definition(_,_,b,_)) = b
 
@@ -120,7 +145,7 @@ let getFixpointName = function
   | CoInductive -> "nu"
 
 let getApplicationKind = function
-    FixpointFormula(fix,_) -> getFixpointName fix
+    FixpointFormula(fix,_,_,_) -> getFixpointName fix
   | DBFormula(_) -> "db"
   | AtomicFormula(_) -> "atom"
 
@@ -130,14 +155,14 @@ let getConnectiveName = function
   | Imp -> "imp"
 
 let getApplicationName = function
-    FixpointFormula(_,(name,_,_))
+    FixpointFormula(_,name,_,_)
   | DBFormula(_,name,_) -> name
   | AtomicFormula(name) -> name
 
 let mapFormula x termsf = {
   polf = (fun (p,f) -> p,(x ()).formf f) ; 
   predf = (function 
-      FixpointFormula(fix,(name,args,f)) -> FixpointFormula (fix,(name,args,(x ()).abstf f))
+      FixpointFormula(fix,name,args,f) -> FixpointFormula (fix,name,args,(x ()).abstf f)
     | AtomicFormula(head) -> AtomicFormula(head)
     | DBFormula(a,b,c) -> DBFormula(a,b,c)) ;
   abstf = (function
@@ -168,7 +193,7 @@ let rec string_of_formula ~generic ~names =
  { polf = (fun (p,f) -> (s ~names).formf f) ;
 
    predf = (function
-		FixpointFormula(_,(name,_,_))
+		FixpointFormula(_,name,_,_)
 	      | AtomicFormula(name) -> name
 	      | DBFormula(l,n,i) -> 
 		  let rec name l = if l=0 then n else "lift_" ^ name (l-1) in name l) ;
@@ -205,7 +230,7 @@ let rec string_of_formula_ast ~generic =
     { polf = (fun (p,f) -> (s ~generic).formf f) ;
 
       predf = (function
-		   FixpointFormula(i,(name,_,f)) -> 
+		   FixpointFormula(i,name,_,f) -> 
 		     (getFixpointName i) ^ "[" ^ name ^ ": " ^ ((s ~generic).abstf f) ^ "]"
 		 | AtomicFormula(name) -> 
 		     "atom["^name^"]"
@@ -262,6 +287,7 @@ let abstract name = {polf = (fun f -> AbstractionFormula(name, AbstractionBody((
 		     abstf = (fun f -> AbstractionFormula(name, (abstractWithoutLambdas name ()).abstf f)) ;
 		     formf = (fun _ -> ()) ; 
 		     predf = (fun _ -> ())}
+
 let abstractVar var = 
   let result = getTermHeadAndArgs var in
   if (Option.isSome result) then
@@ -375,8 +401,9 @@ let eliminateNablas tv =
               begin match apply [head] form with
                 | None -> failwith "not a formula"
                 | Some (AbstractionBody (form)) -> snd ((f pv tv).polf form) 
-						(* A nabla's polarity has to be the same as the polarity behind it *)
-		| Some (AbstractionFormula form) -> failwith "nabla elimination was incomplete"
+                  
+                  (* A nabla's polarity has to be the same as the polarity behind it *)
+                | Some (AbstractionFormula _) -> failwith "nabla elimination was incomplete"
               end
 	    end
         | ApplicationFormula (form,terms) -> (f pv tv).predf form terms) ;
@@ -423,9 +450,10 @@ let eliminateNablas tv =
                  in
                  let wrap t = Norm.deep_norm (wrap t) in
                    List.map wrap terms)
-        | FixpointFormula (i,(name,argnames,body)) ->
-	    let n,a,b = abstract_body name argnames body in
-            ApplicationFormula (FixpointFormula(i,(n,a,b)), List.map tf terms))}
+        | FixpointFormula (i,name,args,body) ->
+            let (progs, names) = List.split args in
+            let n,a,b = abstract_body name names body in
+            ApplicationFormula (FixpointFormula(i,n,List.combine progs a,b), List.map tf terms))}
 
   in
   f [] tv
@@ -586,17 +614,17 @@ let applyFixpoint argument =
 
     {polf = (fun (p,f) -> (p,(ff lam db ()).formf f)) ;
 
-     predf = (function
-	 FixpointFormula (i,(name,args,body)) -> FixpointFormula(i,(name,args,(ff lam (db+1) ()).abstf body))
-       | DBFormula(_) -> failwith "Firstorderabsyn.applyFixpoint: encountered invalid DB."
-       | AtomicFormula(name) -> AtomicFormula(name)) ;
+    predf = (function
+	      FixpointFormula (i,name,args,body) -> FixpointFormula(i,name,args,(ff lam (db+1) ()).abstf body)
+      | DBFormula(_) -> failwith "Firstorderabsyn.applyFixpoint: encountered invalid DB."
+      | AtomicFormula(name) -> AtomicFormula(name)) ;
 
-     abstf = (function
-	 AbstractionFormula(name,body) -> AbstractionFormula(name,(ff (name::lam) db ()).abstf body)
-       | AbstractionBody(f) -> AbstractionBody((ff lam db ()).polf f)) ;
+    abstf = (function
+        AbstractionFormula(name,body) -> AbstractionFormula(name,(ff (name::lam) db ()).abstf body)
+      | AbstractionBody(f) -> AbstractionBody((ff lam db ()).polf f)) ;
 
-     formf = (fun f -> match f with
-         ApplicationFormula(DBFormula(lifts,n,db'),args) ->
+    formf = (fun f -> match f with
+        ApplicationFormula(DBFormula(lifts,n,db'),args) ->
           if db <> db' then f else
             let argument =
               if lifts = 0 then argument else
@@ -608,8 +636,8 @@ let applyFixpoint argument =
                   (eliminateNablas generics).abstf argument
             in
               (match (normalizeAbstractions lam argument args) with
-		  AbstractionBody(_,f) -> f
-		| AbstractionFormula(_) -> failwith "Firstorderabsyn.applyFixpoint: ill-formed fixpoint.")
+		    AbstractionBody(_,f) -> f
+		  | AbstractionFormula(_) -> failwith "Firstorderabsyn.applyFixpoint: ill-formed fixpoint.")
 	| _ -> (mapFormula (ff lam db) tf).formf f)}
   in
 
@@ -623,3 +651,62 @@ let applyFixpoint argument =
 ********************************************************************)
 let makeAnonymousTerm () =
   Term.fresh ~name:"_" ~tag:Term.Logic ~lts:max_int ~ts:max_int
+
+(**********************************************************************
+*matchFormula:
+* Match a pattern with a formula.  If the match succeeds, returns true,
+* otherwise returns false.
+**********************************************************************)
+let matchFormula pattern formula =
+  (*  success: determines whether a unification result indicates
+      successful unification. *)
+  let success ur =
+    match ur with
+      UnifySucceeded(s) -> true
+    | _ -> false
+  in
+  
+  (*  Keep track of binding state to undo it later. *)
+  let state = Term.save_state () in
+  
+  let matchPredicates pattern pred =
+    match (pattern, pred) with
+        (AtomicPattern(name), FixpointFormula(_, name', _, _))
+      | (AtomicPattern(name), AtomicFormula(name')) -> name = name'
+      | _ -> false
+  in
+  
+  (********************************************************************
+  *matchFormulas:
+  * Recurse over the structure of a formula and a pattern, matching
+  * them.
+  ********************************************************************)
+  let rec matchFormulas pattern formula =
+    let (polarity, formula) = formula in
+    let (patternPolarity, pattern) = pattern in
+    
+    (*  Polarity Check  *)
+    if (Option.isSome patternPolarity) && ((Option.get patternPolarity) <> polarity) then
+      false
+    else
+    
+    match (pattern, formula) with
+      (AnonymousFormula, _) ->
+        true  
+    | (BinaryPattern(c, l,r), BinaryFormula(c', l', r')) ->
+        (c = c') && (matchFormulas l l') && (matchFormulas r r')
+    | (EqualityPattern(t1, t2), EqualityFormula(t1', t2')) ->
+        (success (rightUnify t1 t1')) && (success (rightUnify t2 t2'))
+    | (QuantifiedPattern(q, f), QuantifiedFormula(q', f')) ->
+        (q = q') && (matchFormulas f f')
+    | (ApplicationPattern(head,tl), ApplicationFormula(head',tl')) ->
+        (matchPredicates head head') &&
+        (List.for_all success (List.map2 rightUnify tl tl'))
+    | _ -> false
+  in
+  let result = (matchFormulas pattern formula) in
+  
+  (*  Restore the binding state so later matches can work,
+      and return the result.  *)
+  (Term.restore_state state;
+  result)

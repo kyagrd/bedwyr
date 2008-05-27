@@ -28,14 +28,14 @@ exception SemanticError of string
 
 type term = Term.term
 
+type progress =
+    Progressing
+  | Unknown
+
 type fixpoint =
     Inductive
   | CoInductive
-(*
-type polarity =
-    Synchronous
-  | Asynchronous
-*)
+
 type quantifier =
     Pi
   | Sigma
@@ -43,19 +43,28 @@ type quantifier =
 
 type connective =
     And
-  | Or 
+  | Or
   | Imp
 
+(*  Annotations *)
+type polarity = Positive | Negative
+type freezing = Frozen | Unfrozen
+type control  = Normal | Focused | Delayed
+type junk     = Clean | Dirty of (unit -> unit)
+type annotation = {
+  polarity : polarity ;
+  freezing : freezing ;
+  control  : control ;
+  junk     : junk
+}
+
+(*  Formulas  *)
 type 'a polarized = ('a * 'a formula)
 
 and 'a predicate = 
-    FixpointFormula of (fixpoint * (string * string list * 'a abstraction))
+    FixpointFormula of fixpoint * string * (progress * string) list * 'a abstraction
   | DBFormula of int * string * int
   | AtomicFormula of string
-
-and 'a abstraction = 
-    AbstractionFormula of (string * 'a abstraction)
-  | AbstractionBody of 'a polarized
 
 and 'a formula =
     BinaryFormula of (connective * 'a polarized * 'a polarized)
@@ -63,16 +72,46 @@ and 'a formula =
   | QuantifiedFormula of (quantifier * 'a abstraction)
   | ApplicationFormula of ('a predicate * term list)
 
+and 'a abstraction =
+    AbstractionFormula of string * 'a abstraction
+  | AbstractionBody of 'a polarized
+
+(*  mapf: mapping over formulas.  *)
+type ('a,'b,'c,'d,'e) mapf =
+  {polf : 'a polarized -> 'b ;
+  predf : 'a predicate -> 'c ;
+  abstf : 'a abstraction -> 'd ;
+  formf : 'a formula -> 'e}
+
+(*  Patterns  *)
+type fixpoint_pattern =
+    InductivePattern
+  | CoinductivePattern
+  | AnonymousFixpoint
+
+type 'a polarized_pattern = 'a * 'a formula_pattern
+
+and 'a predicate_pattern =
+    AnonymousPredicate
+  | AtomicPattern of string
+
+and 'a formula_pattern =
+    BinaryPattern of connective * 'a polarized_pattern * 'a polarized_pattern
+  | EqualityPattern of term * term
+  | QuantifiedPattern of quantifier * 'a abstraction_pattern
+  | ApplicationPattern of 'a predicate_pattern * term list
+  | AnonymousFormula
+
+and 'a abstraction_pattern = unit
+
 type 'a predefinition =
-  PreDefinition of (string * string list * 'a polarized * fixpoint)
+  PreDefinition of (string * (string * progress) list * 'a polarized * fixpoint)
 
 type 'a definition =
   Definition of (string * int * 'a polarized * fixpoint)
 
-
-type ('a,'b,'c,'d,'e) mapf = {polf : 'a polarized -> 'b ; predf : 'a predicate -> 'c ; abstf : 'a abstraction -> 'd ; formf : 'a formula -> 'e}
-
 type state
+
 type unifyresult =
     UnifyFailed
   | UnifySucceeded of state
@@ -100,12 +139,12 @@ val string_of_definition : 'a definition -> string
 val string_of_formula : generic:string list -> (* names:string list -> *) ('a,string,string,string,string) mapf
 val string_of_formula_ast : generic:string list -> ('a,string,string,string,string) mapf
 
-
 val undoUnify : state -> unit
 val rightUnify : term -> term -> unifyresult
 val leftUnify : term -> term -> unifyresult
 val unifyList : (term -> term -> unifyresult) -> term list -> term list -> unifyresult
-(* val matchFormula : 'a w_polarized -> 'a polarized -> bool *)
+
+val matchFormula : 'a polarized_pattern -> 'a polarized -> bool
 
 val getDefinitionArity : 'a definition -> int
 val getDefinitionBody : 'a definition -> 'a polarized
