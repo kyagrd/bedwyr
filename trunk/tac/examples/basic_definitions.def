@@ -4,13 +4,31 @@
 #define "even x := (x=o);(sigma y\ (x=(s (s y)),(even y)))".
 #define "odd x := (x=(s o));(sigma y\ (x=(s (s y)),(odd y)))".
 #define "leq x y := (x=y);(sigma z\ (y=(s z),(leq x z)))".
-#define "plus x y z := (x = o, y = z);(sigma m\ n\ x = (s m), z = (s n), plus m y n)".
-#define "half x h := (((x=o);(x=(s o))),(h=o)); (sigma xx\ hh\ (x=(s (s xx)),h=(s hh), (half xx hh)))".
-#define "mult x y z := 
-  (x = o, z = o);(sigma x'\ x = s x', sigma z'\ mult x' y z', plus y z' z)".
+s
+#define
+  "plus x y z :=
+    (x = o, y = z);
+    (sigma m\ n\ x = (s m), z = (s n), plus m y n)".
+#define
+  "half x h :=
+    (((x=o);(x=(s o))),(h=o));
+    (sigma xx\ hh\ (x=(s (s xx)),h=(s hh), (half xx hh)))".
 
-#define "coinductive sim p q := pi a\ p'\ ((step p a p') => (sigma q'\ (step q a q'),(sim p' q')))".
-#define "simi p q := pi a\ p'\ ((step p a p') => (sigma q'\ (step q a q'),(simi p' q')))".
+#define
+  "mult x y z :=
+    (x = o, z = o);
+    (sigma x'\ x = s x', sigma z'\ mult x' y z', plus y z' z)".
 
+#define
+  "coinductive sim p q :=
+    pi a\ p'\ ((step p a p') => (sigma q'\ (step q a q'),(sim p' q')))".
+
+#define
+  "simi p q :=
+    pi a\ p'\ ((step p a p') => (sigma q'\ (step q a q'),(simi p' q')))".
+s
 #define "empty x := (x = nil)".
-#define "list x := (x=nil);(sigma y\ z\ (x=(cons y z),list z))".
+#define
+  "list x :=
+    (x=nil);
+    (sigma y\ z\ (x=(cons y z), list z))".
