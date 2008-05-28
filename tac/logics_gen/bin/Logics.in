@@ -16,8 +16,12 @@
 //along with this code; if not, write to the Free Software Foundation,      //
 //Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA              //
 //////////////////////////////////////////////////////////////////////////////
+
+//Output Modules:
 output(console, Output.ConsoleOutput);
 output(xml, Output.XmlOutput);
+
+//Logics:
 logic(none, Nologic.Nologic);
 logic(propositional, Propositional.Propositional);
 logic(firstorder, Firstorder.Firstorderstrict);
