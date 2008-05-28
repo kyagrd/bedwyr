@@ -76,13 +76,6 @@ and 'a abstraction =
     AbstractionFormula of string * 'a abstraction
   | AbstractionBody of 'a polarized
 
-(*  mapf: mapping over formulas.  *)
-type ('a,'b,'c,'d,'e) mapf =
-  {polf : 'a polarized -> 'b ;
-  predf : 'a predicate -> 'c ;
-  abstf : 'a abstraction -> 'd ;
-  formf : 'a formula -> 'e}
-
 (*  Patterns  *)
 type fixpoint_pattern =
     InductivePattern
@@ -92,8 +85,10 @@ type fixpoint_pattern =
 type 'a polarized_pattern = 'a * 'a formula_pattern
 
 and 'a predicate_pattern =
-    AnonymousPredicate
-  | AtomicPattern of string
+    AtomicPattern of string
+  | AnonymousPredicate
+  | AnonymousMu
+  | AnonymousNu
 
 and 'a formula_pattern =
     BinaryPattern of connective * 'a polarized_pattern * 'a polarized_pattern
@@ -102,10 +97,15 @@ and 'a formula_pattern =
   | ApplicationPattern of 'a predicate_pattern * term list
   | AnonymousFormula
 
-and 'a abstraction_pattern = unit
+and 'a abstraction_pattern =
+    AbstractionPattern of string * 'a abstraction_pattern
+  | AbstractionBodyPattern of 'a polarized_pattern
+  | AnonymousAbstraction
+
+val anonymousBinder : string
 
 type 'a predefinition =
-  PreDefinition of (string * (string * progress) list * 'a polarized * fixpoint)
+  PreDefinition of (string * (string * progress) list * 'a abstraction_pattern * fixpoint)
 
 type 'a definition =
   Definition of (string * int * 'a polarized * fixpoint)
@@ -117,27 +117,49 @@ type unifyresult =
   | UnifySucceeded of state
   | UnifyError of string
 
+(*  map_formula: mapping over formulas.  *)
+type ('a,'b,'c,'d,'e) map_formula =
+  {polf : 'a polarized -> 'b ;
+  predf : 'a predicate -> 'c ;
+  abstf : 'a abstraction -> 'd ;
+  formf : 'a formula -> 'e}
+
+(*  mappattern: mapping over formulas.  *)
+type ('a,'b,'c,'d,'e) map_pattern =
+  {polp : 'a polarized_pattern -> 'b ;
+  predp : 'a predicate_pattern -> 'c ;
+  abstp : 'a abstraction_pattern -> 'd ;
+  formp : 'a formula_pattern -> 'e}
+
 (*val makeAnonymousFormula : unit -> 'a weak
 val isAnonymousFormula : formula -> bool *)
+val string_of_pattern : polarity polarized_pattern -> string
 
 val isAnonymousTerm : term -> bool 
 val makeAnonymousTerm : unit -> term
 
-val mapFormula : (unit -> ('a,'a polarized,'a predicate,'a abstraction,'a formula) mapf) -> (term -> term) -> ('a,'a polarized,'a predicate,'a abstraction,'a formula) mapf
-val terms_polarized : 'a polarized -> term list
-val abstract : string -> ('a, 'a abstraction, unit, 'a abstraction, unit) mapf
-val abstractDummyWithoutLambdas : unit -> ('a,'a polarized,'a predicate,'a abstraction,'a formula) mapf
-val abstractVar : term -> ('a, 'a abstraction, unit, 'a abstraction, unit) mapf 
-val abstractVarWithoutLambdas : term -> unit -> ('a,'a polarized,'a predicate,'a abstraction,'a formula) mapf
+val mapFormula :
+  (unit -> ('a,'a polarized,'a predicate,'a abstraction,'a formula) map_formula) ->
+    (term -> term) -> ('a,'a polarized,'a predicate,'a abstraction,'a formula) map_formula
+val mapPattern :
+  (unit -> ('a,'a polarized_pattern,'a predicate_pattern,'a abstraction_pattern,'a formula_pattern) map_pattern) ->
+    (term -> term) -> ('a,'a polarized_pattern,'a predicate_pattern,'a abstraction_pattern,'a formula_pattern) map_pattern
+
+val termsPolarized : 'a polarized -> term list
+val abstract : string -> ('a, 'a abstraction, unit, 'a abstraction, unit) map_formula
+val abstractPattern : string -> ('a, 'a abstraction_pattern, unit, 'a abstraction_pattern, unit) map_pattern
+val abstractDummyWithoutLambdas : unit -> ('a,'a polarized,'a predicate,'a abstraction,'a formula) map_formula
+val abstractVar : term -> ('a, 'a abstraction, unit, 'a abstraction, unit) map_formula 
+val abstractVarWithoutLambdas : term -> unit -> ('a,'a polarized,'a predicate,'a abstraction,'a formula) map_formula
 
 val apply : term list -> 'a abstraction -> 'a abstraction option
-val eliminateNablas : term list -> ('a, 'a polarized, term list -> 'a formula, 'a abstraction, 'a formula) mapf
+val eliminateNablas : term list -> ('a, 'a polarized, term list -> 'a formula, 'a abstraction, 'a formula) map_formula
 
-val applyFixpoint : 'a abstraction -> ('a, 'a polarized option, 'a predicate option, 'a abstraction option, 'a formula option) mapf
+val applyFixpoint : 'a abstraction -> ('a, 'a polarized option, 'a predicate option, 'a abstraction option, 'a formula option) map_formula
 
 val string_of_definition : 'a definition -> string
-val string_of_formula : generic:string list -> (* names:string list -> *) ('a,string,string,string,string) mapf
-val string_of_formula_ast : generic:string list -> ('a,string,string,string,string) mapf
+val string_of_formula : generic:string list -> (* names:string list -> *) ('a,string,string,string,string) map_formula
+val string_of_formula_ast : generic:string list -> ('a,string,string,string,string) map_formula
 
 val undoUnify : state -> unit
 val rightUnify : term -> term -> unifyresult

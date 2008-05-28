@@ -37,15 +37,27 @@ rule token = parse
 
 | "(" {LPAREN}
 | ")" {RPAREN}
+| "{" {LBRACE}
+| "}" {RBRACE}
+| "[" {LBRACK}
+| "]" {RBRACK}
 
 | "_" {UNDERSCORE}
+
 | "=" {EQ}
+| ":=" {DEF}
+
 | "," {AND}
 | ";" {OR}
+| "&" {WITH}
+| "|" {PAR}
 | "=>" {IMP}
-| ":=" {DEF}
-| "\\" {BSLASH}
 
+| "+" {PLUS}
+| "-" {MINUS}
+| "*" {STAR}
+
+| "\\" {BSLASH}
 | "pi"      {PI}
 | "sigma"   {SIGMA}
 | "nabla"   {NABLA}
