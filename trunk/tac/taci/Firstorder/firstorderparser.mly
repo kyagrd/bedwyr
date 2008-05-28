@@ -39,11 +39,34 @@
 %{
   module FOA = Firstorderabsyn
   
-  let eqFormula f1 f2 = FOA.EqualityFormula(f1, f2)
-  let andFormula f1 f2 = FOA.AndFormula(f1, f2)
-  let orFormula f1 f2 = FOA.OrFormula(f1, f2)
-  let impFormula f1 f2 = FOA.ImplicationFormula(f1, f2)
+  let defaultAnnotation =
+    {FOA.polarity = FOA.Negative;
+    FOA.freezing = FOA.Unfrozen;
+    FOA.control = FOA.Normal;
+    FOA.junk = FOA.Clean}
+
+  let default f =
+    (defaultAnnotation, f)
+
+  let frozen f =
+    let (p,f') = f in
+    ({p with FOA.freezing = FOA.Frozen}, f')
   
+  let focused f =
+    let (p,f') = f in
+    ({p with FOA.control = FOA.Focused}, f')
+  
+  let positive f =
+    let (p,f') = f in
+    ({p with FOA.polarity = FOA.Positive}, f')
+
+  let negative f =
+    let (p,f') = f in
+    ({p with FOA.polarity = FOA.Negative}, f')
+
+  let eqFormula f1 f2 = default (FOA.EqualityPattern(f1, f2))
+  let binaryFormula f1 f2 c = default (FOA.BinaryPattern(c, f1, f2))
+ 
   (********************************************************************
   *getAbstractions:
   * Returns a list of the toplevel abstractions on a formula, and the
@@ -51,10 +74,12 @@
   ********************************************************************)
   let rec getAbstractions f =
     match f with
-        FOA.AbstractionFormula(name, f') ->
+        FOA.AbstractionPattern(name, f') ->
           let (names,f'') = (getAbstractions f') in
           (name::names, f'')
-      | _ -> ([], f)
+      | FOA.AbstractionBodyPattern(f) -> ([], f)
+      | FOA.AnonymousAbstraction ->
+          ([FOA.anonymousBinder], (defaultAnnotation, FOA.AnonymousFormula))
 
   (********************************************************************
   *makeAbstractions:
@@ -63,34 +88,23 @@
   * correct quantification formula "on top of" each abstraction.  The
   * quantification is made by the constructor function.
   ********************************************************************)
-  let makeAbstractions make f =
+  let makeAbstractions formulaConstructor f =
     let rec makeAbs' names make f =
       match names with
         [] ->
-          let f = FOA.string_of_formula ~generic:[] f in
-          let msg = "argument does not have toplevel abstractions: " ^ f in
+          let msg = "argument does not have toplevel abstractions" in
             raise (FOA.SemanticError msg)
-      | [name] -> make (FOA.AbstractionFormula(name,f))
+      | [name] ->
+          (formulaConstructor name (FOA.AbstractionBodyPattern(f)))
       | name::names ->
-          make (FOA.AbstractionFormula(name, makeAbs' (names) make f))
+         formulaConstructor name (FOA.AbstractionBodyPattern(makeAbs' names formulaConstructor f))
     in
-    if (FOA.isAnonymousFormula f) then
-      make f
-    else
-      let (names,f') = getAbstractions f in
-      (makeAbs' names make f')
+    let (names,f') = getAbstractions f in
+    (makeAbs' names formulaConstructor f')
 
-  let pi f =
-    let make f = FOA.PiFormula(f) in
-    (makeAbstractions make f)
-
-  let sigma f =
-    let make f = FOA.SigmaFormula(f) in
-    (makeAbstractions make f)
-
-  let nabla f =
-    let make f = FOA.NablaFormula(f) in
-    (makeAbstractions make f)
+  let quantified pol q body =
+    let make name body = pol (FOA.QuantifiedPattern(q, FOA.AbstractionPattern(name, body))) in
+    (makeAbstractions make body)
 
   (********************************************************************
   *atomic:
@@ -101,7 +115,7 @@
     let result = FOA.getTermHeadAndArgs t in
     if (Option.isSome result) then
       let (head,args) = Option.get result in
-      FOA.AtomicFormula(head, args)
+      default (FOA.ApplicationPattern(FOA.AtomicPattern(head), args))
     else
       raise (FOA.SemanticError("term is neither a first order application nor an atom"))
 
@@ -109,7 +123,7 @@
   let atom t = Term.atom t
   
   let abstract id f =
-    FOA.abstract id f
+    (FOA.abstractPattern id).FOA.abstp f
     
   let application tlist =
     match tlist with
@@ -122,24 +136,30 @@
   * over the argument names.
   ********************************************************************)
   let definition name args body fix =
-    let (_,argnames) = List.split args in
-    let abstract arg f =
-      FOA.abstract arg f
-    in
-    let free (f,name) =
+    let (argnames, _, p) = Listutils.split3 args in
+
+    let free (name, f, _) =
       if f then
         (Term.free name)
       else
         ()
     in
-    let result = FOA.PreDefinition(name,argnames,List.fold_right abstract argnames body,fix) in
+    let body' = FOA.AbstractionBodyPattern(body) in
+    let result =
+      FOA.PreDefinition(
+        name,
+        List.combine argnames p,
+        List.fold_right abstract argnames body',
+        fix)
+    in
     (List.iter free args;
     result)
 %}
 
-%token BSLASH LPAREN RPAREN DOT SHARP UNDERSCORE
-%token EQ AND ANDL OR ORL IMP DEF
+%token BSLASH LPAREN RPAREN LBRACE RBRACE LBRACK RBRACK UNDERSCORE
+%token EQ AND AND OR WITH PAR IMP DEF
 %token PI SIGMA NABLA MU NU
+%token PLUS MINUS STAR
 %token IND COIND
 %token EOF
 %token <string> ID
@@ -148,31 +168,26 @@
 %nonassoc BSLASH
 %nonassoc PI SIGMA NABLA MU NU
 %right IMP
-%left OR ORL
-%left AND ANDL
+%left OR PAR
+%left AND WITH
 %nonassoc EQ
+%nonassoc PLUS MINUS
+%nonassoc STAR
 
-%start toplevel_formula toplevel_term toplevel_definition toplevel_template
-%type <Firstorderabsyn.formula> toplevel_formula toplevel_template
+%start toplevel_pattern toplevel_term toplevel_definition toplevel_invariant
+%type <Firstorderabsyn.annotation Firstorderabsyn.polarized_pattern> toplevel_pattern pattern
 %type <Firstorderabsyn.term> toplevel_term
-%type <Firstorderabsyn.predefinition> toplevel_definition
+%type <Firstorderabsyn.annotation Firstorderabsyn.predefinition> toplevel_definition
+%type <Firstorderabsyn.annotation Firstorderabsyn.abstraction_pattern> toplevel_invariant
 
 %%
-toplevel_formula
-  : formula     {$1}
-  | formula EOF {$1}
+toplevel_pattern
+  : pattern           {$1}
+  | pattern EOF       {$1}
   ;
 
-toplevel_template
-  : formula           {$1}
-  | formula EOF       {$1}
-  | template          {$1}
-  | template EOF      {$1}
-  ;
-
-template
-  : MU UNDERSCORE     {FOA.ApplicationFormula(FOA.MuFormula("_", [], FOA.makeAnonymousFormula  ()), [])}
-  | NU UNDERSCORE     {FOA.ApplicationFormula(FOA.NuFormula("_", [], FOA.makeAnonymousFormula  ()), [])}
+toplevel_invariant
+  : abstracted_pattern  {$1}
   ;
 
 toplevel_definition
@@ -181,51 +196,79 @@ toplevel_definition
   ;
 
 def
-  : ID definitionargs DEF formula         {(definition $1 $2 $4 FOA.Inductive)}
-  | IND ID definitionargs DEF formula     {(definition $2 $3 $5 FOA.Inductive)}
-  | COIND ID definitionargs DEF formula   {(definition $2 $3 $5 FOA.CoInductive)}
+  : ID definition_args DEF pattern         {(definition $1 $2 $4 FOA.Inductive)}
+  | IND ID definition_args DEF pattern     {(definition $2 $3 $5 FOA.Inductive)}
+  | COIND ID definition_args DEF pattern   {(definition $2 $3 $5 FOA.CoInductive)}
   ;
 
-definitionargs
-  : ID definitionargs   {let free = Term.is_free $1 in
-                        let result = (free, $1) in
-                        if List.exists ((=) result) $2 then
-                          raise (FOA.SemanticError("argument appears more than once"))
-                        else
-                          result::$2}
-  |                     {[]}
+definition_args
+  : arg definition_args  {let (id, _, _) = $1 in
+                          if List.exists (fun (id',_,_) -> id = id') $2 then
+                            raise (FOA.SemanticError("argument appears more than once"))
+                          else
+                            $1::$2}
+  |                      {[]}
   ;
 
-formula
-  : formula AND formula {andFormula $1 $3}
-  | formula OR formula {orFormula $1 $3}
-  | formula IMP formula {impFormula $1 $3}
-  | term EQ term {eqFormula $1 $3}
+arg
+  : ID                {($1, Term.is_free $1, FOA.Unknown)}
+  | LBRACE ID RBRACE  {($2, Term.is_free $2, FOA.Progressing)}
+  ;
 
-  | PI formula    {pi $2}
-  | SIGMA formula {sigma $2}
-  | NABLA formula {nabla $2}
+pattern
+  : MU UNDERSCORE     {default (FOA.ApplicationPattern(FOA.AnonymousMu, []))}
+  | NU UNDERSCORE     {default (FOA.ApplicationPattern(FOA.AnonymousNu, []))}
+  | PI UNDERSCORE     {default (FOA.QuantifiedPattern(FOA.Pi, FOA.AnonymousAbstraction))}
+  | SIGMA UNDERSCORE  {default (FOA.QuantifiedPattern(FOA.Sigma, FOA.AnonymousAbstraction))}
+  | NABLA UNDERSCORE  {default (FOA.QuantifiedPattern(FOA.Nabla, FOA.AnonymousAbstraction))}
 
-  | binder formula %prec BSLASH
-                  { let (free, name) = $1 in
-                    let abs = abstract name $2 in
-                      if free then Term.free name ;
-                      abs }
+  | pattern AND pattern   {positive (binaryFormula $1 $3 FOA.And)}
+  | pattern OR pattern    {positive (binaryFormula $1 $3 FOA.Or)}
+  | pattern WITH pattern  {positive (binaryFormula $1 $3 FOA.And)}
+  | pattern PAR pattern   {positive (binaryFormula $1 $3 FOA.Or)}
+  | pattern IMP pattern   {positive (binaryFormula $1 $3 FOA.Imp)}
+  | term EQ term          {eqFormula $1 $3}
 
-  | LPAREN formula RPAREN     {$2}
-  | term                      {atomic $1}
+  | PI abstracted_pattern     {quantified default FOA.Pi $2}
+  | SIGMA abstracted_pattern  {quantified default FOA.Sigma $2}
+  | NABLA abstracted_pattern  {quantified default FOA.Nabla $2}
+
+  | LPAREN pattern RPAREN     {$2}
+  | LBRACK pattern RBRACK     {(focused $2)}
+  | atom                      {$1}
+  ;
+
+atom
+  : term            {negative (atomic $1)}
+  | term STAR       {negative (frozen (atomic $1))}
+  | PLUS term       {positive (atomic $2)}
+  | PLUS term STAR  {positive (frozen (atomic $2))}
+  | MINUS term      {negative (atomic $2)}
+  | MINUS term STAR {negative (frozen (atomic $2))}
+  ;
+
+abstracted_pattern
+  : binder abstracted_pattern %prec BSLASH  { let (name, free) = $1 in
+                                              let abs = abstract name $2 in
+                                              if free then
+                                                Term.free name ;
+                                              abs}
+  | binder pattern %prec BSLASH             { let (name, free) = $1 in
+                                              let abs = abstract name (FOA.AbstractionBodyPattern($2)) in
+                                              if free then
+                                                Term.free name ;
+                                              abs}
   ;
 
 binder
-  : ID BSLASH                 {(Term.is_free $1, $1)}
-  | UNDERSCORE BSLASH         {(false, "_")}
+  : ID BSLASH                 {($1, Term.is_free $1)}
+  | UNDERSCORE BSLASH         {("_", false)}
   ;
 
 toplevel_term
   : term      {$1}
   | term EOF  {$1}
   ;
-
 
 term
   : lterm {application $1}
@@ -242,9 +285,10 @@ primaryterm
   | STRING              {Term.string $1}
   | UNDERSCORE          {anonymous ()}   
   | LPAREN binder term RPAREN
-                        {let (free,name) = $2 in
-                         let abs = Term.abstract (Term.atom name) $3 in
-                           if free then Term.free name ;
-                           abs}
+                        { let (name,free) = $2 in
+                          let abs = Term.abstract (Term.atom name) $3 in
+                          if free then Term.free name ;
+                          abs}
   ;
+
 %%

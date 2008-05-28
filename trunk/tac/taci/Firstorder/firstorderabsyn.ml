@@ -69,13 +69,6 @@ and 'a abstraction =
     AbstractionFormula of string * 'a abstraction
   | AbstractionBody of 'a polarized
 
-(*  mapf: mapping over formulas.  *)
-type ('a,'b,'c,'d,'e) mapf =
-  {polf : 'a polarized -> 'b ;
-  predf : 'a predicate -> 'c ;
-  abstf : 'a abstraction -> 'd ;
-  formf : 'a formula -> 'e}
-
 (*  Patterns  *)
 type fixpoint_pattern =
     InductivePattern
@@ -85,8 +78,10 @@ type fixpoint_pattern =
 type 'a polarized_pattern = 'a * 'a formula_pattern
 
 and 'a predicate_pattern =
-    AnonymousPredicate
-  | AtomicPattern of string
+    AtomicPattern of string
+  | AnonymousPredicate
+  | AnonymousMu
+  | AnonymousNu
 
 and 'a formula_pattern =
     BinaryPattern of connective * 'a polarized_pattern * 'a polarized_pattern
@@ -95,13 +90,32 @@ and 'a formula_pattern =
   | ApplicationPattern of 'a predicate_pattern * term list
   | AnonymousFormula
 
-and 'a abstraction_pattern = unit
+and 'a abstraction_pattern =
+    AbstractionPattern of string * 'a abstraction_pattern
+  | AbstractionBodyPattern of 'a polarized_pattern
+  | AnonymousAbstraction
+
+let anonymousBinder = "_"
 
 type 'a predefinition =
-  PreDefinition of (string * (string * progress) list * 'a polarized * fixpoint)
+  PreDefinition of (string * (string * progress) list * 'a abstraction_pattern * fixpoint)
 
 type 'a definition =
   Definition of (string * int * 'a polarized * fixpoint)
+
+(*  map_formula: mapping over formulas.  *)
+type ('a,'b,'c,'d,'e) map_formula =
+  {polf : 'a polarized -> 'b ;
+  predf : 'a predicate -> 'c ;
+  abstf : 'a abstraction -> 'd ;
+  formf : 'a formula -> 'e}
+
+(*  mappattern: mapping over formulas.  *)
+type ('a,'b,'c,'d,'e) map_pattern =
+  {polp : 'a polarized_pattern -> 'b ;
+  predp : 'a predicate_pattern -> 'c ;
+  abstp : 'a abstraction_pattern -> 'd ;
+  formp : 'a formula_pattern -> 'e}
 
 (**********************************************************************
 *getTermHeadAndArgs:
@@ -174,15 +188,35 @@ let mapFormula x termsf = {
     | QuantifiedFormula(q,f) -> QuantifiedFormula(q,(x ()).abstf f)
     | ApplicationFormula(f,tl) -> ApplicationFormula((x ()).predf f,List.map termsf tl))}
 
-let rec terms_polarized (p,f) = terms_formula f
-and terms_abstraction = function  
-    AbstractionFormula(_,f) -> terms_abstraction f
-  | AbstractionBody(f) -> terms_polarized f
- and terms_formula = function
-     BinaryFormula(_,l,r) -> (terms_polarized l)@(terms_polarized r)
+let mapPattern x termsf = {
+  polp = (fun (p,f) -> p,(x ()).formp f) ; 
+  predp = (function 
+      AtomicPattern(head) -> AtomicPattern(head)
+    | AnonymousPredicate -> AnonymousPredicate
+    | AnonymousMu -> AnonymousMu
+    | AnonymousNu -> AnonymousNu) ;
+  abstp = (function
+      AbstractionPattern(name,f) -> AbstractionPattern(name,(x ()).abstp f)
+    | AbstractionBodyPattern(f) -> AbstractionBodyPattern((x ()).polp f)
+    | AnonymousAbstraction -> AnonymousAbstraction) ;
+  formp = (function 
+      BinaryPattern(c,l,r) -> BinaryPattern(c,(x ()).polp l, (x ()).polp r)
+    | EqualityPattern(l,r) -> EqualityPattern(termsf l, termsf r)
+    | QuantifiedPattern(q,f) -> QuantifiedPattern(q,(x ()).abstp f)
+    | ApplicationPattern(f,tl) -> ApplicationPattern((x ()).predp f,List.map termsf tl)
+    | AnonymousFormula -> AnonymousFormula)}
+
+let rec termsPolarized (p,f) = termsFormula f
+and termsAbstraction = function  
+    AbstractionFormula(_,f) -> termsAbstraction f
+  | AbstractionBody(f) -> termsPolarized f
+ and termsFormula = function
+     BinaryFormula(_,l,r) -> (termsPolarized l)@(termsPolarized r)
    | EqualityFormula(l,r) -> [l;r]
-   | QuantifiedFormula(_,f) -> terms_abstraction f
+   | QuantifiedFormula(_,f) -> termsAbstraction f
    | ApplicationFormula(_,tl) -> tl
+
+let string_of_pattern f = ""
 
 let string_of_term ~generic names t =
   Pprint.term_to_string_preabstracted ~generic ~bound:names t
@@ -276,18 +310,26 @@ let string_of_definition (Definition(name,arity,body,ind)) =
 * Abstracts the given formula over the given name. Doesn't go through
 * mu/nu abstractions.
 **********************************************************************)
-
 let abstract0 var = let rec x () = mapFormula x (Term.abstract var) in x
 let dummyvar = Term.var ~ts:0 ~lts:0 ~tag:Term.Constant
 let abstractDummyWithoutLambdas () = abstract0 dummyvar () 
 let abstractWithoutLambdas name = abstract0 (Term.atom name) 
 let abstractVarWithoutLambdas var = abstract0 var
 let abstractVarWithoutLambas = abstract0
-let abstract name = {polf = (fun f -> AbstractionFormula(name, AbstractionBody((abstractWithoutLambdas name ()).polf f))) ;
-		     abstf = (fun f -> AbstractionFormula(name, (abstractWithoutLambdas name ()).abstf f)) ;
-		     formf = (fun _ -> ()) ; 
-		     predf = (fun _ -> ())}
+let abstract name =
+  {polf = (fun f -> AbstractionFormula(name, AbstractionBody((abstractWithoutLambdas name ()).polf f))) ;
+   abstf = (fun f -> AbstractionFormula(name, (abstractWithoutLambdas name ()).abstf f)) ;
+   formf = (fun _ -> ()) ; 
+   predf = (fun _ -> ())}
 
+let abstractPattern0 var = let rec x () = mapPattern x (Term.abstract var) in x
+let abstractPatternWithoutLambdas name = abstractPattern0 (Term.atom name)
+let abstractPattern name =
+  {polp = (fun f -> AbstractionPattern(name, AbstractionBodyPattern((abstractPatternWithoutLambdas name ()).polp f))) ;
+   abstp = (fun f -> AbstractionPattern(name, (abstractPatternWithoutLambdas name ()).abstp f)) ;
+   formp = (fun _ -> ()) ; 
+   predp = (fun _ -> ())}
+  
 let abstractVar var = 
   let result = getTermHeadAndArgs var in
   if (Option.isSome result) then
@@ -686,7 +728,7 @@ let matchFormula pattern formula =
     let (patternPolarity, pattern) = pattern in
     
     (*  Polarity Check  *)
-    if (Option.isSome patternPolarity) && ((Option.get patternPolarity) <> polarity) then
+    if patternPolarity <> polarity then
       false
     else
     
@@ -698,7 +740,7 @@ let matchFormula pattern formula =
     | (EqualityPattern(t1, t2), EqualityFormula(t1', t2')) ->
         (success (rightUnify t1 t1')) && (success (rightUnify t2 t2'))
     | (QuantifiedPattern(q, f), QuantifiedFormula(q', f')) ->
-        (q = q') && (matchFormulas f f')
+        (q = q')
     | (ApplicationPattern(head,tl), ApplicationFormula(head',tl')) ->
         (matchPredicates head head') &&
         (List.for_all success (List.map2 rightUnify tl tl'))
