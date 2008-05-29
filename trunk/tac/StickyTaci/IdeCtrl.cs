@@ -42,18 +42,6 @@ namespace StickyTaci
 
     private List<Logic> m_Logics = new List<Logic>();
     private List<string> m_Tacticals = new List<string>();
-    private bool m_Dirty = false;
-    public bool Dirty
-    {
-      get
-      {
-        return m_Dirty;
-      }
-      set
-      {
-        m_Dirty = value;
-      }
-    }
 
     private string m_FileName = "";
     public string FileName
@@ -68,7 +56,7 @@ namespace StickyTaci
       }
     }
 
-    public uint CurrentLine
+    public int CurrentLine
     {
       get
       {
@@ -245,24 +233,23 @@ namespace StickyTaci
     private void Save(string filename)
     {
       FileName = filename;
-      Form.Rtf.SaveFile(filename, RichTextBoxStreamType.PlainText);
-      Dirty = false;
+      Form.SaveFile(filename);
+      
     }
 
     public void OnNew()
     {
-      if((Dirty && SaveMessage()) || !Dirty)
+      if((Form.Dirty && SaveMessage()) || !Form.Dirty)
       {
         FileName = "";
         Form.Clear();
         OnTacReset();
-        Dirty = false;
       }
     }
 
     public void OnExit()
     {
-      if((Dirty && SaveMessage()) || !Dirty)
+      if((Form.Dirty && SaveMessage()) || !Form.Dirty)
       {
         Taci.Shutdown();
       }
@@ -313,7 +300,7 @@ namespace StickyTaci
 
     public void OnOpen()
     {
-      if((Dirty && SaveMessage()) || !Dirty)
+      if((Form.Dirty && SaveMessage()) || !Form.Dirty)
       {
         Open();
       }
@@ -339,11 +326,8 @@ namespace StickyTaci
         {
           MessageBox.Show("Unable to load session logic: logic not specified.", "StickyTaci - Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
-        Form.Rtf.LoadFile(dlg.FileName, RichTextBoxStreamType.PlainText);
+        Form.LoadFile(dlg.FileName);
         FileName = dlg.FileName;
-        Form.ColorLines((uint)Form.Rtf.Lines.Length);
-
-        Dirty = false;
       }
     }
 
@@ -404,9 +388,8 @@ namespace StickyTaci
       return false;
     }
 
-    public void OnInputChanged(uint numlines)
+    public void OnInputChanged(int numlines)
     {
-      Dirty = true;
       if(CurrentLine >= numlines)
       {
         if(numlines > 0)
@@ -423,7 +406,7 @@ namespace StickyTaci
 
     public void OnEnd()
     {
-      OnAll((uint)Form.Rtf.Lines.Length);
+      OnAll((int)Form.Scintilla.Lines.Count);
     }
 
     public void OnPreviousLine()
@@ -441,11 +424,11 @@ namespace StickyTaci
       };
     }
 
-    public void OnAll(uint line)
+    public void OnAll(int line)
     {
       //Run each line upto the given one.
       int i = 0;
-      int maxIterations = Form.Rtf.Lines.Length + 1;
+      int maxIterations = Form.Scintilla.Lines.Count + 1;
       while(CurrentLine < line && i < maxIterations)
       {
         OnNextLine();
