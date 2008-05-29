@@ -60,6 +60,7 @@ namespace StickyTaci
       this.mainMenuTacNextLine = new System.Windows.Forms.ToolStripMenuItem();
       this.mainMenuTacPreviousLine = new System.Windows.Forms.ToolStripMenuItem();
       this.mainMenuTacStart = new System.Windows.Forms.ToolStripMenuItem();
+      this.mainMenuTacEnd = new System.Windows.Forms.ToolStripMenuItem();
       this.toolStripSeparator6 = new System.Windows.Forms.ToolStripSeparator();
       this.mainMenuTacLogics = new System.Windows.Forms.ToolStripMenuItem();
       this.mainMenuTacTacticals = new System.Windows.Forms.ToolStripMenuItem();
@@ -69,16 +70,16 @@ namespace StickyTaci
       this.mainMenuHelpAbout = new System.Windows.Forms.ToolStripMenuItem();
       this.mainSplitter = new System.Windows.Forms.SplitContainer();
       this.currentLineImagePanel = new System.Windows.Forms.Panel();
-      this.inputBox = new System.Windows.Forms.RichTextBox();
+      this.inputBox = new ScintillaNet.Scintilla();
       this.outputSplitter = new System.Windows.Forms.SplitContainer();
       this.goalBox = new System.Windows.Forms.RichTextBox();
       this.outputBox = new System.Windows.Forms.RichTextBox();
-      this.mainMenuTacEnd = new System.Windows.Forms.ToolStripMenuItem();
       mainMenuTacOpen = new System.Windows.Forms.ToolStripMenuItem();
       this.mainMenu.SuspendLayout();
       this.mainSplitter.Panel1.SuspendLayout();
       this.mainSplitter.Panel2.SuspendLayout();
       this.mainSplitter.SuspendLayout();
+      ((System.ComponentModel.ISupportInitialize)(this.inputBox)).BeginInit();
       this.outputSplitter.Panel1.SuspendLayout();
       this.outputSplitter.Panel2.SuspendLayout();
       this.outputSplitter.SuspendLayout();
@@ -346,6 +347,13 @@ namespace StickyTaci
       this.mainMenuTacStart.Text = "&Start";
       this.mainMenuTacStart.Click += new System.EventHandler(this.mainMenuTacStart_Click);
       // 
+      // mainMenuTacEnd
+      // 
+      this.mainMenuTacEnd.Name = "mainMenuTacEnd";
+      this.mainMenuTacEnd.Size = new System.Drawing.Size(214, 22);
+      this.mainMenuTacEnd.Text = "&End";
+      this.mainMenuTacEnd.Click += new System.EventHandler(this.mainMenuTacEnd_Click);
+      // 
       // toolStripSeparator6
       // 
       this.toolStripSeparator6.Name = "toolStripSeparator6";
@@ -419,17 +427,17 @@ namespace StickyTaci
       // 
       // inputBox
       // 
-      this.inputBox.AcceptsTab = true;
       this.inputBox.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
                   | System.Windows.Forms.AnchorStyles.Left)
                   | System.Windows.Forms.AnchorStyles.Right)));
-      this.inputBox.DetectUrls = false;
+      this.inputBox.CurrentPos = 0;
+      this.inputBox.Font = new System.Drawing.Font("Courier New", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
       this.inputBox.Location = new System.Drawing.Point(18, 0);
       this.inputBox.Name = "inputBox";
-      this.inputBox.ScrollBars = System.Windows.Forms.RichTextBoxScrollBars.ForcedVertical;
+      this.inputBox.Scrolling.HorizontalWidth = 256;
       this.inputBox.Size = new System.Drawing.Size(330, 242);
       this.inputBox.TabIndex = 0;
-      this.inputBox.Text = "";
+      this.inputBox.UseFont = true;
       // 
       // outputSplitter
       // 
@@ -472,13 +480,6 @@ namespace StickyTaci
       this.outputBox.TabIndex = 0;
       this.outputBox.Text = "";
       // 
-      // mainMenuTacEnd
-      // 
-      this.mainMenuTacEnd.Name = "mainMenuTacEnd";
-      this.mainMenuTacEnd.Size = new System.Drawing.Size(214, 22);
-      this.mainMenuTacEnd.Text = "&End";
-      this.mainMenuTacEnd.Click += new System.EventHandler(this.mainMenuTacEnd_Click);
-      // 
       // IdeForm
       // 
       this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -497,6 +498,7 @@ namespace StickyTaci
       this.mainSplitter.Panel1.ResumeLayout(false);
       this.mainSplitter.Panel2.ResumeLayout(false);
       this.mainSplitter.ResumeLayout(false);
+      ((System.ComponentModel.ISupportInitialize)(this.inputBox)).EndInit();
       this.outputSplitter.Panel1.ResumeLayout(false);
       this.outputSplitter.Panel2.ResumeLayout(false);
       this.outputSplitter.ResumeLayout(false);
@@ -512,7 +514,7 @@ namespace StickyTaci
     private System.Windows.Forms.ToolStripMenuItem mainMenuFileExit;
     private System.Windows.Forms.SplitContainer mainSplitter;
     private System.Windows.Forms.SplitContainer outputSplitter;
-    private System.Windows.Forms.RichTextBox inputBox;
+    private ScintillaNet.Scintilla inputBox;
     private System.Windows.Forms.RichTextBox goalBox;
     private System.Windows.Forms.RichTextBox outputBox;
     private System.Windows.Forms.ToolStripMenuItem mainMenuEdit;

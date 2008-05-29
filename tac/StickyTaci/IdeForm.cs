@@ -24,15 +24,25 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.Text;
 using System.Windows.Forms;
+using System.IO;
+using System.Diagnostics;
 
 namespace StickyTaci
 {
   public partial class IdeForm : Form
   {
-    private int CompareLength(string s1, string s2)
+    private delegate void MethodInvoker1(object o1);
+    private delegate void MethodInvoker2(object o1, object o2);
+
+    private bool m_Dirty = false;
+    public bool Dirty
     {
-      return s1.Length.CompareTo(s2.Length);
+      get
+      {
+        return m_Dirty;
+      }
     }
+
     private class TacticalHandler
     {
       private IdeCtrl m_Ctrl = null;
@@ -91,7 +101,6 @@ namespace StickyTaci
     }
 
     private List<string> m_Commands = null;
-    private List<string> m_SortedCommands = null;
     public List<string> Commands
     {
       get
@@ -101,8 +110,6 @@ namespace StickyTaci
       set
       {
         m_Commands = value;
-        m_SortedCommands = value.ConvertAll<string>(new Converter<string, string>(string.Copy));
-        m_SortedCommands.Sort(new Comparison<string>(CompareLength));
       }
     }
 
@@ -120,12 +127,7 @@ namespace StickyTaci
       }
     }
 
-    private bool m_Coloring = false;
     private List<string> m_Tacticals = null;
-
-    //Sorted by length so that the dumb syntax highlighter uses
-    //the largest match.
-    private List<string> m_SortedTacticals = null; 
     public List<string> Tacticals
     {
       get
@@ -135,16 +137,17 @@ namespace StickyTaci
       set
       {
         m_Tacticals = value;
-
-        m_SortedTacticals = value.ConvertAll<string>(new Converter<string, string>(string.Copy));
-        m_SortedTacticals.Sort(new Comparison<string>(CompareLength));
-
         TacticalsChanged = true;
 
+        string tacticals = String.Join(" ", m_Tacticals.ToArray());
+        InvokeDelegate(Scintilla, (MethodInvoker)delegate()
+        {
+          Scintilla.Lexing.Keywords[1] = tacticals;
+        });
       }
     }
-
-    public RichTextBox Rtf
+    
+    public ScintillaNet.Scintilla Scintilla
     {
       get
       {
@@ -152,8 +155,8 @@ namespace StickyTaci
       }
     }
 
-    private uint m_CurrentLine = 0;
-    public uint CurrentLine
+    private int m_CurrentLine = 0;
+    public int CurrentLine
     {
       get
       {
@@ -161,21 +164,39 @@ namespace StickyTaci
       }
       set
       {
+        int previous = m_CurrentLine;
         m_CurrentLine = value;
-
+        
+        InvokeDelegate(Scintilla, (MethodInvoker)delegate()
+        {
+          Scintilla.NativeInterface.SetProperty("lexer.simple.currentline", m_CurrentLine.ToString());
+          Scintilla.Lexing.Colorize(Scintilla.Lines[previous].StartPosition, Scintilla.Lines[previous].EndPosition);
+          Scintilla.Lexing.Colorize(Scintilla.Lines[m_CurrentLine].StartPosition, Scintilla.Lines[m_CurrentLine].EndPosition);
+        });
+        
+        Debug.WriteLine("Value: " + Scintilla.NativeInterface.GetPropertyInt("lexer.simple.currentline", -1));
         UpdateCurrentLineMarker();
       }
     }
 
-    private delegate void IOHandler(string s);
-    private delegate void ClearHandler();
-    private delegate void CloseHandler();
-
     private Image m_CurrentLineImage = null;
-    private Font m_InputFont = new Font("Courier New", 10, FontStyle.Regular);
-    private Font m_OutputFont = new Font("Courier New", 8, FontStyle.Regular);
-    private Font m_GoalFont = new Font("Courier New", 10, FontStyle.Regular);
 
+    private IdeCtrl m_Ctrl;
+    public IdeCtrl Ctrl
+    {
+      get
+      {
+        return m_Ctrl;
+      }
+    }
+
+    #region Font Information -- OBSOLETE
+    private Font m_InputFont = new Font("Courier New", 8.25f, FontStyle.Regular);
+    private Font m_OutputFont = new Font("Courier New", 8.25f, FontStyle.Regular);
+    private Font m_GoalFont = new Font("Courier New", 8.25f, FontStyle.Regular);
+    #endregion
+
+    #region Coloring Information -- OBSOLETE
     private Color m_StringColor = Color.Maroon;
     public Color StringColor
     {
@@ -292,16 +313,9 @@ namespace StickyTaci
         m_GoalColor = value;
       }
     }
+    #endregion
 
-    private IdeCtrl m_Ctrl;
-    public IdeCtrl Ctrl
-    {
-      get
-      {
-        return m_Ctrl;
-      }
-    }
-
+    #region Constructors
     public IdeForm(IdeCtrl ctrl)
     {
       InitializeComponent();
@@ -315,10 +329,13 @@ namespace StickyTaci
       outputBox.Font = m_OutputFont;
       outputBox.SelectionFont = m_OutputFont;
 
-      Rtf.Font = m_InputFont;
-      Rtf.KeyDown += new KeyEventHandler(inputBox_KeyDown);
-      Rtf.TextChanged += new EventHandler(inputBox_TextChanged);
-      Rtf.VScroll += new EventHandler(inputBox_VScroll);
+      Scintilla.Font = m_InputFont;
+      Scintilla.TextChanged += new EventHandler(Scintilla_TextChanged);
+      Scintilla.Scroll += new EventHandler<ScrollEventArgs>(Scintilla_Scroll);
+      Scintilla.ConfigurationManager.CustomLocation = "Data\\tac.xml";
+      Scintilla.ConfigurationManager.Language = "taci";
+      Scintilla.Margins.Margin0.Width = 24;
+      Scintilla.Margins.Margin1.Width = 0;
 
       m_Ctrl = ctrl;
 
@@ -342,19 +359,42 @@ namespace StickyTaci
       TacticalsChanged = true;
       CurrentLine = 0;
     }
+    #endregion
 
-    void inputBox_VScroll(object sender, EventArgs e)
-    {
-      UpdateCurrentLineMarker();
-    }
-
+    #region Overridden Protected Methods
     protected override void OnShown(EventArgs e)
     {
       base.OnShown(e);
       Ctrl.OnShown();
     }
 
-    void mainMenuTacLogics_DropDownOpening(object sender, EventArgs e)
+    protected override void WndProc(ref Message m)
+    {
+      //Check for WM_CLOSE:
+      if(m.Msg == 0x0112 && (int)m.WParam == 0xf060)
+      {
+        Ctrl.OnExit();
+        return;
+      }
+      base.WndProc(ref m);
+    }
+
+    #endregion
+
+    #region Control Event Handlers
+    private void mainMenuTacRestart_Click(object sender, EventArgs e)
+    {
+      goalBox.Clear();
+      outputBox.Clear();
+      Ctrl.OnTacRestart();
+    }
+
+    private void mainMenuTacClear_Click(object sender, EventArgs e)
+    {
+      Ctrl.OnTacClear();
+    }
+
+    private void mainMenuTacLogics_DropDownOpening(object sender, EventArgs e)
     {
       if(LogicsChanged)
       {
@@ -373,7 +413,7 @@ namespace StickyTaci
       }
     }
 
-    void mainMenuTacTacticals_DropDownOpening(object sender, EventArgs e)
+    private void mainMenuTacTacticals_DropDownOpening(object sender, EventArgs e)
     {
       if(TacticalsChanged)
       {
@@ -391,365 +431,47 @@ namespace StickyTaci
       }
     }
 
-    void mainMenuEdit_DropDownOpening(object sender, EventArgs e)
+    private void mainMenuEdit_DropDownOpening(object sender, EventArgs e)
     {
-      mainMenuEditUndo.Enabled = Rtf.CanUndo;
-      mainMenuEditRedo.Enabled = Rtf.CanRedo;
-      mainMenuEditCopy.Enabled = (Rtf.SelectionLength > 0);
-      mainMenuEditPaste.Enabled = Rtf.CanPaste(DataFormats.GetFormat(DataFormats.Text));
+      mainMenuEditUndo.Enabled = Scintilla.UndoRedo.CanUndo;
+      mainMenuEditRedo.Enabled = Scintilla.UndoRedo.CanRedo;
+      mainMenuEditCopy.Enabled = (Scintilla.Selection.Length > 0);
+      mainMenuEditPaste.Enabled = Scintilla.Clipboard.CanPaste;
     }
 
-    void currentLineImagePanel_Paint(object sender, PaintEventArgs e)
-    {
-      Rectangle dest = new Rectangle(new Point(0, 0), m_CurrentLineImage.Size);
-      ImageAttributes attr = new ImageAttributes();
-      attr.SetColorKey(Color.Black, Color.Black);
-      e.Graphics.DrawImage(m_CurrentLineImage, dest, 0, 0, m_CurrentLineImage.Width, m_CurrentLineImage.Height, GraphicsUnit.Pixel, attr);
-    }
-
-    void inputBox_TextChanged(object sender, EventArgs e)
-    {
-      if(!m_Coloring)
-      {
-        Ctrl.OnInputChanged((uint)inputBox.Lines.Length);
-      }
-    }
-
-    new public void Close()
-    {
-      if(this.InvokeRequired)
-      {
-        CloseHandler h = new CloseHandler(Close);
-        Invoke(h);
-      }
-      else
-      {
-        //Real close.
-        ((Form)this).Close();
-      }
-    }
-    public void Output(string s)
-    {
-      if(outputBox.InvokeRequired)
-      {
-        IOHandler h = new IOHandler(Output);
-        Invoke(h, new object[] { s });
-      }
-      else
-      {
-        outputBox.SelectionFont = m_OutputFont;
-        outputBox.SelectionColor = OutputColor;
-        outputBox.SelectedText = s;
-        outputBox.ScrollToCaret();
-      }
-    }
-
-    public void ClearOutput()
-    {
-      if(outputBox.InvokeRequired)
-      {
-        ClearHandler h = new ClearHandler(ClearOutput);
-        Invoke(h);
-      }
-      else
-      {
-        outputBox.Clear();
-      }
-    }
-
-    public void Error(string s)
-    {
-      if(outputBox.InvokeRequired)
-      {
-        IOHandler h = new IOHandler(Error);
-        Invoke(h, new object[] { s });
-      }
-      else
-      {
-        //outputBox.Clear();
-        outputBox.SelectionFont = m_OutputFont;
-        outputBox.SelectionColor = ErrorColor;
-        outputBox.SelectedText = "Error: " + s;
-        outputBox.ScrollToCaret();
-      }
-    }
-
-    public void Input(string s)
-    {
-      if(goalBox.InvokeRequired)
-      {
-        IOHandler h = new IOHandler(Input);
-        Invoke(h, new object[] { s });
-      }
-      else
-      {
-        inputBox.SelectionColor = InputColor;
-        inputBox.SelectedText = s;
-      }
-    }
-
-    public void Goal(string s)
-    {
-      if(goalBox.InvokeRequired)
-      {
-        IOHandler h = new IOHandler(Goal);
-        Invoke(h, new object[] { s });
-      }
-      else
-      {
-        goalBox.Clear();
-        goalBox.SelectionColor = GoalColor;
-        goalBox.SelectedText = s;
-      }
-    }
-
-    public void ColorLines(uint max)
-    {
-      int state = SaveState();
-      int len = Rtf.SelectionLength;
-      for(uint i = 0; i < max; i++)
-      {
-        ColorLine(i);
-      }
-      RestoreState(state);
-      Rtf.SelectionLength = len;
-    }
-
-    private void ColorLine(uint linenum)
-    {
-      int index = -1;
-      if(linenum < 0 || linenum > (Rtf.Lines.Length - 1))
-        return;
-
-      int start = Rtf.GetFirstCharIndexFromLine((int)linenum);      
-      string line = Rtf.Lines[linenum];
-
-      if(line == "")
-        return;
-
-      //If this is an "old" line, color it green.
-      if(linenum < CurrentLine)
-      {
-        Rtf.Select(start, line.Length);
-        Rtf.SelectionColor = OldInputColor;
-        return;
-      }
-
-      //Reset the color.
-      Rtf.Select(start, line.Length);
-      Rtf.SelectionColor = InputColor;
-
-      //If the first character in the line is a % it is a comment.
-      string comment = line.Trim();
-      if(comment != "" && comment[0] == '%')
-      {
-        Rtf.Select(start, line.Length);
-        Rtf.SelectionColor = CommentColor;
-        return;
-      }
-      
-      //Otherwise color it right:
-      if(m_SortedTacticals != null)
-      {
-        foreach(string tactical in m_SortedTacticals)
-        {
-          index = line.IndexOf(tactical);
-          while(index != -1)
-          {
-            Rtf.Select(start + index, tactical.Length);
-            Rtf.SelectionColor = TacticalColor;
-            index = line.IndexOf(tactical, index + 1);
-          }
-        }
-      }
-
-      if(m_SortedCommands != null)
-      {
-        foreach(string command in m_SortedCommands)
-        {
-          index = line.IndexOf(command);
-          while(index != -1)
-          {
-            Rtf.Select(start + index, command.Length);
-            Rtf.SelectionColor = CommandColor;
-            index = line.IndexOf(command, index + 1);
-          }
-        }
-      }
-
-      //Color quoted strings.
-      index = line.IndexOf("\"");
-      while(index != -1)
-      {
-        int nextIndex = line.IndexOf("\"", index + 1);
-        if(nextIndex == -1)
-        {
-          Rtf.Select(start + index, line.Length - index);
-          Rtf.SelectionColor = StringColor;
-          index = -1;
-        }
-        else
-        {
-          Rtf.Select(start + index, nextIndex - index + 1);
-          Rtf.SelectionColor = StringColor;
-          index = line.IndexOf("\"", nextIndex + 1);
-        }
-      }
-    }
-
-    public void ColorCurrentLine()
-    {
-      int state = SaveState();
-      ColorLine((uint)Rtf.GetLineFromCharIndex(Rtf.SelectionStart));
-      RestoreState(state);
-    }
-
-    public void inputBox_KeyDown(object sender, KeyEventArgs e)
-    {
-      int state = SaveState();
-      int length = Rtf.SelectionLength;
-
-      //Coloring Triggers:
-      if((e.KeyCode == Keys.D9 || e.KeyCode == Keys.D0) && e.Shift)
-      {
-        //Parens
-        ColorCurrentLine();
-      }
-      else if(e.KeyCode == Keys.OemPeriod || e.KeyCode == Keys.Oemcomma)
-      {
-        //Period or comma
-        ColorCurrentLine();
-      }
-      else if(e.KeyCode == Keys.Space || e.KeyCode == Keys.Tab || e.KeyCode == Keys.Enter)
-      {
-        //Whitespace
-        ColorCurrentLine();
-      }
-      else if(e.KeyCode == Keys.Back || e.KeyCode == Keys.Delete)
-      {
-        //Backspace/Delete
-        ColorCurrentLine();
-      }
-      RestoreState(state);
-      Rtf.SelectionLength = length;
-      return;
-    }
-
-    public void Clear()
-    {
-      outputBox.Clear();
-      inputBox.Clear();
-      goalBox.Clear();
-    }
-
-    public bool GetNextLine(ref string line)
-    {
-      if(CurrentLine >= inputBox.Lines.Length)
-      {
-        return false;
-      }
-      else
-      {
-        line = inputBox.Lines[CurrentLine];
-        if(CurrentLine == (inputBox.Lines.Length - 1) && line == "" )
-          return false;
-        ++CurrentLine;
-
-        int state = SaveState();
-        ColorLine(CurrentLine - 1);
-        RestoreState(state);
-        return true;
-      }
-    }
-
-    public bool GetPreviousLine(ref string line)
-    {
-      if(CurrentLine <= 0)
-      {
-        return false;
-      }
-      else
-      {
-        line = inputBox.Lines[CurrentLine - 1];
-        --CurrentLine;
-
-        int state = SaveState();
-        ColorLine(CurrentLine - 1);
-        RestoreState(state);
-        return true;
-      }
-    }
     private void mainMenuFileExit_Click(object sender, EventArgs e)
     {
       Ctrl.OnExit();
     }
 
-    private void helpMenuTaci_Click(object sender, EventArgs e)
-    {
-      Ctrl.OnHelpTaci();
-    }
-
-    private void mainMenuTacRestart_Click(object sender, EventArgs e)
-    {
-      goalBox.Clear();
-      outputBox.Clear();
-      Ctrl.OnTacRestart();
-    }
-
-    private void mainMenuTacClear_Click(object sender, EventArgs e)
-    {
-      Ctrl.OnTacClear();
-    }
-
-    public string GetLine(uint line)
-    {
-      int begin = inputBox.GetFirstCharIndexFromLine((int)line);
-      int end = inputBox.GetFirstCharIndexFromLine((int)line + 1);
-      if(end - begin < 0 || begin < 0 || end < 0)
-        return "";
-      return inputBox.Text.Substring(begin, end - begin);
-    }
-
     private void mainMenuEditPaste_Click(object sender, EventArgs e)
     {
-      inputBox.Paste();
-      inputBox.SelectionColor = InputColor;
-
-      uint startline = (uint)Rtf.GetLineFromCharIndex(inputBox.SelectionStart);
-      uint endline = (uint)Rtf.GetLineFromCharIndex(inputBox.SelectionStart + inputBox.SelectionLength);
-
-      int state = SaveState();
-      ColorLine(startline);
-      for(uint currentline = startline + 1u; (currentline < endline); currentline++)
-      {
-        ColorLine(currentline);
-      }
-      RestoreState(state);
+      Scintilla.Clipboard.Paste();
     }
 
     private void mainMenuEditUndo_Click(object sender, EventArgs e)
     {
-      inputBox.Undo();
+      Scintilla.UndoRedo.Undo();
     }
 
     private void mainMenuEditRedo_Click(object sender, EventArgs e)
     {
-      inputBox.Redo();
+      Scintilla.UndoRedo.Redo();
     }
 
     private void mainMenuEditCut_Click(object sender, EventArgs e)
     {
-      inputBox.Cut();
+      Scintilla.Clipboard.Cut();
     }
 
     private void mainMenuEditCopy_Click(object sender, EventArgs e)
     {
-      inputBox.Copy();
+      Scintilla.Clipboard.Copy();
     }
 
     private void mainMenuEditDelete_Click(object sender, EventArgs e)
     {
-      inputBox.SelectedText = "";
+      Scintilla.Selection.Text = "";
     }
 
     private void mainMenuFileSave_Click(object sender, EventArgs e)
@@ -764,7 +486,7 @@ namespace StickyTaci
 
     private void mainMenuEditSelectAll_Click(object sender, EventArgs e)
     {
-      inputBox.SelectAll();
+      Scintilla.Selection.SelectAll();
     }
 
     private void mainMenuFileNew_Click(object sender, EventArgs e)
@@ -794,36 +516,12 @@ namespace StickyTaci
 
     private void mainMenuTacReset_Click(object sender, EventArgs e)
     {
-      uint current = CurrentLine;
       Ctrl.OnTacReset();
-      ColorLines(current);
     }
 
-    protected override void WndProc(ref Message m)
+    private void helpMenuTaci_Click(object sender, EventArgs e)
     {
-      //Check for WM_CLOSE:
-      if(m.Msg == 0x0112 && (int)m.WParam == 0xf060)
-      {
-        Ctrl.OnExit();
-        return;
-      }
-      base.WndProc(ref m);
-    }
-
-    private int SaveState()
-    {
-      m_Coloring = true;
-      Rtf.Enabled = false;
-      return Rtf.SelectionStart;
-    }
-
-    private void RestoreState(int i)
-    {
-      m_Coloring = false;
-      Rtf.Select(i, 0);
-      Rtf.SelectionColor = InputColor;
-      Rtf.Enabled = true;
-      Rtf.Focus();
+      Ctrl.OnHelpTaci();
     }
 
     private void mainMenuTacNextLine_Click(object sender, EventArgs e)
@@ -834,17 +532,11 @@ namespace StickyTaci
     private void mainMenuTacPreviousLine_Click(object sender, EventArgs e)
     {
       Ctrl.OnPreviousLine();
-
-      int state = SaveState();
-      ColorLine(CurrentLine);
-      RestoreState(state);
     }
 
     private void mainMenuTacStart_Click(object sender, EventArgs e)
     {
-      uint current = CurrentLine;
       Ctrl.OnStart();
-      ColorLines(current);
     }
 
     private void mainMenuTacEnd_Click(object sender, EventArgs e)
@@ -852,19 +544,170 @@ namespace StickyTaci
       Ctrl.OnEnd();
     }
 
+    private void currentLineImagePanel_Paint(object sender, PaintEventArgs e)
+    {
+      Rectangle dest = new Rectangle(new Point(0, 0), m_CurrentLineImage.Size);
+      ImageAttributes attr = new ImageAttributes();
+      attr.SetColorKey(Color.Black, Color.Black);
+      e.Graphics.DrawImage(m_CurrentLineImage, dest, 0, 0, m_CurrentLineImage.Width, m_CurrentLineImage.Height, GraphicsUnit.Pixel, attr);
+    }
+    #endregion
+
+    #region Scintilla Event Handlers
+    void Scintilla_Scroll(object sender, ScrollEventArgs e)
+    {
+      UpdateCurrentLineMarker();
+    }
+
+    void Scintilla_TextChanged(object sender, EventArgs e)
+    {
+      Ctrl.OnInputChanged(Scintilla.Lines.Count);
+      m_Dirty = true;
+    }
+    #endregion
+
+    #region Public Interface
+    new public void Close()
+    {
+      InvokeDelegate(this, (MethodInvoker)delegate()
+      {
+        ((Form)this).Close();
+      });
+    }
+
+    public void Output(string s)
+    {
+      InvokeDelegate(this, (MethodInvoker)delegate()
+      {
+        outputBox.SelectionFont = m_OutputFont;
+        outputBox.SelectionColor = OutputColor;
+        outputBox.SelectedText = s;
+        outputBox.ScrollToCaret();
+      });
+    }
+
+    public void ClearOutput()
+    {
+      InvokeDelegate(this, (MethodInvoker)delegate()
+      {
+        outputBox.Clear();
+      });
+    }
+
+    public void Error(string s)
+    {
+      InvokeDelegate(this, (MethodInvoker)delegate()
+      {
+        //outputBox.Clear();
+        outputBox.SelectionFont = m_OutputFont;
+        outputBox.SelectionColor = ErrorColor;
+        outputBox.SelectedText = "Error: " + s;
+        outputBox.ScrollToCaret();
+      });
+    }
+
+    public void Input(string s)
+    {
+      InvokeDelegate(this, (MethodInvoker)delegate()
+      {
+        Scintilla.Selection.Text = s;
+      });
+    }
+
+    public void Goal(string s)
+    {
+      InvokeDelegate(this, (MethodInvoker)delegate()
+      {  
+        goalBox.Clear();
+        goalBox.SelectionColor = GoalColor;
+        goalBox.SelectedText = s;
+      });
+    }
+
+
+    public bool GetNextLine(ref string line)
+    {
+      if(CurrentLine >= Scintilla.Lines.Count)
+      {
+        return false;
+      }
+      else
+      {
+        line = Scintilla.Lines[CurrentLine].Text;
+        if(CurrentLine == (Scintilla.Lines.Count - 1) && line == "")
+          return false;
+        CurrentLine++;
+        return true;
+      }
+    }
+
+    public bool GetPreviousLine(ref string line)
+    {
+      if(CurrentLine <= 0)
+      {
+        return false;
+      }
+      else
+      {
+        line = Scintilla.Lines[CurrentLine - 1].Text;
+        --CurrentLine;
+        return true;
+      }
+    }
+
+    public void Clear()
+    {
+      outputBox.Clear();
+      Scintilla.Text = "";
+      goalBox.Clear();
+      m_Dirty = false;
+    }
+
+    public void SaveFile(string filename)
+    {
+      File.WriteAllText(filename, Scintilla.Text, Encoding.ASCII);
+      m_Dirty = false;
+      return;
+    }
+
+    public void LoadFile(string filename)
+    {
+      Scintilla.ResetText();
+      Scintilla.AppendText(File.ReadAllText(filename, Encoding.ASCII));
+      Scintilla.Caret.Position = 0;
+      m_Dirty = false;
+      return;
+    }
+    
+    private void InvokeDelegate(Control o, MethodInvoker d)
+    {
+      if(o.InvokeRequired)
+        o.Invoke(d, null);
+      else
+        d.Invoke();
+    }
+
+    public string GetLine(int line)
+    {
+      return Scintilla.Lines[line].Text;
+    }
+
+    #endregion
+
+    #region Private Methods
     private void UpdateCurrentLineMarker()
     {
       //Show current line marker:
-      int line = (int)m_CurrentLine;
+      int line = (int)CurrentLine;
       int y = 0;
-      if(line == Rtf.Lines.Length)
+      if(line == Scintilla.Lines.Count)
       {
         y = 0;
       }
       else
       {
-        Point inc = (Rtf.GetPositionFromCharIndex(Rtf.GetFirstCharIndexFromLine(line)));
-        Point inw = PointToClient(Rtf.PointToScreen(inc));
+        Point inc = new Point(0, Scintilla.PointYFromPosition(Scintilla.Lines[CurrentLine].StartPosition));
+        Point inw = PointToClient(Scintilla.PointToScreen(inc));
         y = inw.Y;
         y -= Font.Height;
         y -= Font.Height;
@@ -872,5 +715,6 @@ namespace StickyTaci
       Point p = new Point(1, y);
       currentLineImagePanel.Location = p;
     }
+    #endregion
   }
 }

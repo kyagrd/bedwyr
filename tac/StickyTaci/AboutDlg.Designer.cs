@@ -47,11 +47,11 @@ namespace StickyTaci
       this.tableLayoutPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 70.74341F));
       this.tableLayoutPanel.Controls.Add(this.logoPictureBox, 0, 0);
       this.tableLayoutPanel.Controls.Add(this.labelProductName, 1, 0);
-      this.tableLayoutPanel.Controls.Add(this.labelVersion, 1, 1);
-      this.tableLayoutPanel.Controls.Add(this.labelCopyright, 1, 2);
       this.tableLayoutPanel.Controls.Add(this.labelCompanyName, 1, 3);
       this.tableLayoutPanel.Controls.Add(this.textBoxDescription, 1, 4);
       this.tableLayoutPanel.Controls.Add(this.okButton, 1, 5);
+      this.tableLayoutPanel.Controls.Add(this.labelVersion, 1, 1);
+      this.tableLayoutPanel.Controls.Add(this.labelCopyright, 1, 2);
       this.tableLayoutPanel.Dock = System.Windows.Forms.DockStyle.Fill;
       this.tableLayoutPanel.Location = new System.Drawing.Point(9, 9);
       this.tableLayoutPanel.Name = "tableLayoutPanel";

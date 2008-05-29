@@ -1,0 +1,32 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ScintillaNET>
+	<Language Name="taci">
+		<Indentation TabWidth="2" UseSpaces="False" />
+		<Lexer LexerName="simple">	
+			<Keywords List="0" Inherit="False">
+        #clear #debug #define #exit #help #include #lemmas #logic #logics #open
+        #proof_output #redo #reset #tacticals #tactics #theorem #time #undo
+			</Keywords>
+      <Keywords List="1" Inherit="False">
+      </Keywords>
+		</Lexer>
+    <AutoComplete FillUpCharacters="(," SingleLineAccept="True" IsCaseSensitive="False">
+      <List>
+        #clear #debug #exit #help #include #lemmas #logic #logics #open
+        #proof_output #redo #reset #tacticals #tactics #theorem #time #undo
+      </List>
+    </AutoComplete>
+    <Styles>
+      <Style Name="COMMENTLINE" ForeColor="Green"></Style>
+      <Style Name="STRING" ForeColor="Maroon"></Style>
+      <Style Name="WORD" ForeColor="Red"></Style>
+      <Style Name="WORD2" ForeColor="Blue"></Style>
+      <Style Name="WORD3" ForeColor="Black"></Style>
+      <Style Name="WORD4" ForeColor="Black"></Style>
+      <Style Name="OPERATOR" ForeColor="Gray"></Style>
+      <Style Name="OLDLINE" ForeColor="LightGray"></Style>
+      <Style Name="NUMBER" ForeColor="Black"></Style>
+      <Style Name="DEFAULT" ForeColor="Black"></Style>
+    </Styles>
+	</Language>
+</ScintillaNET> 

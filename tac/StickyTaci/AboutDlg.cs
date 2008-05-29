@@ -1,6 +1,6 @@
 /*****************************************************************************
 * StickyTaci                                                                 *
-* Copyright (C) 2007 Zach Snow                                               *
+* Copyright (C) 2007 - 2008 Zach Snow                                        *
 *                                                                            *
 * This program is free software; you can redistribute it and/or modify       *
 * it under the terms of the GNU General Public License as published by       *
@@ -36,11 +36,11 @@ namespace StickyTaci
       //  - Project->Properties->Application->Assembly Information
       //  - AssemblyInfo.cs
       this.Text = String.Format("About {0}", AssemblyTitle);
-      this.labelProductName.Text = AssemblyProduct;
-      this.labelVersion.Text = String.Format("Version {0}", AssemblyVersion);
-      this.labelCopyright.Text = AssemblyCopyright;
-      this.labelCompanyName.Text = AssemblyCompany;
-      this.textBoxDescription.Text = AssemblyDescription;
+      //this.labelProductName.Text = AssemblyProduct;
+      //this.labelVersion.Text = String.Format("Version {0}", AssemblyVersion);
+      //this.labelCopyright.Text = AssemblyCopyright;
+      //this.labelCompanyName.Text = AssemblyCompany;
+      //this.textBoxDescription.Text = AssemblyDescription;
     }
 
     #region Assembly Attribute Accessors
