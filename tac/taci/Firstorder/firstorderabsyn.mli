@@ -62,7 +62,7 @@ type annotation = {
 type 'a polarized = ('a * 'a formula)
 
 and 'a predicate = 
-    FixpointFormula of fixpoint * string * (progress * string) list * 'a abstraction
+    FixpointFormula of fixpoint * string * (string * progress) list * 'a abstraction
   | DBFormula of int * string * int
   | AtomicFormula of string
 
@@ -108,7 +108,7 @@ type 'a predefinition =
   PreDefinition of (string * (string * progress) list * 'a abstraction_pattern * fixpoint)
 
 type 'a definition =
-  Definition of (string * int * 'a polarized * fixpoint)
+  Definition of (string * (string * progress) list * 'a abstraction * fixpoint)
 
 type state
 
@@ -141,6 +141,17 @@ val makeAnonymousTerm : unit -> term
 val mapFormula :
   (unit -> ('a,'a polarized,'a predicate,'a abstraction,'a formula) map_formula) ->
     (term -> term) -> ('a,'a polarized,'a predicate,'a abstraction,'a formula) map_formula
+
+val mapFormula2 :
+ (string -> 'a -> 'a) -> (connective -> 'a -> 'a * 'a) -> 
+ ('a -> ('b, 'b polarized, term list -> 'b formula, 'b abstraction, 'b formula) map_formula)
+ -> (term -> term) -> 'a -> ('b, 'b polarized, term list -> 'b formula, 'b abstraction, 'b formula) map_formula
+
+val mapFormula3 :
+ (string -> 'a -> 'a) -> (string -> 'a -> 'a) -> 
+ ('a -> ('b, 'b polarized, term list -> 'b formula, 'b abstraction, 'b formula) map_pattern)
+ -> (term -> term) -> 'a -> ('b, 'b polarized, term list -> 'b formula, 'b abstraction, 'b formula) map_pattern
+
 val mapPattern :
   (unit -> ('a,'a polarized_pattern,'a predicate_pattern,'a abstraction_pattern,'a formula_pattern) map_pattern) ->
     (term -> term) -> ('a,'a polarized_pattern,'a predicate_pattern,'a abstraction_pattern,'a formula_pattern) map_pattern
@@ -151,6 +162,7 @@ val abstractPattern : string -> ('a, 'a abstraction_pattern, unit, 'a abstractio
 val abstractDummyWithoutLambdas : unit -> ('a,'a polarized,'a predicate,'a abstraction,'a formula) map_formula
 val abstractVar : term -> ('a, 'a abstraction, unit, 'a abstraction, unit) map_formula 
 val abstractVarWithoutLambdas : term -> unit -> ('a,'a polarized,'a predicate,'a abstraction,'a formula) map_formula
+val abstractWithoutLambdas : string -> unit -> ('a,'a polarized,'a predicate,'a abstraction,'a formula) map_formula
 
 val apply : term list -> 'a abstraction -> 'a abstraction option
 val eliminateNablas : term list -> ('a, 'a polarized, term list -> 'a formula, 'a abstraction, 'a formula) map_formula
@@ -169,7 +181,8 @@ val unifyList : (term -> term -> unifyresult) -> term list -> term list -> unify
 val matchFormula : 'a polarized_pattern -> 'a polarized -> bool
 
 val getDefinitionArity : 'a definition -> int
-val getDefinitionBody : 'a definition -> 'a polarized
+val getDefinitionBody : 'a definition -> 'a abstraction
+val predicateofDefinition : 'a definition -> 'a predicate
 
 val getTermHeadAndArgs : term -> (string * term list) option
 

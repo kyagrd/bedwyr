@@ -59,63 +59,44 @@ struct
   * indicating focusedness, and a polarity.  The polarity is only
   * relevant for atoms.
   ********************************************************************)
-  type marktype =
-      Focused
-    | Nonfocused
-    | Frozen
 
-  type polarity =
-      Positive
-    | Negative
+  (** A formula has a local level *)
+  type formula = Formula of (int * (FOA.annotation FOA.polarized))
 
-  (** A formula has a local level, and an annotation. *)
-  type formula = Formula of (int * (marktype * polarity) * FOA.formula)
+  let string_of_polarity = function FOA.Positive -> "+" |FOA.Negative -> "-"
+  let string_of_freezing = function FOA.Frozen -> "*" |FOA.Unfrozen -> " "
+  let string_of_control = function FOA.Normal -> " " |FOA.Focused -> "#" |FOA.Delayed -> "?"
 
-  let string_of_polarity p = match p with Positive -> "+" |Negative -> "-"
-  let string_of_marktype m = match m with Focused -> "#" |Frozen -> "/" |Nonfocused -> " "
+  let string_of_annotation a = (string_of_control a.FOA.control)^(string_of_freezing a.FOA.freezing)^(string_of_polarity a.FOA.polarity)
 
-  let string_of_formula (Formula(local,(m,p),t)) =
+  let string_of_formula (Formula(local,(a,t))) =
     let generic = Term.get_dummy_names ~start:1 local "n" in
-    let result = FOA.string_of_formula ~generic t in
+    let result = (FOA.string_of_formula ~generic).FOA.formf t in
       List.iter Term.free generic ;
-      (String.concat "," generic) ^ ">> " ^ (string_of_marktype m) ^ (string_of_polarity p) ^ " " ^ result
+      (String.concat "," generic) ^ ">> " ^ (string_of_annotation a) ^ " " ^ result
 
-  let string_of_formula_ast (Formula(local,(m,_),t)) =
+  let string_of_formula_ast (Formula(local,(a,t))) =
     let generic = Term.get_dummy_names ~start:1 local "n" in
-    let result = FOA.string_of_formula_ast ~generic t in
+    let result = (FOA.string_of_formula_ast ~generic).FOA.formf t in
       List.iter Term.free generic ;
-      (String.concat "," generic) ^ ">> " ^
-      if m = Focused then
-        "[" ^ result ^ "]"
-      else
-        result
+      (String.concat "," generic) ^ ">> " ^ (string_of_annotation a) ^ " " ^ result
 
   let escape_term = Str.global_replace (Str.regexp "=>") "=&gt;"
 
-  let xml_of_formula (Formula(local,(m,p),t)) = 
+  let xml_of_formula (Formula(local,(a,t))) = 
     let generic = Term.get_dummy_names ~start:1 local "n" in
-    let result = escape_term (FOA.string_of_formula ~generic t) in
-    let quasi_atomic = function
-      | FOA.ApplicationFormula _ | FOA.AtomicFormula _ -> true | _ -> false
-    in
+    let result = escape_term ((FOA.string_of_formula ~generic).FOA.formf t) in
       List.iter Term.free generic ;
-      Printf.sprintf "<formula%s%s>%s%s</formula>"
-        (match m with
-           | Nonfocused -> ""
-           | Focused -> " mark=\"focused\"" | Frozen -> " mark=\"frozen\"")
-        (if not (quasi_atomic t) then "" else
-           Printf.sprintf
-             " polarity=\"%s\""
-             (if p=Positive then "positive" else "negative"))
-        (if generic = [] then "" else
+      Printf.sprintf "<formula%s>%s%s</formula>"
+        (string_of_annotation a)
+         (if generic = [] then "" else
            "<generic>" ^ String.concat "," generic ^ "</generic>")
         result
-
-  let getFormulaFormula  (Formula(_,(_,_),f)) = f
-  let getFormulaMarker   (Formula(_,(m,_),_)) = m
-  let getFormulaPolarity (Formula(_,(_,p),_)) = p
-  let getFormulaLevel    (Formula(i,(_,_),_)) = i
-  let makeFormula t = Formula(0, (Nonfocused,Positive), t)
+	
+  let getFormulaFormula    (Formula(_,(_,f))) = f
+  let getFormulaAnnotation (Formula(_,(a,_))) = a
+  let getFormulaLevel      (Formula(i,(_,_))) = i
+  let makeFormula t = Formula(0, t)
 
   let string_of_definition def = FOA.string_of_definition def
   
@@ -193,7 +174,7 @@ struct
   type session = {
     tactics :
       (session, (sequent, proof) Logic.tactic) Logic.tactical Logic.table ;
-    definitions : FOA.definition Logic.table ;
+    definitions : (FOA.annotation FOA.definition) Logic.table ;
     sequents : sequent list ; (* current goals *)
     builder : proof Logic.proofbuilder ;
     state : Term.state ;
@@ -201,7 +182,7 @@ struct
     initial_namespace : Term.namespace ;
     proof_namespace   : Term.namespace ;
     theorem_name : string option ;
-    theorem : FOA.formula option ;
+    theorem : (FOA.annotation FOA.polarized) option ;
     lemmas : lemma list
   }
 
@@ -348,7 +329,7 @@ struct
   * must be abstracted the same number of times as the atom is under
   * abstractions.
   ********************************************************************)
-  let replaceApplications defs formula =
+  let replaceApplications defs =
     (******************************************************************
     *makeArgs:
     * Generates a list of new names of length i.  This is only used
@@ -368,7 +349,7 @@ struct
     * same number of abstractions as the atom being replaced was.
     ******************************************************************)
     let abstractReplacement lambdas f =
-      List.fold_left (fun f _ -> FOA.abstractDummyWithoutLambdas f) f lambdas
+      List.fold_left (fun f _ -> (FOA.abstractDummyWithoutLambdas ()).FOA.predf f) f lambdas
     in
     
     (******************************************************************
@@ -380,58 +361,46 @@ struct
     let rec makeAbstractions args formula =
       match args with
         [] -> formula
-      | a::aa ->  FOA.abstract a (makeAbstractions aa (formula))
+      | a::aa -> (FOA.abstractWithoutLambdas a ()).FOA.formf (makeAbstractions aa formula)
     in
 
     let tf t = t in
-    let rec ff lambdas f =
-      match f with
-          FOA.AtomicFormula(head,args) ->
-            let def = Logic.find head defs in
-            if (Option.isSome def) then
-              let def = (Option.get def) in
-              let arity = FOA.getDefinitionArity def in
-              let body = FOA.getDefinitionBody def in
-              if (arity = List.length args) then
-                (FOA.ApplicationFormula(abstractReplacement lambdas body, args))
-              else if arity > List.length args then
-                let argnames = makeArgs (arity - (List.length args)) in
-                let args' = args @ (List.map (Term.atom) argnames) in
-                let f = (FOA.ApplicationFormula(abstractReplacement lambdas body, args')) in
-                makeAbstractions argnames f
-              else             
-                raise (FOA.SemanticError("'" ^ head ^ "' applied to too many arguments"))
-            else
-              f
-        | FOA.AbstractionFormula(n,body) ->
-            FOA.AbstractionFormula(n, (ff (n::lambdas) body))
-        | _ -> (FOA.mapFormula (ff lambdas) tf f)
-    in
-    (ff [] formula)
-  
-  (********************************************************************
-  *processFormula:
-  * Replaces applications with mu or nu formulas.
-  ********************************************************************)
-  let processFormula defs f =
-    let f' = replaceApplications defs f in
-    f'
-    
+    let rec ff lambdas =   
+      {(FOA.mapFormula3 (fun n l -> n::l) (fun _ x -> x) ff tf lambdas) with 
+	 FOA.predp = fun f args -> match f with
+	     FOA.AtomicPattern(head) ->
+	       let def = Logic.find head defs in
+		 if (Option.isSome def) then
+		   let def = (Option.get def) in
+		   let arity = FOA.getDefinitionArity def in
+		   let body = FOA.predicateofDefinition def in
+		     if (arity = List.length args) then
+		       FOA.ApplicationFormula(abstractReplacement lambdas body, args)
+		     else if arity > List.length args then
+		       let argnames = makeArgs (arity - (List.length args)) in
+		       let args' = args @ (List.map (Term.atom) argnames) in
+			 (makeAbstractions argnames (FOA.ApplicationFormula((abstractReplacement lambdas body),args')))
+		     else             
+		       raise (FOA.SemanticError("'" ^ head ^ "' applied to too many arguments"))
+		 else
+		   FOA.ApplicationFormula(FOA.AtomicFormula(head),args)
+	   |_ -> assert false}
+    in ff []
+
   (********************************************************************
   *abstractFixpointDefinition:
   * Given a definition of the form FOA.MuFormula() or FOA.NuFormula(),
   * creates an abstracted application term that may be passed to 
   * FOA.applyFixpoint.
   ********************************************************************)
-  let abstractFixpointDefinition f argnames =
+  let abstractFixpointDefinition p f argnames =
     match f with
-      | FOA.MuFormula(_,_,body)
-      | FOA.NuFormula(_,_,body) ->
-          let args' = List.map
-            (fun n -> Term.fresh ~name:"*" ~lts:0 ~ts:0 ~tag:Term.Constant)
+      | FOA.FixpointFormula(_,_,argnames,_) ->
+           let args' = List.map
+            (fun (_,n) -> Term.fresh ~name:"*" ~lts:0 ~ts:0 ~tag:Term.Constant)
             argnames in
-          let f' = FOA.ApplicationFormula(f, args') in
-          let f'' = (List.fold_right (FOA.abstractVar) args' f') in
+          let f' = FOA.AbstractionBody(p,FOA.ApplicationFormula(f, args')) in
+          let f'' = (List.fold_right (fun t -> (FOA.abstractVar t).FOA.abstf) args' f') in
           (* let () =
             O.debug ("Firstorder.abstractFixpointDefinition: " ^
                      (FOA.string_of_formula_ast ~generic:[] f'') ^ "\n")
@@ -447,46 +416,18 @@ struct
   * it is, the resulting template is flagged as being "focused".
   ********************************************************************)
   let parseTemplate defs t =
-    (*  focused: checks whether the template string is surrounded in
-        brackets. *)
-    let focused s =
-      let len = String.length s in
-      if len > 1 then
-        s.[0] = '[' && s.[len - 1] = ']'
-      else
-        false
-    in
-
-    (*  strip: removes surrounding brackets.  *)
-    let strip s =
-      let len = String.length s in
-      if len > 1 then
-        String.sub s 1 (len - 2)
-      else
-        (O.impossible "Firstorder.parseTemplate: invalid focused template.\n";
-        s)
-    in
-
-    try
-      let (t, focus) =
-        if focused t then
-          ((strip t), Focused)
-        else
-          (t, Nonfocused)
-      in
-
-      let formula = Firstorderparser.toplevel_template Firstorderlexer.token (Lexing.from_string t) in
-      Some (processFormula defs formula, focus)
+    try	let formula = Firstorderparser.toplevel_pattern Firstorderlexer.token (Lexing.from_string t) in
+      Some ((replaceApplications defs).FOA.polp formula)
     with
         FOA.SyntaxError(s) ->
           (O.error (s ^ ".\n");
-          None)
+             None)
       | FOA.SemanticError(s) ->
           (O.error (s ^ ".\n");
-          None)
+           None)
       | Parsing.Parse_error ->
           (O.error "Syntax error.\n";
-          None)
+           None)
 
   (********************************************************************
   *parseFormula:
@@ -496,18 +437,19 @@ struct
   let parseFormula defs t =        
     try
       let formula =
-        Firstorderparser.toplevel_formula
+        Firstorderparser.toplevel_pattern
           Firstorderlexer.token (Lexing.from_string t)
       in
+      let formula = (replaceApplications defs).FOA.polp formula in
       let () =
         O.debug ("Firstorder.parseFormula: formula: " ^
-                 (FOA.string_of_formula ~generic:[] formula) ^ "\n")
+                 ((FOA.string_of_formula ~generic:[]).FOA.polf formula) ^ "\n")
       in
       let () =
         O.debug ("Firstorder.parseFormula: formula ast: " ^
-                 (FOA.string_of_formula_ast ~generic:[] formula) ^ "\n")
+                 ((FOA.string_of_formula_ast ~generic:[]).FOA.polf formula) ^ "\n")
       in
-      Some (processFormula defs formula)
+      Some formula
     with
         FOA.SyntaxError(s) ->
           (O.error (s ^ ".\n");
@@ -527,17 +469,18 @@ struct
   let parseDefinition defs t =        
     try
       let FOA.PreDefinition(name,args,body,ind) = Firstorderparser.toplevel_definition Firstorderlexer.token (Lexing.from_string t) in
+      let body = (replaceApplications defs).FOA.abstp body in
       let () =
         O.debug ("Firstorder.parseDefinition: predefinition ast:" ^
-                 name ^ " " ^ (FOA.string_of_formula_ast ~generic:[] body) ^
+                 name ^ " " ^ ((FOA.string_of_formula_ast ~generic:[]).FOA.abstf body) ^
                  ".\n")
       in
       let () =
         O.debug ("Firstorder.parseDefinition: predefinition: " ^
-                 name ^ " " ^ (FOA.string_of_formula ~generic:[] body) ^
+                 name ^ " " ^ ((FOA.string_of_formula ~generic:[]).FOA.abstf body) ^
                  ".\n")
       in
-      Some (FOA.PreDefinition(name,args,(replaceApplications defs body),ind))
+      Some (FOA.Definition(name,args,body,ind))
     with
         FOA.SyntaxError(s) ->
           (O.error (s ^ ".\n");
@@ -607,23 +550,23 @@ struct
       ****************************************************************)
       let checkMonotonicity body =
         let tf t = t in
-        let rec ff db neg f =
-          match f with
-              FOA.ImplicationFormula(l,r) ->
-                (ff db (neg + 1) l)
-            | FOA.MuFormula(_,_,body)
-            | FOA.NuFormula(_,_,body) ->
-                (ff (db + 1) neg body)
-            | FOA.DBFormula(_,_,db') ->
-                if (db = db') && (neg mod 2) <> 0 then
-                  raise NonMonotonic
-                else
-                  f
-            | _ -> FOA.mapFormula (ff db neg) tf f
+
+	let rec ff (db,neg) =
+	  let ff = FOA.mapFormula2 (fun name (db,neg) -> (db+1,neg)) 
+	    (function FOA.Imp -> fun (db,neg) -> ((db,neg+1),(db,neg)) |_ -> fun x -> (x,x)) 
+	    ff tf (db,neg) in
+	    {ff with 
+	       FOA.predf = fun f -> match f with
+		   FOA.DBFormula(_,_,db') ->              
+		     if (db = db') && (neg mod 2) <> 0 then
+		       raise NonMonotonic
+		     else
+		       ff.FOA.predf f
+		 |_ -> ff.FOA.predf f}
         in
 
         try
-          (ignore (ff 0 0 body);
+          (ignore ((ff (0,0)).FOA.abstf body);
           true)
         with
           NonMonotonic -> false
@@ -633,13 +576,8 @@ struct
       *makeFixpoint:
       * Makes a mu or nu formula based on the combinator type.
       ****************************************************************)
-      let makeFixpoint ind name argnames body =
-        match ind with
-            FOA.Inductive ->
-              FOA.MuFormula(name,argnames,body)
-          | FOA.CoInductive ->
-              FOA.NuFormula(name,argnames,body)
-      in
+      let makeFixpoint ind name argnames body = 
+	FOA.FixpointFormula(ind,name,argnames,body) in
       
       (****************************************************************
       *abstractDefinition:
@@ -679,7 +617,7 @@ struct
         **************************************************************)
         let findDefinition name predefs =
           try
-            let find name (FOA.PreDefinition(name',ids,formula,ind)) =
+            let find name (FOA.Definition(name',ids,formula,ind)) =
               name' = name
             in
             Some (List.find (find name) predefs)
@@ -689,23 +627,28 @@ struct
         
         
         let tf t = t in  
-        let rec ff abstractions f =
-          match f with
-              FOA.AtomicFormula(head, args) ->
-                let db = getDB head abstractions in
-                if Option.isSome db then
-                  FOA.ApplicationFormula
+	let id1 _ x = x in
+	let id2 _ x = x,x in
+        let rec ff abstractions  =
+	  let ff' = FOA.mapFormula2 id1 id2 ff tf abstractions in
+	    {ff' with
+	       FOA.predf = fun f args -> match f with
+		   FOA.AtomicFormula(head) ->
+                     let db = getDB head abstractions in
+                       if Option.isSome db then
+			 FOA.ApplicationFormula
                     (FOA.DBFormula(0,head, Option.get db), args)
-                else
+                       else
+			 let f =
                   let def = findDefinition head predefs in
                   if Option.isSome def then
-                    let FOA.PreDefinition(_,argnames,f',ind) = (Option.get def) in
-                    (makeFixpoint ind head argnames (ff (head::abstractions) f'))
-                  else
-                    f
-            | _ -> (FOA.mapFormula (ff abstractions) tf f)
+                    let FOA.Definition(_,argnames,f',ind) = (Option.get def) in
+                    makeFixpoint ind head argnames ((ff (head::abstractions)).FOA.abstf f')
+                  else f in
+                    FOA.ApplicationFormula(f,args)
+            | _ -> ff'.FOA.predf f args}
         in
-        (ff abstractions f)
+        ((ff abstractions).FOA.abstf f)
       in
 
       (****************************************************************
@@ -713,12 +656,11 @@ struct
       * Mu/Nu-abstracts the body of the predefinition, and wraps the body
       * in a Mu/Nu formula.
       ****************************************************************)
-      let processPreDefinition (FOA.PreDefinition(name, ids, formula, ind)) =
+      let processPreDefinition (FOA.Definition(name, ids, formula, ind)) =
         let formula' = abstractDefinition [name] formula in
-        let formula'' = makeFixpoint ind name ids formula' in
         
-        let result = FOA.Definition(name, List.length ids, formula'', ind) in
-        if (checkMonotonicity formula'') then
+        let result = FOA.Definition(name, ids, formula', ind) in
+        if (checkMonotonicity formula') then
           Some(result)
         else
           (O.output ("Warning: " ^ name ^ ": non-monotonic definition.\n");
@@ -742,7 +684,7 @@ struct
           else
             let () =
               O.debug ("Firstorder.definitions: definition ast: " ^
-                       (FOA.string_of_formula_ast ~generic:[] formula) ^ ".\n")
+                       ((FOA.string_of_formula_ast ~generic:[]).FOA.abstf formula) ^ ".\n")
             in
             let () =
               O.output ("Definition: " ^ (string_of_definition def) ^ ".\n")
@@ -770,10 +712,10 @@ struct
   *copyFormula:
   * Copies a formula's eigen variables. Used before performing eqL.
   ********************************************************************)
-  let copyFormula ?(copier=(Term.copy_eigen ())) (Formula(i,b,f)) =
+  let copyFormula ?(copier=(Term.copy_eigen ())) (Formula(i,f)) =
     let copyTerm t = copier t in
-    let rec copyFormula f = FOA.mapFormula copyFormula copyTerm f in
-    (Formula(i,b,copyFormula f))
+    let rec copyFormula () = FOA.mapFormula copyFormula copyTerm in
+    (Formula(i,(copyFormula ()).FOA.polf f))
 
   (********************************************************************
   *makeExistentialVar/makeUniversalVar/makeNablaVar:
@@ -832,10 +774,10 @@ struct
   * that matches the template along with its context in F.
   ********************************************************************)
   let findFormula template marker formulas =
-    O.debug ("Firstorder.findFormula: template: " ^
+ (*   O.debug ("Firstorder.findFormula: template: " ^
              (FOA.string_of_formula ~generic:[] template) ^ "\n") ;
     O.debug ("Firstorder.findFormula: template ast: " ^
-             (FOA.string_of_formula_ast ~generic:[] template) ^ "\n") ;
+             (FOA.string_of_formula_ast ~generic:[] template) ^ "\n") ; *)
     let rec find front formulas =
       match formulas with
         [] ->
