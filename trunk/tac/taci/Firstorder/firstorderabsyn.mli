@@ -57,6 +57,7 @@ type annotation = {
   control  : control ;
   junk     : junk
 }
+val defaultAnnotation : annotation
 
 (*  Formulas  *)
 type 'a polarized = ('a * 'a formula)
@@ -165,6 +166,7 @@ val abstractVarWithoutLambdas : term -> unit -> ('a,'a polarized,'a predicate,'a
 val abstractWithoutLambdas : string -> unit -> ('a,'a polarized,'a predicate,'a abstraction,'a formula) map_formula
 
 val apply : term list -> 'a abstraction -> 'a abstraction option
+val fullApply : term list -> 'a abstraction -> 'a polarized option
 val eliminateNablas : term list -> ('a, 'a polarized, term list -> 'a formula, 'a abstraction, 'a formula) map_formula
 
 val applyFixpoint : 'a abstraction -> ('a, 'a polarized option, 'a predicate option, 'a abstraction option, 'a formula option) map_formula
@@ -186,3 +188,6 @@ val predicateofDefinition : 'a definition -> 'a predicate
 
 val getTermHeadAndArgs : term -> (string * term list) option
 
+val negativeFormula : annotation formula -> annotation polarized
+val positiveFormula : annotation formula -> annotation polarized
+val freeze : annotation -> annotation

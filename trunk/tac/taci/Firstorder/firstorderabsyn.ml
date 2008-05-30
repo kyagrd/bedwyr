@@ -50,11 +50,19 @@ type annotation = {
   control  : control ;
   junk     : junk
 }
+  
+let defaultAnnotation =
+  {polarity = Negative;
+   freezing = Unfrozen;
+   control = Normal;
+   junk = Clean}
+
+let freeze a = { a with freezing = Frozen }
 
 (*  Formulas  *)
 type 'a polarized = ('a * 'a formula)
 
-and 'a predicate = 
+and 'a predicate =
     FixpointFormula of fixpoint * string * (string * progress) list * 'a abstraction
   | DBFormula of int * string * int
   | AtomicFormula of string
@@ -68,6 +76,9 @@ and 'a formula =
 and 'a abstraction =
     AbstractionFormula of string * 'a abstraction
   | AbstractionBody of 'a polarized
+
+let negativeFormula f = { defaultAnnotation with polarity = Negative },f
+let positiveFormula f = { defaultAnnotation with polarity = Positive },f
 
 (*  Patterns  *)
 type fixpoint_pattern =
@@ -393,6 +404,10 @@ let rec apply terms formula =
         else
           None
 
+let fullApply args f = match apply args f with
+  | Some (AbstractionBody formula) -> Some formula
+  | _ -> None
+
 type state = Term.state
 type unifyresult =
     UnifyFailed
@@ -465,8 +480,10 @@ let eliminateNablas tv =
 
        formf = (function
         (** Generic abstraction commutes with all connectives. *)
-        | BinaryFormula (c,a,b)    -> BinaryFormula (c, (f pv tv).polf a, (f pv tv).polf b)
-        | EqualityFormula    (u,v) -> EqualityFormula (tf u, tf v)
+        | BinaryFormula (c,a,b) ->
+            BinaryFormula (c, (f pv tv).polf a, (f pv tv).polf b)
+        | EqualityFormula (u,v) ->
+            EqualityFormula (tf u, tf v)
 	| QuantifiedFormula(q,form) -> begin match q with
 	      Pi
 	    | Sigma -> QuantifiedFormula(q,(f pv tv).abstf form)
@@ -475,10 +492,12 @@ let eliminateNablas tv =
             let tv = head :: tv in
               begin match apply [head] form with
                 | None -> failwith "not a formula"
-                | Some (AbstractionBody (form)) -> snd ((f pv tv).polf form) 
-                  
-                  (* A nabla's polarity has to be the same as the polarity behind it *)
-                | Some (AbstractionFormula _) -> failwith "nabla elimination was incomplete"
+                | Some (AbstractionBody (form)) ->
+                    (* A nabla's polarity has to be
+                     * the same as the polarity behind it. TODO what's that ? *)
+                    snd ((f pv tv).polf form)
+		| Some (AbstractionFormula _) ->
+                    failwith "nabla elimination was incomplete"
               end
 	    end
         | ApplicationFormula (form,terms) -> (f pv tv).predf form terms) ;
@@ -773,7 +792,7 @@ let matchFormula pattern formula =
     | (EqualityPattern(t1, t2), EqualityFormula(t1', t2')) ->
         (success (rightUnify t1 t1')) && (success (rightUnify t2 t2'))
     | (QuantifiedPattern(q, f), QuantifiedFormula(q', f')) ->
-        (q = q')
+        (q = q') (* && TODO *)
     | (ApplicationPattern(head,tl), ApplicationFormula(head',tl')) ->
         (matchPredicates head head') &&
         (List.for_all success (List.map2 rightUnify tl tl'))

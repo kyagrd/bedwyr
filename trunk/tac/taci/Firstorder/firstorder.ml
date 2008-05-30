@@ -63,11 +63,15 @@ struct
   (** A formula has a local level *)
   type formula = Formula of (int * (FOA.annotation FOA.polarized))
 
-  let string_of_polarity = function FOA.Positive -> "+" |FOA.Negative -> "-"
-  let string_of_freezing = function FOA.Frozen -> "*" |FOA.Unfrozen -> " "
-  let string_of_control = function FOA.Normal -> " " |FOA.Focused -> "#" |FOA.Delayed -> "?"
+  let string_of_polarity = function FOA.Positive -> "+" | FOA.Negative -> "-"
+  let string_of_freezing = function FOA.Frozen -> "*" | FOA.Unfrozen -> " "
+  let string_of_control =
+    function FOA.Normal -> " " | FOA.Focused -> "#" | FOA.Delayed -> "?"
 
-  let string_of_annotation a = (string_of_control a.FOA.control)^(string_of_freezing a.FOA.freezing)^(string_of_polarity a.FOA.polarity)
+  let string_of_annotation a =
+    (string_of_control a.FOA.control)^
+    (string_of_freezing a.FOA.freezing)^
+    (string_of_polarity a.FOA.polarity)
 
   let string_of_formula (Formula(local,(a,t))) =
     let generic = Term.get_dummy_names ~start:1 local "n" in
@@ -388,25 +392,18 @@ struct
     in ff []
 
   (********************************************************************
-  *abstractFixpointDefinition:
-  * Given a definition of the form FOA.MuFormula() or FOA.NuFormula(),
-  * creates an abstracted application term that may be passed to 
-  * FOA.applyFixpoint.
+  * abs_of_pred:
+  * eta-expand (mu B) which is a predicate into (x..\ mu B x) which is
+  * an abstraction.
   ********************************************************************)
-  let abstractFixpointDefinition p f argnames =
-    match f with
-      | FOA.FixpointFormula(_,_,argnames,_) ->
-           let args' = List.map
-            (fun (_,n) -> Term.fresh ~name:"*" ~lts:0 ~ts:0 ~tag:Term.Constant)
-            argnames in
-          let f' = FOA.AbstractionBody(p,FOA.ApplicationFormula(f, args')) in
-          let f'' = (List.fold_right (fun t -> (FOA.abstractVar t).FOA.abstf) args' f') in
-          (* let () =
-            O.debug ("Firstorder.abstractFixpointDefinition: " ^
-                     (FOA.string_of_formula_ast ~generic:[] f'') ^ "\n")
-          in *)
-          f''
-      | _ -> assert false
+  let abs_of_pred arity pol pred =
+    let args' =
+      Listutils.mapi
+        (fun _ -> Term.fresh ~name:"*" ~lts:0 ~ts:0 ~tag:Term.Constant)
+        arity
+    in
+    let f' = FOA.AbstractionBody(pol,FOA.ApplicationFormula(pred, args')) in
+      List.fold_right (fun t -> (FOA.abstractVar t).FOA.abstf) args' f'
 
   (********************************************************************
   *parseTemplate:
@@ -415,19 +412,21 @@ struct
   * checks to see if the passed template is surrounded in brackets.  If
   * it is, the resulting template is flagged as being "focused".
   ********************************************************************)
-  let parseTemplate defs t =
-    try	let formula = Firstorderparser.toplevel_pattern Firstorderlexer.token (Lexing.from_string t) in
-      Some ((replaceApplications defs).FOA.polp formula)
+  let parseTemplate t =
+    try
+      Some
+       (Firstorderparser.toplevel_pattern
+         Firstorderlexer.token (Lexing.from_string t))
     with
         FOA.SyntaxError(s) ->
-          (O.error (s ^ ".\n");
-             None)
+          O.error (s ^ ".\n");
+          None
       | FOA.SemanticError(s) ->
-          (O.error (s ^ ".\n");
-           None)
+          O.error (s ^ ".\n");
+          None
       | Parsing.Parse_error ->
-          (O.error "Syntax error.\n";
-           None)
+          O.error "Syntax error.\n";
+          None
 
   (********************************************************************
   *parseFormula:
@@ -460,6 +459,8 @@ struct
       | Parsing.Parse_error ->
           (O.error "Syntax error.\n";
           None)
+
+  let parseInvariant defs t = assert false
 
   (********************************************************************
   *parseDefinition:
@@ -711,6 +712,7 @@ struct
   (********************************************************************
   *copyFormula:
   * Copies a formula's eigen variables. Used before performing eqL.
+  * TODO isn't it enough to work on FOA.formulas ?
   ********************************************************************)
   let copyFormula ?(copier=(Term.copy_eigen ())) (Formula(i,f)) =
     let copyTerm t = copier t in
@@ -773,29 +775,23 @@ struct
   * Given a template and a list of formulas F, returns the first formula
   * that matches the template along with its context in F.
   ********************************************************************)
-  let findFormula template marker formulas =
- (*   O.debug ("Firstorder.findFormula: template: " ^
-             (FOA.string_of_formula ~generic:[] template) ^ "\n") ;
-    O.debug ("Firstorder.findFormula: template ast: " ^
-             (FOA.string_of_formula_ast ~generic:[] template) ^ "\n") ; *)
+  let findFormula template formulas =
     let rec find front formulas =
       match formulas with
         [] ->
           let () = O.debug "Firstorder.findFormula: not found.\n" in
           None
-      | formula::fs ->
-          let Formula(i,(marker',_),f) = formula in
-          if (marker = Nonfocused || marker = marker') &&
-             FOA.matchFormula template f then
+      | (Formula(_,formula) as f)::fs ->
+          if FOA.matchFormula template formula then
             let () =
               O.debug ("Firstorder.findFormula: found: " ^
-                       (string_of_formula formula) ^ ".\n")
+                       (string_of_formula f ^ ".\n"))
             in
-            Some(formula, List.rev front, fs)
+              Some(f, List.rev front, fs)
           else
-            find (formula::front) fs
+            find (f::front) fs
     in
-    find [] formulas
+      find [] formulas
 
   (********************************************************************
   *matchLeft, matchRight:
@@ -806,32 +802,18 @@ struct
   *   the whole left
   *   the whole right
   ********************************************************************)
-  let matchLeft pattern marker after sequent =
-    O.debug
-      ("Template: " ^ (FOA.string_of_formula_ast ~generic:[] pattern) ^ ".\n") ;
-    let lhs = 
-      if Option.isSome after then
-        Option.get after
-      else
-        sequent.lhs
-    in
+  let matchLeft pattern after sequent =
+    let lhs = match after with Some a -> a | None -> sequent.lhs in
     let rhs = sequent.rhs in
-    let result = findFormula pattern marker lhs in
+    let result = findFormula pattern lhs in
     match result with
       Some(f,before,after) -> Some(f,before,after,lhs,rhs)
     | None -> None
 
-  let matchRight pattern marker after sequent =
-    O.debug
-      ("Template: " ^ (FOA.string_of_formula_ast ~generic:[] pattern) ^ ".\n") ;
+  let matchRight pattern after sequent =
     let lhs = sequent.lhs in
-    let rhs =
-      if Option.isSome after then
-        Option.get after
-      else
-        sequent.rhs
-    in
-    let result = findFormula pattern marker rhs in
+    let rhs = match after with Some a -> a | None -> sequent.rhs in
+    let result = findFormula pattern rhs in
     match result with
       Some(f,before,after) -> Some(f,before,after,lhs,rhs)
     | None -> None
@@ -886,24 +868,24 @@ struct
         (G.invalidArguments (name ^ ": incorrect number of arguments."))
       else
       
-      let defaulttemplate =
-        parseTemplate session.definitions defaulttemplate in
+      let defaulttemplate = parseTemplate defaulttemplate in
       
       if Option.isSome defaulttemplate then
-        let (defaulttemplate, focus) = Option.get defaulttemplate in
+        let defaulttemplate = Option.get defaulttemplate in
         match args with
             [] ->
-              (makeTactical name (matchbuilder defaulttemplate focus) tactic session)
+              (makeTactical name (matchbuilder defaulttemplate) tactic session)
           | Absyn.String(s)::[] ->
-              let template = parseTemplate session.definitions s in
+              let template = parseTemplate s in
               if (Option.isSome template) then
-                let (template, focus') = Option.get template in
-                if (FOA.matchFormula defaulttemplate template) && (focus = focus') then
-                  (makeTactical name (matchbuilder template focus) tactic session)
-                else
-                  (G.invalidArguments (name ^ ": template does not match default"))
+                let template = Option.get template in
+                (* TODO check that template matches defaulttemplate so that
+                 * users don't get too surprised
+                 * if (FOA.matchFormula defaulttemplate template)
+                 * && (focus = focus') then *)
+                makeTactical name (matchbuilder template) tactic session
               else
-                  (G.invalidArguments (name ^ ": invalid template"))
+                (G.invalidArguments (name ^ ": invalid template"))
           | _ -> (G.invalidArguments (name ^ ": incorrect number of arguments"))
       else
         (G.invalidArguments (name ^ ": invalid default template."))
@@ -938,7 +920,8 @@ struct
   let atomic_init i p params sc fc =
     let rec attempts = function
       | [] -> fc ()
-      | Formula(i',b,FOA.AtomicFormula(p',params'))::formulas ->
+      | Formula(i',(_,FOA.ApplicationFormula(FOA.AtomicFormula p',params')))
+        ::formulas ->
           if p=p' && (i=i' || not Param.strictNabla) then
             begin match FOA.unifyList FOA.rightUnify params params' with
               | FOA.UnifySucceeded bind ->
@@ -958,14 +941,14 @@ struct
   (* This is currently rather weak. Comparing the bodies will eventually be
    * needed, but implies using Term.eq for the leafs. *)
   let fixpoint_eq p p' = match p,p' with
-    | FOA.MuFormula (name,_,_), FOA.MuFormula (name',_,_)
-    | FOA.NuFormula (name,_,_), FOA.NuFormula (name',_,_) -> name = name'
+    | FOA.FixpointFormula (f,name,_,_), FOA.FixpointFormula (f',name',_,_) ->
+        f = f' && name = name'
     | _ -> false
 
   let fixpoint_init i p params sc fc =
     let rec attempts = function
       | [] -> fc ()
-      | Formula(i',b,FOA.ApplicationFormula(p',params'))::formulas ->
+      | Formula(i',(_,FOA.ApplicationFormula(p',params')))::formulas ->
           if fixpoint_eq p p' && (i=i' || not Param.strictNabla) then
             begin match FOA.unifyList FOA.rightUnify params params' with
               | FOA.UnifySucceeded bind ->
@@ -982,18 +965,22 @@ struct
     in
       attempts
 
-  let unfold_fixpoint rulename name args body argnames mkseq sc fc =
+  let unfold_fixpoint rulename pol pred arity args mkseq sc fc =
+    let body =
+      match pred with
+        | FOA.FixpointFormula (_,_,_,body) -> body
+        | _ -> assert false
+    in
     match (* body (mu body) *)
-      FOA.applyFixpoint
-        (abstractFixpointDefinition name argnames) body
+      (FOA.applyFixpoint (abs_of_pred arity pol pred)).FOA.abstf body
     with
      | Some p' ->
-         begin match FOA.apply args p' with
+         begin match FOA.fullApply args p' with
            | Some mu' -> (* body (mu body) args *)
                sc rulename (mkseq mu')
-           | None ->
+           | _ ->
                O.impossible
-                 "unable to apply arguments to nu formula.\n" ;
+                 "unable to apply arguments to fixpoint formula.\n" ;
                fc ()
          end
      | None ->
@@ -1010,51 +997,25 @@ struct
           let (lvl'', aa') = makeArgs lvl' i aa in
             (lvl'',  a'::aa')
     in
-      match parseFormula session.definitions s with
-        | Some s ->
-            let (lvl',t') = makeArgs lvl i argnames in
-            begin match
-              FOA.apply t s, FOA.apply t' s, FOA.applyFixpoint s body
-            with
-              | Some st, Some st', Some bs ->
-                  begin match FOA.apply t' bs with
-                    | Some bst' -> Some (st,lvl',st',bst')
-                    | None ->
-                        O.impossible
-                          "unable to apply arguments to B(S).\n";
-                        None
-                  end
-              | _ ->
-                  O.error "invariant has incorrect arity.\n";
+    let (lvl',t') = makeArgs lvl i argnames in
+      begin match
+        FOA.fullApply t s, FOA.fullApply t' s,
+        (FOA.applyFixpoint s).FOA.abstf body
+      with
+        | Some st, Some st', Some bs ->
+            begin match FOA.fullApply t' bs with
+              | Some bst' -> Some (st,lvl',st',bst')
+              | None ->
+                  O.impossible
+                    "unable to apply arguments to B(S).\n";
                   None
             end
-        | None ->
-            O.impossible "cannot parse (co)invariant.\n";
+        | _ ->
+            O.error "invariant has incorrect arity.\n";
             None
+      end
 
-  (* TODO get rid of this temporary hard-coding...
-   * NOTE: logic variables are never "rigid", even though they might be
-   * substituted for "rigid" terms. *)
-  let normalize = Str.global_replace (Str.regexp "lift_") ""
-  let unfolding_progresses name args =
-    let name = normalize name in
-    let rec rigid t = match Term.observe (Norm.hnorm t) with
-      | Term.Lam (_,t) -> rigid t
-      | Term.App (t,_) -> rigid t
-      | Term.Var v when v.Term.tag = Term.Constant -> true
-      | _ -> false
-    in
-      if List.mem name ["nat";"even";"odd";"plus";"mult";"list";"half";
-                        "mem";"bind";"context";"ctxt";"one";"step"] then
-        rigid (List.hd args) (* first-arg based *)
-      else if List.mem name ["cp";"eq";"typeof";"move"] then
-        rigid (List.nth args 2)
-      else if List.mem name ["leq";"assoc"] then
-        rigid (List.hd (List.rev args)) (* last-arg based *)
-      else if List.mem name ["permute";"empty"] then
-        true (* non-recursive *)
-      else
-        false 
+  let unfolding_progresses argnames args = assert false
 
   type internal_sc =
     ?k:(unit -> unit) -> ?b:(Term.term list) -> string -> sequent list -> unit
@@ -1076,63 +1037,80 @@ struct
   let intro side matcher session arg =
 
     (* Apply a rule with its active formula on the left hand-side. *)
-    let left seq (Formula(i,b,f)) zip (sc:internal_sc) fc =
+    let left seq (Formula(i,f)) zip (sc:internal_sc) fc =
+      (* Propagate the focused flag from f to its subformulas. *)
+      let zip l =
+        zip (List.map
+               (fun (Formula(i,(a,sf))) ->
+                  Formula
+                    (i,
+                     ((if (fst f).FOA.control=FOA.Focused
+                          && a.FOA.control<>FOA.Delayed
+                       then { a with FOA.control=FOA.Focused } else a),
+                      sf)))
+               l)
+      in
       match f with
-        | FOA.AndFormula (l,r) ->
-            sc "and_l" [{ seq with lhs = zip [Formula(i,b,l);Formula(i,b,r)] }]
-        | FOA.OrFormula (l,r) ->
-            sc "or_l" [
-              { seq with lhs = zip [Formula(i,b,l)] };
-              { seq with lhs = zip [Formula(i,b,r)] }
-            ]
-        | FOA.ImplicationFormula (l,r) ->
-            sc "imp_l" [
-              { seq with lhs = zip [] ; rhs =
-                  if Param.intuitionistic then
-                    [Formula(i,b,l)]
-                  else
-                    Formula(i,b,l)::seq.rhs } ;
-              { seq with lhs = zip [Formula(i,b,r)] }
-            ]
-        | FOA.PiFormula f ->
-            let hint = match f with
-              | FOA.AbstractionFormula(hint,_) -> hint
-              | _ -> assert false
-            in
+        | _,FOA.BinaryFormula (conn,l,r) ->
+            begin match conn with
+              | FOA.And ->
+                  sc "and_l"
+                    [{ seq with lhs = zip [Formula(i,l);Formula(i,r)] }]
+              | FOA.Or ->
+                  sc "or_l" [
+                    { seq with lhs = zip [Formula(i,l)] };
+                    { seq with lhs = zip [Formula(i,r)] }
+                  ]
+              | FOA.Imp ->
+                  sc "imp_l" [
+                    { seq with lhs = zip [] ; rhs =
+                        if Param.intuitionistic then
+                          [Formula(i,l)]
+                        else
+                          Formula(i,l)::seq.rhs } ;
+                    { seq with lhs = zip [Formula(i,r)] }
+                  ]
+            end
+        | _,FOA.QuantifiedFormula (FOA.Pi,
+              (FOA.AbstractionFormula(hint,FOA.AbstractionBody _) as f)) ->
             let (lvl',var) = makeExistentialVar hint seq.lvl i in
-              begin match FOA.apply [var] f with
+              begin match FOA.fullApply [var] f with
                 | Some f' ->
                     sc "pi_l" ~b:[var]
-                      [{ seq with lvl=lvl' ; lhs = zip [Formula(i,b,f')] }]
-                | None -> fc ()
+                      [{ seq with lvl=lvl' ; lhs = zip [Formula(i,f')] }]
+                | _ -> fc ()
               end
-        | FOA.SigmaFormula f ->
-            let hint = match f with
-              | FOA.AbstractionFormula(hint,_) -> hint
-              | _ -> assert false
-            in
+        | _,FOA.QuantifiedFormula (FOA.Sigma,
+              (FOA.AbstractionFormula(hint,FOA.AbstractionBody _) as f)) ->
             let (lvl',var) = makeUniversalVar hint seq.lvl i in
-              begin match FOA.apply [var] f with
+              begin match FOA.fullApply [var] f with
                 | Some f' ->
                     sc "sigma_l" ~b:[var]
-                      [{ seq with lvl=lvl' ; lhs = zip [Formula(i,b,f')] }]
-                | None -> fc ()
+                      [{ seq with lvl=lvl' ; lhs = zip [Formula(i,f')] }]
+                | _ -> fc ()
               end
-        | FOA.NablaFormula f ->
+        | _,FOA.QuantifiedFormula (FOA.Nabla,
+              (FOA.AbstractionFormula(hint,FOA.AbstractionBody _) as f)) ->
             let (lvl',i',var) = makeNablaVar seq.lvl i in
-              begin match FOA.apply [var] f with
+              begin match FOA.fullApply [var] f with
                 | Some f' ->
                     sc "nabla_l"
-                      [{ seq with lvl=lvl' ; lhs = zip [Formula(i',b,f')] }]
-                | None -> fc ()
+                      [{ seq with lvl=lvl' ; lhs = zip [Formula(i',f')] }]
+                | _ -> fc ()
               end
-        | FOA.EqualityFormula _ ->
+        | _,FOA.QuantifiedFormula _ -> assert false
+        | _,FOA.EqualityFormula _ ->
+            (* Copy the equality, then possibly instantiate its variables,
+             * these instantiations will be taken into account when copying
+             * the rest of the sequent. *)
             let copier = Term.copy_eigen () in
             let copy = List.map (copyFormula ~copier) in
-              begin match copyFormula ~copier (Formula(i,b,f)) with
-                | Formula(i,b,FOA.EqualityFormula(t1,t2)) ->
+              begin match copyFormula ~copier (Formula(i,f)) with
+                | Formula(_,(_,FOA.EqualityFormula(t1,t2))) ->
                     begin match FOA.leftUnify t1 t2 with
-                      | FOA.UnifyFailed -> sc "eq_l" []
+                      | FOA.UnifyFailed ->
+                          (* TODO check side effect *)
+                          sc "eq_l" []
                       | FOA.UnifySucceeded bind ->
                           let fc () = FOA.undoUnify bind ; fc () in
                             sc "eq_l" ~k:fc [{seq with lhs = copy (zip []) ;
@@ -1143,10 +1121,8 @@ struct
                     end
                 | _ -> assert false
               end
-        | FOA.AtomicFormula (p,params) ->
-            if p = "false" then sc "false" [] else
-              atomic_init i p params (fun k -> sc "init" [] ~k) fc seq.rhs
-        | FOA.ApplicationFormula (p,args) ->
+        | pol,FOA.ApplicationFormula (p,args) ->
+            let arity = List.length args in
             let unfold_fixpoint rule_name name args body argnames sc fc =
               (* TODO
                * The "rigidity" test should only be used on particular
@@ -1160,13 +1136,14 @@ struct
               in
               let mkseq f =
                 [{ seq with bound = bound ;
-                            lhs = zip [Formula(i,b,f)] }]
+                            lhs = zip [Formula(i,f)] }]
               in
                 if out_of_bound bound then fc () else
-                  unfold_fixpoint rule_name p args body argnames mkseq sc fc
+                  unfold_fixpoint rule_name pol p arity args mkseq sc fc
             in
             begin match p with
-              | FOA.NuFormula (name,argnames,body) ->
+              | FOA.FixpointFormula (FOA.CoInductive,name,argnames,body) ->
+                  assert (arity = List.length argnames) ;
                   (* This is synchronous. *)
                   begin match arg with
                     | Some "unfold" ->
@@ -1184,7 +1161,9 @@ struct
                           seq.rhs
                     | s -> assert false
                   end
-              | FOA.MuFormula (name,argnames,body) ->
+              | FOA.FixpointFormula (FOA.Inductive,name,argnames,body) ->
+                  let argnames = List.map fst argnames in
+                  assert (arity = List.length argnames) ;
                   (* This is asynchronous.
                    * If [arg] is "unfold", do mu_l, otherwise treat it as an
                    * invariant, otherwise infer an invariant. *)
@@ -1192,15 +1171,16 @@ struct
                     | Some "unfold" ->
                         unfold_fixpoint "mu_l" name args body argnames sc fc
                     | Some s ->
+                        let s = parseInvariant session s in
                         (* TODO bound check *) begin match
                           fixpoint_St_St'_BSt'
                             ~session ~lvl:seq.lvl ~i
                             ~body ~argnames ~s ~t:args
                         with
                           | Some (st,lvl',st',bst') ->
-                              let st   = Formula (i,b,st) in
-                              let st'  = Formula (0,b,st') in
-                              let bst' = Formula (0,b,bst') in
+                              let st   = Formula (i,st) in
+                              let st'  = Formula (0,st') in
+                              let bst' = Formula (0,bst') in
                                 sc "induction" [
                                   { seq with lhs = zip [st] } ;
                                   { seq with lvl = lvl' ;
@@ -1214,26 +1194,26 @@ struct
                         in
 			let rhs =
                           (* ... |- H1,..,Hn becomes H1\/..\/Hn *)
+                          (* TODO don't ignore generic context *)
                           let rec s = function
                             | [] -> assert false
-                            | [f] -> getFormulaFormula f
-                            | f::l -> FOA.OrFormula (getFormulaFormula f, s l)
+                            | [Formula(_,f)] -> f
+                            | (Formula(_,pf))::l ->
+                                { FOA.defaultAnnotation
+                                  with FOA.polarity = FOA.Negative },
+                                FOA.BinaryFormula (FOA.Or, pf, s l)
                           in s seq.rhs
                         in
 			let lrhs =
                           (* H1, ..., Hn |- rhs becomes H1 => .. => Hn => rhs *)
                           let rec s = function
                             | [] -> rhs
-                            | f::l ->
-                                (* TODO Removing frozen formulas as here
-                                 * makes sense to avoid loops,
-                                 * but leaving them frozen would be best. *)
-                                if getFormulaMarker f = Nonfocused then
-                                  FOA.ImplicationFormula
-                                    (getFormulaFormula f,s l)
-                                else
-                                  s l
-                          in s (zip [])
+                            | Formula(_,f)::l ->
+                               { FOA.defaultAnnotation with
+                                   FOA.polarity = FOA.Negative },
+                               FOA.BinaryFormula (FOA.Imp, f, s l)
+                          in
+                          s (zip [(*TODO frozen version of what we induct on*)])
                         in
 			let fv,elrhs =
                           (* Essentially form
@@ -1245,140 +1225,141 @@ struct
                                   let lv,f = e lan la in
                                   let v = fresh an in
                                     v::lv,
-                                    FOA.ImplicationFormula
-                                      (FOA.EqualityFormula (v,a), f) 
+                                    FOA.negativeFormula
+                                      (FOA.BinaryFormula
+                                         (FOA.Imp,
+                                          FOA.positiveFormula
+                                            (FOA.EqualityFormula (v,a)),
+                                          f))
                               |_ -> assert false
                           in
                             e argnames (List.rev args)
                         in
                         (* Abstract universally over eigenvariables. *)
 			let getenv =
-                          Term.eigen_vars ((FOA.termsFormula lrhs)@args)
+                          Term.eigen_vars ((FOA.termsPolarized lrhs)@args)
                         in
 			let aelrhs =
                           List.fold_left
-                            (fun f v -> FOA.PiFormula (FOA.abstractVar v f))
+                            (fun f v ->
+                               FOA.negativeFormula
+                                 (FOA.QuantifiedFormula
+                                    (FOA.Pi, (FOA.abstractVar v).FOA.polf f)))
                             elrhs getenv
                         in
                         (* Abstract out the fv1..fvn. *)
-			let formula =
+			let invariant =
                           List.fold_left
-                            (fun f v -> FOA.abstractVar v f) aelrhs fv
+                            (fun f v -> (FOA.abstractVar v).FOA.abstf f)
+                            (FOA.AbstractionBody aelrhs)
+                            fv
                         in
-                        match FOA.applyFixpoint formula body with
-                         | Some f ->
-			     (match FOA.apply args f with
-                               | Some f ->
-                                   let bound = update_bound seq in
-                                   if out_of_bound bound then fc () else
-                                     sc "induction"
-                                       [{ seq with bound = bound ;
-                                                   lhs = zip [Formula(i,b,f)]}]
-                               | None -> fc ())
-                         | None -> fc ()
+                        let _,lvl',st',bst' =
+                          Option.get (fixpoint_St_St'_BSt'
+                                        ~session ~lvl:seq.lvl ~i ~body ~argnames
+                                        ~s:invariant ~t:args)
+                        in
+                        let bound = update_bound seq in
+                          if out_of_bound bound then fc () else
+                            sc "induction"
+                              [{ bound = bound ; lvl = lvl' ;
+                                 rhs = [Formula(0,bst')] ;
+                                 lhs = [Formula(0,st')] }]
                   end
-              | _ -> assert false
+              | FOA.AtomicFormula p ->
+                  if p = "false" then sc "false" [] else (* TODO boooh *)
+                    atomic_init i p args (fun k -> sc "init" [] ~k) fc seq.rhs
+              | FOA.DBFormula _ -> assert false
             end
-        | FOA.DBFormula _ | FOA.AbstractionFormula _
-        | FOA.MuFormula _ | FOA.NuFormula _ -> assert false
     in
 
     (* Apply a rule with its active formula on the right hand-side. *)
-    let right seq (Formula(i,b,f)) zip (sc:internal_sc) fc =
-      if debug then Printf.printf "µ %s\n%!" (xml_of_formula (Formula(i,b,f))) ;
+    let right seq (Formula(i,f)) zip (sc:internal_sc) fc =
       match f with
-        | FOA.AndFormula (l,r) ->
-            sc "and_r" [
-              { seq with rhs = zip [Formula(i,b,l)] };
-              { seq with rhs = zip [Formula(i,b,r)] }
-            ]
-        | FOA.OrFormula (l,r) ->
-            if not Param.intuitionistic then
-              sc "or_r" [{ seq with rhs = zip [Formula(i,b,l);Formula(i,b,r)] }]
-            else
-              let left  = { seq with rhs = [Formula(i,b,l)] } in
-              let right = { seq with rhs = [Formula(i,b,r)] } in
-                begin match arg with
-                  | Some s when s <> "" ->
-                      if s.[0] = 'l' then
-                        sc "left" [left]
-                      else
-                        sc "right" [right]
-                  | _ ->
-                      sc "left" [left] ~k:(fun () -> sc "right" [right])
-                end
-        | FOA.ImplicationFormula (l,r) ->
-            sc "imp_r" [{ seq with rhs = zip [Formula(i,b,r)] ;
-                                   lhs = Formula(i,b,l)::seq.lhs }]
-        | FOA.PiFormula f ->
-            let hint = match f with
-              | FOA.AbstractionFormula(hint,_) -> hint
-              | _ -> assert false
-            in
+        | _,FOA.BinaryFormula (conn,l,r) ->
+            begin match conn with
+              | FOA.Or ->
+                  if not Param.intuitionistic then
+                    sc "or_r"
+                      [{ seq with rhs = zip [Formula(i,l);Formula(i,r)] }]
+                  else
+                    let left  = { seq with rhs = [Formula(i,l)] } in
+                    let right = { seq with rhs = [Formula(i,r)] } in
+                      begin match arg with
+                        | Some s when s <> "" ->
+                            if s.[0] = 'l' then
+                              sc "left" [left]
+                            else
+                              sc "right" [right]
+                        | _ ->
+                            sc "left" [left] ~k:(fun () -> sc "right" [right])
+                      end
+              | FOA.And ->
+                  sc "and_r" [
+                    { seq with lhs = zip [Formula(i,l)] };
+                    { seq with lhs = zip [Formula(i,r)] }
+                  ]
+              | FOA.Imp ->
+                  sc "imp_r" [ { seq with lhs = Formula(i,l)::seq.lhs ;
+                                          rhs = zip [Formula(i,r)] } ]
+            end
+        | _,FOA.QuantifiedFormula (FOA.Pi,
+              (FOA.AbstractionFormula(hint,FOA.AbstractionBody _) as f)) ->
             let (lvl',var) = makeUniversalVar hint seq.lvl i in
-              begin match FOA.apply [var] f with
+              begin match FOA.fullApply [var] f with
                 | Some f' ->
                     sc "pi_r" ~b:[var]
-                      [{ seq with lvl=lvl' ; rhs = zip [Formula(i,b,f')] }]
-                | None -> fc ()
+                      [{ seq with lvl=lvl' ; rhs = zip [Formula(i,f')] }]
+                | _ -> fc ()
               end
-        | FOA.SigmaFormula f ->
-            let hint = match f with
-              | FOA.AbstractionFormula(hint,_) -> hint
-              | _ -> assert false
-            in
+        | _,FOA.QuantifiedFormula (FOA.Sigma,
+              (FOA.AbstractionFormula(hint,FOA.AbstractionBody _) as f)) ->
             let (lvl',var) = makeExistentialVar hint seq.lvl i in
-              begin match FOA.apply [var] f with
+              begin match FOA.fullApply [var] f with
                 | Some f' ->
                     sc "sigma_r" ~b:[var]
-                      [{ seq with lvl=lvl' ; rhs = zip [Formula(i,b,f')] }]
-                | None -> fc ()
+                      [{ seq with lvl=lvl' ; rhs = zip [Formula(i,f')] }]
+                | _ -> fc ()
               end
-        | FOA.NablaFormula f ->
+        | _,FOA.QuantifiedFormula (FOA.Nabla,
+              (FOA.AbstractionFormula(hint,FOA.AbstractionBody _) as f)) ->
             let (lvl',i',var) = makeNablaVar seq.lvl i in
-              begin match FOA.apply [var] f with
+              begin match FOA.fullApply [var] f with
                 | Some f' ->
                     sc "nabla_r"
-                      [{ seq with lvl=lvl' ; rhs = zip [Formula(i',b,f')] }]
-                | None -> fc ()
+                      [{ seq with lvl=lvl' ; rhs = zip [Formula(i',f')] }]
+                | _ -> fc ()
               end
-        | FOA.EqualityFormula (t1,t2) ->
+        | _,FOA.QuantifiedFormula _ -> assert false
+        | _,FOA.EqualityFormula (t1,t2) ->
             begin match FOA.rightUnify t1 t2 with
               | FOA.UnifySucceeded(bind) ->
                   let fc' () = FOA.undoUnify bind ; fc () in
                     sc "eq_r" ~k:fc' []
               | FOA.UnifyFailed -> fc ()
               | FOA.UnifyError(s) ->
-                  O.error (s ^ ".\n");
+                  O.error (s ^ ".\n"); (* TODO that's annoying ? *)
                   fc ()
             end
-        | FOA.AtomicFormula (p,params) ->
-            (* Since we don't check for the polarity of the atom,
-             * the initial rule will be able to happen in the asynchronous
-             * phase, which is a slight (meaningless) departure from the
-             * focusing system. *)
-            if p = "true" then sc "true" [] else
-              atomic_init i p params (fun k -> sc "init" [] ~k) fc seq.lhs
-        | FOA.ApplicationFormula (p,args) ->
+        | pol,FOA.ApplicationFormula (p,args) ->
+            let arity = List.length args in
             let unfold_fixpoint rule_name name args body argnames sc fc =
-              (* TODO
-               * The "rigidity" test should only be used on particular
-               * arguments of particular fixed points, not blindly as here. *)
               let bound =
-                if unfolding_progresses name args then
+                if unfolding_progresses argnames args then
                   seq.bound
                 else
                   update_bound seq
               in
               let mkseq f =
                 [{ seq with bound = bound ;
-                            rhs = zip [Formula(i,b,f)] }]
+                            lhs = zip [Formula(i,f)] }]
               in
                 if out_of_bound bound then fc () else
-                  unfold_fixpoint rule_name p args body argnames mkseq sc fc
+                  unfold_fixpoint rule_name pol p arity args mkseq sc fc
             in
             begin match p with
-              | FOA.MuFormula (name,argnames,body) ->
+              | FOA.FixpointFormula (FOA.Inductive,name,argnames,body) ->
+                  assert (arity = List.length argnames) ;
                   (* This is synchronous. *)
                   begin match arg with
                     | Some "unfold" ->
@@ -1394,36 +1375,119 @@ struct
                              unfold_fixpoint "mu_r"
                                name args body argnames sc fc)
                           seq.lhs
-                    | s -> assert false
+                    | s -> O.error "Invalid parameter." ; fc ()
                   end
-              | FOA.NuFormula (_,argnames,body) -> (* nu body args *)
+              | FOA.FixpointFormula (FOA.CoInductive,name,argnames,body) ->
+                  let argnames = List.map fst argnames in
+                  assert (arity = List.length argnames) ;
+                  (* This is asynchronous.
+                   * If [arg] is "unfold", do nu_r, otherwise treat it as an
+                   * invariant, otherwise infer an invariant. *)
                   begin match arg with
                     | Some "unfold" ->
                         unfold_fixpoint "nu_r" name args body argnames sc fc
                     | Some s ->
-                        begin match (* TODO bound check/update *)
+                        let s = parseInvariant session s in
+                        (* TODO bound check *) begin match
                           fixpoint_St_St'_BSt'
                             ~session ~lvl:seq.lvl ~i
                             ~body ~argnames ~s ~t:args
                         with
                           | Some (st,lvl',st',bst') ->
-                              let st   = Formula (i,b,st) in
-                              let st'  = Formula (0,b,st') in
-                              let bst' = Formula (0,b,bst') in
-                                sc "coinduction" [
+                              let st   = Formula (i,st) in
+                              let st'  = Formula (0,st') in
+                              let bst' = Formula (0,bst') in
+                                sc "induction" [
                                   { seq with rhs = zip [st] } ;
                                   { seq with lvl = lvl' ;
                                              lhs = [st'] ; rhs = [bst'] }
                                 ]
                           | None -> fc ()
                         end
-                    | None -> (* TODO automatic mode *)
-                        unfold_fixpoint "nu_r" name args body argnames sc fc
+                    | None ->
+			let fresh n =
+                          Term.fresh ~name:n ~ts:0 ~lts:0 ~tag:Term.Eigen
+                        in
+			let rhs =
+                          (* ... |- H1,..,Hn becomes H1\/..\/Hn *)
+                          (* TODO don't ignore generic context *)
+                          let rec s = function
+                            | [] -> assert false
+                            | [Formula(_,f)] -> f
+                            | (Formula(_,pf))::l ->
+                                { FOA.defaultAnnotation
+                                  with FOA.polarity = FOA.Negative },
+                                FOA.BinaryFormula (FOA.Or, pf, s l)
+                          in
+                          s (zip [(*TODO frozen version of what we induct on*)])
+                        in
+			let lrhs = (* TODO probably wrong, use /\ instead *)
+                          (* H1, ..., Hn |- rhs becomes H1 => .. => Hn => rhs *)
+                          let rec s = function
+                            | [] -> rhs
+                            | Formula(_,f)::l ->
+                               { FOA.defaultAnnotation with
+                                   FOA.polarity = FOA.Negative },
+                               FOA.BinaryFormula (FOA.Imp, f, s l)
+                          in
+                          s seq.lhs
+                        in
+			let fv,elrhs =
+                          (* Essentially form
+                           * fv1\..fvn\ fv1=arg1 /\ .. fvn=argn /\ lrhs *)
+                          let rec e lan la =
+                            match lan,la with
+                              | [],[] -> [],lrhs 
+                              | an::lan,a::la ->
+                                  let lv,f = e lan la in
+                                  let v = fresh an in
+                                    v::lv,
+                                    FOA.positiveFormula
+                                      (FOA.BinaryFormula
+                                         (FOA.And,
+                                          FOA.positiveFormula
+                                            (FOA.EqualityFormula (v,a)),
+                                          f))
+                              |_ -> assert false
+                          in
+                            e argnames (List.rev args)
+                        in
+                        (* Abstract universally over eigenvariables. *)
+			let getenv =
+                          Term.eigen_vars ((FOA.termsPolarized lrhs)@args)
+                        in
+			let aelrhs =
+                          List.fold_left
+                            (fun f v ->
+                               FOA.negativeFormula
+                                 (FOA.QuantifiedFormula
+                                    (FOA.Pi, (FOA.abstractVar v).FOA.polf f)))
+                            elrhs getenv
+                        in
+                        (* Abstract out the fv1..fvn. *)
+			let invariant =
+                          List.fold_left
+                            (fun f v -> (FOA.abstractVar v).FOA.abstf f)
+                            (FOA.AbstractionBody aelrhs)
+                            fv
+                        in
+                        let _,lvl',st',bst' =
+                          Option.get (fixpoint_St_St'_BSt'
+                                        ~session ~lvl:seq.lvl ~i ~body ~argnames
+                                        ~s:invariant ~t:args)
+                        in
+                        let bound = update_bound seq in
+                          if out_of_bound bound then fc () else
+                            sc "coinduction"
+                              [{ bound = bound ; lvl = lvl' ;
+                                 lhs = [Formula(0,bst')] ;
+                                 rhs = [Formula(0,st')] }]
                   end
-              | _ -> assert false
+              | FOA.AtomicFormula p ->
+                  if p = "true" then sc "true" [] else (* TODO boooh *)
+                    atomic_init i p args (fun k -> sc "init" [] ~k) fc seq.lhs
+              | FOA.DBFormula _ -> assert false
             end
-        | FOA.DBFormula _ | FOA.AbstractionFormula _
-        | FOA.MuFormula _ | FOA.NuFormula _ -> assert false
     in
 
     (* Wrap up: try to find a matched formula, apply a rule on it. *)
@@ -1450,7 +1514,8 @@ struct
         | `Left -> G.makeTactical left
         | `Right -> G.makeTactical right
 
-  (** Utility for creating matchers easily. *)
+  (** Utility for creating matchers easily. TODO get rid of that, and only
+    * use patterns. *)
   let make_matcher test formulas =
     let rec aux acc = function
       | f::tl -> if test f then Some (f,List.rev acc,tl) else aux (f::acc) tl
@@ -1462,9 +1527,11 @@ struct
   let specialize ?arg side default_matcher session args =
     match args with
       | [Absyn.String s] ->
-          begin match parseTemplate session.definitions s with
-            | Some (template,focus) ->
-                intro side (findFormula template focus) session arg
+          begin match parseTemplate s with
+            | Some template ->
+                intro
+                  side (findFormula template)
+                  session arg
             | None ->
                 O.error "invalid pattern" ; fun s sc fc -> fc ()
           end
@@ -1474,9 +1541,9 @@ struct
 
   (* Even more wrapping: pass a pattern instead of a matcher.. *)
   let pattern_tac ?arg side default_pattern session args =
-    match parseTemplate session.definitions default_pattern with
-      | Some (template,focus) ->
-          specialize ?arg side (findFormula template focus) session args
+    match parseTemplate default_pattern with
+      | Some (template) ->
+          specialize ?arg side (findFormula template) session args
       | None -> assert false
 
   (* {1 Specialized basic manual tactics} *)
@@ -1516,23 +1583,29 @@ struct
     | [Absyn.String i; Absyn.String p] -> pattern_tac `Right p ~arg:i session []
     | _ -> (fun _ _ fc -> O.error "Invalid arguments.\n" ; fc ())
 
-  let axiom_atom  =
-    specialize `Right (make_matcher
-                         (function
-                            | Formula(_,_,FOA.AtomicFormula _) -> true
-                            | _ -> false))
+  let axiom_atom =
+    specialize `Right
+      (make_matcher
+         (function
+            | Formula(_,(_,FOA.ApplicationFormula ((FOA.AtomicFormula _),_))) ->
+                true
+            | _ -> false))
   let axiom_mu =
     specialize `Right
       (make_matcher
          (function
-            | Formula(_,_,FOA.ApplicationFormula(FOA.MuFormula _,_)) -> true
+            | Formula(_,
+                (_,FOA.ApplicationFormula
+                    ((FOA.FixpointFormula (FOA.Inductive,_,_,_)),_))) -> true
             | _ -> false))
       ~arg:"init"
   let axiom_nu =
     specialize `Left
       (make_matcher
          (function
-            | Formula(_,_,FOA.ApplicationFormula(FOA.NuFormula _,_)) -> true
+            | Formula(_,
+                (_,FOA.ApplicationFormula
+                    ((FOA.FixpointFormula (FOA.CoInductive,_,_,_)),_))) -> true
             | _ -> false))
       ~arg:"init"
   let axiom s a =
@@ -1573,17 +1646,17 @@ struct
 
   let rotateL session params seqs success failure =
     match seqs with
-      | { lhs = [] } :: _ | [] -> failure ()
+      | { lhs = [] } :: _ -> failure ()
       | ({ lhs = l::ltl } as seq)::tl ->
           success [{ seq with lhs = ltl@[l] }] tl (fun p -> p) failure
-      | _ -> assert false
+      | [] -> assert false
 
   let rotateR session params seqs success failure =
     match seqs with
-      | [] -> failure ()
+      | ({ rhs = [] })::_ -> failure ()
       | ({ rhs = l::rtl } as seq)::tl ->
           success [{ seq with rhs = rtl@[l] }] tl (fun p -> p) failure
-      | _ -> assert false
+      | [] -> assert false
 
   (** {1 Meta-rules} *)
 
@@ -1631,7 +1704,8 @@ struct
               | None -> O.error "unable to parse lemma.\n" ; G.failureTactical
               | Some f ->
                   let pretactic = fun sequent sc fc ->
-                    let f' = Formula(0, (Nonfocused, Positive), f) in
+                    let f' = Formula (0,f) in
+                    (* TODO classical cut *)
                     let s1 = { sequent with rhs = [f'] } in
                     let s2 = { sequent with lhs = sequent.lhs @ [f'] } in
                     let pb = makeProofBuilder "cut" ~p:["formula",s] sequent in
@@ -1645,27 +1719,25 @@ struct
     * Apply all non-branching invertible rules.
     * Handling units (true/false) requires to work on atoms on both sides. *)
 
-  let simplify_matcher_l =
+  let simplify_matcher_l = (* TODO use annotations more ? *)
     make_matcher
-      (fun (Formula(i,b,f)) ->
+      (fun (Formula(i,(_,f))) ->
          match f with
-           | FOA.AndFormula _
-           | FOA.NablaFormula _
-           | FOA.SigmaFormula _
+           | FOA.BinaryFormula (FOA.And,_,_)
+           | FOA.QuantifiedFormula ((FOA.Nabla|FOA.Sigma),_)
            | FOA.EqualityFormula _
-           | FOA.AtomicFormula _ -> true
+           | FOA.ApplicationFormula ((FOA.AtomicFormula _),_) -> true
            | _ -> false)
 
   let simplify_matcher_r =
     make_matcher
-      (fun (Formula(i,b,f)) ->
+      (fun (Formula(i,(_,f))) ->
          match f with
-           | FOA.NablaFormula _
-           | FOA.PiFormula _
-           | FOA.ImplicationFormula _
+           | FOA.QuantifiedFormula ((FOA.Nabla|FOA.Pi),_)
+           | FOA.BinaryFormula (FOA.Imp,_,_)
            | FOA.EqualityFormula _
-           | FOA.AtomicFormula _ -> true
-           | FOA.OrFormula _ when not Param.intuitionistic -> true
+           | FOA.ApplicationFormula ((FOA.AtomicFormula _),_) -> true
+           | FOA.BinaryFormula (FOA.Or,_,_) -> not Param.intuitionistic
            | _ -> false)
 
   let simplifyTactical session args = match args with
@@ -1686,10 +1758,10 @@ struct
     let abstract seq =
       (* Compute the nabla-normal form of every formula in the sequent.
        * it may be more convenient to be able to target a specific one. *)
-      let abstract (Formula(i,m,form)) =
+      let abstract (Formula(i,form)) =
         let tv = List.map Term.nabla (n_downto_1 i) in
-        let form = FOA.eliminateNablas tv form in
-          Formula(0,m,form)
+        let form = (FOA.eliminateNablas tv).FOA.polf form in
+          Formula(0,form)
       in
         { seq with lhs = List.map abstract seq.lhs ;
                    rhs = List.map abstract seq.rhs }
@@ -1766,27 +1838,6 @@ struct
     * subformulas.
     * Hence, the "polarity" of mu/nu is currently fixed to resp. pos/neg. *)
 
-  let sync_on_l pol f =
-    match f with
-      (* | FOA.AndFormula _ -> true *)
-      | FOA.PiFormula _ | FOA.ImplicationFormula _ -> true
-      | FOA.AtomicFormula _  when pol = Negative -> true
-      | FOA.ApplicationFormula (FOA.NuFormula _, _) -> true
-      | _ -> false
-
-  let sync_on_r pol f =
-    match f with
-      | FOA.AndFormula _ -> true
-      | FOA.OrFormula _ when Param.intuitionistic -> true
-      | FOA.SigmaFormula _ | FOA.EqualityFormula _ -> true
-      | FOA.AtomicFormula _  when pol = Positive -> true
-      | FOA.ApplicationFormula (FOA.MuFormula _, _) -> true
-      | _ -> false
-
-  let fixpoint = function
-    | FOA.ApplicationFormula _ -> true
-    | _ -> false
-
   let cutThenTactical, cutRepeatTactical =
     let restorer () =
       let s = Term.save_state () in
@@ -1815,15 +1866,23 @@ struct
   (** In automatic mode, intro doesn't really need a session. *)
   let automatic_intro side matcher = intro side matcher dummy_session None
 
+  let fixpoint = function
+    | FOA.ApplicationFormula ((FOA.FixpointFormula _),_) -> true
+    | _ -> false
+
   (** The decide rule focuses on a synchronous formula.
     * This tactic takes a single sequent and its successes are single sequents
-    * too. *)
+    * too.
+    * The freeze tactic works the same way, even though it has nothing to do
+    * with decide. *)
   let focus,focusr,freeze1 =
-    let matcher fl =
-      make_matcher (fun (Formula(i,(m,p),f)) -> fl m p f)
+    let matcher fl = make_matcher (fun (Formula(i,f)) -> fl f) in
+    let focus (Formula(i,(a,f))) =
+      Formula (i,({a with FOA.control=FOA.Focused},f))
     in
-    let focus (Formula(i,(_,p),f)) = Formula (i,(Focused,p),f) in
-    let freeze (Formula(i,(_,p),f)) = Formula (i,(Frozen,p),f) in
+    let freeze (Formula(i,(a,f))) =
+      Formula (i,({a with FOA.freezing=FOA.Frozen},f))
+    in
 
     (* Find a formula on the right satisfying fr,
      * succeed with the sequent resulting of the application of focus to it.
@@ -1869,20 +1928,24 @@ struct
       (fun seq sc fc ->
          tac_l
            [] seq.lhs seq sc fc focus
-           (fun m p f -> m=Nonfocused && sync_on_l p f)
-           (fun m p f -> m=Nonfocused && sync_on_r p f)
+           (fun (a,_) -> a.FOA.control<>FOA.Focused &&
+                         a.FOA.polarity=FOA.Negative)
+           (fun (a,_) -> a.FOA.control<>FOA.Focused &&
+                         a.FOA.polarity=FOA.Positive)
            true),
       (fun seq sc fc ->
          tac_r
            [] seq.rhs seq sc fc focus
-           (fun m p f -> m=Nonfocused && sync_on_l p f)
-           (fun m p f -> m=Nonfocused && sync_on_r p f)
+           (fun (a,_) -> a.FOA.control<>FOA.Focused &&
+                         a.FOA.polarity=FOA.Negative)
+           (fun (a,_) -> a.FOA.control<>FOA.Focused &&
+                         a.FOA.polarity=FOA.Positive)
            true),
       (fun seq sc fc ->
          tac_l
            [] seq.lhs seq sc fc freeze
-           (fun m p f -> m=Nonfocused && fixpoint f)
-           (fun m p f -> m=Nonfocused && fixpoint f)
+           (fun (a,f) -> a.FOA.freezing=FOA.Unfrozen && fixpoint f)
+           (fun (a,f) -> a.FOA.freezing=FOA.Unfrozen && fixpoint f)
            true)
 
 
@@ -1890,13 +1953,17 @@ struct
   let unfocus =
     let matcher_l =
       make_matcher
-        (fun (Formula(i,(m,p),f)) -> m=Focused && not (sync_on_l p f))
+        (fun (Formula(i,(a,f))) ->
+           a.FOA.control=FOA.Focused && a.FOA.polarity=FOA.Positive)
     in
     let matcher_r =
       make_matcher
-        (fun (Formula(i,(m,p),f)) -> m=Focused && not (sync_on_r p f))
+        (fun (Formula(i,(a,f))) ->
+           a.FOA.control=FOA.Focused && a.FOA.polarity=FOA.Negative)
     in
-    let unfocus (Formula(i,(_,p),f)) = Formula (i,(Nonfocused,p),f) in
+    let unfocus (Formula(i,(a,f))) =
+      Formula (i,({ a with FOA.control = FOA.Normal },f))
+    in
       (fun seq ->
          match matcher_l seq.lhs with
            | Some (f,before,after) ->
@@ -1930,27 +1997,31 @@ struct
       cutRepeatTactical
         (G.orElseListTactical
            [ automatic_intro `Left
-               (make_matcher (fun (Formula(i,b,f)) ->
-                                not (fixpoint f || sync_on_l (snd b) f))) ;
+               (make_matcher
+                 (fun (Formula(i,(a,f))) ->
+                    not (fixpoint f || a.FOA.polarity=FOA.Negative))) ;
              automatic_intro `Right
-               (make_matcher (fun (Formula(i,b,f)) ->
-                                not (fixpoint f || sync_on_r (snd b) f))) ;
+               (make_matcher
+                 (fun (Formula(i,(a,f))) ->
+                    not (fixpoint f || a.FOA.polarity=FOA.Positive))) ;
              intro `Left
                (make_matcher (function
-                                | Formula(i,b,
+                                | Formula(i,(a,
                                     FOA.ApplicationFormula(
-                                      FOA.MuFormula(name,_,_),args)) ->
-                                    fst b <> Frozen &&
-                                    unfolding_progresses name args
+                                      FOA.FixpointFormula(
+                                        FOA.Inductive,_,argnames,_),args))) ->
+                                    a.FOA.freezing = FOA.Unfrozen &&
+                                    unfolding_progresses argnames args
                                 | _ -> false))
                dummy_session (Some "unfold") ;
              automatic_intro `Right
                (make_matcher (function
-                                | Formula(i,b,
+                                | Formula(i,(a,
                                     FOA.ApplicationFormula(
-                                      FOA.NuFormula(name,_,_),args)) ->
-                                    fst b <> Frozen &&
-                                    unfolding_progresses name args
+                                      FOA.FixpointFormula(
+                                        FOA.CoInductive,_,argnames,_),args))) ->
+                                    a.FOA.freezing = FOA.Unfrozen &&
+                                    unfolding_progresses argnames args
                                 | _ -> false)) ])
                                 
     (* TODO note that the treatment of fixed points is not based on polarities
@@ -1960,17 +2031,21 @@ struct
 
     let left_no_progress =
       make_matcher
-        (fun (Formula(i,(m,_),f)) ->
+        (fun (Formula(i,(a,f))) ->
            match f with
-             | FOA.ApplicationFormula (FOA.MuFormula (name,_,_), args) ->
-                 m <> Frozen && not (unfolding_progresses name args)
+             | FOA.ApplicationFormula
+                (FOA.FixpointFormula (FOA.Inductive,_,argnames,_), args) ->
+                a.FOA.freezing = FOA.Unfrozen &&
+                not (unfolding_progresses argnames args)
              | _ -> false)
     let right_no_progress =
       make_matcher
-        (fun (Formula(i,(m,_),f)) ->
+        (fun (Formula(i,(a,f))) ->
            match f with
-             | FOA.ApplicationFormula (FOA.NuFormula (name,_,_), args) ->
-                 m <> Frozen && not (unfolding_progresses name args)
+             | FOA.ApplicationFormula
+                (FOA.FixpointFormula (FOA.CoInductive,_,argnames,_), args) ->
+                a.FOA.freezing = FOA.Unfrozen &&
+                not (unfolding_progresses argnames args)
              | _ -> false)
 
     (** Apply a rule on the focused formula if it is synchronous. *)
@@ -1978,10 +2053,12 @@ struct
       G.orElseTactical
         (automatic_intro `Left
           (make_matcher
-             (fun (Formula(i,b,f)) -> fst b = Focused && sync_on_l (snd b) f)))
+             (fun (Formula(i,(a,f))) ->
+               a.FOA.control=FOA.Focused && a.FOA.polarity=FOA.Negative)))
         (automatic_intro `Right
           (make_matcher
-             (fun (Formula(i,b,f)) -> fst b = Focused && sync_on_r (snd b) f)))
+             (fun (Formula(i,(a,f))) ->
+               a.FOA.control=FOA.Focused && a.FOA.polarity=FOA.Positive)))
 
   (** Focused proof-search, starting with the async phase. *)
   let rec full_async s sc fc =
@@ -1993,7 +2070,7 @@ struct
     let async = cutThenTactical finite freeze in
     let seq = match sequents with [seq] -> seq | _ -> assert false in
       match left_no_progress seq.lhs with
-       | Some (Formula(i,(_,p),f), before, after) ->
+       | Some (Formula(i,(a,f)), before, after) ->
            (* We can do induction, and unfolding doesn't progress.
             * So we'll only try freezing, then induction.
             * Unfolding might sometimes yield simpler proofs,
@@ -2005,10 +2082,10 @@ struct
                     (String.make
                        (match seq.bound with Some b -> max 0 b | None -> 0)
                        ' ')
-                    (string_of_formula (Formula(i,(Nonfocused,p),f)));
+                    (string_of_formula (Formula(i,(FOA.freeze a,f))));
                 freeze
                   [{seq with lhs =
-                               before@[Formula(i,(Frozen,p),f)]@after }])
+                               before@[Formula(i,(FOA.freeze a,f))]@after }])
              (cutThenTactical
                 (* The cut is needed here so that auto_intro doesn't try
                  * to induct on another Mu on the left. *)
@@ -2018,23 +2095,23 @@ struct
                        (String.make
                           (match seq.bound with Some b -> max 0 b | None -> 0)
                           ' ')
-                       (string_of_formula (Formula(i,(Nonfocused,p),f))) ;
+                       (string_of_formula (Formula(i,(a,f)))) ;
                    automatic_intro `Left left_no_progress [seq])
                 async)
-             [(*stub*)] sc fc
+             [(*no args*)] sc fc
        | None ->
            begin match right_no_progress seq.rhs with
-             | Some (Formula(i,(_,p),f), before, after) ->
+             | Some (Formula(i,(a,f)), before, after) ->
                  G.orElseTactical
                    (fun _ ->
                       freeze
-                        [{seq with rhs =
-                                     before@[Formula(i,(Frozen,p),f)]@after }])
+                        [{seq with
+                          rhs = before@[Formula(i,(FOA.freeze a,f))]@after }])
                    (cutThenTactical
                      (fun _ ->
                         automatic_intro `Right right_no_progress [seq])
                      async)
-                   [(*stub*)] sc fc
+                   [(*no args*)] sc fc
              | None ->
                  (* Don't wait to collect all results of the async phase,
                   * check each immediately. *)
