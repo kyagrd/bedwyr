@@ -38,15 +38,9 @@
 **********************************************************************/
 %{
   module FOA = Firstorderabsyn
-  
-  let defaultAnnotation =
-    {FOA.polarity = FOA.Negative;
-    FOA.freezing = FOA.Unfrozen;
-    FOA.control = FOA.Normal;
-    FOA.junk = FOA.Clean}
 
   let default f =
-    (defaultAnnotation, f)
+    (FOA.defaultAnnotation, f)
 
   let frozen f =
     let (p,f') = f in
@@ -79,7 +73,7 @@
           (name::names, f'')
       | FOA.AbstractionBodyPattern(f) -> ([], f)
       | FOA.AnonymousAbstraction ->
-          ([FOA.anonymousBinder], (defaultAnnotation, FOA.AnonymousFormula))
+          ([FOA.anonymousBinder], (default FOA.AnonymousFormula))
 
   (********************************************************************
   *makeAbstractions:
