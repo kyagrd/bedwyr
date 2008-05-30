@@ -1015,7 +1015,14 @@ struct
             None
       end
 
-  let unfolding_progresses argnames args = assert false
+  let unfolding_progresses =
+    let rec rigid t = match Term.observe (Norm.hnorm t) with
+      | Term.Lam (_,t) -> rigid t
+      | Term.App (t,_) -> rigid t
+      | Term.Var v when v.Term.tag = Term.Constant -> true
+      | _ -> false
+    in
+      List.exists2 (fun (_,b) a -> b=FOA.Progressing && rigid a)
 
   type internal_sc =
     ?k:(unit -> unit) -> ?b:(Term.term list) -> string -> sequent list -> unit
@@ -1129,7 +1136,7 @@ struct
                * arguments of particular fixed points, not blindly as here.
                * This is already needed to handle "leq". *)
               let bound =
-                if unfolding_progresses name args then
+                if unfolding_progresses argnames args then
                   seq.bound
                 else
                   update_bound seq
@@ -1162,7 +1169,7 @@ struct
                     | s -> assert false
                   end
               | FOA.FixpointFormula (FOA.Inductive,name,argnames,body) ->
-                  let argnames = List.map fst argnames in
+                  let onlynames = List.map fst argnames in
                   assert (arity = List.length argnames) ;
                   (* This is asynchronous.
                    * If [arg] is "unfold", do mu_l, otherwise treat it as an
@@ -1175,7 +1182,7 @@ struct
                         (* TODO bound check *) begin match
                           fixpoint_St_St'_BSt'
                             ~session ~lvl:seq.lvl ~i
-                            ~body ~argnames ~s ~t:args
+                            ~body ~argnames:onlynames ~s ~t:args
                         with
                           | Some (st,lvl',st',bst') ->
                               let st   = Formula (i,st) in
@@ -1233,7 +1240,7 @@ struct
                                           f))
                               |_ -> assert false
                           in
-                            e argnames (List.rev args)
+                            e onlynames (List.rev args)
                         in
                         (* Abstract universally over eigenvariables. *)
 			let getenv =
@@ -1256,7 +1263,8 @@ struct
                         in
                         let _,lvl',st',bst' =
                           Option.get (fixpoint_St_St'_BSt'
-                                        ~session ~lvl:seq.lvl ~i ~body ~argnames
+                                        ~session ~lvl:seq.lvl ~i ~body
+                                        ~argnames:onlynames
                                         ~s:invariant ~t:args)
                         in
                         let bound = update_bound seq in
@@ -1378,7 +1386,7 @@ struct
                     | s -> O.error "Invalid parameter." ; fc ()
                   end
               | FOA.FixpointFormula (FOA.CoInductive,name,argnames,body) ->
-                  let argnames = List.map fst argnames in
+                  let onlynames = List.map fst argnames in
                   assert (arity = List.length argnames) ;
                   (* This is asynchronous.
                    * If [arg] is "unfold", do nu_r, otherwise treat it as an
@@ -1391,7 +1399,7 @@ struct
                         (* TODO bound check *) begin match
                           fixpoint_St_St'_BSt'
                             ~session ~lvl:seq.lvl ~i
-                            ~body ~argnames ~s ~t:args
+                            ~body ~argnames:onlynames ~s ~t:args
                         with
                           | Some (st,lvl',st',bst') ->
                               let st   = Formula (i,st) in
@@ -1450,7 +1458,7 @@ struct
                                           f))
                               |_ -> assert false
                           in
-                            e argnames (List.rev args)
+                            e onlynames (List.rev args)
                         in
                         (* Abstract universally over eigenvariables. *)
 			let getenv =
@@ -1473,7 +1481,8 @@ struct
                         in
                         let _,lvl',st',bst' =
                           Option.get (fixpoint_St_St'_BSt'
-                                        ~session ~lvl:seq.lvl ~i ~body ~argnames
+                                        ~session ~lvl:seq.lvl ~i ~body
+                                        ~argnames:onlynames
                                         ~s:invariant ~t:args)
                         in
                         let bound = update_bound seq in
