@@ -494,7 +494,7 @@ let eliminateNablas tv =
                 | None -> failwith "not a formula"
                 | Some (AbstractionBody (form)) ->
                     (* A nabla's polarity has to be the same as that of the
-                     * connective above it.
+                     * connective under it, because it will override it.
                      * It should be ensured by construction. *)
                     snd ((f pv tv).polf form)
 		| Some (AbstractionFormula _) ->
