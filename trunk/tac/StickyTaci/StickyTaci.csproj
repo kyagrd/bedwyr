@@ -48,9 +48,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="ScintillaNet, Version=2.0.2970.34417, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="ScintillaNet, Version=2.0.3068.26807, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\..\..\Downloads\Development\ScintillaNET\ScintillaNet.dll</HintPath>
+      <HintPath>.\ScintillaNet.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
