@@ -34,6 +34,7 @@ namespace StickyTaci
     private delegate void MethodInvoker1(object o1);
     private delegate void MethodInvoker2(object o1, object o2);
 
+
     private bool m_Dirty = false;
     public bool Dirty
     {
@@ -140,9 +141,12 @@ namespace StickyTaci
         TacticalsChanged = true;
 
         string tacticals = String.Join(" ", m_Tacticals.ToArray());
+        string commands = String.Join(" ", m_Commands.ToArray());
         InvokeDelegate(Scintilla, (MethodInvoker)delegate()
         {
           Scintilla.Lexing.Keywords[1] = tacticals;
+          Scintilla.AutoComplete.ListString = commands + " " + tacticals;
+          
         });
       }
     }
@@ -334,8 +338,11 @@ namespace StickyTaci
       Scintilla.Scroll += new EventHandler<ScrollEventArgs>(Scintilla_Scroll);
       Scintilla.ConfigurationManager.CustomLocation = "Data\\tac.xml";
       Scintilla.ConfigurationManager.Language = "taci";
-      Scintilla.Margins.Margin0.Width = 24;
+      Scintilla.Margins.Margin0.Width = 20;
       Scintilla.Margins.Margin1.Width = 0;
+      Scintilla.Margins.Margin2.Width = 20;
+      Scintilla.Indentation.TabWidth = 2;
+      Scintilla.Indentation.UseTabs = false;
 
       m_Ctrl = ctrl;
 
