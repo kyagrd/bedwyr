@@ -4,7 +4,7 @@
 #define "even x := (x=o);(sigma y\ (x=(s (s y)),(even y)))".
 #define "odd x := (x=(s o));(sigma y\ (x=(s (s y)),(odd y)))".
 #define "leq x y := (x=y);(sigma z\ (y=(s z),(leq x z)))".
-s
+
 #define
   "plus x y z :=
     (x = o, y = z);
