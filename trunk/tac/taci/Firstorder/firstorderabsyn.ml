@@ -493,8 +493,9 @@ let eliminateNablas tv =
               begin match apply [head] form with
                 | None -> failwith "not a formula"
                 | Some (AbstractionBody (form)) ->
-                    (* A nabla's polarity has to be
-                     * the same as the polarity behind it. TODO what's that ? *)
+                    (* A nabla's polarity has to be the same as that of the
+                     * connective above it.
+                     * It should be ensured by construction. *)
                     snd ((f pv tv).polf form)
 		| Some (AbstractionFormula _) ->
                     failwith "nabla elimination was incomplete"
