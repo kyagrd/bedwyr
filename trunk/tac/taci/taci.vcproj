@@ -220,6 +220,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\properties.ml"
+				>
+			</File>
+			<File
 				RelativePath=".\toplevel.ml"
 				>
 			</File>
@@ -263,6 +267,10 @@
 			</File>
 			<File
 				RelativePath=".\output.mli"
+				>
+			</File>
+			<File
+				RelativePath=".\properties.mli"
 				>
 			</File>
 			<File

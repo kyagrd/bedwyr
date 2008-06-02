@@ -1,4 +1,3 @@
-
 % Just checking the abstraction order.
 #theorem test "(nabla x1\x2\x3\ p x2 x3) => (nabla x1\x2\x3\ p x2 x3)".
 imp.

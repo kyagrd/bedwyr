@@ -1,3 +1,6 @@
+#open "basic_definitions.def".
+#theorem foo "pi x\ nat x => nat (s x)".
+
 % List definitions.
 #define "list X := (X = nil); (sigma H\ TL\ X = (cons H TL), (list TL))".
 #define

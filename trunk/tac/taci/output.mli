@@ -27,7 +27,6 @@
 * output may be formatted in different ways based on the way Taci is
 * being used.
 **********************************************************************)
-val showDebug : bool ref
 module type Output =
 sig
   val prompt : string -> unit

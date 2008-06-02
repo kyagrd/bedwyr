@@ -35,7 +35,7 @@ type command =
   | Clear
   | Undo of int
   | Redo of int
-  | Proof_Output of string
+  | ProofOutput of string
 
   | Theorem of string * string
   | Definitions of string list

@@ -45,12 +45,13 @@ No logic does nothing!
     (print_endline ("No Logic can't prove '" ^ name ^ "': " ^ s ^ ".");
     session)
     
+  let lemmas session = session
   let proved session = session
   let definitions ds session = session
   let operator name fix prec session = session
 
   type sequent = unit
-  let theorem_name session = ""
+  let theoremName session = ""
 
   let validSequent session = true
   let sequent session = Some((), ())

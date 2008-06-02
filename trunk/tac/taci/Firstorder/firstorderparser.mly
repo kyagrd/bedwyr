@@ -40,23 +40,23 @@
   module FOA = Firstorderabsyn
 
   let default f =
-    (FOA.defaultAnnotation, f)
+    (FOA.defaultPatternAnnotation, f)
 
   let frozen f =
     let (p,f') = f in
-    ({p with FOA.freezing = FOA.Frozen}, f')
+    ({p with FOA.freezing_pattern = Some FOA.Frozen}, f')
   
   let focused f =
     let (p,f') = f in
-    ({p with FOA.control = FOA.Focused}, f')
+    ({p with FOA.control_pattern = Some FOA.Focused}, f')
   
   let positive f =
     let (p,f') = f in
-    ({p with FOA.polarity = FOA.Positive}, f')
+    ({p with FOA.polarity_pattern = Some FOA.Positive}, f')
 
   let negative f =
     let (p,f') = f in
-    ({p with FOA.polarity = FOA.Negative}, f')
+    ({p with FOA.polarity_pattern = Some FOA.Negative}, f')
 
   let eqFormula f1 f2 = default (FOA.EqualityPattern(f1, f2))
   let binaryFormula f1 f2 c = default (FOA.BinaryPattern(c, f1, f2))
@@ -73,7 +73,7 @@
           (name::names, f'')
       | FOA.AbstractionBodyPattern(f) -> ([], f)
       | FOA.AnonymousAbstraction ->
-          ([FOA.anonymousBinder], (default FOA.AnonymousFormula))
+          ([FOA.anonymousBinder], (default (FOA.ApplicationPattern(FOA.AnonymousPredicate, []))))
 
   (********************************************************************
   *makeAbstractions:
@@ -109,11 +109,14 @@
     let result = FOA.getTermHeadAndArgs t in
     if (Option.isSome result) then
       let (head,args) = Option.get result in
-      default (FOA.ApplicationPattern(FOA.AtomicPattern(head), args))
+      if head = "_" then
+        default (FOA.ApplicationPattern(FOA.AnonymousPredicate, args))
+      else
+        default (FOA.ApplicationPattern(FOA.AtomicPattern(head), args))
     else
       raise (FOA.SemanticError("term is neither a first order application nor an atom"))
 
-  let anonymous () = FOA.makeAnonymousTerm ()
+  let anonymousTerm () = FOA.makeAnonymousTerm ()
   let atom t = Term.atom t
   
   let abstract id f =
@@ -169,10 +172,10 @@
 %nonassoc STAR
 
 %start toplevel_pattern toplevel_term toplevel_definition toplevel_invariant
-%type <Firstorderabsyn.annotation Firstorderabsyn.polarized_pattern> toplevel_pattern pattern
+%type <Firstorderabsyn.pattern_annotation Firstorderabsyn.polarized_pattern> toplevel_pattern pattern
 %type <Firstorderabsyn.term> toplevel_term
-%type <Firstorderabsyn.annotation Firstorderabsyn.predefinition> toplevel_definition
-%type <Firstorderabsyn.annotation Firstorderabsyn.abstraction_pattern> toplevel_invariant
+%type <Firstorderabsyn.pattern_annotation Firstorderabsyn.predefinition> toplevel_definition
+%type <Firstorderabsyn.pattern_annotation Firstorderabsyn.abstraction_pattern> toplevel_invariant
 
 %%
 toplevel_pattern
@@ -222,7 +225,7 @@ pattern
   | pattern PAR pattern   {positive (binaryFormula $1 $3 FOA.Or)}
   | pattern IMP pattern   {positive (binaryFormula $1 $3 FOA.Imp)}
   | term EQ term          {eqFormula $1 $3}
-
+  
   | PI abstracted_pattern     {quantified default FOA.Pi $2}
   | SIGMA abstracted_pattern  {quantified default FOA.Sigma $2}
   | NABLA abstracted_pattern  {quantified default FOA.Nabla $2}
@@ -233,8 +236,8 @@ pattern
   ;
 
 atom
-  : term            {negative (atomic $1)}
-  | term STAR       {negative (frozen (atomic $1))}
+  : term            {(atomic $1)}
+  | term STAR       {(frozen (atomic $1))}
   | PLUS term       {positive (atomic $2)}
   | PLUS term STAR  {positive (frozen (atomic $2))}
   | MINUS term      {negative (atomic $2)}
@@ -265,7 +268,7 @@ toplevel_term
   ;
 
 term
-  : lterm {application $1}
+  : lterm             {application $1}
   ;
 
 lterm
@@ -277,7 +280,7 @@ primaryterm
   : LPAREN term RPAREN  {$2}
   | ID                  {atom $1}
   | STRING              {Term.string $1}
-  | UNDERSCORE          {anonymous ()}   
+  | UNDERSCORE          {anonymousTerm ()}   
   | LPAREN binder term RPAREN
                         { let (name,free) = $2 in
                           let abs = Term.abstract (Term.atom name) $3 in
