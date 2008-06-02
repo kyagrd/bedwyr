@@ -215,14 +215,14 @@ arg
 pattern
   : MU UNDERSCORE     {default (FOA.ApplicationPattern(FOA.AnonymousMu, []))}
   | NU UNDERSCORE     {default (FOA.ApplicationPattern(FOA.AnonymousNu, []))}
-  | PI UNDERSCORE     {default (FOA.QuantifiedPattern(FOA.Pi, FOA.AnonymousAbstraction))}
-  | SIGMA UNDERSCORE  {default (FOA.QuantifiedPattern(FOA.Sigma, FOA.AnonymousAbstraction))}
+  | PI UNDERSCORE     {negative (default (FOA.QuantifiedPattern(FOA.Pi, FOA.AnonymousAbstraction)))}
+  | SIGMA UNDERSCORE  {positive (default (FOA.QuantifiedPattern(FOA.Sigma, FOA.AnonymousAbstraction)))}
   | NABLA UNDERSCORE  {default (FOA.QuantifiedPattern(FOA.Nabla, FOA.AnonymousAbstraction))}
 
   | pattern AND pattern   {positive (binaryFormula $1 $3 FOA.And)}
-  | pattern OR pattern    {negative (binaryFormula $1 $3 FOA.Or)}
+  | pattern OR pattern    {positive (binaryFormula $1 $3 FOA.Or)}
   | pattern WITH pattern  {negative (binaryFormula $1 $3 FOA.And)}
-  | pattern PAR pattern   {positive (binaryFormula $1 $3 FOA.Or)}
+  | pattern PAR pattern   {negative (binaryFormula $1 $3 FOA.Or)}
   | pattern IMP pattern   {negative (binaryFormula $1 $3 FOA.Imp)}
   | term EQ term          {eqFormula $1 $3}
   

@@ -86,6 +86,8 @@ rule command = parse
 | "theorem"     {THEOREM}
 | "define"      {DEFINE}
 
+| "set"         {SET}
+
 | '"' (instring as n) '"' {String.iter (function '\n' -> incrline lexbuf | _ -> ()) n ; STRING(n)}
 | name as n     {ID n}
 | _ as c  {raise (Absyn.SyntaxError("invalid character '" ^ (String.make 1 c) ^ "'"))}

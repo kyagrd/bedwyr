@@ -384,6 +384,7 @@ struct
     let handle input session =
       match input with
           Absyn.Exit -> raise (Exit session)
+        | Absyn.Set(p,v) -> Properties.setString p v; (session, false)
         | Absyn.Clear -> (O.clear (); (session, true))
         | Absyn.Help -> (showHelp (); (session, true))
         | Absyn.Undo(_) -> ((undo session), false)
