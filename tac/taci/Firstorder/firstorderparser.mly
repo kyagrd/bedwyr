@@ -60,7 +60,7 @@
 
   let id f = f
   
-  let eqFormula f1 f2 = default (FOA.EqualityPattern(f1, f2))
+  let eqFormula f1 f2 = positive (default (FOA.EqualityPattern(f1, f2)))
   let binaryFormula f1 f2 c = default (FOA.BinaryPattern(c, f1, f2))
  
   (********************************************************************
