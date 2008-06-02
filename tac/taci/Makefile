@@ -7,7 +7,8 @@ OCAMLYACC=ocamlyacc
 OCAMLLEX=ocamllex
 
 SOURCE= ndcore/term.ml ndcore/norm.ml ndcore/unify.ml ndcore/pprint.ml \
-	listutils.ml absyn.ml output.ml option.ml \
+	listutils.ml properties.ml\
+	absyn.ml output.ml option.ml \
 	logic.ml propositionalabsyn.ml \
 	Nologic/nologic.ml \
 	Propositional/propositionalparser.ml \
