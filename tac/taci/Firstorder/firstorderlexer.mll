@@ -57,7 +57,7 @@ rule token = parse
 | "-" {MINUS}
 | "*" {STAR}
 
-| "\\" {BSLASH}
+| "\\"      {BSLASH}
 | "pi"      {PI}
 | "sigma"   {SIGMA}
 | "nabla"   {NABLA}
@@ -70,4 +70,5 @@ rule token = parse
 | name as n {ID n}
 | '"' (instring as n) '"'
     {String.iter (function '\n' -> incrline lexbuf | _ -> ()) n ; STRING n}
+| _ as c {raise (Absyn.SyntaxError("invalid character '" ^ (String.make 1 c) ^ "'"))}
 | eof    {EOF}

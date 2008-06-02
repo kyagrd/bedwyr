@@ -68,6 +68,7 @@ sig
   val reset : unit -> session
   val prove : string -> string -> session -> session
   val proved : session -> session
+  val lemmas : session -> session
   val definitions : string list -> session -> session
   val undo : session -> session
   val redo : session -> session
@@ -77,7 +78,7 @@ sig
   val sequents : session -> sequent list
   val string_of_sequents : session -> string
   
-  val theorem_name : session -> string
+  val theoremName : session -> string
   
   type proof
   val proof : session -> proof proofbuilder
@@ -122,20 +123,6 @@ struct
   type logic_tactical = (L.logic_session, logic_tactic) tactical
     
   (********************************************************************
-  *split_nth:
-  * Returns a pair (l, r) where l is the first n elements of the given
-  * list and r is the rest.
-  ********************************************************************)
-  let split_nth i l =
-    let rec split' i l r =
-      match (i, r) with
-          (0, _) -> (List.rev l, r)
-        | (i',h::t) -> split' (i' - 1) (h :: l) (t)
-        | _ -> raise (Failure "split_nth")
-    in
-    split' i [] l
-
-  (********************************************************************
   *makeTactical:
   * Given a tactic, make a tactical that selects the first sequent
   * in the list, applies the given tactic, and propagates the new
@@ -146,7 +133,7 @@ struct
       (seq::sequents') ->
         let sc' newseqs builder k =
           let builder' pnll =
-            let (pnl, pl) = split_nth (List.length newseqs) pnll in
+            let (pnl, pl) = Listutils.split_nth (List.length newseqs) pnll in
             (builder pnl)::pl
           in
           (sc newseqs sequents' builder' k)
@@ -214,7 +201,7 @@ struct
             let sc' newseqs oldseqs pb k =
               let pb' proofs =
                 let l = (List.length newseqs + List.length oldseqs) in
-                let (pnew,pold) = split_nth l proofs in
+                let (pnew,pold) = Listutils.split_nth l proofs in
                 (pb pnew) @ pold
               in
               sc newseqs (oldseqs @ aa) pb' k
@@ -279,7 +266,7 @@ struct
         | Some old ->
             fun proofs ->
               let l = (List.length proofs) - nseqs in
-              let (potherseqs, pseqs) = split_nth l proofs in
+              let (potherseqs, pseqs) = Listutils.split_nth l proofs in
               (old potherseqs) @ (builder pseqs)
       in
 
@@ -335,7 +322,7 @@ struct
         let n = List.length realoldseqs in
         let builder' proofs =
           let l = (List.length proofs) - n in
-          let (pseqs, potherseqs) = split_nth l proofs in
+          let (pseqs, potherseqs) = Listutils.split_nth l proofs in
           oldbuilder ((builder pseqs) @ potherseqs)
         in
         (sc (newseqs @ oldseqs) realoldseqs builder' k)

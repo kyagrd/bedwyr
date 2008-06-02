@@ -81,6 +81,19 @@ let negativeFormula f = { defaultAnnotation with polarity = Negative },f
 let positiveFormula f = { defaultAnnotation with polarity = Positive },f
 
 (*  Patterns  *)
+type pattern_annotation = {
+  polarity_pattern : polarity option ;
+  freezing_pattern : freezing option ;
+  control_pattern  : control option ;
+  junk_pattern     : junk option
+}
+
+let defaultPatternAnnotation =
+  {polarity_pattern = None;
+   freezing_pattern = None;
+   control_pattern = None;
+   junk_pattern = None}
+
 type fixpoint_pattern =
     InductivePattern
   | CoinductivePattern
@@ -99,7 +112,6 @@ and 'a formula_pattern =
   | EqualityPattern of term * term
   | QuantifiedPattern of quantifier * 'a abstraction_pattern
   | ApplicationPattern of 'a predicate_pattern * term list
-  | AnonymousFormula
 
 and 'a abstraction_pattern =
     AbstractionPattern of string * 'a abstraction_pattern
@@ -128,6 +140,12 @@ type ('a,'b,'c,'d,'e) map_pattern =
   abstp : 'a abstraction_pattern -> 'd ;
   formp : 'a formula_pattern -> 'e}
 
+(********************************************************************
+*makeAnonymousTerm:
+********************************************************************)
+let makeAnonymousTerm () =
+  Term.fresh ~name:"_" ~tag:Term.Logic ~lts:max_int ~ts:max_int
+
 (**********************************************************************
 *getTermHeadAndArgs:
 * Gets the head and arguments of a term.  If the term isn't a constant,
@@ -147,9 +165,13 @@ let getTermHeadAndArgs t =
             Some (Term.get_name t', args)
           else
             None
-      | _ -> None)
+      | _ -> None)    
   | Term.Var(v) ->
-      Some (Term.get_name t, [])
+      (try
+        let h = Term.get_hint t in
+        Some(h, [])
+      with
+        Not_found -> Some(Term.get_name t, []))
   | _ -> None
 
 let getDefinitionArity (Definition(_,a,_,_)) = List.length a
@@ -216,8 +238,15 @@ let mapFormula2 f1 f2 x termsf a = {
     | QuantifiedFormula(q,f) -> QuantifiedFormula(q,(x a).abstf f)
     | ApplicationFormula(f,tl) -> ((x a).predf f (List.map termsf tl)))}
 
-let mapFormula3 f1 f2 x termsf a = {
-  polp = (fun (p,f) -> p,(x a).formp f) ; 
+let mapAnnotation p =
+  let get default x = if Option.isNone x then default else Option.get x in
+  {polarity = get Negative p.polarity_pattern;
+  freezing = get Unfrozen p.freezing_pattern;
+  control = get Normal p.control_pattern;
+  junk = get Clean p.junk_pattern}
+
+let mapPatternToFormula f1 x termsf a = {
+  polp = (fun (p,f) -> mapAnnotation p,(x a).formp f) ; 
   predp = (fun f tl -> ApplicationFormula((match f with 
       AtomicPattern(head) -> AtomicFormula(head)
     |_ -> assert false),tl)) ;
@@ -229,11 +258,11 @@ let mapFormula3 f1 f2 x termsf a = {
       BinaryPattern(c,l,r) -> BinaryFormula(c,(x a).polp l, (x a).polp r)
     | EqualityPattern(l,r) -> EqualityFormula(termsf l, termsf r)
     | QuantifiedPattern(q,f) -> QuantifiedFormula(q,(x a).abstp f)
-    | ApplicationPattern(f,tl) -> ((x a).predp f (List.map termsf tl))
-    | _ -> assert false)}
+    | ApplicationPattern(f,tl) -> ((x a).predp f (List.map termsf tl)))}
+
 
 let mapPattern x termsf = {
-  polp = (fun (p,f) -> p,(x ()).formp f) ; 
+  polp = (fun (p,f) -> (p,(x ()).formp f)) ; 
   predp = (function 
       AtomicPattern(head) -> AtomicPattern(head)
     | AnonymousPredicate -> AnonymousPredicate
@@ -247,8 +276,7 @@ let mapPattern x termsf = {
       BinaryPattern(c,l,r) -> BinaryPattern(c,(x ()).polp l, (x ()).polp r)
     | EqualityPattern(l,r) -> EqualityPattern(termsf l, termsf r)
     | QuantifiedPattern(q,f) -> QuantifiedPattern(q,(x ()).abstp f)
-    | ApplicationPattern(f,tl) -> ApplicationPattern((x ()).predp f,List.map termsf tl)
-    | AnonymousFormula -> AnonymousFormula)}
+    | ApplicationPattern(f,tl) -> ApplicationPattern((x ()).predp f, List.map termsf tl))}
 
 let rec termsPolarized (p,f) = termsFormula f
 and termsAbstraction = function  
@@ -267,39 +295,75 @@ let string_of_term ~generic names t =
 
 let rec string_of_formula ~generic ~names =
   let s = string_of_formula ~generic in
+  { polf = (fun (p,f) -> (s ~names).formf f) ;
+    predf = (function
+		    FixpointFormula(_,name,_,_)
+      | AtomicFormula(name) -> name
+	    | DBFormula(l,n,i) -> 
+	        (*  TODO: eep!  Such hackery! *)
+  		    let rec name l = if l=0 then n else "lift_" ^ name (l-1) in
+  		    name l) ;
 
- { polf = (fun (p,f) -> (s ~names).formf f) ;
+    abstf = (function
+		    AbstractionFormula (hint,f) ->
+		      let hint = Term.get_dummy_name hint in 
+		      let s = hint ^ "\\ " ^ ((s ~names:(hint::names)).abstf f) in 
+		        (Term.free hint; s)
+      | AbstractionBody (f) -> (s ~names).polf f) ; 
 
-   predf = (function
-		FixpointFormula(_,name,_,_)
-	      | AtomicFormula(name) -> name
-	      | DBFormula(l,n,i) -> 
-		  let rec name l = if l=0 then n else "lift_" ^ name (l-1) in name l) ;
+    formf = (function
+        BinaryFormula(c,l,r) ->
+		      let s1 = ((s ~names).polf l) in
+		      let s2 = ((s ~names).polf r) in
+		      "(" ^ s1 ^ (getConnective c) ^ s2 ^ ")"
+      | EqualityFormula(l,r) ->
+		      let s1 = (string_of_term ~generic names l) in
+		      let s2 = (string_of_term ~generic names r) in
+		      "(" ^ s1 ^ " = " ^ s2 ^ ")"
+	    | QuantifiedFormula(q,f) -> 
+	        let s1 = getQuantifierName q in 
+          let s2 = (s ~names).abstf f in 
+          (s1 ^ " " ^ s2)
+      | ApplicationFormula(f,tl) ->
+		      let args = (String.concat " " (List.map (string_of_term ~generic names) tl)) in
+		      let name = (s ~names).predf f in
+		      if args = "" then name else name ^ " " ^ args)}
 
-   abstf = (function
-		AbstractionFormula (hint,f) -> let hint = Term.get_dummy_name hint in 
-		let s = hint ^ "\\ " ^ ((s ~names:(hint::names)).abstf f) in 
-		  (Term.free hint; s)
-	      | AbstractionBody (f) -> (s ~names).polf f) ; 
+let rec string_of_pattern_ast =
+  let s = string_of_pattern_ast in
+  { polp = (fun (_,f) -> s.formp f) ;
+    predp = (function
+      | AtomicPattern(name) -> name
+      | AnonymousPredicate -> "<anon>"
+      | AnonymousMu -> "mu <anon>"
+      | AnonymousNu -> "nu <anon>") ;
 
-   formf = (function
-		BinaryFormula(c,l,r) ->
-		  let s1 = ((s ~names).polf l) in
-		  let s2 = ((s ~names).polf r) in
-		    "(" ^ s1 ^ (getConnective c) ^ s2 ^ ")"
-	      | EqualityFormula(l,r) ->
-		  let s1 = (string_of_term ~generic names l) in
-		  let s2 = (string_of_term ~generic names r) in
-		    "(" ^ s1 ^ " = " ^ s2 ^ ")"
-	      | QuantifiedFormula(q,f) -> 
-		  let s1 = getQuantifierName q and 
-		      s2 = (s ~names).abstf f in 
-		    (s1 ^ s2)
-	      | ApplicationFormula(f,tl) ->
-		  let args = (String.concat " " (List.map (string_of_term ~generic names) tl)) in
-		  let name = (s ~names).predf f in
-		    if args = "" then name else name ^ " " ^ args)}
-  
+    abstp = (function
+		    AbstractionPattern (hint,f) ->
+		      let s = hint ^ "\\ " ^ (s.abstp f) in 
+		      s
+      | AbstractionBodyPattern (f) -> s.polp f
+      | AnonymousAbstraction -> "_\\ _") ; 
+
+    formp = (function
+        BinaryPattern(c,l,r) ->
+		      let s1 = (s.polp l) in
+		      let s2 = (s.polp r) in
+		      (getConnectiveName c) ^ "(" ^ s1 ^ ", " ^ s2 ^ ")"
+      | EqualityPattern(l,r) ->
+      		let s1 = (string_of_term ~generic:[] [] l) in
+		      let s2 = (string_of_term ~generic:[] [] r) in
+		      "eq(" ^ s1 ^ ", " ^ s2 ^ ")"
+	    | QuantifiedPattern(q,f) -> 
+	        let s1 = getQuantifierName q in 
+          let s2 = s.abstp f in 
+          (s1 ^ " " ^ s2)
+      | ApplicationPattern(f,tl) ->
+		      let args = (String.concat " " (List.map (fun _ -> "<term>") tl)) in
+		      let name = "app(" ^ (s.predp f) in
+		      if args = "" then name ^ ")" else name ^ ", " ^ args ^ ")")}
+let string_of_pattern_ast = string_of_pattern_ast.polp
+
 let string_of_term_ast ~generic t =
   Pprint.term_to_string_full ~generic ~bound:[] t
 
@@ -347,7 +411,7 @@ let string_of_fixpoint = function
 let string_of_formula = string_of_formula ~names:[]
 
 let string_of_definition (Definition(name,arity,body,ind)) =
-  (string_of_fixpoint ind) ^ " " ^ ((string_of_formula ~generic:[]).abstf body)
+  (string_of_fixpoint ind) ^ " " ^ name ^ " " ^ ((string_of_formula ~generic:[]).abstf body)
     
 (**********************************************************************
 *abstract:
@@ -423,7 +487,6 @@ type unifyresult =
 * The list [pv] associates to one bound predicate name the local level
 * up to which it has already been raised.
 **********************************************************************)
-
 let eliminateNablas tv =
 
   let rec range_downto m n =
@@ -497,7 +560,7 @@ let eliminateNablas tv =
                      * connective under it, because it will override it.
                      * It should be ensured by construction. *)
                     snd ((f pv tv).polf form)
-		| Some (AbstractionFormula _) ->
+                | Some (AbstractionFormula _) ->
                     failwith "nabla elimination was incomplete"
               end
 	    end
@@ -522,8 +585,9 @@ let eliminateNablas tv =
         | AtomicFormula (name) -> 
             (* For undefined atoms, the only thing we can do
              * is lifting the name.. *)
-            let terms = List.map tf terms in ApplicationFormula(AtomicFormula(lift_pname tv name), terms)
-	| DBFormula (liftings,name,i) ->
+            let terms = List.map tf terms in
+            ApplicationFormula(AtomicFormula(lift_pname tv name), terms)
+	      | DBFormula (liftings,name,i) ->
             let s   = List.nth pv i in
             let s'  = List.length tv - s in
             let s'' = liftings in
@@ -637,11 +701,6 @@ let isAnonymousTerm t =
       (Term.get_hint t = "_")
   | _ -> false
 
-let isAnonymousFormula f =
-  match f with
-    AtomicFormula(head) -> (head = "_") (* && (t = []) *)
-  | _ -> false
-
 (**********************************************************************
 *getTermVarName:
 * Gets the name of the head of a term (if it is a constant).
@@ -741,18 +800,106 @@ let applyFixpoint argument =
     {polf = catch mapf.polf ; predf = catch mapf.predf ; abstf = catch mapf.abstf ; formf = catch mapf.formf}
 
 
-(********************************************************************
-*makeAnonymousTerm:
-********************************************************************)
-let makeAnonymousTerm () =
-  Term.fresh ~name:"_" ~tag:Term.Logic ~lts:max_int ~ts:max_int
+(**********************************************************************
+*matchPattern:
+* Match a pattern with a pattern.  If the match succeeds, returns true,
+* otherwise returns false.  Note that the less specific pattern should
+* be the first argument, so that you don't get false positives: if the
+* first argument is "pi _" and the second is "_", the result is false,
+* so that if you are using the first to require the second to have the
+* the same structure, it actually works.  See firstorderabsyn.ml for
+* examples of usage in this way.
+**********************************************************************)
+let rec matchPattern pattern1 pattern2 =
+(*  success: determines whether a unification result indicates
+      successful unification. *)
+  let success ur =
+    match ur with
+      UnifySucceeded(s) -> true
+    | _ -> false
+  in
+  
+  (*  Keep track of binding state to undo it later. *)
+  let state = Term.save_state () in
+  
+  (********************************************************************
+  *matchAnnotation:
+  * Matches two annotations, respecting 'unspecified' annotations.
+  ********************************************************************)
+  let matchAnnotation patternAnn formulaAnn =
+    (Option.isNone patternAnn.polarity_pattern ||
+      patternAnn.polarity_pattern = formulaAnn.polarity_pattern) &&
+    (Option.isNone patternAnn.freezing_pattern ||
+      patternAnn.freezing_pattern = formulaAnn.freezing_pattern) &&
+    (Option.isNone patternAnn.control_pattern ||
+      patternAnn.control_pattern = formulaAnn.control_pattern) &&
+    (Option.isNone patternAnn.junk_pattern ||
+      patternAnn.junk_pattern = formulaAnn.junk_pattern)
+  in
+
+  (********************************************************************
+  *matchPredicates:
+  * Matches predicate patterns.
+  ********************************************************************)
+  let matchPredicates pattern pred =
+    match (pattern, pred) with
+        (AtomicPattern(name), AtomicPattern(name')) -> name = name'
+      | (AnonymousMu, AnonymousMu)
+      | (AnonymousNu, AnonymousNu)
+      | (AnonymousPredicate, _) -> true
+      | _ -> false
+    in
+  
+  (********************************************************************
+  *matchAbstractionFormula:
+  ********************************************************************)
+  let rec matchAbstractionPattern pattern formula =
+    match (pattern, formula) with
+        (AbstractionPattern(binder, f), AbstractionPattern(binder', f')) ->
+          (binder = "" || binder = binder') && (matchAbstractionPattern f f')
+      | (AbstractionBodyPattern(f), AbstractionBodyPattern(f')) ->
+          (matchPattern f f')
+      | (AnonymousAbstraction, _) -> true
+      | _ -> false
+
+  (********************************************************************
+  *matchPatterns:
+  * Recurse over the structure of patterns, matching them.
+  ********************************************************************)
+  and matchPatterns pattern1 formula2 =
+    let (annotation1, pattern1) = pattern1 in
+    let (annotation2, pattern2) = pattern2 in
+    
+    (*  Polarity Check  *)
+    if not (matchAnnotation annotation1 annotation2) then
+      false
+    else
+    
+    match (pattern1, pattern2) with
+    | (BinaryPattern(c, l,r), BinaryPattern(c', l', r')) ->
+        (c = c') && (matchPatterns l l') && (matchPatterns r r')
+    | (EqualityPattern(t1, t2), EqualityPattern(t1', t2')) ->
+        (success (rightUnify t1 t1')) && (success (rightUnify t2 t2'))
+    | (QuantifiedPattern(q, f), QuantifiedPattern(q', f')) ->
+        (q = q') && (matchAbstractionPattern f f')
+    | (ApplicationPattern(head,tl), ApplicationPattern(head',tl')) ->
+        (matchPredicates head head') && (List.length tl = List.length tl') &&
+        (List.for_all success (List.map2 rightUnify tl tl'))
+    | _ -> false
+  in
+  let result = (matchPatterns pattern1 pattern2) in
+  
+  (*  Restore the binding state so later matches can work,
+      and return the result.  *)
+  (Term.restore_state state;
+  result)
 
 (**********************************************************************
 *matchFormula:
 * Match a pattern with a formula.  If the match succeeds, returns true,
 * otherwise returns false.
 **********************************************************************)
-let matchFormula pattern formula =
+let rec matchFormula pattern formula =
   (*  success: determines whether a unification result indicates
       successful unification. *)
   let success ur =
@@ -764,40 +911,77 @@ let matchFormula pattern formula =
   (*  Keep track of binding state to undo it later. *)
   let state = Term.save_state () in
   
-  let matchPredicates pattern pred =
+  (********************************************************************
+  *matchAnnotation:
+  * Matches two annotations, respecting 'unspecified' annotations.
+  ********************************************************************)
+  let matchAnnotation patternAnn formulaAnn =
+    (Option.isNone patternAnn.polarity_pattern ||
+      Option.get patternAnn.polarity_pattern = formulaAnn.polarity) &&
+    (Option.isNone patternAnn.freezing_pattern ||
+      Option.get patternAnn.freezing_pattern = formulaAnn.freezing) &&
+    (Option.isNone patternAnn.control_pattern ||
+      Option.get patternAnn.control_pattern = formulaAnn.control) &&
+    (Option.isNone patternAnn.junk_pattern ||
+      Option.get patternAnn.junk_pattern = formulaAnn.junk)
+  in
+
+  (********************************************************************
+  *matchPredicates:
+  * Matches a predicate pattern and a predicate formula.  This match
+  * 'hides' the bodies of fixpoints, comparing only names.
+  ********************************************************************)
+  let matchPredicates p1 p2 =
+    let (pattern, tl) = p1 in
+    let (pred, tl') = p2 in
     match (pattern, pred) with
         (AtomicPattern(name), FixpointFormula(_, name', _, _))
-      | (AtomicPattern(name), AtomicFormula(name')) -> name = name'
+      | (AtomicPattern(name), AtomicFormula(name')) ->
+          (name = name') && (List.length tl = List.length tl') &&
+          (List.for_all success (List.map2 rightUnify tl tl'))
+      | (AnonymousPredicate, _)
+      | (AnonymousMu, FixpointFormula(Inductive, _, _, _))
+      | (AnonymousNu, FixpointFormula(CoInductive, _, _, _)) -> true
       | _ -> false
   in
   
+  (********************************************************************
+  *matchAbstractionFormula:
+  ********************************************************************)
+  let rec matchAbstractionFormula pattern formula =
+    match (pattern, formula) with
+        (AbstractionPattern(binder, f), AbstractionFormula(binder', f')) ->
+          (binder = "" || binder = binder') && (matchAbstractionFormula f f')
+      | (AbstractionBodyPattern(f), AbstractionBody(f')) ->
+          (matchFormula f f')
+      | (AnonymousAbstraction, _) -> true
+      | _ -> false
+
   (********************************************************************
   *matchFormulas:
   * Recurse over the structure of a formula and a pattern, matching
   * them.
   ********************************************************************)
-  let rec matchFormulas pattern formula =
-    let (polarity, formula) = formula in
-    let (patternPolarity, pattern) = pattern in
+  and matchFormulas pattern formula =
+    let (annotation, formula) = formula in
+    let (patternAnnotation, pattern) = pattern in
     
     (*  Polarity Check  *)
-    if patternPolarity <> polarity then
+    if not (matchAnnotation patternAnnotation annotation) then
       false
     else
     
     match (pattern, formula) with
-      (AnonymousFormula, _) ->
-        true  
+    | (ApplicationPattern(AnonymousPredicate, _), _) -> true
+    | (ApplicationPattern(head,tl), ApplicationFormula(head',tl')) ->
+        matchPredicates (head,tl) (head', tl')
     | (BinaryPattern(c, l,r), BinaryFormula(c', l', r')) ->
         (c = c') && (matchFormulas l l') && (matchFormulas r r')
     | (EqualityPattern(t1, t2), EqualityFormula(t1', t2')) ->
         (success (rightUnify t1 t1')) && (success (rightUnify t2 t2'))
     | (QuantifiedPattern(q, f), QuantifiedFormula(q', f')) ->
-        (q = q') (* && TODO *)
-    | (ApplicationPattern(head,tl), ApplicationFormula(head',tl')) ->
-        (matchPredicates head head') &&
-        (List.for_all success (List.map2 rightUnify tl tl'))
-    | _ -> false
+        (q = q') && (matchAbstractionFormula f f')
+    | (p,f) -> false
   in
   let result = (matchFormulas pattern formula) in
   

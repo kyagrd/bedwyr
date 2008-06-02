@@ -74,7 +74,7 @@ command
   | RESET               {Absyn.Reset}
   | OPEN stringlist     {Absyn.Open $2}
   | INCLUDE stringlist  {Absyn.Include $2}
-  | PROOF_OUTPUT STRING {Absyn.Proof_Output $2}
+  | PROOF_OUTPUT STRING {Absyn.ProofOutput $2}
   
   | CLEAR       {Absyn.Clear}
   

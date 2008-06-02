@@ -16,11 +16,11 @@
 * along with this code; if not, write to the Free Software Foundation,*
 * Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA        *
 **********************************************************************)
-
+let () = Properties.setBool "output.debug" false
 let debug () =
   (print_endline "Debugging enabled.";
-  Output.showDebug := true;
-  Pprint.debug := true)
+  Properties.setBool "output.debug" true;
+  Pprint.debug := true) (*  Can't use a property because Pprint is part of ndcore.  *)
 
 let outputName = ref "console"
 let logicName = ref "none"

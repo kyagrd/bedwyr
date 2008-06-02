@@ -78,6 +78,14 @@ and 'a abstraction =
   | AbstractionBody of 'a polarized
 
 (*  Patterns  *)
+type pattern_annotation = {
+  polarity_pattern : polarity option ;
+  freezing_pattern : freezing option ;
+  control_pattern  : control option ;
+  junk_pattern     : junk option
+}
+val defaultPatternAnnotation : pattern_annotation
+
 type fixpoint_pattern =
     InductivePattern
   | CoinductivePattern
@@ -96,7 +104,6 @@ and 'a formula_pattern =
   | EqualityPattern of term * term
   | QuantifiedPattern of quantifier * 'a abstraction_pattern
   | ApplicationPattern of 'a predicate_pattern * term list
-  | AnonymousFormula
 
 and 'a abstraction_pattern =
     AbstractionPattern of string * 'a abstraction_pattern
@@ -132,9 +139,8 @@ type ('a,'b,'c,'d,'e) map_pattern =
   abstp : 'a abstraction_pattern -> 'd ;
   formp : 'a formula_pattern -> 'e}
 
-(*val makeAnonymousFormula : unit -> 'a weak
-val isAnonymousFormula : formula -> bool *)
-val string_of_pattern : polarity polarized_pattern -> string
+val string_of_pattern : pattern_annotation polarized_pattern -> string
+val string_of_pattern_ast : pattern_annotation polarized_pattern -> string
 
 val isAnonymousTerm : term -> bool 
 val makeAnonymousTerm : unit -> term
@@ -148,14 +154,30 @@ val mapFormula2 :
  ('a -> ('b, 'b polarized, term list -> 'b formula, 'b abstraction, 'b formula) map_formula)
  -> (term -> term) -> 'a -> ('b, 'b polarized, term list -> 'b formula, 'b abstraction, 'b formula) map_formula
 
-val mapFormula3 :
- (string -> 'a -> 'a) -> (string -> 'a -> 'a) -> 
- ('a -> ('b, 'b polarized, term list -> 'b formula, 'b abstraction, 'b formula) map_pattern)
- -> (term -> term) -> 'a -> ('b, 'b polarized, term list -> 'b formula, 'b abstraction, 'b formula) map_pattern
+val mapPatternToFormula :
+  (string -> 'a -> 'a) ->
+    ('a ->
+      (pattern_annotation, 'b polarized, term list -> 'b formula,
+        'b abstraction, 'c)
+    map_pattern) ->
+    (term -> term) ->
+    'a ->
+      (pattern_annotation, annotation * 'c, term list -> 'd formula,
+        'b abstraction, 'b formula) map_pattern
 
 val mapPattern :
-  (unit -> ('a,'a polarized_pattern,'a predicate_pattern,'a abstraction_pattern,'a formula_pattern) map_pattern) ->
-    (term -> term) -> ('a,'a polarized_pattern,'a predicate_pattern,'a abstraction_pattern,'a formula_pattern) map_pattern
+  (unit ->
+    (pattern_annotation,
+      pattern_annotation polarized_pattern,
+      pattern_annotation predicate_pattern,
+      pattern_annotation abstraction_pattern,
+      pattern_annotation formula_pattern) map_pattern) ->
+    (term -> term) ->
+    (pattern_annotation,
+      pattern_annotation polarized_pattern,
+      pattern_annotation predicate_pattern,
+      pattern_annotation abstraction_pattern,
+      pattern_annotation formula_pattern) map_pattern
 
 val termsPolarized : 'a polarized -> term list
 val abstract : string -> ('a, 'a abstraction, unit, 'a abstraction, unit) map_formula
@@ -180,7 +202,8 @@ val rightUnify : term -> term -> unifyresult
 val leftUnify : term -> term -> unifyresult
 val unifyList : (term -> term -> unifyresult) -> term list -> term list -> unifyresult
 
-val matchFormula : 'a polarized_pattern -> 'a polarized -> bool
+val matchPattern : pattern_annotation polarized_pattern -> pattern_annotation polarized_pattern -> bool
+val matchFormula : pattern_annotation polarized_pattern -> annotation polarized -> bool
 
 val getDefinitionArity : 'a definition -> int
 val getDefinitionBody : 'a definition -> 'a abstraction

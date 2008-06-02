@@ -80,6 +80,7 @@ sig
   val reset : unit -> session
   val prove : string -> string -> session -> session
   val proved : session -> session
+  val lemmas : session -> session
   val definitions : string list -> session -> session
   val undo : session -> session
   val redo : session -> session
@@ -89,7 +90,7 @@ sig
   val sequents : session -> sequent list
   val string_of_sequents : session -> string
 
-  val theorem_name : session -> string
+  val theoremName : session -> string
 
   type proof
   val proof : session -> proof proofbuilder

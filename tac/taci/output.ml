@@ -16,8 +16,6 @@
 * along with this code; if not, write to the Free Software Foundation,*
 * Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA        *
 **********************************************************************)
-let showDebug = ref false
-
 module type Output =
 sig
   val prompt : string -> unit
@@ -34,7 +32,7 @@ end
 module ConsoleOutput =
 struct
   let debug s =
-    if !showDebug then
+    if Properties.getBool "output.debug" then
       (print_string ("Debug: " ^ s);
       flush stdout)
     else
@@ -52,16 +50,19 @@ struct
   * not to have a standard way.
   **********************************************************************)
   let clear () =
-    if Sys.os_type = "Win32" then
-      let _ = Sys.command "cls" in
-      ()
-    else
-      let _ = Sys.command "clear" in
-      ()
+    try
+      if Sys.os_type = "Win32" then
+        let _ = Sys.command "cls" in
+        ()
+      else
+        let _ = Sys.command "clear" in
+        ()
+    with _ -> ()  (* Eep. *)
 
   let logics ls =
     let get (key, name) =
-      key ^ (String.make (20 - (String.length key)) ' ') ^ ":  " ^ name
+      let len = max (20 - (String.length key)) 0 in
+      key ^ (String.make len ' ') ^ ":  " ^ name
     in
     output ("Logics:\n  " ^ (String.concat "\n  " (List.map get ls)) ^ "\n")
   
@@ -95,7 +96,7 @@ struct
     escape' map s
 
   let debug s =
-    if !showDebug then
+    if Properties.getBool "output.debug" then
       print_string ("<Output type=\"debug\" text=\"" ^ (escape s) ^ "\"/>")
     else
       ()

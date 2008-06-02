@@ -16,6 +16,8 @@
 * along with this code; if not, write to the Free Software Foundation,*
 * Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA        *
 **********************************************************************)
+let () = Properties.setString "interpreter.proofoutput" ""
+
 module type Interpreter =
 sig
   type session
@@ -48,7 +50,6 @@ struct
   let timing = ref false
   
   (* If set, indicates a directory in which proofs should be stored. *)
-  let proof_output = ref None
 
   let home_unrelate =
     let home =
@@ -254,10 +255,10 @@ struct
             O.goal "" ;
             
             (*  Save the proof output.  *)
-            (match !proof_output with
-              | None -> ()
-              | Some dir ->
-                  let name = L.theorem_name s in
+            (match Properties.getString "interpreter.proofoutput" with
+              | "" -> ()
+              | dir ->
+                  let name = L.theoremName s in
                   let name = if name = "" then "proof" else name in
                   let filename = Printf.sprintf "%s/%s.xml" dir name in
                   let chan = open_out filename in
@@ -388,10 +389,10 @@ struct
         | Absyn.Undo(_) -> ((undo session), false)
         | Absyn.Redo(_) -> ((redo session), false)
         | Absyn.Reset -> (L.reset (), true)
-        | Absyn.Proof_Output name ->
+        | Absyn.ProofOutput name ->
             let dir = (home_unrelate name) in
             (O.output ("Proof output set to '" ^ dir ^ "'\n");
-            proof_output := Some dir;
+            Properties.setString "interpreter.proofoutput" dir;
             (session, true))
         | Absyn.Theorem(name, t) ->
             L.prove name t session, true
@@ -400,7 +401,8 @@ struct
         | Absyn.Timing(onoff) ->
             timing := onoff; (session, true)
         | Absyn.Debug(onoff) ->
-            Output.showDebug := onoff; (session, true)
+            (Properties.setBool "output.debug" onoff;
+            (session, true))
         | Absyn.Include(sl) ->
             (L.incl sl session, true)
         | Absyn.Open(sl) ->
