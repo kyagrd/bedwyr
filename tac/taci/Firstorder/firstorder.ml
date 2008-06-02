@@ -1122,25 +1122,26 @@ struct
     * The [intro] tactic will be conveniently wrapped in several specialized
     * tactics for the user, using [arg] to force choices. *)
   let intro side matcher session arg =
-    (*  Propagate the focused flag from f to its subformulas by modifying the
-        zip function to do so on each zipped formula. *)
-    let convertZip zip f l =
-      (*  propagate: copy the focused flag correctly. *)
-      let propagate (Formula(i,(a,sf))) =
-        let ann =
-          if (fst f).FOA.control = FOA.Focused && a.FOA.control <> FOA.Delayed then
-            { a with FOA.control=FOA.Focused }
-          else
-            a
-        in
-        Formula(i,(ann, sf))
+    (* Propagate the focused flag from f to its subformulas. Meant to be used as
+     * part of the zipper. *)
+    let propagate (super,_) (Formula(i,(sub,sf))) =
+      let ann =
+        (* TODO Make sure that release doesn't break because we automatically
+         * release here in case of a delay. Why not treat the delay there
+         * anyway.. because it would have been overwritten by a propagation. *)
+        if super.FOA.control = FOA.Focused &&
+          sub.FOA.control <> FOA.Delayed
+        then
+          { sub with FOA.control = FOA.Focused }
+        else
+          sub
       in
-      zip (List.map propagate l)
+        Formula(i,(ann,sf))
     in
-
     (* Apply a rule with its active formula on the left hand-side. *)
     let left seq (Formula(i,f)) zip (sc:internal_sc) fc =
-      let zip = convertZip zip f in
+      let propagate = propagate f in
+      let zip l = zip (List.map propagate l) in
       match f with
         | _,FOA.BinaryFormula (conn,l,r) ->
             begin match conn with
@@ -1155,10 +1156,11 @@ struct
               | FOA.Imp ->
                   sc "imp_l" [
                     { seq with lhs = zip [] ; rhs =
-                        if Param.intuitionistic then
-                          [Formula(i,l)]
-                        else
-                          Formula(i,l)::seq.rhs } ;
+                        let l = propagate (Formula (i,l)) in
+                          if Param.intuitionistic then
+                            [l]
+                          else
+                            l::seq.rhs } ;
                     { seq with lhs = zip [Formula(i,r)] }
                   ]
             end
@@ -1374,7 +1376,8 @@ struct
 
     (* Apply a rule with its active formula on the right hand-side. *)
     let right seq (Formula(i,f)) zip (sc:internal_sc) fc =
-      let zip = convertZip zip f in
+      let propagate = propagate f in
+      let zip l = zip (List.map propagate l) in
       match f with
         | _,FOA.BinaryFormula (conn,l,r) ->
             begin match conn with
@@ -1383,8 +1386,8 @@ struct
                     sc "or_r"
                       [{ seq with rhs = zip [Formula(i,l);Formula(i,r)] }]
                   else
-                    let left  = { seq with rhs = [Formula(i,l)] } in
-                    let right = { seq with rhs = [Formula(i,r)] } in
+                    let left  = { seq with rhs = [propagate (Formula(i,l))] } in
+                    let right = { seq with rhs = [propagate (Formula(i,r))] } in
                       begin match arg with
                         | Some s when s <> "" ->
                             if s.[0] = 'l' then
@@ -1400,7 +1403,8 @@ struct
                     { seq with rhs = zip [Formula(i,r)] }
                   ]
               | FOA.Imp ->
-                  sc "imp_r" [ { seq with lhs = Formula(i,l)::seq.lhs ;
+                  let l = propagate (Formula (i,l)) in
+                  sc "imp_r" [ { seq with lhs = l::seq.lhs ;
                                           rhs = zip [Formula(i,r)] } ]
             end
         | _,FOA.QuantifiedFormula (FOA.Pi,
