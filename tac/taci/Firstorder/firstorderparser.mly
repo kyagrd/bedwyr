@@ -58,6 +58,8 @@
     let (p,f') = f in
     ({p with FOA.polarity_pattern = Some FOA.Negative}, f')
 
+  let id f = f
+  
   let eqFormula f1 f2 = default (FOA.EqualityPattern(f1, f2))
   let binaryFormula f1 f2 c = default (FOA.BinaryPattern(c, f1, f2))
  
@@ -97,7 +99,7 @@
     (makeAbs' names formulaConstructor f')
 
   let quantified pol q body =
-    let make name body = pol (FOA.QuantifiedPattern(q, FOA.AbstractionPattern(name, body))) in
+    let make name body = pol (default (FOA.QuantifiedPattern(q, FOA.AbstractionPattern(name, body)))) in
     (makeAbstractions make body)
 
   (********************************************************************
@@ -226,9 +228,9 @@ pattern
   | pattern IMP pattern   {negative (binaryFormula $1 $3 FOA.Imp)}
   | term EQ term          {eqFormula $1 $3}
   
-  | PI abstracted_pattern     {quantified default FOA.Pi $2}
-  | SIGMA abstracted_pattern  {quantified default FOA.Sigma $2}
-  | NABLA abstracted_pattern  {quantified default FOA.Nabla $2}
+  | PI abstracted_pattern     {quantified negative FOA.Pi $2}
+  | SIGMA abstracted_pattern  {quantified positive FOA.Sigma $2}
+  | NABLA abstracted_pattern  {quantified id FOA.Nabla $2}
 
   | LPAREN pattern RPAREN     {$2}
   | LBRACK pattern RBRACK     {(focused $2)}

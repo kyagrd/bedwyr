@@ -18,6 +18,7 @@
 **********************************************************************)
 let () = Properties.setBool "firstorder.proofsearchdebug" true
 let () = Properties.setBool "firstorder.debug" true
+let () = Properties.setInt "firstorder.defaultbound" 3
 
 (**********************************************************************
 *ParamSig:
@@ -2260,7 +2261,10 @@ struct
            | None -> fc ())
 
   let setBound session args seqs sc fc =
-    let n = match args with [Absyn.String n] -> int_of_string n | _ -> 3 in
+    let n = match args with
+        [Absyn.String n] -> int_of_string n
+      | _ -> Properties.getInt "firstorder.defaultbound"
+    in
     match seqs with
      | ({bound=_} as seq)::tl ->
          sc [{seq with bound = Some n}] tl (fun proofs -> proofs) fc
@@ -2380,7 +2384,7 @@ struct
                        | Some s -> sc [s] List.hd fc
                        | None -> fc ()))
         ++ ("sync", fun _ _ -> sync_step) 
-        ++ ("set_ound", setBound)
+        ++ ("set_bound", setBound)
 
         ++ ("abstract", abstractTactical)
     in
