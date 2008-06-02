@@ -1505,7 +1505,7 @@ struct
                                   sc "induction" [
                                     { seq with rhs = zip [st] } ;
                                     { seq with lvl = lvl' ;
-                                               lhs = [bst'] ; rhs = [st'] }
+                                               lhs = [st'] ; rhs = [bst'] }
                                   ]
                             | None -> fc ()
                           end
@@ -1588,8 +1588,8 @@ struct
                           if out_of_bound bound then fc () else
                             sc "coinduction"
                               [{ bound = bound ; lvl = lvl' ;
-                                 lhs = [Formula(0,bst')] ;
-                                 rhs = [Formula(0,st')] }]
+                                 lhs = [Formula(0,st')] ;
+                                 rhs = [Formula(0,bst')] }]
                   end
               | FOA.AtomicFormula p ->
                   if p = "true" then sc "true" [] else (* TODO boooh *)
