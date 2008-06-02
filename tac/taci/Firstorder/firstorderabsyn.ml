@@ -439,8 +439,8 @@ let abstractPattern name =
    predp = (fun _ -> ())}
   
 let abstractVar var = 
-  {polf = (fun f -> AbstractionFormula("*var*", AbstractionBody((abstractVarWithoutLambdas var ()).polf f))) ;
-   abstf = (fun f -> AbstractionFormula("*var*", (abstractVarWithoutLambdas var ()).abstf f)) ;
+  {polf = (fun f -> AbstractionFormula(Term.get_name var, AbstractionBody((abstractVarWithoutLambdas var ()).polf f))) ;
+   abstf = (fun f -> AbstractionFormula(Term.get_name var, (abstractVarWithoutLambdas var ()).abstf f)) ;
    formf = (fun _ -> ()) ; 
    predf = (fun _ -> ())}
 
