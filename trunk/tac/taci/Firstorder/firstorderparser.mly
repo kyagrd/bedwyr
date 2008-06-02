@@ -220,10 +220,10 @@ pattern
   | NABLA UNDERSCORE  {default (FOA.QuantifiedPattern(FOA.Nabla, FOA.AnonymousAbstraction))}
 
   | pattern AND pattern   {positive (binaryFormula $1 $3 FOA.And)}
-  | pattern OR pattern    {positive (binaryFormula $1 $3 FOA.Or)}
-  | pattern WITH pattern  {positive (binaryFormula $1 $3 FOA.And)}
+  | pattern OR pattern    {negative (binaryFormula $1 $3 FOA.Or)}
+  | pattern WITH pattern  {negative (binaryFormula $1 $3 FOA.And)}
   | pattern PAR pattern   {positive (binaryFormula $1 $3 FOA.Or)}
-  | pattern IMP pattern   {positive (binaryFormula $1 $3 FOA.Imp)}
+  | pattern IMP pattern   {negative (binaryFormula $1 $3 FOA.Imp)}
   | term EQ term          {eqFormula $1 $3}
   
   | PI abstracted_pattern     {quantified default FOA.Pi $2}
