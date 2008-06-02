@@ -359,31 +359,65 @@ struct
     let rec makeAbstractions args formula =
       match args with
         [] -> formula
-      | a::aa -> (FOA.abstractWithoutLambdas a ()).FOA.formf (makeAbstractions aa formula)
+      | a::aa ->
+          (FOA.abstractWithoutLambdas a ()).FOA.formf
+            (makeAbstractions aa formula)
+    in
+
+    (* Takes the predicate f applied to args, and the surrounding annotation.
+     * Returns a polarized. *)
+    let predp lambdas annot f args =
+      let head =
+        match f with FOA.AtomicPattern head -> head | _ -> assert false
+      in
+        match Logic.find head defs with
+          | None ->
+              FOA.patternAnnotationToFormulaAnnotation annot,
+              FOA.ApplicationFormula(FOA.AtomicFormula(head),args)
+          | Some def ->
+              let arity = FOA.getDefinitionArity def in
+              let body = FOA.predicateofDefinition def in
+              let annot =
+                { (FOA.patternAnnotationToFormulaAnnotation annot) with
+                  FOA.polarity =
+                    match annot.FOA.polarity_pattern with
+                      | Some p -> p
+                      | None ->
+                          begin match body with
+                            | FOA.FixpointFormula (FOA.Inductive,_,_,_) ->
+                                FOA.Positive
+                            | FOA.FixpointFormula (FOA.CoInductive,_,_,_) ->
+                                FOA.Negative
+                            | _ -> assert false
+                          end }
+              in
+              if arity = List.length args then
+                (*  Correct number of arguments.  *)
+                annot,
+                FOA.ApplicationFormula
+                  (abstractReplacement lambdas body, args)
+              else if arity > List.length args then
+                (*  Too few arguments; eta-expansion.  *)
+                let argnames = makeArgs (arity - (List.length args)) in
+                let args' = args @ (List.map (Term.atom) argnames) in
+                annot,
+                makeAbstractions argnames
+                  (FOA.ApplicationFormula
+                     ((abstractReplacement lambdas body),args'))
+              else             
+                raise (FOA.SemanticError("'" ^ head ^
+                                         "' applied to too many arguments"))
     in
 
     let tf t = t in
-    let rec ff lambdas =   
-      {(FOA.mapPatternToFormula (fun n l -> n::l) ff tf lambdas) with 
-        FOA.predp = fun f args ->
+    let rec ff lambdas =
+      {(FOA.mapPatternToFormula (fun n l -> n::l) ff tf lambdas) with
+        FOA.polp = fun (annot,f) ->
           match f with
-            FOA.AtomicPattern(head) ->
-              let def = Logic.find head defs in
-              if (Option.isSome def) then
-                let def = (Option.get def) in
-                let arity = FOA.getDefinitionArity def in
-                let body = FOA.predicateofDefinition def in
-                  if (arity = List.length args) then  (*  Correct number of arguments.  *)
-                    FOA.ApplicationFormula(abstractReplacement lambdas body, args)
-                  else if arity > List.length args then (*  Too few arguments; eta-expansion.  *)
-                    let argnames = makeArgs (arity - (List.length args)) in
-                    let args' = args @ (List.map (Term.atom) argnames) in
-                    (makeAbstractions argnames (FOA.ApplicationFormula((abstractReplacement lambdas body),args')))
-                  else             
-                    raise (FOA.SemanticError("'" ^ head ^ "' applied to too many arguments"))
-              else
-                FOA.ApplicationFormula(FOA.AtomicFormula(head),args)
-          |_ -> assert false}
+            | FOA.ApplicationPattern (f,args) -> predp lambdas annot f args
+            | _ ->
+                FOA.patternAnnotationToFormulaAnnotation annot,
+                (ff lambdas).FOA.formp f }
     in
     ff []
 

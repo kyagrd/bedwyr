@@ -141,6 +141,7 @@ type ('a,'b,'c,'d,'e) map_pattern =
 
 val string_of_pattern : pattern_annotation polarized_pattern -> string
 val string_of_pattern_ast : pattern_annotation polarized_pattern -> string
+val patternAnnotationToFormulaAnnotation : pattern_annotation -> annotation
 
 val isAnonymousTerm : term -> bool 
 val makeAnonymousTerm : unit -> term

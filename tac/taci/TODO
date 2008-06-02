@@ -6,6 +6,9 @@ TODO:
     abstractions at the heads of invariants or definitions, and the types should
     reflect this.
 
+    Putting polarity annotations everywhere may allow funny games (like a 
+    positive implication) but I really don't see why the application should be 
+    polarized -- which caused bugs, and might cause more.
 
 A few things that would be useful:
   * Output modules shouldn't take strings but formatters, in order to allow
