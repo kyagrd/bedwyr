@@ -1212,8 +1212,10 @@ struct
                 [{ seq with bound = bound ;
                             lhs = zip [Formula(i,f)] }]
               in
-                if out_of_bound bound then fc () else
-                  unfoldFixpoint ruleName pol p arity args mkseq sc fc
+              if out_of_bound bound then
+                fc ()
+              else
+                unfoldFixpoint ruleName pol p arity args mkseq sc fc
             in
             begin match p with
               | FOA.FixpointFormula (FOA.CoInductive,name,argnames,body) ->
@@ -1435,8 +1437,10 @@ struct
                 [{ seq with bound = bound ;
                             rhs = zip [Formula(i,f)] }]
               in
-                if out_of_bound bound then fc () else
-                  unfoldFixpoint ruleName pol p arity args mkseq sc fc
+              if out_of_bound bound then
+                fc ()
+              else
+                unfoldFixpoint ruleName pol p arity args mkseq sc fc
             in
             begin match p with
               | FOA.FixpointFormula (FOA.Inductive,name,argnames,body) ->
