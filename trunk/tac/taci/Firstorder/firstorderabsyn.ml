@@ -238,7 +238,7 @@ let mapFormula2 f1 f2 x termsf a = {
     | QuantifiedFormula(q,f) -> QuantifiedFormula(q,(x a).abstf f)
     | ApplicationFormula(f,tl) -> ((x a).predf f (List.map termsf tl)))}
 
-let mapAnnotation p =
+let patternAnnotationToFormulaAnnotation p =
   let get default x = if Option.isNone x then default else Option.get x in
   {polarity = get Negative p.polarity_pattern;
   freezing = get Unfrozen p.freezing_pattern;
@@ -246,7 +246,7 @@ let mapAnnotation p =
   junk = get Clean p.junk_pattern}
 
 let mapPatternToFormula f1 x termsf a = {
-  polp = (fun (p,f) -> mapAnnotation p,(x a).formp f) ; 
+  polp = (fun (p,f) -> patternAnnotationToFormulaAnnotation p,(x a).formp f) ; 
   predp = (fun f tl -> ApplicationFormula((match f with 
       AtomicPattern(head) -> AtomicFormula(head)
     |_ -> assert false),tl)) ;
@@ -734,6 +734,7 @@ let applyFixpoint argument =
   * the now lambdaless arguments to the target.  It then re-absracts
   * the result over the same n variables.  Finally it frees the
   * generated variables.
+  * TODO isn't there a more direct way ?
   ********************************************************************)
   let rec normalizeAbstractions lambdas target arguments =
     let free (name,info) = if info then Term.free name else () in
@@ -766,34 +767,45 @@ let applyFixpoint argument =
   in
 
   let tf t = t in
-  let rec ff lam db () =
-    {polf = (fun (p,f) -> (p,(ff lam db ()).formf f)) ;
+  let rec ff lam db () = {
+
+    formf = (mapFormula (ff lam db) tf).formf ;
 
     predf = (function
-        FixpointFormula (i,name,args,body) -> FixpointFormula(i,name,args,(ff lam (db+1) ()).abstf body)
-      | DBFormula(_) -> failwith "Firstorderabsyn.applyFixpoint: encountered invalid DB."
-      | AtomicFormula(name) -> AtomicFormula(name)) ;
+      | FixpointFormula (i,name,args,body) ->
+          FixpointFormula (i,name,args,(ff lam (db+1) ()).abstf body)
+      | DBFormula(_) -> failwith "Firstorderabsyn.applyFixpoint: \
+                                  encountered invalid DB."
+      | AtomicFormula(name) -> AtomicFormula name) ;
 
     abstf = (function
         AbstractionFormula(name,body) -> AbstractionFormula(name,(ff (name::lam) db ()).abstf body)
       | AbstractionBody(f) -> AbstractionBody((ff lam db ()).polf f)) ;
 
-    formf = (fun f -> match f with
-        ApplicationFormula(DBFormula(lifts,n,db'),args) ->
-          if db <> db' then f else
-            let argument =
-              if lifts = 0 then argument else
-                let fresh _ = Term.var ~ts:0 ~lts:0 ~tag:Term.Constant in
-                let generics =
-                  let rec mk = function 0 -> [] | n -> fresh () :: mk (n-1) in
-                    mk lifts
-                in
-                  (eliminateNablas generics).abstf argument
-            in
-              (match (normalizeAbstractions lam argument args) with
-                  AbstractionBody(_,f) -> f
-                | AbstractionFormula(_) -> failwith "Firstorderabsyn.applyFixpoint: ill-formed fixpoint.")
-      | _ -> (mapFormula (ff lam db) tf).formf f)}
+    polf = (function
+              | p,ApplicationFormula (DBFormula (lifts,n,db'), args) as f ->
+                  if db <> db' then f else
+                    let argument =
+                      if lifts = 0 then argument else
+                        let fresh _ =
+                          Term.var ~ts:0 ~lts:0 ~tag:Term.Constant
+                        in
+                        let generics =
+                          let rec mk =
+                            function 0 -> [] | n -> fresh () :: mk (n-1)
+                          in
+                            mk lifts
+                        in
+                          (eliminateNablas generics).abstf argument
+                    in
+                      begin match normalizeAbstractions lam argument args with
+                        | AbstractionBody pf -> pf
+                        | AbstractionFormula _ ->
+                            failwith "Firstorderabsyn.applyFixpoint: \
+                                      ill-formed fixpoint."
+                      end
+              | p,f -> p, (ff lam db ()).formf f)
+    }
   in
 
   let catch f x = try Some (f x) with InvalidFixpointApplication -> None in
