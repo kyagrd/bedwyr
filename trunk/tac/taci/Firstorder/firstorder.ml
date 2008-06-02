@@ -1158,7 +1158,7 @@ struct
                         if Param.intuitionistic then
                           [Formula(i,l)]
                         else
-                          (Formula(i,l))::seq.rhs} ;
+                          Formula(i,l)::seq.rhs } ;
                     { seq with lhs = zip [Formula(i,r)] }
                   ]
             end
@@ -1383,8 +1383,8 @@ struct
                     sc "or_r"
                       [{ seq with rhs = zip [Formula(i,l);Formula(i,r)] }]
                   else
-                    let left  = { seq with rhs = zip [Formula(i,l)] } in
-                    let right = { seq with rhs = zip [Formula(i,r)] } in
+                    let left  = { seq with rhs = [Formula(i,l)] } in
+                    let right = { seq with rhs = [Formula(i,r)] } in
                       begin match arg with
                         | Some s when s <> "" ->
                             if s.[0] = 'l' then
@@ -2048,19 +2048,19 @@ struct
     (fun seq sc fc ->
        tac_l
          [] seq.lhs seq sc fc focus
-         (fun (a,f) -> a.FOA.control<>FOA.Focused &&
-                       (a.FOA.polarity=FOA.Negative || fixpoint f))
-         (fun (a,f) -> a.FOA.control<>FOA.Focused &&
-                       (a.FOA.polarity=FOA.Positive || fixpoint f))
+         (fun (a,_) -> a.FOA.control<>FOA.Focused &&
+                       a.FOA.polarity=FOA.Negative)
+         (fun (a,_) -> a.FOA.control<>FOA.Focused &&
+                       a.FOA.polarity=FOA.Positive)
          true),
     (*  focusRight  *)
     (fun seq sc fc ->
        tac_r
          [] seq.rhs seq sc fc focus
-         (fun (a,f) -> a.FOA.control<>FOA.Focused &&
-                       (a.FOA.polarity=FOA.Negative || fixpoint f))
-         (fun (a,f) -> a.FOA.control<>FOA.Focused &&
-                       (a.FOA.polarity=FOA.Positive || fixpoint f))
+         (fun (a,_) -> a.FOA.control<>FOA.Focused &&
+                       a.FOA.polarity=FOA.Negative)
+         (fun (a,_) -> a.FOA.control<>FOA.Focused &&
+                       a.FOA.polarity=FOA.Positive)
          true),
     (*  freezeLeft  *)
     (fun seq sc fc ->
@@ -2156,7 +2156,7 @@ struct
         (fun (Formula(i,(a,f))) ->
            match f with
              | FOA.ApplicationFormula
-                (FOA.FixpointFormula ((*FOA.Inductive*)_,_,argnames,_), args) ->
+                (FOA.FixpointFormula (FOA.Inductive,_,argnames,_), args) ->
                 a.FOA.freezing = FOA.Unfrozen &&
                 not (unfoldingProgresses argnames args)
              | _ -> false)
@@ -2165,7 +2165,7 @@ struct
         (fun (Formula(i,(a,f))) ->
            match f with
              | FOA.ApplicationFormula
-                (FOA.FixpointFormula ((*FOA.CoInductive*)_,_,argnames,_), args) ->
+                (FOA.FixpointFormula (FOA.CoInductive,_,argnames,_), args) ->
                 a.FOA.freezing = FOA.Unfrozen &&
                 not (unfoldingProgresses argnames args)
              | _ -> false)
@@ -2176,11 +2176,11 @@ struct
         (automaticIntro `Left
           (make_matcher
              (fun (Formula(i,(a,f))) ->
-               a.FOA.control=FOA.Focused && (a.FOA.polarity=FOA.Negative || fixpoint f))))
+               a.FOA.control=FOA.Focused && a.FOA.polarity=FOA.Negative)))
         (automaticIntro `Right
           (make_matcher
              (fun (Formula(i,(a,f))) ->
-               a.FOA.control=FOA.Focused && (a.FOA.polarity=FOA.Positive || fixpoint f))))
+               a.FOA.control=FOA.Focused && a.FOA.polarity=FOA.Positive)))
 
   (** Focused proof-search, starting with the async phase. *)
   let rec full_async s sc fc =
