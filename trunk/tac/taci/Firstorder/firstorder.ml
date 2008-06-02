@@ -397,7 +397,14 @@ struct
         (fun _ -> Term.fresh ~name:"*eta*" ~lts:0 ~ts:0 ~tag:Term.Constant)
         arity
     in
+     O.output (Printf.sprintf
+                 "Predicate AST:\n  %s\n\n" ((FOA.string_of_formula_ast ~generic:[]).FOA.predf pred)) ; 
+
     let f' = FOA.AbstractionBody(pol,FOA.ApplicationFormula(pred, args')) in
+
+      O.output (Printf.sprintf
+                 "Abstraction of predicate AST:\n  %s\n\n" ((FOA.string_of_formula_ast ~generic:[]).FOA.abstf f')) ; 
+
     List.fold_right (fun t -> (FOA.abstractVar t).FOA.abstf) args' f'
 
   (********************************************************************
@@ -1026,12 +1033,21 @@ struct
         | FOA.FixpointFormula (_,_,_,body) -> body
         | _ -> assert false
     in
+    let abst = abs_of_pred arity pol pred in
+      O.output (Printf.sprintf
+                 "Predicate AST:\n  %s\n\n" ((FOA.string_of_formula_ast ~generic:[]).FOA.abstf abst)) ;
+       O.output (Printf.sprintf
+                 "Body AST:\n  %s\n\n" ((FOA.string_of_formula_ast ~generic:[]).FOA.abstf body)) ; 
     match (* body (mu body) *)
-      (FOA.applyFixpoint (abs_of_pred arity pol pred)).FOA.abstf body      
+      (FOA.applyFixpoint abst).FOA.abstf body      
     with
      | Some p' ->
+      O.output (Printf.sprintf
+                 "After fixpoint application AST:\n  %s\n\n" ((FOA.string_of_formula_ast ~generic:[]).FOA.abstf p')) ;
          begin match FOA.fullApply args p' with
            | Some mu' -> (* body (mu body) args *)
+     O.output (Printf.sprintf
+                 "After full application AST:\n  %s\n\n" ((FOA.string_of_formula_ast ~generic:[]).FOA.polf mu')) ; 
                sc rulename (mkseq mu')
            | _ ->
                O.impossible
@@ -1345,8 +1361,8 @@ struct
                           if out_of_bound bound then fc () else
                             sc "induction"
                               [{ bound = bound ; lvl = lvl' ;
-                                 rhs = [Formula(0,bst')] ;
-                                 lhs = [Formula(0,st')] }]
+                                 lhs = [Formula(0,bst')] ;
+                                 rhs = [Formula(0,st')] }]
                   end
               | FOA.AtomicFormula p ->
                   if p = "false" then sc "false" [] else (* TODO boooh *)
@@ -1488,7 +1504,7 @@ struct
                                   sc "induction" [
                                     { seq with rhs = zip [st] } ;
                                     { seq with lvl = lvl' ;
-                                               lhs = [st'] ; rhs = [bst'] }
+                                               lhs = [bst'] ; rhs = [st'] }
                                   ]
                             | None -> fc ()
                           end
