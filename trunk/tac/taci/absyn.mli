@@ -57,6 +57,8 @@ type command =
   
   | Logic of string  
   | Logics
+  
+  | Set of string * string
 
   | NoCommand
   
