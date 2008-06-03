@@ -16,7 +16,7 @@
 * along with this code; if not, write to the Free Software Foundation,*
 * Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA        *
 **********************************************************************)
-let () = Properties.setBool "firstorder.proofsearchdebug" true
+let () = Properties.setBool "firstorder.proofsearchdebug" false
 let () = Properties.setBool "firstorder.debug" true
 let () = Properties.setInt "firstorder.defaultbound" 3
 
@@ -432,13 +432,9 @@ struct
         (fun _ -> Term.fresh ~name:"*eta*" ~lts:0 ~ts:0 ~tag:Term.Constant)
         arity
     in
-     O.output (Printf.sprintf
-                 "Predicate AST:\n  %s\n\n" ((FOA.string_of_formula_ast ~generic:[]).FOA.predf pred)) ; 
 
     let f' = FOA.AbstractionBody(pol,FOA.ApplicationFormula(pred, args')) in
 
-      O.output (Printf.sprintf
-                 "Abstraction of predicate AST:\n  %s\n\n" ((FOA.string_of_formula_ast ~generic:[]).FOA.abstf f')) ; 
 
     List.fold_right (fun t -> (FOA.abstractVar t).FOA.abstf) args' f'
 
@@ -1069,20 +1065,12 @@ struct
         | _ -> assert false
     in
     let abst = abs_of_pred arity pol pred in
-      O.output (Printf.sprintf
-                 "Predicate AST:\n  %s\n\n" ((FOA.string_of_formula_ast ~generic:[]).FOA.abstf abst)) ;
-       O.output (Printf.sprintf
-                 "Body AST:\n  %s\n\n" ((FOA.string_of_formula_ast ~generic:[]).FOA.abstf body)) ; 
     match (* body (mu body) *)
       (FOA.applyFixpoint abst).FOA.abstf body      
     with
      | Some p' ->
-      O.output (Printf.sprintf
-                 "After fixpoint application AST:\n  %s\n\n" ((FOA.string_of_formula_ast ~generic:[]).FOA.abstf p')) ;
          begin match FOA.fullApply args p' with
            | Some mu' -> (* body (mu body) args *)
-     O.output (Printf.sprintf
-                 "After full application AST:\n  %s\n\n" ((FOA.string_of_formula_ast ~generic:[]).FOA.polf mu')) ; 
                sc rulename (mkseq mu')
            | _ ->
                O.impossible
@@ -1553,27 +1541,26 @@ struct
                         let fresh n =
                           Term.fresh ~name:n ~ts:0 ~lts:0 ~tag:Term.Eigen
                         in
-                        let rhs =
-                          (* ... |- H1,..,Hn becomes H1\/..\/Hn *)
-                          (* TODO don't ignore generic context *)
+                        (* For now, don't treat the right hand-side,
+                         * it is useless in the intuitionistic case,
+                         * and requires some care for classical logic:
+                         * the rhs would have to be negated and put in a big
+                         * conjunction in the co-invariant. But the negation is
+                         * badly written as A=>false. *)
+                        let lrhs =
+                          (* Conjunction of the left hand-side.
+                           * TODO treat generic quantif. *)
                           let rec s = function
-                            | [] -> assert false
+                            | [] ->
+                                { FOA.defaultAnnotation with
+                                    FOA.polarity = FOA.Positive },
+                                FOA.ApplicationFormula
+                                  (FOA.AtomicFormula "true", [])
                             | [Formula(_,f)] -> f
-                            | (Formula(_,pf))::l ->
-                                { FOA.defaultAnnotation
-                                  with FOA.polarity = FOA.Negative },
-                                FOA.BinaryFormula (FOA.Or, pf, s l)
-                          in
-                          s (zip [(*TODO frozen version of what we induct on*)])
-                        in
-                        let lrhs = (* TODO probably wrong, use /\ instead *)
-                          (* H1, ..., Hn |- rhs becomes H1 => .. => Hn => rhs *)
-                          let rec s = function
-                            | [] -> rhs
                             | Formula(_,f)::l ->
                                { FOA.defaultAnnotation with
-                                   FOA.polarity = FOA.Negative },
-                               FOA.BinaryFormula (FOA.Imp, f, s l)
+                                   FOA.polarity = FOA.Positive },
+                               FOA.BinaryFormula (FOA.And, f, s l)
                           in
                           s seq.lhs
                         in
@@ -1606,7 +1593,8 @@ struct
                             (fun f v ->
                                FOA.negativeFormula
                                  (FOA.QuantifiedFormula
-                                    (FOA.Pi, (FOA.abstractVar v).FOA.polf f)))
+                                    (FOA.Sigma,
+                                     (FOA.abstractVar v).FOA.polf f)))
                             elrhs getenv
                         in
                         (* Abstract out the fv1..fvn. *)
@@ -1724,7 +1712,7 @@ struct
     | [Absyn.String i; Absyn.String p] -> patternTac `Left p ~arg:i session []
     | _ -> (fun _ _ fc -> O.error "Invalid arguments.\n" ; fc ())
   let coinductionTactical session = function
-    | [] -> patternTac `Right "nu _" ~arg:"" session []
+    | [] -> patternTac `Right "nu _" session []
     | [Absyn.String i] -> patternTac `Right "nu _" ~arg:i session []
     | [Absyn.String i; Absyn.String p] -> patternTac `Right p ~arg:i session []
     | _ -> (fun _ _ fc -> O.error "Invalid arguments.\n" ; fc ())
