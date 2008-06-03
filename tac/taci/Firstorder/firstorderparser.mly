@@ -60,7 +60,7 @@
 
   let id f = f
   
-  let eqFormula f1 f2 = positive (default (FOA.EqualityPattern(f1, f2)))
+  let eqFormula f1 f2 = default (FOA.EqualityPattern(f1, f2))
   let binaryFormula f1 f2 c = default (FOA.BinaryPattern(c, f1, f2))
  
   (********************************************************************
@@ -98,8 +98,10 @@
     let (names,f') = getAbstractions f in
     (makeAbs' names formulaConstructor f')
 
-  let quantified pol q body =
-    let make name body = pol (default (FOA.QuantifiedPattern(q, FOA.AbstractionPattern(name, body)))) in
+  let quantified q body =
+    let make name body =
+      default (FOA.QuantifiedPattern(q, FOA.AbstractionPattern(name, body)))
+    in
     (makeAbstractions make body)
 
   (********************************************************************
@@ -217,23 +219,25 @@ arg
 pattern
   : MU UNDERSCORE     {default (FOA.ApplicationPattern(FOA.AnonymousMu, []))}
   | NU UNDERSCORE     {default (FOA.ApplicationPattern(FOA.AnonymousNu, []))}
-  | PI UNDERSCORE     {negative (default (FOA.QuantifiedPattern(FOA.Pi, FOA.AnonymousAbstraction)))}
-  | SIGMA UNDERSCORE  {positive (default (FOA.QuantifiedPattern(FOA.Sigma, FOA.AnonymousAbstraction)))}
+  | PI UNDERSCORE     {default (FOA.QuantifiedPattern(FOA.Pi, FOA.AnonymousAbstraction))}
+  | SIGMA UNDERSCORE  {default (FOA.QuantifiedPattern(FOA.Sigma, FOA.AnonymousAbstraction))}
   | NABLA UNDERSCORE  {default (FOA.QuantifiedPattern(FOA.Nabla, FOA.AnonymousAbstraction))}
 
-  | pattern AND pattern   {positive (binaryFormula $1 $3 FOA.And)}
-  | pattern OR pattern    {positive (binaryFormula $1 $3 FOA.Or)}
-  | pattern WITH pattern  {negative (binaryFormula $1 $3 FOA.And)}
-  | pattern PAR pattern   {negative (binaryFormula $1 $3 FOA.Or)}
-  | pattern IMP pattern   {negative (binaryFormula $1 $3 FOA.Imp)}
+  | pattern AND pattern   {binaryFormula $1 $3 FOA.And}
+  | pattern OR pattern    {binaryFormula $1 $3 FOA.Or}
+  | pattern WITH pattern  {binaryFormula $1 $3 FOA.And}
+  | pattern PAR pattern   {binaryFormula $1 $3 FOA.Or}
+  | pattern IMP pattern   {binaryFormula $1 $3 FOA.Imp}
   | term EQ term          {eqFormula $1 $3}
   
-  | PI abstracted_pattern     {quantified negative FOA.Pi $2}
-  | SIGMA abstracted_pattern  {quantified positive FOA.Sigma $2}
-  | NABLA abstracted_pattern  {quantified id FOA.Nabla $2}
+  | PI abstracted_pattern     {quantified FOA.Pi $2}
+  | SIGMA abstracted_pattern  {quantified FOA.Sigma $2}
+  | NABLA abstracted_pattern  {quantified FOA.Nabla $2}
 
   | LPAREN pattern RPAREN     {$2}
   | LBRACK pattern RBRACK     {(focused $2)}
+  | PLUS  LPAREN pattern RPAREN { positive $3 }
+  | MINUS LPAREN pattern RPAREN { negative $3 }
   | atom                      {$1}
   ;
 

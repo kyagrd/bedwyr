@@ -238,27 +238,12 @@ let mapFormula2 f1 f2 x termsf a = {
     | QuantifiedFormula(q,f) -> QuantifiedFormula(q,(x a).abstf f)
     | ApplicationFormula(f,tl) -> ((x a).predf f (List.map termsf tl)))}
 
-let patternAnnotationToFormulaAnnotation p =
-  let get default x = if Option.isNone x then default else Option.get x in
-  {polarity = get Negative p.polarity_pattern;
-  freezing = get Unfrozen p.freezing_pattern;
-  control = get Normal p.control_pattern;
-  junk = get Clean p.junk_pattern}
-
-let mapPatternToFormula f1 x termsf a = {
-  polp = (fun (p,f) -> patternAnnotationToFormulaAnnotation p,(x a).formp f) ; 
-  predp = (fun f tl -> ApplicationFormula((match f with 
-      AtomicPattern(head) -> AtomicFormula(head)
-    |_ -> assert false),tl)) ;
-  abstp = (function
-      AbstractionPattern(name,f) -> AbstractionFormula(name,(x (f1 name a)).abstp f)
-    | AbstractionBodyPattern(f) -> AbstractionBody((x a).polp f)
-    | _ -> assert false) ;
-  formp = (function 
-      BinaryPattern(c,l,r) -> BinaryFormula(c,(x a).polp l, (x a).polp r)
-    | EqualityPattern(l,r) -> EqualityFormula(termsf l, termsf r)
-    | QuantifiedPattern(q,f) -> QuantifiedFormula(q,(x a).abstp f)
-    | ApplicationPattern(f,tl) -> ((x a).predp f (List.map termsf tl)))}
+let patternAnnotationToFormulaAnnotation polarity p =
+  let get default = function None -> default | Some x -> x in
+  {polarity = get polarity p.polarity_pattern;
+   freezing = get Unfrozen p.freezing_pattern;
+   control = get Normal p.control_pattern;
+   junk   = get Clean p.junk_pattern}
 
 
 let mapPattern x termsf = {
@@ -411,7 +396,8 @@ let string_of_fixpoint = function
 let string_of_formula = string_of_formula ~names:[]
 
 let string_of_definition (Definition(name,arity,body,ind)) =
-  (string_of_fixpoint ind) ^ " " ^ name ^ " " ^ ((string_of_formula_ast ~generic:[]).abstf body)
+  (string_of_fixpoint ind) ^ " " ^ name ^ " " ^
+  ((string_of_formula ~generic:[]).abstf body)
     
 (**********************************************************************
 *abstract:
@@ -945,6 +931,7 @@ let rec matchFormula pattern formula =
   * 'hides' the bodies of fixpoints, comparing only names.
   ********************************************************************)
   let matchPredicates p1 p2 =
+    
     let (pattern, tl) = p1 in
     let (pred, tl') = p2 in
     match (pattern, pred) with

@@ -141,7 +141,8 @@ type ('a,'b,'c,'d,'e) map_pattern =
 
 val string_of_pattern : pattern_annotation polarized_pattern -> string
 val string_of_pattern_ast : pattern_annotation polarized_pattern -> string
-val patternAnnotationToFormulaAnnotation : pattern_annotation -> annotation
+val patternAnnotationToFormulaAnnotation :
+      polarity -> pattern_annotation -> annotation
 
 val isAnonymousTerm : term -> bool 
 val makeAnonymousTerm : unit -> term
@@ -154,17 +155,6 @@ val mapFormula2 :
  (string -> 'a -> 'a) -> (connective -> 'a -> 'a * 'a) -> 
  ('a -> ('b, 'b polarized, term list -> 'b formula, 'b abstraction, 'b formula) map_formula)
  -> (term -> term) -> 'a -> ('b, 'b polarized, term list -> 'b formula, 'b abstraction, 'b formula) map_formula
-
-val mapPatternToFormula :
-  (string -> 'a -> 'a) ->
-    ('a ->
-      (pattern_annotation, 'b polarized, term list -> 'b formula,
-        'b abstraction, 'c)
-    map_pattern) ->
-    (term -> term) ->
-    'a ->
-      (pattern_annotation, annotation * 'c, term list -> 'd formula,
-        'b abstraction, 'b formula) map_pattern
 
 val mapPattern :
   (unit ->

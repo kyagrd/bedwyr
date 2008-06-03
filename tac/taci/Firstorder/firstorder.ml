@@ -372,24 +372,30 @@ struct
       in
         match Logic.find head defs with
           | None ->
-              FOA.patternAnnotationToFormulaAnnotation annot,
-              FOA.ApplicationFormula(FOA.AtomicFormula(head),args)
+              let default_pol =
+                if head = "true" || head = "false" then
+                  FOA.Positive
+                else
+                  FOA.Negative
+              in
+              FOA.patternAnnotationToFormulaAnnotation default_pol annot,
+              FOA.ApplicationFormula(FOA.AtomicFormula head, args)
           | Some def ->
               let arity = FOA.getDefinitionArity def in
               let body = FOA.predicateofDefinition def in
               let annot =
-                { (FOA.patternAnnotationToFormulaAnnotation annot) with
-                  FOA.polarity =
-                    match annot.FOA.polarity_pattern with
-                      | Some p -> p
-                      | None ->
-                          begin match body with
-                            | FOA.FixpointFormula (FOA.Inductive,_,_,_) ->
-                                FOA.Positive
-                            | FOA.FixpointFormula (FOA.CoInductive,_,_,_) ->
-                                FOA.Negative
-                            | _ -> assert false
-                          end }
+                FOA.patternAnnotationToFormulaAnnotation
+                  (match annot.FOA.polarity_pattern with
+                     | Some p -> p
+                     | None ->
+                         begin match body with
+                           | FOA.FixpointFormula (FOA.Inductive,_,_,_) ->
+                               FOA.Positive
+                           | FOA.FixpointFormula (FOA.CoInductive,_,_,_) ->
+                               FOA.Negative
+                           | _ -> assert false
+                         end)
+                  annot
               in
               if arity = List.length args then
                 (*  Correct number of arguments.  *)
@@ -408,16 +414,62 @@ struct
                 raise (FOA.SemanticError("'" ^ head ^
                                          "' applied to too many arguments"))
     in
-
-    let tf t = t in
+    let defpos = FOA.patternAnnotationToFormulaAnnotation FOA.Positive in
+    let defneg = FOA.patternAnnotationToFormulaAnnotation FOA.Negative in
     let rec ff lambdas =
-      {(FOA.mapPatternToFormula (fun n l -> n::l) ff tf lambdas) with
-        FOA.polp = fun (annot,f) ->
-          match f with
-            | FOA.ApplicationPattern (f,args) -> predp lambdas annot f args
-            | _ ->
-                FOA.patternAnnotationToFormulaAnnotation annot,
-                (ff lambdas).FOA.formp f }
+      let rec self = {
+
+        FOA.predp =
+          (fun _ _ ->
+            (* We shouldn't need it ?
+             * We can't use the above predp function because it wants
+             * a polarity annotation, and there is none: I prefer to wait for a
+             * need rather than fake a polarity here. *)
+            assert false) ;
+
+        FOA.formp = (fun f -> (* Everything is done in polp *) assert false) ;
+
+        FOA.abstp = (function
+          | FOA.AbstractionPattern (name,f) ->
+              FOA.AbstractionFormula (name,(ff (name::lambdas)).FOA.abstp f)
+          | FOA.AbstractionBodyPattern f ->
+              FOA.AbstractionBody (self.FOA.polp f)
+          | _ -> assert false) ;
+
+        FOA.polp = (fun (p,f) -> match f with
+
+          (* Positive connectives *)
+          | FOA.BinaryPattern((FOA.And|FOA.Or as c),l,r) ->
+              defpos p, FOA.BinaryFormula (c,self.FOA.polp l, self.FOA.polp r)
+          | FOA.EqualityPattern(l,r) ->
+              defpos p, FOA.EqualityFormula (l,r)
+          | FOA.QuantifiedPattern(FOA.Sigma,f) ->
+              defpos p, FOA.QuantifiedFormula(FOA.Sigma,self.FOA.abstp f)
+
+          (* Negative connectives *)
+          | FOA.BinaryPattern(FOA.Imp,l,r) ->
+              defneg p,
+              FOA.BinaryFormula (FOA.Imp,self.FOA.polp l, self.FOA.polp r)
+          | FOA.QuantifiedPattern(FOA.Pi,f) ->
+              defneg p, FOA.QuantifiedFormula(FOA.Pi,self.FOA.abstp f)
+
+          (* Special cases *)
+          | FOA.QuantifiedPattern(FOA.Nabla,f) ->
+              let f = self.FOA.abstp f in
+              let subp =
+                let rec get = function
+                  | FOA.AbstractionFormula (_,f) -> get f
+                  | FOA.AbstractionBody (p,f) -> p
+                in
+                  get f
+              in
+                FOA.patternAnnotationToFormulaAnnotation
+                  (match p.FOA.polarity_pattern with
+                     | Some pol -> pol | None -> subp.FOA.polarity)
+                  p,
+                FOA.QuantifiedFormula (FOA.Nabla,f)
+          | FOA.ApplicationPattern(pred,args) -> predp lambdas p pred args) }
+      in self
     in
     ff []
 
