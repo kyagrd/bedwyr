@@ -44,10 +44,11 @@ struct
     let batch session =
       try
         let session' = (I.onBatch session) in
-        (I.onEnd session')
+        (I.onEnd session';
+        raise BatchSuccess)
       with
-          I.Exit(session) -> ((I.onEnd session); raise BatchSuccess)
-        | I.BatchFailure -> (raise BatchFailure)
+          I.BatchFailure -> (raise BatchFailure)
+        | _ -> failwith "Interface.interpret: invalid interpreter termination."
     in
     
     let rec interp session =
