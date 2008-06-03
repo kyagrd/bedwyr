@@ -276,10 +276,10 @@ struct
         | [] -> ""
         | mainseq::seqs ->
             if [] <> seqs then
-              (string_of_sequent mainseq)
-              ^ "\n\n" ^
-              (String.concat "\n\n" (List.map string_of_sequent_rhs seqs))
-              ^ "\n"
+              let mainseq = string_of_sequent mainseq in
+                mainseq ^ "\n\n" ^
+                (String.concat "\n\n" (List.map string_of_sequent_rhs seqs)) ^
+                "\n"
             else
               (string_of_sequent mainseq) ^ "\n"
 
@@ -1478,7 +1478,7 @@ struct
                   ]
               | FOA.Imp ->
                   let l = propagate (Formula (i,l)) in
-                  sc "imp_r" [ { seq with lhs = l::seq.lhs ;
+                  sc "imp_r" [ { seq with lhs = seq.lhs@[l] ;
                                           rhs = zip [Formula(i,r)] } ]
             end
         | _,FOA.QuantifiedFormula (FOA.Pi,
