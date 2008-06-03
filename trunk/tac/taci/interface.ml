@@ -18,6 +18,8 @@
 **********************************************************************)
 
 exception Logic of string
+exception BatchFailure
+
 module type Interface =
 sig
   val interpret : (string * string) list -> unit
@@ -38,6 +40,15 @@ struct
   * can load a new interface and interpreter.
   ********************************************************************)
   let interpret logics =
+    let batch session =
+      try
+        let session' = (I.onBatch session) in
+        (I.onEnd session')
+      with
+          I.Exit(session) -> (I.onEnd session)
+        | I.BatchFailure -> (raise BatchFailure)
+    in
+    
     let rec interp session =
       try
         let session' = I.onPrompt session in
@@ -50,7 +61,12 @@ struct
           (I.onEnd session;
           raise (Logic s))
     in
+    (*  Hackery so that the logic knows the names of all logics.  *)
     let () = I.setLogics logics in
     let session = I.onStart () in
-    (interp session)
+    
+    if Properties.getBool "output.batch" then
+      batch session
+    else
+      interp session
 end

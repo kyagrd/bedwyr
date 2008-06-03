@@ -5,7 +5,7 @@
 		<Lexer LexerName="simple" LineCommentPrefix="%">	
 			<Keywords List="0" Inherit="False">
         #clear #debug #define #exit #help #include #lemmas #logic #logics #open
-        #proof_output #redo #reset #tacticals #tactics #theorem #time #undo
+        #proof_output #redo #reset #set #tacticals #tactics #theorem #time #undo
 			</Keywords>
       <Keywords List="1" Inherit="False">
       </Keywords>
@@ -13,7 +13,8 @@
     <AutoComplete FillUpCharacters="(," SingleLineAccept="True" IsCaseSensitive="False">
       <List>
         #clear #debug #exit #help #include #lemmas #logic #logics #open
-        #proof_output #redo #reset #tacticals #tactics #theorem #time #undo
+        #proof_output #redo #reset #set #tacticals #tactics #theorem #time
+        #undo
       </List>
     </AutoComplete>
     <Snippets IsOneKeySelectionEmbedEnabled="True" IsEnabled="True">

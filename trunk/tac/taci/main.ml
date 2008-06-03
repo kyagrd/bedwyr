@@ -22,6 +22,11 @@ let debug () =
   Properties.setBool "output.debug" true;
   Pprint.debug := true) (*  Can't use a property because Pprint is part of ndcore.  *)
 
+let () = Properties.setBool "output.batch" false
+let batchMode s =
+  Properties.setBool "output.batch" true;
+  Properties.setString "output.batchfile" s
+
 let outputName = ref "console"
 let logicName = ref "none"
 let printLogicInformation = ref false
@@ -46,7 +51,9 @@ parseArgs:
 *   output: specifies the output module to load
 *   outputs: lists all output modules
 **********************************************************************)
-and speclist = [("--debug", Arg.Unit(debug), "enable debugging");
+and speclist = [("-b", Arg.String(batchMode), "batch mode");
+                ("--batch", Arg.String(batchMode), "batch mode");
+                ("--debug", Arg.Unit(debug), "enable debugging");
                 ("-help", Arg.Unit(printHelp), "");
                 ("--help", Arg.Unit(printHelp), "print usage information");
                 ("--logic", Arg.Set_string(logicName), "logic");
@@ -77,6 +84,9 @@ let rec interpret interp =
       else
         (print_endline "Error: unable to load logic.";
         1)
+  | Interface.BatchFailure ->
+      (print_endline "Error: batch file contains errors.";
+      2)
 
 (**********************************************************************
 *main:

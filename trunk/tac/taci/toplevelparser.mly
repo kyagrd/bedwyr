@@ -46,10 +46,10 @@ toplevel_file:
   ;
 
 file:
-  | SHARP command DOT file  {$2 :: $4}
-  | EOF                     {[]}
+  | SHARP command DOT file   {$2 ::  $4}
+  | tactical DOT file        {Absyn.PreTactical($1) :: $3}
+  | EOF                      {[]}
   ;
-
 
 toplevel_command
   :                     {Absyn.NoCommand}

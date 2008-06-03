@@ -25,6 +25,8 @@
 * input and passing it to the interpreter for processing.
 **********************************************************************)
 exception Logic of string
+exception BatchFailure
+
 module type Interface =
 sig
   val interpret : (string * string) list -> unit

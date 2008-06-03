@@ -26,6 +26,7 @@
 module type Interpreter =
 sig
   type session
+  exception BatchFailure
   exception Exit of session
   exception Logic of string * session
   
@@ -34,5 +35,6 @@ sig
   val onEnd : session -> unit
   val onPrompt : session -> session
   val onInput : session -> session 
+  val onBatch : session -> session
 end
 module Make : functor (O : Output.Output) -> functor (L : Logic.Logic) -> Interpreter
