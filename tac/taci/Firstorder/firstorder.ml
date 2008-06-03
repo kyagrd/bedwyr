@@ -18,7 +18,7 @@
 **********************************************************************)
 let () = Properties.setBool "firstorder.proofsearchdebug" false
 let () = Properties.setBool "firstorder.debug" false
-let () = Properties.setInt "firstorder.defaultbound" 2
+let () = Properties.setInt "firstorder.defaultbound" 3
 
 (**********************************************************************
 *ParamSig:
@@ -2034,6 +2034,7 @@ struct
             O.output ("Pattern: " ^ (FOA.string_of_pattern_ast (Option.get p)) ^ ".\n");
             sc [] sequents Logic.idProofBuilder fc
     | _ -> G.invalidArguments "examine"
+  
   (** {1 Focusing strategy} *)
 
   (********************************************************************
@@ -2350,16 +2351,19 @@ struct
            | Some seq -> fullAsync [seq] sc fc
            | None -> fc ())
 
-  let setBound session args seqs sc fc =
-    let n = match args with
-        [Absyn.String n] -> int_of_string n
-      | _ -> Properties.getInt "firstorder.defaultbound"
-    in
-    match seqs with
-     | ({bound=_} as seq)::tl ->
-         sc [{seq with bound = Some n}] tl (fun proofs -> proofs) fc
-     | [] -> fc ()
+  let setBound session n =
+    fun seqs sc fc ->
+      match seqs with
+       | ({bound = _} as seq)::tl ->
+           sc [{seq with bound = Some n}] tl (fun proofs -> proofs) fc
+       | [] -> fc ()
   
+  let setBoundTactical session args =
+    match args with
+        [Absyn.String s] -> setBound session (int_of_string s)
+      | [] -> setBound session (Properties.getInt "firstorder.defaultbound")
+      | _ -> G.invalidArguments "set_bound"
+
   let unfocus =
     G.makeTactical
       (fun seq sc fc ->
@@ -2380,7 +2384,28 @@ struct
      * which by the way restricts our attention to the first sequent.
      * There is no need to force fullAsync to complete, since it never returns
      * partial successes by design. *)
-    G.thenTactical (setBound session args) fullAsync
+    G.thenTactical (setBoundTactical session args) fullAsync
+
+  (********************************************************************
+  *proveToTactical:
+  * Iterative deepening.
+  ********************************************************************)
+  let proveToTactical session args =
+    let rec construct i max =
+      if i = max then
+        (G.thenTactical (setBound session max) fullAsync)
+      else
+        (G.orElseTactical
+          (G.thenTactical (setBound session i) fullAsync)
+          (construct (i + 1) max))
+    in
+    match args with
+        [Absyn.String(s)] ->
+          let maxBound = int_of_string s in
+          construct 0 (max maxBound 0)
+      | [] ->
+          construct 0 (max (Properties.getInt "firstorder.defaultbound") 0)
+      | _ -> G.invalidArguments "proveto"
 
   (********************************************************************
   *cutLemmaTactical:
@@ -2476,6 +2501,8 @@ struct
       | _ -> G.invalidArguments "admit"
 
   (********************************************************************
+  *pervasiveTacticals:
+  * The tacticals exported by the logic.
   ********************************************************************)
   let pervasiveTacticals =
     let (++) t (a,b) = Logic.Table.add a b t in
@@ -2537,6 +2564,7 @@ struct
         ++ ("cut_lemma", cutLemmaTactical)
         ++ ("force", forceTactical)
         ++ ("prove", proveTactical)
+        ++ ("prove_to", proveToTactical)
         ++ ("async", fun _ _ -> finite)
         ++ ("focus",
             fun _ _ ->
@@ -2553,7 +2581,7 @@ struct
                 (fun seq sc fc -> freezeLeft seq (fun s k -> sc [s] List.hd k) fc))
         ++ ("unfocus", unfocusTactical)
         ++ ("sync", fun _ _ -> sync_step) 
-        ++ ("set_bound", setBound)
+        ++ ("set_bound", setBoundTactical)
 
         ++ ("abstract", abstractTactical)
     in
