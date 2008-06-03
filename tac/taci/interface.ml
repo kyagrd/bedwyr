@@ -19,6 +19,7 @@
 
 exception Logic of string
 exception BatchFailure
+exception BatchSuccess
 
 module type Interface =
 sig
@@ -45,7 +46,7 @@ struct
         let session' = (I.onBatch session) in
         (I.onEnd session')
       with
-          I.Exit(session) -> (I.onEnd session)
+          I.Exit(session) -> ((I.onEnd session); raise BatchSuccess)
         | I.BatchFailure -> (raise BatchFailure)
     in
     

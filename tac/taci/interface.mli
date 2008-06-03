@@ -26,6 +26,7 @@
 **********************************************************************)
 exception Logic of string
 exception BatchFailure
+exception BatchSuccess
 
 module type Interface =
 sig

@@ -2340,6 +2340,16 @@ struct
      | ({bound=_} as seq)::tl ->
          sc [{seq with bound = Some n}] tl (fun proofs -> proofs) fc
      | [] -> fc ()
+  
+  let unfocus =
+    G.makeTactical
+      (fun seq sc fc ->
+         match unfocus seq with
+           | Some s -> sc [s] List.hd fc
+           | None -> fc ())
+
+  let unfocusTactical =
+    fun _ _ -> unfocus
 
   (********************************************************************
   *proveTactical:
@@ -2397,7 +2407,8 @@ struct
             let f' = FOA.mapFormula ff tf in
             {f' with
               FOA.polf = fun (ann, f) ->
-                ({ann with FOA.polarity = FOA.Negative}, (ff ()).FOA.formf f)}
+                (ann, (ff ()).FOA.formf f)}
+                (*  ({ann with FOA.polarity = FOA.Negative}, (ff ()).FOA.formf f)}  *)
           in
           let (annotation, newFormula) = (ff ()).FOA.polf formula in
           ({annotation with FOA.control = FOA.Focused}, newFormula)
@@ -2420,7 +2431,9 @@ struct
           in
             (G.thenTactical
               (G.makeTactical pretactic)
-              (G.repeatTactical syncTactical))
+              (G.thenTactical
+                (G.repeatTactical sync_step)
+                (G.tryTactical unfocus)))
         with
           Not_found -> (O.error "undefined lemma.\n" ; G.failureTactical))
     | _ -> G.invalidArguments "apply"
@@ -2519,13 +2532,7 @@ struct
             fun _ _ ->
               G.makeTactical
                 (fun seq sc fc -> freezeLeft seq (fun s k -> sc [s] List.hd k) fc))
-        ++ ("unfocus",
-              fun _ _ ->
-                G.makeTactical
-                  (fun seq sc fc ->
-                     match unfocus seq with
-                       | Some s -> sc [s] List.hd fc
-                       | None -> fc ()))
+        ++ ("unfocus", unfocusTactical)
         ++ ("sync", fun _ _ -> sync_step) 
         ++ ("set_bound", setBound)
 
