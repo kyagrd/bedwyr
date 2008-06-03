@@ -48,7 +48,10 @@ struct
         raise BatchSuccess)
       with
           I.BatchFailure -> (raise BatchFailure)
-        | _ -> failwith "Interface.interpret: invalid interpreter termination."
+        | I.Exit(s) ->
+            (I.onEnd s;
+            raise BatchSuccess)
+        
     in
     
     let rec interp session =
