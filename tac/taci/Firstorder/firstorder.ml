@@ -2387,7 +2387,7 @@ struct
   *proveToTactical:
   * Iterative deepening.
   ********************************************************************)
-  let proveToTactical session args =
+  let iterativeDeepeningProveTactical session args =
     let rec construct i max =
       if i = max then
         (G.thenTactical (setBound session max) fullAsync)
@@ -2402,7 +2402,7 @@ struct
           construct 0 (max maxBound 0)
       | [] ->
           construct 0 (max (Properties.getInt "firstorder.defaultbound") 0)
-      | _ -> G.invalidArguments "proveto"
+      | _ -> G.invalidArguments "prove"
 
   (********************************************************************
   *cutLemmaTactical:
@@ -2560,8 +2560,7 @@ struct
         ++ ("cut", cutTactical)
         ++ ("cut_lemma", cutLemmaTactical)
         ++ ("force", forceTactical)
-        ++ ("prove", proveTactical)
-        ++ ("prove_to", proveToTactical)
+        ++ ("prove", iterativeDeepeningProveTactical)
         ++ ("async", fun _ _ -> finite)
         ++ ("focus",
             fun _ _ ->
