@@ -17,8 +17,8 @@
 * Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA        *
 **********************************************************************)
 let () = Properties.setBool "firstorder.proofsearchdebug" false
-let () = Properties.setBool "firstorder.debug" true (*  This isn't used...  *)
-let () = Properties.setInt "firstorder.defaultbound" 3
+let () = Properties.setBool "firstorder.debug" false
+let () = Properties.setInt "firstorder.defaultbound" 2
 
 (**********************************************************************
 *ParamSig:
@@ -1092,7 +1092,8 @@ struct
               | FOA.UnifyFailed ->
                   attempts formulas
               | FOA.UnifyError s ->
-                  O.error (s ^ ".\n");
+                  if Properties.getBool "firstorder.debug" then
+                    O.error (s ^ ".\n");
                   attempts formulas
             end
           else
@@ -1119,7 +1120,8 @@ struct
               | FOA.UnifyFailed ->
                   attempts formulas
               | FOA.UnifyError s ->
-                  O.error (s ^ ".\n");
+                  if Properties.getBool "firstorder.debug" then
+                    O.error (s ^ ".\n");
                   attempts formulas
             end
           else
@@ -1304,7 +1306,8 @@ struct
                             sc "eq_l" ~k:fc [{seq with lhs = copy (zip []) ;
                                                        rhs = copy seq.rhs }]
                       | FOA.UnifyError s ->
-                          O.error (s ^ ".\n");
+                          if Properties.getBool "firstorder.debug" then
+                            O.error (s ^ ".\n");
                           fc ()
                     end
                 | _ -> assert false
@@ -1312,10 +1315,13 @@ struct
         | pol,FOA.ApplicationFormula (p,args) ->
             let arity = List.length args in
             let unfoldFixpoint ruleName name args body argnames sc fc =
-              (* TODO
-               * The "rigidity" test should only be used on particular
-               * arguments of particular fixed points, not blindly as here.
-               * This is already needed to handle "leq". *)
+              let pol =
+                { pol with FOA.control =
+                    if pol.FOA.control = FOA.Focused then
+                      FOA.Normal
+                    else
+                      pol.FOA.control }
+              in
               let bound =
                 if unfoldingProgresses argnames args then
                   seq.bound
@@ -1537,12 +1543,20 @@ struct
                     sc "eq_r" ~k:fc' []
               | FOA.UnifyFailed -> fc ()
               | FOA.UnifyError(s) ->
-                  O.error (s ^ ".\n"); (* TODO that's annoying ? *)
+                  if Properties.getBool "firstorder.debug" then
+                    O.error (s ^ ".\n");
                   fc ()
             end
         | pol,FOA.ApplicationFormula (p,args) ->
             let arity = List.length args in
             let unfoldFixpoint ruleName name args body argnames sc fc =
+              let pol =
+                { pol with FOA.control =
+                    if pol.FOA.control = FOA.Focused then
+                      FOA.Normal
+                    else
+                      pol.FOA.control }
+              in
               let bound =
                 if unfoldingProgresses argnames args then
                   seq.bound
@@ -1894,8 +1908,9 @@ struct
                       sc [seq] pb fc'
                   | FOA.UnifyFailed -> fc ()
                   | FOA.UnifyError(s) ->
-                      (O.error (s ^ ".\n");
-                      fc ())
+                      if Properties.getBool "firstorder.debug" then
+                        O.error (s ^ ".\n");
+                      fc ()
               in
               G.makeTactical pretactic
             
@@ -2199,6 +2214,9 @@ struct
                (make_matcher
                  (fun (Formula(i,(a,f))) ->
                     not (fixpoint f || a.FOA.polarity=FOA.Positive))) ;
+             (* TODO use a bound local to the repeat(finite) because finite
+              * can in fact run into infinite loops in some cases of ping-pong
+              * between two progressing fixed points *)
              intro `Left
                (make_matcher (function
                                 | Formula(i,(a,
@@ -2209,6 +2227,7 @@ struct
                                     unfoldingProgresses argnames args
                                 | _ -> false))
                dummy_session (Some "unfold") ;
+             (* TODO this doesn't work for nu as it causes coinduction *)
              automaticIntro `Right
                (make_matcher (function
                                 | Formula(i,(a,

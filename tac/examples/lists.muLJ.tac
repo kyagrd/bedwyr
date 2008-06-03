@@ -10,9 +10,12 @@ prove.
 % Qed.
 
 % This works but takes a while.
+% Again, the list hypothesis are useless,
+% but a good test.
 #theorem equal_trans
-  "pi x\ y\ z\ list x => list y => list z =>
-  equal x y => equal y z => equal x z".
+  "pi x\ y\ z\
+    list x => list y => list z =>
+    equal x y => equal y z => equal x z".
 prove.
 % Qed.
 
@@ -28,21 +31,10 @@ prove.
   "pi x\ y\ list x, list y, append x nil y => equal x y".
 prove.
 
-% Epic fail with the old statement:
-%  pi x\ y\ z\ r\ list x => list y => list r =>
-%    (sigma w\ list w => append x y w => append w z r) =>
-%    (sigma w\ list w => append y z w => append x w r)
-% which I'm not sure what it means.
-% Works decently as follows.
 #theorem append_assoc
   "pi x\ y\ z\ xy\ yz\ xy_z\ x_yz\ list x => list y => list z =>
     (append x y xy, append xy z xy_z, append y z yz, append x yz x_yz)
     => xy_z = x_yz".
-simplify.
 prove.
-
-% Should fail.
-#theorem reverse_image
-  "pi x\ y\ (list x, list y, reverse x y) => reverse y x".
-prove.
+% Qed.
 
