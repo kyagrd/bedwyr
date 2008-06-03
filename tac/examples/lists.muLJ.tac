@@ -1,8 +1,6 @@
 % List definitions.
 #open "basic_definitions.def".
 
-#proof_output "/tmp".
-
 % Equality Theorems.
 #theorem equal_sym "pi x\ y\ list x => list y => equal x y => equal y x".
 prove.

@@ -21,20 +21,24 @@ let () = Properties.setString "interpreter.proofoutput" ""
 module type Interpreter =
 sig
   type session
+  exception BatchFailure
   exception Exit of session
   exception Logic of string * session
-
+  
   val setLogics : (string * string) list -> unit
   val onStart : unit -> session
-  val onEnd : session -> unit  
+  val onEnd : session -> unit
   val onPrompt : session -> session
   val onInput : session -> session 
+  val onBatch : session -> session
 end
+
 
 module Make (O : Output.Output) (L : Logic.Logic) =
 struct
   type session = L.session
   type proofbuilder = L.proof Logic.proofbuilder
+  exception BatchFailure
   exception Exit of session
   exception Logic of string * session
   exception TacticalSuccess of session
@@ -46,11 +50,18 @@ struct
   let logics = ref []
   let setLogics l = logics := l
   
+  (*  errorHandler: called whenever an error that should break batch
+      mode occurs.  *)
+  let errorHandler session =
+    if Properties.getBool "output.batch" then
+      raise BatchFailure
+    else
+      session
+
   (*  A flag to determine whether timing is enabled.  *)
   let timing = ref false
-  
-  (* If set, indicates a directory in which proofs should be stored. *)
 
+  (*  home_unrelate: *)  
   let home_unrelate =
     let home =
       try Some (Sys.getenv "HOME") with Not_found -> None
@@ -76,7 +87,7 @@ struct
                   end
             | _ -> s
     in
-      unrel
+    unrel
 
   (********************************************************************
   *findTactical:
@@ -111,6 +122,7 @@ struct
 #redo                       : Redo.
 #reset.                     : Reset the current session, removing all definitions
                               and removing all sequents.
+#set <property> <value>     : Set the given property to a particular value.
 #tactical <name> <tactical> : Define a tactical with the given name and body.
 #tacticals.                 : List all available tacticals.
 #theorem <name> <theorem>.  : Prove the given quoted theorem in the current logic.
@@ -151,7 +163,7 @@ struct
       (L.undo session'))
     else
       (O.error "nothing do undo.\n";
-      session)
+      errorHandler session)
 
   let redo session =
     if (List.length (!redoList) > 0) then
@@ -161,7 +173,7 @@ struct
       (L.redo session'))
     else
       (O.error "nothing do redo.\n";
-      session)
+      errorHandler session)
 
   (********************************************************************
   *applyTactical:
@@ -246,8 +258,8 @@ struct
       session
     with
         Absyn.SyntaxError s ->
-          O.error (s ^ ".\n");
-          session
+          (O.error (s ^ ".\n");
+          errorHandler  session)
       | TacticalSuccess s ->
           O.output "Success.\n";
           if not (L.validSequent s) then
@@ -269,13 +281,13 @@ struct
             s
       | TacticalFailure ->
           O.output "Failure.\n";
-          session
+          errorHandler session
       | Failure s ->
           O.error (Printf.sprintf "Internal Failure: %s.\n" s);
-          session
+          errorHandler session
       | Logic.Interrupt ->
           O.output "Interrupted.\n";
-          session
+          errorHandler session
 
   (********************************************************************
   *makeTactical:
@@ -333,7 +345,7 @@ struct
       raise (Logic(l,session))
     else
       (O.error ("undefined logic '" ^ l ^ "'.\n");
-      session)
+      errorHandler session)
     
   (********************************************************************
   *openFiles:
@@ -351,8 +363,12 @@ struct
         let commands = Toplevel.parseChannelCommandList infile in
         List.fold_left executeCommand session commands
       with
-        Sys_error(s) -> (O.error ("unable to open file '" ^ file ^ "': " ^ s ^ ".\n"); session)
-      | Absyn.SyntaxError(s) -> (O.error ("in file '" ^ file ^ "': " ^ s ^ ".\n"); session)
+        Sys_error(s) ->
+          (O.error ("unable to open file '" ^ file ^ "': " ^ s ^ ".\n");
+          errorHandler session)
+      | Absyn.SyntaxError(s) ->
+          (O.error ("in file '" ^ file ^ "': " ^ s ^ ".\n");
+          errorHandler session)
     in
     List.fold_left executeFile session files
 
@@ -384,7 +400,9 @@ struct
     let handle input session =
       match input with
           Absyn.Exit -> raise (Exit session)
-        | Absyn.Set(p,v) -> Properties.setString p v; (session, false)
+        | Absyn.Set(p,v) ->
+            (*  Set doesn't actually get undone.  *)
+            Properties.setString p v; (session, true)
         | Absyn.Clear -> (O.clear (); (session, true))
         | Absyn.Help -> (showHelp (); (session, true))
         | Absyn.Undo(_) -> ((undo session), false)
@@ -418,7 +436,7 @@ struct
               (tactical pretactical session, true)
             else
               (O.error "No valid sequent.\n";
-              (session, true))
+              (errorHandler session, true))
         | Absyn.NoCommand -> (session,true)
     in
  
@@ -467,9 +485,15 @@ struct
   * This function is called by the interface (see interface.ml) when
   * a logic is unloaded.  It is provided to allow a logic to clean itself
   * up if necessary, though as of now no cleanup function is provided by
-  * the Logic.Logic module (see logic.mli).
+  * the Logic.Logic module (see logic.mli) for onEnd to even call.
   ********************************************************************)
   let onEnd session = ()
+
+  (********************************************************************
+  *onBatch:
+  ********************************************************************)
+  let onBatch session =
+    openFiles session [(Properties.getString "output.batchfile")]
 
   (********************************************************************
   *onInput:
@@ -491,5 +515,5 @@ struct
             This ensures that undo will always restore the
             previous state even in the case of a parse error. *)
         storeSession session;
-        session)
+        errorHandler session)
 end

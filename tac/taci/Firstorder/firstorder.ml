@@ -17,7 +17,7 @@
 * Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA        *
 **********************************************************************)
 let () = Properties.setBool "firstorder.proofsearchdebug" false
-let () = Properties.setBool "firstorder.debug" true
+let () = Properties.setBool "firstorder.debug" true (*  This isn't used...  *)
 let () = Properties.setInt "firstorder.defaultbound" 3
 
 (**********************************************************************
@@ -114,6 +114,10 @@ struct
     | {bound = None} -> None
     | {bound = Some b} -> Some (b-1)
 
+  (********************************************************************
+  *string_of_sequent:
+  * Convert a sequent to a string, including the sequent's level.
+  ********************************************************************)
   let string_of_sequent seq =
     let top       = String.concat "\n" (List.map string_of_formula seq.lhs) in
     let bottom    = String.concat "\n" (List.map string_of_formula seq.rhs) in
@@ -146,6 +150,13 @@ struct
 
   (********************************************************************
   *Proof:
+  * rule: the name of the rule applied
+  * formula: the formula on which the rule was applied
+  * sequent: the sequent on which the rule was applied
+  * params: the parameters (their names and their values); these are
+  *   rule-specific
+  * bindings:
+  * subs: sub-proofs
   ********************************************************************)
   type proof = {
     rule : string;
@@ -156,7 +167,7 @@ struct
     subs : proof list
   }
 
-  type lemma = string * formula * proof
+  type lemma = string * FOA.annotation FOA.polarized * proof
   
   (********************************************************************
   *Session:
@@ -206,11 +217,21 @@ struct
 
   let proof session = session.builder
 
+  (********************************************************************
+  *undo:
+  * Implements undo functionality; the given session is the session
+  * that we should undo "to".
+  ********************************************************************)
   let undo session =
     Term.restore_state session.state ;
     Term.restore_namespace session.proof_namespace ;
     session
 
+  (********************************************************************
+  *redo:
+  * Implements redo functionality; the given session is the session
+  * that we should redo "to".
+  ********************************************************************)
   let redo session =
     (* The idea would be to use the diff field to redo,
      * but this is actually unused and not implemented. *)
@@ -663,7 +684,7 @@ struct
         [proof] ->
         let lemmas' =
           (Option.get session.theorem_name,
-            makeFormula (Option.get session.theorem),
+            Option.get session.theorem,
             proof) ::
           session.lemmas
         in
@@ -1962,35 +1983,11 @@ struct
         | s::tl -> sc [abstract s] tl (fun proofs -> proofs) fc
         | _ -> fc ()
 
+  (** {1 Debugging} *)
   (********************************************************************
-  *applyTactical:
-  * Searches the list of lemmas and adds the lemma of the given name
-  * to the hypotheses.  Additionally modifies the proof builder to insert
-  * the proof of the lemma in the appropriate place.
+  *examineTactical:
+  * Print the AST of the current sequent and succeed.
   ********************************************************************)
-  let applyTactical session args = match args with
-      Absyn.String(s)::[] ->
-        (try
-          let (_,formula,proof) = List.find (fun (s',_,_) -> s = s') session.lemmas in
-          let pretactic = fun sequent sc fc ->
-            let seq = { sequent with lhs = sequent.lhs @ [formula] } in
-            let pb = fun proofs ->
-              { rule = "apply" ;
-              params = ["lemma", s] ;
-              bindings = [] ;
-              formula = Some formula ;
-              sequent = seq ;
-              subs = proof::proofs }
-            in
-            sc [seq] pb fc
-          in
-            G.makeTactical pretactic
-        with
-          Not_found -> (O.error "undefined lemma.\n" ; G.failureTactical))
-    | _ -> G.invalidArguments "apply"
-
-  (** {1 Debugging}
-    * The examine tactic is useful for debugging. *)
   let examineTactical session args = match args with
     | [] ->
         fun sequents sc fc ->
@@ -2008,6 +2005,10 @@ struct
             sc [] sequents Logic.idProofBuilder fc
     | _ -> G.invalidArguments "examine"
 
+  (********************************************************************
+  *examinePatternTactical:
+  * Print the AST of the given pattern and succeed.
+  ********************************************************************)
   let examinePatternTactical session args = match args with
     | [Absyn.String(s)] ->
         let p = parsePattern s in
@@ -2043,10 +2044,7 @@ struct
     * subformulas.
     * Hence, the "polarity" of mu/nu is currently fixed to resp. pos/neg. *)
   
-  (** The focused proof-search strategy makes use of building blocks
-    * which process one sequent at a time, glued together using Then (and an
-    * underlying Iterate) in order to get a tactic processing several goals in
-    * parallel.
+  (** Why we don't use the existing building blocks (then, or, etc.):
     * The problem is that this model hides some information. The asynchronous
     * phase, in presence of fixed points, can produce several alternative lists
     * of subgoals, which might easily have the first goal in common.
@@ -2055,10 +2053,7 @@ struct
     * have the same impossible first goal.
     * An example of that is (nat x => nat y): the first possibility is to freeze
     * (nat x), all the others produce a subgoal (x=0 => nat y) which is
-    * impossible.
-    * A better strategy would be to start the focusing phase as soon as one goal
-    * is produced and fail earlier (at the level of the first choice to unfold
-    * nat). TODO remove this comment I think I fixed this -- david *)
+    * impossible. *)
 
   (** In automatic mode, intro doesn't really need a session. *)
   let automaticIntro side matcher = intro side matcher dummy_session None
@@ -2228,7 +2223,6 @@ struct
      * but the roles of mu/nu are hardcoded. *)
 
     (** Matchers for fixed points without a progressing unfolding. *)
-
     let left_no_progress =
       make_matcher
         (fun (Formula(i,(a,f))) ->
@@ -2261,11 +2255,10 @@ struct
                a.FOA.control=FOA.Focused && a.FOA.polarity=FOA.Positive)))
 
   (** Focused proof-search, starting with the async phase. *)
-  let rec full_async s sc fc =
-    cutThenTactical finite freeze s sc fc
+  let rec fullAsync s sc fc = cutThenTactical finite freeze s sc fc
 
   (* Freeze the first available asynchronous fixed point,
-   * takes care of unfoldings and re-calling full_async when needed. *)
+   * takes care of unfoldings and re-calling fullAsync when needed. *)
   and freeze sequents sc fc =
     let async = cutThenTactical finite freeze in
     let seq = match sequents with [seq] -> seq | _ -> assert false in
@@ -2321,21 +2314,21 @@ struct
   (** Complete focused proof-search starting with a decide rule. *)
   and fullSync seq sc fc =
     focus seq
-      (fun seq k -> sync [seq] sc k)
+      (fun seq k -> syncTactical [seq] sc k)
       fc
 
-  and sync seqs sc fc =
+  and syncTactical seqs sc fc =
     assert (List.length seqs = 1) ;
     sync_step seqs
       (fun n o b k ->
-         G.iterateTactical sync (n@o)          (* succeeds on n@o=[] *)
+         G.iterateTactical syncTactical (n@o)          (* succeeds on n@o=[] *)
            (fun n' o' b' k' ->
-              assert (n'=[] && o'=[]) ;        (* sync is a complete tactic *)
+              assert (n'=[] && o'=[]) ;        (* syncTactical is a complete tactic *)
               sc [] [] (fun l -> b (b' l)) k') (* expect l = [] *)
            k)
       (fun () ->
          match unfocus (List.hd seqs) with
-           | Some seq -> full_async [seq] sc fc
+           | Some seq -> fullAsync [seq] sc fc
            | None -> fc ())
 
   let setBound session args seqs sc fc =
@@ -2356,9 +2349,81 @@ struct
   let proveTactical session args =
     (* Set a bound to the number of unfoldings,
      * which by the way restricts our attention to the first sequent.
-     * There is no need to force full_async to complete, since it never returns
+     * There is no need to force fullAsync to complete, since it never returns
      * partial successes by design. *)
-    G.thenTactical (setBound session args) full_async
+    G.thenTactical (setBound session args) fullAsync
+
+  (********************************************************************
+  *cutLemmaTactical:
+  * Searches the list of lemmas and adds the lemma of the given name
+  * to the hypotheses.  Additionally modifies the proof builder to insert
+  * the proof of the lemma in the appropriate place.
+  ********************************************************************)
+  let cutLemmaTactical session args = match args with
+      Absyn.String(s)::[] ->
+        (try
+          let (_,formula,proof) = List.find (fun (s',_,_) -> s = s') session.lemmas in
+          let formula' = Formula(0, formula) in
+          let pretactic = fun sequent sc fc ->
+            let seq = { sequent with lhs = sequent.lhs @ [formula'] } in
+            let pb = fun proofs ->
+              { rule = "cut_lemma" ;
+              params = ["lemma", s] ;
+              bindings = [] ;
+              formula = Some formula' ;
+              sequent = seq ;
+              subs = proof::proofs }
+            in
+            sc [seq] pb fc
+          in
+          (G.makeTactical pretactic)
+        with
+          Not_found -> (O.error "undefined lemma.\n" ; G.failureTactical))
+    | _ -> G.invalidArguments "cut_lemma"
+
+  (********************************************************************
+  *applyTactical:
+  * Applies the lemma of the given name by making all elements of the
+  * lemma formula negative, focusing on the lemma, and then repeating
+  * 'sync', and finally releasing focus.
+  ********************************************************************)
+  let applyTactical session args = match args with
+      Absyn.String(s)::[] ->
+        (*  select: given a formula, make it totally negative and focus
+            the top level.  *)
+        let select formula =
+          let tf x = x in
+          let rec ff () =
+            let f' = FOA.mapFormula ff tf in
+            {f' with
+              FOA.polf = fun (ann, f) ->
+                ({ann with FOA.polarity = FOA.Negative}, (ff ()).FOA.formf f)}
+          in
+          let (annotation, newFormula) = (ff ()).FOA.polf formula in
+          ({annotation with FOA.control = FOA.Focused}, newFormula)
+        in
+        
+        (try
+          let (_,formula,proof) = List.find (fun (s',_,_) -> s = s') session.lemmas in
+          let formula' = Formula(0, select formula) in
+          let pretactic = fun sequent sc fc ->
+            let seq = { sequent with lhs = sequent.lhs @ [formula'] } in
+            let pb = fun proofs ->
+              { rule = "apply" ;
+              params = ["lemma", s] ;
+              bindings = [] ;
+              formula = Some formula' ;
+              sequent = seq ;
+              subs = proof::proofs }
+            in
+            sc [seq] pb fc
+          in
+            (G.thenTactical
+              (G.makeTactical pretactic)
+              (G.repeatTactical syncTactical))
+        with
+          Not_found -> (O.error "undefined lemma.\n" ; G.failureTactical))
+    | _ -> G.invalidArguments "apply"
 
   (********************************************************************
   *admitTactical:

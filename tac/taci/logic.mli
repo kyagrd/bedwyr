@@ -146,7 +146,6 @@ sig
   val failureTactical : logic_tactic
   val idTactical : logic_tactic
   val admitTactical : (L.logic_sequent -> L.logic_proof) -> logic_tactic
-  (*  val applyTactical : logic_tactic -> logic_tactic  *)
   val orElseTactical : logic_tactic -> logic_tactic -> logic_tactic
   val orElseListTactical : logic_tactic list -> logic_tactic
   val cutThenTactical : (unit -> unit -> unit) -> logic_tactic -> logic_tactic -> logic_tactic

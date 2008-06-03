@@ -38,11 +38,33 @@ struct
     else
       ()
 
-  let prompt s = (print_string s; flush stdout)
-  let impossible s = (print_string ("Impossible: " ^ s); flush stdout)
-  let error s = (print_string ("Error: " ^ s); flush stdout)
-  let output s = (print_string s; flush stdout)
-  let goal s = (print_string s; flush stdout)
+  let prompt s =
+    if not (Properties.getBool "output.batch") then
+      (print_string s; flush stdout)
+    else
+      ()
+
+  let impossible s =
+    (*  Output even in batchmode. *)
+    (print_string ("Impossible: " ^ s); flush stdout)
+
+  let error s =
+    if not (Properties.getBool "output.batch") then
+      (print_string ("Error: " ^ s); flush stdout)
+    else
+      ()
+
+  let output s =
+    if not (Properties.getBool "output.batch") then
+      (print_string s; flush stdout)
+    else
+      ()
+
+  let goal s =
+    if not (Properties.getBool "output.batch") then
+      (print_string s; flush stdout)
+    else
+      ()
   
   (**********************************************************************
   *clear:
@@ -50,15 +72,18 @@ struct
   * not to have a standard way.
   **********************************************************************)
   let clear () =
-    try
-      if Sys.os_type = "Win32" then
-        let _ = Sys.command "cls" in
-        ()
-      else
-        let _ = Sys.command "clear" in
-        ()
-    with _ -> ()  (* Eep. *)
-
+    if not (Properties.getBool "output.batch") then
+      try
+        if Sys.os_type = "Win32" then
+          let _ = Sys.command "cls" in
+          ()
+        else
+          let _ = Sys.command "clear" in
+          ()
+      with _ -> ()  (* Eep. *)
+    else
+      ()
+  
   let logics ls =
     let get (key, name) =
       let len = max (20 - (String.length key)) 0 in
@@ -74,6 +99,8 @@ end
 
 module XmlOutput =
 struct
+  (*  Note: XmlOutput doesn't respect batchmode.  *)
+
   let map =
     let sq = ("'", "&apos;") in
     let dq = ("\"", "&quot;") in

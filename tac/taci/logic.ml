@@ -397,13 +397,7 @@ struct
 
   (********************************************************************
   * Interfaces for Tacticals
-  ********************************************************************)
-  (*
-  let applyInterface session args = match args with
-      Absyn.Tactical(tac)::[] -> tac
-    | _ -> invalidArguments "apply"
-  *)
-  
+  ********************************************************************) 
   let orElseInterface session args = match args with
       Absyn.Tactical(tac1)::Absyn.Tactical(tac2)::[] ->
         (orElseTactical tac1 tac2)
