@@ -2201,9 +2201,7 @@ struct
 
     (** "Finite" async connectives can be introduced eagerly without backtrack.
       * For the fixed points (mu on the left, nu on the right) there is a choice
-      * of "opening" or "freezing", over which backtrack should be possible.
-      * However we treat specially fixed points for which unfolding progresses,
-      * since their unfolding is not a commitment and cannot yield loops. *)
+      * of "opening" or "freezing", over which backtrack should be possible. *)
     let finite =
       cutRepeatTactical
         (G.orElseListTactical
@@ -2228,8 +2226,7 @@ struct
                                     unfoldingProgresses argnames args
                                 | _ -> false))
                dummy_session (Some "unfold") ;
-             (* TODO this doesn't work for nu as it causes coinduction *)
-             automaticIntro `Right
+             intro `Right
                (make_matcher (function
                                 | Formula(i,(a,
                                     FOA.ApplicationFormula(
@@ -2237,29 +2234,28 @@ struct
                                         FOA.CoInductive,_,argnames,_),args))) ->
                                     a.FOA.freezing = FOA.Unfrozen &&
                                     unfoldingProgresses argnames args
-                                | _ -> false)) ])
-                                
+                                | _ -> false))
+               dummy_session (Some "unfold")
+           ])
+
     (* TODO note that the treatment of fixed points is not based on polarities
      * but the roles of mu/nu are hardcoded. *)
 
-    (** Matchers for fixed points without a progressing unfolding. *)
-    let left_no_progress =
+    let match_inductable =
       make_matcher
         (fun (Formula(i,(a,f))) ->
            match f with
              | FOA.ApplicationFormula
                 (FOA.FixpointFormula (FOA.Inductive,_,argnames,_), args) ->
-                a.FOA.freezing = FOA.Unfrozen &&
-                not (unfoldingProgresses argnames args)
+                a.FOA.freezing = FOA.Unfrozen
              | _ -> false)
-    let right_no_progress =
+    let match_coinductable =
       make_matcher
         (fun (Formula(i,(a,f))) ->
            match f with
              | FOA.ApplicationFormula
                 (FOA.FixpointFormula (FOA.CoInductive,_,argnames,_), args) ->
-                a.FOA.freezing = FOA.Unfrozen &&
-                not (unfoldingProgresses argnames args)
+                a.FOA.freezing = FOA.Unfrozen
              | _ -> false)
 
     (** Apply a rule on the focused formula if it is synchronous. *)
@@ -2282,12 +2278,13 @@ struct
   and freeze sequents sc fc =
     let async = cutThenTactical finite freeze in
     let seq = match sequents with [seq] -> seq | _ -> assert false in
-      match left_no_progress seq.lhs with
+      match match_inductable seq.lhs with
        | Some (Formula(i,(a,f)), before, after) ->
-           (* We can do induction, and unfolding doesn't progress.
-            * So we'll only try freezing, then induction.
-            * Unfolding might sometimes yield simpler proofs,
-            * but trying it everytime seems costly... *)
+           (* Unfolding might sometimes yield simpler proofs,
+            * but trying it everytime seems costly...
+            * TODO a way of getting a quasi-unfolding for free inside the
+            * induction is to bundle a frozen version of the fixed point
+            * with the invariant *)
            G.orElseTactical
              (fun _ ->
                 if Properties.getBool "firstorder.proofsearchdebug" then
@@ -2309,11 +2306,11 @@ struct
                           (match seq.bound with Some b -> max 0 b | None -> 0)
                           ' ')
                        (string_of_formula (Formula(i,(a,f)))) ;
-                   automaticIntro `Left left_no_progress [seq])
+                   automaticIntro `Left match_inductable [seq])
                 async)
              [(*no args*)] sc fc
        | None ->
-           begin match right_no_progress seq.rhs with
+           begin match match_coinductable seq.rhs with
              | Some (Formula(i,(a,f)), before, after) ->
                  G.orElseTactical
                    (fun _ ->
@@ -2322,7 +2319,7 @@ struct
                           rhs = before@[Formula(i,(FOA.freeze a,f))]@after }])
                    (cutThenTactical
                      (fun _ ->
-                        automaticIntro `Right right_no_progress [seq])
+                        automaticIntro `Right match_coinductable [seq])
                      async)
                    [(*no args*)] sc fc
              | None ->
