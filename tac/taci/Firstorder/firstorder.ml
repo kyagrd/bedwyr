@@ -2393,14 +2393,15 @@ struct
 
   (********************************************************************
   *applyTactical:
-  * Applies the lemma of the given name by making all elements of the
-  * lemma formula negative, focusing on the lemma, and then repeating
-  * 'sync', and finally releasing focus.
+  * Applies the lemma of the given name by focusing on the lemma,
+  * repeating 'sync', and finally releasing focus.  It also tweaks the
+  * proof builder in the same way as cutLemmaTactical.
   ********************************************************************)
   let applyTactical session args = match args with
       Absyn.String(s)::[] ->
-        (*  select: given a formula, make it totally negative and focus
-            the top level.  *)
+        (*  select: given a formula, do something to it (we don't know
+            what yet, so we don't do anything; options include negating
+            some things, freezing others, etc.), and focus on it. *)
         let select formula =
           let tf x = x in
           let rec ff () =
@@ -2408,7 +2409,6 @@ struct
             {f' with
               FOA.polf = fun (ann, f) ->
                 (ann, (ff ()).FOA.formf f)}
-                (*  ({ann with FOA.polarity = FOA.Negative}, (ff ()).FOA.formf f)}  *)
           in
           let (annotation, newFormula) = (ff ()).FOA.polf formula in
           ({annotation with FOA.control = FOA.Focused}, newFormula)
