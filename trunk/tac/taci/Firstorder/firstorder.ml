@@ -2458,8 +2458,6 @@ struct
         ++ ("and", andL||andR)
         ++ ("and_l", andL)
         ++ ("and_r", andR)
-
-        ++ ("apply", applyTactical)
         
         ++ ("imp", impL||impR)
         ++ ("imp_l", impL)
@@ -2502,7 +2500,9 @@ struct
         ++ ("weak_l", weakL)
         ++ ("contract_l", contractL)
 
+        ++ ("apply", applyTactical)
         ++ ("cut", cutTactical)
+        ++ ("cut_lemma", cutLemmaTactical)
         ++ ("force", forceTactical)
         ++ ("prove", proveTactical)
         ++ ("async", fun _ _ -> finite)
