@@ -409,6 +409,7 @@ struct
         | Absyn.Redo(_) -> ((redo session), false)
         | Absyn.Reset -> (L.reset (), true)
         | Absyn.ProofOutput name ->
+            (*  Proof Output doesn't get undone.  *)
             let dir = (home_unrelate name) in
             (O.output ("Proof output set to '" ^ dir ^ "'\n");
             Properties.setString "interpreter.proofoutput" dir;

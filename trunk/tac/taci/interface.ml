@@ -51,7 +51,6 @@ struct
         | I.Exit(s) ->
             (I.onEnd s;
             raise BatchSuccess)
-        
     in
     
     let rec interp session =
