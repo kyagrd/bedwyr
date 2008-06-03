@@ -87,6 +87,9 @@ let rec interpret interp =
   | Interface.BatchFailure ->
       (print_endline "Error: batch file contains errors.";
       2)
+  | Interface.BatchSuccess ->
+      (print_endline "Batch file executed successfully.";
+      0)
 
 (**********************************************************************
 *main:
