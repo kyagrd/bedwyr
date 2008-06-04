@@ -38,3 +38,13 @@ prove.
 prove.
 % Qed.
 
+% Avoid an infinite loop of "progressing" unfoldings.
+#theorem neq_trap "pi x\y\ equal x (cons a y) => equal x y => false".
+prove.
+% Qed.
+
+% Same, different order.
+#theorem neq_trap "pi x\y\ equal x y => equal x (cons a y) => false".
+prove.
+% Qed.
+
