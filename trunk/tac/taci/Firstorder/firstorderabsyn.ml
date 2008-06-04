@@ -81,7 +81,7 @@ and 'a abstraction =
 
 let negativeFormula f = { defaultAnnotation with polarity = Negative },f
 let positiveFormula f = { defaultAnnotation with polarity = Positive },f
-let change f (a,form) = (f a, form)
+let changeAnnotation f (a,form) = (f a, form)
 
 (*  Patterns  *)
 type pattern_annotation = {

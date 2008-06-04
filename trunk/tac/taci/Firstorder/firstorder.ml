@@ -755,7 +755,7 @@ struct
       * Makes a mu or nu formula based on the combinator type.
       ****************************************************************)
       let makeFixpoint ind name argnames body = 
-  FOA.FixpointFormula(ind,name,argnames,body) in
+        FOA.FixpointFormula(ind,name,argnames,body) in
       
       (****************************************************************
       *abstractDefinition:
@@ -925,7 +925,7 @@ struct
 
   let makeNablaVar lvl i =
     (lvl, i + 1, Term.nabla (i + 1))
-
+  
   (********************************************************************
   *Tacticals:
   ********************************************************************)
@@ -1407,11 +1407,12 @@ struct
                                 let st   = Formula (i,st) in
                                 let st'  = Formula (0,st') in
                                 let bst' = Formula (0,bst') in
-                                  sc "induction" [
-                                    { seq with lhs = zip [st] } ;
-                                    { seq with lvl = lvl' ;
-                                               lhs = [bst'] ; rhs = [st'] }
-                                  ]
+                                let seqs =
+                                  [{ seq with lhs = zip [st] } ;
+                                  { seq with lvl = lvl' ;
+                                             lhs = [bst'] ; rhs = [st'] }]
+                                in
+                                sc "induction" seqs
                             | None -> fc ()
                           end
                         else
@@ -1437,14 +1438,26 @@ struct
                           let rec s = function
                             | [] -> rhs
                             | Formula(_,f')::l -> 
-				if (Properties.getString "firstorder.frozens" = "ignore") && (fst f').FOA.freezing = FOA.Frozen then s l else
-                               { FOA.defaultAnnotation with
-				   FOA.polarity = FOA.Negative },
-                               FOA.BinaryFormula 
-				 (FOA.Imp, (if (Properties.getString "firstorder.frozens" = "thaw") then FOA.change FOA.thaw f' else f'), s l)
+                                if Properties.getString "firstorder.frozens" = "ignore" &&
+                                  (fst f').FOA.freezing = FOA.Frozen then
+                                  (s l)
+                                else
+                                  let ann = 
+                                    { FOA.defaultAnnotation with
+                                      FOA.polarity = FOA.Negative }
+                                  in
+                                  let f'' =
+                                    if Properties.getString "firstorder.frozens" = "thaw" then
+                                      FOA.changeAnnotation FOA.thaw f'
+                                    else
+                                      f'
+                                  in
+                                  (ann, FOA.BinaryFormula(FOA.Imp, f'', s l))
                           in
-                          s (zip 
-			       (if Properties.getBool "firstorder.induction-unfold" then [Formula(i,FOA.change FOA.freeze f)] else [])) 
+                          if Properties.getBool "firstorder.induction-unfold" then
+                            s (zip [Formula(i,FOA.changeAnnotation FOA.freeze f)])
+                          else
+                            s (zip [])
                         in
                         let fv,elrhs =
                           (* Essentially form
@@ -1495,10 +1508,13 @@ struct
                           { seq with bound = updateBound seq.bound }
                         in
                           if outOfBound seq then fc () else
-                            sc "induction"
-                              [{ seq with lvl = lvl' ;
-                                 lhs = [Formula(0,bst')] ;
-                                 rhs = [Formula(0,st')] }]
+                            let seq' = 
+                              { seq with lvl = lvl' ;
+                                   lhs = [Formula(0,bst')] ;
+                                   rhs = [Formula(0,st')] }
+                            in
+                            (*  TODO: is this valid?  *)
+                            sc "induction" [seq']
                   end
               | FOA.AtomicFormula p ->
                   if p = "false" then sc "false" [] else (* TODO boooh *)
@@ -1660,11 +1676,12 @@ struct
                                 let st   = Formula (i,st) in
                                 let st'  = Formula (0,st') in
                                 let bst' = Formula (0,bst') in
-                                  sc "induction" [
-                                    { seq with rhs = zip [st] } ;
-                                    { seq with lvl = lvl' ;
-                                               lhs = [st'] ; rhs = [bst'] }
-                                  ]
+                                let seqs =
+                                  [{ seq with rhs = zip [st] } ;
+                                  { seq with lvl = lvl' ;
+                                             lhs = [st'] ; rhs = [bst'] }]
+                                in
+                                sc "induction" seqs
                             | None -> fc ()
                           end
                         else
@@ -2444,7 +2461,8 @@ struct
 
   (********************************************************************
   *proveToTactical:
-  * Iterative deepening.
+  * Iterative deepening.  Takes a lower and upper bound; you can
+  * therefore simulate the old prove tactical by doing prove("n", "n").
   ********************************************************************)
   let iterativeDeepeningProveTactical session args =
     let rec construct i max =

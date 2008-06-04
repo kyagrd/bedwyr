@@ -204,8 +204,9 @@ val getTermHeadAndArgs : term -> (string * term list) option
 
 val negativeFormula : annotation formula -> annotation polarized
 val positiveFormula : annotation formula -> annotation polarized
+
 val freeze : annotation -> annotation
 val thaw : annotation -> annotation
 val focus : annotation -> annotation
 val delay : annotation -> annotation
-val change : (annotation -> annotation) -> annotation polarized -> annotation polarized
+val changeAnnotation : (annotation -> annotation) -> annotation polarized -> annotation polarized
