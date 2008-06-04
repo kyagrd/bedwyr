@@ -343,6 +343,7 @@ namespace StickyTaci
       Scintilla.Margins.Margin2.Width = 16;
       Scintilla.Indentation.TabWidth = 2;
       Scintilla.Indentation.UseTabs = false;
+      Scintilla.IsBraceMatching = true;
 
       m_Ctrl = ctrl;
 
@@ -570,6 +571,7 @@ namespace StickyTaci
     {
       Ctrl.OnInputChanged(Scintilla.Lines.Count);
       m_Dirty = true;
+      Debug.WriteLine("Text changed.");
     }
     #endregion
 
@@ -598,6 +600,14 @@ namespace StickyTaci
       InvokeDelegate(this, (MethodInvoker)delegate()
       {
         outputBox.Clear();
+      });
+    }
+
+    public void ClearGoal()
+    {
+      InvokeDelegate(this, (MethodInvoker)delegate()
+      {
+        goalBox.Clear();
       });
     }
 

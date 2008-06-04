@@ -306,6 +306,8 @@ namespace StickyTaci
       // mainMenuTacRestart
       // 
       this.mainMenuTacRestart.Name = "mainMenuTacRestart";
+      this.mainMenuTacRestart.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Alt)
+                  | System.Windows.Forms.Keys.R)));
       this.mainMenuTacRestart.Size = new System.Drawing.Size(214, 22);
       this.mainMenuTacRestart.Text = "Re&start";
       this.mainMenuTacRestart.Click += new System.EventHandler(this.mainMenuTacRestart_Click);
