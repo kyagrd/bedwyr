@@ -1,4 +1,4 @@
-TEST=lists.muLJ.tac sim.muLJ.tac internal_checks.muLJ.tac
+TEST=lists.muLJ.tac sim.muLJ.tac internal_checks.muLJ.tac tictactoe.muLJ.tac
 test:
 	@cd examples && for t in $(TEST) ; do \
 	  echo Testing $$t... ; \
