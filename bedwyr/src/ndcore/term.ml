@@ -276,12 +276,20 @@ let atom name =
 
 let get_var x = match observe x with
   | Var v -> v
-  | App _ -> assert false
   | _ -> assert false
 
 (** Raise Not_found if not naming hint is attached to the variable. *)
-let get_hint var =
-  Hint.find (get_var var)
+let get_hint v =
+  let v = get_var v in
+  try
+    Hint.find v
+  with
+    | Not_found ->
+        begin match v.tag with
+          | Logic -> "H"
+          | Eigen -> "h"
+          | Constant -> "c"
+        end
 
 (** Find an unique name for [v] (based on a naming hint if there is one)
   * and registers it in the symbols table. *)
@@ -304,19 +312,7 @@ let get_name var =
     match existing_name with
       | Some n -> n
       | None ->
-          let v = match observe var with Var v -> v | _ -> assert false in
-          let prefix =
-            try
-              (* Get the naming hint. *)
-              Hint.find v
-            with
-              | Not_found ->
-                  begin match v.tag with
-                    | Logic -> "H"
-                    | Eigen -> "h"
-                    | Constant -> "c"
-                  end
-          in
+          let prefix = get_hint var in
           let rec lookup suffix =
             let name =
               if suffix < 0 then prefix else prefix ^ string_of_int suffix
