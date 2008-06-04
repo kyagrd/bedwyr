@@ -1,4 +1,4 @@
-#define "winner x l := sigma a\ b\ d\ e\ f\ g\
+#define "winner x {l} := sigma a\ b\ d\ e\ f\ g\
 l = c x (c x (c x (c a (c b (c g (c d (c e (c f nil)))))))) ;
 l = c a (c b (c g (c x (c x (c x (c d (c e (c f nil)))))))) ;
 l = c d (c e (c f (c a (c b (c g (c x (c x (c x nil)))))))) ;
@@ -8,9 +8,9 @@ l = c g (c f (c x (c a (c b (c x (c d (c e (c x nil)))))))) ;
 l = c x (c b (c f (c a (c x (c g (c d (c e (c x nil)))))))) ;
 l = c b (c d (c x (c a (c x (c g (c x (c e (c f nil))))))))".
 
-#define "nowinner l := pi x\ winner x l => x=n".
+#define "nowinner {l} := pi x\ winner x l => x=n".
 
-#define "move x l k := (sigma l0\ l = c n l0, k = c x l0) ;
+#define "move x {l} {k} := (sigma l0\ l = c n l0, k = c x l0) ;
  (sigma l0\ k0\ a\ l = c a l0, k = c a k0, move x l0 k0)".
 
 #define "wins p o l := winner p l ; pi l0\ move o l l0 =>
@@ -22,43 +22,7 @@ l = c b (c d (c x (c a (c x (c g (c x (c e (c f nil))))))))".
 
 #theorem t1 "pi x\ l\ k\ flip l k => winner x l => winner x k".
 prove.
-#theorem t2 "pi x\ l\ k\ l2\ k2\ (move x l k, flip l l2, flip k k2) => move x l2 k2".
-async.
-rotate_l.
-mu_l.
-mu_l.
-async.
-mu_l.
-async.
-prove.
-then(mu_l,async).
-prove.
-then(mu_l,async).
-prove.
-then(mu_l,async).
-then(mu_r,right).
-then(repeat(sigma_r),and_r).
-then(and_r,eq_r).
-then(mu_r,right).
-then(repeat(sigma_r),and_r).
-then(and_r,eq_r).
-then(mu_r,right).
-then(repeat(sigma_r),and_r).
-then(and_r,eq_r).
-then(mu_r,right).
-then(repeat(sigma_r),and_r).
-then(and_r,eq_r).
-then(mu_r,right).
-then(repeat(sigma_r),and_r).
-then(and_r,eq_r).
-then(mu_r,right).
-then(repeat(sigma_r),and_r).
-then(and_r,eq_r).
 
-then(mu_l,async).
-then(mu_l,async).
-then(mu_l,async).
-then(mu_l,async).
-then(mu_l,async).
-then(mu_l,async).
+#theorem t2 "pi x\ l\ k\ l2\ k2\ (flip l l2, move x l k, flip k k2) => move x l2 k2".
+prove.
 
