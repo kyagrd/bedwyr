@@ -1437,11 +1437,11 @@ struct
                           let rec s = function
                             | [] -> rhs
                             | Formula(_,f')::l -> 
-				if (Properties.getString "firstorder.frozens" == "ignore") && (fst f').FOA.freezing = FOA.Frozen then s l else
+				if (Properties.getString "firstorder.frozens" = "ignore") && (fst f').FOA.freezing = FOA.Frozen then s l else
                                { FOA.defaultAnnotation with
 				   FOA.polarity = FOA.Negative },
                                FOA.BinaryFormula 
-				 (FOA.Imp, (if (Properties.getString "firstorder.frozens" == "thaw") then FOA.change FOA.thaw f' else f'), s l)
+				 (FOA.Imp, (if (Properties.getString "firstorder.frozens" = "thaw") then FOA.change FOA.thaw f' else f'), s l)
                           in
                           s (zip 
 			       (if Properties.getBool "firstorder.induction-unfold" then [Formula(i,FOA.change FOA.freeze f)] else [])) 
