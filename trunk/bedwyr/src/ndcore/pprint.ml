@@ -105,7 +105,7 @@ let term_to_string_full ~generic ~bound term =
           let res = (String.concat "\\" more)^"\\"^t in
             List.iter Term.free more ;
             if pr = 0 then res else parenthesis res
-      | Susp _ -> raise Term.NonNormalTerm
+      | Susp (t,_,_,l) -> Printf.sprintf "<%d:%s>" (List.length l) (pp ~bound pr t)
       | Ptr  _ -> assert false (* observe *)
   in
     pp ~bound high_pr term
@@ -137,10 +137,10 @@ let print_term ?(bound=[]) term =
   * The input term should have at least [List.length bound] abstractions
   * at toplevel. *)
 let term_to_string_preabstracted ~generic ~bound term =
-  let term = Norm.deep_norm term in
+  (* let term = Norm.hnorm term in *)
   let len = List.length bound in
     match observe term with
       | Lam (n,term) ->
           assert (len <= n) ;
           term_to_string_full ~generic ~bound (lambda (n-len) term)
-      | _ -> assert (bound = []); term_to_string_full ~generic ~bound term
+      | _ -> (* assert (bound = []);*) term_to_string_full ~generic ~bound term
