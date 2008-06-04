@@ -368,7 +368,8 @@ let free n =
   * Input terms should be normalized. *)
 let copy_eigen () =
   let tbl = Hashtbl.create 100 in
-  let rec cp ?(passive=false) tm = match observe tm with
+  fun ?(passive=false) tm ->
+  let rec cp tm = match observe tm with
     | Var v when v.tag = Eigen ->
         begin try Hashtbl.find tbl v with
           | Not_found ->
@@ -385,7 +386,7 @@ let copy_eigen () =
     | NB i | DB i as x -> x
     | Susp _ | Ptr _ -> assert false
   in
-    cp
+    cp tm
 
 (** {1 Convenience} *)
 
