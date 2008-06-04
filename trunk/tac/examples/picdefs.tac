@@ -1,4 +1,4 @@
-#define "one V W := 
+#define "one {V} W := 
     (sigma X\ sigma M\
        V = (in X M), W = (resp (dn X) M))
   ; (sigma X\ sigma Y\ sigma P\
@@ -49,7 +49,7 @@
        one P (resp (up X) M), one Q (resp (dn X) N))
   ".
 
-#define "coinductive bisim P Q := 
+#define "coinductive bisim {P} {Q} := 
   (pi A\ pi P1\ one P (res A P1) => sigma Q1\ one Q (res A Q1), bisim P1 Q1),
   (pi X\ pi M\  one P (resp (dn X) M) => sigma N\ one Q (resp (dn X) N), pi w\ bisim (M w) (N w)),
   (pi X\ pi M\  one P (resp (up X) M) => sigma N\ one Q (resp (up X) N), nabla w\ bisim (M w) (N w)),
