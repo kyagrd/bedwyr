@@ -101,7 +101,11 @@ val eigen_vars : term list -> term list
 
 val get_var : term -> var
 
-val copy_eigen : unit -> term -> term
+(** Return an eigenvar copier.
+  * When passive is passed to the copier,
+  * it only propagates what's been copied when active,
+  * but doesn't copy newly encountered variables. *)
+val copy_eigen : unit -> (?passive:bool -> term -> term)
 
 module Notations :
   sig
