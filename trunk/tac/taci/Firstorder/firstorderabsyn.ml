@@ -58,7 +58,9 @@ let defaultAnnotation =
    junk = Clean}
 
 let freeze a = { a with freezing = Frozen }
-
+let thaw a = { a with freezing = Unfrozen }
+let focus a = { a with control = Focused }
+let delay a = { a with control = Delayed }
 (*  Formulas  *)
 type 'a polarized = ('a * 'a formula)
 
@@ -79,6 +81,7 @@ and 'a abstraction =
 
 let negativeFormula f = { defaultAnnotation with polarity = Negative },f
 let positiveFormula f = { defaultAnnotation with polarity = Positive },f
+let change f (a,form) = (f a, form)
 
 (*  Patterns  *)
 type pattern_annotation = {
