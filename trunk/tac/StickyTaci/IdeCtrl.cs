@@ -198,6 +198,8 @@ namespace StickyTaci
     public void OnTacReset()
     {
       Form.CurrentLine = 0;
+      Form.ClearOutput();
+      Form.ClearGoal();
       Taci.Write(Taci.RESET + ".");
     }
 
