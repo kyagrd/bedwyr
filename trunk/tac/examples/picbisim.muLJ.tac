@@ -4,9 +4,9 @@
 prove.
 % Qed.
 
-#theorem two "bisim (out a a z) (rx (x\ out x x z))".
+#theorem two "bisim (out a a z) (rx (x\ out x x z)) => false".
 prove.
-% Failure is normal.
+% Qed.
 
 #theorem three "(bisim (out a a z) (rx (x\ out x x z))) => false".
 prove.
