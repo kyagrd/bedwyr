@@ -891,7 +891,7 @@ struct
   * Copies a formula's eigen variables. Used before performing eqL.
   * TODO isn't it enough to work on FOA.formulas ?
   ********************************************************************)
-  let copyFormula ?(copier=(Term.copy_eigen ())) (Formula(i,f)) =
+  let copyFormula ?(copier=(Term.copy_eigen () ~passive:false)) (Formula(i,f)) =
     let copyTerm t = copier t in
     let rec copyFormula () = FOA.mapFormula copyFormula copyTerm in
     (Formula(i,(copyFormula ()).FOA.polf f))
@@ -1307,7 +1307,7 @@ struct
              * these instantiations will be taken into account when copying
              * the rest of the sequent. *)
             let copier = Term.copy_eigen () in
-            let copy = List.map (copyFormula ~copier) in
+            let copy = List.map (copyFormula ~copier:(copier ~passive:true)) in
               begin match copyFormula ~copier (Formula(i,f)) with
                 | Formula(_,(_,FOA.EqualityFormula(t1,t2))) ->
                     begin match FOA.leftUnify t1 t2 with
