@@ -425,8 +425,12 @@ let abstractPattern name =
    predp = (fun _ -> ())}
   
 let abstractVar var = 
-  {polf = (fun f -> AbstractionFormula(Term.get_name var, AbstractionBody((abstractVarWithoutLambdas var ()).polf f))) ;
-   abstf = (fun f -> AbstractionFormula(Term.get_name var, (abstractVarWithoutLambdas var ()).abstf f)) ;
+  {polf =
+     (fun f -> AbstractionFormula(Term.get_hint var,
+                AbstractionBody((abstractVarWithoutLambdas var ()).polf f))) ;
+   abstf =
+     (fun f -> AbstractionFormula(Term.get_hint var,
+                (abstractVarWithoutLambdas var ()).abstf f)) ;
    formf = (fun _ -> ()) ; 
    predf = (fun _ -> ())}
 
@@ -690,13 +694,6 @@ let isAnonymousTerm t =
     Term.Var(v) ->
       (Term.get_hint t = "_")
   | _ -> false
-
-(**********************************************************************
-*getTermVarName:
-* Gets the name of the head of a term (if it is a constant).
-**********************************************************************)
-let getTermVarName t =
-  Term.get_name t
 
 (**********************************************************************
 *applyFixpoint:
