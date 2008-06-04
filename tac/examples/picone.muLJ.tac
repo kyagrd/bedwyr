@@ -1,4 +1,4 @@
-#open "picdefs.tac".
+#open "picalculus.defs".
 
 #theorem foo "one (in a (y\z)) (resp (dn a) (y\z))".
 prove("0").

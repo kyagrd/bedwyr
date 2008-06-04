@@ -1,6 +1,6 @@
-#open "basic_definitions.def".
+#open "naturals.def".
 
-#proof_output "/tmp".
+#proof_output ".\".
 
 #theorem even_or_even_s "pi x\ nat x => even x ; even (s x)".
 simplify.

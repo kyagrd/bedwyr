@@ -1,4 +1,4 @@
-#open "picdefs.tac".
+#open "picalculus.defs".
 
 #theorem one "bisim z (rx (x\ out x x z))".
 prove.

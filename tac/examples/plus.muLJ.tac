@@ -1,9 +1,9 @@
 % Proof of the commutativity of plus.
-#open "basic_definitions.def".
+#open "naturals.def".
 #proof_output ".\".
 
 % Theorem: x + y = z => y + x = z.
-#theorem plus_com "pi x\ y\ z\ (nat x, nat y, plus x y z) =>
+#theorem plus_com "pi x\ y\ z\ nat y => plus x y z =>
 	(plus y x z)".
 prove.
 % Qed.
@@ -14,6 +14,7 @@ prove.
   (sigma w\ (plus x y w, plus w z r)) =>
   (sigma w\ (plus x w r, plus y z w))".
 prove.
+% Qed.
 
 % Theorem: x = y => y = z => x = z.
 #theorem eq_assoc "pi x\ y\ z\ x = y => y = z => x = z".
@@ -33,8 +34,7 @@ prove.
 % Lemma: x + y = z => x + (y + 1) = (z + 1).
 % cut("pi x\ y\ z\ (nat x, plus x y z)=>(plus x (s y) (s z))").
 % simplify.
-% then(induction("x\ pi y\ z\ plus x y z => plus x (s y) (s z)",
-	       "nat x"),prove("0")).
+% then(induction("x\ pi y\ z\ plus x y z => plus x (s y) (s z)", "nat x"),prove("0")).
 
 % Proving the theorem.
 % simplify.
