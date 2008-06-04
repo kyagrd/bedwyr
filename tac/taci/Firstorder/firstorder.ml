@@ -19,6 +19,8 @@
 let () = Properties.setBool "firstorder.proofsearchdebug" false
 let () = Properties.setBool "firstorder.debug" false
 let () = Properties.setInt "firstorder.defaultbound" 3
+let () = Properties.setBool "firstorder.asyncbound" true
+let () = Properties.setInt "firstorder.defaultasyncbound" 10
 
 (**********************************************************************
 *ParamSig:
@@ -107,12 +109,20 @@ struct
     lvl : int ;
     lhs : formula list ;
     rhs : formula list ;
-    bound : int option
+    bound : int option ;
+    async_bound : int option
   }
 
   let updateBound = function
-    | {bound = None} -> None
-    | {bound = Some b} -> Some (b-1)
+    | None -> None
+    | Some b -> Some (b-1)
+
+  let resetAsyncBound s =
+    { s with async_bound =
+               ( if Properties.getBool "firstorder.asyncbound" then
+                   Some (Properties.getInt "firstorder.defaultasyncbound")
+                 else
+                   None) }
 
   (********************************************************************
   *string_of_sequent:
@@ -144,9 +154,11 @@ struct
     let separator = String.make (max (min (String.length bottom) 72) 16) '-' in
       Printf.sprintf "%d: %s\n%s" seq.lvl separator bottom
 
-  let out_of_bound = function
-    | None -> false
-    | Some b -> b < 0
+  let outOfBound seq =
+    (match seq with
+       | { bound = Some b } -> b<0 | { bound = None } -> false) ||
+    (match seq with
+       | { async_bound = Some b } -> b<0 | { async_bound = None } -> false)
 
   (********************************************************************
   *Proof:
@@ -545,6 +557,7 @@ struct
       in
       let formula = (replaceApplications defs).FOA.polp formula in
       let () =
+        (* TODO note that it prints a string, thus uses names *)
         O.debug ("Firstorder.parseFormula: formula: " ^
                  ((FOA.string_of_formula ~generic:[]).FOA.polf formula) ^ "\n")
       in
@@ -659,7 +672,7 @@ struct
             { session with
                   proof_namespace = proofNamespace ;
                   builder = Logic.idProofBuilder ;
-                  sequents = [{ bound = None ;
+                  sequents = [{ bound = None ; async_bound = None ;
                                 lvl=0 ; lhs=[] ; rhs=[makeFormula f] }] ;
                   theorem_name = Some name;
                   theorem = Some f}
@@ -1315,6 +1328,16 @@ struct
         | pol,FOA.ApplicationFormula (p,args) ->
             let arity = List.length args in
             let unfoldFixpoint ruleName name args body argnames sc fc =
+              let async_bound,bound =
+                (if pol.FOA.control = FOA.Focused then
+                  seq.async_bound
+                else
+                  ( updateBound seq.async_bound )),
+                if unfoldingProgresses argnames args then
+                  seq.bound
+                else
+                  updateBound seq.bound
+              in
               let pol =
                 { pol with FOA.control =
                     if pol.FOA.control = FOA.Focused then
@@ -1322,17 +1345,13 @@ struct
                     else
                       pol.FOA.control }
               in
-              let bound =
-                if unfoldingProgresses argnames args then
-                  seq.bound
-                else
-                  updateBound seq
+              let seq =
+                { seq with bound = bound ; async_bound = async_bound }
               in
               let mkseq f =
-                [{ seq with bound = bound ;
-                            lhs = zip [Formula(i,f)] }]
+                [{ seq with lhs = zip [Formula(i,f)] }]
               in
-              if out_of_bound bound then
+              if outOfBound seq then
                 fc ()
               else
                 unfoldFixpoint ruleName pol p arity args mkseq sc fc
@@ -1461,10 +1480,12 @@ struct
                                         ~argnames:onlynames
                                         ~s:invariant ~t:args)
                         in
-                        let bound = updateBound seq in
-                          if out_of_bound bound then fc () else
+                        let seq =
+                          { seq with bound = updateBound seq.bound }
+                        in
+                          if outOfBound seq then fc () else
                             sc "induction"
-                              [{ bound = bound ; lvl = lvl' ;
+                              [{ seq with lvl = lvl' ;
                                  lhs = [Formula(0,bst')] ;
                                  rhs = [Formula(0,st')] }]
                   end
@@ -1549,7 +1570,18 @@ struct
             end
         | pol,FOA.ApplicationFormula (p,args) ->
             let arity = List.length args in
+            (* TODO factor this out, I've cut/pasted too many times *)
             let unfoldFixpoint ruleName name args body argnames sc fc =
+              let async_bound,bound =
+                (if pol.FOA.control = FOA.Focused then
+                  seq.async_bound
+                else
+                  ( updateBound seq.async_bound )),
+                if unfoldingProgresses argnames args then
+                  seq.bound
+                else
+                  updateBound seq.bound
+              in
               let pol =
                 { pol with FOA.control =
                     if pol.FOA.control = FOA.Focused then
@@ -1557,17 +1589,13 @@ struct
                     else
                       pol.FOA.control }
               in
-              let bound =
-                if unfoldingProgresses argnames args then
-                  seq.bound
-                else
-                  updateBound seq
+              let seq =
+                { seq with bound = bound ; async_bound = async_bound }
               in
               let mkseq f =
-                [{ seq with bound = bound ;
-                            rhs = zip [Formula(i,f)] }]
+                [{ seq with rhs = zip [Formula(i,f)] }]
               in
-              if out_of_bound bound then
+              if outOfBound seq then
                 fc ()
               else
                 unfoldFixpoint ruleName pol p arity args mkseq sc fc
@@ -1604,7 +1632,7 @@ struct
                     | Some s ->
                         let s = parseInvariant session.definitions s in
                         if Option.isSome s then
-                          (* TODO bound check *)
+                          (* TODO bound check ? *)
                           let s = Option.get s in
                           begin match
                             fixpoint_St_St'_BSt'
@@ -1697,10 +1725,12 @@ struct
                                         ~argnames:onlynames
                                         ~s:invariant ~t:args)
                         in
-                        let bound = updateBound seq in
-                          if out_of_bound bound then fc () else
+                        let seq =
+                          { seq with bound = updateBound seq.bound }
+                        in
+                          if outOfBound seq then fc () else
                             sc "coinduction"
-                              [{ bound = bound ; lvl = lvl' ;
+                              [{ seq with lvl = lvl' ;
                                  lhs = [Formula(0,st')] ;
                                  rhs = [Formula(0,bst')] }]
                   end
@@ -2271,7 +2301,9 @@ struct
                a.FOA.control=FOA.Focused && a.FOA.polarity=FOA.Positive)))
 
   (** Focused proof-search, starting with the async phase. *)
-  let rec fullAsync s sc fc = cutThenTactical finite freeze s sc fc
+  let rec fullAsync s sc fc =
+    let s = List.map resetAsyncBound s in
+    cutThenTactical finite freeze s sc fc
 
   (* Freeze the first available asynchronous fixed point,
    * takes care of unfoldings and re-calling fullAsync when needed. *)
@@ -2300,13 +2332,15 @@ struct
                 (* The cut is needed here so that auto_intro doesn't try
                  * to induct on another Mu on the left. *)
                 (fun _ ->
+                   (* TODO don't print "Induction" if the bound won't allow it
+                    * *)
                    if Properties.getBool "firstorder.proofsearchdebug" then
                      Format.printf "%s@[<hov 2>Induction@ %s@]\n%!"
                        (String.make
                           (match seq.bound with Some b -> max 0 b | None -> 0)
                           ' ')
                        (string_of_formula (Formula(i,(a,f)))) ;
-                   automaticIntro `Left match_inductable [seq])
+                   automaticIntro `Left match_inductable [resetAsyncBound seq])
                 async)
              [(*no args*)] sc fc
        | None ->
@@ -2319,7 +2353,7 @@ struct
                           rhs = before@[Formula(i,(FOA.freeze a,f))]@after }])
                    (cutThenTactical
                      (fun _ ->
-                        automaticIntro `Right match_coinductable [seq])
+                        automaticIntro `Right match_coinductable [resetAsyncBound seq])
                      async)
                    [(*no args*)] sc fc
              | None ->
@@ -2346,7 +2380,7 @@ struct
       (fun () ->
          match unfocus (List.hd seqs) with
            | Some seq -> fullAsync [seq] sc fc
-           | None -> fc ())
+           | None -> fc ()) (* TODO that might be broken with delays *)
 
   let setBound session n =
     fun seqs sc fc ->
@@ -2400,6 +2434,10 @@ struct
         [Absyn.String(s)] ->
           let maxBound = int_of_string s in
           construct 0 (max maxBound 0)
+      | [Absyn.String(s);Absyn.String(s')] ->
+          let minBound = int_of_string s in
+          let maxBound = int_of_string s' in
+          construct (min maxBound minBound) (max minBound maxBound)
       | [] ->
           construct 0 (max (Properties.getInt "firstorder.defaultbound") 0)
       | _ -> G.invalidArguments "prove"
@@ -2561,7 +2599,7 @@ struct
         ++ ("cut_lemma", cutLemmaTactical)
         ++ ("force", forceTactical)
         ++ ("prove", iterativeDeepeningProveTactical)
-        ++ ("async", fun _ _ -> finite)
+        ++ ("async", fun _ _ -> finite) (* TODO might be infinite *)
         ++ ("focus",
             fun _ _ ->
               G.makeTactical
