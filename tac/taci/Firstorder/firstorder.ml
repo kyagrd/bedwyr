@@ -21,6 +21,8 @@ let () = Properties.setBool "firstorder.debug" false
 let () = Properties.setInt "firstorder.defaultbound" 3
 let () = Properties.setBool "firstorder.asyncbound" true
 let () = Properties.setInt "firstorder.defaultasyncbound" 10
+let () = Properties.setString "firstorder.frozens" "default"
+let () = Properties.setBool "firstorder.induction-unfold" false
 
 (**********************************************************************
 *ParamSig:
@@ -1362,6 +1364,12 @@ struct
                   (* This is synchronous. *)
                   begin match arg with
                     | Some "unfold" ->
+                   if Properties.getBool "firstorder.proofsearchdebug" then
+                     Format.printf "%s@[<hov 2>Unfold left@ %s@]\n%!"
+                       (String.make
+                          (match seq.bound with Some b -> max 0 b | None -> 0)
+                          ' ')
+                       (string_of_formula (Formula(i,f))) ;
                         unfoldFixpoint "nu_l" name args body argnames sc fc
                     | Some "init" ->
                         fixpointInit i p args
@@ -1418,7 +1426,7 @@ struct
                           let rec s = function
                             | [] -> assert false
                             | [Formula(_,f)] -> f
-                            | (Formula(_,pf))::l ->
+                            | (Formula(_,pf))::l -> 
                                 { FOA.defaultAnnotation
                                   with FOA.polarity = FOA.Negative },
                                 FOA.BinaryFormula (FOA.Or, pf, s l)
@@ -1428,19 +1436,22 @@ struct
                           (* H1, ..., Hn |- rhs becomes H1 => .. => Hn => rhs *)
                           let rec s = function
                             | [] -> rhs
-                            | Formula(_,f)::l ->
+                            | Formula(_,f')::l -> 
+				if (Properties.getString "firstorder.frozens" == "ignore") && (fst f').FOA.freezing = FOA.Frozen then s l else
                                { FOA.defaultAnnotation with
-                                   FOA.polarity = FOA.Negative },
-                               FOA.BinaryFormula (FOA.Imp, f, s l)
+				   FOA.polarity = FOA.Negative },
+                               FOA.BinaryFormula 
+				 (FOA.Imp, (if (Properties.getString "firstorder.frozens" == "thaw") then FOA.change FOA.thaw f' else f'), s l)
                           in
-                          s (zip [(*TODO frozen version of what we induct on*)])
+                          s (zip 
+			       (if Properties.getBool "firstorder.induction-unfold" then [Formula(i,FOA.change FOA.freeze f)] else [])) 
                         in
                         let fv,elrhs =
                           (* Essentially form
                            * fv1\..fvn\ fv1=arg1 => .. fvn=argn => lrhs *)
                           let rec e lan la =
                             match lan,la with
-                              | [],[] -> [],lrhs 
+                              | [],[] -> [], lrhs 
                               | an::lan,a::la ->
                                   let lv,f = e lan la in
                                   let v = fresh an in
@@ -1606,6 +1617,12 @@ struct
                   (* This is synchronous. *)
                   begin match arg with
                     | Some "unfold" ->
+                   if Properties.getBool "firstorder.proofsearchdebug" then
+                     Format.printf "%s@[<hov 2>Unfold right@ %s@]\n%!"
+                       (String.make
+                          (match seq.bound with Some b -> max 0 b | None -> 0)
+                          ' ')
+                       (string_of_formula (Formula(i,f))) ;
                         unfoldFixpoint "mu_r" name args body argnames sc fc
                     | Some "init" ->
                         fixpointInit i p args
@@ -2248,23 +2265,31 @@ struct
               * between two progressing fixed points *)
              intro `Left
                (make_matcher (function
-                                | Formula(i,(a,
+                                Formula(i,(a,f)) -> (match f with
                                     FOA.ApplicationFormula(
                                       FOA.FixpointFormula(
-                                        FOA.Inductive,_,argnames,_),args))) ->
-                                    a.FOA.freezing = FOA.Unfrozen &&
-                                    unfoldingProgresses argnames args
-                                | _ -> false))
+                                        FOA.Inductive,_,argnames,_),args) ->
+                                    if a.FOA.freezing = FOA.Unfrozen &&
+                                    unfoldingProgresses argnames args then
+                   (if Properties.getBool "firstorder.proofsearchdebug" then
+                     (Format.printf "%s@[<hov 2>Unfold left@ %s@]\n%!"
+                       ""
+                       (string_of_formula (Formula(i,(a,f))))) ; true) else false |_ -> false)
+                                ))
                dummy_session (Some "unfold") ;
              intro `Right
                (make_matcher (function
-                                | Formula(i,(a,
+                                Formula(i,(a,f)) -> (match f with
                                     FOA.ApplicationFormula(
                                       FOA.FixpointFormula(
-                                        FOA.CoInductive,_,argnames,_),args))) ->
-                                    a.FOA.freezing = FOA.Unfrozen &&
-                                    unfoldingProgresses argnames args
-                                | _ -> false))
+                                        FOA.CoInductive,_,argnames,_),args) ->
+                                    if a.FOA.freezing = FOA.Unfrozen &&
+                                    unfoldingProgresses argnames args then
+                   (if Properties.getBool "firstorder.proofsearchdebug" then
+                     (Format.printf "%s@[<hov 2>Unfold right@ %s@]\n%!"
+                       ""
+                       (string_of_formula (Formula(i,(a,f))))) ; true) else false |_ -> false)
+                                ))
                dummy_session (Some "unfold")
            ])
 
