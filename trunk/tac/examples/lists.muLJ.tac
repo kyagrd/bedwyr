@@ -1,5 +1,15 @@
 % List definitions.
-#open "basic_definitions.def".
+#open "lists.def".
+
+% Sublist Theorems.
+#theorem sublist_ref "pi x\ list x => sublist x x".
+simplify.
+mu_r.
+repeat(sigma).
+and.
+prove.
+prove.
+
 
 % Equality Theorems.
 #theorem equal_sym "pi x\ y\ list x => list y => equal x y => equal y x".

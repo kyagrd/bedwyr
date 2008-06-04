@@ -1,4 +1,4 @@
-#open "basic_definitions.def".
+#open "bisimulation.def".
 
 % Simulation is reflexive, step by step.
 #theorem ref "pi p\ sim p p".
