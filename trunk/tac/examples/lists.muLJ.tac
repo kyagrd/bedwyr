@@ -1,16 +1,6 @@
 % List definitions.
 #open "lists.def".
 
-% Sublist Theorems.
-#theorem sublist_ref "pi x\ list x => sublist x x".
-simplify.
-mu_r.
-repeat(sigma).
-and.
-prove.
-prove.
-
-
 % Equality Theorems.
 #theorem equal_sym "pi x\ y\ list x => list y => equal x y => equal y x".
 prove.
@@ -57,4 +47,3 @@ prove.
 #theorem neq_trap "pi x\y\ equal x y => equal x (cons a y) => false".
 prove.
 % Qed.
-
