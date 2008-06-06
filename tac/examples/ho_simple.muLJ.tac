@@ -1,5 +1,3 @@
-#proof_output "/tmp".
-
 % =========== MEMBERSHIP =================.
 
 #define "mem x l := sigma hd\tl\ l = cons hd tl, (x=hd ; mem x tl)".
@@ -83,6 +81,8 @@ prove.
 then(abstract,prove).
 % QED.
 
+% Another simple proof:
+% the merging principle used in the copy example.
 #theorem term_m "pi c\t\ (nabla a\b\ term (c a b) (t a b)) =>
                          (nabla a\   term (c a a) (t a a))".
 simplify.
@@ -95,3 +95,54 @@ then(induction("x\l\ nabla a\ mem (x a a) (l a a)"),
 prove.
 prove.
 % QED.
+
+% ============ AUTOMATION ============== .
+
+% All these proofs used trivial invariants.
+
+#theorem term_m "pi c\t\ (nabla a\b\ term (c a b) (t a b)) =>
+                         (nabla a\   term (c a a) (t a a))".
+abstract.
+simplify.
+induction.
+then(async,try(prove)).
+% Term is not an invariant of mem,
+% at least not a trivial one.
+then(induction("x''\l''\
+ nabla a\ mem (x'' a a) (l'' a a)"),
+prove).
+% Qed.
+
+#theorem term_w "pi c\t\ (nabla n\ term c t) => term c t".
+simplify.
+abstract.
+induction.
+then(async,try(prove)).
+% Same deal as before.
+then(cut("mem h3 h4"),prove).
+% Qed.
+
+#theorem ctxt_w "pi l\ (nabla n\ ctxt l) => ctxt l".
+simplify.
+abstract.
+induction.
+then(async,try(prove)).
+% And again.
+mu_r.
+right.
+repeat(sigma).
+then(repeat(and),try(prove)).
+simplify.
+weak_l.
+cut("nabla x\ mem h4 h3").
+weak_l.
+prove.
+prove.
+% Qed.
+
+#theorem notmem_w "pi x\l\ (nabla n\ mem x l => false) => (mem x l => false)".
+prove.
+
+#theorem mem_w "pi x\l\ (nabla n\ mem x l) => (mem x l)".
+prove.
+

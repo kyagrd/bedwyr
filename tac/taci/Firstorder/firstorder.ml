@@ -23,6 +23,7 @@ let () = Properties.setBool "firstorder.asyncbound" true
 let () = Properties.setInt "firstorder.defaultasyncbound" 10
 let () = Properties.setString "firstorder.frozens" "default"
 let () = Properties.setBool "firstorder.induction-unfold" false
+(* TODO frozens and induction-unfold for coinduction *)
 
 (**********************************************************************
 *ParamSig:
@@ -1364,12 +1365,12 @@ struct
                   (* This is synchronous. *)
                   begin match arg with
                     | Some "unfold" ->
-                   if Properties.getBool "firstorder.proofsearchdebug" then
-                     Format.printf "%s@[<hov 2>Unfold left@ %s@]\n%!"
-                       (String.make
-                          (match seq.bound with Some b -> max 0 b | None -> 0)
-                          ' ')
-                       (string_of_formula (Formula(i,f))) ;
+                        if Properties.getBool "firstorder.proofsearchdebug" then
+                          Format.printf "%s@[<hov 2>Unfold left@ %s@]\n%!"
+                            (String.make
+                               (match seq.bound with Some b -> max 0 b | None -> 0)
+                               ' ')
+                            (string_of_formula (Formula(i,f))) ;
                         unfoldFixpoint "nu_l" name args body argnames sc fc
                     | Some "init" ->
                         fixpointInit i p args
@@ -1455,6 +1456,10 @@ struct
                                   (ann, FOA.BinaryFormula(FOA.Imp, f'', s l))
                           in
                           if Properties.getBool "firstorder.induction-unfold" then
+                            (* TODO this seems wrong, and moreover interacts
+                             * with thaw.
+                             * this is not building S/\muB, this is putting muB
+                             * inside S. *)
                             s (zip [Formula(i,FOA.changeAnnotation FOA.freeze f)])
                           else
                             s (zip [])
@@ -2277,36 +2282,35 @@ struct
                (make_matcher
                  (fun (Formula(i,(a,f))) ->
                     not (fixpoint f || a.FOA.polarity=FOA.Positive))) ;
-             (* TODO use a bound local to the repeat(finite) because finite
-              * can in fact run into infinite loops in some cases of ping-pong
-              * between two progressing fixed points *)
              intro `Left
-               (make_matcher (function
-                                Formula(i,(a,f)) -> (match f with
-                                    FOA.ApplicationFormula(
-                                      FOA.FixpointFormula(
-                                        FOA.Inductive,_,argnames,_),args) ->
-                                    if a.FOA.freezing = FOA.Unfrozen &&
-                                    unfoldingProgresses argnames args then
-                   (if Properties.getBool "firstorder.proofsearchdebug" then
-                     (Format.printf "%s@[<hov 2>Unfold left@ %s@]\n%!"
-                       ""
-                       (string_of_formula (Formula(i,(a,f))))) ; true) else false |_ -> false)
-                                ))
+               (make_matcher
+                  (function
+                     | Formula(i,(({FOA.freezing=FOA.Unfrozen} as a),
+                         (FOA.ApplicationFormula(
+                            FOA.FixpointFormula(
+                              FOA.Inductive,_,argnames,_),args) as f)))
+                       when unfoldingProgresses argnames args ->
+                         if Properties.getBool "firstorder.proofsearchdebug" then
+                           Format.printf "%s@[<hov 2>Unfold left@ %s@]\n%!"
+                             ""
+                             (string_of_formula (Formula(i,(a,f)))) ;
+                         true
+                     | _ -> false))
                dummy_session (Some "unfold") ;
              intro `Right
-               (make_matcher (function
-                                Formula(i,(a,f)) -> (match f with
-                                    FOA.ApplicationFormula(
-                                      FOA.FixpointFormula(
-                                        FOA.CoInductive,_,argnames,_),args) ->
-                                    if a.FOA.freezing = FOA.Unfrozen &&
-                                    unfoldingProgresses argnames args then
-                   (if Properties.getBool "firstorder.proofsearchdebug" then
-                     (Format.printf "%s@[<hov 2>Unfold right@ %s@]\n%!"
-                       ""
-                       (string_of_formula (Formula(i,(a,f))))) ; true) else false |_ -> false)
-                                ))
+               (make_matcher
+                  (function
+                     | Formula(i,(({FOA.freezing=FOA.Unfrozen} as a),
+                         (FOA.ApplicationFormula(
+                            FOA.FixpointFormula(
+                              FOA.CoInductive,_,argnames,_),args) as f)))
+                       when unfoldingProgresses argnames args ->
+                         if Properties.getBool "firstorder.proofsearchdebug" then
+                           Format.printf "%s@[<hov 2>Unfold right@ %s@]\n%!"
+                             ""
+                             (string_of_formula (Formula(i,(a,f)))) ;
+                         true
+                     | _ -> false))
                dummy_session (Some "unfold")
            ])
 
@@ -2447,24 +2451,17 @@ struct
   let unfocusTactical =
     fun _ _ -> unfocus
 
-  (********************************************************************
-  *proveTactical:
-  * The frontend to automatic proof search. Simply sets the bound
-  * using the given arguments and commences search.
-  ********************************************************************)
-  let proveTactical session args =
-    (* Set a bound to the number of unfoldings,
-     * which by the way restricts our attention to the first sequent.
-     * There is no need to force fullAsync to complete, since it never returns
-     * partial successes by design. *)
-    G.thenTactical (setBoundTactical session args) fullAsync
-
-  (********************************************************************
+  (*******************************************************************
   *proveToTactical:
   * Iterative deepening.  Takes a lower and upper bound; you can
   * therefore simulate the old prove tactical by doing prove("n", "n").
+  * We _must_ abstract out generic quantifications first: because it
+  * brings more expressivity but also because the automation does not
+  * take the generic contexts into account at many places, and it would
+  * thus do meaningless error-prone things.
   ********************************************************************)
   let iterativeDeepeningProveTactical session args =
+    let fullAsync = G.thenTactical (abstractTactical session []) fullAsync in
     let rec construct i max =
       if i = max then
         (G.thenTactical (setBound session max) fullAsync)
