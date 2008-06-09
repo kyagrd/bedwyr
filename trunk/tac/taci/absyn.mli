@@ -43,24 +43,21 @@ type command =
   | Undo of int
   | Redo of int
   | ProofOutput of string
-  
+
   | Theorem of string * string
   | Definitions of string list
 
   | Tacticals
   | TacticalDefinition of string * pretactical
-  
+
   | PreTactical of pretactical
-  
+
   | Timing of bool
   | Debug of bool
-  
-  | Logic of string  
+
+  | Logic of string
   | Logics
-  
+
   | Set of string * string
 
-  | NoCommand
-  
 val string_of_pretactical : pretactical -> string
-  

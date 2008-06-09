@@ -52,8 +52,6 @@ type command =
 
   | Set of string * string
 
-  | NoCommand
-
 let rec string_of_pretactical tac =
   match tac with
       ApplicationPreTactical(name, []) ->
