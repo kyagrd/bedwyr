@@ -59,5 +59,6 @@ type command =
   | Logics
 
   | Set of string * string
+  | Get of string
 
 val string_of_pretactical : pretactical -> string

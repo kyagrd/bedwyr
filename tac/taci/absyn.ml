@@ -51,6 +51,7 @@ type command =
   | Logics
 
   | Set of string * string
+  | Get of string
 
 let rec string_of_pretactical tac =
   match tac with

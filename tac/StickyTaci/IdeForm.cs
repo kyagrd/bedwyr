@@ -177,8 +177,8 @@ namespace StickyTaci
           Scintilla.Lexing.Colorize(Scintilla.Lines[previous].StartPosition, Scintilla.Lines[previous].EndPosition);
           Scintilla.Lexing.Colorize(Scintilla.Lines[m_CurrentLine].StartPosition, Scintilla.Lines[m_CurrentLine].EndPosition);
         });
-        
-        Debug.WriteLine("Value: " + Scintilla.NativeInterface.GetPropertyInt("lexer.simple.currentline", -1));
+
+        System.Diagnostics.Debug.WriteLine("Value: " + Scintilla.NativeInterface.GetPropertyInt("lexer.simple.currentline", -1));
         UpdateCurrentLineMarker();
       }
     }
@@ -200,82 +200,17 @@ namespace StickyTaci
     private Font m_GoalFont = new Font("Courier New", 8.25f, FontStyle.Regular);
     #endregion
 
-    #region Coloring Information -- OBSOLETE
-    private Color m_StringColor = Color.Maroon;
-    public Color StringColor
+    #region Coloring Information
+    private Color m_DebugColor = Color.Maroon;
+    public Color DebugColor
     {
       get
       {
-        return m_StringColor;
+        return m_DebugColor;
       }
       set
       {
-        m_StringColor = value;
-      }
-    }
-
-    private Color m_TacticalColor = Color.Blue;
-    public Color TacticalColor
-    {
-      get
-      {
-        return m_TacticalColor;
-      }
-      set
-      {
-        m_TacticalColor = value;
-      }
-    }
-
-    private Color m_CommandColor = Color.Red;
-    public Color CommandColor
-    {
-      get
-      {
-        return m_CommandColor;
-      }
-      set
-      {
-        m_CommandColor = value;
-      }
-    }
-
-    private Color m_CommentColor = Color.Green;
-    public Color CommentColor
-    {
-      get
-      {
-        return m_CommentColor;
-      }
-      set
-      {
-        m_CommentColor = value;
-      }
-    }
-
-    private Color m_OldInputColor = Color.LightGray;    
-    public Color OldInputColor
-    {
-      get
-      {
-        return m_OldInputColor;
-      }
-      set
-      {
-        m_OldInputColor = value;
-      }
-    }
-
-    private Color m_InputColor = Color.Black;
-    public Color InputColor
-    {
-      get
-      {
-        return m_InputColor;
-      }
-      set
-      {
-        m_InputColor = value;
+        m_DebugColor = value;
       }
     }
 
@@ -571,7 +506,7 @@ namespace StickyTaci
     {
       Ctrl.OnInputChanged(Scintilla.Lines.Count);
       m_Dirty = true;
-      Debug.WriteLine("Text changed.");
+      System.Diagnostics.Debug.WriteLine("Text changed.");
     }
     #endregion
 
@@ -608,6 +543,17 @@ namespace StickyTaci
       InvokeDelegate(this, (MethodInvoker)delegate()
       {
         goalBox.Clear();
+      });
+    }
+
+    public void Debug(string s)
+    {
+      InvokeDelegate(this, (MethodInvoker)delegate()
+      {
+        outputBox.SelectionFont = m_OutputFont;
+        outputBox.SelectionColor = DebugColor;
+        outputBox.SelectedText = "Debug: " + s;
+        outputBox.ScrollToCaret();
       });
     }
 
