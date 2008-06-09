@@ -1315,7 +1315,6 @@ struct
                 | Formula(_,(_,FOA.EqualityFormula(t1,t2))) ->
                     begin match FOA.leftUnify t1 t2 with
                       | FOA.UnifyFailed ->
-                          (* TODO check side effect *)
                           sc "eq_l" []
                       | FOA.UnifySucceeded bind ->
                           let fc () = FOA.undoUnify bind ; fc () in
