@@ -24,12 +24,12 @@ sig
   exception BatchFailure
   exception Exit of session
   exception Logic of string * session
-  
+
   val setLogics : (string * string) list -> unit
   val onStart : unit -> session
   val onEnd : session -> unit
   val onPrompt : session -> session
-  val onInput : session -> session 
+  val onInput : session -> session
   val onBatch : session -> session
 end
 
@@ -43,13 +43,13 @@ struct
   exception Logic of string * session
   exception TacticalSuccess of session
   exception TacticalFailure
-  
+
   (*  This list stores all logic names.  It is used to ensure the logic
       actually exists that when a user tries to change to a new logic
       before raising the appropriate exception. *)
   let logics = ref []
   let setLogics l = logics := l
-  
+
   (*  errorHandler: called whenever an error that should break batch
       mode occurs.  *)
   let errorHandler session =
@@ -61,7 +61,7 @@ struct
   (*  A flag to determine whether timing is enabled.  *)
   let timing = ref false
 
-  (*  home_unrelate: *)  
+  (*  home_unrelate: *)
   let home_unrelate =
     let home =
       try Some (Sys.getenv "HOME") with Not_found -> None
@@ -101,7 +101,7 @@ struct
       Some tactical
     with
       Not_found -> None
-  
+
   let helpMessage =
 "Taci v0.0
 
@@ -149,7 +149,7 @@ struct
   let redoList = ref []
   let resetLists () =
     undoList := []; redoList := []
-  
+
   let storeSession session =
     undoList := session :: (!undoList);
     redoList := [];
@@ -188,7 +188,7 @@ struct
           tac seqs (sc session) fc
       | Absyn.String(_) ->
           O.impossible "Interpreter.applyTactical: invalid quoted string"
-    
+
   (********************************************************************
   *buildTactical:
   * Constructs a tactical from an absyn pretactical.  A pretactical
@@ -212,7 +212,7 @@ struct
             raise (Absyn.SyntaxError ("undefined tactical: " ^ name))
       | Absyn.StringPreTactical(s) ->
           raise (Absyn.SyntaxError ("unexpected quoted string: " ^ s))
-      
+
   (********************************************************************
   *tactical:
   * Attempts to apply the given pretactical. A success continuation is
@@ -239,7 +239,7 @@ struct
       let session' = L.update (newSequents @ oldSequents) proof' session in
       raise (TacticalSuccess(session'))
     in
-    
+
     (******************************************************************
     *failure:
     * The toplevel failure continuation.  This simply raises the failure
@@ -248,7 +248,7 @@ struct
     let failure () =
       raise TacticalFailure
     in
-    
+
     try
       O.debug (Printf.sprintf "Pretactical: %s.\n"
                  (Absyn.string_of_pretactical pretactical)) ;
@@ -265,7 +265,7 @@ struct
           if not (L.validSequent s) then
             (O.output "Proof completed.\n" ;
             O.goal "" ;
-            
+
             (*  Save the proof output.  *)
             (match Properties.getString "interpreter.proofoutput" with
               | "" -> ()
@@ -320,7 +320,7 @@ struct
   let showLogics session =
     let compare' (_,n) (_,n') = compare n n' in
     (O.logics (List.sort compare' !logics))
-  
+
   (********************************************************************
   *showTacticals:
   * Lists all tacticals available.
@@ -346,7 +346,7 @@ struct
     else
       (O.error ("undefined logic '" ^ l ^ "'.\n");
       errorHandler session)
-    
+
   (********************************************************************
   *openFiles:
   * Open each file and read each command in it.  If any error is
@@ -356,7 +356,7 @@ struct
     let executeCommand session command =
       handleInput command session
     in
-    
+
     let executeFile session file =
       try
         let infile = open_in file in
@@ -383,7 +383,7 @@ struct
         (O.goal ((L.string_of_sequents session') ^ "\n");
         session')
       else
-        session'  
+        session'
     in
     List.fold_left handle' session inputlist
 
@@ -438,9 +438,8 @@ struct
             else
               (O.error "No valid sequent.\n";
               (errorHandler session, true))
-        | Absyn.NoCommand -> (session,true)
     in
- 
+
     (*  Handle the input and then save the session in the undo stack
         only when it is not undo or redo. *)
     let (session', save) = handle input session in
@@ -458,7 +457,7 @@ struct
     let find = fun (_,n) -> n = name in
     let (k,_) = List.find find !logics in
     k
-  
+
   (********************************************************************
   *onPrompt:
   * This function is called by the interface (see interface.ml) to print
@@ -480,7 +479,7 @@ struct
     (showStartup ();
     resetLists ();
     L.reset ())
-  
+
   (********************************************************************
   *onEnd:
   * This function is called by the interface (see interface.ml) when
@@ -511,7 +510,7 @@ struct
     with
       Absyn.SyntaxError(s) ->
         (O.error (s ^ ".\n");
-        
+
         (*  Store the session if there was a parse error.
             This ensures that undo will always restore the
             previous state even in the case of a parse error. *)

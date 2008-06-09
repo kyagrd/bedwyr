@@ -52,8 +52,7 @@ file:
   ;
 
 toplevel_command
-  :                     {Absyn.NoCommand}
-  | SHARP command DOT   {$2}
+  : SHARP command DOT   {$2}
   | tactical DOT        {Absyn.PreTactical($1)}
   ;
 
