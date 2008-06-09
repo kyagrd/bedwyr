@@ -278,8 +278,8 @@ and termsAbstraction = function
 
 let string_of_pattern f = ""
 
-let string_of_term ~generic names t =
-  Pprint.term_to_string_preabstracted ~generic ~bound:names t
+let string_of_term ?(norm=fun x->x) ~generic names t =
+  Pprint.term_to_string_preabstracted ~generic ~bound:names (norm t)
 
 let rec string_of_formula ~generic ~names =
   let s = string_of_formula ~generic in
@@ -305,15 +305,18 @@ let rec string_of_formula ~generic ~names =
           let s2 = ((s ~names).polf r) in
           "(" ^ s1 ^ (getConnective c) ^ s2 ^ ")"
       | EqualityFormula(l,r) ->
-          let s1 = (string_of_term ~generic names l) in
-          let s2 = (string_of_term ~generic names r) in
+          let s1 = (string_of_term ~norm:Norm.deep_norm ~generic names l) in
+          let s2 = (string_of_term ~norm:Norm.deep_norm ~generic names r) in
           "(" ^ s1 ^ " = " ^ s2 ^ ")"
       | QuantifiedFormula(q,f) -> 
           let s1 = getQuantifierName q in 
           let s2 = (s ~names).abstf f in 
           (s1 ^ " " ^ s2)
       | ApplicationFormula(f,tl) ->
-          let args = (String.concat " " (List.map (string_of_term ~generic names) tl)) in
+          let args =
+            String.concat " "
+              (List.map (string_of_term ~norm:Norm.deep_norm ~generic names) tl)
+          in
           let name = (s ~names).predf f in
           if args = "" then name else name ^ " " ^ args)}
 
@@ -388,7 +391,9 @@ let rec string_of_formula_ast ~generic =
        s2 = (s ~generic).abstf f in  
            (s1 ^ "(" ^ s2  ^ ")")
      | ApplicationFormula(f,tl) ->
-         let args = (String.concat " " (List.map (string_of_term_ast ~generic) tl)) in
+         let args =
+           String.concat " " (List.map (string_of_term_ast ~generic) tl)
+         in
          let args = if args = "" then "" else "(" ^ args ^")" in
            ((s ~generic).predf f) ^ args)}
       
