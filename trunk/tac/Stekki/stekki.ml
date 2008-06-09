@@ -239,11 +239,11 @@ let write_process line =
     assert (len = Unix.write proc_in line 0 len)
 
 let eval_command () =
-  (** Find the end of the next command. *)
+  (** Send a line, might not be a full command, might be several commands. *)
   let start = `Linechar (0,0), [] in
     match
       try
-        Some (Text.search ~pattern:".\n" ~switches:[]
+        Some (Text.search ~pattern:"\n" ~switches:[]
                 ~start ~stop:(`End,[])
                 after)
       with _ -> None
@@ -254,14 +254,24 @@ let eval_command () =
             Text.delete after ~start ~stop:(`Linechar (l+1,0),[]) ;
             Listbox.insert before ~index:`End ~texts:[command] ;
             Listbox.yview before (`Moveto 1.) ;
+            Printf.printf "%S\n" command ; (* TODO remove debug *)
             write_process (command^"\n")
 
-let undo () =
+let undo ?(send=true) () =
   if Listbox.size before = 0 then false else
     let command = Listbox.get before ~index:`End in
       Listbox.delete before ~first:`End ~last:`End ;
       Text.insert after ~index:(`Linechar (0,0),[]) ~text:(command^"\n") ;
-      write_process "#undo.\n" ;
+      if send then begin
+        try
+          String.iter
+            (function
+               | '.' -> write_process "#undo.\n"
+               | '%' -> failwith "comment"
+               | _ -> ())
+            command
+        with Failure "comment" -> ()
+      end ;
       true
 
 let () =
@@ -276,7 +286,7 @@ let () =
 (* ********** BUTTONS ********** *)
 
 let on_reset () =
-  while undo () do () done ;
+  while undo ~send:false () do () done ;
   reload ()
 
 let warn message f () =
