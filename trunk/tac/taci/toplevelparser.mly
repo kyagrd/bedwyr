@@ -30,7 +30,7 @@
 
 %token DOT SHARP LPAREN RPAREN COMMA
 %token HELP EXIT RESET OPEN INCLUDE TIME DEBUG PROOF_OUTPUT
-%token ON OFF CLEAR THEOREM SET
+%token ON OFF CLEAR THEOREM SET GET
 %token TACTICAL TACTICALS LOGIC LOGICS
 %token DEFINE UNDO REDO
 %token EOF
@@ -94,6 +94,7 @@ command
   | LOGICS                {Absyn.Logics}
   
   | SET STRING STRING     {Absyn.Set($2,$3)}
+  | GET STRING            {Absyn.Get($2)}
   ;
 
 stringlist

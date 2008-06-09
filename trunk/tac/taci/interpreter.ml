@@ -143,34 +143,42 @@ struct
   * but undo and redo puts a new item on the undo stack and clears the
   * redo stack.  Undo pops an item off of the undo stack and puts the
   * given session onto the redo stack.  Redo pops an item off of the
-  * redo stack and pushes the given stack onto the undo stack.
+  * redo stack and pushes the given item onto the undo stack.
   ********************************************************************)
+  type doable =
+      Session of L.session
+    | Properties of Properties.properties
+
   let undoList = ref []
   let redoList = ref []
   let resetLists () =
     undoList := []; redoList := []
 
-  let storeSession session =
-    undoList := session :: (!undoList);
+  let store d =
+    undoList := d :: (!undoList);
     redoList := [];
     ()
 
   let undo session =
-    if (List.length (!undoList) > 0) then
-      let session' = List.hd (!undoList) in
-      (redoList := session :: (!redoList);
-      undoList := List.tl (!undoList);
-      (L.undo session'))
+    if not (Listutils.empty (!undoList)) then
+      let d = List.hd (!undoList) in
+      let () = redoList := Session(session) :: (!redoList) in
+      let () = undoList := List.tl (!undoList) in
+      match d with
+          Session(session') -> (L.undo session')
+        | Properties(p) -> (Properties.update p; session)
     else
       (O.error "nothing do undo.\n";
       errorHandler session)
 
   let redo session =
     if (List.length (!redoList) > 0) then
-      let session' = List.hd (!redoList) in
-      (undoList := session :: (!undoList);
-      redoList := List.tl (!redoList);
-      (L.redo session'))
+      let d = List.hd (!redoList) in
+      let () = undoList := (Session session) :: (!undoList) in
+      let () = redoList := List.tl (!redoList) in
+      match d with
+          Session(session') -> (L.redo session')
+        | Properties(p) -> (Properties.update p; session)
     else
       (O.error "nothing do redo.\n";
       errorHandler session)
@@ -402,39 +410,47 @@ struct
           Absyn.Exit -> raise (Exit session)
         | Absyn.Set(p,v) ->
             (*  Set doesn't actually get undone.  *)
-            Properties.setString p v; (session, true)
-        | Absyn.Clear -> (O.clear (); (session, true))
-        | Absyn.Help -> (showHelp (); (session, true))
-        | Absyn.Undo(_) -> ((undo session), false)
-        | Absyn.Redo(_) -> ((redo session), false)
-        | Absyn.Reset -> (L.reset (), true)
+            let props = Properties.state () in
+            Properties.setString p v;
+            (session, Some (Properties(props)))
+        | Absyn.Get(p) ->
+            O.output ("Property: " ^ p ^ " = " ^ (Properties.getString p) ^ "\n");
+            (session, Some (Session(session)))
+        | Absyn.Clear -> (O.clear (); (session, Some (Session(session))))
+        | Absyn.Help -> (showHelp (); (session, Some (Session(session))))
+        | Absyn.Undo(_) -> ((undo session), None)
+        | Absyn.Redo(_) -> ((redo session), None)
+        | Absyn.Reset ->
+            let session' = L.reset () in
+            (session', Some (Session(session)))
         | Absyn.ProofOutput name ->
             (*  Proof Output doesn't get undone.  *)
             let dir = (home_unrelate name) in
             (O.output ("Proof output set to '" ^ dir ^ "'\n");
             Properties.setString "interpreter.proofoutput" dir;
-            (session, true))
+            (session, Some (Session(session))))
         | Absyn.Theorem(name, t) ->
-            L.prove name t session, true
+            L.prove name t session, Some (Session(session))
         | Absyn.Definitions(ds) ->
-            L.definitions ds session, true
+            L.definitions ds session, Some (Session(session))
         | Absyn.Timing(onoff) ->
-            timing := onoff; (session, true)
+            timing := onoff; (session, Some (Session(session)))
         | Absyn.Debug(onoff) ->
             (Properties.setBool "output.debug" onoff;
-            (session, true))
+            (session, Some (Session(session))))
         | Absyn.Include(sl) ->
-            (L.incl sl session, true)
+            (L.incl sl session, Some (Session(session)))
         | Absyn.Open(sl) ->
-            (openFiles session sl, true)
-        | Absyn.Logics -> (showLogics session; (session, true))
-        | Absyn.Logic(s) -> (loadLogic s session, true)
-        | Absyn.Tacticals -> (showTacticals session; (session, true))
+            let session' = openFiles session sl in
+            (session', Some (Session(session)))
+        | Absyn.Logics -> (showLogics session; (session, Some (Session(session))))
+        | Absyn.Logic(s) -> (loadLogic s session, Some (Session(session)))
+        | Absyn.Tacticals -> (showTacticals session; (session, Some (Session(session))))
         | Absyn.TacticalDefinition(name, pretactical) ->
-            (defineTactical name pretactical session, true)
+            (defineTactical name pretactical session, Some (Session(session)))
         | Absyn.PreTactical(pretactical) ->
             if (L.validSequent session) then
-              (tactical pretactical session, true)
+              (tactical pretactical session, Some (Session(session)))
             else
               (O.error "No valid sequent.\n";
               (errorHandler session, true))
@@ -443,8 +459,8 @@ struct
     (*  Handle the input and then save the session in the undo stack
         only when it is not undo or redo. *)
     let (session', save) = handle input session in
-    if save then
-      (storeSession session;
+    if Option.isSome save then
+      (store (Option.get save);
       session')
     else
       (session')
@@ -514,6 +530,6 @@ struct
         (*  Store the session if there was a parse error.
             This ensures that undo will always restore the
             previous state even in the case of a parse error. *)
-        storeSession session;
+        store (Session(session));
         errorHandler session)
 end

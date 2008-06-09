@@ -87,6 +87,7 @@ rule command = parse
 | "define"      {DEFINE}
 
 | "set"         {SET}
+| "get"         {GET}
 
 | '"' (instring as n) '"' {String.iter (function '\n' -> incrline lexbuf | _ -> ()) n ; STRING(n)}
 | name as n     {ID n}

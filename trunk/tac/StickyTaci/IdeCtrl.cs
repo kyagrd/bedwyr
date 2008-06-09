@@ -100,6 +100,7 @@ namespace StickyTaci
         Taci.Output += new Taci.IOHandler<string>(Taci_Output);
         Taci.Goal += new Taci.IOHandler<string>(Taci_Goal);
         Taci.Error += new Taci.IOHandler<string>(Taci_Error);
+        Taci.Debug += new Taci.IOHandler<string>(Taci_Debug);
         Taci.Command += new Taci.IOHandler<string>(Taci_Command);
         Taci.Tactical += new Taci.IOHandler<string>(Taci_Tactical);
         Taci.Logic += new Taci.IOHandler<Logic>(Taci_Logic);
@@ -441,6 +442,12 @@ namespace StickyTaci
     private void Taci_Output(Taci instance, string data)
     {
       Form.Output(data);
+    }
+
+
+    void Taci_Debug(Taci instance, string data)
+    {
+      Form.Debug(data);
     }
 
     private void Taci_Error(Taci instance, string data)

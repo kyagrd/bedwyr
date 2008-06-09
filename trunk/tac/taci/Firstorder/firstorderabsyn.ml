@@ -276,7 +276,12 @@ and termsAbstraction = function
    | QuantifiedFormula(_,f) -> termsAbstraction f
    | ApplicationFormula(_,tl) -> tl
 
-let string_of_pattern f = ""
+let string_of_polarity = function Positive -> "+" | Negative -> "-"
+let string_of_freezing = function Frozen -> "*" | Unfrozen -> ""
+let string_of_control = function
+  Normal -> "" | Focused -> "#" | Delayed -> "?"
+
+let string_of_pattern _ = ""
 
 let string_of_term ?(norm=fun x->x) ~generic names t =
   Pprint.term_to_string_preabstracted ~generic ~bound:names (norm t)

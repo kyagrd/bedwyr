@@ -56,6 +56,7 @@ namespace StickyTaci
     public event ExitHandler Exit;
     public event IOHandler<string> Output;
     public event IOHandler<string> Goal;
+    public event IOHandler<string> Debug;
     public event IOHandler<string> Error;
     public event IOHandler<string> Command;
     public event IOHandler<string> Tactical;
@@ -144,7 +145,7 @@ namespace StickyTaci
    
     public void Write(string s)
     {
-      Debug.WriteLine("Taci: " + s);
+      System.Diagnostics.Debug.WriteLine("Taci: " + s);
       m_Taci.StandardInput.WriteLine(s + "\n");
     }
 
@@ -259,15 +260,20 @@ namespace StickyTaci
       else if(type == "tactical" && Tactical != null)
       {
         string text = GetAttribute(node, "text");
-        Debug.WriteLine("Tactical: " + text + ".");
+        System.Diagnostics.Debug.WriteLine("Tactical: " + text + ".");
         Tactical(this, text);
       }
       else if(type == "logic" && Logic != null)
       {
         string key = GetAttribute(node, "key");
         string name = GetAttribute(node, "name");
-        Debug.WriteLine("Logic: " + key + " : " + name + ".");
+        System.Diagnostics.Debug.WriteLine("Logic: " + key + " : " + name + ".");
         Logic(this, new Logic(key, name));
+      }
+      else if(type == "debug" && Debug != null)
+      {
+        string text = GetAttribute(node, "text");
+        Debug(this, text);
       }
     }
 

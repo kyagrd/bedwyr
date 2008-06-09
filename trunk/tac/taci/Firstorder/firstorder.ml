@@ -16,13 +16,23 @@
 * along with this code; if not, write to the Free Software Foundation,*
 * Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA        *
 **********************************************************************)
+
+(**********************************************************************
+* Firstorder Properties:
+*
+* NOTE: These are shared across all logics constructed by the functor.
+**********************************************************************)
 let () = Properties.setBool "firstorder.proofsearchdebug" false
 let () = Properties.setBool "firstorder.debug" false
 let () = Properties.setInt "firstorder.defaultbound" 3
 let () = Properties.setBool "firstorder.asyncbound" true
 let () = Properties.setInt "firstorder.defaultasyncbound" 10
+let () = Properties.setBool "firstorder.uselemmas" true
+let () = Properties.setInt "firstorder.defaultlemmabound" 3
 let () = Properties.setString "firstorder.frozens" "default"
 let () = Properties.setBool "firstorder.induction-unfold" false
+let () = Properties.setBool "firstorder.thawasync" false
+
 (* TODO frozens and induction-unfold for coinduction *)
 
 (**********************************************************************
@@ -63,17 +73,13 @@ struct
   * context level and an abstract syntax formula.
   ********************************************************************)
   type formula = Formula of (int * (FOA.annotation FOA.polarized))
-
-  let string_of_polarity = function FOA.Positive -> "+" | FOA.Negative -> "-"
-  let string_of_freezing = function FOA.Frozen -> "*" | FOA.Unfrozen -> ""
-  let string_of_control =
-    function FOA.Normal -> " " | FOA.Focused -> "# " | FOA.Delayed -> "? "
-
+  
   let string_of_annotation ann formula =
-    (string_of_control ann.FOA.control) ^
-    (string_of_polarity ann.FOA.polarity) ^
+    (FOA.string_of_control ann.FOA.control) ^ " " ^
+    (FOA.string_of_polarity ann.FOA.polarity) ^
     formula ^
-    (string_of_freezing ann.FOA.freezing)
+    (FOA.string_of_freezing ann.FOA.freezing)
+
 
   let string_of_formula (Formula(local,(a,t))) =
     let generic = Term.get_dummy_names ~start:1 local "n" in
@@ -113,7 +119,8 @@ struct
     lhs : formula list ;
     rhs : formula list ;
     bound : int option ;
-    async_bound : int option
+    async_bound : int option ;
+    lemma_bound : int option ;
   }
 
   let updateBound = function
@@ -162,6 +169,11 @@ struct
        | { bound = Some b } -> b<0 | { bound = None } -> false) ||
     (match seq with
        | { async_bound = Some b } -> b<0 | { async_bound = None } -> false)
+
+  let lemmaOutOfBound seq =
+    (match seq with
+       | { lemma_bound = Some b } -> b <= 0
+       | { lemma_bound = None } -> assert false)
 
   (********************************************************************
   *Proof:
@@ -675,7 +687,7 @@ struct
             { session with
                   proof_namespace = proofNamespace ;
                   builder = Logic.idProofBuilder ;
-                  sequents = [{ bound = None ; async_bound = None ;
+                  sequents = [{ bound = None ; async_bound = None ; lemma_bound = None ;
                                 lvl=0 ; lhs=[] ; rhs=[makeFormula f] }] ;
                   theorem_name = Some name;
                   theorem = Some f}
@@ -888,6 +900,48 @@ struct
           { session with definitions = defs'' ;
               (* Always remember constants used in the new definitions. *)
               initial_namespace = Term.save_namespace () }
+
+  (********************************************************************
+  *modifyFormulaAnnotations:
+  * Modifies *all* of the annotations in a formula.
+  ********************************************************************)
+  let modifyFormulaAnnotations modifier f =
+    let tf x = x in
+    let rec ff () =
+      let f' = FOA.mapFormula ff tf in
+      {f' with
+        FOA.polf = fun ((ann, f) as arg) ->
+          let ann' = modifier arg in
+          (ann', (ff ()).FOA.formf f)}
+    in
+    (ff ()).FOA.polf f
+
+  (*  focusFormula/freezeFormula: similar to above, but only modify the
+      toplevel annotation. *)
+  let focusFormula (Formula(i,(a,f))) = Formula (i,({a with FOA.control=FOA.Focused},f))
+  let freezeFormula (Formula(i,(a,f))) = Formula (i, ({a with FOA.freezing = FOA.Frozen}, f))
+
+  (********************************************************************
+  *modifySequentAnnotations:
+  * For every formula in a sequent, applies the annotation modifying
+  * function.
+  ********************************************************************)
+  let modifySequentAnnotations modifier seq =
+    let modifySequentFormula (Formula(i,f)) =
+      Formula(i, modifyFormulaAnnotations modifier f)
+    in
+    {seq with
+      lhs = List.map modifySequentFormula seq.lhs;
+      rhs = List.map modifySequentFormula seq.rhs}
+  
+  let unfreezeModifier (ann, f) = {ann with FOA.freezing = FOA.Unfrozen}
+  let unfocusModifier (ann, f) = {ann with FOA.control = FOA.Normal}
+  let freezeModifier (ann, f) = {ann with FOA.freezing = FOA.Frozen}
+  let idModifier (ann, f) = ann
+  
+  let composeModifiers m1 m2 ((ann, f) as arg) =
+    let ann' = (m1 arg) in
+    m2 (ann', f)
 
   (********************************************************************
   *copyFormula:
@@ -2150,86 +2204,98 @@ struct
     * This tactic takes a single sequent and its successes are single sequents
     * too.
     * The freeze tactic works the same way, even though it has nothing to do
-    * with decide. *)
-  let focus,focusRight,freezeLeft =
-    let matcher fl = make_matcher (fun (Formula(i,f)) -> fl f) in
-    let focus (Formula(i,(a,f))) =
-      Formula (i,({a with FOA.control=FOA.Focused},f))
-    in
-    let freeze (Formula(i,(a,f))) =
-      Formula (i,({a with FOA.freezing=FOA.Frozen},f))
-    in
-
-    (* Find a formula on the right satisfying fr,
-     * succeed with the sequent resulting of the application of focus to it.
-     * On failure, if b, keep searching on the left with tac_l and fl. *)
-    let rec tac_r before after seq sc fc focus fl fr b =
-      match matcher fr after with
-        | Some (f,before',after) ->
-            let before = before @ before' in
-              if Properties.getBool "firstorder.proofsearchdebug" then
-                Format.printf "%s@[<hov 2>Focus right@ %s@]\n%!"
-                  (String.make
-                     (match seq.bound with Some b -> max 0 b | None -> 0)
-                     ' ')
-                  (string_of_formula f) ;
-              sc
-                { seq with rhs = before @ [ focus f ] @ after }
-                (fun () -> tac_r (before@[f]) after seq sc fc focus fl fr b)
-        | None ->
-            if b then
-              tac_l [] seq.lhs seq sc fc focus fl fr false
-            else
-              fc ()
-
-    and tac_l before after seq sc fc focus fl fr b =
-      match matcher fl after with
-        | Some (f,before',after) ->
-            let before = before @ before' in
+    * with decide. *)  
+  (*  matcher: helper to make a matcher.  *)
+  let matcher fl = make_matcher (fun (Formula(i,f)) -> fl f)
+  
+  (* Find a formula on the right satisfying fr,
+  * succeed with the sequent resulting of the application of focus to it.
+  * On failure, if b, keep searching on the left with tac_l and fl. *)
+  let rec tac_r before after seq sc (fc : unit -> unit) focuser fl fr b =
+    match matcher fr after with
+      | Some (f,before',after) ->
+          let before = before @ before' in
             if Properties.getBool "firstorder.proofsearchdebug" then
-              Format.printf "%s@[<hov 2>Focus left@ %s@]\n%!"
+              Format.printf "%s@[<hov 2>Focus right@ %s@]\n%!"
                 (String.make
                    (match seq.bound with Some b -> max 0 b | None -> 0)
                    ' ')
                 (string_of_formula f) ;
             sc
-              { seq with lhs = before @ [ focus f ] @ after }
-              (fun () -> tac_l (before@[f]) after seq sc fc focus fl fr b)
-        | None ->
-            if b then
-              tac_r [] seq.rhs seq sc fc focus fl fr false
-            else
-              fc ()
+              [{ seq with rhs = before @ [ focuser f ] @ after }]
+              (fun () -> tac_r (before@[f]) after seq sc (fc : unit -> unit) focuser fl fr b)
+      | None ->
+          if b then
+            tac_l [] seq.lhs seq sc fc focuser fl fr false
+          else
+            (fc : unit -> unit) ()
+
+  and tac_l before after seq sc (fc : unit -> unit) focuser fl fr b =
+    match matcher fl after with
+      | Some (f,before',after) ->
+          let before = before @ before' in
+          if Properties.getBool "firstorder.proofsearchdebug" then
+            Format.printf "%s@[<hov 2>Focus left@ %s@]\n%!"
+              (String.make
+                 (match seq.bound with Some b -> max 0 b | None -> 0)
+                 ' ')
+              (string_of_formula f) ;
+          sc
+            [{ seq with lhs = before @ [ focuser f ] @ after }]
+            (fun () -> tac_l (before@[f]) after seq sc (fc : unit -> unit) focuser fl fr b)
+      | None ->
+          if b then
+            tac_r [] seq.rhs seq sc (fc : unit -> unit) focuser fl fr false
+          else
+            (fc : unit -> unit) ()
+
+  (********************************************************************
+  *focusTactic:
+  * Builds a tactic that focuses on something.
+  ********************************************************************)
+  let rec focusTactic session =
+    let (pretactic : (sequent, proof) Logic.pretactic) = fun seq sc fc ->
+      let sc s k = sc s (List.hd) k in
+      tac_l
+        [] seq.lhs seq sc fc 
+        focusFormula
+        (fun (a,_) -> a.FOA.control<>FOA.Focused &&
+                      a.FOA.polarity=FOA.Negative)
+        (fun (a,_) -> a.FOA.control<>FOA.Focused &&
+                      a.FOA.polarity=FOA.Positive)
+        true
     in
-    (*  focus *)
-    (fun seq sc fc ->
-       tac_l
-         [] seq.lhs seq sc fc focus
-         (fun (a,_) -> a.FOA.control<>FOA.Focused &&
-                       a.FOA.polarity=FOA.Negative)
-         (fun (a,_) -> a.FOA.control<>FOA.Focused &&
-                       a.FOA.polarity=FOA.Positive)
-         true),
-    (*  focusRight  *)
-    (fun seq sc fc ->
-       tac_r
-         [] seq.rhs seq sc fc focus
-         (fun (a,_) -> a.FOA.control<>FOA.Focused &&
-                       a.FOA.polarity=FOA.Negative)
-         (fun (a,_) -> a.FOA.control<>FOA.Focused &&
-                       a.FOA.polarity=FOA.Positive)
-         true),
-    (*  freezeLeft  *)
-    (fun seq sc fc ->
-       tac_l
-         [] seq.lhs seq sc fc freeze
-         (fun (a,f) -> a.FOA.freezing=FOA.Unfrozen && fixpoint f)
-         (fun (a,f) -> a.FOA.freezing=FOA.Unfrozen && fixpoint f)
-         true)
+    (G.makeTactical pretactic)
 
+  (********************************************************************
+  *focusRightTactic:
+  * A tactic for manually focusing on something on the right.
+  ********************************************************************)
+  and focusRightTactic = fun seq sc fc ->
+    tac_r
+      [] seq.rhs seq sc fc focusFormula
+      (fun (a,_) -> a.FOA.control<>FOA.Focused &&
+                    a.FOA.polarity=FOA.Negative)
+      (fun (a,_) -> a.FOA.control<>FOA.Focused &&
+                    a.FOA.polarity=FOA.Positive)
+      true
 
-  (** The reaction rule removes the focus from an asynchronous formula. *)
-  let unfocus =
+  (********************************************************************
+  *freezeLeftTactic:
+  * A tactic for manually freezing something on the left.
+  ********************************************************************)
+  and freezeLeftTactic = fun seq sc fc ->
+    tac_l
+      [] seq.lhs seq sc fc freezeFormula
+      (fun (a,f) -> a.FOA.freezing=FOA.Unfrozen && fixpoint f)
+      (fun (a,f) -> a.FOA.freezing=FOA.Unfrozen && fixpoint f)
+      true
+
+  (********************************************************************
+  *unfocus:
+  * The reaction rule removes the focus from an asynchronous formula.
+  ********************************************************************)
+  and unfocus =
     let matcher_l =
       make_matcher
         (fun (Formula(i,(a,f))) ->
@@ -2267,75 +2333,76 @@ struct
                  | None -> None
                end)
 
-    (** "Finite" async connectives can be introduced eagerly without backtrack.
-      * For the fixed points (mu on the left, nu on the right) there is a choice
-      * of "opening" or "freezing", over which backtrack should be possible. *)
-    let finite =
-      cutRepeatTactical
-        (G.orElseListTactical
-           [ automaticIntro `Left
-               (make_matcher
-                 (fun (Formula(i,(a,f))) ->
-                    not (fixpoint f || a.FOA.polarity=FOA.Negative))) ;
-             automaticIntro `Right
-               (make_matcher
-                 (fun (Formula(i,(a,f))) ->
-                    not (fixpoint f || a.FOA.polarity=FOA.Positive))) ;
-             intro `Left
-               (make_matcher
-                  (function
-                     | Formula(i,(({FOA.freezing=FOA.Unfrozen} as a),
-                         (FOA.ApplicationFormula(
-                            FOA.FixpointFormula(
-                              FOA.Inductive,_,argnames,_),args) as f)))
-                       when unfoldingProgresses argnames args ->
-                         if Properties.getBool "firstorder.proofsearchdebug" then
-                           Format.printf "%s@[<hov 2>Unfold left@ %s@]\n%!"
-                             ""
-                             (string_of_formula (Formula(i,(a,f)))) ;
-                         true
-                     | _ -> false))
-               dummy_session (Some "unfold") ;
-             intro `Right
-               (make_matcher
-                  (function
-                     | Formula(i,(({FOA.freezing=FOA.Unfrozen} as a),
-                         (FOA.ApplicationFormula(
-                            FOA.FixpointFormula(
-                              FOA.CoInductive,_,argnames,_),args) as f)))
-                       when unfoldingProgresses argnames args ->
-                         if Properties.getBool "firstorder.proofsearchdebug" then
-                           Format.printf "%s@[<hov 2>Unfold right@ %s@]\n%!"
-                             ""
-                             (string_of_formula (Formula(i,(a,f)))) ;
-                         true
-                     | _ -> false))
-               dummy_session (Some "unfold")
-           ])
+  (** "Finite" async connectives can be introduced eagerly without backtrack.
+    * For the fixed points (mu on the left, nu on the right) there is a choice
+    * of "opening" or "freezing", over which backtrack should be possible. *)
+  and finite =
+    cutRepeatTactical
+      (G.orElseListTactical
+         [ automaticIntro `Left
+             (make_matcher
+               (fun (Formula(i,(a,f))) ->
+                  not (fixpoint f || a.FOA.polarity=FOA.Negative))) ;
+           automaticIntro `Right
+             (make_matcher
+               (fun (Formula(i,(a,f))) ->
+                  not (fixpoint f || a.FOA.polarity=FOA.Positive))) ;
+           intro `Left
+             (make_matcher
+                (function
+                   | Formula(i,(({FOA.freezing=FOA.Unfrozen} as a),
+                       (FOA.ApplicationFormula(
+                          FOA.FixpointFormula(
+                            FOA.Inductive,_,argnames,_),args) as f)))
+                     when unfoldingProgresses argnames args ->
+                       if Properties.getBool "firstorder.proofsearchdebug" then
+                         Format.printf "%s@[<hov 2>Unfold left@ %s@]\n%!"
+                           ""
+                           (string_of_formula (Formula(i,(a,f)))) ;
+                       true
+                   | _ -> false))
+             dummy_session (Some "unfold") ;
+           intro `Right
+             (make_matcher
+                (function
+                   | Formula(i,(({FOA.freezing=FOA.Unfrozen} as a),
+                       (FOA.ApplicationFormula(
+                          FOA.FixpointFormula(
+                            FOA.CoInductive,_,argnames,_),args) as f)))
+                     when unfoldingProgresses argnames args ->
+                       if Properties.getBool "firstorder.proofsearchdebug" then
+                         Format.printf "%s@[<hov 2>Unfold right@ %s@]\n%!"
+                           ""
+                           (string_of_formula (Formula(i,(a,f)))) ;
+                       true
+                   | _ -> false))
+             dummy_session (Some "unfold")
+         ])
 
-    (* TODO note that the treatment of fixed points is not based on polarities
-     * but the roles of mu/nu are hardcoded. *)
+  (* TODO note that the treatment of fixed points is not based on polarities
+   * but the roles of mu/nu are hardcoded. *)
+  and match_inductable =
+    make_matcher
+      (fun (Formula(i,(a,f))) ->
+         match f with
+           | FOA.ApplicationFormula
+              (FOA.FixpointFormula (FOA.Inductive,_,argnames,_), args) ->
+              a.FOA.freezing = FOA.Unfrozen
+           | _ -> false)
+  
+  and match_coinductable =
+    make_matcher
+      (fun (Formula(i,(a,f))) ->
+         match f with
+           | FOA.ApplicationFormula
+              (FOA.FixpointFormula (FOA.CoInductive,_,argnames,_), args) ->
+              a.FOA.freezing = FOA.Unfrozen
+           | _ -> false)
 
-    let match_inductable =
-      make_matcher
-        (fun (Formula(i,(a,f))) ->
-           match f with
-             | FOA.ApplicationFormula
-                (FOA.FixpointFormula (FOA.Inductive,_,argnames,_), args) ->
-                a.FOA.freezing = FOA.Unfrozen
-             | _ -> false)
-    let match_coinductable =
-      make_matcher
-        (fun (Formula(i,(a,f))) ->
-           match f with
-             | FOA.ApplicationFormula
-                (FOA.FixpointFormula (FOA.CoInductive,_,argnames,_), args) ->
-                a.FOA.freezing = FOA.Unfrozen
-             | _ -> false)
-
-    (** Apply a rule on the focused formula if it is synchronous. *)
-    let sync_step =
-      G.orElseTactical
+  (** Apply a rule on the focused formula if it is synchronous. *)
+  and sync_step =
+    let body =
+      (G.orElseTactical
         (automaticIntro `Left
           (make_matcher
              (fun (Formula(i,(a,f))) ->
@@ -2343,17 +2410,84 @@ struct
         (automaticIntro `Right
           (make_matcher
              (fun (Formula(i,(a,f))) ->
-               a.FOA.control=FOA.Focused && a.FOA.polarity=FOA.Positive)))
+               a.FOA.control=FOA.Focused && a.FOA.polarity=FOA.Positive))))
+    in
+    body
+
+  (********************************************************************
+  *lemmaInit:
+  * Strips all non-atomic formulas, adds all lemmas on the left after
+  * freezing them, and then tries to automatically prove.  Doesn't
+  * bother if the right is empty.
+  ********************************************************************)
+  and lemmaInit session =
+    let strip s =
+      let atomic f =
+        match f with
+            Formula(_, (_,FOA.ApplicationFormula(_))) -> true
+          | _ -> false
+      in
+      (List.filter atomic s)
+    in
+    let freezer arg =
+      match arg with
+        ann, FOA.ApplicationFormula(_) -> freezeModifier arg
+      | _ -> idModifier arg
+    in
+    let freezeAll fs =
+      List.map
+        (fun (Formula(i,f)) ->
+          Formula(i, modifyFormulaAnnotations (composeModifiers freezer unfocusModifier) f))
+        fs
+    in
+    let lemmas =
+      List.map 
+        (fun (_,f,_) -> Formula(0,f))
+        session.lemmas
+    in
+    
+    let pretactic = fun seq sc fc ->
+      if lemmaOutOfBound seq then
+        let () = O.debug "Lemma bound exceeded.\n" in
+        fc ()
+      else
+        let () = O.debug "Introducing lemmas.\n" in
+        let lhs' = strip seq.lhs in
+        let rhs' = strip seq.rhs in
+        if Listutils.empty rhs' then
+          fc ()
+        else
+          let seq' =
+            {seq with
+              lhs = freezeAll (List.append lemmas lhs');
+              rhs = freezeAll rhs';
+              lemma_bound = updateBound seq.lemma_bound}
+          in
+          let make pb = fun proofs ->
+            { rule = "lemma_init" ;
+            params = [] ;
+            bindings = [] ;
+            formula = None ;
+            sequent = seq ;
+            subs = (pb proofs) }
+          in
+          fullAsync session [seq']
+            (fun ns os pb k ->
+              assert (Listutils.empty ns) ;
+              sc ns (make pb) k)
+            fc
+    in
+    G.makeTactical pretactic
 
   (** Focused proof-search, starting with the async phase. *)
-  let rec fullAsync s sc fc =
+  and fullAsync session s sc fc =
     let s = List.map resetAsyncBound s in
-    cutThenTactical finite freeze s sc fc
+    cutThenTactical (finite) (freeze session) s sc fc
 
   (* Freeze the first available asynchronous fixed point,
    * takes care of unfoldings and re-calling fullAsync when needed. *)
-  and freeze sequents sc fc =
-    let async = cutThenTactical finite freeze in
+  and freeze session sequents sc fc =
+    let async = cutThenTactical finite (freeze session) in
     let seq = match sequents with [seq] -> seq | _ -> assert false in
       match match_inductable seq.lhs with
        | Some (Formula(i,(a,f)), before, after) ->
@@ -2370,7 +2504,7 @@ struct
                        (match seq.bound with Some b -> max 0 b | None -> 0)
                        ' ')
                     (string_of_formula (Formula(i,(FOA.freeze a,f))));
-                freeze
+                freeze session
                   [{seq with lhs =
                                before@[Formula(i,(FOA.freeze a,f))]@after }])
              (cutThenTactical
@@ -2393,7 +2527,7 @@ struct
              | Some (Formula(i,(a,f)), before, after) ->
                  G.orElseTactical
                    (fun _ ->
-                      freeze
+                      freeze session
                         [{seq with
                           rhs = before@[Formula(i,(FOA.freeze a,f))]@after }])
                    (cutThenTactical
@@ -2404,54 +2538,62 @@ struct
              | None ->
                  (* Don't wait to collect all results of the async phase,
                   * check each immediately. *)
-                 fullSync seq sc fc
+                 fullSync session seq sc fc
            end
 
   (** Complete focused proof-search starting with a decide rule. *)
-  and fullSync seq sc fc =
-    focus seq
-      (fun seq k -> syncTactical [seq] sc k)
-      fc
+  and fullSync session seq sc fc =
+    let seq' =
+      if Properties.getBool "firstorder.thawasync" then
+        modifySequentAnnotations unfreezeModifier seq
+      else
+        seq
+    in
+    let focuser () =
+      focusTactic session [seq']
+        (fun newSeqs oldSeqs pb k -> syncTactical session newSeqs sc k)
+        fc
+    in
+    if Properties.getBool "firstorder.uselemmas" then
+      (lemmaInit session [seq]
+        sc
+        focuser)
+    else
+      focuser ()
 
-  and syncTactical seqs sc fc =
+  and syncTactical session seqs sc fc =
     assert (List.length seqs = 1) ;
     sync_step seqs
       (fun n o b k ->
-         G.iterateTactical syncTactical (n@o)          (* succeeds on n@o=[] *)
+         G.iterateTactical (syncTactical session) (List.append n o)          (* succeeds on n@o=[] *)
            (fun n' o' b' k' ->
               assert (n'=[] && o'=[]) ;        (* syncTactical is a complete tactic *)
               sc [] [] (fun l -> b (b' l)) k') (* expect l = [] *)
            k)
       (fun () ->
          match unfocus (List.hd seqs) with
-           | Some seq -> fullAsync [seq] sc fc
+           | Some seq -> fullAsync session [seq] sc fc
            | None -> fc ()) (* TODO that might be broken with delays *)
 
-  let setBound session n =
+  and setBound session syncBound lemmaBound =
     fun seqs sc fc ->
       match seqs with
-       | ({bound = _} as seq)::tl ->
-           sc [{seq with bound = Some n}] tl (fun proofs -> proofs) fc
+       | (seq::tl) ->
+           sc [{seq with bound = Some syncBound; lemma_bound = Some lemmaBound}] tl (fun proofs -> proofs) fc
        | [] -> fc ()
   
-  let setBoundTactical session args =
+  and setBoundTactical session args =
+    let lemmaBound = Properties.getInt "firstorder.defaultlemmabound" in
+    let syncBound = (Properties.getInt "firstorder.defaultbound") in
     match args with
-        [Absyn.String s] -> setBound session (int_of_string s)
-      | [] -> setBound session (Properties.getInt "firstorder.defaultbound")
+        [Absyn.String s] -> setBound session (int_of_string s) lemmaBound
+      | [(Absyn.String s1); (Absyn.String s2)] ->
+          setBound session (int_of_string s1) (int_of_string s2)
+      | [] -> setBound session syncBound lemmaBound
       | _ -> G.invalidArguments "set_bound"
-
-  let unfocus =
-    G.makeTactical
-      (fun seq sc fc ->
-         match unfocus seq with
-           | Some s -> sc [s] List.hd fc
-           | None -> fc ())
-
-  let unfocusTactical =
-    fun _ _ -> unfocus
-
+  
   (*******************************************************************
-  *proveToTactical:
+  *iterativeDeepeningProveTactical:
   * Iterative deepening.  Takes a lower and upper bound; you can
   * therefore simulate the old prove tactical by doing prove("n", "n").
   * We _must_ abstract out generic quantifications first: because it
@@ -2459,14 +2601,17 @@ struct
   * take the generic contexts into account at many places, and it would
   * thus do meaningless error-prone things.
   ********************************************************************)
-  let iterativeDeepeningProveTactical session args =
-    let fullAsync = G.thenTactical (abstractTactical session []) fullAsync in
+  and iterativeDeepeningProveTactical session args =
+    let abstractAsync =
+      G.thenTactical (abstractTactical session []) (fullAsync session)
+    in
+    let lemmaBound = Properties.getInt "firstorder.defaultlemmabound" in
     let rec construct i max =
       if i = max then
-        (G.thenTactical (setBound session max) fullAsync)
+        (G.thenTactical (setBound session max lemmaBound) abstractAsync)
       else
         (G.orElseTactical
-          (G.thenTactical (setBound session i) fullAsync)
+          (G.thenTactical (setBound session i lemmaBound) abstractAsync)
           (construct (i + 1) max))
     in
     match args with
@@ -2480,6 +2625,16 @@ struct
       | [] ->
           construct 0 (max (Properties.getInt "firstorder.defaultbound") 0)
       | _ -> G.invalidArguments "prove"
+
+  let unfocusTactic =
+    G.makeTactical
+      (fun seq sc fc ->
+         match unfocus seq with
+           | Some s -> sc [s] List.hd fc
+           | None -> fc ())
+
+  let unfocusTactical =
+    fun _ _ -> unfocusTactic
 
   (********************************************************************
   *cutLemmaTactical:
@@ -2515,45 +2670,59 @@ struct
   * repeating 'sync', and finally releasing focus.  It also tweaks the
   * proof builder in the same way as cutLemmaTactical.
   ********************************************************************)
-  let applyTactical session args = match args with
-      Absyn.String(s)::[] ->
-        (*  select: given a formula, do something to it (we don't know
-            what yet, so we don't do anything; options include negating
-            some things, freezing others, etc.), and focus on it. *)
-        let select formula =
-          let tf x = x in
-          let rec ff () =
-            let f' = FOA.mapFormula ff tf in
-            {f' with
-              FOA.polf = fun (ann, f) ->
-                (ann, (ff ()).FOA.formf f)}
-          in
-          let (annotation, newFormula) = (ff ()).FOA.polf formula in
-          ({annotation with FOA.control = FOA.Focused}, newFormula)
+  let applyTactical session args =
+    let apply lemma reduce =
+      (*  select: given a formula, do something to it (we don't know
+          what yet, so we don't do anything; options include negating
+          some things, freezing others, etc.), and focus on it. *)
+      let select formula =
+        let tf x = x in
+        let rec ff () =
+          let f' = FOA.mapFormula ff tf in
+          {f' with
+            FOA.polf = fun (ann, f) ->
+              (ann, (ff ()).FOA.formf f)}
         in
-        
-        (try
-          let (_,formula,proof) = List.find (fun (s',_,_) -> s = s') session.lemmas in
-          let formula' = Formula(0, select formula) in
-          let pretactic = fun sequent sc fc ->
-            let seq = { sequent with lhs = sequent.lhs @ [formula'] } in
-            let pb = fun proofs ->
-              { rule = "apply" ;
-              params = ["lemma", s] ;
-              bindings = [] ;
-              formula = Some formula' ;
-              sequent = seq ;
-              subs = proof::proofs }
-            in
-            sc [seq] pb fc
+        let (annotation, newFormula) = (ff ()).FOA.polf formula in
+        ({annotation with FOA.control = FOA.Focused}, newFormula)
+      in
+      
+      (try
+        let (_,formula,proof) = List.find (fun (s',_,_) -> lemma = s') session.lemmas in
+        let formula' = Formula(0, select formula) in
+        let pretactic = fun sequent sc fc ->
+          let seq = { sequent with lhs = sequent.lhs @ [formula'] } in
+          let pb = fun proofs ->
+            { rule = "apply" ;
+            params = ["lemma", lemma] ;
+            bindings = [] ;
+            formula = Some formula' ;
+            sequent = seq ;
+            subs = proof::proofs }
           in
+          sc [seq] pb fc
+        in
+        let tac = (G.makeTactical pretactic) in
+        if reduce then
+          (G.thenTactical
+            tac
             (G.thenTactical
-              (G.makeTactical pretactic)
-              (G.thenTactical
-                (G.repeatTactical sync_step)
-                (G.tryTactical unfocus)))
-        with
-          Not_found -> (O.error "undefined lemma.\n" ; G.failureTactical))
+              (G.repeatTactical sync_step)
+              (G.tryTactical unfocusTactic)))
+        else
+          tac
+      with
+        Not_found -> (O.error "undefined lemma.\n" ; G.failureTactical))
+    in
+    match args with
+      [Absyn.String(s)] -> apply s true
+    | [Absyn.String(s); Absyn.String(mode)] ->
+        if mode = "reduce" then
+          apply s true
+        else if mode = "simple" then
+          apply s false
+        else
+          G.invalidArguments "apply"
     | _ -> G.invalidArguments "apply"
 
   (********************************************************************
@@ -2639,21 +2808,18 @@ struct
         ++ ("force", forceTactical)
         ++ ("prove", iterativeDeepeningProveTactical)
         ++ ("async", fun _ _ -> finite) (* TODO might be infinite *)
-        ++ ("focus",
-            fun _ _ ->
-              G.makeTactical
-                (fun seq sc fc -> focus seq (fun s k -> sc [s] List.hd k) fc))
+        ++ ("focus", fun session _ -> focusTactic session)
         ++ ("focus_r",
             fun _ _ ->
               G.makeTactical
                   (fun seq sc fc ->
-                     focusRight seq (fun s k -> sc [s] List.hd k) fc))
+                     focusRightTactic seq (fun s k -> sc s List.hd k) fc))
         ++ ("freeze",
             fun _ _ ->
               G.makeTactical
-                (fun seq sc fc -> freezeLeft seq (fun s k -> sc [s] List.hd k) fc))
+                (fun seq sc fc -> freezeLeftTactic seq (fun s k -> sc s List.hd k) fc))
         ++ ("unfocus", unfocusTactical)
-        ++ ("sync", fun _ _ -> sync_step) 
+        ++ ("sync", fun _ _ -> sync_step)
         ++ ("set_bound", setBoundTactical)
 
         ++ ("abstract", abstractTactical)

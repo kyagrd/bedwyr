@@ -139,6 +139,10 @@ type ('a,'b,'c,'d,'e) map_pattern =
   abstp : 'a abstraction_pattern -> 'd ;
   formp : 'a formula_pattern -> 'e}
 
+val string_of_freezing : freezing -> string
+val string_of_polarity : polarity -> string
+val string_of_control : control -> string
+
 val string_of_pattern : pattern_annotation polarized_pattern -> string
 val string_of_pattern_ast : pattern_annotation polarized_pattern -> string
 val patternAnnotationToFormulaAnnotation :
