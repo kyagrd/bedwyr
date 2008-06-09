@@ -8,6 +8,13 @@
                        ; (sigma m1\n1\ m = abs m1, n = abs n1,
                           nabla a\ eq (cons (pair a a) gamma) (m1 a) (n1 a))".
 
+% A simple check.
+#theorem warmup "pi x\y\z\ (nabla a\ assoc x y z) => assoc x y z".
+prove.
+% It involved an induction with an invariant saying that the generic
+% variable is unused.
+% Qed.
+
 % First, let's focus on the main lemma.
 #theorem main "pi gamma\m\n\
     (nabla a\b\ eq (cons (pair a b) gamma) (m a) (n b))
@@ -16,10 +23,9 @@ simplify.
 abstract.
 then(induction("g\m\n\ nabla a\ eq (g a a) (m a a) (n a a)"),abstract).
 axiom.
-then(repeat(or_l),simplify).
-then(induction("a\b\l\ nabla c\ assoc (a c c) (b c c) (l c c)"),abstract).
-% These are all trivial.
-iterate(prove("1")).
+then(async,try(prove)).
+% Only the var case is left.
+then(induction("a\b\l\ nabla c\ assoc (a c c) (b c c) (l c c)"),prove).
 % Qed.
 
 #define "cp gamma m n := assoc m n gamma
@@ -34,27 +40,20 @@ simplify.
 induction("g\m\n\ eq g m n").
  % The inner induction shows that eq implies equality.
  induction("g\m\n\ (pi a\b\ assoc a b g => a=b) => m=n").
-  prove("0").
+  prove.
   % Inner invariance proof.
-  then(repeat(or_l),then(simplify,try(prove("0")))).
+  then(async,try(prove)).
   abstract.
-  then(imp_l("_ => (x1\ _ x1) = (x1\ _ x1)"),simplify).
-  then(mu_l,then(simplify,then(or_l,simplify))).
-  % The invariant has to say that the abstraction is vacuous.
-  induction("m'\n'\g'\ pi g\ (x\g' x) = (x\g)
-             => sigma m\n\ (x\m' x)=(x\m), (x\n' x)=(x\n), assoc m n g").
-  prove("0").
-  prove("0").
+  then(imp_l,simplify).
+  % Automated induction inside,
+  % deriving assoc from lift_assoc in case of vacuous abstractions.
+  then(mu_l,prove).
 % Outer invariance.
-then(repeat(or_l),then(simplify,try(then(mu_r,prove("0"))))).
-then(mu_r,right).
-then(repeat(sigma_r),then(repeat(and_r),try(eq_r))).
+then(async,try(prove)).
 % This is the "main lemma" that we proved first.
 abstract.
 then(induction("g\m\n\ nabla a\ eq (g a a) (m a a) (n a a)"),abstract).
-axiom.
-then(repeat(or_l),simplify).
-then(induction("a\b\l\ nabla c\ assoc (a c c) (b c c) (l c c)"),abstract).
-% These are all trivial.
-iterate(prove("1")).
+prove.
+then(async,try(prove)).
+then(induction("a\b\l\ nabla c\ assoc (a c c) (b c c) (l c c)"),prove).
 % Qed.
