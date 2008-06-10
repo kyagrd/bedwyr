@@ -50,10 +50,7 @@ induction("g\m\n\ eq g m n").
   then(mu_l,prove).
 % Outer invariance.
 then(async,try(prove)).
-% This is the "main lemma" that we proved first.
-abstract.
-then(induction("g\m\n\ nabla a\ eq (g a a) (m a a) (n a a)"),abstract).
+apply("main").
 prove.
-then(async,try(prove)).
-then(induction("a\b\l\ nabla c\ assoc (a c c) (b c c) (l c c)"),prove).
 % Qed.
+

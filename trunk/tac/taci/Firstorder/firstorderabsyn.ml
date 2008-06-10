@@ -270,11 +270,11 @@ let rec termsPolarized (p,f) = termsFormula f
 and termsAbstraction = function  
     AbstractionFormula(_,f) -> termsAbstraction f
   | AbstractionBody(f) -> termsPolarized f
- and termsFormula = function
-     BinaryFormula(_,l,r) -> (termsPolarized l)@(termsPolarized r)
-   | EqualityFormula(l,r) -> [l;r]
-   | QuantifiedFormula(_,f) -> termsAbstraction f
-   | ApplicationFormula(_,tl) -> tl
+and termsFormula = function
+    BinaryFormula(_,l,r) -> (termsPolarized l)@(termsPolarized r)
+  | EqualityFormula(l,r) -> [l;r]
+  | QuantifiedFormula(_,f) -> termsAbstraction f
+  | ApplicationFormula(_,tl) -> tl
 
 let string_of_polarity = function Positive -> "+" | Negative -> "-"
 let string_of_freezing = function Frozen -> "*" | Unfrozen -> ""
@@ -373,7 +373,9 @@ let rec string_of_formula_ast ~generic =
      | AtomicFormula(name) -> 
          "atom["^name^"]"
      | DBFormula(l,n,i) -> 
-         let rec name l = if l=0 then "#" ^ (string_of_int i) else "lift_" ^ name (l-1) in name l) ;
+         let rec name l =
+           if l=0 then "#" ^ (string_of_int i) else "lift_" ^ name (l-1)
+         in name l) ;
 
       abstf = (function
        AbstractionFormula (hint,f) -> 
@@ -417,15 +419,25 @@ let string_of_definition (Definition(name,arity,body,ind)) =
 * Abstracts the given formula over the given name. Doesn't go through
 * mu/nu abstractions.
 **********************************************************************)
+
 let abstract0 var = let rec x () = mapFormula x (Term.abstract var) in x
+
 let dummyvar = Term.var ~ts:0 ~lts:0 ~tag:Term.Constant
-let abstractDummyWithoutLambdas () = abstract0 dummyvar () 
+let lift = abstract0 dummyvar ()
+let rec lift_pred n p =
+  if n>0 then lift_pred (n-1) (lift.predf p) else p
+
 let abstractWithoutLambdas name = abstract0 (Term.atom name)
-let abstractVarWithoutLambdas var = abstract0 var
-let abstractVarWithoutLambas = abstract0
-let abstract name =
-  {polf = (fun f -> AbstractionFormula(name, AbstractionBody((abstractWithoutLambdas name ()).polf f))) ;
-   abstf = (fun f -> AbstractionFormula(name, (abstractWithoutLambdas name ()).abstf f)) ;
+
+let abstractVarWithoutLambdas = abstract0
+
+let abstractVar var = 
+  {polf =
+     (fun f -> AbstractionFormula(Term.get_hint var,
+                AbstractionBody((abstractVarWithoutLambdas var ()).polf f))) ;
+   abstf =
+     (fun f -> AbstractionFormula(Term.get_hint var,
+                (abstractVarWithoutLambdas var ()).abstf f)) ;
    formf = (fun _ -> ()) ; 
    predf = (fun _ -> ())}
 
@@ -436,16 +448,6 @@ let abstractPattern name =
    abstp = (fun f -> AbstractionPattern(name, (abstractPatternWithoutLambdas name ()).abstp f)) ;
    formp = (fun _ -> ()) ; 
    predp = (fun _ -> ())}
-  
-let abstractVar var = 
-  {polf =
-     (fun f -> AbstractionFormula(Term.get_hint var,
-                AbstractionBody((abstractVarWithoutLambdas var ()).polf f))) ;
-   abstf =
-     (fun f -> AbstractionFormula(Term.get_hint var,
-                (abstractVarWithoutLambdas var ()).abstf f)) ;
-   formf = (fun _ -> ()) ; 
-   predf = (fun _ -> ())}
 
 (** The [var] should have a naming hint attached to it. *)
 
@@ -588,7 +590,8 @@ let eliminateNablas tv =
             AbstractionBody ((f pv tv).polf form)) ;
 
       predf = (fun form terms -> match form with
-          AtomicFormula (name) when name="true" || name="false" -> ApplicationFormula(form,terms)
+          AtomicFormula (name) when name="true" || name="false" ->
+            ApplicationFormula(form,terms)
         | AtomicFormula (name) -> 
             (* For undefined atoms, the only thing we can do
              * is lifting the name.. *)
@@ -697,16 +700,6 @@ let unifyList unifier l1 l2 =
   in
   unify l1 l2
 
-
-(**********************************************************************
-*isAnonymousTerm:
-* Determines whether a term corresponds to an "_".
-**********************************************************************)
-let isAnonymousTerm t =
-  match (Term.observe t) with
-    Term.Var(v) ->
-      (Term.get_hint t = "_")
-  | _ -> false
 
 (**********************************************************************
 *applyFixpoint:
