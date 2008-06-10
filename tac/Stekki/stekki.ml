@@ -254,7 +254,6 @@ let eval_command () =
             Text.delete after ~start ~stop:(`Linechar (l+1,0),[]) ;
             Listbox.insert before ~index:`End ~texts:[command] ;
             Listbox.yview before (`Moveto 1.) ;
-            Printf.printf "%S\n" command ; (* TODO remove debug *)
             write_process (command^"\n")
 
 let undo ?(send=true) () =
