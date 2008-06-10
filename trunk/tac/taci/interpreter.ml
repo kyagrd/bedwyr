@@ -422,7 +422,7 @@ struct
         | Absyn.Redo(_) -> ((redo session), None)
         | Absyn.Reset ->
             let session' = L.reset () in
-            (session', Some (Session(session)))
+            (session', Some (Session(session')))
         | Absyn.ProofOutput name ->
             (*  Proof Output doesn't get undone.  *)
             let dir = (home_unrelate name) in
@@ -442,7 +442,7 @@ struct
             (L.incl sl session, Some (Session(session)))
         | Absyn.Open(sl) ->
             let session' = openFiles session sl in
-            (session', Some (Session(session)))
+            (session', Some (Session(session')))
         | Absyn.Logics -> (showLogics session; (session, Some (Session(session))))
         | Absyn.Logic(s) -> (loadLogic s session, Some (Session(session)))
         | Absyn.Tacticals -> (showTacticals session; (session, Some (Session(session))))
@@ -453,7 +453,7 @@ struct
               (tactical pretactical session, Some (Session(session)))
             else
               (O.error "No valid sequent.\n";
-              (errorHandler session, true))
+              (errorHandler session, Some(Session(session))))
     in
 
     (*  Handle the input and then save the session in the undo stack
