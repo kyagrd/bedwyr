@@ -28,7 +28,7 @@ let () = Properties.setInt "firstorder.defaultbound" 3
 let () = Properties.setBool "firstorder.asyncbound" true
 let () = Properties.setInt "firstorder.defaultasyncbound" 10
 let () = Properties.setBool "firstorder.uselemmas" true
-let () = Properties.setInt "firstorder.defaultlemmabound" 3
+let () = Properties.setInt "firstorder.defaultlemmabound" 1
 let () = Properties.setString "firstorder.frozens" "default"
 let () = Properties.setBool "firstorder.induction-unfold" false
 let () = Properties.setBool "firstorder.thawasync" false
@@ -93,8 +93,26 @@ struct
       List.iter Term.free generic ;
       (String.concat "," generic) ^ ">> " ^ (string_of_annotation a result)
 
-  let escapeTerm = Str.global_replace (Str.regexp "=>") "=&gt;"
-
+  (********************************************************************
+  *escapeTerm:
+  * Hackery to escape xml.
+  *
+  * TODO: fill in this list.  Or better yet, use xml-light.
+  ********************************************************************)
+  let regexes =
+    [(Str.regexp "<", "&lt;");
+    (Str.regexp ">", "&gt;");
+    (Str.regexp "&", "&amp;")]
+  let escapeTerm s =
+    List.fold_left
+      (fun s (regex, replace) -> Str.global_replace regex replace s)
+      s
+      regexes
+  
+  (********************************************************************
+  *xml_of_formula:
+  * Generates valid xml from a formula.
+  ********************************************************************)
   let xml_of_formula (Formula(local,(a,t))) = 
     let generic = Term.get_dummy_names ~start:1 local "n" in
     let result = escapeTerm ((FOA.string_of_formula ~generic).FOA.formf t) in
@@ -113,6 +131,10 @@ struct
   *Sequent:
   * A sequent has a left and right side, each a list of formulas, along
   * with an index approximating its signature (set of eigenvariables).
+  * Additionally, there are three bounds: bound is the maximum number
+  * of synchronous stages to do, async_bound is the maximum number of
+  * asynchronous 'progressing' unfoldings to perform, and lemma_bound
+  * is the number of times to introduce lemmas.
   ********************************************************************)
   type sequent = {
     lvl : int ;
@@ -129,10 +151,10 @@ struct
 
   let resetAsyncBound s =
     { s with async_bound =
-               ( if Properties.getBool "firstorder.asyncbound" then
-                   Some (Properties.getInt "firstorder.defaultasyncbound")
-                 else
-                   None) }
+      (if Properties.getBool "firstorder.asyncbound" then
+        Some (Properties.getInt "firstorder.defaultasyncbound")
+      else
+        None)}
 
   (********************************************************************
   *string_of_sequent:
@@ -1920,6 +1942,7 @@ struct
     | [Absyn.String i] -> patternTac `Left "mu _" ~arg:i session []
     | [Absyn.String i; Absyn.String p] -> patternTac `Left p ~arg:i session []
     | _ -> (fun _ _ fc -> O.error "Invalid arguments.\n" ; fc ())
+
   let coinductionTactical session = function
     | [] -> patternTac `Right "nu _" session []
     | [Absyn.String i] -> patternTac `Right "nu _" ~arg:i session []
@@ -2156,8 +2179,6 @@ struct
             O.output ("Pattern: " ^ (FOA.string_of_pattern_ast (Option.get p)) ^ ".\n");
             sc [] sequents Logic.idProofBuilder fc
     | _ -> G.invalidArguments "examine"
-  
-  (** {1 Focusing strategy} *)
 
   (********************************************************************
   *cutThenTactical, cutRepeatTactical:
@@ -2174,7 +2195,16 @@ struct
       fun () -> Term.restore_state s
     in
       G.cutThenTactical restorer,
-      G.cutRepeatTactical restorer
+      G.cutRepeatTactical restorer  
+  (** {1 Focusing strategy} *)
+
+  (********************************************************************
+  *Focusing Strategy:
+  * Focusing proceeds as follows:
+  *   1. Asynchronous phase.
+  *   2. Freezing phase.
+  *   3. Synchronous phase.
+  ********************************************************************)
 
   (** AtomicFormula includes the units (true/false).
     * The Negative polarity is actually never used, and the whole polarity
@@ -2333,9 +2363,13 @@ struct
                  | None -> None
                end)
 
-  (** "Finite" async connectives can be introduced eagerly without backtrack.
-    * For the fixed points (mu on the left, nu on the right) there is a choice
-    * of "opening" or "freezing", over which backtrack should be possible. *)
+  (********************************************************************
+  *finite:
+  * Introduces 'finite' async connectives, i.e. those that can be
+  * introduced eagerly without backtrack.  For the fixed points (mu on
+  * the left, nu on the right) there is a choice of "opening" or
+  * "freezing", over which backtrack should be possible.
+  ********************************************************************)
   and finite =
     cutRepeatTactical
       (G.orElseListTactical
@@ -2415,12 +2449,13 @@ struct
     body
 
   (********************************************************************
-  *lemmaInit:
+  *introduceLemmas:
   * Strips all non-atomic formulas, adds all lemmas on the left after
   * freezing them, and then tries to automatically prove.  Doesn't
-  * bother if the right is empty.
+  * bother if the right is empty.  It is assumed that the lemma bound
+  * hasn't been reached.
   ********************************************************************)
-  and lemmaInit session =
+  and introduceLemmas session =
     let strip s =
       let atomic f =
         match f with
@@ -2447,45 +2482,55 @@ struct
     in
     
     let pretactic = fun seq sc fc ->
-      if lemmaOutOfBound seq then
-        let () = O.debug "Lemma bound exceeded.\n" in
+      let () = O.debug "Introducing lemmas.\n" in
+      let lhs' = strip seq.lhs in
+      let rhs' = strip seq.rhs in
+      if Listutils.empty rhs' then
         fc ()
       else
-        let () = O.debug "Introducing lemmas.\n" in
-        let lhs' = strip seq.lhs in
-        let rhs' = strip seq.rhs in
-        if Listutils.empty rhs' then
-          fc ()
-        else
-          let seq' =
-            {seq with
-              lhs = freezeAll (List.append lemmas lhs');
-              rhs = freezeAll rhs';
-              lemma_bound = updateBound seq.lemma_bound}
-          in
-          let make pb = fun proofs ->
-            { rule = "lemma_init" ;
-            params = [] ;
-            bindings = [] ;
-            formula = None ;
-            sequent = seq ;
-            subs = (pb proofs) }
-          in
-          fullAsync session [seq']
-            (fun ns os pb k ->
-              assert (Listutils.empty ns) ;
-              sc ns (make pb) k)
-            fc
+        let seq' =
+          {seq with
+            lhs = freezeAll (List.append lemmas lhs');
+            rhs = freezeAll rhs';
+            lemma_bound = updateBound seq.lemma_bound}
+        in
+        let make pb = fun proofs ->
+          { rule = "lemma_init" ;
+          params = [] ;
+          bindings = [] ;
+          formula = None ;
+          sequent = seq ;
+          subs = (pb proofs) }
+        in
+        fullAsync session [seq']
+          (fun ns os pb k ->
+            assert (Listutils.empty ns) ;
+            sc ns (make pb) k)
+          fc
     in
     G.makeTactical pretactic
 
   (** Focused proof-search, starting with the async phase. *)
+  (********************************************************************
+  *fullAsync:
+  * The start of the asynchronous phase, just resets the asynchronous
+  * bound, runs the asynchronous phase, and then runs the freezing
+  * phase.
+  ********************************************************************)
   and fullAsync session s sc fc =
     let s = List.map resetAsyncBound s in
     cutThenTactical (finite) (freeze session) s sc fc
 
   (* Freeze the first available asynchronous fixed point,
    * takes care of unfoldings and re-calling fullAsync when needed. *)
+  
+  (********************************************************************
+  *freeze:
+  * The freezing phase.  Finds an inductable and tries to do induction
+  * or coinduction on it.  If it succeeds it continues with the
+  * asynchronous phase; if it can't find one it proceeds to the
+  * synchronous phase.
+  ********************************************************************)
   and freeze session sequents sc fc =
     let async = cutThenTactical finite (freeze session) in
     let seq = match sequents with [seq] -> seq | _ -> assert false in
@@ -2542,6 +2587,13 @@ struct
            end
 
   (** Complete focused proof-search starting with a decide rule. *)
+  (********************************************************************
+  *fullSync:
+  * First thaws all formulas in the sequent if the corresponding
+  * property is set.  Then either introduces lemmas if that property
+  * is set followed by focusing on a formula, or just focuses on a
+  * formula immediately.
+  ********************************************************************)
   and fullSync session seq sc fc =
     let seq' =
       if Properties.getBool "firstorder.thawasync" then
@@ -2555,12 +2607,21 @@ struct
         fc
     in
     if Properties.getBool "firstorder.uselemmas" then
-      (lemmaInit session [seq]
+      if lemmaOutOfBound seq then
+        let () = O.debug "Lemma bound exceeded.\n" in
+        focuser ()
+      else
+      (introduceLemmas session [seq']
         sc
         focuser)
     else
       focuser ()
 
+  (********************************************************************
+  *syncTactical:
+  * Toplevel tactical that repeatedly calls sync_step until it fails.
+  * Once it fails it unfocuses and begins the asynchronous phase again.
+  ********************************************************************)
   and syncTactical session seqs sc fc =
     assert (List.length seqs = 1) ;
     sync_step seqs
@@ -2575,6 +2636,10 @@ struct
            | Some seq -> fullAsync session [seq] sc fc
            | None -> fc ()) (* TODO that might be broken with delays *)
 
+  (********************************************************************
+  *setBound:
+  * Sets the syncrhounous and lemma bounds.
+  ********************************************************************)
   and setBound session syncBound lemmaBound =
     fun seqs sc fc ->
       match seqs with
@@ -2582,6 +2647,10 @@ struct
            sc [{seq with bound = Some syncBound; lemma_bound = Some lemmaBound}] tl (fun proofs -> proofs) fc
        | [] -> fc ()
   
+  (********************************************************************
+  *setBoundTactical:
+  * Toplevel interface to setBound.
+  ********************************************************************)
   and setBoundTactical session args =
     let lemmaBound = Properties.getInt "firstorder.defaultlemmabound" in
     let syncBound = (Properties.getInt "firstorder.defaultbound") in
