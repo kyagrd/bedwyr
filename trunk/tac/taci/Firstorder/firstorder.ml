@@ -28,8 +28,8 @@ let () = Properties.setInt "firstorder.defaultbound" 3
 let () = Properties.setBool "firstorder.asyncbound" true
 let () = Properties.setInt "firstorder.defaultasyncbound" 10
 let () = Properties.setBool "firstorder.uselemmas" true
-let () = Properties.setInt "firstorder.defaultlemmabound" 1
-let () = Properties.setString "firstorder.frozens" "default"
+let () = Properties.setInt "firstorder.defaultlemmabound" 3
+let () = Properties.setString "firstorder.frozens" "thaw"
 let () = Properties.setBool "firstorder.induction-unfold" false
 let () = Properties.setBool "firstorder.thawasync" false
 
@@ -101,8 +101,7 @@ struct
   ********************************************************************)
   let regexes =
     [(Str.regexp "<", "&lt;");
-    (Str.regexp ">", "&gt;");
-    (Str.regexp "&", "&amp;")]
+    (Str.regexp ">", "&gt;")]
   let escapeTerm s =
     List.fold_left
       (fun s (regex, replace) -> Str.global_replace regex replace s)
@@ -2224,7 +2223,7 @@ struct
     * impossible. *)
 
   (** In automatic mode, intro doesn't really need a session. *)
-  let automaticIntro side matcher = intro side matcher dummy_session None
+  let automaticIntro session side matcher = intro side matcher session None
 
   let fixpoint = function
     | FOA.ApplicationFormula ((FOA.FixpointFormula _),_) -> true
@@ -2370,14 +2369,14 @@ struct
   * the left, nu on the right) there is a choice of "opening" or
   * "freezing", over which backtrack should be possible.
   ********************************************************************)
-  and finite =
+  and finite session =
     cutRepeatTactical
       (G.orElseListTactical
-         [ automaticIntro `Left
+         [ automaticIntro session `Left
              (make_matcher
                (fun (Formula(i,(a,f))) ->
                   not (fixpoint f || a.FOA.polarity=FOA.Negative))) ;
-           automaticIntro `Right
+           automaticIntro session `Right
              (make_matcher
                (fun (Formula(i,(a,f))) ->
                   not (fixpoint f || a.FOA.polarity=FOA.Positive))) ;
@@ -2395,7 +2394,7 @@ struct
                            (string_of_formula (Formula(i,(a,f)))) ;
                        true
                    | _ -> false))
-             dummy_session (Some "unfold") ;
+             session (Some "unfold") ;
            intro `Right
              (make_matcher
                 (function
@@ -2410,7 +2409,7 @@ struct
                            (string_of_formula (Formula(i,(a,f)))) ;
                        true
                    | _ -> false))
-             dummy_session (Some "unfold")
+             session (Some "unfold")
          ])
 
   (* TODO note that the treatment of fixed points is not based on polarities
@@ -2434,14 +2433,14 @@ struct
            | _ -> false)
 
   (** Apply a rule on the focused formula if it is synchronous. *)
-  and sync_step =
+  and sync_step session =
     let body =
       (G.orElseTactical
-        (automaticIntro `Left
+        (automaticIntro session `Left
           (make_matcher
              (fun (Formula(i,(a,f))) ->
                a.FOA.control=FOA.Focused && a.FOA.polarity=FOA.Negative)))
-        (automaticIntro `Right
+        (automaticIntro session `Right
           (make_matcher
              (fun (Formula(i,(a,f))) ->
                a.FOA.control=FOA.Focused && a.FOA.polarity=FOA.Positive))))
@@ -2519,7 +2518,7 @@ struct
   ********************************************************************)
   and fullAsync session s sc fc =
     let s = List.map resetAsyncBound s in
-    cutThenTactical (finite) (freeze session) s sc fc
+    cutThenTactical (finite session) (freeze session) s sc fc
 
   (* Freeze the first available asynchronous fixed point,
    * takes care of unfoldings and re-calling fullAsync when needed. *)
@@ -2532,7 +2531,7 @@ struct
   * synchronous phase.
   ********************************************************************)
   and freeze session sequents sc fc =
-    let async = cutThenTactical finite (freeze session) in
+    let async = cutThenTactical (finite session) (freeze session) in
     let seq = match sequents with [seq] -> seq | _ -> assert false in
       match match_inductable seq.lhs with
        | Some (Formula(i,(a,f)), before, after) ->
@@ -2564,7 +2563,7 @@ struct
                           (match seq.bound with Some b -> max 0 b | None -> 0)
                           ' ')
                        (string_of_formula (Formula(i,(a,f)))) ;
-                   automaticIntro `Left match_inductable [resetAsyncBound seq])
+                   automaticIntro session `Left match_inductable [resetAsyncBound seq])
                 async)
              [(*no args*)] sc fc
        | None ->
@@ -2577,7 +2576,7 @@ struct
                           rhs = before@[Formula(i,(FOA.freeze a,f))]@after }])
                    (cutThenTactical
                      (fun _ ->
-                        automaticIntro `Right match_coinductable [resetAsyncBound seq])
+                        automaticIntro session `Right match_coinductable [resetAsyncBound seq])
                      async)
                    [(*no args*)] sc fc
              | None ->
@@ -2607,13 +2606,13 @@ struct
         fc
     in
     if Properties.getBool "firstorder.uselemmas" then
-      if lemmaOutOfBound seq then
-        let () = O.debug "Lemma bound exceeded.\n" in
-        focuser ()
+      if not (lemmaOutOfBound seq) then
+        (introduceLemmas session [seq']
+          sc
+          focuser)
       else
-      (introduceLemmas session [seq']
-        sc
-        focuser)
+        (O.debug "Lemma bound exceeded.\n";
+        focuser ())
     else
       focuser ()
 
@@ -2624,7 +2623,7 @@ struct
   ********************************************************************)
   and syncTactical session seqs sc fc =
     assert (List.length seqs = 1) ;
-    sync_step seqs
+    sync_step session seqs
       (fun n o b k ->
          G.iterateTactical (syncTactical session) (List.append n o)          (* succeeds on n@o=[] *)
            (fun n' o' b' k' ->
@@ -2776,7 +2775,7 @@ struct
           (G.thenTactical
             tac
             (G.thenTactical
-              (G.repeatTactical sync_step)
+              (G.repeatTactical (sync_step session))
               (G.tryTactical unfocusTactic)))
         else
           tac
@@ -2876,7 +2875,7 @@ struct
         ++ ("cut_lemma", cutLemmaTactical)
         ++ ("force", forceTactical)
         ++ ("prove", iterativeDeepeningProveTactical)
-        ++ ("async", fun _ _ -> finite) (* TODO might be infinite *)
+        ++ ("async", fun session _ -> finite session) (* TODO might be infinite *)
         ++ ("focus", fun session _ -> focusTactic session)
         ++ ("focus_r",
             fun _ _ ->
@@ -2888,7 +2887,7 @@ struct
               G.makeTactical
                 (fun seq sc fc -> freezeLeftTactic seq (fun s k -> sc s List.hd k) fc))
         ++ ("unfocus", unfocusTactical)
-        ++ ("sync", fun _ _ -> sync_step)
+        ++ ("sync", fun session _ -> sync_step session)
         ++ ("set_bound", setBoundTactical)
 
         ++ ("abstract", abstractTactical)
