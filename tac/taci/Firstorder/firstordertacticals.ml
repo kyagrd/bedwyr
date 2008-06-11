@@ -443,7 +443,7 @@ struct
               begin match FOA.fullApply [var] f with
                 | Some f' ->
                     sc "nabla_l"
-                      [{ seq with lvl=lvl' ; lhs = zip [makeFormula f'] }]
+                      [{ seq with lvl=lvl' ; lhs = zip [Formula({i with context = i'}, f')] }]
                 | _ -> fc ()
               end
         | _,FOA.QuantifiedFormula _ -> assert false
