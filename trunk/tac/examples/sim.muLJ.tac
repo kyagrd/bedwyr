@@ -25,5 +25,5 @@ prove.
 % Qed.
 
 #theorem trans_auto "pi p\q\r\ sim p q => sim q r => sim p r".
-prove("3").
+prove.
 % Qed.
