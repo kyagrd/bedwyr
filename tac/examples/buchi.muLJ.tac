@@ -24,19 +24,9 @@ prove.
 % Qed.
 
 #theorem qz_inf_steps "pi x\ infz x => qz x".
-simplify.
-coinduction.
-simplify.
-nu_l.
-left.
 prove.
 % Qed.
 
 #theorem qz_not_info "pi x\ qz x, info x => false".
-simplify.
-then(repeat(nu_l),async).
-induction.
-async.
-prove.
 prove.
 % Qed.
