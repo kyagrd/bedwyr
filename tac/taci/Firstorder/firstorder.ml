@@ -28,7 +28,7 @@ let () = Properties.setInt "firstorder.defaultbound" 3
 let () = Properties.setBool "firstorder.asyncbound" true
 let () = Properties.setInt "firstorder.defaultasyncbound" 10
 let () = Properties.setBool "firstorder.uselemmas" false
-let () = Properties.setInt "firstorder.defaultlemmabound" 3
+let () = Properties.setInt "firstorder.defaultlemmabound" 1
 let () = Properties.setString "firstorder.frozens" "thaw"
 let () = Properties.setBool "firstorder.induction-unfold" false
 let () = Properties.setBool "firstorder.thawasync" false
@@ -74,30 +74,29 @@ struct
   ********************************************************************)
   type formula = Formula of (int * (FOA.annotation FOA.polarized))
   
-  let string_of_annotation ann formula =
+  let annotateFormula ann formula =
     (FOA.string_of_control ann.FOA.control) ^ " " ^
     (FOA.string_of_polarity ann.FOA.polarity) ^
     formula ^
     (FOA.string_of_freezing ann.FOA.freezing)
 
-
   let string_of_formula (Formula(local,(a,t))) =
     let generic = Term.get_dummy_names ~start:1 local "n" in
     let result = (FOA.string_of_formula ~generic).FOA.formf t in
       List.iter Term.free generic ;
-      (String.concat "," generic) ^ ">> " ^ (string_of_annotation a result)
+      (String.concat "," generic) ^ ">> " ^ (annotateFormula a result)
 
   let string_of_formula_ast (Formula(local,(a,t))) =
     let generic = Term.get_dummy_names ~start:1 local "n" in
     let result = (FOA.string_of_formula_ast ~generic).FOA.formf t in
       List.iter Term.free generic ;
-      (String.concat "," generic) ^ ">> " ^ (string_of_annotation a result)
+      (String.concat "," generic) ^ ">> " ^ (annotateFormula a result)
 
   (********************************************************************
   *escapeTerm:
   * Hackery to escape xml.
   *
-  * TODO: fill in this list.  Or better yet, use xml-light.
+  * TODO: fill in this list.
   ********************************************************************)
   let regexes =
     [(Str.regexp "<", "&lt;");
@@ -119,12 +118,7 @@ struct
       Printf.sprintf "<formula>%s%s</formula>"
          (if generic = [] then "" else
            "<generic>" ^ String.concat "," generic ^ "</generic>")
-        (string_of_annotation a result)
-  
-  let getFormulaFormula    (Formula(_,(_,f))) = f
-  let getFormulaAnnotation (Formula(_,(a,_))) = a
-  let getFormulaLevel      (Formula(i,(_,_))) = i
-  let makeFormula t = Formula(0, t)
+        (annotateFormula a result)
   
   (********************************************************************
   *Sequent:
@@ -243,17 +237,6 @@ struct
     lemmas : lemma list
   }
 
-  let dummy_session = {
-    tactics = Logic.Table.empty ; definitions = Logic.Table.empty ;
-    sequents = [] ; builder = (fun _ -> assert false) ;
-    state = Term.save_state () ; diff = Term.get_subst (Term.save_state ()) ;
-    initial_namespace = Term.save_namespace () ;
-    proof_namespace = Term.save_namespace () ;
-    theorem_name = None ;
-    theorem = None ;
-    lemmas = []
-  }
-
   let sequents session = session.sequents
   let validSequent session = [] <> session.sequents
 
@@ -285,9 +268,11 @@ struct
      * but this is actually unused and not implemented. *)
     assert false
 
-  (** Updating to new sequents and proof builders.
-    * This has to come with the storage of the current state,
-    * used when coming back to that point by undoing. *)
+  (********************************************************************
+  *update:
+  * Updating to new sequents and proof builders.  We note the state
+  * of terms to use when coming back to this point by undoing. 
+  ********************************************************************)
   let update sequents builder session =
     let state = Term.save_state () in
     let subst = Term.get_subst state in
@@ -332,12 +317,15 @@ struct
     let proofs = List.map string_of_proof (session.builder []) in
       String.concat "" proofs
 
-  (** This is called by the interface to print the currently open leafs.
-    * The sequent is printed from within a namespace which has only the
-    * constants defined in the theorem's statement (one doesn't want to observe
-    * the effects of invisible logic or eigen-variables) and the namespace
-    * is left in the state after that printing, so that the next input
-    * can rely on what has been displayed. *)
+  (********************************************************************
+  *string_of_sequents:
+  * This is called by the interface to print the currently open leafs.
+  * The sequent is printed from within a namespace which has only the
+  * constants defined in the theorem's statement (one doesn't want to observe
+  * the effects of invisible logic or eigen-variables) and the namespace
+  * is left in the state after that printing, so that the next input
+  * can rely on what has been displayed.
+  ********************************************************************)
   let string_of_sequents session =
     let sequents = session.sequents in
       (* Term.restore_namespace session.proof_namespace  ; *)
@@ -706,14 +694,15 @@ struct
                   sequents = [{ bound = None ;
                                 async_bound = None ;
                                 lemma_bound = None ;
-                                lvl=0 ; lhs=[] ; rhs=[makeFormula f] }] ;
+                                lvl=0 ; lhs=[] ; rhs=[Formula(0, f)] }] ;
                   theorem_name = Some name;
                   theorem = Some f}
         | None -> session
 
   (********************************************************************
   *theoremName:
-  * Returns the current theorem name, if it exists.
+  * Returns the current theorem name, if it exists.  If it doesn't,
+  * its a compiler bug.
   ********************************************************************)
   let theoremName session =
     if Option.isSome session.theorem_name then
@@ -745,7 +734,6 @@ struct
   * table.
   ********************************************************************)
   let definitions defstrings session =
-
     (******************************************************************
     *processPreDefinitions:
     * Processes a list of mutually recursive predefinitions into
@@ -756,7 +744,9 @@ struct
       *checkMonotonicity:
       * Determines whether a definition is monotonic.  A definition is
       * monotonic if none of its DB indices occur under an odd number
-      * of negations.
+      * of negations.  Has to use an thrown exception to indicate
+      * non-monotonic definitions because mapFormula only likes to
+      * return formulas; probably inefficient, but not called often.
       ****************************************************************)
       let checkMonotonicity body =
         let tf t = t in
@@ -857,7 +847,9 @@ struct
                                      FOA.lift_pred bound_terms
                                        (FOA.FixpointFormula
                                           (ind,head,argnames,f'))
-                               | None -> f
+                               | None ->
+                                  (O.warning ("unbound atom '" ^ head ^ "'");
+                                  f)
                        end
                    | _ ->
                        (FOA.mapFormula (fun () -> self) (fun x -> x)).FOA.predf
@@ -918,7 +910,7 @@ struct
     else
       let defs = processPreDefinitions (List.map (Option.get) predefs) in
       if (List.exists (Option.isNone) defs) then
-        (O.error ("definitions contain errors.\n");
+        (O.error "definitions contain errors.\n";
         session)
       else
         let defs' = (List.map (Option.get) defs) in
@@ -972,7 +964,7 @@ struct
   (********************************************************************
   *copyFormula:
   * Copies a formula's eigen variables. Used before performing eqL.
-  * TODO isn't it enough to work on FOA.formulas ?
+  * TODO isn't it enough to work on FOA.formulas?
   ********************************************************************)
   let copyFormula ?(copier=(Term.copy_eigen () ~passive:false)) (Formula(i,f)) =
     let copyTerm t = copier t in
@@ -1008,8 +1000,28 @@ struct
     (lvl, i + 1, Term.nabla (i + 1))
   
   (********************************************************************
+  *intToStringDefault:
+  * Safely convert an int to a string; used by toplevel tacticals to
+  * convert their arguments.
+  ********************************************************************)
+  let intToStringDefault s d =
+    try
+      int_of_string s
+    with
+      Failure "int_of_string" ->
+        (O.error
+          ("Unable to convert '" ^ s ^ "' to int; using default " ^
+          (string_of_int d) ^ ".\n");
+        d)
+
+  (********************************************************************
   *Tacticals:
   ********************************************************************)
+
+  (*  Constructs a module containing the 'generic' tacticals (like
+      then, orelse, etc.) To do so we must generate a small signature
+      containing the relevant types, because we can't pass the
+      current module itself. *)
   module FirstorderSig =
   struct
     type logic_session = session
@@ -2488,12 +2500,12 @@ struct
     in
     
     let pretactic = fun seq sc fc ->
-      let () = O.debug "Introducing lemmas.\n" in
       let lhs' = strip seq.lhs in
       let rhs' = strip seq.rhs in
       if Listutils.empty rhs' then
         fc ()
       else
+        let () = O.debug "Introducing lemmas.\n" in
         let seq' =
           {seq with
             lhs = freezeAll (List.append lemmas lhs');
@@ -2501,7 +2513,7 @@ struct
             lemma_bound = updateBound seq.lemma_bound}
         in
         let make pb = fun proofs ->
-          { rule = "lemma_init" ;
+          { rule = "introduce_lemmas" ;
           params = [] ;
           bindings = [] ;
           formula = None ;
@@ -2592,6 +2604,26 @@ struct
                  fullSync session seq sc fc
            end
 
+  (********************************************************************
+  *asyncTactical:
+  * Just performs a single round of finite 
+  ********************************************************************)
+  and asyncTactical session args =
+    match args with
+        [] ->
+          G.thenTactical
+            (setBound session (Properties.getInt "firstorder.defaultasyncbound") 0)
+            (G.thenTactical
+              (finite session)
+              clearBounds)
+      | [Absyn.String(s)] ->
+          G.thenTactical
+            (setBound session (intToStringDefault s 0) 0)
+            (G.thenTactical
+              (finite session)
+              clearBounds)
+      | _ -> G.invalidArguments "async"
+
   (** Complete focused proof-search starting with a decide rule. *)
   (********************************************************************
   *fullSync:
@@ -2613,7 +2645,7 @@ struct
         fc
     in
     if Properties.getBool "firstorder.uselemmas" then
-      if not (lemmaOutOfBound seq) then
+      if not (lemmaOutOfBound seq) && not (Listutils.empty (session.lemmas)) then
         (introduceLemmas session [seq']
           sc
           focuser)
@@ -2627,6 +2659,9 @@ struct
   *syncTactical:
   * Toplevel tactical that repeatedly calls sync_step until it fails.
   * Once it fails it unfocuses and begins the asynchronous phase again.
+  *
+  * NOTE: This is not exported; if it is, it could mess up the bounds
+  * set on the sequents.
   ********************************************************************)
   and syncTactical session seqs sc fc =
     assert (List.length seqs = 1) ;
@@ -2644,15 +2679,31 @@ struct
 
   (********************************************************************
   *setBound:
-  * Sets the syncrhounous and lemma bounds.
+  * Sets the synchronous and lemma bounds.
   ********************************************************************)
   and setBound session syncBound lemmaBound =
     fun seqs sc fc ->
       match seqs with
        | (seq::tl) ->
-           sc [{seq with bound = Some syncBound; lemma_bound = Some lemmaBound}] tl (fun proofs -> proofs) fc
+          let seq' =
+            [{seq with bound = Some syncBound; lemma_bound = Some lemmaBound}]
+          in
+          sc seq' tl (fun proofs -> proofs) fc
        | [] -> fc ()
   
+  (********************************************************************
+  *clearBounds:
+  * Clears all bounds to None on the given sequents, and succeeds with
+  * all of them as the new sequents.  Doesn't mess with the proof
+  * builder, as we hide extra-logical things like bounds in the proof.
+  ********************************************************************)
+  and clearBounds =
+    fun seqs sc fc ->
+      let clear seq =
+        {seq with bound = None; async_bound = None; lemma_bound = None}
+      in
+      sc (List.map clear seqs) [] (fun proofs -> proofs) fc
+
   (********************************************************************
   *setBoundTactical:
   * Toplevel interface to setBound.
@@ -2661,9 +2712,10 @@ struct
     let lemmaBound = Properties.getInt "firstorder.defaultlemmabound" in
     let syncBound = (Properties.getInt "firstorder.defaultbound") in
     match args with
-        [Absyn.String s] -> setBound session (int_of_string s) lemmaBound
+        [Absyn.String s] ->
+          setBound session (intToStringDefault s 0) lemmaBound
       | [(Absyn.String s1); (Absyn.String s2)] ->
-          setBound session (int_of_string s1) (int_of_string s2)
+          setBound session (intToStringDefault s1 0) (intToStringDefault s2 0)
       | [] -> setBound session syncBound lemmaBound
       | _ -> G.invalidArguments "set_bound"
   
@@ -2674,7 +2726,7 @@ struct
   * We _must_ abstract out generic quantifications first: because it
   * brings more expressivity but also because the automation does not
   * take the generic contexts into account at many places, and it would
-  * thus do meaningless error-prone things.
+  * thus do meaningless and error-prone things.
   ********************************************************************)
   and iterativeDeepeningProveTactical session args =
     let abstractAsync =
@@ -2691,11 +2743,11 @@ struct
     in
     match args with
         [Absyn.String(s)] ->
-          let maxBound = int_of_string s in
+          let maxBound = intToStringDefault s 0 in
           construct 0 (max maxBound 0)
       | [Absyn.String(s);Absyn.String(s')] ->
-          let minBound = int_of_string s in
-          let maxBound = int_of_string s' in
+          let minBound = intToStringDefault s 0 in
+          let maxBound = intToStringDefault s' 0 in
           construct (min maxBound minBound) (max minBound maxBound)
       | [] ->
           construct 0 (max (Properties.getInt "firstorder.defaultbound") 0)
@@ -2820,7 +2872,8 @@ struct
 
   (********************************************************************
   *pervasiveTacticals:
-  * The tacticals exported by the logic.
+  * The tacticals exported by the logic.  Checks the Param module to
+  * see determine which structural and disjunction tacticals to allow.
   ********************************************************************)
   let pervasiveTacticals =
     let (++) t (a,b) = Logic.Table.add a b t in
@@ -2874,15 +2927,12 @@ struct
         ++ ("false", falseL)
         ++ ("trivial", trueR||falseL)
 
-        ++ ("weak_l", weakL)
-        ++ ("contract_l", contractL)
-
         ++ ("apply", applyTactical)
         ++ ("cut", cutTactical)
         ++ ("cut_lemma", cutLemmaTactical)
         ++ ("force", forceTactical)
         ++ ("prove", iterativeDeepeningProveTactical)
-        ++ ("async", fun session _ -> finite session) (* TODO might be infinite *)
+        ++ ("async", asyncTactical)
         ++ ("focus", fun session _ -> focusTactic session)
         ++ ("focus_r",
             fun _ _ ->
@@ -2937,7 +2987,7 @@ struct
     * and initial list of tacticals, as well as an empty definition table.
     * Additionally it includes the identity proof builder for simplicity
     * (instead of, say, an option), as well as undo, redo, and namespace
-    * info. *)
+    * info. Note that the redo info is currently unused.  *)
   let emptySession =
     let state = Term.save_state () in
     let ns = Term.save_namespace () in
@@ -2951,8 +3001,7 @@ struct
 
   (********************************************************************
   *reset:
-  * Provides a new sequent.  This amounts to returning the empty
-  * sequent.
+  * Provides a new session by returning the empty session.
   ********************************************************************)
   let reset =
     let initialNamespace = Term.save_namespace () in
