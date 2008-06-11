@@ -66,7 +66,7 @@ struct
   let name = Param.name
   let info = Param.name ^ "\n"
   let start = info
-  
+
   (********************************************************************
   *Formula:
   * Represent formulae in sequents.  Formulae consist of a local
@@ -703,7 +703,9 @@ struct
             { session with
                   proof_namespace = proofNamespace ;
                   builder = Logic.idProofBuilder ;
-                  sequents = [{ bound = None ; async_bound = None ; lemma_bound = None ;
+                  sequents = [{ bound = None ;
+                                async_bound = None ;
+                                lemma_bound = None ;
                                 lvl=0 ; lhs=[] ; rhs=[makeFormula f] }] ;
                   theorem_name = Some name;
                   theorem = Some f}
@@ -1822,7 +1824,7 @@ struct
                         let aelrhs =
                           List.fold_left
                             (fun f v ->
-                               FOA.negativeFormula
+                               FOA.positiveFormula
                                  (FOA.QuantifiedFormula
                                     (FOA.Sigma,
                                      (FOA.abstractVar v).FOA.polf f)))
@@ -2228,7 +2230,7 @@ struct
   (** In automatic mode, intro doesn't really need a session. *)
   let automaticIntro session side matcher = intro side matcher session None
 
-  let fixpoint = function
+  let isFixpoint = function
     | FOA.ApplicationFormula ((FOA.FixpointFormula _),_) -> true
     | _ -> false
 
@@ -2237,6 +2239,7 @@ struct
     * too.
     * The freeze tactic works the same way, even though it has nothing to do
     * with decide. *)  
+
   (*  matcher: helper to make a matcher.  *)
   let matcher fl = make_matcher (fun (Formula(i,f)) -> fl f)
   
@@ -2248,6 +2251,7 @@ struct
       | Some (f,before',after) ->
           let before = before @ before' in
             if Properties.getBool "firstorder.proofsearchdebug" then
+              (* TODO this also shows up for the freezing tac *)
               Format.printf "%s@[<hov 2>Focus right@ %s@]\n%!"
                 (String.make
                    (match seq.bound with Some b -> max 0 b | None -> 0)
@@ -2255,7 +2259,7 @@ struct
                 (string_of_formula f) ;
             sc
               [{ seq with rhs = before @ [ focuser f ] @ after }]
-              (fun () -> tac_r (before@[f]) after seq sc (fc : unit -> unit) focuser fl fr b)
+              (fun () -> tac_r (before@[f]) after seq sc fc focuser fl fr b)
       | None ->
           if b then
             tac_l [] seq.lhs seq sc fc focuser fl fr false
@@ -2319,8 +2323,8 @@ struct
   and freezeLeftTactic = fun seq sc fc ->
     tac_l
       [] seq.lhs seq sc fc freezeFormula
-      (fun (a,f) -> a.FOA.freezing=FOA.Unfrozen && fixpoint f)
-      (fun (a,f) -> a.FOA.freezing=FOA.Unfrozen && fixpoint f)
+      (fun (a,f) -> a.FOA.freezing=FOA.Unfrozen && isFixpoint f)
+      (fun (a,f) -> a.FOA.freezing=FOA.Unfrozen && isFixpoint f)
       true
 
   (********************************************************************
@@ -2378,11 +2382,11 @@ struct
          [ automaticIntro session `Left
              (make_matcher
                (fun (Formula(i,(a,f))) ->
-                  not (fixpoint f || a.FOA.polarity=FOA.Negative))) ;
+                  not (isFixpoint f || a.FOA.polarity=FOA.Negative))) ;
            automaticIntro session `Right
              (make_matcher
                (fun (Formula(i,(a,f))) ->
-                  not (fixpoint f || a.FOA.polarity=FOA.Positive))) ;
+                  not (isFixpoint f || a.FOA.polarity=FOA.Positive))) ;
            intro `Left
              (make_matcher
                 (function
