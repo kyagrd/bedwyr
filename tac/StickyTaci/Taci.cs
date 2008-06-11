@@ -57,6 +57,7 @@ namespace StickyTaci
     public event IOHandler<string> Output;
     public event IOHandler<string> Goal;
     public event IOHandler<string> Debug;
+    public event IOHandler<string> Warning;
     public event IOHandler<string> Error;
     public event IOHandler<string> Command;
     public event IOHandler<string> Tactical;
@@ -269,6 +270,11 @@ namespace StickyTaci
         string name = GetAttribute(node, "name");
         System.Diagnostics.Debug.WriteLine("Logic: " + key + " : " + name + ".");
         Logic(this, new Logic(key, name));
+      }
+      else if(type == "warning" && Warning != null)
+      {
+        string text = GetAttribute(node, "text");
+        Warning(this, text);
       }
       else if(type == "debug" && Debug != null)
       {

@@ -263,11 +263,11 @@ struct
       let tactical = buildTactical pretactical session in
       let () = O.debug ("Built tactical.\n") in
       let () = (applyTactical tactical session success failure) in
-      session
+      assert false
     with
         Absyn.SyntaxError s ->
           (O.error (s ^ ".\n");
-          errorHandler  session)
+          errorHandler session)
       | TacticalSuccess s ->
           O.output "Success.\n";
           if not (L.validSequent s) then
@@ -450,7 +450,10 @@ struct
             (defineTactical name pretactical session, Some (Session(session)))
         | Absyn.PreTactical(pretactical) ->
             if (L.validSequent session) then
-              (tactical pretactical session, Some (Session(session)))
+              let () = O.beginComputation () in
+              let session' = tactical pretactical session in
+              let () = O.endComputation () in
+              (session', Some (Session(session)))
             else
               (O.error "No valid sequent.\n";
               (errorHandler session, Some(Session(session))))
@@ -490,10 +493,14 @@ struct
   * a logic is first loaded.  It shows startup information and clears
   * the undo and redo lists, as well as creating and returning a new
   * session.
+  *
+  * Note the hackery with endComputation: this is so the GUI can reset
+  * whatever it is using as an indicator that Tac is computing.
   ********************************************************************)
   let onStart () =
     (showStartup ();
     resetLists ();
+    O.endComputation ();
     L.reset ())
 
   (********************************************************************

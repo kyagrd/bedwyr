@@ -29,6 +29,8 @@
 **********************************************************************)
 module type Output =
 sig
+  val beginComputation : unit -> unit
+  val endComputation : unit -> unit
   val prompt : string -> unit
   val impossible : string -> unit
   val error : string -> unit

@@ -421,7 +421,7 @@ struct
             end
         | _,FOA.QuantifiedFormula (FOA.Pi,
               (FOA.AbstractionFormula(hint,FOA.AbstractionBody _) as f)) ->
-            let (lvl',var) = makeExistentialVar hint seq.lvl i in
+            let (lvl',var) = makeExistentialVar hint seq.lvl i.context in
               begin match FOA.fullApply [var] f with
                 | Some f' ->
                     sc "pi_l" ~b:[var]
@@ -430,7 +430,7 @@ struct
               end
         | _,FOA.QuantifiedFormula (FOA.Sigma,
               (FOA.AbstractionFormula(hint,FOA.AbstractionBody _) as f)) ->
-            let (lvl',var) = makeUniversalVar hint seq.lvl i in
+            let (lvl',var) = makeUniversalVar hint seq.lvl i.context in
               begin match FOA.fullApply [var] f with
                 | Some f' ->
                     sc "sigma_l" ~b:[var]
@@ -439,11 +439,11 @@ struct
               end
         | _,FOA.QuantifiedFormula (FOA.Nabla,
               (FOA.AbstractionFormula(hint,FOA.AbstractionBody _) as f)) ->
-            let (lvl',i',var) = makeNablaVar seq.lvl i in
+            let (lvl',i',var) = makeNablaVar seq.lvl i.context in
               begin match FOA.fullApply [var] f with
                 | Some f' ->
                     sc "nabla_l"
-                      [{ seq with lvl=lvl' ; lhs = zip [Formula(i',f')] }]
+                      [{ seq with lvl=lvl' ; lhs = zip [makeFormula f'] }]
                 | _ -> fc ()
               end
         | _,FOA.QuantifiedFormula _ -> assert false
@@ -542,13 +542,13 @@ struct
                           (* TODO bound check *)
                           begin match
                             fixpoint_St_St'_BSt'
-                              ~session ~lvl:seq.lvl ~i
+                              ~session ~lvl:seq.lvl ~i:i.context
                               ~body ~argnames:onlynames ~s ~t:args
                           with
                             | Some (st,lvl',st',bst') ->
-                                let st   = Formula (i,st) in
-                                let st'  = Formula (0,st') in
-                                let bst' = Formula (0,bst') in
+                                let st   = Formula(i,st) in
+                                let st'  = makeFormula st' in
+                                let bst' = makeFormula bst' in
                                 let seqs =
                                   [{ seq with lhs = zip [st] } ;
                                   { seq with lvl = lvl' ;
@@ -646,7 +646,7 @@ struct
                         in
                         let _,lvl',st',bst' =
                           Option.get (fixpoint_St_St'_BSt'
-                                        ~session ~lvl:seq.lvl ~i ~body
+                                        ~session ~lvl:seq.lvl ~i:i.context ~body
                                         ~argnames:onlynames
                                         ~s:invariant ~t:args)
                         in
@@ -656,8 +656,8 @@ struct
                           if outOfBound seq then fc () else
                             let seq' = 
                               { seq with lvl = lvl' ;
-                                   lhs = [Formula(0,bst')] ;
-                                   rhs = [Formula(0,st')] }
+                                   lhs = [makeFormula bst'] ;
+                                   rhs = [makeFormula st'] }
                             in
                             (*  TODO: is this valid?  *)
                             sc "induction" [seq']
@@ -704,7 +704,7 @@ struct
             end
         | _,FOA.QuantifiedFormula (FOA.Pi,
               (FOA.AbstractionFormula(hint,FOA.AbstractionBody _) as f)) ->
-            let (lvl',var) = makeUniversalVar hint seq.lvl i in
+            let (lvl',var) = makeUniversalVar hint seq.lvl i.context in
               begin match FOA.fullApply [var] f with
                 | Some f' ->
                     sc "pi_r" ~b:[var]
@@ -713,7 +713,7 @@ struct
               end
         | _,FOA.QuantifiedFormula (FOA.Sigma,
               (FOA.AbstractionFormula(hint,FOA.AbstractionBody _) as f)) ->
-            let (lvl',var) = makeExistentialVar hint seq.lvl i in
+            let (lvl',var) = makeExistentialVar hint seq.lvl i.context in
               begin match FOA.fullApply [var] f with
                 | Some f' ->
                     sc "sigma_r" ~b:[var]
@@ -722,11 +722,11 @@ struct
               end
         | _,FOA.QuantifiedFormula (FOA.Nabla,
               (FOA.AbstractionFormula(hint,FOA.AbstractionBody _) as f)) ->
-            let (lvl',i',var) = makeNablaVar seq.lvl i in
+            let (lvl',i',var) = makeNablaVar seq.lvl i.context in
               begin match FOA.fullApply [var] f with
                 | Some f' ->
                     sc "nabla_r"
-                      [{ seq with lvl=lvl' ; rhs = zip [Formula(i',f')] }]
+                      [{ seq with lvl=lvl' ; rhs = zip [Formula({i with context = i'},f')] }]
                 | _ -> fc ()
               end
         | _,FOA.QuantifiedFormula _ -> assert false
@@ -815,13 +815,13 @@ struct
                           let s = Option.get s in
                           begin match
                             fixpoint_St_St'_BSt'
-                              ~session ~lvl:seq.lvl ~i
+                              ~session ~lvl:seq.lvl ~i:i.context
                               ~body ~argnames:onlynames ~s ~t:args
                           with
                             | Some (st,lvl',st',bst') ->
-                                let st   = Formula (i,st) in
-                                let st'  = Formula (0,st') in
-                                let bst' = Formula (0,bst') in
+                                let st   = Formula(i,st) in
+                                let st'  = makeFormula st' in
+                                let bst' = makeFormula bst' in
                                 let seqs =
                                   [{ seq with rhs = zip [st] } ;
                                   { seq with lvl = lvl' ;
@@ -901,7 +901,7 @@ struct
                         in
                         let _,lvl',st',bst' =
                           Option.get (fixpoint_St_St'_BSt'
-                                        ~session ~lvl:seq.lvl ~i ~body
+                                        ~session ~lvl:seq.lvl ~i:i.context ~body
                                         ~argnames:onlynames
                                         ~s:invariant ~t:args)
                         in
@@ -911,8 +911,8 @@ struct
                           if outOfBound seq then fc () else
                             sc "coinduction"
                               [{ seq with lvl = lvl' ;
-                                 lhs = [Formula(0,st')] ;
-                                 rhs = [Formula(0,bst')] }]
+                                 lhs = [makeFormula st'] ;
+                                 rhs = [makeFormula bst'] }]
                   end
               | FOA.AtomicFormula p ->
                   if p = "true" then sc "true" [] else (* TODO boooh *)
@@ -1143,7 +1143,7 @@ struct
               | None -> O.error "unable to parse lemma.\n" ; G.failureTactical
               | Some f ->
                   let pretactic = fun sequent sc fc ->
-                    let f' = Formula (0,f) in
+                    let f' = makeFormula f in
                     (* TODO classical cut *)
                     let s1 = { sequent with rhs = [f'] } in
                     let s2 = { sequent with lhs = sequent.lhs @ [f'] } in
@@ -1197,9 +1197,9 @@ struct
       (* Compute the nabla-normal form of every formula in the sequent.
        * it may be more convenient to be able to target a specific one. *)
       let abstract (Formula(i,form)) =
-        let tv = List.map Term.nabla (n_downto_1 i) in
+        let tv = List.map Term.nabla (n_downto_1 i.context) in
         let form = (FOA.eliminateNablas tv).FOA.polf form in
-          Formula(0,form)
+        makeFormula form
       in
         { seq with lhs = List.map abstract seq.lhs ;
                    rhs = List.map abstract seq.rhs }
@@ -1545,7 +1545,7 @@ struct
     in
     let lemmas =
       List.map 
-        (fun (_,f,_) -> Formula(0,f))
+        (fun (_,f,_) -> makeFormula f)
         session.lemmas
     in
     
@@ -1823,7 +1823,7 @@ struct
       Absyn.String(s)::[] ->
         (try
           let (_,formula,proof) = List.find (fun (s',_,_) -> s = s') session.lemmas in
-          let formula' = Formula(0, formula) in
+          let formula' = makeFormula formula in
           let pretactic = fun sequent sc fc ->
             let seq = { sequent with lhs = sequent.lhs @ [formula'] } in
             let pb = fun proofs ->
@@ -1866,7 +1866,7 @@ struct
       
       (try
         let (_,formula,proof) = List.find (fun (s',_,_) -> lemma = s') session.lemmas in
-        let formula' = Formula(0, select formula) in
+        let formula' = makeFormula (select formula) in
         let pretactic = fun sequent sc fc ->
           let seq = { sequent with lhs = sequent.lhs @ [formula'] } in
           let pb = fun proofs ->

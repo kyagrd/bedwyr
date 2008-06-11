@@ -29,13 +29,13 @@ Getting Started with StickyTaci:
   (see Interacting with Taci).
 
   
-Syntax Highlighting:
-  StickyTaci provides a very simple (and broken) syntax highlighter.  The
-  highlighter works on a line-by-line basis, highlighting commands in red,
-  tacticals in blue, comments in green, quoted strings in marroon, and
-  already executed lines in gray.  Unfortunately, it doesn't highlight
-  quoted strings quite right, which means quoted strings that span multiple
-  lines do not show up as they should.  
+Syntax Highlighting and Code Folding:
+  StickyTaci provides syntax highlighting, code folding, autocompletion,
+  and code snippets through the excellent Scintilla library.  Commands
+  are highlighted in red, tacticals in blue, comments in green, quoted
+  strings in maroon, and already executed lines in gray.  Autocomplete
+  can be initiated by typing Ctrl + Space.  Code snippets can be initiated
+  by typing Ctrl + J.
 
 Interacting with Taci:
   The Tac menu in StickyTaci offers a number of ways to interact with

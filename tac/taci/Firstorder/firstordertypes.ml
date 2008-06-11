@@ -36,10 +36,10 @@ sig
   * Represent formulae in sequents.  Formulae consist of a local
   * context level and an abstract syntax formula.
   ********************************************************************)
+  type formula_annotation = {context : int}
   type formula =
-    Formula of (int * (Firstorderabsyn.annotation Firstorderabsyn.polarized))
-
-
+    Formula of (formula_annotation * (Firstorderabsyn.annotation Firstorderabsyn.polarized))
+  
   (********************************************************************
   *sequent:
   * A sequent has a left and right side, each a list of formulas, along
@@ -157,14 +157,18 @@ sig
   
   val focusFormula : formula -> formula
   val freezeFormula : formula -> formula
+  
+  val makeFormula : Firstorderabsyn.annotation Firstorderabsyn.polarized -> formula
 end
 
 module Types (O : Output.Output) =
 struct
   module FOA = Firstorderabsyn
 
-  type formula = Formula of (int * (FOA.annotation FOA.polarized))
-
+  type formula_annotation = {context : int}
+  type formula =
+    Formula of (formula_annotation * (Firstorderabsyn.annotation Firstorderabsyn.polarized))
+  
   type sequent = {
     lvl : int ;
     lhs : formula list ;
@@ -208,13 +212,13 @@ struct
     (FOA.string_of_freezing ann.FOA.freezing)
 
   let string_of_formula (Formula(local,(a,t))) =
-    let generic = Term.get_dummy_names ~start:1 local "n" in
+    let generic = Term.get_dummy_names ~start:1 local.context "n" in
     let result = (FOA.string_of_formula ~generic).FOA.formf t in
       List.iter Term.free generic ;
       (String.concat "," generic) ^ ">> " ^ (annotateFormula a result)
 
   let string_of_formula_ast (Formula(local,(a,t))) =
-    let generic = Term.get_dummy_names ~start:1 local "n" in
+    let generic = Term.get_dummy_names ~start:1 local.context "n" in
     let result = (FOA.string_of_formula_ast ~generic).FOA.formf t in
       List.iter Term.free generic ;
       (String.concat "," generic) ^ ">> " ^ (annotateFormula a result)
@@ -239,7 +243,7 @@ struct
   * Generates valid xml from a formula.
   ********************************************************************)
   let xml_of_formula (Formula(local,(a,t))) = 
-    let generic = Term.get_dummy_names ~start:1 local "n" in
+    let generic = Term.get_dummy_names ~start:1 local.context "n" in
     let result = escapeTerm ((FOA.string_of_formula ~generic).FOA.formf t) in
       List.iter Term.free generic ;
       Printf.sprintf "<formula>%s%s</formula>"
@@ -637,5 +641,7 @@ struct
   let composeModifiers m1 m2 ((ann, f) as arg) =
     let ann' = (m1 arg) in
     m2 (ann', f)
+
+  let makeFormula f = Formula({context = 0}, f)
 
 end

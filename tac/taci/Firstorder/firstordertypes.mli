@@ -42,14 +42,14 @@ end
 **********************************************************************)
 module type TypesSig =
 sig
-
   (********************************************************************
   *formula:
   * Represent formulae in sequents.  Formulae consist of a local
   * context level and an abstract syntax formula.
   ********************************************************************)
+  type formula_annotation = {context : int}
   type formula =
-    Formula of (int * (Firstorderabsyn.annotation Firstorderabsyn.polarized))
+    Formula of (formula_annotation * (Firstorderabsyn.annotation Firstorderabsyn.polarized))
 
 
   (********************************************************************
@@ -169,6 +169,7 @@ sig
   val focusFormula : formula -> formula
   val freezeFormula : formula -> formula
   
+  val makeFormula : Firstorderabsyn.annotation Firstorderabsyn.polarized -> formula
 end
 
 (**********************************************************************
