@@ -17,8 +17,8 @@ SOURCE= ndcore/term.ml ndcore/norm.ml ndcore/unify.ml ndcore/pprint.ml \
 	Firstorder/firstorderabsyn.ml \
 	Firstorder/firstorderparser.ml \
 	Firstorder/firstorderlexer.ml \
-        Firstorder/firstordertypes.ml \
-        Firstorder/firstordertacticals.ml \
+	Firstorder/firstordertypes.ml \
+	Firstorder/firstordertacticals.ml \
 	Firstorder/firstorder.ml \
 	toplevellexer.ml toplevelparser.ml \
 	toplevel.ml interpreter.ml interface.ml logics_gen.ml logics.ml main.ml
