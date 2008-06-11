@@ -820,10 +820,10 @@ let rec matchPattern pattern1 pattern2 =
       UnifySucceeded(s) -> true
     | _ -> false
   in
-  
+
   (*  Keep track of binding state to undo it later. *)
   let state = Term.save_state () in
-  
+
   (********************************************************************
   *matchAnnotation:
   * Matches two annotations, respecting 'unspecified' annotations.
@@ -884,6 +884,7 @@ let rec matchPattern pattern1 pattern2 =
         (success (rightUnify t1 t1')) && (success (rightUnify t2 t2'))
     | (QuantifiedPattern(q, f), QuantifiedPattern(q', f')) ->
         (q = q') && (matchAbstractionPattern f f')
+    | (ApplicationPattern(AnonymousPredicate,_), _) -> true
     | (ApplicationPattern(head,tl), ApplicationPattern(head',tl')) ->
         (matchPredicates head head') && (List.length tl = List.length tl') &&
         (List.for_all success (List.map2 rightUnify tl tl'))
