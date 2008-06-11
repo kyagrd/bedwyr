@@ -8,7 +8,7 @@ prove.
 prove.
 % Qed.
 
-% Not quite the same.
+% Not quite the same proof, step by step.
 #theorem half_total "pi x\ nat x => sigma h\ half x h".
 simplify.
 induction("x\ nat x, pi y\ leq y x => sigma h\ half y h").
@@ -19,7 +19,13 @@ prove.
 then(and,prove).
 % Qed.
 
-% TODO #theorem half_double "pi x\y\ half x y => (x=s o => false) => double y x".
+#theorem half_double "pi x\y\ double x y => half y x".
+prove.
+% Qed.
+
+#theorem even_half_double "pi x\y\ even x => half x y => double y x".
+prove.
+% Qed.
 
 #theorem test_ack "sigma a\ ack (s (s o)) (s (s o)) a, a = a".
 sigma.
@@ -30,10 +36,7 @@ eq.
 % Qed.
 
 #theorem ack_nat "pi x\y\z\ nat y => ack x y z => nat z".
-simplify.
-rotate_l.
 prove.
-% TODO don't be sensitive to the order.
 % Qed.
 
 #theorem ack_total "pi x\ nat x => pi y\ nat y => sigma a\ nat a, ack x y a".
@@ -41,9 +44,7 @@ then(pi,imp).
 induction.
 async.
 prove.
-rotate_l.
-contract_l.
-% TODO contract_l(nat _) should work.
+contract_l("nat _").
 induction(
  "y\ nat y => (pi y1\ nat y1 => sigma a\ nat a, ack h y1 a) => sigma a\ ack (s h) y a, nat a").
 rotate.
@@ -76,11 +77,12 @@ prove.
 pi_l.
 imp.
 eq.
-rotate_l.
 weak_l.
+rotate_l.
 weak_l.
 % prove should really work here.
 sigma_l.
 sigma_r.
 then(and,then(simplify,then(repeat(freeze),prove))).
 % Qed.
+
