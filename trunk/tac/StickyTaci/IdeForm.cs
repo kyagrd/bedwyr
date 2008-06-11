@@ -34,6 +34,21 @@ namespace StickyTaci
     private delegate void MethodInvoker1(object o1);
     private delegate void MethodInvoker2(object o1, object o2);
 
+    public bool Computing
+    {
+      set
+      {
+        if(value)
+          m_CurrentLineImage = m_ComputingImage;
+        else
+          m_CurrentLineImage = m_NotComputingImage;
+        
+        InvokeDelegate(currentLineImagePanel, (MethodInvoker)delegate()
+        {
+          currentLineImagePanel.Invalidate();
+        });
+      }
+    }
 
     private bool m_Dirty = false;
     public bool Dirty
@@ -178,11 +193,12 @@ namespace StickyTaci
           Scintilla.Lexing.Colorize(Scintilla.Lines[m_CurrentLine].StartPosition, Scintilla.Lines[m_CurrentLine].EndPosition);
         });
 
-        System.Diagnostics.Debug.WriteLine("Value: " + Scintilla.NativeInterface.GetPropertyInt("lexer.simple.currentline", -1));
         UpdateCurrentLineMarker();
       }
     }
 
+    private Image m_ComputingImage = null;
+    private Image m_NotComputingImage = null;
     private Image m_CurrentLineImage = null;
 
     private IdeCtrl m_Ctrl;
@@ -227,6 +243,19 @@ namespace StickyTaci
       }
     }
 
+    private Color m_WarningColor = Color.Red;
+    public Color WarningColor
+    {
+      get
+      {
+        return m_WarningColor;
+      }
+      set
+      {
+        m_WarningColor = value;
+      }
+    }
+
     private Color m_OutputColor = Color.Black;
     public Color OutputColor
     {
@@ -259,7 +288,10 @@ namespace StickyTaci
     {
       InitializeComponent();
 
-      m_CurrentLineImage = Image.FromFile("Data/CurrentLine.bmp");
+      m_ComputingImage = Image.FromFile("Data/CurrentLineBusy.bmp");
+      m_NotComputingImage = Image.FromFile("Data/CurrentLine.bmp");
+      m_CurrentLineImage = m_NotComputingImage;
+
       currentLineImagePanel.Paint += new PaintEventHandler(currentLineImagePanel_Paint);
       currentLineImagePanel.Show();
       
@@ -269,7 +301,8 @@ namespace StickyTaci
       outputBox.SelectionFont = m_OutputFont;
 
       Scintilla.Font = m_InputFont;
-      Scintilla.TextChanged += new EventHandler(Scintilla_TextChanged);
+      Scintilla.SavePointReached += new EventHandler(Scintilla_SavePointReached);
+      Scintilla.SavePointLeft += new EventHandler(Scintilla_SavePointLeft);
       Scintilla.Scroll += new EventHandler<ScrollEventArgs>(Scintilla_Scroll);
       Scintilla.ConfigurationManager.CustomLocation = "Data\\tac.xml";
       Scintilla.ConfigurationManager.Language = "taci";
@@ -302,6 +335,7 @@ namespace StickyTaci
       TacticalsChanged = true;
       CurrentLine = 0;
     }
+
     #endregion
 
     #region Overridden Protected Methods
@@ -325,6 +359,23 @@ namespace StickyTaci
     #endregion
 
     #region Control Event Handlers
+
+
+    private void mainMenuFilePrintPreview_Click(object sender, EventArgs e)
+    {
+      Scintilla.Printing.PrintPreview();
+    }
+
+    private void mainMenuFilePrint_Click(object sender, EventArgs e)
+    {
+      Scintilla.Printing.Print(true);
+    }
+
+    private void mainMenuFilePageSetup_Click(object sender, EventArgs e)
+    {
+      Scintilla.Printing.ShowPageSetupDialog();
+    }
+
     private void mainMenuTacRestart_Click(object sender, EventArgs e)
     {
       goalBox.Clear();
@@ -447,11 +498,6 @@ namespace StickyTaci
       Ctrl.OnHelp();
     }
 
-    private void mainMenuTacInclude_Click(object sender, EventArgs e)
-    {
-      Ctrl.OnTacInclude();
-    }
-
     private void mainMenuTacOpen_Click(object sender, EventArgs e)
     {
       Ctrl.OnTacOpen();
@@ -497,17 +543,21 @@ namespace StickyTaci
     #endregion
 
     #region Scintilla Event Handlers
-    void Scintilla_Scroll(object sender, ScrollEventArgs e)
+    private void Scintilla_Scroll(object sender, ScrollEventArgs e)
     {
       UpdateCurrentLineMarker();
     }
 
-    void Scintilla_TextChanged(object sender, EventArgs e)
+    private void Scintilla_SavePointReached(object sender, EventArgs e)
     {
-      Ctrl.OnInputChanged(Scintilla.Lines.Count);
-      m_Dirty = true;
-      System.Diagnostics.Debug.WriteLine("Text changed.");
+      m_Dirty = false;
     }
+
+    void Scintilla_SavePointLeft(object sender, EventArgs e)
+    {
+      m_Dirty = true;
+    }
+
     #endregion
 
     #region Public Interface
@@ -543,6 +593,17 @@ namespace StickyTaci
       InvokeDelegate(this, (MethodInvoker)delegate()
       {
         goalBox.Clear();
+      });
+    }
+
+    public void Warning(string s)
+    {
+      InvokeDelegate(this, (MethodInvoker)delegate()
+      {
+        outputBox.SelectionFont = m_OutputFont;
+        outputBox.SelectionColor = WarningColor;
+        outputBox.SelectedText = "Warning: " + s;
+        outputBox.ScrollToCaret();
       });
     }
 
@@ -623,13 +684,13 @@ namespace StickyTaci
       outputBox.Clear();
       Scintilla.Text = "";
       goalBox.Clear();
-      m_Dirty = false;
+      Scintilla.NativeInterface.SetSavePoint();
     }
 
     public void SaveFile(string filename)
     {
       File.WriteAllText(filename, Scintilla.Text, Encoding.ASCII);
-      m_Dirty = false;
+      Scintilla.NativeInterface.SetSavePoint();
       return;
     }
 
@@ -638,7 +699,7 @@ namespace StickyTaci
       Scintilla.ResetText();
       Scintilla.AppendText(File.ReadAllText(filename, Encoding.ASCII));
       Scintilla.Caret.Position = 0;
-      m_Dirty = false;
+      Scintilla.NativeInterface.SetSavePoint();
       return;
     }
     

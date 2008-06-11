@@ -29,15 +29,15 @@ Logics:
   intended to serve as a skeleton for the implementation of a new logic
   "from scratch".
 
-  The logic "propositional" is a classical predicate logic without
-  quantification of any kind.  This logic is quite simple, as it was the first
-  logic implemented in the framework.
+  The logic "propositional" is a classical predicate logic with only atoms, and
+  without quantification of any kind.  This logic is quite simple, as it was
+  the first logic implemented in the framework.
 
   The remaining 4 logics are all very similar.  Each is constructed from the
   same functor, using different parameters to achieve the different logics.
   Every logic is first-order, with universal, existential, and nabla
-  quantification, equality on the left and right, and definitions in the form
-  of fixed point combinators.  The muLJ-* logics are intuitionistic, and the
+  quantification, equality on the left and right, and definitions through the use
+  of fixed points.  The muLJ-* logics are intuitionistic, and the
   firstorder* logics are classical.  The *-nonstrict logics are logics in which
   the axiom rule is slightly "sloppy" with respect to generic context: they do
   not check for equality.  They are therefore less restrictive than LINC, but
@@ -48,7 +48,7 @@ Tactics and Tacticals:
   In Tac one interacts with a logic by the application of tactics to a list
   of sequents.  Tactics may be generally thought of as functions from sequents
   to sequents.  They take a list of sequents, along with a success continuation
-  and a failure continuation.  While the meaning and use of the list of sequents,
+  and a failure continuation.  While the meaning and use of the list of sequents
   is obvious, the continuations mentioned are less so.
 
   Success Continuation:
@@ -119,7 +119,8 @@ Implementing a Logic:
   "sequent", and a "proof", along with various accessor functions that operate on
   these types, and a few values.
 
-  Note: the following list may be incomplete!
+  Note: the following list may be incomplete!  For an up to date list, see
+  "tac/taci/logic.mli".
 
   Types:
     Session:

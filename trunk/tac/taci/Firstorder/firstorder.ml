@@ -33,7 +33,6 @@ let () = Properties.setInt "firstorder.defaultlemmabound" 1
 let () = Properties.setString "firstorder.frozens" "thaw"
 let () = Properties.setBool "firstorder.induction-unfold" false
 let () = Properties.setBool "firstorder.thawasync" false
-
 (* TODO frozens and induction-unfold for coinduction *)
 
 (**********************************************************************
@@ -233,7 +232,7 @@ struct
                   sequents = [{ bound = None ;
                                 async_bound = None ;
                                 lemma_bound = None ;
-                                lvl=0 ; lhs=[] ; rhs=[Formula(0, f)] }] ;
+                                lvl=0 ; lhs=[] ; rhs=[Formula({context = 0}, f)] }] ;
                   theorem_name = Some name;
                   theorem = Some f}
         | None -> session
@@ -387,7 +386,7 @@ struct
                                        (FOA.FixpointFormula
                                           (ind,head,argnames,f'))
                                | None ->
-                                  (O.warning ("unbound atom '" ^ head ^ "'");
+                                  (O.warning ("unbound atom '" ^ head ^ "'.\n");
                                   f)
                        end
                    | _ ->

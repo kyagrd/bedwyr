@@ -18,6 +18,8 @@
 **********************************************************************)
 module type Output =
 sig
+  val beginComputation : unit -> unit
+  val endComputation : unit -> unit
   val prompt : string -> unit
   val impossible : string -> unit
   val error : string -> unit
@@ -102,6 +104,9 @@ struct
     let o = "Tacticals:\n  " ^ (String.concat "\n  " sl) ^ "\n" in
     (print_string o;
     flush stdout)
+
+  let beginComputation () = ()
+  let endComputation () = ()
 end
 
 module XmlOutput =
@@ -156,4 +161,6 @@ struct
   let goal s = print_endline ("<Output type=\"goal\" text=\"" ^ (escape s) ^ "\"/>")
   let prompt s = print_endline ("<Output type=\"command\" text=\"prompt\"/>")
   let clear () = print_endline ("<Output type=\"command\" text=\"clear\"/>")
+  let beginComputation () = print_endline ("<Output type=\"command\" text=\"begin-computation\"/>")
+  let endComputation () = print_endline ("<Output type=\"command\" text=\"end-computation\"/>")
 end

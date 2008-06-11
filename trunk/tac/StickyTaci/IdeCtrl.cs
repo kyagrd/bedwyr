@@ -101,6 +101,7 @@ namespace StickyTaci
         Taci.Goal += new Taci.IOHandler<string>(Taci_Goal);
         Taci.Error += new Taci.IOHandler<string>(Taci_Error);
         Taci.Debug += new Taci.IOHandler<string>(Taci_Debug);
+        Taci.Warning += new Taci.IOHandler<string>(Taci_Warning);
         Taci.Command += new Taci.IOHandler<string>(Taci_Command);
         Taci.Tactical += new Taci.IOHandler<string>(Taci_Tactical);
         Taci.Logic += new Taci.IOHandler<Logic>(Taci_Logic);
@@ -450,6 +451,12 @@ namespace StickyTaci
       Form.Debug(data);
     }
 
+    void Taci_Warning(Taci instance, string data)
+    {
+      Form.Warning(data);
+    }
+
+
     private void Taci_Error(Taci instance, string data)
     {
       Form.Error(data);
@@ -463,9 +470,11 @@ namespace StickyTaci
     private void Taci_Command(Taci instance, string data)
     {
       if(data == "clear")
-      {
         Form.ClearOutput();
-      }
+      else if(data == "begin-computation")
+        Form.Computing = true;
+      else if(data == "end-computation")
+        Form.Computing = false;
     }
 
     private string GetLogicName(string path)
