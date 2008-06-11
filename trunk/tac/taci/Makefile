@@ -15,10 +15,10 @@ SOURCE= ndcore/term.ml ndcore/norm.ml ndcore/unify.ml ndcore/pprint.ml \
 	Propositional/propositionallexer.ml \
 	Propositional/propositional.ml \
 	Firstorder/firstorderabsyn.ml \
-  Firstorder/firstordertypes.ml \
-  Firstorder/firstordertacticals.ml \
 	Firstorder/firstorderparser.ml \
 	Firstorder/firstorderlexer.ml \
+        Firstorder/firstordertypes.ml \
+        Firstorder/firstordertacticals.ml \
 	Firstorder/firstorder.ml \
 	toplevellexer.ml toplevelparser.ml \
 	toplevel.ml interpreter.ml interface.ml logics_gen.ml logics.ml main.ml
@@ -32,6 +32,7 @@ logics_gen.ml: ../logics_gen/bin/Logics.in
 	../logics_gen/logics_gen --input $(<) --output logics_gen
 
 clean:
+	rm -f .depend
 	make -C ../logics_gen clean
 	for dir in . Nologic Propositional Firstorder ndcore ; do \
 	  rm -f $$dir/*.cm* $$dir/*.o ; \
