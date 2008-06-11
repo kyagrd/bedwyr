@@ -21,6 +21,7 @@ sig
   val prompt : string -> unit
   val impossible : string -> unit
   val error : string -> unit
+  val warning : string -> unit
   val debug : string -> unit
   val output : string -> unit
   val goal : string -> unit
@@ -47,6 +48,12 @@ struct
   let impossible s =
     (*  Output even in batchmode. *)
     (print_string ("Impossible: " ^ s); flush stdout)
+
+  let warning s =
+    if not (Properties.getBool "output.batch") then
+      (print_string ("Warning: " ^ s); flush stdout)
+    else
+      ()
 
   let error s =
     if not (Properties.getBool "output.batch") then
@@ -144,6 +151,7 @@ struct
 
   let impossible s = print_endline ("<Output type=\"error\" text=\"" ^ (escape s) ^ "\"/>")
   let error s = print_endline ("<Output type=\"error\" text=\"" ^ (escape s) ^ "\"/>")
+  let warning s = print_endline ("<Output type=\"warning\" text=\"" ^ (escape s) ^ "\"/>")
   let output s = print_endline ("<Output type=\"output\" text=\"" ^ (escape s) ^ "\"/>")
   let goal s = print_endline ("<Output type=\"goal\" text=\"" ^ (escape s) ^ "\"/>")
   let prompt s = print_endline ("<Output type=\"command\" text=\"prompt\"/>")

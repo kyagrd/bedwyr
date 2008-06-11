@@ -32,6 +32,7 @@ sig
   val prompt : string -> unit
   val impossible : string -> unit
   val error : string -> unit
+  val warning : string -> unit
   val debug : string -> unit
   val output : string -> unit
   val goal : string -> unit
