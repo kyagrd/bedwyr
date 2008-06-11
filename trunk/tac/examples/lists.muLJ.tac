@@ -47,3 +47,9 @@ prove.
 #theorem neq_trap "pi x\y\ equal x y => equal x (cons a y) => false".
 prove.
 % Qed.
+
+#set "firstorder.lemmabound" "true".
+
+#theorem sublist_refl "pi x\ list x => sublist x x".
+prove.
+% Qed.
