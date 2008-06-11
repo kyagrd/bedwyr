@@ -9,7 +9,6 @@ prove.
 % inducting on the extra list hypothesis -- seems to me that it should.
 % Qed.
 
-% This works but takes a while.
 % Again, the list hypothesis are useless,
 % but a good test.
 #theorem equal_trans
