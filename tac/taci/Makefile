@@ -15,6 +15,8 @@ SOURCE= ndcore/term.ml ndcore/norm.ml ndcore/unify.ml ndcore/pprint.ml \
 	Propositional/propositionallexer.ml \
 	Propositional/propositional.ml \
 	Firstorder/firstorderabsyn.ml \
+  Firstorder/firstordertypes.ml \
+  Firstorder/firstordertacticals.ml \
 	Firstorder/firstorderparser.ml \
 	Firstorder/firstorderlexer.ml \
 	Firstorder/firstorder.ml \

@@ -320,6 +320,22 @@
 					RelativePath=".\Firstorder\firstorderparser.mly"
 					>
 				</File>
+				<File
+					RelativePath=".\Firstorder\firstordertacticals.ml"
+					>
+				</File>
+				<File
+					RelativePath=".\Firstorder\firstordertacticals.mli"
+					>
+				</File>
+				<File
+					RelativePath=".\Firstorder\firstordertypes.ml"
+					>
+				</File>
+				<File
+					RelativePath=".\Firstorder\firstordertypes.mli"
+					>
+				</File>
 			</Filter>
 			<Filter
 				Name="Nologic"
