@@ -1560,15 +1560,17 @@ struct
           {seq with
             lhs = freezeAll (List.append lemmas lhs');
             rhs = freezeAll rhs';
-            lemma_bound = updateBound seq.lemma_bound}
+            lemma_bound = updateBound seq.lemma_bound;
+            bound = Some 1;
+            async_bound = Some 0}
         in
         let make pb = fun proofs ->
           { rule = "introduce_lemmas" ;
-          params = [] ;
-          bindings = [] ;
-          formula = None ;
-          sequent = seq ;
-          subs = (pb proofs) }
+            params = [] ;
+            bindings = [] ;
+            formula = None ;
+            sequent = seq ;
+            subs = (pb proofs) }
         in
         fullAsync session [seq']
           (fun ns os pb k ->

@@ -58,8 +58,11 @@ struct
     else
       session
 
-  (*  A flag to determine whether timing is enabled.  *)
-  let timing = ref false
+  let startTime = ref 0.0
+  let startTiming () =
+    startTime := Sys.time ()
+  let getTiming () =
+    (Sys.time ()) -. !startTime
 
   (*  home_unrelate: *)
   let home_unrelate =
@@ -262,6 +265,7 @@ struct
                  (Absyn.string_of_pretactical pretactical)) ;
       let tactical = buildTactical pretactical session in
       let () = O.debug ("Built tactical.\n") in
+      let () = startTiming () in
       let () = (applyTactical tactical session success failure) in
       assert false
     with
@@ -269,6 +273,9 @@ struct
           (O.error (s ^ ".\n");
           errorHandler session)
       | TacticalSuccess s ->
+          if Properties.getBool "taci.timing" then
+            O.output ("Time: " ^ (string_of_float (getTiming ())) ^ " seconds.\n");
+
           O.output "Success.\n";
           if not (L.validSequent s) then
             (O.output "Proof completed.\n" ;
@@ -422,27 +429,31 @@ struct
         | Absyn.Redo(_) -> ((redo session), None)
         | Absyn.Reset ->
             let session' = L.reset () in
-            (session', Some (Session(session')))
+            (session', Some (Session(session)))
         | Absyn.ProofOutput name ->
             (*  Proof Output doesn't get undone.  *)
             let dir = (home_unrelate name) in
+            let props = Properties.state () in
             (O.output ("Proof output set to '" ^ dir ^ "'\n");
             Properties.setString "interpreter.proofoutput" dir;
-            (session, Some (Session(session))))
+            (session, Some (Properties(props))))
         | Absyn.Theorem(name, t) ->
-            L.prove name t session, Some (Session(session))
+            (L.prove name t session, Some (Session(session)))
         | Absyn.Definitions(ds) ->
-            L.definitions ds session, Some (Session(session))
+            (L.definitions ds session, Some (Session(session)))
         | Absyn.Timing(onoff) ->
-            timing := onoff; (session, Some (Session(session)))
+            let props = Properties.state () in
+            (Properties.setBool "taci.timing" onoff;
+            (session, Some (Properties(props))))
         | Absyn.Debug(onoff) ->
+            let props = Properties.state () in
             (Properties.setBool "output.debug" onoff;
-            (session, Some (Session(session))))
+            (session, Some (Properties(props))))
         | Absyn.Include(sl) ->
             (L.incl sl session, Some (Session(session)))
         | Absyn.Open(sl) ->
             let session' = openFiles session sl in
-            (session', Some (Session(session')))
+            (session', Some (Session(session)))
         | Absyn.Logics -> (showLogics session; (session, Some (Session(session))))
         | Absyn.Logic(s) -> (loadLogic s session, Some (Session(session)))
         | Absyn.Tacticals -> (showTacticals session; (session, Some (Session(session))))
