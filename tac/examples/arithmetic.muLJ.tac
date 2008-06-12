@@ -39,50 +39,18 @@ eq.
 prove.
 % Qed.
 
-#theorem ack_total "pi x\ nat x => pi y\ nat y => sigma a\ nat a, ack x y a".
+#theorem ack_total "pi x\ nat x => pi y\ nat y => sigma a\ ack x y a, nat a".
 then(pi,imp).
 induction.
 async.
 prove.
-contract_l("nat _").
 induction(
- "y\ nat y => (pi y1\ nat y1 => sigma a\ nat a, ack h y1 a) => sigma a\ ack (s h) y a, nat a").
-rotate.
+ "y\ nat y, pi h\ (pi y1\ nat y1 => sigma a\ ack h y1 a, nat a) => sigma a\ ack (s h) y a, nat a)").
+prove.
 % Invariance.
-% Case n=0.
 async.
-pi_l.
-force("Y1","s o").
+% n=0 is easy.
 prove.
-% Case n>0.
-imp_l.
-axiom.
-imp_l.
-prove.
-simplify.
-pi_l.
-force("Y10","a").
-imp_l.
-axiom.
-simplify.
-sigma.
-force("A","a0").
-prove.
-% Invariant => goal.
-% prove doesn't work, at least not quickly.
-imp_l.
-prove.
-imp_l.
-prove.
-pi_l.
-imp.
-eq.
-weak_l.
-rotate_l.
-weak_l.
-% prove should really work here.
-sigma_l.
-sigma_r.
-then(and,then(simplify,then(repeat(freeze),prove))).
+% give it a push for the successor case.
+then(and,prove).
 % Qed.
-
