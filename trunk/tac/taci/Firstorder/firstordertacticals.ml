@@ -1545,7 +1545,7 @@ struct
     in
     let lemmas =
       List.map 
-        (fun (_,f,_) -> makeFormula f)
+        (fun (_,f,_) -> makeFormula ((FOA.eliminateNablas []).FOA.polf f))
         session.lemmas
     in
     
