@@ -23,7 +23,7 @@ let getString s =
   try
     (List.assoc s !properties)
   with
-    Not_found -> failwith ("Properties.get: '" ^ s ^ "' not found.")
+    Not_found -> failwith ("Properties.get: '" ^ s ^ "' not found")
 
 let getBool s = bool_of_string (getString s)
 let getInt s = int_of_string (getString s)
