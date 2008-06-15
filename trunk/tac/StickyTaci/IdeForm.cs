@@ -301,9 +301,9 @@ namespace StickyTaci
       outputBox.SelectionFont = m_OutputFont;
 
       Scintilla.Font = m_InputFont;
+      //Scintilla.KeyDown += new KeyEventHandler(Scintilla_KeyDown);
       Scintilla.SavePointReached += new EventHandler(Scintilla_SavePointReached);
       Scintilla.SavePointLeft += new EventHandler(Scintilla_SavePointLeft);
-      Scintilla.Scroll += new EventHandler<ScrollEventArgs>(Scintilla_Scroll);
       Scintilla.ConfigurationManager.CustomLocation = "Data\\tac.xml";
       Scintilla.ConfigurationManager.Language = "taci";
       Scintilla.Margins.Margin0.Width = 20;
@@ -543,11 +543,6 @@ namespace StickyTaci
     #endregion
 
     #region Scintilla Event Handlers
-    private void Scintilla_Scroll(object sender, ScrollEventArgs e)
-    {
-      UpdateCurrentLineMarker();
-    }
-
     private void Scintilla_SavePointReached(object sender, EventArgs e)
     {
       m_Dirty = false;
@@ -558,6 +553,10 @@ namespace StickyTaci
       m_Dirty = true;
     }
 
+    void Scintilla_KeyDown(object sender, KeyEventArgs e)
+    {
+      UpdateCurrentLineMarker();
+    }
     #endregion
 
     #region Public Interface
