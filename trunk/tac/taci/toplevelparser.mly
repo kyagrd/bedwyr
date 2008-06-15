@@ -85,7 +85,7 @@ command
   
   | HELP                  {Absyn.Help}
   | THEOREM ID STRING     {Absyn.Theorem($2, $3)}
-  | DEFINE stringlist {Absyn.Definitions($2)}
+  | DEFINE stringlist     {Absyn.Definitions($2)}
   
   | TACTICALS             {Absyn.Tacticals}
   | TACTICAL ID tactical  {Absyn.TacticalDefinition($2, $3)}
