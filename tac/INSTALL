@@ -24,6 +24,11 @@ Building Tac on Linux:
       tac $ make -C taci
       tac $ make -C Stekki
 
+    Building the tools requires that xml-light (available at
+    http://www.motion-twin.com) be in your path:
+
+      tac $ make -C tools
+
 Building Tac on Windows XP:
   The easiest way is to build Tac on Windows XP is using Microsoft Visual
   Studio 2005 along with the included solution "tac/tac.sln".  This method
@@ -51,5 +56,6 @@ Building Tac on Windows XP:
     
     Next, simply open the provided solution and build it (Ctrl + Alt + F7).
     All components that can be built (namely, taci, logics_gen, StickyTaci,
-    and ndcore) will be built in the proper order.  The resulting executables
-    will be copied to the directory "tac/bin".
+    ndcore, and the proof tools) will be built in the proper order. The
+    resulting executables will be copied to the directory "/tac/bin".
+    
