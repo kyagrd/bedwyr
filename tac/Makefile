@@ -1,6 +1,6 @@
 TEST=lists.muLJ.tac sim.muLJ.tac internal_checks.muLJ.tac tictactoe.muLJ.tac \
 	 copy.muLJ.tac buchi.muLJ.tac binarytree.muLJ.tac plus.muLJ.tac \
-	 arithmetic.muLJ.tac reverse.muLJ.tac
+	 arithmetic.muLJ.tac reverse.muLJ.tac lift-oddity.muLJ.tac
 # Some examples that work but not in batch mode:
 #  ho_simple.muLJ.tac
 #  lift-oddity.muLJ.tac
