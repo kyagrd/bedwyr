@@ -1,0 +1,30 @@
+===============================================================================
+
+Tac::Proof Tools
+
+===============================================================================
+
+Outliner:
+  This program takes a proof (*.xml) on stdin and produces a proof 'sketch' or
+  outline that is simpler than the original on stdout.  This outline essentially
+  only shows rules done in the synchronous phase, as well as the final sequent in
+  the asynchronous phase.
+
+  Usage:
+    outliner < "input.xml" > "output.xml"
+
+Tactex:
+  The program converts a proof (*.xml) to LaTeX.  To convert the resulting file
+  to *.dvi, use:
+  
+    $ latex <file.tex>
+  
+  Or, to convert it to *.pdf, use:
+  
+    $ pdflatex <file.tex>
+ 
+  Currently tactex can generate very large *.tex files which TeX can sometimes
+  choke on.
+ 
+  Usage:
+    tactex --input "input.xml" --output "output.tex"

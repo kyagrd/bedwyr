@@ -30,11 +30,13 @@ Tac System:
     ndcore:
       A mostly-functional term library.  The ndcore library is contained
       within the Bedwyr project.
-
+      
+    tools:
+      A few tools for manipulating proofs.
 
 Building Tac:
 
-  See INSTALL for information on building Tac on Windows XP and Linux.
+  See "/tac/INSTALL" for information on building Tac on Windows and Linux.
 
 Using Tac:
 
@@ -81,7 +83,7 @@ Using Tac:
 
   Exit using "#exit."
 
-  You can find more definitions and proof scripts in "tac/examples". The example
+  You can find more definitions and proof scripts in "/tac/examples". The example
   files are no  more than a sequence of taci inputs. They can be conveniently used
   from the graphical interfaces, which allow loading/saving and undo/redo in a more
   natural way.
