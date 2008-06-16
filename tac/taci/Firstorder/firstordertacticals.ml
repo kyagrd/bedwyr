@@ -1938,7 +1938,7 @@ struct
           let seq = { sequent with lhs = sequent.lhs @ [formula'] } in
           let pb = fun proofs ->
             { rule = "apply" ;
-            params = ["lemma", lemma] ;
+            params = [] ; (* "lemma", lemma] ; *)
             bindings = [] ;
             formula = Some formula' ;
             sequent = seq ;

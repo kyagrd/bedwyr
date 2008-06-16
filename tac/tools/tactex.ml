@@ -114,7 +114,7 @@ let convertRuleName s =
 * Convert an xml node containing a formula to a string of latex.
 **********************************************************************)
 let parseFormula = function
-    Xml.Element ("formula",_,[Xml.PCData formula]) ->
+    Xml.Element ("formula",_,[_; Xml.PCData formula]) ->
       convertFormula formula
   | x -> fail "formula" x
 
