@@ -433,10 +433,10 @@ let abstractVarWithoutLambdas = abstract0
 
 let abstractVar var = 
   {polf =
-     (fun f -> AbstractionFormula(Term.get_hint var,
+     (fun f -> AbstractionFormula(String.uncapitalize (Term.get_hint var),
                 AbstractionBody((abstractVarWithoutLambdas var ()).polf f))) ;
    abstf =
-     (fun f -> AbstractionFormula(Term.get_hint var,
+     (fun f -> AbstractionFormula(String.uncapitalize (Term.get_hint var),
                 (abstractVarWithoutLambdas var ()).abstf f)) ;
    formf = (fun _ -> ()) ; 
    predf = (fun _ -> ())}
@@ -444,8 +444,13 @@ let abstractVar var =
 let abstractPattern0 var = let rec x () = mapPattern x (Term.abstract var) in x
 let abstractPatternWithoutLambdas name = abstractPattern0 (Term.atom name)
 let abstractPattern name =
-  {polp = (fun f -> AbstractionPattern(name, AbstractionBodyPattern((abstractPatternWithoutLambdas name ()).polp f))) ;
-   abstp = (fun f -> AbstractionPattern(name, (abstractPatternWithoutLambdas name ()).abstp f)) ;
+  {polp =
+     (fun f -> AbstractionPattern(String.uncapitalize name,
+                 AbstractionBodyPattern(
+                   (abstractPatternWithoutLambdas name ()).polp f))) ;
+   abstp =
+     (fun f -> AbstractionPattern(String.uncapitalize name,
+                 (abstractPatternWithoutLambdas name ()).abstp f)) ;
    formp = (fun _ -> ()) ; 
    predp = (fun _ -> ())}
 
