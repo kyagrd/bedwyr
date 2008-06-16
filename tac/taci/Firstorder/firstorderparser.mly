@@ -149,7 +149,7 @@
     let result =
       FOA.PreDefinition(
         name,
-        List.combine argnames p,
+        List.combine (List.map String.lowercase argnames) p,
         List.fold_right abstract argnames body',
         fix)
     in
