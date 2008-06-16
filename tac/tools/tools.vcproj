@@ -29,7 +29,7 @@
 			<Tool
 				Name="VCCustomBuildTool"
 				Description="Compiling tools..."
-				CommandLine="ocamlc xml-light.cma outliner.ml -o $(SolutionDir)bin\outliner.exe&#x0D;&#x0A;ocamlc xml-light.cma str.cma tactex.ml -o $(SolutionDir)bin\tactex.exe&#x0D;&#x0A;"
+				CommandLine="ocamake xml-light.cma str.cma tactex.ml -epp -o $(SolutionDir)bin\tactex.exe&#x0D;&#x0A;"
 				Outputs="none"
 			/>
 			<Tool
@@ -89,7 +89,6 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				Description=""
 				CommandLine=""
 			/>
 		</Configuration>
@@ -178,26 +177,6 @@
 			>
 			<File
 				RelativePath=".\tactex.ml"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCustomBuildTool"
-						Description=""
-						CommandLine=""
-						Outputs=""
-					/>
-				</FileConfiguration>
-			</File>
-		</Filter>
-		<Filter
-			Name="Outliner"
-			Filter="h;hpp;hxx;hm;inl;inc;xsd"
-			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
-			>
-			<File
-				RelativePath=".\outliner.ml"
 				>
 				<FileConfiguration
 					Name="Debug|Win32"

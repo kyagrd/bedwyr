@@ -350,34 +350,6 @@
 				</File>
 			</Filter>
 			<Filter
-				Name="Linear"
-				>
-				<File
-					RelativePath=".\Linear\linear.ml"
-					>
-				</File>
-				<File
-					RelativePath=".\Linear\linear.mli"
-					>
-				</File>
-				<File
-					RelativePath=".\Linear\linearabsyn.ml"
-					>
-				</File>
-				<File
-					RelativePath=".\Linear\linearabsyn.mli"
-					>
-				</File>
-				<File
-					RelativePath=".\Linear\linearlexer.mll"
-					>
-				</File>
-				<File
-					RelativePath=".\Linear\linearparser.mly"
-					>
-				</File>
-			</Filter>
-			<Filter
 				Name="Propositional"
 				>
 				<File

@@ -10,6 +10,7 @@
 **********************************************************************)
 let inputName = ref ""
 let outputName = ref ""
+let outline = ref false
 
 let getInputChannel () =
   if !inputName = "" then
@@ -55,7 +56,9 @@ let footer =
 "
 
 (*  fail: incredible error handling! *)
-let fail expected x = failwith ("Not a '" ^ expected ^ "':\n" ^ Xml.to_string x)
+let fail expected x =
+  prerr_endline ("Error: XML is not a '" ^ expected ^ "': " ^ Xml.to_string x) ;
+  exit (-1)
 
 (**********************************************************************
 *
@@ -68,6 +71,7 @@ type rule = {
   rhs : formula list ;
   active : formula ;
   bound : string ;
+  focused : bool ;
   sub : rule list
 }
 
@@ -126,7 +130,8 @@ let rec parseRule = function
         Xml.Element ("sequent",[],[
           Xml.Element ("level",[],[Xml.PCData level]);
           Xml.Element ("lhs",[],lhs);
-          Xml.Element ("rhs",[],rhs)
+          Xml.Element ("rhs",[],rhs);
+          Xml.Element ("focused", [], [Xml.PCData focused])
         ]) ;
         formula ;
         Xml.Element ("bound",[],bound) ;
@@ -137,33 +142,12 @@ let rec parseRule = function
           rhs = parseSide rhs ;
           active = parseFormula formula ;
           bound = (match bound with [Xml.PCData s] -> s | _ -> "") ;
+          focused = bool_of_string focused ;
           sub = parseRules sub}
   | x -> fail "rule" x
 
 and parseRules rules = List.map parseRule rules
 
-(**********************************************************************
-*printHelp:
-* Simply prints the usage information based on the speclist.
-**********************************************************************)
-let rec printHelp () = (Arg.usage speclist usage; exit 0)
-
-(**********************************************************************
-parseArgs:
-* Parse the command line arguments.
-* The supported options are:
-*   input: specifies the input file.
-*   output: specifies the output file.
-*   help: print usage information.
-**********************************************************************)
-and speclist = [("-h", Arg.Unit(printHelp), "");
-                ("--help", Arg.Unit(printHelp), "");
-                ("--input", Arg.Set_string(inputName), "input");
-                ("--output", Arg.Set_string(outputName), "output")]
-and usage = "Usage: tactex --input \"input file\"\n\nOptions:"
-let parseArgs output =
-    (Arg.parse speclist (fun s -> ()) usage)
-    
 (**********************************************************************
 *convert:
 * 
@@ -181,6 +165,57 @@ let convert p =
   let s = processProof p in
   header ^ "\\[\n" ^ s ^ "\n\\]\n" ^ footer
 
+(**********************************************************************
+*outline:
+* Changes the given proof so that strings of asynchronous rules are
+* shown only as a single 'async' rule.
+**********************************************************************)
+let outlineProof p =
+  let phaseSwitch p =
+    p.focused || p.name = "induction" || p.name = "coinduction"
+  in
+  
+  (*  getAsyncSubs: get all subformulas of an async phase.  *)
+  let rec getAsyncSubs p =
+    if phaseSwitch p then
+      [p]
+    else
+      List.concat (List.map getAsyncSubs p.sub)
+  in
+  
+  let rec outline p =
+    if not (phaseSwitch p) then
+      let subformulas = List.concat (List.map getAsyncSubs p.sub) in
+      let subformulas' = List.map outline subformulas in
+      {p with name = "async"; sub = subformulas'}
+    else
+      {p with sub = (List.map outline p.sub)}
+  in
+  outline p
+
+(**********************************************************************
+*printHelp:
+* Simply prints the usage information based on the speclist.
+**********************************************************************)
+let rec printHelp () = (Arg.usage speclist usage; exit 0)
+
+(**********************************************************************
+parseArgs:
+* Parse the command line arguments.
+* The supported options are:
+*   input: specifies the input file.
+*   output: specifies the output file.
+*   help: print usage information.
+**********************************************************************)
+and speclist = [("-h", Arg.Unit(printHelp), "");
+                ("--help", Arg.Unit(printHelp), "");
+                ("--input", Arg.Set_string(inputName), "input file");
+                ("--outline", Arg.Set(outline), "outline the proof");
+                ("--output", Arg.Set_string(outputName), "output file")]
+and usage = "Usage: tactex --input \"input file\"\n\nOptions:"
+let parseArgs output =
+    (Arg.parse speclist (fun s -> ()) usage)
+    
 let main () =
   (*  Parse the command line arguments. *)
   let () = parseArgs () in
@@ -188,7 +223,8 @@ let main () =
   let xml = Xml.parse_in input in
   let () = close_in input in
   let proof = parseRule xml in  (*  Assumption: there's just a single rule. *)
-  let s = convert proof in
+  let proof' = if !outline then outlineProof proof else proof in (*  Outline if requested. *)
+  let s = convert proof' in
   let output = getOutputChannel () in
   (output_string output s;
   close_out output;
