@@ -21,8 +21,13 @@ then(induction("x'\l'\ mem (x' dummy) (l' dummy)"),prove).
 #theorem mem_w "pi x\l\ (nabla n\ mem x l) => (mem x l)".
 simplify.
 abstract.
+% prove would work here because this invariant is exactly the context.
 then(induction("x'\l'\ pi x\l\ (x'=(a\x), l'=(a\l)) => mem x l"),prove).
 % QED.
+
+#theorem mem_m "pi x\l\ (nabla a\b\ mem (x a b) (l a b)) => (nabla a\ mem (x a a) (l a a))".
+prove.
+% Qed.
 
 % ********** .
 % It is also possible to weaken nabla around the negation of mem.
@@ -31,7 +36,8 @@ then(induction("x'\l'\ pi x\l\ (x'=(a\x), l'=(a\l)) => mem x l"),prove).
 simplify.
 abstract.
 then(imp_l,simplify).
-then(induction("x\l\ nabla n\ mem x l"),then(abstract,prove)).
+% Again, prove alone works too.
+then(induction("x\l\ nabla n\ mem x l"),prove).
 % QED.
 
 % ============ CONTEXT ============.
@@ -47,6 +53,7 @@ then(induction("x\l\ nabla n\ mem x l"),then(abstract,prove)).
 % Otherwise we'd have to prove (mem (x n) (l n) => lift_mem x l)
 % which is true only if n is fresh.
 % By including that statement in the invariant, everything goes fine.
+
 #theorem ctxt_w "pi l\ (nabla n\ ctxt l) => ctxt l".
 simplify.
 abstract.
@@ -54,11 +61,7 @@ induction("l'\ pi l\ l' = (x\l) => ctxt l").
 prove.
 then(or_l,simplify).
 prove.
-then(mu_r,then(right,then(repeat(sigma),and))).
-prove.
-then(imp_r,then(imp_l,simplify)).
-then(induction("x\l\ nabla a\ mem x l"),then(abstract,simplify)).
-prove.
+cut_lemma("notmem_w").
 prove.
 % QED.
 
@@ -75,10 +78,10 @@ simplify.
 abstract.
 induction("c'\t'\ pi c\t\ (c'=(x\c), t'=(x\t)) => term c t").
 prove.
-then(repeat(or_l),simplify).
-then(induction("x'\l'\ pi x\l\ (x'=(a\x), l'=(a\l)) => mem x l"),prove).
+async.
+then(cut_lemma("mem_w"),prove).
 prove.
-then(abstract,prove).
+prove.
 % QED.
 
 % Another simple proof:
@@ -87,62 +90,10 @@ then(abstract,prove).
                          (nabla a\   term (c a a) (t a a))".
 simplify.
 abstract.
-then(induction("c\t\ nabla a\ term (c a a) (t a a)"),abstract).
+induction("c\t\ nabla a\ term (c a a) (t a a)").
 prove.
-then(repeat(or_l),simplify).
-then(induction("x\l\ nabla a\ mem (x a a) (l a a)"),
-  then(abstract,prove)).
+async.
+then(cut_lemma("mem_m"),prove).
 prove.
 prove.
 % QED.
-
-% ============ AUTOMATION ============== .
-
-% All these proofs used trivial invariants.
-
-#theorem term_m "pi c\t\ (nabla a\b\ term (c a b) (t a b)) =>
-                         (nabla a\   term (c a a) (t a a))".
-abstract.
-simplify.
-induction.
-then(async,try(prove)).
-% Term is not an invariant of mem,
-% at least not a trivial one.
-then(induction("x''\l''\
- nabla a\ mem (x'' a a) (l'' a a)"),
-prove).
-% Qed.
-
-#theorem term_w "pi c\t\ (nabla n\ term c t) => term c t".
-simplify.
-abstract.
-induction.
-then(async,try(prove)).
-% Same deal as before.
-then(cut("mem h3 h4"),prove).
-% Qed.
-
-#theorem ctxt_w "pi l\ (nabla n\ ctxt l) => ctxt l".
-simplify.
-abstract.
-induction.
-then(async,try(prove)).
-% And again.
-mu_r.
-right.
-repeat(sigma).
-then(repeat(and),try(prove)).
-simplify.
-weak_l.
-cut("nabla x\ mem h4 h3").
-weak_l.
-prove.
-prove.
-% Qed.
-
-#theorem notmem_w "pi x\l\ (nabla n\ mem x l => false) => (mem x l => false)".
-prove.
-
-#theorem mem_w "pi x\l\ (nabla n\ mem x l) => (mem x l)".
-prove.
-

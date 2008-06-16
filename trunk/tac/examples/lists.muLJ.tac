@@ -5,8 +5,6 @@
 #theorem equal_sym "pi x\ y\ list x => list y => equal x y => equal y x".
 prove.
 % It works better without the list hypothesis.
-% TODO Find out why it doesn't work in the first attempt,
-% inducting on the extra list hypothesis -- seems to me that it should.
 % Qed.
 
 % Again, the list hypothesis are useless,
@@ -46,6 +44,9 @@ prove.
 #theorem neq_trap "pi x\y\ equal x y => equal x (cons a y) => false".
 prove.
 % Qed.
+
+#theorem simple_trap "pi x\ equal x (s x) => false".
+prove.
 
 #set "firstorder.lemmabound" "true".
 
