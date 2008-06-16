@@ -1,0 +1,6 @@
+@echo off
+echo Building proof outliner...
+ocamlc xml-light.cma outliner.ml -o ..\bin\outliner.exe
+echo Building tactex...
+ocamlc 	xml-light.cma str.cma tactex.ml -o ..\bin\tactex.exe
+echo Done.
