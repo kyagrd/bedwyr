@@ -21,9 +21,8 @@ mu_r.
 sigma_r.
 and_r.
 eq.
-% TODO terms not normal.
 % Lifting and unfolding do not commute, hence the axiom does not apply.
 % This is not a bug of the logic,
 % which would have done "abstract" first.
-axiom.
-% Not qued.
+admit.
+% Not qed.
