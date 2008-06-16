@@ -247,8 +247,7 @@ struct
     let result = escapeTerm ((FOA.string_of_formula ~generic).FOA.formf t) in
       List.iter Term.free generic ;
       Printf.sprintf "<formula>%s%s</formula>"
-         (if generic = [] then "" else
-           "<generic>" ^ String.concat "," generic ^ "</generic>")
+         ("<generic>" ^ String.concat "," generic ^ "</generic>")
         (annotateFormula a result)
 
   let generateSymbol =
