@@ -234,10 +234,12 @@ val unifyList :
 (** Get all terms from a polarized formula. *)
 val termsPolarized : 'a polarized -> term list
 
-(** Abstract a formula over a variable name. *)
+(** Abstract a formula over a variable. *)
 val abstractVar :
   term -> ('a, 'a abstraction, unit, 'a abstraction, unit) map_formula 
 
+val abstractVarWithoutLambdas :
+  term -> ('a, 'a polarized, 'a predicate, 'a abstraction, 'a formula) map_formula  
 (** Lift a formula, i.e. abstract over a fresh variable. *)
 val lift :
   (annotation,annotation polarized,
@@ -277,3 +279,5 @@ val abstractPattern :
 val abstractWithoutLambdas :
   string -> unit ->
   ('a,'a polarized,'a predicate,'a abstraction,'a formula) map_formula
+
+val isSpecialAtom : string -> bool

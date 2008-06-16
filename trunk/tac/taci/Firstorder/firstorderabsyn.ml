@@ -143,6 +143,10 @@ type ('a,'b,'c,'d,'e) map_pattern =
   abstp : 'a abstraction_pattern -> 'd ;
   formp : 'a formula_pattern -> 'e}
 
+(*  isSpecialAtom: returns true if the atom is allowed to be unbound;
+    only matters for true and false.  *)
+let isSpecialAtom a = a = "true" || a = "false"
+
 (********************************************************************
 *makeAnonymousTerm:
 ********************************************************************)
@@ -595,7 +599,7 @@ let eliminateNablas tv =
             AbstractionBody ((f pv tv).polf form)) ;
 
       predf = (fun form terms -> match form with
-          AtomicFormula (name) when name="true" || name="false" ->
+          AtomicFormula (name) when (isSpecialAtom name) ->
             ApplicationFormula(form,terms)
         | AtomicFormula (name) -> 
             (* For undefined atoms, the only thing we can do
@@ -718,7 +722,7 @@ exception InvalidFixpointApplication
 let applyFixpoint argument =
   (* Normalizing the argument must be done first, before the normalization
    * that might occur during instantiation. The downside is that even if you
-   * never abstracted anything your invariant gets abstracted here. TODO? *)
+   * never abstracted anything your invariant gets abstracted here. *)
   let argument = (eliminateNablas []).abstf argument in
 
   (********************************************************************
@@ -728,7 +732,16 @@ let applyFixpoint argument =
   * the now lambdaless arguments to the target.  It then re-absracts
   * the result over the same n variables.  Finally it frees the
   * generated variables.
-  * TODO isn't there a more direct way ?
+  *
+  * The reason is this: if you are substituting some P for #0, and
+  * you have #0 x y, you want P x y.  But suppose #0 x y is under some
+  * abstractions x1\ x2\ #0 x y.  If you substitute x and y into P
+  * by application, you get P x y where some parts of P aren't abstracted
+  * over x1 and x2, and some parts that are (namely, x and y).  So you
+  * make sure to replace x and y (which in this case are really x1\x2\x,
+  * and x1\x2\y) with 'ground' x and y.   Then nothing in P x y is
+  * abstracted over x1 and x2, so you can just go ahead and do the
+  * abstraction and be done.
   ********************************************************************)
   let rec normalizeAbstractions lambdas target arguments =
     let free (name,info) = if info then Term.free name else () in
@@ -998,3 +1011,5 @@ let rec matchFormula pattern formula =
       and return the result.  *)
   (Term.restore_state state;
   result)
+
+let abstractVarWithoutLambdas var = abstractVarWithoutLambdas var ()

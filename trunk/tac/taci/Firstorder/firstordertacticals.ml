@@ -41,7 +41,6 @@ struct
   (********************************************************************
   *copyFormula:
   * Copies a formula's eigen variables. Used before performing eqL.
-  * TODO isn't it enough to work on FOA.formulas?
   ********************************************************************)
   let copyFormula ?(copier=(Term.copy_eigen () ~passive:false)) (Formula(i,f)) =
     let copyTerm t = copier t in
@@ -62,6 +61,32 @@ struct
           ("Unable to convert '" ^ s ^ "' to int; using default " ^
           (string_of_int d) ^ ".\n");
         d)
+
+  (********************************************************************
+  *handleNablas:
+  * Given a formula found with a particular context level, makes it
+  * into a formula at context level 0 by eliminating nablas via
+  * abstraction.
+  ********************************************************************)
+  let rec handleNablas context f =
+    let rec handle context f =
+      if context = 0 then
+        f
+      else
+        let (ann, _) = f in
+        let v = Term.nabla context in
+        let abstraction =
+          FOA.AbstractionFormula(
+            "invariant_n" ^ (string_of_int context),
+            FOA.AbstractionBody(
+              (FOA.abstractVarWithoutLambdas v).FOA.polf (handle (context - 1) f)))
+        in
+        (ann, FOA.QuantifiedFormula(FOA.Nabla, abstraction))
+    in
+    if Properties.getBool "firstorder.fix-nabla-induction" then
+      (handle context f)
+    else
+      f
 
   (********************************************************************
   *makeProofBuilder ruleName ~b:bound_vars ~p:rule_params ~f:formula seq:
@@ -316,15 +341,15 @@ struct
 
   (** Given a body [b], and a (co)invariant [s] as a string, and parameters [t],
     * computes [s t], [s t'] and [b s t']. *)
-  let fixpoint_St_St'_BSt' ~session ~lvl ~i ~body ~argnames ~s ~t =
-    let rec makeArgs lvl i = function
+  let fixpoint_St_St'_BSt' ~session ~lvl ~body ~argnames ~s ~t =
+    let rec makeArgs lvl = function
       | [] -> (lvl, [])
       | a::aa ->
-          let (lvl', a') = makeUniversalVar a lvl i in
-          let (lvl'', aa') = makeArgs lvl' i aa in
+          let (lvl', a') = makeUniversalVar a lvl 0 in
+          let (lvl'', aa') = makeArgs lvl' aa in
             (lvl'',  a'::aa')
     in
-    let (lvl',t') = makeArgs lvl i argnames in
+    let (lvl',t') = makeArgs lvl argnames in
       begin match
         FOA.fullApply t s, FOA.fullApply t' s,
         (FOA.applyFixpoint s).FOA.abstf body
@@ -381,9 +406,9 @@ struct
      * part of the zipper. *)
     let propagate (super,_) (Formula(i,(sub,sf))) =
       let ann =
-        (* TODO Make sure that release doesn't break because we automatically
+        (* TODO: Make sure that release doesn't break because we automatically
          * release here in case of a delay. Why not treat the delay there
-         * anyway.. because it would have been overwritten by a propagation. *)
+         * anyway... because it would have been overwritten by a propagation. *)
         if super.FOA.control = FOA.Focused &&
           sub.FOA.control <> FOA.Delayed
         then
@@ -539,10 +564,9 @@ struct
                         let s = parseInvariant session.definitions s in
                         if Option.isSome s then
                           let s = Option.get s in
-                          (* TODO bound check *)
                           begin match
                             fixpoint_St_St'_BSt'
-                              ~session ~lvl:seq.lvl ~i:i.context
+                              ~session ~lvl:seq.lvl
                               ~body ~argnames:onlynames ~s ~t:args
                           with
                             | Some (st,lvl',st',bst') ->
@@ -558,28 +582,32 @@ struct
                             | None -> fc ()
                           end
                         else
-                          fc () (*  TODO: needs error message?  *)
+                          fc ()
                     | None ->
+                        if i.context <> 0 then
+                          O.warning
+                            "induction or coinduction with non-zero generic contexts; \
+                            use 'abstract' first to avoid this problem.\n";
+
                         let fresh n =
                           Term.fresh ~name:n ~ts:0 ~lts:0 ~tag:Term.Eigen
                         in
                         let rhs =
                           (* ... |- H1,..,Hn becomes H1\/..\/Hn *)
-                          (* TODO don't ignore generic context *)
                           let rec s = function
                             | [] -> assert false
-                            | [Formula(_,f)] -> f
-                            | (Formula(_,pf))::l -> 
+                            | [Formula(i,f)] -> handleNablas i.context f
+                            | (Formula(i,pf))::l -> 
                                 { FOA.defaultAnnotation
                                   with FOA.polarity = FOA.Negative },
-                                FOA.BinaryFormula (FOA.Or, pf, s l)
+                                FOA.BinaryFormula (FOA.Or, handleNablas i.context pf, s l)
                           in s seq.rhs
                         in
                         let lrhs =
                           (* H1, ..., Hn |- rhs becomes H1 => .. => Hn => rhs *)
                           let rec s = function
                             | [] -> rhs
-                            | Formula(_,f')::l -> 
+                            | Formula(i,f')::l -> 
                                 if Properties.getString "firstorder.frozens" = "ignore" &&
                                   (fst f').FOA.freezing = FOA.Frozen then
                                   (s l)
@@ -594,20 +622,12 @@ struct
                                     else
                                       f'
                                   in
-                                  (ann, FOA.BinaryFormula(FOA.Imp, f'', s l))
+                                  handleNablas i.context (ann, FOA.BinaryFormula(FOA.Imp, f'', s l))
                           in
-                          if Properties.getBool "firstorder.induction-unfold" then
-                            (* TODO this seems wrong, and moreover interacts
-                             * with thaw.
-                             * this is not building S/\muB, this is putting muB
-                             * inside S. *)
-                            s (zip [Formula(i,FOA.changeAnnotation FOA.freeze f)])
-                          else
-                            s (zip [])
+                          s (zip [])
                         in
                         let fv,elrhs =
-                          (* Essentially form
-                           * fv1\..fvn\ fv1=arg1 => .. fvn=argn => lrhs *)
+                          (* Essentially form fv1\..fvn\ fv1=arg1 => .. fvn=argn => lrhs *)
                           let rec e lan la =
                             match lan,la with
                               | [],[] -> [], lrhs 
@@ -618,12 +638,13 @@ struct
                                     FOA.negativeFormula
                                       (FOA.BinaryFormula
                                          (FOA.Imp,
-                                          FOA.positiveFormula
-                                            (FOA.EqualityFormula (v,a)),
+                                          handleNablas i.context
+                                            (FOA.positiveFormula
+                                              (FOA.EqualityFormula (v,a))),
                                           f))
-                              |_ -> assert false
+                              | _ -> assert false
                           in
-                            e onlynames (List.rev args)
+                          e onlynames (List.rev args)
                         in
                         (* Abstract universally over eigenvariables. *)
                         let getenv =
@@ -637,30 +658,38 @@ struct
                                     (FOA.Pi, (FOA.abstractVar v).FOA.polf f)))
                             elrhs getenv
                         in
+                        let aelrhs' =
+                          if Properties.getBool "firstorder.induction-unfold" then
+                            let (ann,_) = aelrhs in
+                            (ann, FOA.BinaryFormula(FOA.And, (FOA.changeAnnotation FOA.freeze f), aelrhs))
+                          else
+                            aelrhs
+                        in
                         (* Abstract out the fv1..fvn. *)
                         let invariant =
                           List.fold_left
                             (fun f v -> (FOA.abstractVar v).FOA.abstf f)
-                            (FOA.AbstractionBody aelrhs)
+                            (FOA.AbstractionBody aelrhs')
                             fv
                         in
                         let _,lvl',st',bst' =
                           Option.get (fixpoint_St_St'_BSt'
-                                        ~session ~lvl:seq.lvl ~i:i.context ~body
+                                        ~session ~lvl:seq.lvl ~body
                                         ~argnames:onlynames
                                         ~s:invariant ~t:args)
                         in
                         let seq =
                           { seq with bound = updateBound seq.bound }
                         in
-                          if outOfBound seq then fc () else
-                            let seq' = 
-                              { seq with lvl = lvl' ;
-                                   lhs = [makeFormula bst'] ;
-                                   rhs = [makeFormula st'] }
-                            in
-                            (*  TODO: is this valid?  *)
-                            sc "induction" [seq']
+                        if outOfBound seq then fc () else
+                          let seq' = 
+                            { seq with lvl = lvl' ;
+                                 lhs = [makeFormula bst'] ;
+                                 rhs = [makeFormula st'] }
+                          in
+                          (*  TODO: check the other premise (in the proof
+                              builder, to save work).  *)
+                          sc "induction" [seq']
                   end
               | FOA.AtomicFormula p ->
                   if p = "false" then sc "false" [] else (* TODO boooh *)
@@ -811,11 +840,10 @@ struct
                     | Some s ->
                         let s = parseInvariant session.definitions s in
                         if Option.isSome s then
-                          (* TODO bound check ? *)
                           let s = Option.get s in
                           begin match
                             fixpoint_St_St'_BSt'
-                              ~session ~lvl:seq.lvl ~i:i.context
+                              ~session ~lvl:seq.lvl
                               ~body ~argnames:onlynames ~s ~t:args
                           with
                             | Some (st,lvl',st',bst') ->
@@ -831,8 +859,13 @@ struct
                             | None -> fc ()
                           end
                         else
-                          fc () (*  TODO: needs error message?  *)
+                          fc ()
                     | None ->
+                        if i.context <> 0 then
+                          O.warning
+                            "induction or coinduction with non-zero generic contexts; \
+                            use 'abstract' first to avoid this problem.\n";
+                        
                         let fresh n =
                           Term.fresh ~name:n ~ts:0 ~lts:0 ~tag:Term.Eigen
                         in
@@ -843,19 +876,18 @@ struct
                          * conjunction in the co-invariant. But the negation is
                          * badly written as A=>false. *)
                         let lrhs =
-                          (* Conjunction of the left hand-side.
-                           * TODO treat generic quantif. *)
+                          (* Conjunction of the left hand-side. *)
                           let rec s = function
                             | [] ->
                                 { FOA.defaultAnnotation with
                                     FOA.polarity = FOA.Positive },
                                 FOA.ApplicationFormula
                                   (FOA.AtomicFormula "true", [])
-                            | [Formula(_,f)] -> f
-                            | Formula(_,f)::l ->
+                            | [Formula(i,f)] -> handleNablas i.context f
+                            | Formula(i,f)::l ->
                                { FOA.defaultAnnotation with
                                    FOA.polarity = FOA.Positive },
-                               FOA.BinaryFormula (FOA.And, f, s l)
+                               FOA.BinaryFormula (FOA.And, handleNablas i.context f, s l)
                           in
                           s seq.lhs
                         in
@@ -872,8 +904,9 @@ struct
                                     FOA.positiveFormula
                                       (FOA.BinaryFormula
                                          (FOA.And,
-                                          FOA.positiveFormula
-                                            (FOA.EqualityFormula (v,a)),
+                                          handleNablas i.context
+                                            (FOA.positiveFormula
+                                              (FOA.EqualityFormula (v,a))),
                                           f))
                               |_ -> assert false
                           in
@@ -892,16 +925,23 @@ struct
                                      (FOA.abstractVar v).FOA.polf f)))
                             elrhs getenv
                         in
+                        let aelrhs' =
+                          if Properties.getBool "firstorder.coinduction-unfold" then
+                            let (ann,_) = aelrhs in
+                            (ann, FOA.BinaryFormula(FOA.And, (FOA.changeAnnotation FOA.freeze f), aelrhs))
+                          else
+                            aelrhs
+                        in
                         (* Abstract out the fv1..fvn. *)
                         let invariant =
                           List.fold_left
                             (fun f v -> (FOA.abstractVar v).FOA.abstf f)
-                            (FOA.AbstractionBody aelrhs)
+                            (FOA.AbstractionBody aelrhs')
                             fv
                         in
                         let _,lvl',st',bst' =
                           Option.get (fixpoint_St_St'_BSt'
-                                        ~session ~lvl:seq.lvl ~i:i.context ~body
+                                        ~session ~lvl:seq.lvl ~body
                                         ~argnames:onlynames
                                         ~s:invariant ~t:args)
                         in
@@ -909,13 +949,14 @@ struct
                           { seq with bound = updateBound seq.bound }
                         in
                           if outOfBound seq then fc () else
+                            (*  TODO: check the other premise.  *)
                             sc "coinduction"
                               [{ seq with lvl = lvl' ;
                                  lhs = [makeFormula st'] ;
                                  rhs = [makeFormula bst'] }]
                   end
               | FOA.AtomicFormula p ->
-                  if p = "true" then sc "true" [] else (* TODO boooh *)
+                  if p = "true" then sc "true" [] else
                   atomicInit i p args (fun k -> sc "init" [] ~k) fc seq.lhs
               | FOA.DBFormula _ -> assert false
             end
@@ -1098,7 +1139,12 @@ struct
 
   (** {1 Meta-rules} *)
 
-  (** Force unification between two terms. *)
+  (********************************************************************
+  *forceTactical:
+  * Toplevel tactical to force unification between two terms.  Note
+  * that all that this does is attempt unification; if you specify
+  * terms that don't exist in the sequent it could still easily succeed.
+  ********************************************************************)
   let forceTactical session args =
     match args with
       | Absyn.String(seqstring)::Absyn.String(term)::[] ->
@@ -1107,6 +1153,7 @@ struct
             if Option.isSome seqterm && Option.isSome unterm then
               let seqterm = Option.get seqterm in
               let unterm = Option.get unterm in
+
               (* pretactic: simply unifies the two terms. *)
               let pretactic = fun seq sc fc ->
                 match FOA.rightUnify seqterm unterm with
@@ -1133,8 +1180,11 @@ struct
               G.failureTactical)
       | _ -> (G.invalidArguments "unify")
 
-  (** The cut rule.
-    * This implementation is not satisfying for a classical logic. *)
+  (********************************************************************
+  *cutTactical:
+  * Toplevel tactical to cut an arbitrary formula.  Handles both
+  * classical and intuitionistic cuts.
+  ********************************************************************)
   let cutTactical session args =
     match args with
       | Absyn.String(s)::[] ->
@@ -1144,11 +1194,19 @@ struct
               | Some f ->
                   let pretactic = fun sequent sc fc ->
                     let f' = makeFormula f in
-                    (* TODO classical cut *)
-                    let s1 = { sequent with rhs = [f'] } in
-                    let s2 = { sequent with lhs = sequent.lhs @ [f'] } in
                     let pb = makeProofBuilder "cut" ~p:["formula",s] sequent in
-                      sc [s1; s2] pb fc
+
+                    (*  Classical vs. intuitionistic cut  *)
+                    let rhs' =
+                      if Param.intuitionistic then
+                        [f']
+                      else
+                        sequent.rhs @ [f']
+                    in
+                    
+                    let s1 = { sequent with rhs = rhs' } in
+                    let s2 = { sequent with lhs = sequent.lhs @ [f'] } in
+                    sc [s1; s2] pb fc
                   in
                     G.makeTactical pretactic
             end
@@ -1267,11 +1325,25 @@ struct
   (********************************************************************
   *Focusing Strategy:
   * Focusing proceeds as follows:
-  *   1. Asynchronous phase.
-  *   2. Freezing phase.
-  *   3. Synchronous phase.
+  *   1. Asynchronous phase:
+  *       Here you repeatedly apply asynchronous rules.  Once there
+  *       are no more to apply, you move to the freezing phase via the
+  *       success continuation.
+  *   2. Freezing phase:
+  *       Here you make the choice of either freezing or performing
+  *       induction on each mu/nu formula.  First, everything gets
+  *       frozen.  If this fails, one formula is unfrozen and induction
+  *       is tried on it.  If this fails, another is unfrozen (leaving
+  *       the previously unfrozen mu/nu unfrozen) and induction is
+  *       tried, and so on, until all atoms have been tried.  The
+  *       success continuation points to the synchronous phase.
+  *   3. Synchronous phase:
+  *       Here you run a synchronous phase by first focusing on
+  *       something and then repeatedly applying sync_step.  Once
+  *       there's nothing left with focus on it, the success continuation
+  *       sends you back to the asynchronous phase.
   ********************************************************************)
-
+  
   (** AtomicFormula includes the units (true/false).
     * The Negative polarity is actually never used, and the whole polarity
     * design is too weak as the polarity is set only at toplevel and not on
@@ -1353,7 +1425,11 @@ struct
   ********************************************************************)
   let rec focusTactic session =
     let (pretactic : (sequent, proof) Logic.pretactic) = fun seq sc fc ->
-      let sc s k = sc s (List.hd) k in
+      let pb proofs = 
+        let proof = List.hd proofs in
+        {proof with params = ("focus", "true")::(proof.params)}
+      in
+      let sc s k = sc s pb k in
       tac_l
         [] seq.lhs seq sc fc 
         focusFormula
@@ -1481,14 +1557,14 @@ struct
              session (Some "unfold")
          ])
 
-  (* TODO note that the treatment of fixed points is not based on polarities
+  (* TODO: note that the treatment of fixed points is not based on polarities
    * but the roles of mu/nu are hardcoded. *)
   and match_inductable =
     make_matcher
       (fun (Formula(i,(a,f))) ->
          match f with
            | FOA.ApplicationFormula
-              (FOA.FixpointFormula (FOA.Inductive,_,argnames,_), args) ->
+              (FOA.FixpointFormula (FOA.Inductive,_,_,_), _) ->
               a.FOA.freezing = FOA.Unfrozen
            | _ -> false)
   
@@ -1497,7 +1573,7 @@ struct
       (fun (Formula(i,(a,f))) ->
          match f with
            | FOA.ApplicationFormula
-              (FOA.FixpointFormula (FOA.CoInductive,_,argnames,_), args) ->
+              (FOA.FixpointFormula (FOA.CoInductive,_,_,_), _) ->
               a.FOA.freezing = FOA.Unfrozen
            | _ -> false)
 
@@ -1593,7 +1669,6 @@ struct
 
   (* Freeze the first available asynchronous fixed point,
    * takes care of unfoldings and re-calling fullAsync when needed. *)
-  
   (********************************************************************
   *freeze:
   * The freezing phase.  Finds an inductable and tries to do induction
@@ -1608,7 +1683,7 @@ struct
        | Some (Formula(i,(a,f)), before, after) ->
            (* Unfolding might sometimes yield simpler proofs,
             * but trying it everytime seems costly...
-            * TODO a way of getting a quasi-unfolding for free inside the
+            * TODO: a way of getting a quasi-unfolding for free inside the
             * induction is to bundle a frozen version of the fixed point
             * with the invariant *)
            G.orElseTactical
@@ -1626,8 +1701,6 @@ struct
                 (* The cut is needed here so that auto_intro doesn't try
                  * to induct on another Mu on the left. *)
                 (fun _ ->
-                   (* TODO don't print "Induction" if the bound won't allow it
-                    * *)
                    if Properties.getBool "firstorder.proofsearchdebug" then
                      Format.printf "%s@[<hov 2>Induction@ %s@]\n%!"
                        (String.make
@@ -1636,7 +1709,7 @@ struct
                        (string_of_formula (Formula(i,(a,f)))) ;
                    automaticIntro session `Left match_inductable [resetAsyncBound seq])
                 async)
-             [(*no args*)] sc fc
+             [(* No arguments *)] sc fc
        | None ->
            begin match match_coinductable seq.rhs with
              | Some (Formula(i,(a,f)), before, after) ->
@@ -1711,7 +1784,7 @@ struct
     assert (List.length seqs = 1) ;
     sync_step session seqs
       (fun n o b k ->
-         G.iterateTactical (syncTactical session) (List.append n o)          (* succeeds on n@o=[] *)
+         G.iterateTactical (syncTactical session) (List.append n o) (* succeeds on n@o=[] *)
            (fun n' o' b' k' ->
               assert (n'=[] && o'=[]) ;        (* syncTactical is a complete tactic *)
               sc [] [] (fun l -> b (b' l)) k') (* expect l = [] *)
@@ -1719,7 +1792,7 @@ struct
       (fun () ->
          match unfocus (List.hd seqs) with
            | Some seq -> fullAsync session [seq] sc fc
-           | None -> fc ()) (* TODO that might be broken with delays *)
+           | None -> fc ()) (* TODO: that might be broken with delays *)
 
   (********************************************************************
   *setBound:

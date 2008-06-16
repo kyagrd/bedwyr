@@ -32,8 +32,15 @@ let () = Properties.setBool "firstorder.lemmabound" false
 let () = Properties.setInt "firstorder.defaultlemmabound" 1
 let () = Properties.setString "firstorder.frozens" "thaw"
 let () = Properties.setBool "firstorder.induction-unfold" false
+let () = Properties.setBool "firstorder.coinduction-unfold" false
 let () = Properties.setBool "firstorder.thawasync" false
-(* TODO frozens and induction-unfold for coinduction *)
+
+(*  fix-nabla-induction:  this will attempt to abstract the appropriate
+    things during invariant generation so that the generic context
+    gets properly taken into account.  Problem is, it doesn't quite
+    work, because the naive vision of nabla doesn't work with induction.
+*)
+let () = Properties.setBool "firstorder.fix-nabla-induction" true
 
 (**********************************************************************
 *Firstorder:
@@ -72,11 +79,16 @@ struct
       List.iter (fun f -> Format.fprintf fmt "%s@," (xml_of_formula f)) forms ;
       Format.fprintf fmt "</%s>" side
     in
-      Format.fprintf fmt "@[<><sequent><level>%d</level>@,@[<hov 2>" seq.lvl ;
-      print_side "lhs" seq.lhs ;
-      Format.fprintf fmt "@," ;
-      print_side "rhs" seq.rhs ;
-      Format.fprintf fmt "@]</sequent>@]"
+    let isFocused seq =
+      let check (Formula(_,(ann,f))) = ann.FOA.control = FOA.Focused in
+      (List.exists check seq.lhs) || (List.exists check seq.rhs)
+    in
+    Format.fprintf fmt "@[<><sequent><level>%d</level>@,@[<hov 2>" seq.lvl ;
+    print_side "lhs" seq.lhs ;
+    Format.fprintf fmt "@," ;
+    print_side "rhs" seq.rhs ;
+    Format.fprintf fmt "<focused>%b</focused>" (isFocused seq) ;
+    Format.fprintf fmt "@]</sequent>@]"
 
   let xml_of_sequent seq =
     ppxml_sequent Format.str_formatter seq ; Format.flush_str_formatter ()
@@ -386,7 +398,8 @@ struct
                                        (FOA.FixpointFormula
                                           (ind,head,argnames,f'))
                                | None ->
-                                  (O.warning ("unbound atom '" ^ head ^ "'.\n");
+                                  (if not (FOA.isSpecialAtom head) then
+                                    O.warning ("unbound atom '" ^ head ^ "'.\n") ;
                                   f)
                        end
                    | _ ->
@@ -410,13 +423,12 @@ struct
         let formula' = abstractDefinition [name] formula in
         let result = FOA.Definition(name, ids, formula', ind) in
         if not (checkMonotonicity formula') then
-          O.output (Printf.sprintf
-            "Warning: %s: non-monotonic definition.\n"
+          O.warning (Printf.sprintf
+            "%s: non-monotonic definition.\n"
             name) ;
         Some result
       in
-
-        List.map processPreDefinition predefs
+      List.map processPreDefinition predefs
     in
     
     (******************************************************************
