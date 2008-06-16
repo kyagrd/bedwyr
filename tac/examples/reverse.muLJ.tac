@@ -25,7 +25,6 @@ focl.
 axiom.
 axiom.
 mu_l.
-% TODO async loops.
 then(or_l,simplify).
 then(mu_r,right).
 focr.

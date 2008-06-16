@@ -443,7 +443,7 @@ struct
               begin match FOA.fullApply [var] f with
                 | Some f' ->
                     sc "nabla_l"
-                      [{ seq with lvl=lvl' ; lhs = zip [Formula({i with context = i'}, f')] }]
+                      [{ seq with lvl=lvl' ; lhs = zip [Formula({(*i with*) context = i'}, f')] }]
                 | _ -> fc ()
               end
         | _,FOA.QuantifiedFormula _ -> assert false
@@ -726,7 +726,7 @@ struct
               begin match FOA.fullApply [var] f with
                 | Some f' ->
                     sc "nabla_r"
-                      [{ seq with lvl=lvl' ; rhs = zip [Formula({i with context = i'},f')] }]
+                      [{ seq with lvl=lvl' ; rhs = zip [Formula({(*i with*) context = i'},f')] }]
                 | _ -> fc ()
               end
         | _,FOA.QuantifiedFormula _ -> assert false
@@ -1658,23 +1658,15 @@ struct
 
   (********************************************************************
   *asyncTactical:
-  * Just performs a single round of finite 
+  * Just performs a single round of finite.
+  * The bounds have to be set before, cause they won't be installed
+  * by the rest of the prove tactic.
   ********************************************************************)
   and asyncTactical session args =
-    match args with
-        [] ->
-          G.thenTactical
-            (setBound session (Properties.getInt "firstorder.defaultasyncbound") 0)
-            (G.thenTactical
-              (finite session)
-              clearBounds)
-      | [Absyn.String(s)] ->
-          G.thenTactical
-            (setBound session (intToStringDefault s 0) 0)
-            (G.thenTactical
-              (finite session)
-              clearBounds)
-      | _ -> G.invalidArguments "async"
+    let setAsyncBound seqs sc fc =
+      sc (List.map resetAsyncBound seqs) [] (fun x -> x) fc
+    in
+      G.thenTactical setAsyncBound (G.thenTactical (finite session) clearBounds)
 
   (** Complete focused proof-search starting with a decide rule. *)
   (********************************************************************
