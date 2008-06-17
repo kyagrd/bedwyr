@@ -6,7 +6,7 @@
 
 ; Grab the output from taci.  Assumes that perl is installed; would be better not to need it.
 !system '..\bin\taci --version | perl -pe "s/Taci version/!define VERSION/" > version.nsh'
-!include version.nsh
+!include "version.nsh"
 
 ; Installer Name:
 Name "Tac"
@@ -15,7 +15,7 @@ Name "Tac"
 OutFile "Tac-${VERSION}.exe"
 
 ; The default installation directory
-InstallDir $PROGRAMFILES\Tac
+InstallDir "$PROGRAMFILES\Tac"
 
 ; Registry key to check for directory (so if you install again, it will 
 ; overwrite the old one automatically)
@@ -32,17 +32,13 @@ RequestExecutionLevel admin
 !define MUI_FINISHPAGE_TEXT "Tac has been installed successfully. The directory '$INSTDIR\bin' has been added to your path."
 !insertmacro MUI_PAGE_FINISH
 
-
 !insertmacro MUI_UNPAGE_CONFIRM
 !insertmacro MUI_UNPAGE_INSTFILES
-
 
 ;----------------------------------------------------------------------
 ;Languages
 ;----------------------------------------------------------------------
-
 !insertmacro MUI_LANGUAGE "English"
-
 
 ;----------------------------------------------------------------------
 ; Files to Install
