@@ -251,7 +251,7 @@ struct
       | [] -> fc ()
       | Formula(i',(_,FOA.ApplicationFormula(FOA.AtomicFormula p',params')))
         ::formulas ->
-          if p=p' && (i=i' || not Param.strictNabla) then
+          if p=p' && (i.context=i'.context || not Param.strictNabla) then
             begin match FOA.unifyList FOA.rightUnify params params' with
               | FOA.UnifySucceeded bind ->
                   sc (fun () -> FOA.undoUnify bind ; attempts formulas)
@@ -279,7 +279,8 @@ struct
     let rec attempts = function
       | [] -> fc ()
       | Formula(i',(_,FOA.ApplicationFormula(p',params')))::formulas ->
-          if fixpointEq p p' && (i=i' || not Param.strictNabla) then
+          if fixpointEq p p' &&
+             (i.context=i'.context || not Param.strictNabla) then
             begin match FOA.unifyList FOA.rightUnify params params' with
               | FOA.UnifySucceeded bind ->
                   sc (fun () -> FOA.undoUnify bind ; attempts formulas)
@@ -387,6 +388,8 @@ struct
   type internal_sc =
     ?k:(unit -> unit) -> ?b:(Term.term list) -> string -> sequent list -> unit
 
+  let initial_progressing_bound = Some 10
+
   (** [intro] will be our do-it-all tactic: it takes a matcher, and applies
     * a rule with a matched formula as the active one.
     *
@@ -469,7 +472,7 @@ struct
                 | Some f' ->
                     sc "nabla_l"
                       [{ seq with lvl=lvl' ;
-                                  lhs = zip [Formula({(*i with*) context = i'},
+                                  lhs = zip [Formula({ i with context = i'},
                                                      f')] }]
                 | _ -> fc ()
               end
@@ -498,16 +501,25 @@ struct
               end
         | pol,FOA.ApplicationFormula (p,args) ->
             let arity = List.length args in
+            (* Induction steps consume the fixed point which makes it impossible
+             * to do them infinitly many times.
+             * On the other hand, fixed point unfoldings should be bounded.
+             * We make a distinction between progressing and non-progressing
+             * unfoldings: both can be done infinitely many times, but in
+             * pratice, progressing unfoldings are "less dangerous" and "more
+             * informative".
+             * Before we used to consume a so-called async_bound for every
+             * asynchronous unfolding, which was always progressing.
+             * Now the progressing_bound is decreased for any progressing
+             * unfolding while the normal bound is decreased otherwise. *)
             let unfoldFixpoint ruleName name args body argnames sc fc =
-              let async_bound,bound =
-                (if pol.FOA.control = FOA.Focused then
-                  seq.async_bound
-                else
-                  ( updateBound seq.async_bound )),
+              let i,bound =
                 if unfoldingProgresses argnames args then
+                  { i with
+                        progressing_bound = updateBound i.progressing_bound },
                   seq.bound
                 else
-                  updateBound seq.bound
+                  i, updateBound seq.bound
               in
               let pol =
                 { pol with FOA.control =
@@ -516,13 +528,11 @@ struct
                     else
                       pol.FOA.control }
               in
-              let seq =
-                { seq with bound = bound ; async_bound = async_bound }
-              in
+              let seq = { seq with bound = bound } in
               let mkseq f =
                 [{ seq with lhs = zip [Formula(i,f)] }]
               in
-              if outOfBound seq then
+              if outOfBound seq.bound || outOfBound i.progressing_bound then
                 fc ()
               else
                 unfoldFixpoint ruleName pol p arity args mkseq sc fc
@@ -573,9 +583,10 @@ struct
                               ~body ~argnames:onlynames ~s ~t:args
                           with
                             | Some (st,lvl',st',bst') ->
+                                let i' = { i with context = 0 } in
                                 let st   = Formula(i,st) in
-                                let st'  = makeFormula st' in
-                                let bst' = makeFormula bst' in
+                                let st'  = Formula(i',st') in
+                                let bst' = Formula(i',bst') in
                                 let seqs =
                                   [{ seq with lhs = zip [st] } ;
                                   { seq with lvl = lvl' ;
@@ -697,14 +708,18 @@ struct
                         let seq =
                           { seq with bound = updateBound seq.bound }
                         in
-                        if outOfBound seq then fc () else
+                        let i' =
+                          { (* i with *) context = 0 ;
+                            progressing_bound = initial_progressing_bound }
+                        in
+                        if outOfBound seq.bound then fc () else
                           let seq' = 
                             { seq with lvl = lvl' ;
-                                 lhs = [makeFormula bst'] ;
-                                 rhs = [makeFormula st'] }
+                                 lhs = [Formula (i',bst')] ;
+                                 rhs = [Formula (i',st')] }
                           in
-                          (*  TODO: check the other premise (in the proof
-                              builder, to save work).  *)
+                          (* TODO: check the other premise
+                           *  (in the proof builder, to save work).  *)
                           sc "induction" [seq']
                   end
               | FOA.AtomicFormula p ->
@@ -771,7 +786,9 @@ struct
               begin match FOA.fullApply [var] f with
                 | Some f' ->
                     sc "nabla_r"
-                      [{ seq with lvl=lvl' ; rhs = zip [Formula({(*i with*) context = i'},f')] }]
+                      [{ seq with
+                         lvl = lvl' ;
+                         rhs = zip [Formula({ i with context = i'},f')] }]
                 | _ -> fc ()
               end
         | _,FOA.QuantifiedFormula _ -> assert false
@@ -790,15 +807,13 @@ struct
             let arity = List.length args in
             (* TODO factor this out, I've cut/pasted too many times *)
             let unfoldFixpoint ruleName name args body argnames sc fc =
-              let async_bound,bound =
-                (if pol.FOA.control = FOA.Focused then
-                  seq.async_bound
-                else
-                  ( updateBound seq.async_bound )),
+              let i,bound =
                 if unfoldingProgresses argnames args then
+                  { i with
+                        progressing_bound = updateBound i.progressing_bound },
                   seq.bound
                 else
-                  updateBound seq.bound
+                  i, updateBound seq.bound
               in
               let pol =
                 { pol with FOA.control =
@@ -807,13 +822,11 @@ struct
                     else
                       pol.FOA.control }
               in
-              let seq =
-                { seq with bound = bound ; async_bound = async_bound }
-              in
+              let seq = { seq with bound = bound } in
               let mkseq f =
                 [{ seq with rhs = zip [Formula(i,f)] }]
               in
-              if outOfBound seq then
+              if outOfBound seq.bound || outOfBound i.progressing_bound then
                 fc ()
               else
                 unfoldFixpoint ruleName pol p arity args mkseq sc fc
@@ -824,12 +837,6 @@ struct
                   (* This is synchronous. *)
                   begin match arg with
                     | Some "unfold" ->
-                   if Properties.getBool "firstorder.proofsearchdebug" then
-                     Format.printf "%s@[<hov 2>Unfold right@ %s@]\n%!"
-                       (String.make
-                          (match seq.bound with Some b -> max 0 b | None -> 0)
-                          ' ')
-                       (string_of_formula (Formula(i,f))) ;
                         unfoldFixpoint "mu_r" name args body argnames sc fc
                     | Some "init" ->
                         fixpointInit i p args
@@ -863,9 +870,10 @@ struct
                               ~body ~argnames:onlynames ~s ~t:args
                           with
                             | Some (st,lvl',st',bst') ->
+                                let i'   = { i with context = 0 } in
                                 let st   = Formula(i,st) in
-                                let st'  = makeFormula st' in
-                                let bst' = makeFormula bst' in
+                                let st'  = Formula(i',st') in
+                                let bst' = Formula(i',bst') in
                                 let seqs =
                                   [{ seq with rhs = zip [st] } ;
                                   { seq with lvl = lvl' ;
@@ -879,8 +887,9 @@ struct
                     | None ->
                         if i.context <> 0 then
                           O.warning
-                            "induction or coinduction with non-zero generic contexts; \
-                            use 'abstract' first to avoid this problem.\n";
+                            "induction or coinduction with non-zero \
+                             generic contexts; \
+                             use 'abstract' first to avoid this problem.\n";
                         
                         let fresh n =
                           Term.fresh ~name:n ~ts:0 ~lts:0 ~tag:Term.Eigen
@@ -903,7 +912,8 @@ struct
                             | Formula(i,f)::l ->
                                { FOA.defaultAnnotation with
                                    FOA.polarity = FOA.Positive },
-                               FOA.BinaryFormula (FOA.And, handleNablas i.context f, s l)
+                               FOA.BinaryFormula
+                                 (FOA.And, handleNablas i.context f, s l)
                           in
                           s seq.lhs
                         in
@@ -970,12 +980,16 @@ struct
                         let seq =
                           { seq with bound = updateBound seq.bound }
                         in
-                          if outOfBound seq then fc () else
+                        let i' =
+                          { (* i with *) context = 0 ;
+                            progressing_bound = initial_progressing_bound }
+                        in
+                          if outOfBound seq.bound then fc () else
                             (*  TODO: check the other premise.  *)
                             sc "coinduction"
                               [{ seq with lvl = lvl' ;
-                                 lhs = [makeFormula st'] ;
-                                 rhs = [makeFormula bst'] }]
+                                 lhs = [Formula(i',st')] ;
+                                 rhs = [Formula(i',bst')] }]
                   end
               | FOA.AtomicFormula p ->
                   if p = "true" then sc "true" [] else
@@ -1279,7 +1293,7 @@ struct
       let abstract (Formula(i,form)) =
         let tv = List.map Term.nabla (n_downto_1 i.context) in
         let form = (FOA.eliminateNablas tv).FOA.polf form in
-        makeFormula form
+        Formula({ i with context = 0 },form)
       in
         { seq with lhs = List.map abstract seq.lhs ;
                    rhs = List.map abstract seq.rhs }
@@ -1343,7 +1357,8 @@ struct
       fun () -> Term.restore_state s
     in
       G.cutThenTactical restorer,
-      G.cutRepeatTactical restorer  
+      G.cutRepeatTactical restorer
+
   (** {1 Focusing strategy} *)
 
   (********************************************************************
@@ -1663,8 +1678,7 @@ struct
             lhs = freezeAll (List.append lemmas lhs');
             rhs = freezeAll rhs';
             lemma_bound = updateBound seq.lemma_bound;
-            bound = Some 1;
-            async_bound = Some 0}
+            bound = Some 1}
         in
         let make pb = fun proofs ->
           { rule = "introduce_lemmas" ;
@@ -1690,7 +1704,6 @@ struct
   * phase.
   ********************************************************************)
   and fullAsync session s sc fc =
-    let s = List.map resetAsyncBound s in
     cutThenTactical (finite session) (freeze session) s sc fc
 
   (* Freeze the first available asynchronous fixed point,
@@ -1733,8 +1746,7 @@ struct
                           (match seq.bound with Some b -> max 0 b | None -> 0)
                           ' ')
                        (string_of_formula (Formula(i,(a,f)))) ;
-                   automaticIntro session `Left match_inductable
-                     [resetAsyncBound seq])
+                   automaticIntro session `Left match_inductable [seq])
                 async)
              [(* No arguments *)] sc fc
        | None ->
@@ -1747,8 +1759,7 @@ struct
                           rhs = before@[Formula(i,(FOA.freeze a,f))]@after }])
                    (cutThenTactical
                      (fun _ ->
-                        automaticIntro session `Right match_coinductable
-                          [resetAsyncBound seq])
+                        automaticIntro session `Right match_coinductable [seq])
                      async)
                    [(*no args*)] sc fc
              | None ->
@@ -1759,15 +1770,14 @@ struct
 
   (********************************************************************
   *asyncTactical:
-  * Just performs a single round of finite.
+  * Just performs a single round of finite, for manual use outside "prove".
   * The bounds have to be set before, cause they won't be installed
   * by the rest of the prove tactic.
   ********************************************************************)
   and asyncTactical session args =
-    let setAsyncBound seqs sc fc =
-      sc (List.map resetAsyncBound seqs) [] (fun x -> x) fc
-    in
-      G.thenTactical setAsyncBound (G.thenTactical (finite session) clearBounds)
+    G.thenTactical
+      (setBoundTactical session args)
+      (G.thenTactical (finite session) clearBounds)
 
   (** Complete focused proof-search starting with a decide rule. *)
   (********************************************************************
@@ -1791,13 +1801,13 @@ struct
     in
     if Properties.getBool "firstorder.lemmabound" then
       if
-        not (lemmaOutOfBound seq) && not (Listutils.empty (session.lemmas))
+        not (outOfBound seq.lemma_bound || Listutils.empty (session.lemmas))
       then
         (introduceLemmas session [seq']
           sc
           focuser)
       else
-        (O.debug "Lemma bound exceeded.\n";
+        (O.debug "Lemma bound exceeded, or no lemma to try.\n";
         focuser ())
     else
       focuser ()
@@ -1831,11 +1841,18 @@ struct
   * Sets the synchronous and lemma bounds.
   ********************************************************************)
   and setBound session syncBound lemmaBound =
+    let set (Formula (i,f)) =
+      Formula ({ i with progressing_bound = initial_progressing_bound },f)
+    in
     fun seqs sc fc ->
       match seqs with
        | (seq::tl) ->
           let seq' =
-            [{seq with bound = Some syncBound; lemma_bound = Some lemmaBound}]
+            [{seq with
+                bound = Some syncBound;
+                lemma_bound = Some lemmaBound;
+                lhs = List.map set seq.lhs ;
+                rhs = List.map set seq.rhs }]
           in
           sc seq' tl (fun proofs -> proofs) fc
        | [] -> fc ()
@@ -1847,9 +1864,13 @@ struct
   * builder, as we hide extra-logical things like bounds in the proof.
   ********************************************************************)
   and clearBounds =
+    let unset (Formula (i,f)) =
+      Formula ({ i with progressing_bound = None },f)
+    in
     fun seqs sc fc ->
       let clear seq =
-        {seq with bound = None; async_bound = None; lemma_bound = None}
+        { seq with bound = None; lemma_bound = None ;
+           lhs = List.map unset seq.lhs ; rhs = List.map unset seq.rhs }
       in
       sc (List.map clear seqs) [] (fun proofs -> proofs) fc
 

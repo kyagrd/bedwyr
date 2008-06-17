@@ -16,7 +16,7 @@
       append T1 L2 T3)".
 
 #define
-  "reverse {L1} {L2} :=
+  "reverse {L1} L2 :=
     (L1 = nil, L2 = nil); 
     (sigma H\ T\ RT\
       L1 = cons H T, reverse T RT, append RT (cons H nil) L2)".

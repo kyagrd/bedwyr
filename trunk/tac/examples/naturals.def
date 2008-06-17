@@ -24,7 +24,7 @@
     (sigma xp\dp\ x=(s xp), d=(s(s dp)), double xp dp)".
 
 #define
-  "ack {m} n a :=
+  "ack m n a :=
      (m = o, a = s n);
      (sigma p\ n = o, m = s p, ack p (s o) a);
      (sigma p\q\b\ m = s p, n = s q, ack m q b, ack p b a)".

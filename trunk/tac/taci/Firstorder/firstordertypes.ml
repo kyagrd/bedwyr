@@ -36,7 +36,7 @@ sig
   * Represent formulae in sequents.  Formulae consist of a local
   * context level and an abstract syntax formula.
   ********************************************************************)
-  type formula_annotation = {context : int}
+  type formula_annotation = {context : int ; progressing_bound : int option}
   type formula =
     Formula of (formula_annotation * (Firstorderabsyn.annotation Firstorderabsyn.polarized))
   
@@ -45,8 +45,7 @@ sig
   * A sequent has a left and right side, each a list of formulas, along
   * with an index approximating its signature (set of eigenvariables).
   * Additionally, there are three bounds: bound is the maximum number
-  * of synchronous stages to do, async_bound is the maximum number of
-  * asynchronous 'progressing' unfoldings to perform, and lemma_bound
+  * of synchronous stages to do, and lemma_bound
   * is the number of times to introduce lemmas.
   ********************************************************************)
   type sequent = {
@@ -54,7 +53,6 @@ sig
     lhs : formula list ;
     rhs : formula list ;
     bound : int option ;
-    async_bound : int option ;
     lemma_bound : int option ;
   }
 
@@ -128,9 +126,7 @@ sig
   val parseTerm : string -> Term.term option
 
   val updateBound : int option -> int option
-  val resetAsyncBound : sequent -> sequent
-  val outOfBound : sequent -> bool
-  val lemmaOutOfBound : sequent -> bool
+  val outOfBound  : int option -> bool
   
   val makeExistentialVar : string -> int -> int -> (int * Term.term)
   val makeUniversalVar : string -> int -> int -> (int * Term.term)
@@ -158,14 +154,19 @@ sig
   val focusFormula : formula -> formula
   val freezeFormula : formula -> formula
   
-  val makeFormula : Firstorderabsyn.annotation Firstorderabsyn.polarized -> formula
+  val makeFormula :
+    Firstorderabsyn.annotation Firstorderabsyn.polarized -> formula
 end
 
 module Types (O : Output.Output) =
 struct
   module FOA = Firstorderabsyn
 
-  type formula_annotation = {context : int}
+  type formula_annotation = {
+    context : int ;
+    progressing_bound : int option
+  }
+
   type formula =
     Formula of (formula_annotation * (Firstorderabsyn.annotation Firstorderabsyn.polarized))
   
@@ -174,7 +175,6 @@ struct
     lhs : formula list ;
     rhs : formula list ;
     bound : int option ;
-    async_bound : int option ;
     lemma_bound : int option ;
   }
 
@@ -552,23 +552,8 @@ struct
     | None -> None
     | Some b -> Some (b-1)
 
-  let resetAsyncBound s =
-    { s with async_bound =
-      (if Properties.getBool "firstorder.asyncbound" then
-        Some (Properties.getInt "firstorder.defaultasyncbound")
-      else
-        None)}
-
   let outOfBound seq =
-    (match seq with
-       | { bound = Some b } -> b<0 | { bound = None } -> false) ||
-    (match seq with
-       | { async_bound = Some b } -> b<0 | { async_bound = None } -> false)
-
-  let lemmaOutOfBound seq =
-    (match seq with
-       | { lemma_bound = Some b } -> b <= 0
-       | { lemma_bound = None } -> assert false)
+    match seq with Some b when b < 0 -> true | _ -> false
 
   (********************************************************************
   *makeExistentialVar/makeUniversalVar/makeNablaVar:
@@ -642,6 +627,6 @@ struct
     let ann' = (m1 arg) in
     m2 (ann', f)
 
-  let makeFormula f = Formula({context = 0}, f)
+  let makeFormula f = Formula ({context = 0 ; progressing_bound = None}, f)
 
 end
