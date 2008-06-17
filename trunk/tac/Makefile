@@ -18,8 +18,7 @@ tools/tactex: tools
 test: taci/taci
 	@echo Testing: ; \
 	cd examples && for t in $(TEST) ; do \
-	  echo "  $$t..." ; \
-	  echo -n "    " ; \
+	  printf "  $$t...\t" ; \
 	  ../taci/taci --logic muLJ --batch $$t || exit 1 ; \
 	done
 
