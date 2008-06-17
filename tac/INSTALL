@@ -35,8 +35,10 @@ Building Tac on Linux:
 
 Building Tac on Windows XP:
   The easiest way is to build Tac on Windows XP is using Microsoft Visual
-  Studio 2005 along with the included solution "tac/tac.sln".
+  Studio 2005 along with the included solution "/tac/tac.sln".
 
+  For information about building the installer, see "/tac/installer/README".
+  
   Dependencies:
     Microsoft Visual Studio 2008    http://www.microsoft.com/express
     O'Caml                          http://caml.inria.fr
@@ -65,7 +67,8 @@ Building Tac on Windows XP:
     executables will be copied to the directory "/tac/bin".
 
     Note: Ocamake doesn't worry about 'inconsistency' violations when
-    determining what to recompile.  Therefore sometimes when building taci
-    you will get an error from O'Caml complaining that it can't link.  If
-    this occurs just run the script "/tac/taci/clean.bat" and recompile.
-  
+    determining what to recompile.  Therefore sometimes when building Tac
+    in Microsoft Visual Studio 2008 you will get an error from O'Caml
+    complaining that it can't link.  If this occurs just run the script
+    "/tac/taci/clean.bat" (and possibly the "/tac/logics_gen/clean.bat")
+    and recompile.

@@ -28,6 +28,14 @@ namespace StickyTaci
   {
     private string m_Line = "";
 
+    public string ApplicationPath
+    {
+      get
+      {
+        return Path.GetDirectoryName(Application.ExecutablePath);
+      }
+    }
+
     public string CurrentLogic
     {
       get
@@ -213,7 +221,7 @@ namespace StickyTaci
 
     public void OnShown()
     {
-      StartTaci(Application.StartupPath + "/taci.exe", "firstorder");
+      StartTaci(Path.Combine(ApplicationPath, "taci.exe"), "muLJ");
     }
 
     private bool SaveMessage()

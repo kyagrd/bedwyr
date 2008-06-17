@@ -287,9 +287,10 @@ namespace StickyTaci
     public IdeForm(IdeCtrl ctrl)
     {
       InitializeComponent();
+      m_Ctrl = ctrl;
 
-      m_ComputingImage = Image.FromFile("Data/CurrentLineBusy.bmp");
-      m_NotComputingImage = Image.FromFile("Data/CurrentLine.bmp");
+      m_ComputingImage = Image.FromFile(Path.Combine(Ctrl.ApplicationPath, "Data/CurrentLineBusy.bmp"));
+      m_NotComputingImage = Image.FromFile(Path.Combine(Ctrl.ApplicationPath, "Data/CurrentLine.bmp"));
       m_CurrentLineImage = m_NotComputingImage;
 
       currentLineImagePanel.Paint += new PaintEventHandler(currentLineImagePanel_Paint);
@@ -304,7 +305,7 @@ namespace StickyTaci
       //Scintilla.KeyDown += new KeyEventHandler(Scintilla_KeyDown);
       Scintilla.SavePointReached += new EventHandler(Scintilla_SavePointReached);
       Scintilla.SavePointLeft += new EventHandler(Scintilla_SavePointLeft);
-      Scintilla.ConfigurationManager.CustomLocation = "Data\\tac.xml";
+      Scintilla.ConfigurationManager.CustomLocation = Path.Combine(Path.GetDirectoryName(Application.ExecutablePath), "Data/tac.xml");
       Scintilla.ConfigurationManager.Language = "taci";
       Scintilla.Margins.Margin0.Width = 20;
       Scintilla.Margins.Margin1.Width = 0;
@@ -313,8 +314,7 @@ namespace StickyTaci
       Scintilla.Indentation.UseTabs = false;
       Scintilla.IsBraceMatching = true;
 
-      m_Ctrl = ctrl;
-
+      
       mainMenuEdit.DropDownOpening += new EventHandler(mainMenuEdit_DropDownOpening);
       mainMenuTacTacticals.DropDownOpening += new EventHandler(mainMenuTacTacticals_DropDownOpening);
       mainMenuTacTacticals.DropDownItems.Add("*dummy*");
