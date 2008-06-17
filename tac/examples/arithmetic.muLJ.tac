@@ -30,7 +30,7 @@ prove.
 #theorem test_ack "sigma a\ ack (s (s o)) (s (s o)) a, a = a".
 sigma.
 and.
-prove.
+prove("10").
 % If you're curious to see the result.
 eq.
 % Qed.
@@ -49,8 +49,8 @@ induction(
 prove.
 % Invariance.
 async.
-% n=0 is easy.
 prove.
-% give it a push for the successor case.
-then(and,prove).
+and.
+prove.
+prove.
 % Qed.

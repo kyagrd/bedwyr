@@ -56,5 +56,10 @@ prove.
 #theorem simple_trap "pi x\ equal x (cons foo x) => false".
 prove.
 
-% TODO the same with delayeq would loop,
-% just as trying to prove sigma x\ equal x (cons foo x).
+#theorem other_trap "pi x\ delayeq x (cons foo x) => false".
+prove.
+
+% Also check that prove doesn't loop on:
+% #theorem check "sigma x\ equal x (cons foo x)".
+% prove.
+

@@ -251,9 +251,8 @@ struct
                   proof_namespace = proofNamespace ;
                   builder = Logic.idProofBuilder ;
                   sequents = [{ bound = None ;
-                                async_bound = None ;
                                 lemma_bound = None ;
-                                lvl=0 ; lhs=[] ; rhs=[Formula({context = 0}, f)] }] ;
+                                lvl=0 ; lhs=[] ; rhs=[makeFormula f] }] ;
                   theorem_name = Some name;
                   theorem = Some f}
         | None -> session
