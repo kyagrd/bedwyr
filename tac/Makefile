@@ -16,9 +16,10 @@ tools/tactex: tools
 
 
 test: taci/taci
-	@cd examples && for t in $(TEST) ; do \
-	  echo Testing $$t... ; \
-	  echo -n "  " ; \
+	@echo Testing: ; \
+	cd examples && for t in $(TEST) ; do \
+	  echo "  $$t..." ; \
+	  echo -n "    " ; \
 	  ../taci/taci --logic muLJ --batch $$t || exit 1 ; \
 	done
 
