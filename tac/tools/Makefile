@@ -1,2 +1,2 @@
 all:
-  ocamlc xml-light.cma str.cma tactex.ml -o tactex
+	ocamlc -I +xml-light xml-light.cma str.cma tactex.ml -o tactex

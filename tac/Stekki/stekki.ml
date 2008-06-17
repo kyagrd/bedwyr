@@ -69,9 +69,9 @@ let window =
      * Thanks to the de-uglification guide for the style:
      * http://matt.gushee.net/rg/items/4 *)
     Encoding.system_set "utf-8" ;
-    ignore (get_font "guifont" ~size:8
+    ignore (get_font "guifont" ~size:10
               ["sans"; "verdana"; "lucida"; "bitstream vera sans"]) ;
-    ignore (get_font "textfont" ~size:9
+    ignore (get_font "textfont" ~size:11
               ["lettergothic"; "lucida typewriter";
                "bitstream vera sans mono"; "courier"]) ;
 
