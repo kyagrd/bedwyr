@@ -468,7 +468,9 @@ struct
               begin match FOA.fullApply [var] f with
                 | Some f' ->
                     sc "nabla_l"
-                      [{ seq with lvl=lvl' ; lhs = zip [Formula({(*i with*) context = i'}, f')] }]
+                      [{ seq with lvl=lvl' ;
+                                  lhs = zip [Formula({(*i with*) context = i'},
+                                                     f')] }]
                 | _ -> fc ()
               end
         | _,FOA.QuantifiedFormula _ -> assert false
@@ -534,7 +536,8 @@ struct
                         if Properties.getBool "firstorder.proofsearchdebug" then
                           Format.printf "%s@[<hov 2>Unfold left@ %s@]\n%!"
                             (String.make
-                               (match seq.bound with Some b -> max 0 b | None -> 0)
+                               (match seq.bound with
+                                  | Some b -> max 0 b | None -> 0)
                                ' ')
                             (string_of_formula (Formula(i,f))) ;
                         unfoldFixpoint "nu_l" name args body argnames sc fc
@@ -586,8 +589,9 @@ struct
                     | None ->
                         if i.context <> 0 then
                           O.warning
-                            "induction or coinduction with non-zero generic contexts; \
-                            use 'abstract' first to avoid this problem.\n";
+                            "induction or coinduction with non-zero \
+                             generic contexts; \
+                             use 'abstract' first for better results.\n";
 
                         let fresh n =
                           Term.fresh ~name:n ~ts:0 ~lts:0 ~tag:Term.Eigen
@@ -600,7 +604,8 @@ struct
                             | (Formula(i,pf))::l -> 
                                 { FOA.defaultAnnotation
                                   with FOA.polarity = FOA.Negative },
-                                FOA.BinaryFormula (FOA.Or, handleNablas i.context pf, s l)
+                                FOA.BinaryFormula
+                                  (FOA.Or, handleNablas i.context pf, s l)
                           in s seq.rhs
                         in
                         let lrhs =
@@ -608,7 +613,10 @@ struct
                           let rec s = function
                             | [] -> rhs
                             | Formula(i,f')::l -> 
-                                if Properties.getString "firstorder.frozens" = "ignore" &&
+                                let frozens =
+                                  Properties.getString "firstorder.frozens"
+                                in
+                                if frozens = "ignore" &&
                                   (fst f').FOA.freezing = FOA.Frozen then
                                   (s l)
                                 else
@@ -617,17 +625,19 @@ struct
                                       FOA.polarity = FOA.Negative }
                                   in
                                   let f'' =
-                                    if Properties.getString "firstorder.frozens" = "thaw" then
+                                    if frozens = "thaw" then
                                       FOA.changeAnnotation FOA.thaw f'
                                     else
                                       f'
                                   in
-                                  handleNablas i.context (ann, FOA.BinaryFormula(FOA.Imp, f'', s l))
+                                  handleNablas i.context
+                                    (ann, FOA.BinaryFormula(FOA.Imp, f'', s l))
                           in
                           s (zip [])
                         in
                         let fv,elrhs =
-                          (* Essentially form fv1\..fvn\ fv1=arg1 => .. fvn=argn => lrhs *)
+                          (* Essentially form
+                           *   fv1\..fvn\ fv1=arg1 => .. fvn=argn => lrhs *)
                           let rec e lan la =
                             match lan,la with
                               | [],[] -> [], lrhs 
@@ -659,9 +669,15 @@ struct
                             elrhs getenv
                         in
                         let aelrhs' =
-                          if Properties.getBool "firstorder.induction-unfold" then
-                            let (ann,_) = aelrhs in
-                            (ann, FOA.BinaryFormula(FOA.And, (FOA.changeAnnotation FOA.freeze f), aelrhs))
+                          if
+                            Properties.getBool "firstorder.induction-unfold"
+                          then
+                            let f = FOA.ApplicationFormula (p,List.rev fv) in
+                            let f = { FOA.defaultAnnotation with
+                                        FOA.polarity = FOA.Positive ;
+                                        FOA.freezing = FOA.Frozen },f in
+                              FOA.positiveFormula
+                                (FOA.BinaryFormula(FOA.And,f,aelrhs))
                           else
                             aelrhs
                         in
@@ -926,9 +942,15 @@ struct
                             elrhs getenv
                         in
                         let aelrhs' =
-                          if Properties.getBool "firstorder.coinduction-unfold" then
-                            let (ann,_) = aelrhs in
-                            (ann, FOA.BinaryFormula(FOA.And, (FOA.changeAnnotation FOA.freeze f), aelrhs))
+                          if
+                            Properties.getBool "firstorder.coinduction-unfold"
+                          then
+                            let f = FOA.ApplicationFormula (p,List.rev fv) in
+                            let f = { FOA.defaultAnnotation with
+                                        FOA.polarity = FOA.Negative ;
+                                        FOA.freezing = FOA.Frozen },f in
+                              FOA.positiveFormula
+                                (FOA.BinaryFormula(FOA.Or,f,aelrhs))
                           else
                             aelrhs
                         in
