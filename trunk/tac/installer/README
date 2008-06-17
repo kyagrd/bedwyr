@@ -1,0 +1,22 @@
+===============================================================================
+
+Tac::Installer
+
+===============================================================================
+
+Requirements:
+  To create the Windows installer you must have NSIS installed.  It is available
+  at http://nsis.sourceforge.net/.
+
+  Additionally, you must have perl installed.  One implementation of perl is
+  available at http://www.activestate.com/.
+
+Building the Installer:
+  First, verify that the required software is installed; in particular make
+  sure that perl is on your PATH.
+  
+  Next, build the system using Microsoft Visual Studio 2008; for information
+  on building the system see "/tac/INSTALL".
+
+  Finally, right-click on "/tac/installer/tac.nsi" and select "Compile NSIS Script".
+
