@@ -18,6 +18,10 @@
   (sigma y\ x = cons y nil);
   (sigma c1\ c2\ xs1\ xs2\
     x = cons c1 xs1,
-    xs = cons c2 xs2,
+    xs1 = cons c2 xs2,
     leq c1 c2,
     sorted xs1)".
+
+#define "sort x y :=
+  (x = nil, y = nil) ;
+  (sigma hd\tl\stl\ x = cons hd tl, sort tl stl, insert hd stl y)".
