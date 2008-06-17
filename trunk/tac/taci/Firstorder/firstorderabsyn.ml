@@ -693,7 +693,10 @@ let leftUnify a b =
 * Given a 2 lists of terms, attempts to unify each term in the first
 * list with the corresponding term in the second using the passed
 * unification function.  If the lists are of different lengths it fails.
-* If any unification fails it fails.
+* If any unification fails it fails.  After a call to unifyList,
+* the term state is in a valid state: either the unify succeeded, and
+* the state before unification is returned for later restoration, or
+* the term state remains unchanged.
 **********************************************************************)
 let unifyList unifier l1 l2 =
   let state = Term.save_state () in
@@ -702,10 +705,10 @@ let unifyList unifier l1 l2 =
         (l1hd::l1tl, l2hd::l2tl) ->
           (match (unifier l1hd l2hd) with
               UnifySucceeded(_) -> unify l1tl l2tl
-            | UnifyFailed -> UnifyFailed
-            | UnifyError _ as u -> u)
+            | (UnifyFailed as u)
+            | (UnifyError _ as u) -> (Term.restore_state state; u))
       | ([],[]) -> UnifySucceeded(state)
-      | (_,_) -> UnifyFailed
+      | (_,_) -> (Term.restore_state state; UnifyFailed)
   in
   unify l1 l2
 
