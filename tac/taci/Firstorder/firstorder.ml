@@ -102,7 +102,10 @@ struct
   let string_of_sequent_rhs seq =
     let bottom    = String.concat "\n" (List.map string_of_formula seq.rhs) in
     let separator = String.make (max (min (String.length bottom) 72) 16) '-' in
-      Printf.sprintf "%d: %s\n%s" seq.lvl separator bottom
+      if Properties.getBool "firstorder.proofsearchdebug" then
+        Printf.sprintf "%d: %s\n%s" seq.lvl separator bottom
+      else
+        Printf.sprintf " %s\n%s" separator bottom
   
   let sequents session = session.sequents
   let validSequent session = [] <> session.sequents
