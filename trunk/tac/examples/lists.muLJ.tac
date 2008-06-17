@@ -28,6 +28,14 @@ prove.
   "pi x\ y\ list x, list y, append x nil y => equal x y".
 prove.
 
+#set "firstorder.lemmabound" "true".
+
+#theorem sublist_refl "pi x\ list x => sublist x x".
+prove.
+% Qed.
+
+#set "firstorder.lemmabound" "false".
+
 #theorem append_assoc
   "pi x\ y\ z\ xy\ yz\ xy_z\ x_yz\ list x => list y => list z =>
     (append x y xy, append xy z xy_z, append y z yz, append x yz x_yz)
@@ -45,11 +53,8 @@ prove.
 prove.
 % Qed.
 
-#theorem simple_trap "pi x\ equal x (s x) => false".
+#theorem simple_trap "pi x\ equal x (cons foo x) => false".
 prove.
 
-#set "firstorder.lemmabound" "true".
-
-#theorem sublist_refl "pi x\ list x => sublist x x".
-prove.
-% Qed.
+% TODO the same with delayeq would loop,
+% just as trying to prove sigma x\ equal x (cons foo x).
