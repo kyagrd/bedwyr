@@ -4,14 +4,17 @@ Tac::Building and Installing the Tac system
 
 ===============================================================================
 
+Note on StickyTaci and Stekki:
+  StickyTaci and Stekki are graphical interfaces to taci.  Unfortunately,
+  StickyTaci currently only works on Windows (XP and higher), and stekki can't
+  work on Windows.  See "/tac/StickyTaci/README" and "/tac/stekki/README" for
+  more information.  If you want to compile StickyTaci with Mono, see
+  "/tac/StickyTaci/INSTALL".
+
 Building Tac on Linux:
-  Requirements:
-    taci: O'Caml
-    logics_gen: O'Caml
-    StickyTaci: O'Caml, Mono
-      Note: Compiles and runs using Mono but does not run correctly.
-    Stekki: O'Caml, Labltk
-    ndcore: O'Caml
+  Dependencies:
+    O'Caml
+    Labltk
 
   Compiling:
     You first have to make sure that the ndcore library inside Bedwyr
@@ -24,38 +27,39 @@ Building Tac on Linux:
       tac $ make -C taci
       tac $ make -C Stekki
 
-    Building the tools requires that xml-light (available at
-    http://www.motion-twin.com) be in your path:
+    Building tactex requires that xml-light (available at
+    http://www.motion-twin.com) be installed somewhere that O'Caml can
+    find it.
 
       tac $ make -C tools
 
 Building Tac on Windows XP:
   The easiest way is to build Tac on Windows XP is using Microsoft Visual
-  Studio 2005 along with the included solution "tac/tac.sln".  This method
-  depends additionally on the tool Ocamake, which is provided at
-  "tac/util/ocamake.ml".
+  Studio 2005 along with the included solution "tac/tac.sln".
 
-  Requirements:
-    taci: O'Caml
-    logics_gen: O'Caml
-    StickyTaci: O'Caml, Microsoft Visual Studio 2008
-    Stekki: O'Caml, Labltk
-      Note: Compiles and runs but immediately throws an exception due
-      to the use of Unix pipes.
-    ndcore: O'Caml
+  Dependencies:
+    Microsoft Visual Studio 2008    http://www.microsoft.com/express
+    O'Caml                          http://caml.inria.fr
+    Ocamake*                        http://tech.motion-twin.com
+    Xml-Light                       http://tech.motion-twin.com
+
+    * Use the included ocamake.ml, as it has been patched to work with
+      Microsoft Visual 2008 project files.
 
   Compiling:
     First you must compile Ocamake and put it on your path.  The easiest
-    way to do this is to first compile it:
+    way to do this is to compile it as follows:
 
       ocamlc unix.cma str.cma ocamake.ml -o ocamake.exe
 
-    Place the generated executable in your path.  If you have already
+    Then, place the generated executable in your path.  If you have already
     installed O'Caml, a reasonable place to copy the generated executable
     is in the O'Caml /bin directory.
-    
+
+    Next, be sure that Xml-Light is installed somewhere that O'Caml can find
+    it.
+
     Next, simply open the provided solution and build it (Ctrl + Alt + F7).
     All components that can be built (namely, taci, logics_gen, StickyTaci,
-    ndcore, and the proof tools) will be built in the proper order. The
-    resulting executables will be copied to the directory "/tac/bin".
-    
+    ndcore, and tactex) will be built in the proper order. The resulting
+    executables will be copied to the directory "/tac/bin".
