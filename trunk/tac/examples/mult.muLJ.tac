@@ -1,4 +1,4 @@
-% Proof of the commutativity of plus.
+% Proof of the commutativity of mult.
 #open "naturals.def".
 #proof_output ".\".
 
@@ -20,3 +20,4 @@ prove.
   "pi x\ y\ z\
     (nat x, nat y, mult x y z) =>
     (mult y x z)".
+% TODO.
