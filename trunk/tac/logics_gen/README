@@ -1,22 +1,25 @@
+===============================================================================
+
 Tac::logics_gen
 
-  logics_gen is a simple code generator designed to ease the addition of
+===============================================================================
+
+logics_gen is a simple code generator designed to ease the addition of
 logics to the Tac system.  It takes as input a specially formatted
 logics definition file and generates an O'Caml module and interface.
 The generated files are intended to be compiled into taci along with the
 rest of the taci source code.  For more information about taci see
-"tac/taci/README"
+"/tac/taci/README"
 
-  When building the system using Microsoft Visual Studio one needs only
+When building the system using Microsoft Visual Studio 2008 one needs only
 to build the solution after editing the input file; the logics_gen program
 will then be automatically built, run on the default input file, and the
-outputs copied to the taci directory before taci itself is built.
+outputs copied to the correct directory before the rest of the system is
+built.
 
-  When building the system using the included makefiles, one needs only
-to invoke make as follows to compile logics_gen, run it on the default
-input file, and copy the output to the "tac/taci" directory:
-
-  logics_gen $ make -C logics_gen
+When building the system using the included makefile, logics_gen is
+automatically built and run on the default input file before compiling the
+rest of the system.
 
 Usage:
   logics_gen is invoked as follows:
@@ -24,21 +27,21 @@ Usage:
     logics_gen --input "filename" --output "modulename"
 
   The above command generates a module "modulename.ml" and an interface
-"modulename.mli" based on the input file "filename".  The input file
-must be in the format described below.
+  "modulename.mli" based on the input file "filename".  The input file
+  must be in the format described below.
   
 Input File Format:
   The format of the input file is quite simple.  It consists of a list
-of logics and outputs in any order.
+  of logics and outputs in any order.
 
   A logic is specified as follows:
 
     logic(keyword, module);
 
   In the above, the logic defined in "module" is added to taci under the
-keyword "keyword".  For example, given a linear logic defined in the module
-LinearLogic in the file linear.ml, one might add the following line in
-order to add the logic under keyword "ll".
+  keyword "keyword".  For example, given a linear logic defined in the module
+  LinearLogic in the file linear.ml, one might add the following line in
+  order to add the logic under keyword "ll".
 
     logic(ll, Linear.LinearLogic);
 
@@ -46,6 +49,6 @@ order to add the logic under keyword "ll".
 
     output(keyword, module);
 
-  C++ style line comments are allowed in the output file.  Note that this
-file is case sensitive.  The default logic file can be found at
-"tac/logics_gen/bin/logics.in".
+  C++ style line comments are allowed in the input file.  Note that this
+  file is case sensitive.  The default logic file can be found at
+  "/tac/logics_gen/bin/logics.in".
