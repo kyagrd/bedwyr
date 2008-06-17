@@ -65,7 +65,8 @@ struct
           (I.onEnd session;
           raise (Logic s))
     in
-    (*  Hackery so that the logic knows the names of all logics.  *)
+    (*  Hackery so that the logic knows the names of all logics, so that you
+        don't accidentally throw a Logic exception with a bad logic name.  *)
     let () = I.setLogics logics in
     let session = I.onStart () in
     

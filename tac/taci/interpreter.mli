@@ -21,7 +21,9 @@
 * Interpreter
 ***********************************************************************
 * This functor builds an interpreter that uses the given output for
-* writing and the given logic for reasoning.
+* writing and the given logic for reasoning.  The interpreter is
+* responsible for getting input from the user, parsing it, passing
+* relevant requests to the current logic for parsing.
 **********************************************************************)
 module type Interpreter =
 sig

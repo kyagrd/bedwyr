@@ -19,7 +19,7 @@
 (**********************************************************************
 * Absyn
 ***********************************************************************
-* Represents the abstract syntax parsed at the top level.  The top level
+* Represents the abstract syntax parsed at the top level.  The top-level
 * parser (module Toplevelparser) assumes that any quoted string is
 * "opaque" and will be later parsed by a particular logic's parser.
 **********************************************************************)

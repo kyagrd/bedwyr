@@ -16,4 +16,11 @@
 * along with this code; if not, write to the Free Software Foundation,*
 * Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA        *
 **********************************************************************)
+
+(**********************************************************************
+*Nologic:
+***********************************************************************
+* A really simple logic that does absolutely nothing; use this as a
+* skeleton if you want to implement a new logic 'from scratch'.
+**********************************************************************)
 module Nologic : functor (O : Output.Output) -> Logic.Logic

@@ -16,4 +16,11 @@
 * along with this code; if not, write to the Free Software Foundation,*
 * Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA        *
 **********************************************************************)
+(**********************************************************************
+*Propositional:
+***********************************************************************
+* This module implements a simple classical propositional logic.  It
+* supports the basic connectives and atoms; there's no support for
+* quantification, terms, or definitions.
+**********************************************************************)
 module Propositional : functor (O : Output.Output) -> Logic.Logic

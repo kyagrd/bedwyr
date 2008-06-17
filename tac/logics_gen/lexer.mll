@@ -20,6 +20,7 @@
   open Parser
   open Lexing
 
+  (*  trim: trims whitespace in a silly way...  *)
   let rec trim s =
     let l = String.length s in 
     if l = 0 then
