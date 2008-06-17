@@ -36,6 +36,9 @@ let printLogicInformation = ref false
 let printOutputInformation = ref false
 
 
+let printVersion () =
+  (print_endline ("Taci version " ^ (Properties.getString "taci.version"));
+  exit 0)
 
 (**********************************************************************
 *printHelp:
@@ -62,7 +65,9 @@ and speclist = [("-b", Arg.String(batchMode), "batch mode");
                 ("--logic", Arg.Set_string(logicName), "logic");
                 ("--logics", Arg.Set(printLogicInformation), "list logics");
                 ("--output", Arg.Set_string(outputName), "output");
-                ("--outputs", Arg.Set(printOutputInformation), "list outputs")]
+                ("--outputs", Arg.Set(printOutputInformation), "list outputs");
+                ("-v", Arg.Unit(printVersion), "print version information");
+                ("--version", Arg.Unit(printVersion), "print version information")]
 and usage = "Usage: taci --logic \"logic name\"\n\nOptions:"
 let parseArgs output =
     (Arg.parse speclist (fun s -> ()) usage)
