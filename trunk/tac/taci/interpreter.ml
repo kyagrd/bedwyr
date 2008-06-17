@@ -105,7 +105,8 @@ struct
     with
       Not_found -> None
 
-  let helpMessage = "Taci version " ^ (Properties.getString "taci.version") ^
+  (*  helpMessage: delay so that taci.version gets set; yuck! *)
+  let helpMessage () = "Taci version " ^ (Properties.getString "taci.version") ^
 "
 
 #clear.                     : Clear the screen.
@@ -133,12 +134,12 @@ struct
 #undo.                      : Undo.
 "
 
-  let startupMessage = "Welcome to " ^ helpMessage
+  let startupMessage () = "Welcome to " ^ (helpMessage ())
   let showHelp () =
-    (O.output (helpMessage ^ L.info))
+    (O.output ((helpMessage ()) ^ L.info))
 
   let showStartup () =
-    (O.output (startupMessage ^ L.start))
+    (O.output ((startupMessage ()) ^ L.start))
 
   (********************************************************************
   *Undo/Redo:
