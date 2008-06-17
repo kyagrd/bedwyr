@@ -63,3 +63,9 @@ Building Tac on Windows XP:
     All components that can be built (namely, taci, logics_gen, StickyTaci,
     ndcore, and tactex) will be built in the proper order. The resulting
     executables will be copied to the directory "/tac/bin".
+
+    Note: Ocamake doesn't worry about 'inconsistency' violations when
+    determining what to recompile.  Therefore sometimes when building taci
+    you will get an error from O'Caml complaining that it can't link.  If
+    this occurs just run the script "/tac/taci/clean.bat" and recompile.
+  
