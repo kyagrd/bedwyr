@@ -2,6 +2,8 @@
 ; Tac System Installer
 ;----------------------------------------------------------------------
 !include "MUI2.nsh"
+!include "LogicLib.nsh"
+!include "VersionCompare.nsh"
 !include "path.nsh"
 
 ; Grab the output from taci.  Assumes that perl is installed; would be better not to need it.
@@ -23,6 +25,38 @@ InstallDirRegKey HKLM "Software\Tac" "Install_Dir"
 
 ; Request application privileges for Windows Vista
 RequestExecutionLevel admin
+
+;----------------------------------------------------------------------
+; Functions to verify that .NET is installed.
+;----------------------------------------------------------------------
+Function GetDotNETVersion
+  Push $0
+  Push $1
+ 
+  System::Call "mscoree::GetCORVersion(w .r0, i ${NSIS_MAX_STRLEN}, *i) i .r1 ?u"
+  StrCmp $1 "error" 0 +2
+    StrCpy $0 "not found"
+ 
+  Pop $1
+  Exch $0
+FunctionEnd
+
+Function .onInit
+  Call GetDotNETVersion
+  Pop $0
+  ${If} $0 == "not found"
+    MessageBox MB_OK|MB_ICONSTOP "Tac requires the Microsoft .NET Framework version 2.0."
+    Abort
+  ${EndIf}
+ 
+  StrCpy $0 $0 "" 1 # skip "v"
+ 
+  ${VersionCompare} $0 "2.0" $1
+  ${If} $1 == 2
+    MessageBox MB_OK|MB_ICONSTOP "Tac requires the Microsoft .NET Framework version 2.0; version $0 is currently installed."
+    Abort
+  ${EndIf}
+FunctionEnd
 
 ;----------------------------------------------------------------------
 ; Pages

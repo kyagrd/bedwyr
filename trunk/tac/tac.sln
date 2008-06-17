@@ -43,6 +43,7 @@ Global
 		{A720FAD9-07CF-40EB-9F49-79CB50527CB8}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{A720FAD9-07CF-40EB-9F49-79CB50527CB8}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{A720FAD9-07CF-40EB-9F49-79CB50527CB8}.Release|Win32.ActiveCfg = Release|Any CPU
+		{A720FAD9-07CF-40EB-9F49-79CB50527CB8}.Release|Win32.Build.0 = Release|Any CPU
 		{E7390A1F-6CD3-4FFF-9A65-E3B147EE8222}.Debug|Any CPU.ActiveCfg = Debug|Win32
 		{E7390A1F-6CD3-4FFF-9A65-E3B147EE8222}.Debug|Mixed Platforms.ActiveCfg = Debug|Win32
 		{E7390A1F-6CD3-4FFF-9A65-E3B147EE8222}.Debug|Mixed Platforms.Build.0 = Debug|Win32
