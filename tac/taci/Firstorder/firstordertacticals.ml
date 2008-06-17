@@ -1322,7 +1322,9 @@ struct
           G.invalidArguments "examine"
         else
           fun sequents sc fc ->
-            O.output ("Pattern: " ^ (FOA.string_of_pattern_ast (Option.get p)) ^ ".\n");
+            O.output
+              (Printf.sprintf "Pattern: %s.\n"
+                 (FOA.string_of_pattern_ast (Option.get p))) ;
             sc [] sequents Logic.idProofBuilder fc
     | _ -> G.invalidArguments "examine"
 
@@ -1434,7 +1436,7 @@ struct
               (string_of_formula f) ;
           sc
             [{ seq with lhs = before @ [ focuser f ] @ after }]
-            (fun () -> tac_l (before@[f]) after seq sc (fc : unit -> unit) focuser fl fr b)
+            (fun () -> tac_l (before@[f]) after seq sc fc focuser fl fr b)
       | None ->
           if b then
             tac_r [] seq.rhs seq sc (fc : unit -> unit) focuser fl fr false
@@ -1638,7 +1640,9 @@ struct
     let freezeAll fs =
       List.map
         (fun (Formula(i,f)) ->
-          Formula(i, modifyFormulaAnnotations (composeModifiers freezer unfocusModifier) f))
+          Formula(i,
+                  modifyFormulaAnnotations
+                    (composeModifiers freezer unfocusModifier) f))
         fs
     in
     let lemmas =
@@ -1729,7 +1733,8 @@ struct
                           (match seq.bound with Some b -> max 0 b | None -> 0)
                           ' ')
                        (string_of_formula (Formula(i,(a,f)))) ;
-                   automaticIntro session `Left match_inductable [resetAsyncBound seq])
+                   automaticIntro session `Left match_inductable
+                     [resetAsyncBound seq])
                 async)
              [(* No arguments *)] sc fc
        | None ->
@@ -1742,7 +1747,8 @@ struct
                           rhs = before@[Formula(i,(FOA.freeze a,f))]@after }])
                    (cutThenTactical
                      (fun _ ->
-                        automaticIntro session `Right match_coinductable [resetAsyncBound seq])
+                        automaticIntro session `Right match_coinductable
+                          [resetAsyncBound seq])
                      async)
                    [(*no args*)] sc fc
              | None ->
@@ -1784,7 +1790,9 @@ struct
         fc
     in
     if Properties.getBool "firstorder.lemmabound" then
-      if not (lemmaOutOfBound seq) && not (Listutils.empty (session.lemmas)) then
+      if
+        not (lemmaOutOfBound seq) && not (Listutils.empty (session.lemmas))
+      then
         (introduceLemmas session [seq']
           sc
           focuser)
@@ -1806,9 +1814,11 @@ struct
     assert (List.length seqs = 1) ;
     sync_step session seqs
       (fun n o b k ->
-         G.iterateTactical (syncTactical session) (List.append n o) (* succeeds on n@o=[] *)
+         G.iterateTactical
+           (syncTactical session)
+           (List.append n o) (* succeeds on n@o=[] *)
            (fun n' o' b' k' ->
-              assert (n'=[] && o'=[]) ;        (* syncTactical is a complete tactic *)
+              assert (n'=[] && o'=[]) ; (* syncTactical is a complete tactic *)
               sc [] [] (fun l -> b (b' l)) k') (* expect l = [] *)
            k)
       (fun () ->
@@ -1911,7 +1921,9 @@ struct
   let cutLemmaTactical session args = match args with
       Absyn.String(s)::[] ->
         (try
-          let (_,formula,proof) = List.find (fun (s',_,_) -> s = s') session.lemmas in
+          let (_,formula,proof) =
+            List.find (fun (s',_,_) -> s = s') session.lemmas
+          in
           let formula' = makeFormula formula in
           let pretactic = fun sequent sc fc ->
             let seq = { sequent with lhs = sequent.lhs @ [formula'] } in
@@ -1954,7 +1966,9 @@ struct
       in
       
       (try
-        let (_,formula,proof) = List.find (fun (s',_,_) -> lemma = s') session.lemmas in
+        let (_,formula,proof) =
+          List.find (fun (s',_,_) -> lemma = s') session.lemmas
+        in
         let formula' = makeFormula (select formula) in
         let pretactic = fun sequent sc fc ->
           let seq = { sequent with lhs = sequent.lhs @ [formula'] } in
