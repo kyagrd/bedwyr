@@ -105,6 +105,9 @@
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
+				Description="Compiling tools..."
+				CommandLine="ocamake xml-light.cma str.cma tactex.ml -epp -o $(SolutionDir)bin\tactex.exe"
+				Outputs="none"
 			/>
 			<Tool
 				Name="VCXMLDataGeneratorTool"
@@ -138,6 +141,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				LinkIncremental="1"
+				GenerateManifest="false"
 				GenerateDebugInformation="true"
 				SubSystem="1"
 				OptimizeReferences="2"
