@@ -98,8 +98,8 @@ let window =
     Option.add ~path:"*Listbox.selectBorderWidth" "0";
     Option.add ~path:"*Listbox.selectBackground" "#0000a0";
     Option.add ~path:"*Listbox.selectForeground" "#ffffff";
-    Option.add ~path:"*Listbox.background" "#eeeeee" ;
-    Option.add ~path:"*Text.background" "#eeeeee" ;
+    Option.add ~path:"*Listbox.background" "#ffffff" ;
+    Option.add ~path:"*Text.background" "#ffffff" ;
 
     Wm.title_set w (Printf.sprintf "Stekki: %s" filename) ;
     w
@@ -243,7 +243,8 @@ let eval_command () =
   let start = `Linechar (0,0), [] in
     match
       try
-        Some (Text.search ~pattern:"\n" ~switches:[]
+        (* Don't send partial stuff as it cannot be undone *)
+        Some (Text.search ~pattern:".\n" ~switches:[]
                 ~start ~stop:(`End,[])
                 after)
       with _ -> None
@@ -262,14 +263,14 @@ let undo ?(send=true) () =
       Listbox.delete before ~first:`End ~last:`End ;
       Text.insert after ~index:(`Linechar (0,0),[]) ~text:(command^"\n") ;
       if send then begin
-        try
+        let in_comment = ref false in
           String.iter
             (function
-               | '.' -> write_process "#undo.\n"
-               | '%' -> failwith "comment"
+               | '.' -> if not !in_comment then write_process "#undo.\n"
+               | '\n' -> in_comment := false
+               | '%' -> in_comment := true
                | _ -> ())
             command
-        with Failure "comment" -> ()
       end ;
       true
 
