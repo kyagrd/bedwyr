@@ -4,9 +4,9 @@ Tac::StickyTaci
 
 ===============================================================================
 
-StickyTaci is a graphical user interface to the taci command line
-tool.  It is written in C# 2.0 using Windows Forms.  It has only been
-test on Windows XP.  It communicates with taci via pipes.
+StickyTaci is a graphical user interface to the taci command line program.
+It is written in C# 2.0 using Windows Forms.  It has only been tested on Windows
+XP, though it should run on Vista.  It communicates with taci via pipes.
 
 Running StickyTaci:
   To start StickyTaci simply double-click the executable, found at
@@ -70,3 +70,12 @@ Interacting with Taci:
   The Taci/Tacticals menu offers a list of all of the tacticals that the
   current logics provides.  Selecting a tactical adds it to the currently
   open file at the cursors location.
+
+Known Issues and Bugs:
+  If you load a file that doesn't have a 'valid' extension (i.e., one
+  that indicates the logic to load) an error message is displayed.  You
+  can still load the logic by hand, so don't worry.
+  
+  Crashes: StickyTaci sometimes crashes if you use 'advanced' features
+  of the Scintilla control; it seems that these are due to the Scintilla.NET
+  wrapper, or at least StickyTaci's use of it.  Sorry!
