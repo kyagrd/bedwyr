@@ -71,7 +71,13 @@ struct
     let top       = String.concat "\n" (List.map string_of_formula seq.lhs) in
     let bottom    = String.concat "\n" (List.map string_of_formula seq.rhs) in
     let separator = String.make (max (min (String.length bottom) 72) 16) '-' in
-      Printf.sprintf "%s\n%d: %s\n%s" top seq.lvl separator bottom
+    (* top should always start with an empty line (it looks better)
+     * whether lhs is empty or not *)
+    let top = if top <> "" then "\n" ^ top else top in
+      if Properties.getBool "firstorder.proofsearchdebug" then
+        Printf.sprintf "%s\n%d: %s\n%s" top seq.lvl separator bottom
+      else
+        Printf.sprintf "%s\n %s\n%s" top separator bottom
 
   let ppxml_sequent fmt seq =
     let print_side side forms =
