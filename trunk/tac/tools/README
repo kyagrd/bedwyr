@@ -16,10 +16,13 @@ Tactex:
 
   The "--outline" option produces a proof 'sketch' or outline that is simpler than
   the original proof.  This outline essentially only shows rules done in the
-  synchronous phase, as well as the final sequent in the asynchronous phase.
+  synchronous phase, as well as the final sequent of the asynchronous phase; it
+  folds all asynchronous rules into a single inference rule named 'async'.  Also,
+  the 'active' formula for each rule is highlighted in blue.
 
   Currently tactex can generate very large *.tex files which TeX can sometimes
-  choke on.
+  choke on.  Even if TeX doesn't choke, sometimes the proof styler doesn't work
+  quite right.
 
   Usage:
     tactex --input "input.xml" --output "output.tex"
