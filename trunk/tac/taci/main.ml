@@ -1,6 +1,6 @@
 (**********************************************************************
 * Taci                                                                *
-* Copyright (C) 2007 Zach Snow, David Baelde                          *
+* Copyright (C) 2007-2008 Zach Snow, David Baelde                     *
 *                                                                     *
 * This program is free software; you can redistribute it and/or modify*
 * it under the terms of the GNU General Public License as published by*
@@ -16,6 +16,8 @@
 * along with this code; if not, write to the Free Software Foundation,*
 * Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA        *
 **********************************************************************)
+(*  Global properties *)
+let () = Properties.setString "taci.version" "0.5.0"
 let () = Properties.setBool "taci.timing" false
 
 let debug () =

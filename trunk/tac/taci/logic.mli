@@ -21,7 +21,7 @@
 ***********************************************************************
 * This module contains the signature Logic that every logic must
 * implement in order to be able to be used by Taci.  This signature is
-* explained in detain in tac/taci/README.  Additionally a functor that
+* explained in detain in /tac/taci/README.  Additionally a functor that
 * creates a module with a set of generic tacticals (tacticals that any
 * logic will be able to use provided it implements the Logic signature)
 * is included.

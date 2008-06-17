@@ -24,7 +24,6 @@
 * toplevelparser.mly).  The interface functions all provide methods for
 * parsing input into abstract syntax commands (see absyn.mli).
 **********************************************************************)
-
 val parseStdinCommand : unit -> Absyn.command
 val parseStdinCommandList : unit -> Absyn.command list
 val parseChannelCommandList : in_channel -> Absyn.command list

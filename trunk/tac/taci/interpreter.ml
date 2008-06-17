@@ -105,14 +105,14 @@ struct
     with
       Not_found -> None
 
-  let helpMessage =
-"Taci v0.0
+  let helpMessage = "Taci version " ^ (Properties.getString "taci.version") ^
+"
 
 #clear.                     : Clear the screen.
 #debug <on | off>.          : Turn debugging on or off.
-#proof_output <dir>         : Print proofs to <dir/proof.xml>.
+#proof_output <dir>         : Print proofs to <dir/theorem name.xml>.
 #define <definition>.       : Add the given quoted definition to the current session.
-#exit.                      : Exit Taci.
+#exit.                      : Exit taci.
 #help.                      : Show this message.
 #include <files>            : Add the definitions in the given files to the
                               current session.  File names should be quoted and

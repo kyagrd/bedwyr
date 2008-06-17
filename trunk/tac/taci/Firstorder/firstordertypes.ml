@@ -156,6 +156,8 @@ sig
   
   val makeFormula :
     Firstorderabsyn.annotation Firstorderabsyn.polarized -> formula
+  
+  val stringToIntDefault : string -> int -> int 
 end
 
 module Types (O : Output.Output) =
@@ -629,4 +631,18 @@ struct
 
   let makeFormula f = Formula ({context = 0 ; progressing_bound = None}, f)
 
+  (********************************************************************
+  *stringToIntDefault:
+  * Safely convert a string to an int; used by toplevel tacticals to
+  * convert their arguments.
+  ********************************************************************)
+  let stringToIntDefault s d =
+    try
+      int_of_string s
+    with
+      Failure "int_of_string" ->
+        (O.error
+          ("Unable to convert '" ^ s ^ "' to int; using default " ^
+          (string_of_int d) ^ ".\n");
+        d)
 end

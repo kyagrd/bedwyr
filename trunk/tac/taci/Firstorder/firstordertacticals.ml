@@ -46,21 +46,6 @@ struct
     let copyTerm t = copier t in
     let rec copyFormula () = FOA.mapFormula copyFormula copyTerm in
     (Formula(i,(copyFormula ()).FOA.polf f))
-  
-  (********************************************************************
-  *intToStringDefault:
-  * Safely convert an int to a string; used by toplevel tacticals to
-  * convert their arguments.
-  ********************************************************************)
-  let intToStringDefault s d =
-    try
-      int_of_string s
-    with
-      Failure "int_of_string" ->
-        (O.error
-          ("Unable to convert '" ^ s ^ "' to int; using default " ^
-          (string_of_int d) ^ ".\n");
-        d)
 
   (********************************************************************
   *handleNablas:
@@ -808,7 +793,8 @@ struct
             (* TODO factor this out, I've cut/pasted too many times *)
             let unfoldFixpoint ruleName name args body argnames sc fc =
               let i,bound =
-                if unfoldingProgresses argnames args then
+                if (unfoldingProgresses argnames args) &&
+                  (Random.int 1000) <> 0 then
                   { i with
                         progressing_bound = updateBound i.progressing_bound },
                   seq.bound
@@ -1883,9 +1869,9 @@ struct
     let syncBound = (Properties.getInt "firstorder.defaultbound") in
     match args with
         [Absyn.String s] ->
-          setBound session (intToStringDefault s 0) lemmaBound
+          setBound session (stringToIntDefault s 0) lemmaBound
       | [(Absyn.String s1); (Absyn.String s2)] ->
-          setBound session (intToStringDefault s1 0) (intToStringDefault s2 0)
+          setBound session (stringToIntDefault s1 0) (stringToIntDefault s2 0)
       | [] -> setBound session syncBound lemmaBound
       | _ -> G.invalidArguments "set_bound"
   
@@ -1913,11 +1899,11 @@ struct
     in
     match args with
         [Absyn.String(s)] ->
-          let maxBound = intToStringDefault s 0 in
+          let maxBound = stringToIntDefault s 0 in
           construct 0 (max maxBound 0)
       | [Absyn.String(s);Absyn.String(s')] ->
-          let minBound = intToStringDefault s 0 in
-          let maxBound = intToStringDefault s' 0 in
+          let minBound = stringToIntDefault s 0 in
+          let maxBound = stringToIntDefault s' 0 in
           construct (min maxBound minBound) (max minBound maxBound)
       | [] ->
           construct 0 (max (Properties.getInt "firstorder.defaultbound") 0)

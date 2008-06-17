@@ -6,22 +6,22 @@ Tac::taci
 
 Taci is the command line interface to the Tac system.  It is intended to be
 used from a console or terminal, or in combination with a graphical interface
-(see tac/StickyTaci/README and tac/stekki/README).
+(see "/tac/StickyTaci/README" and "/tac/stekki/README").
 
 Usage:
   taci may be invoked as follows:
   
-    taci --logic logicname --output outputname
+    tac $ taci --logic logicname --output outputname
 
-  Where logicname is the name of the logic to load and outputname is the
+  Where 'logicname' is the name of the logic to load and 'outputname' is the
   name of the output module to use.  In general, when using taci from the
   command line, one will not specify the output module; it will default to
   the console output module.
   
   A list of available logics and output modules may be obtained as follows:
   
-    taci --logics
-    taci --outputs
+    tac $ taci --logics
+    tac $ taci --outputs
 
 Logics:
   There are 6 logics available in the Tac system.  The first of these,
@@ -83,8 +83,10 @@ Tactics and Tacticals:
   continuation raises a particular exception that can be caught.  Therefore,
   tactics never return except for by calling one of the provided continuations.
   This ensures that all tactics may be completely tail-recursive.
+  
   Tacticals are functions that construct tactics.  In Tac, the only things that
   one writes as a logic author or applies as a user are tacticals.
+  
   All tacticals are functions that take a session and a list of abstract syntax
   arguments and produce a tactic.
 
@@ -114,13 +116,13 @@ Implementing a Logic:
   Each logic is a module that matches a given interface, therefore implementing
   a new logic is as straightforward as creating a module that implements a specific
   interface.  The interface that must be met is named "Logic" and is specified in
-  the file "tac/taci/logic.mli".  Essentially, implementing a module that
+  the file "/tac/taci/logic.mli".  Essentially, implementing a module that
   corresponds to this interface comes down to defining the type of a "session", a
   "sequent", and a "proof", along with various accessor functions that operate on
   these types, and a few values.
 
   Note: the following list may be incomplete!  For an up to date list, see
-  "tac/taci/logic.mli".
+  "/tac/taci/logic.mli".
 
   Types:
     Session:
@@ -232,4 +234,4 @@ Implementing a Logic:
   Once a logic has been implemented it must be registered with Tac.  To do
   this an entry for the logic must be added to the logics_gen input file.
   More information about how to accomplish this can be found in
-  "tac/logics_gen/README".
+  "/tac/logics_gen/README".

@@ -50,6 +50,7 @@ Tacticals:
 
   (********************************************************************
   *Proof:
+  * A proof is just a list of applied rules (tactics).
   ********************************************************************)
   type proof = string
   
@@ -94,8 +95,6 @@ Tacticals:
 
   let proof (Session(_,p,_)) = p
 
-  let incl files session =
-    session
 
   let parseTerm t =
     try
@@ -125,7 +124,11 @@ Tacticals:
   let proved session = session
   let lemmas session = session
   let definitions ds session = session
-  
+  let incl files session =
+    session
+  let undo session = session
+  let redo session = session
+
   let update sequents builder session =
     (setSessionSequents sequents (setSessionBuilder builder session))
 
@@ -134,8 +137,6 @@ Tacticals:
         [] -> false
       | _::_ -> true
   let sequents session = (getSessionSequents session)
-  let undo session = session
-  let redo session = session
 
   (********************************************************************
   *Tacticals:

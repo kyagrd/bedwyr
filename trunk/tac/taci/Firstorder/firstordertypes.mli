@@ -167,6 +167,8 @@ sig
   
   val makeFormula :
     Firstorderabsyn.annotation Firstorderabsyn.polarized -> formula
+  
+  val stringToIntDefault : string -> int -> int 
 end
 
 (**********************************************************************
