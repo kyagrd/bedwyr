@@ -283,7 +283,7 @@ and termsFormula = function
 let string_of_polarity = function Positive -> "+" | Negative -> "-"
 let string_of_freezing = function Frozen -> "*" | Unfrozen -> ""
 let string_of_control = function
-  Normal -> "" | Focused -> "#" | Delayed -> "?"
+  Normal -> " " | Focused -> "#" | Delayed -> "?"
 
 let string_of_pattern _ = ""
 

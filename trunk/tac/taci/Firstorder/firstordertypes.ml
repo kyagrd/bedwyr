@@ -204,10 +204,11 @@ struct
     lemmas : lemma list
   }
 
-
   let annotateFormula ann formula =
     (FOA.string_of_control ann.FOA.control) ^ " " ^
-    (FOA.string_of_polarity ann.FOA.polarity) ^
+    (if Properties.getBool "firstorder.proofsearchdebug" then
+       FOA.string_of_polarity ann.FOA.polarity
+     else "") ^
     formula ^
     (FOA.string_of_freezing ann.FOA.freezing)
 
@@ -215,7 +216,7 @@ struct
     let generic = Term.get_dummy_names ~start:1 local.context "n" in
     let result = (FOA.string_of_formula ~generic).FOA.formf t in
       List.iter Term.free generic ;
-      (String.concat "," generic) ^ ">> " ^ (annotateFormula a result)
+      (String.concat "," generic) ^ (annotateFormula a result)
 
   let string_of_formula_ast (Formula(local,(a,t))) =
     let generic = Term.get_dummy_names ~start:1 local.context "n" in
