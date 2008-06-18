@@ -21,11 +21,17 @@ Using Stekki:
   then moves in a blocked area where you can't edit it. You should undo it before 
   editing.
   
-  Rarely undo breaks and you lose synchronization between the interface and 
-  taci. You can then use the Reset button.
-  
   The Load and Save button reload and save the file. In both cases, it also 
   undoes all inputs and resets taci.
   
   The Interrupt button sends Ctrl+C to to taci; this can be used to kill a long
   running tactical application without losing your place in the current proof.
+ 
+ Known Issues and Bugs:
+  Stekki can get confused if you have multiline strings that contain
+  periods.  As long as you don't use multiline strings with periods, this
+  shouldn't happen, and such lines shouldn't ever occur (because periods are
+  not part of any of the logics' syntax) in general.  But, be wary!
+  
+  Rarely undo breaks and you lose synchronization between the interface and 
+  taci in other cases, as well.  You can then use the Reset button to start over.

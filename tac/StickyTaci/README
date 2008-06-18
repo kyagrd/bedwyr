@@ -79,3 +79,9 @@ Known Issues and Bugs:
   Crashes: StickyTaci sometimes crashes if you use 'advanced' features
   of the Scintilla control; it seems that these are due to the Scintilla.NET
   wrapper, or at least StickyTaci's use of it.  Sorry!
+
+  StickyTaci can get confused if you have multiline strings that contain
+  periods.  As long as you don't use multiline strings with periods, this
+  shouldn't happen, and such lines shouldn't ever occur (because periods are
+  not part of any of the logics' syntax) in general.  But, be wary!
+  

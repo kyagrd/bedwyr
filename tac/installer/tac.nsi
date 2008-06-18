@@ -26,6 +26,11 @@ InstallDirRegKey HKLM "Software\Tac" "Install_Dir"
 ; Request application privileges for Windows Vista
 RequestExecutionLevel admin
 
+; Icon and graphics
+!define MUI_ICON "..\StickyTaci\Data\Small.ico"
+!define MUI_HEADERIMAGE
+!define MUI_HEADERIMAGE_BITMAP "HeaderLogo.bmp" ; Ugly logo!
+!define MUI_HEADERIMAGE_RIGHT
 ;----------------------------------------------------------------------
 ; Functions to verify that .NET is installed.
 ;----------------------------------------------------------------------

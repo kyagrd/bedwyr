@@ -428,14 +428,26 @@ namespace StickyTaci
       {
         line = line.Trim();
 
-        //Count number of periods before the first %.
+        //Count number of periods before the first %, keeping track of
+        //whether you're in a string or not.
         int count = 0;
+        bool inString = false;
         for(int i = 0; i < line.Length; i++)
         {
-          if(line[i] == '.')
-            count++;
-          else if(line[i] == '%')
-            break;
+          if(inString)
+          {
+            if(line[i] == '"')
+              inString = false;
+          }
+          else
+          {
+            if(line[i] == '.')
+              count++;
+            else if(line[i] == '"')
+              inString = true;
+            else if(line[i] == '%')
+              break;
+          }
         }
 
         //Undo many periods.
