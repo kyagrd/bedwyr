@@ -1994,7 +1994,7 @@ struct
           let seq = { sequent with lhs = sequent.lhs @ [formula'] } in
           let pb = fun proofs ->
             { rule = "apply" ;
-            params = [] ; (* "lemma", lemma] ; *)
+            params = [] ; (* ["lemma", lemma] ; *)
             bindings = [] ;
             formula = Some formula' ;
             sequent = seq ;
@@ -2032,7 +2032,8 @@ struct
   * know that the current sequent can be proved and you don't want
   * to bother.
   ********************************************************************)
-  let admitTactical session args = match args with
+  let admitTactical session args =
+    match args with
         [] ->
           (G.admitTactical (fun seq ->
             {rule="admit"; 
