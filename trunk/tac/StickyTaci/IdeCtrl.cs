@@ -427,11 +427,22 @@ namespace StickyTaci
       if(Form.GetPreviousLine(ref line))
       {
         line = line.Trim();
-        if(line == "" || line[0] == '%' || line[line.Length - 1] != '.')
+
+        //Count number of periods before the first %.
+        int count = 0;
+        for(int i = 0; i < line.Length; i++)
         {
-          return;
+          if(line[i] == '.')
+            count++;
+          else if(line[i] == '%')
+            break;
         }
-        Taci.Write(Taci.UNDO + ".");
+
+        //Undo many periods.
+        for(int i = 0; i < count; i++)
+        {
+          Taci.Write(Taci.UNDO + ".");
+        }
         return;
       };
     }
