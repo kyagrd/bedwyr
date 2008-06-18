@@ -1,0 +1,126 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+
+  <head>
+    <title>Tac</title>
+    <link href="../slimmer.css" rel="stylesheet" type="text/css"/>
+  </head>
+
+  <body>
+   <h1 align=center>Tac:<br>
+        A generic and adaptable interactive theorem prover
+  </h1>
+
+ <h2>Overview</h2>
+
+<p class="body">
+Tac is a framework for constructing and interacting with interactive
+theorem provers for various logics.  It is designed to allow for easy
+experimentation.  Tac is composed of several parts.
+  <ul>
+    <li>
+      The primary component of Tac is a
+      framework for implementing interactive theorem provers, and then interacting
+      with said provers.  This core, called "tac", allows logicians to easily implement
+      provers for logics of their choice, and then experiment with the provers.
+      It allows for easy loading of different logics at runtime.  This part of
+      the system acts a driver for reasoning with the logics.
+    </li>
+    <li>
+      In addition to the core framework there are several logics implemented
+      using tac.  These include a propositional logic and several first-order
+      logics.  The first-order logics include classical and intuitionistic variants,
+      and support universal, existential, and generic quantification, inductive
+      and coinductive defintions via fixpoints, induction and coinduction, and
+      automatic proof search based on focusing.
+    </li>
+    <li>
+      Taci is a command line interface to the tac core.
+    </li>
+    <li>
+      StickyTaci is a graphical user interface to Taci, written in C#.  It
+      allows end-users to easily interact with the generated theorem provers,
+      and provides such functionality as loading and saving of proofs, syntax
+      highlighting, and automatic discovery of loaded logics and available
+      tactics and tacticals.
+    </li>
+    <li>
+      Stekki is another graphic user interface, for use where the CLR is
+      unavailable; it is written in OCaml and uses Labltk.
+    </li>
+  </ul>
+</p>
+
+<p>
+The distributed system comes with several example theorems.  They include
+proofs of properties of peano arithmetic, standard list predicates, the
+pi-calculus, buchi automata, and the simply typed lambda calculus.
+</p>
+
+<p>
+The Tac system consists of two primary components: logics, which are OCaml modules
+implementing a particular signature, and a driver program, which loads
+logic modules and facilitates interaction with them.  Currently the most
+interesting logics implemented using the system are a first-order classical
+logic and a first-order intuitionist logic.  Both of these logics support
+universal, existential, and generic quantification, inductie and coinductive
+definitions via fixpoints, induction and coinduction, and automated proof
+search based on focusing.
+</p>
+
+<h2>Current developers</h2>
+<p>
+Tac is an open source project.  The first major versions was
+released on 18 June 2008. We welcome contributions from
+others of both theorems and new features.  The developers
+behind the current distribution are:
+</p>
+
+<ul>
+  <li> <a href="http://www.lix.polytechnique.fr/~dbaelde">David
+  Baelde</a> & <a
+  href="http://www.lix.polytechnique.fr/Labo/Dale.Miller/">Dale
+  Miller</a> & Alexandre Viel (INRIA & LIX/Ecole Polytechnique) 
+  </li>
+  <li> <a href="http://www.cs.umn.edu/~snow/">Zach Snow</a>
+  (University of Minnesota - Minneapolis)  
+  </li>
+</ul>
+
+<p>
+Much of the effort for this work is supported within the context of the
+<a href="http://slimmer.gforge.inria.fr/">Slimmer</a> project, which is 
+supported by funds from INRIA and NSF. Support has also been provided
+by the NSF Grant OISE-0553462 (IRES-REUSSI).  Of course, the
+opinions, findings, and conclusions or recommendations expressed
+in this material are those of the project participants and do not
+necessarily reflect the views of INRIA or the National Science Foundation. 
+</p>
+
+<h2>Links</h2>
+
+<p><font color=green><b>Download:</b></font>
+  Get the latest version of Tac's <a href="https://gforge.inria.fr/frs/?group_id=367">source code</a>,
+  or get the latest version of Tac for Windows as an <a href="https://***">installer</a>.
+</p>
+
+<p><font color=green><b>Open source repository: </b></font> 
+  Active development versions are available from the 
+  <a href="http://gforge.inria.fr/scm/?group_id=367">Tac subversion repository</a>
+  hosted by INRIA's Gforge.  You can
+  <a href="http://gforge.inria.fr/plugins/scmsvn/viewcvs.php/trunk/tac/?root=slimmer">
+  browse the repository</a>, especially the
+  <a href="http://gforge.inria.fr/plugins/scmsvn/viewcvs.php/trunk/tac/examples/?root=slimmer">
+  examples</a>.
+</p>
+
+<script src="http://www.google-analytics.com/urchin.js"
+            type="text/javascript">
+</script>       
+<script type="text/javascript">
+    _uacct = "UA-283578-2";
+    urchinTracker();
+</script>
+</body>
+</html>
