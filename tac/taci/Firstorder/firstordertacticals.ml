@@ -361,14 +361,27 @@ struct
   * whether or not a rigid term is passed as an argument on which the
   * definition progresses.
   ********************************************************************)
-  let unfoldingProgresses =
+  let unfoldingProgresses side =
     let rec rigid t = match Term.observe (Norm.hnorm t) with
       | Term.Lam (_,t) -> rigid t
       | Term.App (t,_) -> rigid t
       | Term.Var v when v.Term.tag = Term.Constant -> true
       | _ -> false
     in
-    List.exists2 (fun (_,b) a -> b = FOA.Progressing && rigid a)
+      fun args params ->
+        List.exists2
+          (fun (_,b) p -> b = FOA.Progressing && rigid p)
+          args params
+        &&
+        match side with
+          | `Left ->
+              let evars =
+                Term.get_vars
+                  (fun v -> v.Term.tag = Term.Logic)
+                  params
+              in
+                evars = []
+          | `Right -> true
 
   type internal_sc =
     ?k:(unit -> unit) -> ?b:(Term.term list) -> string -> sequent list -> unit
@@ -499,7 +512,7 @@ struct
              * unfolding while the normal bound is decreased otherwise. *)
             let unfoldFixpoint ruleName name args body argnames sc fc =
               let i,bound =
-                if unfoldingProgresses argnames args then
+                if unfoldingProgresses `Left argnames args then
                   { i with
                         progressing_bound = updateBound i.progressing_bound },
                   seq.bound
@@ -793,7 +806,7 @@ struct
             (* TODO factor this out, I've cut/pasted too many times *)
             let unfoldFixpoint ruleName name args body argnames sc fc =
               let i,bound =
-                if (unfoldingProgresses argnames args) &&
+                if (unfoldingProgresses `Right argnames args) &&
                   (Random.int 1000) <> 0 then
                   { i with
                         progressing_bound = updateBound i.progressing_bound },
@@ -1557,7 +1570,7 @@ struct
                        (FOA.ApplicationFormula(
                           FOA.FixpointFormula(
                             FOA.Inductive,_,argnames,_),args) as f)))
-                     when unfoldingProgresses argnames args ->
+                     when unfoldingProgresses `Left argnames args ->
                        if Properties.getBool "firstorder.proofsearchdebug" then
                          Format.printf "%s@[<hov 2>Unfold left@ %s@]\n%!"
                            ""
@@ -1572,7 +1585,7 @@ struct
                        (FOA.ApplicationFormula(
                           FOA.FixpointFormula(
                             FOA.CoInductive,_,argnames,_),args) as f)))
-                     when unfoldingProgresses argnames args ->
+                     when unfoldingProgresses `Right argnames args ->
                        if Properties.getBool "firstorder.proofsearchdebug" then
                          Format.printf "%s@[<hov 2>Unfold right@ %s@]\n%!"
                            ""
