@@ -34,6 +34,7 @@ and speclist = [("-help", Arg.Unit(printHelp), "");
                 ("--help", Arg.Unit(printHelp), "print usage information");
                 ("--input", Arg.Set_string(inFilename), "input file");
                 ("--output", Arg.Set_string(outModuleName), "output module");
+                ("-v", Arg.Unit(printVersion), "print version information");
                 ("--version", Arg.Unit(printVersion), "print version information")]
 and usage = "Usage: logics_gen --input \"input filename\" --output \"output filename\" \n\nOptions:"
 let parseArgs output =

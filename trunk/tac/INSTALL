@@ -42,11 +42,8 @@ Building Tac on Windows XP:
   Dependencies:
     Microsoft Visual Studio 2008    http://www.microsoft.com/express
     O'Caml                          http://caml.inria.fr
-    Ocamake*                        http://tech.motion-twin.com
+    Ocamake                         http://tech.motion-twin.com
     Xml-Light                       http://tech.motion-twin.com
-
-    * Use the included ocamake.ml, as it has been patched to work with
-      Microsoft Visual 2008 project files.
 
   Compiling:
     First you must compile Ocamake and put it on your path.  The easiest

@@ -32,6 +32,14 @@ let inputName = ref ""
 let outputName = ref ""
 let outline = ref false
 
+(**********************************************************************
+* Versioning Information:
+**********************************************************************)
+let version = "0.5.0"
+let printVersion () =
+  (print_endline ("tactex version " ^ version ^ ".");
+  exit 0)
+
 let getInputChannel () =
   if !inputName = "" then
     (print_endline ("Error: no input file specified.");
@@ -266,7 +274,9 @@ and speclist = [("-h", Arg.Unit(printHelp), "");
                 ("--help", Arg.Unit(printHelp), "");
                 ("--input", Arg.Set_string(inputName), "input file");
                 ("--outline", Arg.Set(outline), "outline the proof");
-                ("--output", Arg.Set_string(outputName), "output file")]
+                ("--output", Arg.Set_string(outputName), "output file");
+                ("-v", Arg.Unit(printVersion), "print version information");
+                ("--version", Arg.Unit(printVersion), "print version information")]
 and usage = "Usage: tactex --input \"input file\"\n\nOptions:"
 let parseArgs output =
     (Arg.parse speclist (fun s -> ()) usage)

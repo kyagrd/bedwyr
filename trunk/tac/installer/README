@@ -9,7 +9,10 @@ Requirements:
   at http://nsis.sourceforge.net/.
 
   Additionally, you must have perl installed.  One implementation of perl is
-  available at http://www.activestate.com/.
+  available at http://www.activestate.com/.  This is a really ridiculous
+  requirement, because we use only a single line of perl.  Sorry!
+
+  Also, we really need a new logo, but I'm no graphic designer.
 
 Building the Installer:
   First, verify that the required software is installed; in particular make
