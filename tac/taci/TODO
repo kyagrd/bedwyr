@@ -1,4 +1,6 @@
 TODO:
+  * Lemmas shou
+
   * The 'a polarized type in firstorderabsyn.ml could get factored out by
     pushing the annotation into relevant types.
 
@@ -19,3 +21,7 @@ TODO:
   * Type checking.
   
   * Support for anonymous fixed points.
+
+  * Support for adding lemmas to the automatically generated invariant.
+    You could back track over each lemma (that is, add only 1 at a time),
+    with a case where you add no lemma at all.
