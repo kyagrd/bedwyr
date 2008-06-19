@@ -3,3 +3,7 @@ stekki: stekki.ml
 .PHONY: clean
 clean:
 	rm -f stekki
+dist:
+	for f in stekki.ml README Makefile ; do \
+	  cp --parents $$f $(DISTDIR) ; \
+	done
