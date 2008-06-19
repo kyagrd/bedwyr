@@ -6,8 +6,7 @@
 % On the other hand, this style of specification does not support
 % substitution as immediately as the other, and reasoning about it
 % can involve unification problems outside of the higher-order patterns.
-
-#define "nat X := X=0 ; sigma Y\ X = s Y, nat Y".
+% In the end, this experiment is far from being satisfying.
 
 % The definition of "term" is just for clarifying, it is actually unused.
 
@@ -16,18 +15,18 @@
 	(sigma m\ n\ X = (app m n), (term m), (term n));
 	(sigma m\ t\ X = (lambda t m), nabla x\ term (m (var x)))".
 
-#define "bind G V T :=
+#define "bind {G} V T :=
 	(sigma G'\ G = (cons (pair V T) G'));
 	(sigma G'\ V'\ T'\ G = (cons (pair V' T') G'), (bind G' V T))".
 
-#define "context X :=
+#define "context {X} :=
 	(X = nil);
 	(sigma v\ t\ tl\
 		(X = cons (pair v t) tl),
 		(pi T'\ bind tl v T' => false),
 		context tl)".
 
-#define "typeof G M T :=
+#define "typeof G {M} T :=
 	(sigma v\ M = var v, bind G v T);
 	(sigma a\ m1\ m2\
 		M = (app m1 m2),
@@ -38,7 +37,7 @@
 		(T = (arrow a b)),
 		(nabla x\ (typeof (cons (pair x a) G) (f (var x)) b)))".
 
-#define "one m n :=
+#define "one {m} n :=
    (sigma f\t\x\ m = (app (lambda t f) x), n = (f x));
    (sigma m1\m2\n1\ m = app m1 m2, one m1 n1, n = app n1 m2);
    (sigma m1\m2\n2\ m = app m1 m2, one m2 n2, n = app m1 n2);
@@ -46,9 +45,24 @@
                  nabla x\ one (m' (var x)) (n' (var x)))
 ".
 
-#define "permute a b :=
+#define "permute {a} {b} :=
    (pi m\t\ bind a m t => bind b m t), (pi m\t\ bind b m t => bind a m t)
 ".
+
+#theorem context_s "pi g\t\ context g => nabla a\ context (cons (pair a t) g)".
+simplify.
+abstract.
+mu_r.
+right.
+then(repeat(sigma),then(repeat(and),try(eq))).
+prove.
+prove.
+% Qed.
+
+#theorem bind_ww "pi g\m'\t\ (nabla a\ bind g (m' a) t) =>
+                    sigma m\ m'=(a\m), bind g m t".
+prove.
+% Qed.
 
 #theorem determinacy "pi G\ M\ T\
 	(typeof G M T) =>
@@ -74,27 +88,7 @@ induction("G\M\T\ (context G => pi T'\ (typeof G M T' => (T = T')))").
   % LAM.
    then(mu_l("typeof _ _ _"),then(repeat(or_l),simplify)).
    imp_l.
-   % The context extended with a fresh variable is still a context.
-   mu_r.
-   right.
-   repeat(sigma_r).
-   repeat(and).
-   eq.
-   simplify.
-   % The fresh variable can't be bound in G.
-   then(induction("G\ nabla n\ bind G n (T' n) => false","context G"),
-     then(abstract,prove)).
-   % Lifting the "context" judgment.
-   induction("G\ nabla x\ context G","context _").
-   prove.
-   then(repeat(or_l),simplify).
-   prove.
-   abstract.
-   then(mu_r,right).
-   then(repeat(sigma),then(repeat(and),simplify)).
-   % Un-lifting the "bind" judgment.
-   then(induction("l'\x'\t'\
-     pi l\ l'=(x\l) => sigma x\t\ x'=(a\x), t'=(a\t), bind l x t"),prove).
+   apply("context_s").
    prove.
    prove.
 % Qed.
@@ -119,33 +113,58 @@ rotate.
 prove.
 prove.
 prove.
-% The only interesting case.
-then(mu_l,then(repeat(or_l),simplify)).
-then(mu_l,then(repeat(or_l),simplify)).
-abstract.
+% The only interesting case: the beta redex.
+async.
 induction("g'\m'\t'\ pi g\m\t\
- (nabla x\ permute (g' x) (cons (pair x h) g), (m' x)=(m (var x)), (t' x)=t) =>
- (typeof g h2 h) => typeof g (m h2) t").
-repeat(pi_l).
-imp.
-nabla.
-repeat(and).
-force("G","g").
-prove.
-force("M","h2").
-eq_r.
-eq_r.
-imp.
-axiom.
-% Almost there, modulo non-llambda.
-rotate.
-then(repeat(or_l),simplify).
-cut("nabla x\ bind (cons (pair x h6) g2) (h7 x) h8").
-abstract.
-prove.
-nabla.
-then(mu_l("bind _ _ _"),then(or_l,simplify)).
-% One non-llambda shy of completing.
-rotate.
+ (nabla x\ permute (g' x) (cons (pair x h12) g),
+           (m' x)=(m (var x)), (t' x)=t) =>
+ (typeof g h11 h12) => typeof g (m h11) t").
+% Invariant => goal.
+ repeat(pi_l).
+ imp.
+ nabla.
+ repeat(and).
+ force("G","g").
+ prove.
+ % Non-llambda unification, needs help.
+ force("M","h10").
+ eq_r.
+ eq_r.
+ imp.
+ axiom.
+ % Almost there, modulo non-llambda.
+ admit.
+
+% Invariance.
+ then(repeat(or_l),simplify).
+ % BIND.
+ cut("nabla x\ bind (cons (pair x h12) g3) (h14 x) h15").
+ prove.
+ nabla.
+ then(mu_l("bind _ _ _"),then(or_l,simplify)).
+ % Again, we are only one unification away from the axiom.
+ then(weak_l,weak_l).
+ admit.
+ % One non-llambda shy of completing.
+ apply("bind_ww").
+ simplify.
+ repeat(weak_l("lift_bind _ _ _")).
+ weak_l.
+ weak_l("typeof _ _ _").
+ % Another non-llambda...
+ admit.
+
+ % APP.
+ % This case should really be trivial but there are several problems.
+ % Again, some non-llambda unifs, like the one saying that m2 is an app.
+ % But you can also see in the two induction hypothesis that there is
+ % a serious mismatch between HOAS and named-style, in the equality
+ % (x1\ h24 x1) = (x\ m4 (var x1)): we tried to keep substitution for free
+ % by not having the var construct on bound variables, but it backfires now.
+ % To treat it we would have to induct over an extra (term h24) hypo.
+ admit.
+ % LAM: same mess.
+ admit.
 % Not quite Qed.
+
 
