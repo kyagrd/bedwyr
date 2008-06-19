@@ -1989,6 +1989,7 @@ struct
         let (_,formula,proof) =
           List.find (fun (s',_,_) -> lemma = s') session.lemmas
         in
+        let formula = (FOA.eliminateNablas []).FOA.polf formula in
         let formula' = makeFormula (select formula) in
         let pretactic = fun sequent sc fc ->
           let seq = { sequent with lhs = sequent.lhs @ [formula'] } in
@@ -2024,6 +2025,9 @@ struct
         else
           G.invalidArguments "apply"
     | _ -> G.invalidArguments "apply"
+
+  let applyTactical s a =
+    G.thenTactical (abstractTactical s []) (applyTactical s a)
 
   (********************************************************************
   *admitTactical:
