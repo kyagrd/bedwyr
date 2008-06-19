@@ -1,4 +1,4 @@
-#open "picalculus.defs".
+#open "picalculus.def".
 
 #theorem foo "one (in a (y\z)) (resp (dn a) (y\z))".
 prove.
