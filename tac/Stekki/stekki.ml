@@ -69,9 +69,9 @@ let window =
      * Thanks to the de-uglification guide for the style:
      * http://matt.gushee.net/rg/items/4 *)
     Encoding.system_set "utf-8" ;
-    ignore (get_font "guifont" ~size:10
+    (* ignore (get_font "guifont" ~size:8
               ["sans"; "verdana"; "lucida"; "bitstream vera sans"]) ;
-    ignore (get_font "textfont" ~size:11
+    ignore (get_font "textfont" ~size:9
               ["lettergothic"; "lucida typewriter";
                "bitstream vera sans mono"; "courier"]) ;
 
@@ -84,7 +84,7 @@ let window =
     Option.add ~path:"*Text.font" "textfont";
     Option.add ~path:"*Canvas.font" "textfont";
     Option.add ~path:"*Listbox.font" "textfont";
-    Option.add ~path:"*Entry.font" "textfont";
+    Option.add ~path:"*Entry.font" "textfont"; *)
 
     Option.add ~path:"*Text.borderWidth" "1";
     Option.add ~path:"*Canvas.borderWidth" "1";
@@ -263,10 +263,15 @@ let undo ?(send=true) () =
       Listbox.delete before ~first:`End ~last:`End ;
       Text.insert after ~index:(`Linechar (0,0),[]) ~text:(command^"\n") ;
       if send then begin
+        (* Very rudimentary parsing, especially partial with strings. *)
         let in_comment = ref false in
+        let in_string  = ref false in
           String.iter
             (function
-               | '.' -> if not !in_comment then write_process "#undo.\n"
+               | '"' -> in_string := not !in_string ;
+               | '.' ->
+                   if not (!in_comment || !in_string) then
+                     write_process "#undo.\n"
                | '\n' -> in_comment := false
                | '%' -> in_comment := true
                | _ -> ())
