@@ -422,6 +422,7 @@ struct
       in
         Some term
     with
+      | Parsing.Parse_error -> O.error "Parse error.\n" ; None
       | FOA.SyntaxError(s) ->
           O.error (s ^ ".\n");
           None
