@@ -31,3 +31,8 @@ clean:
 	$(OCAMLYACC) $<
 %.ml: %.mll
 	$(OCAMLLEX) $<
+
+dist:
+	for f in $(SOURCE) Makefile bin/Logics.in ; do \
+	  cp --parents $$f $(DISTDIR) ; \
+	done

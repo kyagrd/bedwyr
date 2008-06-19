@@ -9,20 +9,25 @@ OCAMLLEX=ocamllex
 SOURCE= ndcore/term.ml ndcore/norm.ml ndcore/unify.ml ndcore/pprint.ml \
 	listutils.ml properties.ml\
 	absyn.ml output.ml option.ml \
-	logic.ml propositionalabsyn.ml \
+	logic.ml \
 	Nologic/nologic.ml \
-	Propositional/propositionalparser.ml \
-	Propositional/propositionallexer.ml \
+	Propositional/propositionalabsyn.ml \
+	Propositional/propositionalparser.mly \
+	Propositional/propositionallexer.mll \
 	Propositional/propositional.ml \
 	Firstorder/firstorderabsyn.ml \
-	Firstorder/firstorderparser.ml \
-	Firstorder/firstorderlexer.ml \
+	Firstorder/firstorderparser.mly \
+	Firstorder/firstorderlexer.mll \
 	Firstorder/firstordertypes.ml \
 	Firstorder/firstordertacticals.ml \
 	Firstorder/firstorder.ml \
-	toplevellexer.ml toplevelparser.ml \
+	toplevellexer.mll toplevelparser.mly \
 	toplevel.ml interpreter.ml interface.ml logics_gen.ml logics.ml main.ml
-OBJ= $(SOURCE:.ml=$(O))
+
+PREMLS=$(SOURCE:.mly=.ml)
+MLS=$(PREMLS:.mll=.ml)
+OBJ=$(MLS:.ml=$(O))
+MLIS=$(wildcard $(MLS:.ml=.mli))
 
 taci: $(OBJ)
 	$(OCAMLC) $(I) unix$(A) str$(A) $(OBJ) -o $@
@@ -40,10 +45,8 @@ clean:
 	rm -f toplevellexer.ml toplevelparser.ml toplevelparser.mli
 	rm -f logics_gen.*
 
-HEADERS=$(wildcard $(SOURCE:.ml=.mli)) \
-  $($(wildcard SOURCE:.ml=.mly):.mly=.mli)
-.depend: $(SOURCE)
-	ocamldep $(I) $(SOURCE) $(HEADERS) > .depend
+.depend: $(MLS) $(MLIS)
+	ocamldep $(I) $(MLS) $(MLIS) > .depend
 -include .depend
 
 %.cmx: %.ml
@@ -58,3 +61,8 @@ HEADERS=$(wildcard $(SOURCE:.ml=.mli)) \
 	$(OCAMLYACC) $<
 %.ml: %.mll
 	$(OCAMLLEX) $<
+
+dist:
+	for f in $(SOURCE) $(MLIS) Makefile README ; do \
+	  cp --parents $$f $(DISTDIR) ; \
+	done
