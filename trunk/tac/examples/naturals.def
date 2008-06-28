@@ -2,6 +2,7 @@
 #define "even {x} := (x=o);(sigma y\ (x=(s (s y)),(even y)))".
 #define "odd {x} := (x=(s o));(sigma y\ (x=(s (s y)),(odd y)))".
 #define "leq x {y} := (x=y);(sigma z\ (y=(s z),(leq x z)))".
+#define "gt {x} y := (x=s y);(sigma p\ (x=(s p),(gt p y)))".
 
 #define
   "plus {x} y {z} :=
