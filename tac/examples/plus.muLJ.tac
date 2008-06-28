@@ -34,3 +34,6 @@ prove.
 prove.
 % Qed.
 
+#theorem plus_total "pi x\y\z\ nat x => sigma z\ plus x y z".
+prove.
+% Qed.
