@@ -114,16 +114,16 @@ type rule = {
 **********************************************************************)
 let formulaRegexes =
     [(Str.regexp "\\", ".");
-    (Str.regexp "# ", "");
+    (Str.regexp "#", "");
     (Str.regexp "+", "");
     (Str.regexp "-", "");
     (Str.regexp "\\*", "");
     (Str.regexp " ", "~");
-    (Str.regexp "=>", "\\rightarrow");
-    (Str.regexp ", ", " \\wedge ");
-    (Str.regexp ";", " \\vee ");
-    (Str.regexp "pi", "\\forall");
-    (Str.regexp "sigma", "\\exists")
+    (Str.regexp "=>", "\\rightarrow{}");
+    (Str.regexp ",", " \\wedge{}");
+    (Str.regexp ";", " \\vee{}");
+    (Str.regexp "pi", "\\forall{}");
+    (Str.regexp "sigma", "\\exists{}")
     ]
 let convertFormula s =
   List.fold_left
