@@ -82,7 +82,8 @@ struct
           FOA.AbstractionFormula(
             "invariant_n" ^ (string_of_int context),
             FOA.AbstractionBody(
-              (FOA.abstractVarWithoutLambdas v).FOA.polf (handle (context - 1) f)))
+              (FOA.abstractVarWithoutLambdas v).FOA.polf
+                (handle (context - 1) f)))
         in
         (ann, FOA.QuantifiedFormula(FOA.Nabla, abstraction))
     in
@@ -213,7 +214,8 @@ struct
               if (Option.isSome pattern) then
                 let pattern = Option.get pattern in
                 if not (FOA.matchPattern defaultPattern pattern) then
-                  G.invalidArguments (name ^ ": pattern does not match default pattern")
+                  G.invalidArguments
+                    (name ^ ": pattern does not match default pattern")
                 else
                   makeTactical name (matchbuilder pattern) tactic session
               else
@@ -568,16 +570,20 @@ struct
                             (string_of_formula (Formula(i,f))) ;
                         unfoldFixpoint "nu_l" name args body argnames sc fc
                     | Some "init" ->
+                        if pol.FOA.polarity = FOA.Positive then fc () else
                         fixpointInit i p args
                           (fun k -> sc "init_nu" [] ~k)
                           fc seq.rhs
                     | None ->
-                        fixpointInit i p args
-                          (fun k -> sc "init_nu" [] ~k)
-                          (fun () ->
-                             unfoldFixpoint "nu_l"
-                               name args body argnames sc fc)
-                          seq.rhs
+                        let fc () =
+                          unfoldFixpoint "nu_l"
+                            name args body argnames sc fc
+                        in
+                          if pol.FOA.polarity = FOA.Positive then fc () else
+                            fixpointInit i p args
+                              (fun k -> sc "init_nu" [] ~k)
+                              fc
+                              seq.rhs
                     | s -> assert false
                   end
               | FOA.FixpointFormula (FOA.Inductive,name,argnames,body) ->
@@ -740,6 +746,7 @@ struct
                   end
               | FOA.AtomicFormula p ->
                   if p = "false" then sc "false" [] else (* TODO boooh *)
+                  if pol.FOA.polarity = FOA.Positive then fc () else
                     atomicInit i p args (fun k -> sc "init" [] ~k) fc seq.rhs
               | FOA.DBFormula _ -> assert false
             end
@@ -856,16 +863,20 @@ struct
                     | Some "unfold" ->
                         unfoldFixpoint "mu_r" name args body argnames sc fc
                     | Some "init" ->
+                        if pol.FOA.polarity = FOA.Negative then fc () else
                         fixpointInit i p args
                           (fun k -> sc "init_mu" [] ~k)
                           fc seq.lhs
                     | None ->
-                        fixpointInit i p args
-                          (fun k -> sc "init_mu" [] ~k)
-                          (fun () ->
-                             unfoldFixpoint "mu_r"
-                               name args body argnames sc fc)
-                          seq.lhs
+                        let fc () =
+                          unfoldFixpoint "mu_r"
+                            name args body argnames sc fc
+                        in
+                          if pol.FOA.polarity = FOA.Negative then fc () else
+                            fixpointInit i p args
+                              (fun k -> sc "init_mu" [] ~k)
+                              fc
+                              seq.lhs
                     | s -> O.error "Invalid parameter." ; fc ()
                   end
               | FOA.FixpointFormula (FOA.CoInductive,name,argnames,body) ->
@@ -1010,6 +1021,7 @@ struct
                   end
               | FOA.AtomicFormula p ->
                   if p = "true" then sc "true" [] else
+                  if pol.FOA.polarity = FOA.Negative then fc () else
                   atomicInit i p args (fun k -> sc "init" [] ~k) fc seq.lhs
               | FOA.DBFormula _ -> assert false
             end
@@ -1110,7 +1122,7 @@ struct
     | _ -> (fun _ _ fc -> O.error "Invalid arguments.\n" ; fc ())
 
   let axiom_atom =
-    specialize `Right
+    specialize `Any
       (make_matcher
          (function
             | Formula(_,(_,FOA.ApplicationFormula ((FOA.AtomicFormula _),_))) ->
