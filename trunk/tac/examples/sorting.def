@@ -1,4 +1,3 @@
-#open "naturals.def".
 #open "lists.def".
 
 #define "insert x l1 l2 :=
