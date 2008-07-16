@@ -13,14 +13,14 @@ rotate_l.
 induction.
 async.
   %Base Case:
-  prove. 
+  prove.
   %Inductive Case:
   prove.
 % Qed.  
 
 % Theorem: sort yields a sorted list.
-#proof_output 
 #theorem insertion_sort "pi x\ y\ list x => sort x y => sorted y".
 % By induction on sort, the list hypothesis being useless.
 prove.
 % Qed.
+
