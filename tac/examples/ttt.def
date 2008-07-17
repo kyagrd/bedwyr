@@ -1,0 +1,41 @@
+#define "winner W {Board} := 
+  sigma A\B\C\D\E\F\ 
+    Board = (c W (c W (c W (c A (c B (c C (c D (c E (c F nil))))))))) ;
+    Board = (c A (c B (c C (c W (c W (c W (c D (c E (c F nil))))))))) ;
+    Board = (c A (c B (c C (c D (c E (c F (c W (c W (c W nil))))))))) ;
+    Board = (c W (c A (c B (c W (c C (c D (c W (c E (c F nil))))))))) ;
+    Board = (c A (c W (c B (c C (c W (c D (c E (c W (c F nil))))))))) ;
+    Board = (c A (c B (c W (c C (c D (c W (c E (c F (c W nil))))))))) ;
+    Board = (c W (c A (c B (c C (c W (c D (c E (c F (c W nil))))))))) ;
+    Board = (c A (c B (c W (c C (c W (c D (c W (c E (c F nil)))))))))".
+
+#define
+  "nowinner {B} := pi X\ winner X B => X = b".
+
+#define "move {In} W {Out} :=
+   (sigma L\     In = (c b L), Out = (c W L)) ;
+   (sigma X\L\K\ In = (c X L), Out = (c X K), move L W K)".
+
+#define "xwins L :=
+            winner x L ; 
+            pi K\ move L o K => (nowinner K, sigma M\ move K x M, xwins M)".
+
+#define "flip {In} {Out} := sigma A\B\C\D\E\F\G\H\I\ 
+            In  = (c A (c B (c C (c D (c E (c F (c G (c H (c I nil))))))))), 
+            Out = (c G (c H (c I (c D (c E (c F (c A (c B (c C nil)))))))))".
+
+#define "mirror {In} {Out} := sigma A\B\C\D\E\F\G\H\I\ 
+          In  = (c A (c B (c C (c D (c E (c F (c G (c H (c I nil))))))))),
+          Out = (c C (c B (c A (c F (c E (c D (c I (c H (c G nil)))))))))".
+
+#define "rotate1 {In} {Out} := sigma A\B\C\D\E\F\G\H\I\ 
+            In  = (c A (c B (c C (c D (c E (c F (c G (c H (c I nil))))))))),
+            Out = (c G (c D (c A (c H (c E (c B (c I (c F (c C nil)))))))))".
+
+#define "rotate2 {L} {K} := sigma M\ rotate1 L M, rotate1 M K".
+
+#define "rotate3 {L} {K} := sigma M\ rotate1 L M, rotate2 M K".
+
+#define "rotate  {L} {K} := rotate1 L K ; rotate2 L K ; rotate3 L K".
+
+#define "symmetry {L} {K} := flip L K ; mirror L K ; rotate L K".
