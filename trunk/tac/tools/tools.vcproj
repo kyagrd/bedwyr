@@ -106,7 +106,7 @@
 			<Tool
 				Name="VCCustomBuildTool"
 				Description="Compiling tools..."
-				CommandLine="ocamake xml-light.cma str.cma tactex.ml -epp -o $(SolutionDir)bin\tactex.exe"
+				CommandLine="ocamake xml-light.cmxa str.cmxa tactex.ml -opt -epp -o $(SolutionDir)bin\tactex.exe&#x0D;&#x0A;"
 				Outputs="none"
 			/>
 			<Tool
