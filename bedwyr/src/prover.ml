@@ -248,9 +248,10 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
                            * found. We check that everything is a variable. *)
                           let eigen = List.map (fun v -> v,var v) eigen in
                           let rec unicity = function
-                            | [] | [_] -> ()
-                            | (va,a)::(((vb,b)::_) as tl) ->
-                                if a=b then raise (Unify.NotLLambda va) ;
+                            | [] -> ()
+                            | (va,a)::tl ->
+                                if List.exists (fun (_,b) -> a=b) tl then
+                                  raise (Unify.NotLLambda va) ;
                                 unicity tl
                           in
                             unicity eigen
