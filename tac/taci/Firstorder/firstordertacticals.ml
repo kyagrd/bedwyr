@@ -503,13 +503,65 @@ struct
             let copy = List.map (copyFormula ~copier:(copier ~passive:true)) in
               begin match copyFormula ~copier (Formula(i,f)) with
                 | Formula(_,(_,FOA.EqualityFormula(t1,t2))) ->
+                    (* TODO fully normalize before extracting the vars *)
+                    let checks_vars =
+                      (* List of eigenvars which instantiation
+                       * can silently break llambda unifications
+                       * and violate timestamps. *)
+                      let ts v =
+                        match Term.observe v with
+                          | Term.Var v -> v.Term.ts
+                          | _ -> assert false
+                      in
+                      let eigen_id v =
+                        match Term.observe v with
+                          | Term.Var v when v.Term.tag=Term.Eigen -> v.Term.id
+                          | _ -> raise Exit
+                      in
+                      let eigen =
+                        (** Maximum timestamp for logic vars in the sequent. *)
+                        let max_ts =
+                          let logic =
+                            Term.logic_vars
+                              (List.concat
+                                 (List.map
+                                    (fun (Formula (_,f)) ->
+                                       FOA.termsPolarized f)
+                                    (seq.lhs@seq.rhs)))
+                          in
+                            List.fold_left max (-1) (List.map ts logic)
+                        in
+                          List.filter
+                            (fun v -> ts v <= max_ts)
+                            (Term.eigen_vars [t1;t2])
+                      in
+                        fun () ->
+                          try
+                            (* Check that eigen members are still eigenvars. *)
+                            let eigen = List.map eigen_id eigen in
+                            let rec unicity = function
+                              | [] -> ()
+                              | a::tl ->
+                                if List.exists ((=) a) tl then raise Exit ;
+                                unicity tl
+                            in
+                              unicity eigen ; true
+                          with Exit -> false
+                    in
                     begin match FOA.leftUnify t1 t2 with
                       | FOA.UnifyFailed ->
                           sc "eq_l" []
                       | FOA.UnifySucceeded bind ->
                           let fc () = FOA.undoUnify bind ; fc () in
+                          if checks_vars () then
                             sc "eq_l" ~k:fc [{seq with lhs = copy (zip []) ;
                                                        rhs = copy seq.rhs }]
+                          else begin
+                            if Properties.getBool "firstorder.debug" then
+                              O.error "Something nasty happened \
+                                       in LLambda-land!\n" ;
+                            fc ()
+                          end
                       | FOA.UnifyError s ->
                           if Properties.getBool "firstorder.debug" then
                             O.error (s ^ ".\n");
@@ -966,7 +1018,7 @@ struct
                           in
                             e onlynames (List.rev args)
                         in
-                        (* Abstract universally over eigenvariables. *)
+                        (* Abstract existentially over eigenvariables. *)
                         let getenv =
                           Term.eigen_vars ((FOA.termsPolarized lrhs)@args)
                         in
@@ -1243,7 +1295,7 @@ struct
               if Option.isNone unterm then O.error "invalid unification term.\n"
               else ();
               G.failureTactical)
-      | _ -> (G.invalidArguments "unify")
+      | _ -> (G.invalidArguments "force")
 
   (********************************************************************
   *cutTactical:

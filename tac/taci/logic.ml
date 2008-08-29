@@ -413,6 +413,17 @@ struct
         (tryTactical tac)
     | _ -> invalidArguments "try"
 
+  let assertFailInterface session args = match args with
+    | [Absyn.Tactical tac] ->
+        fun seq sc fc ->
+          tac seq
+            (* TODO the following might leave the prover in a bad state,
+             *      as it never calls the continuation to undo the success.
+             * Fix: set a flag and call k, lookup the flag on final failure. *)
+            (fun _ _ _ _ -> fc ())
+            (fun () -> sc seq [] (fun l -> l) fc)
+    | _ -> invalidArguments "assert_fail"
+
   let failureInterface session args = match args with
       [] -> (failureTactical)
     | _ -> invalidArguments "fail"
@@ -456,6 +467,7 @@ struct
     
     let ts = Table.add "orelse" orElseInterface ts in
     let ts = Table.add "try" tryInterface ts in
+    let ts = Table.add "assert_fail" assertFailInterface ts in
     
     let ts = Table.add "complete" completeInterface ts in
     
