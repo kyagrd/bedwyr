@@ -334,21 +334,12 @@ struct
                   annot
               in
               if arity = List.length args then
-                (*  Correct number of arguments.  *)
                 annot,
                 FOA.ApplicationFormula
                   (FOA.lift_pred lambdas body, args)
-              else if arity > List.length args then
-                (*  Too few arguments; eta-expansion.  *)
-                let argnames = makeArgs (arity - (List.length args)) in
-                let args' = args @ (List.map (Term.atom) argnames) in
-                annot,
-                makeAbstractions argnames
-                  (FOA.ApplicationFormula
-                     ((FOA.lift_pred lambdas body),args'))
-              else             
-                raise (FOA.SemanticError("'" ^ head ^
-                                         "' applied to too many arguments"))
+              else
+                raise (FOA.SemanticError("incorrect number of arguments \
+                                          passed to '" ^ head ^"'"))
     in
     let defpos = FOA.patternAnnotationToFormulaAnnotation FOA.Positive in
     let defneg = FOA.patternAnnotationToFormulaAnnotation FOA.Negative in
