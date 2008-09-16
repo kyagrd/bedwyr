@@ -45,6 +45,7 @@ rule token = parse
 | "&" { AND }
 | ";" { OR }
 | "=>" { IMP }
+| "-->" { CIMP } 
 | "->" { RARROW }
 | "<-" { LARROW }
 | "+" { PLUS }
