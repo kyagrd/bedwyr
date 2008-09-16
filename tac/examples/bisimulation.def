@@ -1,7 +1,0 @@
-#define
-  "coinductive sim p q :=
-    pi a\ p'\ ((step p a p') => (sigma q'\ (step q a q'),(sim p' q')))".
-
-#define
-  "simi p q :=
-    pi a\ p'\ ((step p a p') => (sigma q'\ (step q a q'),(simi p' q')))".
