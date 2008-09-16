@@ -1,0 +1,204 @@
+% pi-calculus with abstractions and concretions
+
+% In this example we consider the operational semantics
+% of pi-calculus using abstractions and concretions, as it is
+% described in Chapter 12 of
+%  Robin Milner. "Communicating and Mobile Systems: the pi-calculus".
+%   Cambridge University Press, 1999.
+%
+% The language of processes is similar to that of the polyadic pi-calculus.
+% For the operational semantics, we need a notion of agents.
+% The constructors for agents are as follows:
+%
+%   ag : proc -> agent
+%   con : name -> agent -> agent
+%   abs : (name -> agent) -> agent
+%   new : (name -> agent) -> agent
+% 
+% For example, the agent (in Milner's syntax) 
+%   (x,y,z) P, where P is a process,
+% will be encoded as 
+%   abs x\ abs y\ abs z\ ag P.
+%
+% The input and output prefix now have the following types:
+%
+%   in : name -> agent -> proc
+%   out : name -> agent -> proc
+%
+% For example, x(a,b,c).P is encoded as
+%   in x (abs a\ abs b\ abs c\ ag P)
+% In particular, we allow input prefix with no parameter, e.g.,
+%   x.P is encoded as in x (ag P).
+% Similarly, the output prefixed process, e.g., ~x<a,b,c>.P
+% is encoded as 
+%   out x (con a (con b (con c (ag P)))).
+%
+% We consider only the finite fragment of pi-calculus. Extending it
+% with recursion or replication should be straightforward.
+%
+
+
+% ======= Typing processes and agents ==============================
+% The typing of terms alone does not guarantee the adequacy of the
+% encoded processes and agents, since one can form terms which
+% have type "agent" but do not correspond to any pi-agents,
+% e.g., abs (y\ con y (P y)).
+% Adequacy is enforced by the following inductive predicates.
+%
+% The following seven definitions are not needed in the execution of
+% the operational semantics and bisimulation. They are only needed to
+% prove the meta level properties about the encoding.
+% At the meta level we want to prove the following theorems:
+% 
+% (1) canonical forms:
+%     pi A\ pi B\ (nabla x\ canonical (A x)) & restrict (new A) B ==> canonical B.
+% (2) type preservation:
+%     pi P\ pi X\ pi A\ process P & one P X A ==> canonical A.
+% 
+
+
+% processes
+process z.
+process (in X A) := absAgent A.
+process (out X A) := conAgent A.
+process (plus P Q) := process P, process Q.
+process (par P Q) := process P, process Q.
+process (nu P) := nabla x\process (P x).
+process (taup P) := process P.
+process (match X Y P) := process P.
+
+% abstractions
+absAgent (ag P) := process P.
+absAgent (new P) := nabla x\ absAgent (P x).
+absAgent (abs P) := nabla x\ absAgent (P x).
+
+% concretions
+conAgent (ag P) := process P.
+conAgent (new P) := nabla x\ conAgent (P x).
+conAgent (con M P) := conAgent P.
+
+agent A := absAgent A ; conAgent A.
+
+% Canonical agents: 
+% Call an agent canonical if and only the following hold: 
+%  - if it is an abstraction, then there is no "new" binders in it
+%  - if it is a concretion, then every "new" binder appears
+%    immediately before the variable it binds in a concretion, i.e.,
+%      (new x\ con x (P x))
+%    
+
+canonAbs (ag P).
+canonAbs (abs P) := nabla x\ canonAbs (P x).
+
+canonCon (ag P).
+canonCon (con X P) := canonCon P.
+canonCon (new x\ con x (P x)) := nabla x\ canonCon (P x).
+
+canonical A := agent A & (canonAbs A ; canonCon A).
+
+
+% == Some auxiliary predicates ==========================================
+
+% merge a (parameterized) process with an agent.
+merge M (ag P) A := A = (ag (M P)).
+merge M (abs A) (abs B) := nabla x\ merge M (A x) (B x).
+merge M (con X A) (con X B) := merge M A B.
+merge M (new A) (new B) := nabla x\ merge M (A x) (B x).
+
+% Assuming that (nabla x\ canonical (P x)) holds, running 
+% "restrict (new P) A" gives us a canonical agent A.
+restrict (new x\ ag (P x)) (ag (nu P)).
+restrict (new x\ con x (P x)) (new x\ con x (P x)).
+restrict (new x\ con M (P x)) (con M R) := restrict (new P) R. 
+restrict (new x\ new y\ (P x y)) (new R) :=
+  nabla y\ restrict (new x\ P x y) (R y).
+restrict (new x\ abs (M x)) (abs R) :=  
+  nabla y\ restrict (new x\ M x y) (R y).
+
+% Apply a canonical abstraction to a canonical concretion.
+apply (ag P) (ag Q) M R := R = (M P Q).
+apply A (new B) M (nu R) := nabla x\ apply A (B x) M (R x).
+apply (abs A) (con X B) M R := apply (A X) B M R.
+
+
+% == Operational Semantics ==========================================
+% The one step transition has the type:
+%  one : proc -> action -> agent.
+%  up : name -> action (output action)
+%  dn : name -> action (input action)
+%  tau : action
+
+one (in X A) (dn X) A.
+one (out X A) (up X) A.
+
+one (taup P) tau (ag P).
+
+one (match X X P) Y A := one P Y A.
+
+% plus
+one (plus P Q) X R := one P X R.
+one (plus P Q) X R := one Q X R.
+
+% par
+one (par P Q) X R := sigma A\ one P X A, merge (x\ par x Q) A R.
+one (par P Q) X R := sigma A\ one Q X A, merge (x\ par P x) A R.
+
+% restriction 
+one (nu P) Y R := 
+  sigma T\ (nabla x\ one (P x) Y (T x)), restrict (new T) R.
+
+% communication 
+one (par P Q) tau (ag R) :=
+  sigma X\ sigma M\ sigma N\ 
+     one P (dn X) M, one Q (up X) N, apply M N (x\y\par x y) R.
+one (par P Q) tau (ag R) :=
+  sigma X\ sigma M\ sigma N\
+     one P (up X) M, one Q (dn X) N, apply N M (x\y\par y x) R.
+
+
+% == Strong Bisimulation ===============================================
+
+% We can assume without loss of generality that the agents are in
+% canonical forms.
+
+coinductive bisimAgent (ag P) (ag Q) := bisim P Q.
+coinductive bisimAgent (abs M) (abs N) := pi x\ bisimAgent (M x) (N x).
+coinductive bisimAgent (con X A) (con X B) := bisimAgent A B.
+coinductive bisimAgent (new x\ con x (M x)) (new x\ con x (N x)) :=
+                nabla x\ bisimAgent (M x) (N x).
+
+coinductive bisim P Q := 
+ (pi A\ pi X\ one P X A => sigma B\ one Q X B & bisimAgent A B) &
+ (pi B\ pi X\ one Q X B => sigma A\ one P X A & bisimAgent A B).
+
+
+% == Examples ========================================================
+
+proc 1 (x\ in x (abs y1\ abs y2\ ag (match y1 y2 (out c (ag z))))).
+proc 2 (x\ nu w\ out x (con w (con w (ag z)))).
+proc 3 (x\ nu a\ nu b\ out x (con a (con b (ag z)))).
+
+% nu x.( x(y1,y2).[y1=y2]~c.0 | (nu w. ~x<w,w>.0) | (nu a.nu b. ~x<a,b>.0))
+example 1 (nu x\ par (P x) (par (Q x) (R x))) := 
+  proc 1 P, proc 2 Q, proc 3 R.
+% tau.~c.0 + tau.0
+example 2 (plus (taup (out c (ag z))) (taup z)).
+
+test1 := example 1 P, example 2 Q, process P, process Q, bisim P Q.
+
+
+pair 1 R T := 
+  P1 = (y\ out c (con y (ag z))),
+  P = (x\ in x (abs y\ ag (P1 y))),
+  Q1 = (k\ out c (con k (ag z))),
+  Q2 = (w\ out c (con w (ag z))),
+  Q = (x\ nu k\ plus (out x (con k (ag (Q1 k)))) (in y (abs w\ ag (Q2 w)))),
+  R = (nu x\ par (P x) (Q x)),
+  T1 = in y (abs w\ ag (nu x\ par (P x) (nu k\ Q2 w))),
+  T2 = taup (nu x\ nu k\ par (P1 k) (Q1 k)),
+  T = plus T1 T2.
+
+test2 := pair 1 R T, process R, process T, bisim R T.
+
+
+% TODO: more examples..

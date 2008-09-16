@@ -1,0 +1,157 @@
+% Bisimulation modulo equality theories
+%
+% We consider a simple example of bisimulation modulo some equality
+% theory, e.g., structural congruence or even bisimulation itself.
+% The reason for having this equality theory is to help the tabling
+% system to identify semantically equivalent processes, although
+% they may be syntactically different. 
+% For example, if proof search for (bisim P Q) reduces to 
+% (bisim (P | 0) Q), then we know that we have essentially reach a
+% cycle. But the tabling of bedwyr does not recognize the cycle,
+% so we have to rewrite (P | 0) to P.
+%
+% Basically any sort of confluent and terminating rewrite system
+% can be added to bisimulation checking. The soundness of such
+% a rewriting with respect to (strong, weak) bisimulation must however
+% be proved at the meta level.
+
+% one step transitions: taken from pi.def. For simplicity we omit
+% the match prefix and the non-deterministic choice operator.
+onep (in X M) (dn X) M.
+one (out X Y P) (up X Y) P.
+one  (taup P) tau P.
+one  (par P Q) A (par P1 Q) := one P A P1.
+one  (par P Q) A (par P Q1) := one Q A Q1.
+onep (par P Q) A (x\par (M x) Q) := onep P A M.
+onep (par P Q) A (x\par P (N x)) := onep Q A N.
+one  (nu x\P x) A (nu x\Q x)      := nabla x\ one  (P x) A (Q x).
+onep (nu x\P x) A (y\ nu x\Q x y) := nabla x\ onep (P x) A (y\ Q x y).
+onep (nu x\M x) (up X) N := nabla y\ one (M y) (up X y) (N y).
+one (par P Q) tau (nu y\ par (M y) (N y)) :=
+  sigma X\ onep P (dn X) M & onep Q (up X) N.
+one (par P Q) tau (nu y\ par (M y) (N y)) :=
+  sigma X\ onep P (up X) M & onep Q (dn X) N.
+one (par P Q) tau (par R T) :=
+  sigma X\ sigma Y\ sigma M\ onep P (dn X) M & one Q (up X Y) T & R = (M Y).
+one (par P Q) tau (par R T) :=
+  sigma X\ sigma Y\ sigma M\ onep Q (dn X) M & one P (up X Y) R & T = (M Y).
+one  (bang P) A (par P1 (bang P)) := one P A P1.
+onep (bang P) X (y\ par (M y) (bang P)) := onep P X M.
+one (bang P) tau (par (par R T) (bang P)) :=
+  sigma X\ sigma Y\ sigma M\ onep P (dn X) M & one P (up X Y) R & T = (M Y).
+one (bang P) tau (par (nu y\ par (M y) (N y)) (bang P)) := 
+  sigma X\ onep P (up X) M & onep P (dn X) N.
+
+% weak bisimulation
+
+
+taus P QQ := one P tau Q, taus Q QQ.
+taus P P.
+
+weak_one Q (up X Y) P := taus Q QQ, one QQ A PP, taus PP P.
+weak_one Q tau QQ     := taus Q QQ.
+
+weak_onep Q (up X) P :=
+  taus Q QQ, onep QQ (up X) PP, nabla x\ taus (PP x) (P x).
+weak_onep Q (dn X) P :=
+  taus Q QQ, onep QQ (dn X) PP, nabla x\ taus (PP x) (P x). % pi -> not llam
+
+coinductive weak_bisim P Q :=
+	(pi A\ pi P1\ one P A P1 =>
+           sigma Q1\ weak_one Q A Q1 & weak_bisim P1 Q1) &
+
+	(pi X\ pi M\ onep P (dn X) M => sigma N\ weak_onep Q (dn X) N & 
+					pi w\ weak_bisim (M w) (N w)) &
+
+	(pi X\ pi M\ onep P (up X) M => sigma N\ weak_onep Q (up X) N &
+					nabla w\ weak_bisim (M w) (N w)) &
+
+	(pi A\ pi Q1\ one Q A Q1 =>
+           sigma P1\ weak_one P A P1 & weak_bisim P1 Q1) &
+
+	(pi X\ pi N\ onep Q (dn X) N => sigma M\ weak_onep P (dn X) M & 
+					pi w\ weak_bisim (M w) (N w)) &
+
+	(pi X\ pi N\ onep Q (up X) N => sigma M\ weak_onep P (up X) M &
+					nabla w\ weak_bisim (M w) (N w)).
+
+
+% reduction for some structural congruences
+
+red (nu x\ P) P.
+red (nu x\ par P (M x)) (par P (nu M)).
+red (nu x\ par (M x) P) (par (nu M) P).
+red (par z P) P.
+red (par P z) P.
+
+congr P Q := red P Q.
+congr (taup P) (taup Q) := congr P Q.
+congr (in X M) (in X N) := nabla x\ congr (M x) (N x).
+congr (out X Y P) (out X Y Q) := congr P Q.
+congr (par P Q) (par R Q) := congr P R.
+congr (par P Q) (par P R) := congr Q R.
+congr (nu M) (nu N) := nabla x\ congr (M x) (N x).
+congr (bang P) (bang Q) := congr P Q.
+
+
+% equality modulo structural congruence and other equalities
+
+eq struct P P := pi Q\ congr P Q => false.
+eq struct P R := congr P Q, eq struct Q R.
+
+% modulo weak bisimulation for certain process pairs:
+%  (P | !Q) is weakly bisimilar to !Q if and only if 
+%   P is weakly bisimilar to Q.
+%  (!P | !Q) is weakly bisimilar to !Q if and only if
+%   P  is weakly bisimilar to Q.
+
+weak_bisim_eq (par (bang P) (bang Q)) (bang Q) :=
+  weak_bisim P Q.
+weak_bisim_eq (par P (bang Q)) (bang Q) := 
+  weak_bisim P Q.
+
+
+eq weak P Q := weak_bisim_eq P Q.
+eq X P P.
+
+
+% bisimulation modulo some equality theories.
+% the parameter E gives the type of equality we want.
+
+coinductive bisim_mod E P Q := 
+  sigma R\ sigma T\ 
+    eq E P R & eq E Q T & bisim E R T. 
+
+coinductive bisim E P Q :=
+	(pi A\ pi P1\ one P A P1 => sigma Q1\ one Q A Q1 & bisim_mod E P1 Q1) &
+	(pi X\ pi M\ onep P (dn X) M => sigma N\ onep Q (dn X) N & 
+					pi w\ bisim_mod E (M w) (N w)) &
+	(pi X\ pi M\ onep P (up X) M => sigma N\ onep Q (up X) N &
+					nabla w\ bisim_mod E (M w) (N w)) &
+	(pi A\ pi Q1\ one Q A Q1 => sigma P1\ one P A P1 & bisim_mod E Q1 P1) &
+	(pi X\ pi N\ onep Q (dn X) N => sigma M\ onep P (dn X) M & 
+					pi w\ bisim_mod E (N w) (M w)) &
+	(pi X\ pi N\ onep Q (up X) N => sigma M\ onep P (up X) M &
+					nabla w\ bisim_mod E (N w) (M w)).
+
+% some simple examples
+
+example 1 (bang (nu x\ par (out x a z) (in x y\ out c y z))).
+example 2 (bang (taup (out c a z))).
+example 3 (bang (nu x\ par (out x a z) (in x y\ z))).
+example 4 (bang (taup z)).
+
+
+% Process 1 and process 2 are bisimilar modulo the weak bisimilarity.
+% In this case the bisim predicate actually gives weak bisimilarity.
+test1 := example 1 P, example 2 Q, bisim_mod weak P Q.
+
+% Process 3 and 4 are strongly bisimilar. In this case it's enough
+% to use only structural congruence.
+test2 := example 3 P, example 4 Q, bisim_mod struct P Q.
+
+test3 := example 1 P, bisim_mod weak P (par P P).
+
+test4 := example 1 P, example 2 Q, bisim_mod weak P (par P Q).
+
+

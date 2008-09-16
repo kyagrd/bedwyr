@@ -1,0 +1,36 @@
+
+========================================
+# Bedwyr 1.1 the not-so-sound-logician #
+========================================
+
+This is Bedwyr, a theorem prover for the Level-0/1 fragment of the Linc logic.
+This is free software, licensed under GPL version 2.
+
+Webpage: http://slimmer.gforge.inria.fr/bedwyr
+
+Bedwyr is based on Alwen Tiu's Level-0/1, and Nadathur & Linell's LLambda
+library, both written in SML. The OCaml translation has been done by
+Baelde & Ziegler. It is currently under work by Baelde & Gacek.
+The system also benefited from the wisdom of Miller, Nadathur and Pientka.
+
+For background on the system, see "Mixing Finite Success and Finite Failure
+in an Automated Prover" (Alwen Tiu and Gopalan Nadathur and Dale Miller):
+http://www.lix.polytechnique.fr/Labo/Dale.Miller/papers/eshol05sub.pdf
+
+Building the system:
+# ./configure
+# make
+# src/bedwyr
+
+Type "#help." in Bedwyr for a little help.
+See doc/userguide.(ps.gz|pdf) for more information on how to use it.
+
+Structure of the distribution:
+/examples
+  A few simple examples.
+/src
+  Source code for the prover.
+/src/ndcore
+  Code for the unification and non-destructive normalization of LLambda.
+  Also contains a term indexing module, currenlty only used for tabling.
+  This comes with oUnit and Test for testing it.

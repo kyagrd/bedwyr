@@ -1,0 +1,15 @@
+
+% This one should be ruled out because the unification on the right becomes
+% non-LLambda after the left unif: it has the form (H (f x) = f a).
+#assert_raise (pi y\ sigma a\ (sigma x\ y = f x) => y = f a).
+
+% This one should be ruled out as there are two solutions for z.
+% In other words, after the unification of x and y, the right unif is no more
+% LLambda.
+#assert_raise (pi y\ pi x\ sigma z\ x = y => z = x).
+
+% A similar case.
+#assert_raise (pi x\ pi y\ sigma a\ pi t\ (x=t, y=t) => a=t).
+
+% Here the right unification will eventually be (A x = x) which is no problem.
+#assert (pi y\ sigma a\ pi x\ x = y => a = x).
