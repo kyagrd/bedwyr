@@ -76,13 +76,51 @@ let mark_not_disprovable_until d =
   
 type 'a answer = Known of 'a | Unknown | OffTopic
 
+
+let check_variables l1 l2 =
+  let eigen = eigen_vars l1 in
+  let logic = logic_vars l2 in
+  let var v =
+     match Term.observe v with
+     | Var v -> v
+     | _ -> assert false
+  in
+  let max = (* maximum logic variable timestamp *)
+        List.fold_left
+          (fun m v -> max m (var v).ts) (-1) logic
+  in
+  let eigen = List.filter (fun v -> (var v).ts <= max) eigen in
+     (* Check that all eigen-variables on which logic vars
+      * can depend are instantiated to distinct eigenvars.
+      * Then LLambda unifications will be preserved. *)
+     match eigen with
+     | [] -> fun () -> ()
+     | _ ->
+       let var v =
+          match Term.observe v with
+          | Var v when v.tag = Eigen -> v
+          | _ -> raise (Unify.NotLLambda v)
+       in
+         fun () ->
+         (* This is called when some left solution has been
+          * found. We check that everything is a variable. *)
+           let eigen = List.map (fun v -> v,var v) eigen in
+           let rec unicity = function
+               | [] -> ()
+               | (va,a)::tl ->
+                  if List.exists (fun (_,b) -> a=b) tl then
+                     raise (Unify.NotLLambda va) ;
+                     unicity tl
+           in unicity eigen
+
+
 (* Attemps to prove that the goal [(nabla x_1..x_local . g)(S)] by
  * destructively instantiating it,
  * calling [success] on every success, and finishing with [failure]
  * which can be seen as a more usual continuation, typically
  * restoring modifications and backtracking.
  * [timestamp] must be the oldest timestamp in the goal. *)
-let rec prove ~success ~failure ~level ~timestamp ~local g =
+let rec prove ~success ~failure ~level ~timestamp ~local ~constraints g =
 
   if System.check_interrupt () then begin
     clear_disprovable () ;
@@ -90,6 +128,28 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
   end ;
 
   let g = Norm.hnorm g in
+
+  (* Check whether the constrainsts cs are satisfiable. 
+   * This is done by calling level 0 prover to check the
+   * conjunction of the formulae in cs. If they are provable,
+   * then revert to the original state and continue proving the original goal.
+   * Otherwise, the original goal succeeds, and execute the success continuation. *)
+   
+  let check_constraints sc fl lv ts lc cs g =
+    match cs with
+    | [] -> prove ~success:sc ~failure:fl ~level:lv
+		  ~timestamp:ts ~local:lc ~constraints:cs g
+    | _ -> 
+       let state = Term.save_state () in
+       prove ~level:Zero ~timestamp:ts ~local:lc ~constraints:[]  
+             (Term.app System.Logic.andc cs)
+             ~success:(fun ts' k -> 
+                        Term.restore_state state ;
+			prove ~success:sc ~failure:fl ~level:lv
+			      ~timestamp:ts ~local:lc
+			      ~constraints:cs g)
+	      ~failure:(fun () -> Term.restore_state state ; sc ts fl)                    
+  in 
 
   let prove_atom d args =
     if !debug then
@@ -107,7 +167,7 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
     in
       match status with
         | OffTopic ->
-            prove ~level ~timestamp ~local ~success ~failure
+            prove ~level ~timestamp ~local ~success ~failure ~constraints
               (Term.app body args)
         | Known Table.Proved -> success timestamp failure
         | Known Table.Disproved -> failure ()
@@ -165,11 +225,13 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
                 prove ~level ~local ~timestamp
                   ~success:table_update_success
                   ~failure:table_update_failure
+                  ~constraints
                   (Term.app body args)
               end else
-                prove ~level ~local ~success ~failure ~timestamp
+                prove ~level ~local ~success ~failure ~timestamp ~constraints
                   (Term.app body args)
   in
+
 
   match Term.observe g with
   | Var v when v == Logic.var_truth -> success timestamp failure
@@ -197,6 +259,7 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
                     ~local ~level ~timestamp
                     ~success:(fun ts k -> conj ts k goals)
                     ~failure
+                    ~constraints
                     goal
             in
               conj timestamp failure goals
@@ -209,9 +272,19 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
                   prove
                     ~level ~local ~success ~timestamp
                     ~failure:(fun () -> alt goals)
+                    ~constraints
                     g
             in
               alt goals
+
+        (* Level 1: Constrained implication *)
+        | Var v when v == Logic.var_cimp -> 
+            assert_level_one level;
+            let (a,b) = match goals with [a;b] -> a,b | _ -> assert false in
+            let a = Norm.deep_norm a in
+            let b = Norm.deep_norm b in
+              check_constraints success failure level timestamp local (a::constraints) b
+            
 
         (* Level 1: Implication *)
         | Var v when v == Logic.var_imp ->
@@ -219,43 +292,7 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
             let (a,b) = match goals with [a;b] -> a,b | _ -> assert false in
             let a = Norm.deep_norm a in
             let b = Norm.deep_norm b in
-            let check_variables =
-              let eigen = eigen_vars [a] in
-              let logic = logic_vars [b] in
-              let var v =
-                match Term.observe v with
-                  | Var v -> v
-                  | _ -> assert false
-              in
-              let max = (* maximum logic variable timestamp *)
-                List.fold_left
-                  (fun m v -> max m (var v).ts) (-1) logic
-              in
-              let eigen = List.filter (fun v -> (var v).ts <= max) eigen in
-                (* Check that all eigen-variables on which logic vars
-                 * can depend are instantiated to distinct eigenvars.
-                 * Then LLambda unifications will be preserved. *)
-                match eigen with
-                  | [] -> fun () -> ()
-                  | _ ->
-                      let var v =
-                        match Term.observe v with
-                          | Var v when v.tag = Eigen -> v
-                          | _ -> raise (Unify.NotLLambda v)
-                      in
-                        fun () ->
-                          (* This is called when some left solution has been
-                           * found. We check that everything is a variable. *)
-                          let eigen = List.map (fun v -> v,var v) eigen in
-                          let rec unicity = function
-                            | [] -> ()
-                            | (va,a)::tl ->
-                                if List.exists (fun (_,b) -> a=b) tl then
-                                  raise (Unify.NotLLambda va) ;
-                                unicity tl
-                          in
-                            unicity eigen
-            in
+
             (* Solve [a] using level 0,
              * remind of the solution substitutions as slices of the bind stack,
              * then prove [b] at level 1 for every solution for [a],
@@ -270,7 +307,7 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
                * Then we complete the current solution with the reverse
                * flip of variables to eigenvariables, and we get sigma which
                * we store. *)
-              check_variables () ;
+              check_variables [a] [b] ();
               ev_substs := (ts,get_subst state)::!ev_substs ;
               k ()
             in
@@ -279,8 +316,7 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
               | (ts,sigma)::substs ->
                   (* We have to prove (b theta_0 sigma_i) *)
                   let unsig  = ref (apply_subst sigma) in
-                    prove ~level ~local ~timestamp:ts b
-                    ~success:(fun ts' k ->
+                  let suc = (fun ts' k ->
                                 (* We found (b theta_0 sigma_i theta).
                                  * Temporarily remove sigma_i to
                                  * prove (b theta_0 theta) against other
@@ -292,12 +328,16 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
                                       * for the next successes of (b sigma_i) *)
                                      unsig := apply_subst sigma ;
                                      k ())
-                                  substs)
-                    ~failure:(fun () ->
+                                  substs)  in
+                   let flr = (fun () ->
                                 undo_subst !unsig ;
                                 failure ())
+                   in
+                    (* We first check whether the constraints are satisfiable, 
+                     * before proceeding with proving b. *)
+                    check_constraints suc flr level ts local constraints b
             in
-              prove ~level:Zero ~local ~timestamp a
+              prove ~level:Zero ~local ~timestamp  ~constraints a
                 ~success:store_subst
                 ~failure:(fun () ->
                             prove_b timestamp failure !ev_substs)
@@ -313,7 +353,7 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
                   let timestamp = timestamp + 1 in
                   let var = Term.var ~lts:local ~tag:Eigen ~ts:timestamp in
                   let goal = app goal [var] in
-                    prove ~local ~timestamp ~level ~success ~failure goal
+                    prove ~local ~timestamp ~level ~success ~failure  ~constraints goal
               | _ -> assert false
             end
 
@@ -325,7 +365,7 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
             in begin match observe goal with
               | Lam (1,_) ->
                   let local = local + 1 in
-                    prove ~local ~level ~timestamp ~success ~failure
+                    prove ~local ~level ~timestamp ~success ~failure  ~constraints
                       (app goal [Term.nabla local])
               | _ -> assert false
             end
@@ -347,7 +387,7 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
                   let var =
                     Term.var ~ts:timestamp ~lts:local ~tag
                   in
-                    prove ~local ~level ~timestamp
+                    prove ~local ~level ~timestamp  ~constraints
                       ~success ~failure (app goal [var])
               | _ -> assert false
             end
@@ -392,9 +432,9 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
       printf "Invalid goal %a!" Pprint.pp_term g ;
       failure ()
 
-let prove ~success ~failure ~level ~timestamp ~local g =
+let prove ~success ~failure ~level ~timestamp ~local  ~constraints g =
   try
-    prove ~success ~failure ~level ~timestamp ~local g
+    prove ~success ~failure ~level ~timestamp ~local  ~constraints g
   with e -> clear_disprovable () ; raise e
 
 let toplevel_prove g =
@@ -427,7 +467,7 @@ let toplevel_prove g =
         printf "Search stopped.\n"
       end
   in
-    prove ~level:One ~local:0 ~timestamp:0 g
+    prove ~level:One ~local:0 ~timestamp:0  ~constraints:[] g
       ~success:show
       ~failure:(fun () ->
                   time () ;

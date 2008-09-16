@@ -23,6 +23,7 @@ struct
   let andc    = Term.atom ","
   let orc     = Term.atom ";"
   let imp     = Term.atom "=>"
+  let cimp    = Term.atom "-->"
   let truth   = Term.atom "true"
   let falsity = Term.atom "false"
   let forall  = Term.atom "pi"
@@ -38,6 +39,7 @@ struct
   let var_andc    = Term.get_var andc
   let var_orc     = Term.get_var orc
   let var_imp     = Term.get_var imp
+  let var_cimp    = Term.get_var cimp
   let var_truth   = Term.get_var truth
   let var_falsity = Term.get_var falsity
   let var_forall  = Term.get_var forall
@@ -51,6 +53,7 @@ struct
 
   let _ =
     Pprint.set_infix [ ("=>", Pprint.Right) ;
+                       ("-->", Pprint.Right);
                        ("->", Pprint.Right);
                        ("<-", Pprint.Left) ;
                        (",",  Pprint.Both) ;
