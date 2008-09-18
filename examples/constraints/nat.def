@@ -1,0 +1,41 @@
+% Simple examples to illustrate search strategies related to
+% 'constrained' operators.
+%
+
+nat z.
+nat (s X) := nat X.
+
+even z.
+even (s X) := odd X.
+
+odd (s X) := even X.
+
+% Infinite loop:
+% There is a finite failure, i.e., the second conjunct, but it's
+% blocked by the infinite success of the first conjunct.
+test1 := sigma X\ (nat X, odd z).
+
+% Finite failure:
+% The 'finite failure' conjunction can detect hidden finite failure 
+test2 := sigma X\ (nat X ^ odd z).
+
+% Infinite loop:
+% There is a finite failure if both nat X and X = a are executed,
+% but independently, they both succeed. So the finite-failure conjunction
+% fails to detect this.
+test3 := sigma X\ (nat X ^ X = a).
+
+% Dependent finite failure: 
+% By reordering the goal, we get a finite failure. This can be done
+% automatically by the 'finite-failure first' conjunction. What it
+% does is try proving the conjunction until the first failure is encountered,
+% then it reshuffles the original goal by moving the failing goal to the 
+% front.
+
+test4 := sigma X\ (nat X | X = a).
+
+% Infinite failure.
+% There's no way the three conjunctions we have so far can detect the failure,
+% this needs an inductive proof, e.g., by using tabling.
+test5 := sigma X\ (even X, odd X).
+
