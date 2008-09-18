@@ -21,6 +21,8 @@ module Logic =
 struct
   let eq      = Term.atom "="
   let andc    = Term.atom ","
+  let andf    = Term.atom "^"
+  let andff   = Term.atom "|"
   let orc     = Term.atom ";"
   let imp     = Term.atom "=>"
   let cimp    = Term.atom "-->"
@@ -37,6 +39,8 @@ struct
 
   let var_eq      = Term.get_var eq
   let var_andc    = Term.get_var andc
+  let var_andf    = Term.get_var andf
+  let var_andff   = Term.get_var andff
   let var_orc     = Term.get_var orc
   let var_imp     = Term.get_var imp
   let var_cimp    = Term.get_var cimp
@@ -70,6 +74,7 @@ type input =
   | Def     of defkind * Term.term * int * Term.term
   | Query   of Term.term
   | Command of string * Term.term list
+
 
 (** A simple debug flag, which can be set dynamically from the logic program. *)
 

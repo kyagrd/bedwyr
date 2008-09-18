@@ -1,0 +1,227 @@
+% Simple intruder theory and symbolic trace checking.
+% 
+% It uses a new conjunction operator ^ which can detect
+% independent finite failure. 
+% The operational meaning of A ^ B is as follows: 
+% first try proving A and B independently. If either one
+% fails, then the goal fails. Otherwise, restart the
+% prover with goal (A & B).
+
+% Additional features of this example:
+% - Intruder theories are now represented 'symbolically', i.e.,
+%   using constants such as (v x) to represent a variable.
+%   We have the additional complication of maintaining substitution
+%   pairs that keep track of the bindings of these symbolic variables.
+% - Nabla quantifier is used to generate new variable names.
+% - The message synthesis has its corresponding symbolic parts.
+% - Application of substitution is similar to the 'copy' clause 
+%   normally used in lambdaProlog.
+
+% substitution pair : 
+%  kind substpair.
+%  type sp msg -> msg -> substpair.
+
+member X (cons X L).
+member X (cons Y L) := member X L.
+
+subst L (v X) M := member (sp X M) L.
+subst L (pn N) (pn N).
+subst L (sn N) (sn N).
+subst L (pr M N) (pr R T) := subst L M R, subst L N T.
+subst L (enc M N) (enc R T) := subst L M R, subst L N T.
+
+substlist L nil nil.
+substlist L (cons X R) (cons Y T) := subst L X Y, substlist L R T.
+
+eq S X Y := subst S X M, subst S Y N, M = N.
+
+eq_member S X (cons Y L) := eq S Y X.
+eq_member S X (cons Y L) := eq_member S X L.
+
+% Synthesis of 'concrete' messages
+synth L M := member M L.
+synth L (sn N) := member (sn N) L.
+synth L (pn N). % Public names are always known to the intruder
+% Use finite-failure detection. This is to prevent an infinite
+% success to blocking hidden independent finite failure.
+synth L (pr M N) := synth L M ^ synth L N.
+synth L (enc M N) := synth L M ^ synth L N.
+
+eq_mem S X (cons Y L) := subst S Y X.
+eq_mem S X (cons Y L) := eq_mem S X L.
+
+% Synthesis of symbolic messages
+syn S L M := eq_member S M L.
+syn S L (pn N). 
+syn S L (pr M N) := syn S L M, syn S L N.
+syn S L (enc M N) := syn S L N, syn S L M.
+
+
+remove X (cons X L) L.
+remove X (cons Y L) (cons Y R) := remove X L R.
+
+sat S L (cons X (cons Y R)) := remove (pr X Y) L R.
+sat S L (cons X (cons Y R)) := 
+      remove (enc X Y) L R, syn S L Y.
+ 
+saturate S L L.
+saturate S L R := sat S L R, saturate S R K.
+
+deduce S L M := saturate S L K, substlist S K R, synth R M.
+
+
+% safe S L P 
+% this is provable if the process P never reaches the 'bad' state,
+% in its interaction with an intruder. 
+% Here S is the substitution pairs and L is the knowledge accumulated 
+% by the intruder during its interaction with P.
+
+safe S L zero.
+safe S L (out A M P) := safe S (cons M L) P.
+safe S L (in  A M)   := 
+  pi Y\ nabla x\ deduce S L Y --> safe (cons (sp x Y) S) L (M (v x)).
+safe S L (match X Y P) := eq S X Y => safe S L P.
+safe S L (nu M) := nabla x\ safe S L (M (sn x)).
+
+% no
+ex0 := safe nil nil (in (pn a) y\ bad).
+
+% no: k is made public, so the intruder has access to k
+ex1 := safe nil nil (nu k\ out (pn a) (sn k) (in (pn a) y\ match y (sn k) bad)).
+
+% yes: both m and k are private, although (enc m k) is public, so 
+% the intruder has no access to m.
+ex2 := safe nil nil 
+    (nu k\ nu m\ 
+      out (pn a) (enc (sn m) (sn k))
+      (in (pn a) y\ match y (sn m) bad)).
+
+% no: the intruder can decrypt (enc m k) with k
+ex3 := safe nil nil 
+    (nu k\ nu m\ 
+      out (pn a) (enc (sn m) (sn k))
+      (out (pn a) (sn k) (in (pn a) y\ match y (sn m) bad))).
+
+% yes:
+ex4 := safe nil nil 
+       (nu b\ 
+           in (pn a) 
+	      (y\ 
+	      	  out (pn a) (enc (pn a) y) 
+          	      (in (pn a) w\ match w (sn b) bad)
+              )
+       ).
+
+%
+ex5 := safe nil nil
+       (nu b\
+       	   in (pn a)
+	      (y\
+		out (pn a) (enc y (pn a))
+		    (in (pn a) (w\ match w (sn b) bad))
+	      )
+       ).
+
+% no: 
+% the intruder's knowledge at the end of the trace
+%  a, (enc Y k), (enc m (enc a k))
+% The message m can be decrypted if Y is instantiated to a.
+% Since a is available to the intruder, this is a valid instantiation,
+% so m can be decrypted.
+ex6 := safe nil nil 
+      (nu k\ nu m\ 
+          in (pn a) 
+          (y\ 
+            out (pn a) (enc y (sn k)) 
+             (out (pn a)  (enc (sn m) (enc (pn a) (sn k)))
+               (in (pn a) (w\ match w (sn m) bad)))
+          )
+        ).
+
+
+% yes: 
+% This is similar to ex6, except that the first output is an encryption
+% of m, not y.
+ex7 := safe nil nil
+      (nu k\ nu m\ 
+          in (pn a) 
+          (y\ 
+             out (pn a)  (enc (sn m) (sn k)) 
+             (out (pn a) (enc (sn m) (enc (pn a) (sn k)))
+                  (in (pn a) (w\ match w (sn m) bad))
+              )
+          )
+        ).
+
+
+% yes: 
+% In order to decrypt
+%   (enc m (enc (pr m a) k))
+% the intruder needs to know (enc (pr m a) k).
+% The intruder has access to (enc Y k), where Y
+% is anything that can be synthesized from its initial 
+% knowledge, which contains only a, so the intruder can't
+% synthesize (enc (pr m a) k).
+
+ex8 := safe nil nil
+      (nu k\ nu m\ 
+          in (pn a) 
+          (y\ 
+             out (pn a) 
+	     	 (enc y (sn k)) 
+               	 (out (pn a) 
+	       	      (enc (sn m) (enc (pr (sn m) (pn a)) (sn k)))
+                      (in (pn a) (w\ match w (sn m) bad))
+               	 )
+          )
+       ).
+
+% Yes:
+% same as ex8, except that the initial knowledge is
+% a bit more complicated; the name a has to be decoded. 
+
+ex9 := safe nil (cons (enc (sn a) (sn b)) (cons (sn b) nil))
+      (nu k\ nu m\ 
+          in (sn a) 
+	     (y\ 
+             	 out (sn a) (enc y (sn k)) 
+		     (out (sn a) 
+		     	  (enc (sn m) (enc (pr (sn m) (sn a)) (sn k)))
+                    	  (in (sn a) (w\ match w (sn m) bad))
+                     )
+             )
+       ).
+
+
+% No:
+% modified slightly from ex9, the second message is
+% encrypted using (enc (pr b a) k), and since the intruder
+% can generate (pr b a) (to be fed to the first input),
+% it will have access to (enc (pr b a) k).
+
+ex10 := safe nil (cons (enc (sn a) (sn b)) (cons (sn b) nil))
+      (nu k\ nu m\ 
+          in (sn a) 
+	  (y\ 
+             out (sn a) 
+	     	 (enc y (sn k)) 
+               	 (out (sn a)
+		      (enc (sn m) (enc (pr (sn b) (sn a)) (sn k)))
+                      (in (sn a) (w\ match w (sn m) bad))
+                 )
+          )
+       ).
+
+% Yes
+ex11 := safe nil nil 
+     (nu m\
+          (in (pn a) (y\ 
+	      in (pn a) (w\
+	      	 match w (enc (sn m) y) bad)))).
+
+% Yes
+ex12 := safe nil nil 
+     (nu m\
+          (in (pn a) (y\ 
+	      in (pn a) (w\
+	      	 match w (enc y (sn m)) bad)))).

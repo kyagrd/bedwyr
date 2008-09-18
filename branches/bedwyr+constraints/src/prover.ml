@@ -76,7 +76,6 @@ let mark_not_disprovable_until d =
   
 type 'a answer = Known of 'a | Unknown | OffTopic
 
-
 let check_variables l1 l2 =
   let eigen = eigen_vars l1 in
   let logic = logic_vars l2 in
@@ -307,7 +306,7 @@ let rec prove ~success ~failure ~level ~timestamp ~local ~constraints g =
                * Then we complete the current solution with the reverse
                * flip of variables to eigenvariables, and we get sigma which
                * we store. *)
-              check_variables [a] [b] ();
+              check_variables (a::constraints) [b] ();
               ev_substs := (ts,get_subst state)::!ev_substs ;
               k ()
             in
@@ -392,10 +391,58 @@ let rec prove ~success ~failure ~level ~timestamp ~local ~constraints g =
               | _ -> assert false
             end
 
+        (* Conjunction of independent finite failures: used to detect (independent) finite failure 
+         * in one of the conjuncts *)
+	| Var v when v == Logic.var_andf ->
+	    let newg = Term.app System.Logic.andc goals in
+	    let state = Term.save_state () in
+	    let rec fconjunct gs =
+	      begin match gs with
+	      | [] -> prove ~success ~failure ~level ~timestamp ~local ~constraints newg
+	      | (g::rs) ->
+		  prove ~level ~timestamp ~local ~constraints g
+		    ~success:(fun ts' k -> 
+                      Term.restore_state state ;
+		      fconjunct rs
+			     )
+		    ~failure:(fun () -> Term.restore_state state ; failure ())     
+	      end
+	    in
+	    fconjunct goals
+
+        (* Conjunction with "failure first": used to reorder the goals. It first tries
+	 * the goals by the order they are given, but upon encountering the first fail goal,
+	 * it restarts by putting this failing goal in front of the other goals. *)
+	| Var v when v == Logic.var_andff ->
+	    let state = Term.save_state () in
+	    let rec ffconjunct ts sgs cgs =
+	      begin match cgs with 
+	      | [] -> 
+		  Term.restore_state state ;
+		  let newg = Term.app System.Logic.andc sgs in
+		  prove ~success ~failure ~level ~timestamp ~local ~constraints newg
+	      | (g::rs) ->
+		  prove 
+                    ~local ~level ~timestamp
+                    ~success:(fun ts' k -> ffconjunct ts' (sgs @ [g]) rs)
+                    ~failure:(fun () -> 
+		      Term.restore_state state ;
+		      let newg = Term.app System.Logic.andc ((g::sgs) @ rs)
+		      in
+		      prove ~success ~failure ~level ~timestamp ~local ~constraints newg
+			     )
+                    ~constraints
+                    g
+	      end
+	    in
+	    ffconjunct timestamp [] goals
+
+
         (* Output *)
         | Var v when v == Logic.var_print ->
             List.iter (fun t -> printf "%a\n%!" Pprint.pp_term t) goals ;
             success timestamp failure
+
 
         (* Get an AST *)
         | Var v when v == Logic.var_parse ->

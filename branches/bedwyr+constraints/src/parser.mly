@@ -20,6 +20,8 @@
 %{
   let eq   a b = Term.app System.Logic.eq   [a;b]
   let andc a b = Term.app System.Logic.andc [a;b]
+  let andf a b = Term.app System.Logic.andf [a;b]
+  let andff a b = Term.app System.Logic.andff [a;b]
   let orc  a b = Term.app System.Logic.orc  [a;b]
   let imp  a b = Term.app System.Logic.imp  [a;b]
   let cimp a b = Term.app System.Logic.cimp  [a;b]
@@ -88,7 +90,7 @@
 %}
 
 %token BSLASH LPAREN RPAREN DOT SHARP
-%token EQ AND IMP CIMP RARROW LARROW OR PLUS MINUS TIMES
+%token EQ AND ANDF ANDFF IMP CIMP RARROW LARROW OR PLUS MINUS TIMES
 %token DEF IND COIND
 %token <string> ID
 %token <string> STRING
@@ -98,6 +100,8 @@
 %right CIMP
 %left OR
 %left AND
+%left ANDF
+%left ANDFF
 %nonassoc EQ
 %right RARROW
 %left LARROW
@@ -129,6 +133,8 @@ input_query:
 exp:
 | exp EQ   exp { eq   $1 $3 }
 | exp AND  exp { andc $1 $3 }
+| exp ANDF exp { andf $1 $3 }
+| exp ANDFF exp { andff $1 $3 }
 | exp OR   exp { orc  $1 $3 }
 | exp IMP  exp { imp  $1 $3 }
 | exp CIMP exp { cimp $1 $3 }
@@ -186,7 +192,8 @@ let to_term lexer file =
   let logic x =
     List.exists
       (Term.eq x)
-      [System.Logic.eq;System.Logic.andc;System.Logic.orc;System.Logic.imp;System.Logic.cimp]
+      [System.Logic.eq;System.Logic.andc;System.Logic.andf;
+       System.Logic.andff;System.Logic.orc;System.Logic.imp;System.Logic.cimp]
   in
   let rec split acc = function
     | [] -> assert false

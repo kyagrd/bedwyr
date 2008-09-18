@@ -43,6 +43,8 @@ rule token = parse
 | ":=" { DEF }
 | "," { AND }
 | "&" { AND }
+| "^" { ANDF }
+| "|" { ANDFF}
 | ";" { OR }
 | "=>" { IMP }
 | "-->" { CIMP } 
