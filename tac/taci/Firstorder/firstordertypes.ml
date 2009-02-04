@@ -549,7 +549,9 @@ struct
     | Some b -> Some (b-1)
 
   let outOfBound seq =
-    match seq with Some b when b < 0 -> true | _ -> false
+    match seq with
+        Some b -> b < 0
+      | _ -> false
 
   (********************************************************************
   *makeExistentialVar/makeUniversalVar/makeNablaVar:

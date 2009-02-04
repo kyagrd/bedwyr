@@ -548,6 +548,10 @@ struct
         ++ ("set_bound", Tacticals.setBoundTactical)
 
         ++ ("abstract", Tacticals.abstractTactical)
+        
+        (*  Abella-style tacticals. *)
+        ++ ("case", Tacticals.caseTactical)
+        ++ ("intros", Tacticals.introsTactical)
     in
 
     (* Which structural rules to admit. *)

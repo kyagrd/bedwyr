@@ -138,7 +138,8 @@ struct
 
   let debug s =
     if Properties.getBool "output.debug" then
-      print_string ("<Output type=\"debug\" text=\"" ^ (escape s) ^ "\"/>")
+      (print_endline ("<Output type=\"debug\" text=\"" ^ (escape s) ^ "\"/>");
+      flush stdout)
     else
       ()
   

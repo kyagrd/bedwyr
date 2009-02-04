@@ -883,8 +883,7 @@ struct
             (* TODO factor this out, I've cut/pasted too many times *)
             let unfoldFixpoint ruleName name args body argnames sc fc =
               let i,bound =
-                if (unfoldingProgresses `Right argnames args) &&
-                  (Random.int 1000) <> 0 then
+                if (unfoldingProgresses `Right argnames args) then
                   { i with
                         progressing_bound = updateBound i.progressing_bound },
                   seq.bound
@@ -1161,6 +1160,25 @@ struct
   let nuL = patternTac `Left  "nu _" ~arg:"unfold"
   let nuR = patternTac `Right "nu _" ~arg:"unfold"
 
+  let caseTactical session args =
+    match args with
+        []
+      | [Absyn.String(_)] ->
+          G.thenTactical
+            (muL session args)
+            (G.thenTactical
+              (G.repeatTactical (orL session []))
+              (G.repeatTactical (sigmaL session [])))
+      | _ -> G.invalidArguments "case"
+
+  let introsTactical session args =
+    match args with
+        [] ->
+          (G.thenTactical
+            (G.repeatTactical (piR session []))
+            (G.repeatTactical (impR session [])))
+      | _ -> G.invalidArguments "intros"
+
   let inductionTactical session = function
     | [] -> patternTac `Left "mu _" session []
     | [Absyn.String i] -> patternTac `Left "mu _" ~arg:i session []
@@ -1328,7 +1346,7 @@ struct
                     G.makeTactical pretactic
             end
       | _ -> G.invalidArguments "cut"
-
+        
   (** {1 Simplifying strategy}
     * Apply all non-branching invertible rules.
     * Handling units (true/false) requires to work on atoms on both sides. *)
@@ -1737,8 +1755,8 @@ struct
       List.map
         (fun (Formula(i,f)) ->
           Formula(i,
-                  modifyFormulaAnnotations
-                    (composeModifiers freezer unfocusModifier) f))
+            modifyFormulaAnnotations
+              (composeModifiers freezer unfocusModifier) f))
         fs
     in
     let lemmas =
@@ -1746,7 +1764,6 @@ struct
         (fun (_,f,_) -> makeFormula ((FOA.eliminateNablas []).FOA.polf f))
         session.lemmas
     in
-    
     let pretactic = fun seq sc fc ->
       let lhs' = strip seq.lhs in
       let rhs' = strip seq.rhs in
@@ -1759,7 +1776,7 @@ struct
             lhs = freezeAll (List.append lemmas lhs');
             rhs = freezeAll rhs';
             lemma_bound = updateBound seq.lemma_bound;
-            bound = Some 1}
+            bound = Some 0}
         in
         let make pb = fun proofs ->
           { rule = "introduce_lemmas" ;
@@ -1888,7 +1905,7 @@ struct
           sc
           focuser)
       else
-        (O.debug "Lemma bound exceeded, or no lemma to try.\n";
+        (O.debug "Lemma bound exceeded, or no lemmas to try.\n";
         focuser ())
     else
       focuser ()
