@@ -19,6 +19,14 @@ prove.
 then(and,prove).
 % Qed.
 
+% Yet another one, probably the simplest.
+#theorem half_total "pi x\ nat x => sigma h\ half x h".
+simplify.
+then(
+ induction("x\ (sigma h\ half x h); (sigma p\ x = s p, sigma h\ half p h)"),
+ prove).
+% Qed.
+
 #theorem half_double "pi x\y\ double x y => half y x".
 prove.
 % Qed.
@@ -45,12 +53,12 @@ induction.
 async.
 prove.
 induction(
- "y\ nat y, pi h\ (pi y1\ nat y1 => sigma a\ ack h y1 a, nat a) => sigma a\ ack (s h) y a, nat a)").
+ "y\ nat y, pi h\ (pi y1\ nat y1 => sigma a\ ack h y1 a, nat a) =>
+       sigma a\ ack (s h) y a, nat a)").
 prove.
 % Invariance.
-async.
-prove.
-and.
-prove.
-prove.
+% How come prove doesn't work but the following does.
+then(async,prove).
 % Qed.
+
+
