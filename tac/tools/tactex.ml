@@ -80,6 +80,7 @@ let header =
 \\pdfpagewidth 200in
 \\pdfpageheight 100in
 \\begin{document}
+\\thispagestyle{empty}
 "
 
 let footer =
