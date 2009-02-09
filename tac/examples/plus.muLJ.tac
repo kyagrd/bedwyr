@@ -10,7 +10,7 @@ prove.
 % Qed.
 
 % Theorem: (x + y) + z = x + (y + z).
-#theorem plus_trans "pi r\ x\ y\ z\
+#theorem plus_assoc "pi r\ x\ y\ z\
   (sigma w\ (plus x y w, plus w z r)) =>
   (sigma w\ (plus x w r, plus y z w))".
 prove.
