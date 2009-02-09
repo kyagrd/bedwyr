@@ -26,6 +26,7 @@
 let () = Properties.setBool "firstorder.proofsearchdebug" false
 let () = Properties.setBool "firstorder.debug" false
 let () = Properties.setInt "firstorder.defaultbound" 3
+(* The following is a bad name, for historical reasons *)
 let () = Properties.setBool "firstorder.asyncbound" true
 let () = Properties.setInt "firstorder.defaultasyncbound" 10
 let () = Properties.setBool "firstorder.lemmabound" false
@@ -62,7 +63,7 @@ struct
   type session = FOT.session
   type proof = FOT.proof
   type sequent = FOT.sequent
-  
+
   (********************************************************************
   *string_of_sequent:
   * Convert a sequent to a string, including the sequent's level.

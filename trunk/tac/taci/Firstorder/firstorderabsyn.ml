@@ -217,30 +217,36 @@ let getApplicationName = function
 let mapFormula x termsf = {
   polf = (fun (p,f) -> p,(x ()).formf f) ; 
   predf = (function 
-      FixpointFormula(fix,name,args,f) -> FixpointFormula (fix,name,args,(x ()).abstf f)
+    | FixpointFormula(fix,name,args,f) ->
+        FixpointFormula (fix,name,args,(x ()).abstf f)
     | AtomicFormula(head) -> AtomicFormula(head)
     | DBFormula(a,b,c) -> DBFormula(a,b,c)) ;
   abstf = (function
-      AbstractionFormula(name,f) -> AbstractionFormula(name,(x ()).abstf f)
+    | AbstractionFormula(name,f) -> AbstractionFormula(name,(x ()).abstf f)
     | AbstractionBody(f) -> AbstractionBody((x ()).polf f)) ;
   formf = (function 
-      BinaryFormula(c,l,r) -> BinaryFormula(c,(x ()).polf l, (x ()).polf r)
+    | BinaryFormula(c,l,r) -> BinaryFormula(c,(x ()).polf l, (x ()).polf r)
     | EqualityFormula(l,r) -> EqualityFormula(termsf l, termsf r)
     | QuantifiedFormula(q,f) -> QuantifiedFormula(q,(x ()).abstf f)
-    | ApplicationFormula(f,tl) -> ApplicationFormula((x ()).predf f,List.map termsf tl))}
+    | ApplicationFormula(f,tl) ->
+        ApplicationFormula((x ()).predf f,List.map termsf tl))}
 
 
 let mapFormula2 f1 f2 x termsf a = {
   polf = (fun (p,f) -> p,(x a).formf f) ; 
   predf = (fun f tl -> ApplicationFormula((match f with 
-      FixpointFormula(fix,name,args,f) -> FixpointFormula (fix,name,args,(x a).abstf f)
+    | FixpointFormula(fix,name,args,f) ->
+        FixpointFormula (fix,name,args,(x a).abstf f)
     | AtomicFormula(head) -> AtomicFormula(head)
     | DBFormula(a,b,c) -> DBFormula(a,b,c)),tl)) ;
   abstf = (function
-      AbstractionFormula(name,f) -> AbstractionFormula(name,(x (f1 name a)).abstf f)
+    | AbstractionFormula(name,f) ->
+        AbstractionFormula(name,(x (f1 name a)).abstf f)
     | AbstractionBody(f) -> AbstractionBody((x a).polf f)) ;
   formf = (function 
-      BinaryFormula(c,l,r) -> let (al,ar) = f2 c a in BinaryFormula(c,(x al).polf l, (x ar).polf r)
+    | BinaryFormula(c,l,r) ->
+        let (al,ar) = f2 c a in
+          BinaryFormula(c,(x al).polf l, (x ar).polf r)
     | EqualityFormula(l,r) -> EqualityFormula(termsf l, termsf r)
     | QuantifiedFormula(q,f) -> QuantifiedFormula(q,(x a).abstf f)
     | ApplicationFormula(f,tl) -> ((x a).predf f (List.map termsf tl)))}
@@ -249,8 +255,8 @@ let patternAnnotationToFormulaAnnotation polarity p =
   let get default = function None -> default | Some x -> x in
   {polarity = get polarity p.polarity_pattern;
    freezing = get Unfrozen p.freezing_pattern;
-   control = get Normal p.control_pattern;
-   junk   = get Clean p.junk_pattern}
+   control  = get Normal p.control_pattern;
+   junk     = get Clean p.junk_pattern}
 
 
 let mapPattern x termsf = {
@@ -631,7 +637,9 @@ let eliminateNablas tv =
         | FixpointFormula (i,name,args,body) ->
             let (names,progs) = List.split args in
             let n,a,b = abstract_body name names body in
-            ApplicationFormula (FixpointFormula(i,n,List.combine a progs,b), List.map tf terms))}
+            ApplicationFormula
+              (FixpointFormula(i,n,List.combine a progs,b), List.map tf terms)
+      )}
 
   in
   f [] tv
@@ -789,7 +797,8 @@ let applyFixpoint argument =
       | AtomicFormula(name) -> AtomicFormula name) ;
 
     abstf = (function
-        AbstractionFormula(name,body) -> AbstractionFormula(name,(ff (name::lam) db ()).abstf body)
+      | AbstractionFormula(name,body) ->
+          AbstractionFormula(name,(ff (name::lam) db ()).abstf body)
       | AbstractionBody(f) -> AbstractionBody((ff lam db ()).polf f)) ;
 
     polf = (function
@@ -820,7 +829,8 @@ let applyFixpoint argument =
 
   let catch f x = try Some (f x) with InvalidFixpointApplication -> None in
   let mapf = ff [] 0 () in
-  {polf = catch mapf.polf ; predf = catch mapf.predf ; abstf = catch mapf.abstf ; formf = catch mapf.formf}
+  {polf = catch mapf.polf ; predf = catch mapf.predf ;
+   abstf = catch mapf.abstf ; formf = catch mapf.formf}
 
 
 (**********************************************************************

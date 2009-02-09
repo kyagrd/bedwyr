@@ -76,7 +76,8 @@
           (name::names, f'')
       | FOA.AbstractionBodyPattern(f) -> ([], f)
       | FOA.AnonymousAbstraction ->
-          ([FOA.anonymousBinder], (default (FOA.ApplicationPattern(FOA.AnonymousPredicate, []))))
+          ([FOA.anonymousBinder],
+           (default (FOA.ApplicationPattern(FOA.AnonymousPredicate, []))))
 
   (********************************************************************
   *makeAbstractions:
@@ -94,7 +95,9 @@
       | [name] ->
           (formulaConstructor name (FOA.AbstractionBodyPattern(f)))
       | name::names ->
-         formulaConstructor name (FOA.AbstractionBodyPattern(makeAbs' names formulaConstructor f))
+         formulaConstructor
+           name
+           (FOA.AbstractionBodyPattern(makeAbs' names formulaConstructor f))
     in
     let (names,f') = getAbstractions f in
     (makeAbs' names formulaConstructor f')
@@ -119,7 +122,8 @@
       else
         default (FOA.ApplicationPattern(FOA.AtomicPattern(head), args))
     else
-      raise (FOA.SemanticError("term is neither a first order application nor an atom"))
+      raise (FOA.SemanticError "term is neither a first order application \
+                                nor an atom")
 
   let anonymousTerm () = FOA.makeAnonymousTerm ()
   let atom t = Term.atom t
