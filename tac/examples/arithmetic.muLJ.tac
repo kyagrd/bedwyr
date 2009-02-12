@@ -16,6 +16,10 @@ prove.
 prove.
 % Qed.
 
+#theorem even_and_odd "pi x\y\ even x => odd y => even_and_odd x y".
+prove.
+% Qed.
+
 #theorem half_total "pi x\ nat x => sigma h\ half x h".
 prove.
 % Qed.

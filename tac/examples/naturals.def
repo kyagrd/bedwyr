@@ -5,12 +5,17 @@
 #define "gt {x} y := (x=s y);(sigma p\ (x=(s p),(gt p y)))".
 
 #define
-  "plus {x} y {z} :=
+  "plus {x} y z :=
     (x = o, y = z);
     (sigma m\ n\ x = (s m), z = (s n), plus m y n)".
 
+#define "even_and_odd x y :=
+  (x = o, y = s o);
+  (sigma p\ x = s (s p), even_and_odd p y);
+  (sigma p\ y = s (s p), even_and_odd x p)".
+
 #define
-  "mult {x} y {z} :=
+  "mult {x} y z :=
     (x = o, z = o);
     (sigma x'\ x = s x', sigma z'\ mult x' y z', plus y z' z)".
 
