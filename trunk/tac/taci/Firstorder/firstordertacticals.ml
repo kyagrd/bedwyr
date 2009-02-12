@@ -674,13 +674,9 @@ struct
                     | None ->
                         if i.context <> 0 then
                           O.warning
-                            "induction or coinduction with non-zero \
-                             generic contexts; \
+                            "induction with non-empty generic context; \
                              use 'abstract' first for better results.\n";
 
-                        let fresh n =
-                          Term.fresh ~name:n ~ts:0 ~lts:0 ~tag:Term.Eigen
-                        in
                         let rhs =
                           (* ... |- H1,..,Hn becomes H1\/..\/Hn *)
                           let rec s = function
@@ -720,38 +716,78 @@ struct
                           in
                           s (zip [])
                         in
-                        let fv,elrhs =
+                        let fresh n =
+                          (* The details don't matter, we'll abstract that
+                           * out soon enough. We only need that the fresh vars
+                           * are not eigen. *)
+                          Term.fresh ~name:n ~ts:0 ~lts:0 ~tag:Term.Logic
+                        in
+                        let fv,eigenvars,elrhs =
                           (* Essentially form
-                           *   fv1\..fvn\ fv1=arg1 => .. fvn=argn => lrhs *)
-                          let rec e lan la =
-                            match lan,la with
-                              | [],[] -> [], lrhs 
-                              | an::lan,a::la ->
-                                  let lv,f = e lan la in
-                                  let v = fresh an in
-                                    v::lv,
-                                    FOA.negativeFormula
-                                      (FOA.BinaryFormula
-                                         (FOA.Imp,
-                                          handleNablas i.context
-                                            (FOA.positiveFormula
-                                              (FOA.EqualityFormula (v,a))),
-                                          f))
+                           *   fv1\..fvn\ fv1=arg1 => .. fvn=argn => lrhs.
+                           * We avoid creating trivial equalities on eigenvars
+                           * and keep track of those in [subst] instead. *)
+                          let is_eigen x = match Term.observe x with
+                            | Term.Var { Term.tag=Term.Eigen } -> true
+                            | _ -> false
+                          in
+                          (* We need to copy eigenvars in our invariant
+                           * since we'll perform substitutions on them. *)
+                          let tm_copy = Term.copy_eigen () in
+                          let rec add_equalities names args =
+                            match names,args with
+                              | [],[] -> [],lrhs 
+                              | name::names,arg::args ->
+                                  let fv,f = add_equalities names args in
+                                  let v = fresh name in
+                                    (* Eigenvars might have changed..
+                                     * but then they would have been changed
+                                     * into our fresh [fv] Logic variables.
+                                     * So there's no need to apply the subst
+                                     * (by copying) to check that the arg
+                                     * is (still) an eigenvar. *)
+                                    if i.context=0 && is_eigen arg then
+                                      let arg = tm_copy ~passive:false arg in
+                                        Term.bind arg v ;
+                                        v::fv, f
+                                    else
+                                      v::fv,
+                                      FOA.negativeFormula
+                                        (FOA.BinaryFormula
+                                           (FOA.Imp,
+                                            handleNablas i.context
+                                              (FOA.positiveFormula
+                                                (FOA.EqualityFormula (v,arg))),
+                                            f))
                               | _ -> assert false
                           in
-                          e onlynames (List.rev args)
+                          let fv,f =
+                            add_equalities onlynames (List.rev args)
+                          in
+                          (* Finally apply the substitutions everywhere. *)
+                          let tm_copy = tm_copy ~passive:true in
+                          let f =
+                            let rec copyFormula () =
+                              FOA.mapFormula copyFormula tm_copy
+                            in
+                              (copyFormula ()).FOA.polf f
+                          in
+                          let eigenvars =
+                            (* We won't get the eigenvars
+                             * that have been instantiated to the logic
+                             * variables standing for the arguments [fv]. *)
+                            Term.eigen_vars (FOA.termsPolarized f)
+                          in
+                            fv, eigenvars, f
                         in
                         (* Abstract universally over eigenvariables. *)
-                        let getenv =
-                          Term.eigen_vars ((FOA.termsPolarized lrhs)@args)
-                        in
                         let aelrhs =
                           List.fold_left
                             (fun f v ->
                                FOA.negativeFormula
                                  (FOA.QuantifiedFormula
                                     (FOA.Pi, (FOA.abstractVar v).FOA.polf f)))
-                            elrhs getenv
+                            elrhs eigenvars
                         in
                         let aelrhs' =
                           if
