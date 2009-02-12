@@ -5,25 +5,38 @@ Tac::Proof Tools
 ===============================================================================
 
 Tactex:
+
+  Usage:
+    tactex --input "input.xml" --output "output.tex"
+    tactex --input "input.xml" --output "outline.tex" --outline
+
   The program converts a proof (*.xml) to LaTeX.  To convert the resulting file
   to *.dvi, use:
   
     $ latex <file.tex>
-  
+
+  The resulting DVI file can be turned into a PS with an adjusted bounding box
+  by using:
+
+    $ dvips -E <file.dvi> -o <file.ps>
+
   Or, to convert it to *.pdf, use:
   
     $ pdflatex <file.tex>
 
-  The "--outline" option produces a proof 'sketch' or outline that is simpler than
-  the original proof.  This outline essentially only shows rules done in the
-  synchronous phase, as well as the final sequent of the asynchronous phase; it
-  folds all asynchronous rules into a single inference rule named 'async'.  Also,
-  the 'active' formula for each rule is highlighted in blue.
+  The "--outline" option produces a proof 'sketch' or outline that is simpler
+  than the original proof.  This outline essentially only shows rules done
+  in the synchronous phase, as well as the final sequent of the asynchronous
+  phase; it folds all asynchronous rules into a single inference rule named
+  'async'.  Also, the 'active' formula for each rule is highlighted in blue.
 
   Currently tactex can generate very large *.tex files which TeX can sometimes
   choke on.  Even if TeX doesn't choke, sometimes the proof styler doesn't work
   quite right.
 
+All-in-one "view" script:
+
+  Under UNIX the script view bundles all steps, including viewing using gv.
   Usage:
-    tactex --input "input.xml" --output "output.tex"
-    tactex --input "input.xml" --output "outline.tex" --outline
+    view <file.xml>
+    view <file.xml> [--outline]
