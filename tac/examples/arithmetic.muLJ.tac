@@ -72,23 +72,11 @@ prove.
 % induction(
 %  "y\ nat y, pi h\ (pi y1\ nat y1 => sigma a\ ack h y1 a, nat a) =>
 %        sigma a\ ack (s h) y a, nat a)").
-% We get the same with induction-unfold, modulo some garbage.
+% We get that automatically with induction-unfold, with nat frozen in it.
 #set "firstorder.induction-unfold" "true".
 induction.
+% TODO understand why it's so much slower without doing async first.
 async.
 prove.
-and.
-prove.
-async.
-rotate_l.
-rotate_l.
-pi_l.
-imp_l.
-eq.
-rotate_l.
-pi_l.
-% TODO it seems that "prove" is defeated by the need for the following guess.
-force("H","h2").
 prove.
 % Qed.
-

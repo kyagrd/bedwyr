@@ -48,20 +48,25 @@ prove.
     length x m => length y n => length z p =>
     plus m n p".
 prove.
+% Qed.
 
 % Sublist Theorems.
 % If x is a sublist of y, then x is shorter than (or the same length as) y.
-#theorem sublist_size "pi x\ y\ m\ n\ sublist x y => length x m => length y n => leq m n".
+#theorem sublist_size
+  "pi x\ y\ m\ n\ sublist x y => length x m => length y n => leq m n".
 prove.
+% Qed.
 
 % Sublist is associative.
-% #theorem sublist_assoc "pi x\ y\ z\ sublist x y => sublist y z => sublist x z".
+% #theorem sublist_assoc
+%   "pi x\ y\ z\ sublist x y => sublist y z => sublist x z".
 % prove.
 
 % Sublist is reflexive.
 % We need lemmas on this one.
-#set "firstorder.lemmabound" "true".
+% #set "firstorder.lemmabound" "true".
 #theorem sublist_refl "pi x\ list x => sublist x x".
+cut_lemma("append_nil_1").
 prove.
 % Qed.
 #set "firstorder.lemmabound" "false".
@@ -87,4 +92,3 @@ prove.
 % Also check that prove doesn't loop on:
 % #theorem check "sigma x\ equal x (cons foo x)".
 % prove.
-

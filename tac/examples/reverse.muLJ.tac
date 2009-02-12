@@ -22,24 +22,14 @@ induction.
 async.
 prove.
 then(mu_l,async).
-focl.
 prove.
-focl.
 then(mu_l,async).
+prove.
 then(induction,async).
 prove.
 focl.
 axiom.
 axiom.
-mu_l.
-then(or_l,simplify).
-then(mu_r,right).
-focr.
-then(mu_r,right).
-focr.
 axiom.
-axiom.
-then(mu_r,right).
-focr.
-axiom.
+prove.
 % Qed.

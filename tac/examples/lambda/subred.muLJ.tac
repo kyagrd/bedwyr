@@ -89,19 +89,10 @@ then(rotate_l,then(weak_l,then(weak_l,then(weak_l,then(weak_l,weak_l))))).
 admit.
 
 % Going under an abstraction.
-then(pi_l,then(pi_l,imp_l)).
-eq.
-imp_l.
-eq.
+async.
+prove.
 then(pi_l,then(pi_l,imp_l)).
 force("G'","(x\ cons (pair x t) g0)").
-rotate_l.
-weak_l.
-weak_l.
-prove.
-imp_l.
-weak_l.
-weak_l("typeof _ _ _").
 prove.
 prove.
 % Qed.
