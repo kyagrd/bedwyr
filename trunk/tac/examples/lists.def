@@ -9,6 +9,8 @@
     (sigma H1\ H2\ T1\ T2\
       X = cons H1 T1, Y = cons H2 T2, H1 = H2, equal T1 T2)".
 
+#define "mem X {L} := sigma hd\tl\ L = cons hd tl, (X=hd;mem X tl)".
+
 #define "length {x} {n} :=
   (x = nil, n = o);
   (sigma h\ t\ m\ x = (cons h t), n = s m, length t m)".
