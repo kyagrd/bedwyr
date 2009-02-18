@@ -17,13 +17,21 @@
 * Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA        *
 **********************************************************************)
 type properties = (string * string) list
+exception PropertyNotFound of string
+
 let properties = ref []
+
+let getDefault f s d =
+  try 
+    (f s)
+  with
+    PropertyNotFound(_) -> d
 
 let getString s =
   try
     (List.assoc s !properties)
   with
-    Not_found -> failwith ("Properties.get: '" ^ s ^ "' not found")
+    Not_found -> raise (PropertyNotFound ("Properties.get: '" ^ s ^ "' not found"))
 
 let getBool s = bool_of_string (getString s)
 let getInt s = int_of_string (getString s)
