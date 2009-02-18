@@ -117,6 +117,11 @@ namespace StickyTaci
       m_Commands.Add("#undo");
     }
 
+    public void Interrupt()
+    {
+      //Poor me, no SIG_INT on Windows.
+      return;
+    }
     public void Restart()
     {
       if(m_Taci != null)

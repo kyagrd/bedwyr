@@ -37,6 +37,10 @@ namespace StickyTaci
       this.toolStripSeparator5 = new System.Windows.Forms.ToolStripSeparator();
       this.mainMenuFileSave = new System.Windows.Forms.ToolStripMenuItem();
       this.mainMenuFileSaveAs = new System.Windows.Forms.ToolStripMenuItem();
+      this.toolStripSeparator8 = new System.Windows.Forms.ToolStripSeparator();
+      this.mainMenuFilePageSetup = new System.Windows.Forms.ToolStripMenuItem();
+      this.mainMenuFilePrintPreview = new System.Windows.Forms.ToolStripMenuItem();
+      this.mainMenuFilePrint = new System.Windows.Forms.ToolStripMenuItem();
       this.toolStripSeparator4 = new System.Windows.Forms.ToolStripSeparator();
       this.mainMenuFileExit = new System.Windows.Forms.ToolStripMenuItem();
       this.mainMenuEdit = new System.Windows.Forms.ToolStripMenuItem();
@@ -73,10 +77,7 @@ namespace StickyTaci
       this.outputSplitter = new System.Windows.Forms.SplitContainer();
       this.goalBox = new System.Windows.Forms.RichTextBox();
       this.outputBox = new System.Windows.Forms.RichTextBox();
-      this.mainMenuFilePrint = new System.Windows.Forms.ToolStripMenuItem();
-      this.mainMenuFilePageSetup = new System.Windows.Forms.ToolStripMenuItem();
-      this.mainMenuFilePrintPreview = new System.Windows.Forms.ToolStripMenuItem();
-      this.toolStripSeparator8 = new System.Windows.Forms.ToolStripSeparator();
+      this.mainMenuTacInterrupt = new System.Windows.Forms.ToolStripMenuItem();
       mainMenuTacOpen = new System.Windows.Forms.ToolStripMenuItem();
       this.mainMenu.SuspendLayout();
       this.mainSplitter.Panel1.SuspendLayout();
@@ -132,7 +133,7 @@ namespace StickyTaci
       // 
       this.mainMenuFileNew.Name = "mainMenuFileNew";
       this.mainMenuFileNew.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.N)));
-      this.mainMenuFileNew.Size = new System.Drawing.Size(152, 22);
+      this.mainMenuFileNew.Size = new System.Drawing.Size(151, 22);
       this.mainMenuFileNew.Text = "&New";
       this.mainMenuFileNew.Click += new System.EventHandler(this.mainMenuFileNew_Click);
       // 
@@ -140,39 +141,66 @@ namespace StickyTaci
       // 
       this.mainMenuFileOpen.Name = "mainMenuFileOpen";
       this.mainMenuFileOpen.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.O)));
-      this.mainMenuFileOpen.Size = new System.Drawing.Size(152, 22);
+      this.mainMenuFileOpen.Size = new System.Drawing.Size(151, 22);
       this.mainMenuFileOpen.Text = "&Open";
       this.mainMenuFileOpen.Click += new System.EventHandler(this.mainMenuFileOpen_Click);
       // 
       // toolStripSeparator5
       // 
       this.toolStripSeparator5.Name = "toolStripSeparator5";
-      this.toolStripSeparator5.Size = new System.Drawing.Size(149, 6);
+      this.toolStripSeparator5.Size = new System.Drawing.Size(148, 6);
       // 
       // mainMenuFileSave
       // 
       this.mainMenuFileSave.Name = "mainMenuFileSave";
       this.mainMenuFileSave.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.S)));
-      this.mainMenuFileSave.Size = new System.Drawing.Size(152, 22);
+      this.mainMenuFileSave.Size = new System.Drawing.Size(151, 22);
       this.mainMenuFileSave.Text = "&Save";
       this.mainMenuFileSave.Click += new System.EventHandler(this.mainMenuFileSave_Click);
       // 
       // mainMenuFileSaveAs
       // 
       this.mainMenuFileSaveAs.Name = "mainMenuFileSaveAs";
-      this.mainMenuFileSaveAs.Size = new System.Drawing.Size(152, 22);
+      this.mainMenuFileSaveAs.Size = new System.Drawing.Size(151, 22);
       this.mainMenuFileSaveAs.Text = "Save &As";
       this.mainMenuFileSaveAs.Click += new System.EventHandler(this.mainMenuFileSaveAs_Click);
+      // 
+      // toolStripSeparator8
+      // 
+      this.toolStripSeparator8.Name = "toolStripSeparator8";
+      this.toolStripSeparator8.Size = new System.Drawing.Size(148, 6);
+      // 
+      // mainMenuFilePageSetup
+      // 
+      this.mainMenuFilePageSetup.Name = "mainMenuFilePageSetup";
+      this.mainMenuFilePageSetup.Size = new System.Drawing.Size(151, 22);
+      this.mainMenuFilePageSetup.Text = "Page Set&up";
+      this.mainMenuFilePageSetup.Click += new System.EventHandler(this.mainMenuFilePageSetup_Click);
+      // 
+      // mainMenuFilePrintPreview
+      // 
+      this.mainMenuFilePrintPreview.Name = "mainMenuFilePrintPreview";
+      this.mainMenuFilePrintPreview.Size = new System.Drawing.Size(151, 22);
+      this.mainMenuFilePrintPreview.Text = "Print Pre&view";
+      this.mainMenuFilePrintPreview.Click += new System.EventHandler(this.mainMenuFilePrintPreview_Click);
+      // 
+      // mainMenuFilePrint
+      // 
+      this.mainMenuFilePrint.Name = "mainMenuFilePrint";
+      this.mainMenuFilePrint.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.P)));
+      this.mainMenuFilePrint.Size = new System.Drawing.Size(151, 22);
+      this.mainMenuFilePrint.Text = "&Print";
+      this.mainMenuFilePrint.Click += new System.EventHandler(this.mainMenuFilePrint_Click);
       // 
       // toolStripSeparator4
       // 
       this.toolStripSeparator4.Name = "toolStripSeparator4";
-      this.toolStripSeparator4.Size = new System.Drawing.Size(149, 6);
+      this.toolStripSeparator4.Size = new System.Drawing.Size(148, 6);
       // 
       // mainMenuFileExit
       // 
       this.mainMenuFileExit.Name = "mainMenuFileExit";
-      this.mainMenuFileExit.Size = new System.Drawing.Size(152, 22);
+      this.mainMenuFileExit.Size = new System.Drawing.Size(151, 22);
       this.mainMenuFileExit.Text = "E&xit";
       this.mainMenuFileExit.Click += new System.EventHandler(this.mainMenuFileExit_Click);
       // 
@@ -266,6 +294,7 @@ namespace StickyTaci
             mainMenuTacOpen,
             this.mainMenuTacReset,
             this.mainMenuTacRestart,
+            this.mainMenuTacInterrupt,
             this.mainMenuTacTiming,
             this.toolStripSeparator7,
             this.mainMenuTacNextLine,
@@ -479,32 +508,14 @@ namespace StickyTaci
       this.outputBox.TabIndex = 0;
       this.outputBox.Text = "";
       // 
-      // mainMenuFilePrint
+      // mainMenuTacInterrupt
       // 
-      this.mainMenuFilePrint.Name = "mainMenuFilePrint";
-      this.mainMenuFilePrint.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.P)));
-      this.mainMenuFilePrint.Size = new System.Drawing.Size(152, 22);
-      this.mainMenuFilePrint.Text = "&Print";
-      this.mainMenuFilePrint.Click += new System.EventHandler(this.mainMenuFilePrint_Click);
-      // 
-      // mainMenuFilePageSetup
-      // 
-      this.mainMenuFilePageSetup.Name = "mainMenuFilePageSetup";
-      this.mainMenuFilePageSetup.Size = new System.Drawing.Size(152, 22);
-      this.mainMenuFilePageSetup.Text = "Page Set&up";
-      this.mainMenuFilePageSetup.Click += new System.EventHandler(this.mainMenuFilePageSetup_Click);
-      // 
-      // mainMenuFilePrintPreview
-      // 
-      this.mainMenuFilePrintPreview.Name = "mainMenuFilePrintPreview";
-      this.mainMenuFilePrintPreview.Size = new System.Drawing.Size(152, 22);
-      this.mainMenuFilePrintPreview.Text = "Print Pre&view";
-      this.mainMenuFilePrintPreview.Click += new System.EventHandler(this.mainMenuFilePrintPreview_Click);
-      // 
-      // toolStripSeparator8
-      // 
-      this.toolStripSeparator8.Name = "toolStripSeparator8";
-      this.toolStripSeparator8.Size = new System.Drawing.Size(149, 6);
+      this.mainMenuTacInterrupt.Name = "mainMenuTacInterrupt";
+      this.mainMenuTacInterrupt.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Alt)
+                  | System.Windows.Forms.Keys.C)));
+      this.mainMenuTacInterrupt.Size = new System.Drawing.Size(214, 22);
+      this.mainMenuTacInterrupt.Text = "Interrupt";
+      this.mainMenuTacInterrupt.Click += new System.EventHandler(this.mainMenuTacInterrupt_Click);
       // 
       // IdeForm
       // 
@@ -582,6 +593,7 @@ namespace StickyTaci
     private System.Windows.Forms.ToolStripMenuItem mainMenuFilePageSetup;
     private System.Windows.Forms.ToolStripSeparator toolStripSeparator8;
     private System.Windows.Forms.ToolStripMenuItem mainMenuFilePrintPreview;
+    private System.Windows.Forms.ToolStripMenuItem mainMenuTacInterrupt;
   }
 }
 
