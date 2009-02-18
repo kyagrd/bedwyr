@@ -43,10 +43,17 @@ prove.
 prove.
 % Qed.
 
-#theorem append_length
+#theorem append_length_plus
   "pi x\ y\ z\ m\ n\ p\ append x y z =>
     length x m => length y n => length z p =>
     plus m n p".
+prove.
+% Qed.
+
+#theorem append_plus_length
+  "pi a\b\l\na\nb\n\ append a b l =>
+     length a na => length b nb => plus na nb n =>
+     length l n".
 prove.
 % Qed.
 
