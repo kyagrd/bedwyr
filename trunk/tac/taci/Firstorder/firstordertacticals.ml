@@ -1138,7 +1138,7 @@ struct
       | `Left -> G.makeTactical left
       | `Right -> G.makeTactical right
 
-  (** Utility for creating matchers easily. TODO get rid of that, and only
+  (** Utility for creating matchers easily. TODO: get rid of that, and only
     * use patterns. *)
   let make_matcher test formulas =
     let rec aux acc = function
@@ -1234,6 +1234,8 @@ struct
             | Formula(_,(_,FOA.ApplicationFormula ((FOA.AtomicFormula _),_))) ->
                 true
             | _ -> false))
+      ~arg:"init"
+
   let axiom_mu =
     specialize `Right
       (make_matcher
@@ -1243,6 +1245,7 @@ struct
                     ((FOA.FixpointFormula (FOA.Inductive,_,_,_)),_))) -> true
             | _ -> false))
       ~arg:"init"
+
   let axiom_nu =
     specialize `Left
       (make_matcher
@@ -1768,26 +1771,37 @@ struct
 
   (********************************************************************
   *introduceLemmas:
-  * Strips all non-atomic formulas, adds all lemmas on the left after
-  * freezing them, and then tries to automatically prove.  Doesn't
-  * bother if the right is empty.  It is assumed that the lemma bound
-  * hasn't been reached.
+  * Essentially takes all of the lemmas and adds them to the context,
+  * with some options to make it less terrible:
+  *   Strip non-atomics or not.
+  *   Freeze lemmas or not.
+  *   Freeze hypotheses/conclusion or not.
   ********************************************************************)
   and introduceLemmas session =
+    let strip = Properties.getDefault Properties.getBool "firstorder.lemmas.strip-atomic" false in
+    let freezeLemmas = Properties.getDefault Properties.getBool "firstorder.lemmas.freeze-lemmas" false in
+    let freezeSequent = Properties.getDefault Properties.getBool "firstorder.lemmas.freeze-sequent" false in
+
+    (*  strip: Strip nonatomic formulas from a list of formulas.  *)
     let strip s =
       let atomic f =
         match f with
             Formula(_, (_,FOA.ApplicationFormula(_))) -> true
           | _ -> false
       in
-      (List.filter atomic s)
+      if strip then
+        (List.filter atomic s)
+      else
+        s
     in
-    let freezer arg =
-      match arg with
-        ann, FOA.ApplicationFormula(_) -> freezeModifier arg
-      | _ -> idModifier arg
-    in
+    
+    (*  freezeAll: freeze all formulas in a list. *)
     let freezeAll fs =
+      let freezer arg =
+        match arg with
+          ann, FOA.ApplicationFormula(_) -> freezeModifier arg
+        | _ -> idModifier arg
+      in
       List.map
         (fun (Formula(i,f)) ->
           Formula(i,
@@ -1795,12 +1809,28 @@ struct
               (composeModifiers freezer unfocusModifier) f))
         fs
     in
+
+    let freezeLemmas lemmas =
+      if freezeLemmas then
+        freezeAll lemmas
+      else
+        lemmas
+    in
+    let freezeSequent seq =
+      if freezeSequent then
+        freezeAll seq
+      else
+        seq
+    in
+    
+    (*  The list of lemmas, with nablas removed.  *)
     let lemmas =
       List.map 
         (fun (_,f,_) -> makeFormula ((FOA.eliminateNablas []).FOA.polf f))
         session.lemmas
     in
     let pretactic = fun seq sc fc ->
+      let postLemmaBound = updateBound seq.bound in
       let lhs' = strip seq.lhs in
       let rhs' = strip seq.rhs in
       if Listutils.empty rhs' then
@@ -1809,11 +1839,12 @@ struct
         let () = O.debug "Introducing lemmas.\n" in
         let seq' =
           {seq with
-            lhs = freezeAll (List.append lemmas lhs');
-            rhs = freezeAll rhs';
+            lhs = List.append (freezeLemmas lemmas) (freezeSequent lhs');
+            rhs = freezeSequent rhs';
             lemma_bound = updateBound seq.lemma_bound;
-            bound = Some 1}
+            bound = postLemmaBound}
         in
+        (*  TODO: add in the proofs of all of the lemmas. *)
         let make pb = fun proofs ->
           { rule = "introduce_lemmas" ;
             params = [] ;
@@ -1934,15 +1965,13 @@ struct
         fc
     in
     if Properties.getBool "firstorder.lemmabound" then
-      if
-        not (outOfBound seq.lemma_bound || Listutils.empty (session.lemmas))
-      then
-        (introduceLemmas session [seq']
-          sc
-          focuser)
-      else
-        (O.debug "Lemma bound exceeded, or no lemmas to try.\n";
+      if outOfBound seq.lemma_bound then
+        focuser ()
+      else if Listutils.empty (session.lemmas) then
+        (O.debug "No lemmas to try.\n";
         focuser ())
+      else
+        introduceLemmas session [seq'] sc focuser
     else
       focuser ()
 

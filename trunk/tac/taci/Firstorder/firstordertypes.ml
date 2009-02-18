@@ -546,7 +546,7 @@ struct
   ********************************************************************)
   let updateBound = function
     | None -> None
-    | Some b -> Some (b-1)
+    | Some b -> Some (b - 1)
 
   let outOfBound seq =
     match seq with

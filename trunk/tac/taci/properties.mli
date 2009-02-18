@@ -27,10 +27,14 @@
 * Handles ints, strings, and booleans; if you want to use some other
 * type it must be convertible to string.
 **********************************************************************)
+exception PropertyNotFound of string
+
 val getBool : string -> bool
 val getInt : string -> int
 val getString : string -> string
 val getValue : string -> (string -> 'a) -> 'a
+
+val getDefault : (string -> 'a) -> string -> 'a -> 'a
 
 val setString : string -> string -> unit
 val setInt : string -> int -> unit
