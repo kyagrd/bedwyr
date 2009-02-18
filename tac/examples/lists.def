@@ -9,6 +9,9 @@
     (sigma H1\ H2\ T1\ T2\
       X = cons H1 T1, Y = cons H2 T2, H1 = H2, equal T1 T2)".
 
+#define "nat_list {X} := (X = nil);
+                         (sigma H\ TL\ nat H, X = (cons H TL), (nat_list TL))".
+
 #define "mem X {L} := sigma hd\tl\ L = cons hd tl, (X=hd;mem X tl)".
 
 #define "length {x} {n} :=

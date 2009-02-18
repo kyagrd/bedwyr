@@ -1812,7 +1812,7 @@ struct
             lhs = freezeAll (List.append lemmas lhs');
             rhs = freezeAll rhs';
             lemma_bound = updateBound seq.lemma_bound;
-            bound = Some 0}
+            bound = Some 1}
         in
         let make pb = fun proofs ->
           { rule = "introduce_lemmas" ;
