@@ -371,6 +371,7 @@ namespace StickyTaci
       UpdateInfo();
       OnTacReset();
     }
+
     public void OnLogic(Logic l)
     {
       OnLogic(l.Key);
@@ -419,6 +420,11 @@ namespace StickyTaci
     public void OnEnd()
     {
       OnAll((int)Form.Scintilla.Lines.Count);
+    }
+
+    public void OnInterrupt()
+    {
+      Taci.Interrupt();
     }
 
     public void OnPreviousLine()

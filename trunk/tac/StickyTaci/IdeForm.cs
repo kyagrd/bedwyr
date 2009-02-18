@@ -533,6 +533,11 @@ namespace StickyTaci
       Ctrl.OnEnd();
     }
 
+    private void mainMenuTacInterrupt_Click(object sender, EventArgs e)
+    {
+      Ctrl.OnInterrupt();
+    }
+
     private void currentLineImagePanel_Paint(object sender, PaintEventArgs e)
     {
       Rectangle dest = new Rectangle(new Point(0, 0), m_CurrentLineImage.Size);
