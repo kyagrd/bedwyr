@@ -6,8 +6,10 @@
  ** as such.  This is to support the hilighting found in StickyTaci, part of the Tac system.
  ** It supports multiline strings using ' or ", line comments using %, and that's about it.
  **/
+
 // Copyright 2008 by Zach Snow.  Note that this was adapted from LexPython.cxx, which can
 // be found in the Scintilla sources.
+
 // The License.txt file describes the conditions under which this software may be distributed.
 // Scintilla source code edit control.
 
@@ -59,8 +61,13 @@ static bool IsComment(Accessor &styler, int pos, int len) {
 	return len > 0 && styler[pos] == '%';
 }
 
-static bool IsStringStart(int ch) {
-	if (ch == '\'' || ch == '"')
+//IsStringStart():
+//  Checks for the start of string; if lexer.simple.singlequote is set
+//  single quoted strings aren't allowed, which is good if your language's
+//  identifiers can contain ', though it's not perfect (as 'a' is an
+//  identifier).
+static bool IsStringStart(int ch, const Accessor &styler) {
+	if ((ch == '\'' && styler.GetPropertyBool("lexer.simple.singlequote")) || ch == '"')
 		return true;
 	return false;
 }
@@ -167,7 +174,7 @@ static void ColouriseSimpleDoc(unsigned int startPos, int length, int initStyle,
 				sc.SetState(SCE_SIMPLE_DEFAULT);
 			}
 		} else if (sc.state == SCE_SIMPLE_STRING) {
-      if (IsStringStart(sc.ch)) {
+      if (IsStringStart(sc.ch, styler)) {
 				sc.ForwardSetState(SCE_SIMPLE_DEFAULT);
         inString = false;
 				needEOLCheck = true;
@@ -380,4 +387,3 @@ static const char * const simpleWordListDesc[] = {
 };
 
 LexerModule lmSimple(SCLEX_SIMPLE, ColouriseSimpleDoc, "simple", FoldSimpleDoc, simpleWordListDesc);
-

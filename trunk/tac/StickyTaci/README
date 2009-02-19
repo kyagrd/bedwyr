@@ -35,7 +35,8 @@ Syntax Highlighting and Code Folding:
   are highlighted in red, tacticals in blue, comments in green, quoted
   strings in maroon, and already executed lines in gray.  Autocomplete
   can be initiated by typing Ctrl + Space.  Code snippets can be initiated
-  by typing Ctrl + J.
+  by typing Ctrl + J.  You can comment the current selection using Ctrl + Q,
+  and then uncomment it using Ctrl + Shift + Q.
 
 Interacting with Taci:
   The Tac menu in StickyTaci offers a number of ways to interact with
@@ -84,4 +85,3 @@ Known Issues and Bugs:
   periods.  As long as you don't use multiline strings with periods, this
   shouldn't happen, and such lines shouldn't ever occur (because periods are
   not part of any of the logics' syntax) in general.  But, be wary!
-  
