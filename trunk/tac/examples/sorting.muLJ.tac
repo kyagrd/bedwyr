@@ -1,10 +1,10 @@
 #open "sorting.def".
 
-#theorem leq_s "pi x\y\ leq x y => leq (s x) (s y)".
+#lemma leq_s "pi x\y\ leq x y => leq (s x) (s y)".
 prove.
 % Qed.
 
-#theorem decide_leq_gt "pi x\y\ nat x => nat y => leq x y ; gt x y".
+#lemma decide_leq_gt "pi x\y\ nat x => nat y => leq x y ; gt x y".
 simplify.
 induction.
 async.
@@ -19,7 +19,7 @@ then(cut_lemma("leq_s"),prove).
 prove.
 % Qed.
 
-#theorem gt_leq "pi x\y\ gt x y => leq y x".
+#lemma gt_leq "pi x\y\ gt x y => leq y x".
 prove.
 % Qed.
 
@@ -28,7 +28,7 @@ prove.
 % Qed.
 
 % Theorem: insert preserves sortedness.
-#theorem insert_sorted
+#lemma insert_sorted
    "pi x\ y\ z\ nat x => sorted y => insert x y z => sorted z".
 async.
 rotate_l.
@@ -53,7 +53,7 @@ async.
 % Qed.
 #set "firstorder.induction-unfold" "false".
 
-#theorem insert_total
+#lemma insert_total
     "pi x\l\ nat x => nat_list l => sigma l'\ insert x l l', nat_list l'".
 simplify.
 rotate_l.

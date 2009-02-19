@@ -18,6 +18,7 @@
 **********************************************************************)
 type properties = (string * string) list
 exception PropertyNotFound of string
+exception InvalidPropertyFormat of string
 
 let properties = ref []
 
@@ -33,8 +34,22 @@ let getString s =
   with
     Not_found -> raise (PropertyNotFound ("Properties.get: '" ^ s ^ "' not found"))
 
-let getBool s = bool_of_string (getString s)
-let getInt s = int_of_string (getString s)
+let getBool s =
+  let s' = (getString s) in
+  try
+    bool_of_string s'
+  with
+    Invalid_argument _ ->
+      raise (InvalidPropertyFormat ("Properties.getBool: '" ^ s ^ "' with value '" ^ s' ^ "' not convertible to bool"))
+
+let getInt s =
+  let s' = (getString s) in
+  try
+    int_of_string s'
+  with
+    Invalid_argument _ ->
+      raise (InvalidPropertyFormat ("Properties.getInt: '" ^ s ^ "' with value '" ^ s ^ "' not convertible to int"))
+
 let getValue s f = f (getString s)
 
 let setString s v =

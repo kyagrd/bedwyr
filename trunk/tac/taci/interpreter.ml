@@ -438,8 +438,10 @@ struct
             (O.output ("Proof output set to '" ^ dir ^ "'\n");
             Properties.setString "interpreter.proofoutput" dir;
             (session, Some (Properties(props))))
+        | Absyn.Lemma(name, t) ->
+            (L.lemma name t session, Some (Session(session)))
         | Absyn.Theorem(name, t) ->
-            (L.prove name t session, Some (Session(session)))
+            (L.theorem name t session, Some (Session(session)))
         | Absyn.Definitions(ds) ->
             (L.definitions ds session, Some (Session(session)))
         | Absyn.Timing(onoff) ->

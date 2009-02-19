@@ -16,7 +16,7 @@ prove.
 % Qed.
 
 % First, let's focus on the main lemma.
-#theorem main "pi gamma\m\n\
+#lemma main "pi gamma\m\n\
     (nabla a\b\ eq (cons (pair a b) gamma) (m a) (n b))
  => (nabla   a\ eq (cons (pair a a) gamma) (m a) (n a))".
 simplify.

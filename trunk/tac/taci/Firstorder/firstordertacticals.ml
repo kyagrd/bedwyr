@@ -1853,6 +1853,15 @@ struct
             sequent = seq ;
             subs = (pb proofs) }
         in
+        
+        (*  NOTE: Might not be right... see old way below.  *)
+        (*
+        focusTactic session [seq']
+          (fun newSeqs oldSeqs pb k ->
+            let sc' ns os pb k = sc ns (make pb) k in
+            syncTactical session newSeqs sc' k)
+          fc
+        *)
         fullAsync session [seq']
           (fun ns os pb k ->
             assert (Listutils.empty ns) ;
@@ -1951,6 +1960,8 @@ struct
   * property is set.  Then either introduces lemmas if that property
   * is set followed by focusing on a formula, or just focuses on a
   * formula immediately.
+  *
+  * TODO: Don't thaw everything here, do it in the invariant generation.
   ********************************************************************)
   and fullSync session seq sc fc =
     let seq' =
@@ -1964,7 +1975,7 @@ struct
         (fun newSeqs oldSeqs pb k -> syncTactical session newSeqs sc k)
         fc
     in
-    if Properties.getBool "firstorder.lemmabound" then
+    if Properties.getBool "firstorder.lemmas" then
       if outOfBound seq.lemma_bound then
         focuser ()
       else if Listutils.empty (session.lemmas) then
@@ -2042,7 +2053,7 @@ struct
   * Toplevel interface to setBound.
   ********************************************************************)
   and setBoundTactical session args =
-    let lemmaBound = Properties.getInt "firstorder.defaultlemmabound" in
+    let lemmaBound = Properties.getInt "firstorder.lemmas.bound" in
     let syncBound = (Properties.getInt "firstorder.defaultbound") in
     match args with
         [Absyn.String s] ->
@@ -2065,7 +2076,7 @@ struct
     let abstractAsync =
       G.thenTactical (abstractTactical session []) (fullAsync session)
     in
-    let lemmaBound = Properties.getInt "firstorder.defaultlemmabound" in
+    let lemmaBound = Properties.getInt "firstorder.lemmas.bound" in
     let rec construct i max =
       if i = max then
         (G.thenTactical (setBound session max lemmaBound) abstractAsync)

@@ -21,7 +21,7 @@ prove.
 prove.
 % Qed.
 
-#theorem bind_ww "pi l\x\t'\ (nabla a\ bind l x (t' a))
+#lemma bind_ww "pi l\x\t'\ (nabla a\ bind l x (t' a))
                   => sigma t\ t'=(a\t), bind l x t".
 prove.
 % Qed.
@@ -31,7 +31,7 @@ prove.
 prove.
 % Qed.
 
-#theorem bind_s "pi l\x\t\ bind l x t => nabla a\ bind l x t".
+#lemma bind_s "pi l\x\t\ bind l x t => nabla a\ bind l x t".
 prove.
 % Qed.
 
