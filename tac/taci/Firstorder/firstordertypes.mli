@@ -115,6 +115,7 @@ sig
     proof_namespace   : Term.namespace ;
     theorem_name : string option ;
     theorem : (Firstorderabsyn.annotation Firstorderabsyn.polarized) option ;
+    provingLemma : bool ;
     lemmas : lemma list
   }
 

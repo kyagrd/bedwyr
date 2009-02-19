@@ -41,7 +41,12 @@ No logic does nothing!
   let defineTactical _ _ _ = ()
 
   let reset () = ()
-  let prove name s session =
+  
+  let lemma name s session =
+    (print_endline ("No Logic can't prove lemma '" ^ name ^ "': " ^ s ^ ".");
+    session)
+
+  let theorem name s session =
     (print_endline ("No Logic can't prove '" ^ name ^ "': " ^ s ^ ".");
     session)
     

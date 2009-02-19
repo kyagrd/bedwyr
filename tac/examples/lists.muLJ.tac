@@ -22,7 +22,7 @@ prove.
 % Qed.
 
 % Append Theorems.
-#theorem append_nil_1 "pi x\ list x => append x nil x, append nil x x".
+#lemma append_nil_1 "pi x\ list x => append x nil x, append nil x x".
 prove.
 % Qed.
 
@@ -71,12 +71,13 @@ prove.
 
 % Sublist is reflexive.
 % We need lemmas on this one.
-% #set "firstorder.lemmabound" "true".
+#set "firstorder.lemmas" "true".
+#set "firstorder.lemmas.bound" "0".
 #theorem sublist_refl "pi x\ list x => sublist x x".
-cut_lemma("append_nil_1").
+% cut_lemma("append_nil_1").
 prove.
 % Qed.
-#set "firstorder.lemmabound" "false".
+#set "firstorder.lemmas" "false".
 
 % Some 'traps' related to infinite progressings in the synchronous and
 % asynchronous phases.

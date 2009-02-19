@@ -83,6 +83,7 @@ rule command = parse
 | "logic"       {LOGIC}
 | "logics"      {LOGICS}
 
+| "lemma"       {LEMMA}
 | "theorem"     {THEOREM}
 | "define"      {DEFINE}
 

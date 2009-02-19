@@ -37,6 +37,7 @@ type command =
   | Redo of int
   | ProofOutput of string
 
+  | Lemma of string * string
   | Theorem of string * string
   | Definitions of string list
 

@@ -28,6 +28,7 @@
 * type it must be convertible to string.
 **********************************************************************)
 exception PropertyNotFound of string
+exception InvalidPropertyFormat of string
 
 val getBool : string -> bool
 val getInt : string -> int

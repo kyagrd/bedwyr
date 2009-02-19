@@ -108,12 +108,16 @@ Tacticals:
           (O.error "Syntax error.\n";
           None)
 
+  let lemma name t session =
+    (O.error "Lemmas are not implemented.\n";
+    session)
+
   (********************************************************************
-  *prove:
+  *theorem
   * Parses the argument into a term, and then prepares the session to
   * prove the term by inserting the term into a sequent on the right.
   ********************************************************************)
-  let prove name t session =
+  let theorem name t session =
     let term = parseTerm t in
     if Option.isSome term then
       (setSessionSequents [([], [Option.get term])] session)

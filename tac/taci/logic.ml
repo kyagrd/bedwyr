@@ -66,7 +66,8 @@ sig
   type session
   val incl : string list -> session -> session
   val reset : unit -> session
-  val prove : string -> string -> session -> session
+  val lemma : string -> string -> session -> session
+  val theorem : string -> string -> session -> session
   val proved : session -> session
   val lemmas : session -> session
   val definitions : string list -> session -> session

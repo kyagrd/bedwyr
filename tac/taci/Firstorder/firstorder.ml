@@ -29,8 +29,8 @@ let () = Properties.setInt "firstorder.defaultbound" 3
 (* The following is a bad name, for historical reasons *)
 let () = Properties.setBool "firstorder.asyncbound" true
 let () = Properties.setInt "firstorder.defaultasyncbound" 10
-let () = Properties.setBool "firstorder.lemmabound" false
-let () = Properties.setInt "firstorder.defaultlemmabound" 1
+let () = Properties.setBool "firstorder.lemmas" false
+let () = Properties.setInt "firstorder.lemmas.bound" 1
 let () = Properties.setString "firstorder.frozens" "thaw"
 let () = Properties.setBool "firstorder.induction-unfold" false
 let () = Properties.setBool "firstorder.coinduction-unfold" false
@@ -234,6 +234,7 @@ struct
     O.output output;
     session
 
+   
   (********************************************************************
   *prove:
   * Parses the argument into a formula, and then prepares the session to
@@ -259,6 +260,23 @@ struct
         | None -> session
 
   (********************************************************************
+  *lemma:
+  * Sets the 'provingLemma' flag, and then calls prove.  In proved
+  * we check the 'provingLemma' flag to decide whether to add the
+  * lemma to the session's list of lemmas.
+  ********************************************************************)
+  let lemma name t session =
+    prove name t {session with provingLemma = true}
+  
+  (********************************************************************
+  *theorem:
+  * Unsets the 'provingLemma' flag, and then calls prove (see lemma
+  * above).
+  ********************************************************************)
+  let theorem name t session =
+    prove name t {session with provingLemma = false}
+ 
+  (********************************************************************
   *theoremName:
   * Returns the current theorem name, if it exists.  If it doesn't,
   * its a compiler bug.
@@ -276,13 +294,16 @@ struct
   let proved session =
     match (session.builder []) with
         [proof] ->
-        let lemmas' =
-          (Option.get session.theorem_name,
-            Option.get session.theorem,
-            proof) ::
-          session.lemmas
-        in
-        {session with lemmas = lemmas'}
+        if session.provingLemma then
+          let lemmas' =
+            (Option.get session.theorem_name,
+              Option.get session.theorem,
+              proof) ::
+            session.lemmas
+          in
+          {session with lemmas = lemmas'}
+        else
+          session
       | _ ->
         failwith ("invalid proof of theorem '" ^ (Option.get session.theorem_name) ^ "'")
 
@@ -602,6 +623,7 @@ struct
         initial_namespace = ns ; proof_namespace = ns;
         theorem_name = None;
         theorem = None;
+        provingLemma = false;
         lemmas = []}
 
   (********************************************************************

@@ -18,21 +18,21 @@ then(induction("x'\l'\ mem (x' dummy) (l' dummy)"),prove).
 
 % ********** .
 % A cleaner way to prove the same thing.
-#theorem mem_w "pi x\l\ (nabla n\ mem x l) => (mem x l)".
+#lemma mem_w "pi x\l\ (nabla n\ mem x l) => (mem x l)".
 simplify.
 abstract.
 % prove would work here because this invariant is exactly the context.
 then(induction("x'\l'\ pi x\l\ (x'=(a\x), l'=(a\l)) => mem x l"),prove).
 % QED.
 
-#theorem mem_m "pi x\l\ (nabla a\b\ mem (x a b) (l a b)) => (nabla a\ mem (x a a) (l a a))".
+#lemma mem_m "pi x\l\ (nabla a\b\ mem (x a b) (l a b)) => (nabla a\ mem (x a a) (l a a))".
 prove.
 % Qed.
 
 % ********** .
 % It is also possible to weaken nabla around the negation of mem.
 % That's much easier.
-#theorem notmem_w "pi x\l\ (nabla n\ mem x l => false) => (mem x l => false)".
+#lemma notmem_w "pi x\l\ (nabla n\ mem x l => false) => (mem x l => false)".
 simplify.
 abstract.
 then(imp_l,simplify).

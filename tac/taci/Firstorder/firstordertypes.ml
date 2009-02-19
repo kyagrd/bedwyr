@@ -105,6 +105,7 @@ sig
     proof_namespace   : Term.namespace ;
     theorem_name : string option ;
     theorem : (Firstorderabsyn.annotation Firstorderabsyn.polarized) option ;
+    provingLemma : bool ;
     lemmas : lemma list
   }
 
@@ -204,6 +205,7 @@ struct
     proof_namespace   : Term.namespace ;
     theorem_name : string option ;
     theorem : (FOA.annotation FOA.polarized) option ;
+    provingLemma : bool ;
     lemmas : lemma list
   }
 
