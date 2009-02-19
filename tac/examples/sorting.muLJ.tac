@@ -88,14 +88,5 @@ induction.
 async.
 prove.
 cut_lemma("insert_total").
-pi_l.
-pi_l.
-imp_l.
-axiom.
-imp_l.
-axiom.
-sigma_l.
-sigma_r.
-and.
 prove.
 % Qed.
