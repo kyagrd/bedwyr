@@ -64,7 +64,7 @@ unfriendly features:
  * The lift_* predicate names do not exist: these names are displayed for 
    convenience, but you can't type them in. The system would understand that as 
    an atom. If you want to refer to a lifted version of a predicate, type in 
-   some nabla quantifications, and abstract the result explicitely.
+   some nabla quantifications, and abstract the result explicitly.
 
  * The lift_* predicate names matter, in that equality of fixed points (on 
    which the initial rule is built) relies on names and does not compare the 
