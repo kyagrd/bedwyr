@@ -66,8 +66,8 @@ static bool IsComment(Accessor &styler, int pos, int len) {
 //  single quoted strings aren't allowed, which is good if your language's
 //  identifiers can contain ', though it's not perfect (as 'a' is an
 //  identifier).
-static bool IsStringStart(int ch, const Accessor &styler) {
-	if ((ch == '\'' && styler.GetPropertyBool("lexer.simple.singlequote")) || ch == '"')
+static bool IsStringStart(int ch, Accessor &styler) {
+	if ((ch == '\'' && styler.GetPropertyInt("lexer.simple.singlequote") != 0) || ch == '"')
 		return true;
 	return false;
 }
@@ -204,7 +204,7 @@ static void ColouriseSimpleDoc(unsigned int startPos, int length, int initStyle,
 				sc.SetState(SCE_SIMPLE_COMMENTLINE);
 			} else if (IsOperator(sc.ch)) {
 				sc.SetState(SCE_SIMPLE_OPERATOR);
-      } else if (IsStringStart(sc.ch)) {
+      } else if (IsStringStart(sc.ch, styler)) {
 				sc.SetState(SCE_SIMPLE_STRING);
 			} else if (IsWordStart(sc.ch)) {
 				sc.SetState(SCE_SIMPLE_IDENTIFIER);

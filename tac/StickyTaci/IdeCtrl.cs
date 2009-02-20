@@ -26,8 +26,10 @@ namespace StickyTaci
 {
   public class IdeCtrl
   {
+    
     private string m_Line = "";
 
+    #region Properties
     public string ApplicationPath
     {
       get
@@ -97,7 +99,9 @@ namespace StickyTaci
         return m_Taci;
       }
     }
+    #endregion
 
+    #region Taci
     public void StartTaci(string path, string logic)
     {
       if(Taci == null)
@@ -137,7 +141,7 @@ namespace StickyTaci
       Taci.Write(Taci.HELP + ".");
     }
 
-    void Taci_Logic(Taci instance, Logic data)
+    private void Taci_Logic(Taci instance, Logic data)
     {
       if(instance == Taci)
       {
@@ -150,7 +154,7 @@ namespace StickyTaci
       }
     }
 
-    void Taci_Tactical(Taci instance, string data)
+    private void Taci_Tactical(Taci instance, string data)
     {
       if(instance == Taci)
       {
@@ -163,6 +167,45 @@ namespace StickyTaci
       }
     }
 
+    private void Taci_Output(Taci instance, string data)
+    {
+      Form.Output(data);
+    }
+
+
+    void Taci_Debug(Taci instance, string data)
+    {
+      Form.Debug(data);
+    }
+
+    void Taci_Warning(Taci instance, string data)
+    {
+      Form.Warning(data);
+    }
+
+
+    private void Taci_Error(Taci instance, string data)
+    {
+      Form.Error(data);
+    }
+
+    private void Taci_Goal(Taci instance, string data)
+    {
+      Form.Goal(data);
+    }
+
+    private void Taci_Command(Taci instance, string data)
+    {
+      if(data == "clear")
+        Form.ClearOutput();
+      else if(data == "begin-computation")
+        Form.Computing = true;
+      else if(data == "end-computation")
+        Form.Computing = false;
+    }
+    #endregion
+
+    #region Event Handlers
     public void OnTacInclude()
     {
       //Get a list of files.
@@ -224,31 +267,6 @@ namespace StickyTaci
       StartTaci(Path.Combine(ApplicationPath, "taci.exe"), "muLJ");
     }
 
-    private bool SaveMessage()
-    {
-      string text = "The current file has changed.\nDo you want to save the changes?";
-      DialogResult result = MessageBox.Show(text, "StickyTaci", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Exclamation);
-      if(result == DialogResult.Yes)
-      {
-        return OnSave();
-      }
-      else if(result == DialogResult.No)
-      {
-        return true;
-      }
-      else
-      {
-        return false;
-      }
-    }
-
-    private void Save(string filename)
-    {
-      FileName = filename;
-      Form.SaveFile(filename);
-      
-    }
-
     public void OnNew()
     {
       if((Form.Dirty && SaveMessage()) || !Form.Dirty)
@@ -261,7 +279,7 @@ namespace StickyTaci
 
     public void OnExit()
     {
-      if((Form.Dirty && SaveMessage()) || !Form.Dirty)
+      if(!Form.Dirty || (Form.Dirty && SaveMessage()))
       {
         Taci.Shutdown();
       }
@@ -476,42 +494,31 @@ namespace StickyTaci
         i++;
       }
     }
+    #endregion
 
-    private void Taci_Output(Taci instance, string data)
+    #region Private Methods
+    private bool SaveMessage()
     {
-      Form.Output(data);
+      string text = "The current file has changed.\nDo you want to save the changes?";
+      DialogResult result = MessageBox.Show(text, "StickyTaci", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Exclamation);
+      if(result == DialogResult.Yes)
+      {
+        return OnSave();
+      }
+      else if(result == DialogResult.No)
+      {
+        return true;
+      }
+      else
+      {
+        return false;
+      }
     }
 
-
-    void Taci_Debug(Taci instance, string data)
+    private void Save(string filename)
     {
-      Form.Debug(data);
-    }
-
-    void Taci_Warning(Taci instance, string data)
-    {
-      Form.Warning(data);
-    }
-
-
-    private void Taci_Error(Taci instance, string data)
-    {
-      Form.Error(data);
-    }
-
-    private void Taci_Goal(Taci instance, string data)
-    {
-      Form.Goal(data);
-    }
-
-    private void Taci_Command(Taci instance, string data)
-    {
-      if(data == "clear")
-        Form.ClearOutput();
-      else if(data == "begin-computation")
-        Form.Computing = true;
-      else if(data == "end-computation")
-        Form.Computing = false;
+      FileName = filename;
+      Form.SaveFile(filename);
     }
 
     private string GetLogicName(string path)
@@ -528,5 +535,6 @@ namespace StickyTaci
       }
       return "";
     }
+    #endregion
   }
 }
