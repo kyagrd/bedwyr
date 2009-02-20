@@ -1,7 +1,7 @@
 #open "sorting.def".
 
 #set "firstorder.lemmas" "true".
-#set "firstorder.lemmas.bound" "0".
+#set "firstorder.lemmas.bound" "1".
 #set "firstorder.lemmas.freeze-lemmas" "true".
 
 #lemma leq_s "pi x\y\ leq x y => leq (s x) (s y)".
@@ -11,10 +11,20 @@ prove.
 #lemma decide_leq_gt "pi x\y\ nat x => nat y => leq x y ; gt x y".
 prove.
 
-% Requires lemma 'decide_leq_gt'.
-#theorem insert_sorted
+% The following theorems may be useful when proving 
+#lemma gt_leq "pi x\y\ gt x y => leq y x".
+prove.
+% Qed.
+
+#lemma sorted "pi x\ pi l\ sorted (cons x l) => sorted l".
+simplify.
+mu_l.
+prove.
+
+% Requires lemma 'decide_leq_gt' when proved by hand; doesn't work automatically.
+#lemma insert_sorted
    "pi x\ y\ z\ nat x => sorted y => insert x y z => sorted z".
-admit.
+prove("3").
 
 % Requires lemma 'insert_sorted'.
 #theorem insertion_sort "pi x\ y\ nat_list x => sort x y => sorted y".
