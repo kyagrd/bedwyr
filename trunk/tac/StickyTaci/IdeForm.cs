@@ -303,8 +303,8 @@ namespace StickyTaci
 
       Scintilla.Font = m_InputFont;
       //Scintilla.KeyDown += new KeyEventHandler(Scintilla_KeyDown);
-      Scintilla.SavePointReached += new EventHandler(Scintilla_SavePointReached);
-      Scintilla.SavePointLeft += new EventHandler(Scintilla_SavePointLeft);
+      Scintilla.NativeInterface.SavePointReached += new EventHandler<ScintillaNet.NativeScintillaEventArgs>(Scintilla_SavePointReached);
+      Scintilla.NativeInterface.SavePointLeft += new EventHandler<ScintillaNet.NativeScintillaEventArgs>(Scintilla_SavePointLeft);
       Scintilla.ConfigurationManager.CustomLocation = Path.Combine(Path.GetDirectoryName(Application.ExecutablePath), "Data/tac.xml");
       Scintilla.ConfigurationManager.Language = "taci";
       Scintilla.Margins.Margin0.Width = 20;
@@ -313,6 +313,7 @@ namespace StickyTaci
       Scintilla.Indentation.TabWidth = 2;
       Scintilla.Indentation.UseTabs = false;
       Scintilla.IsBraceMatching = true;
+      Scintilla.NativeInterface.SetProperty("lexer.simple.singlequote", "0");
 
       
       mainMenuEdit.DropDownOpening += new EventHandler(mainMenuEdit_DropDownOpening);
@@ -688,13 +689,14 @@ namespace StickyTaci
       outputBox.Clear();
       Scintilla.Text = "";
       goalBox.Clear();
-      Scintilla.NativeInterface.SetSavePoint();
+      SavePoint();
+      return;
     }
 
     public void SaveFile(string filename)
     {
       File.WriteAllText(filename, Scintilla.Text, Encoding.ASCII);
-      Scintilla.NativeInterface.SetSavePoint();
+      SavePoint();
       return;
     }
 
@@ -703,7 +705,7 @@ namespace StickyTaci
       Scintilla.ResetText();
       Scintilla.AppendText(File.ReadAllText(filename, Encoding.ASCII));
       Scintilla.Caret.Position = 0;
-      Scintilla.NativeInterface.SetSavePoint();
+      SavePoint();
       return;
     }
     
@@ -723,6 +725,14 @@ namespace StickyTaci
     #endregion
 
     #region Private Methods
+    private void SavePoint()
+    {
+      Scintilla.NativeInterface.SetSavePoint();
+      Scintilla.UndoRedo.EmptyUndoBuffer();
+      m_Dirty = false;
+      return;
+    }
+
     private void UpdateCurrentLineMarker()
     {
       //Show current line marker:
