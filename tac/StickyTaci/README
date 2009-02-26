@@ -23,20 +23,66 @@ Getting Started with StickyTaci:
   item.  Opening a StickyTaci session automatically loads the correct
   logic based on the session's filename.
 
-  At this point you may enter any definitions or theorems that one would
-  like in the main window.  To execute the lines in the main window one
-  uses the various navigation commands, all available in the Tac menu
+  At this point you may enter any definitions or theorems that you would
+  like in the main window.  To execute the lines in the main window
+  use the various navigation commands, all available in the Tac menu
   (see Interacting with Taci).
-
   
 Syntax Highlighting and Code Folding:
   StickyTaci provides syntax highlighting, code folding, autocompletion,
   and code snippets through the excellent Scintilla library.  Commands
   are highlighted in red, tacticals in blue, comments in green, quoted
-  strings in maroon, and already executed lines in gray.  Autocomplete
-  can be initiated by typing Ctrl + Space.  Code snippets can be initiated
-  by typing Ctrl + J.  You can comment the current selection using Ctrl + Q,
-  and then uncomment it using Ctrl + Shift + Q.
+  strings in marroon, and already executed lines in gray.
+  
+Keyboard Shortcuts:
+  Document Navigation:
+    Scroll Down: Ctrl + Down
+    Scroll Up: Ctrl + Up
+    Previous Paragraph: Ctrl + [
+    Next Paragraph: Ctrl + ]
+    Top: Ctrl + Home
+    Bottom: Ctrl + End
+    Goto: Ctrl + G
+  
+  Basic Editing:
+    Copy: Ctrl + C; Ctrl + Insert
+    Cut: Ctrl + X; Shift + Delete
+    Paste: Ctrl + V; Shift + Insert
+    Select All: Ctrl + A
+  
+  Word Manipulations:
+    Delete Word (right): Ctrl + Delete
+    Delete Word (left): Ctrl + Backspace
+  
+  Line Manipulations:
+    Delete Line: Ctrl + Shift + L
+    Delete Line (right): Ctrl + Shift + Delete
+    Delete Line (left): Ctrl + Shift + Backspace
+    Cut Line: Ctrl + L
+    Copy Line: Ctrl + Shift + T
+    Transpose Line: Ctrl + T
+
+  Undo/Redo:
+    Undo: Ctrl + Z; Alt + Backspace
+    Redo: Ctrl + Y; 
+
+  Commenting:
+    Comment Selection: Ctrl + Q
+    Uncomment Selection: Ctrl + Shift + Q
+  
+  Printing:
+    Print: Ctrl + P
+    Print Preview: Ctrl + Shift + P
+  
+  Find/Replace:
+    Find: Ctrl + F
+    Replace: Ctrl + H
+    Find Next: F3
+    Find Previous: Shift + F3
+  
+  Autocompletion:
+    Autocomplete: Ctrl + Space
+    Insert Code Snippet: Ctrl + J
 
 Interacting with Taci:
   The Tac menu in StickyTaci offers a number of ways to interact with
