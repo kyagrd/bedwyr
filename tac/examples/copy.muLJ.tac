@@ -1,8 +1,8 @@
 
-#define "assoc x y l := sigma a\b\tl\ l = cons (pair a b) tl,
+#define "assoc x y {l} := sigma a\b\tl\ l = cons (pair a b) tl,
                            ((x=a,y=b);assoc x y tl)".
 
-#define "eq gamma m n := assoc m n gamma
+#define "eq gamma {m} {n} := assoc m n gamma
                        ; (sigma m1\n1\m2\n2\ m = app m1 m2, n = app n1 n2,
                                              eq gamma m1 n1, eq gamma m2 n2)
                        ; (sigma m1\n1\ m = abs m1, n = abs n1,
@@ -28,29 +28,28 @@ then(async,try(prove)).
 then(induction("a\b\l\ nabla c\ assoc (a c c) (b c c) (l c c)"),prove).
 % Qed.
 
+#lemma eq "pi m\n\g\ (pi a\b\ assoc a b g => a=b) => eq g m n => m=n".
+prove.
+% Qed.
+
 #define "cp gamma m n := assoc m n gamma
                        ; (sigma m1\n1\m2\n2\ m = app m1 m2, n = app n1 n2,
                                              eq gamma m1 n1, eq gamma m2 n2)
                        ; (sigma m1\n1\ m = abs m1, n = abs n1,
                           nabla a\b\ eq (cons (pair a b) gamma) (m1 a) (n1 b))".
 
-#theorem copy "pi m\n\ cp nil m n => m=n".
+#lemma cp_eq "pi g\m\n\ cp g m n => eq g m n".
 simplify.
-% The outer induction shows that cp implies eq.
-induction("g\m\n\ eq g m n").
- % The inner induction shows that eq implies equality.
- induction("g\m\n\ (pi a\b\ assoc a b g => a=b) => m=n").
-  prove.
-  % Inner invariance proof.
-  then(async,try(prove)).
-  abstract.
-  then(imp_l,simplify).
-  % Automated induction inside,
-  % deriving assoc from lift_assoc in case of vacuous abstractions.
-  then(mu_l,prove).
-% Outer invariance.
+induction.
 then(async,try(prove)).
 apply("main").
 prove.
 % Qed.
 
+#theorem copy "pi m\n\ cp nil m n => m=n".
+simplify.
+apply("cp_eq").
+apply("eq").
+prove.
+prove.
+% Qed.
