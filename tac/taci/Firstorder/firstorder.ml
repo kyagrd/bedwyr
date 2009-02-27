@@ -153,17 +153,17 @@ struct
 
   let rec string_of_proof proof =
     let s = Printf.sprintf "<rule><name>%s</name>\n" proof.rule in
-    let p =
+    (* let p =
       List.map
         (fun (k,v) -> Printf.sprintf "<key>%s</key><value>%s</value>\n" k v)
         proof.params
     in
-    let s = List.fold_left (^) s p in
+    let s = List.fold_left (^) s p in *)
     let s =
       s ^ xml_of_sequent proof.sequent
     in
     let s = match proof.formula with
-      | None -> s
+      | None -> s ^ "<formula><generic></generic>stub</formula>"
       | Some f -> s ^ xml_of_formula f
     in
     let s =
