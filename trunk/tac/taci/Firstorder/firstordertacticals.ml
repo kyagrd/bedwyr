@@ -613,13 +613,6 @@ struct
                   (* This is synchronous. *)
                   begin match arg with
                     | Some "unfold" ->
-                        if Properties.getBool "firstorder.proofsearchdebug" then
-                          Format.printf "%s@[<hov 2>Unfold left@ %s@]\n%!"
-                            (String.make
-                               (match seq.bound with
-                                  | Some b -> max 0 b | None -> 0)
-                               ' ')
-                            (string_of_formula (Formula(i,f))) ;
                         unfoldFixpoint "nu_l" name args body argnames sc fc
                     | Some "init" ->
                         if pol.FOA.polarity = FOA.Positive then fc () else
@@ -1778,9 +1771,10 @@ struct
   *   Freeze hypotheses/conclusion or not.
   ********************************************************************)
   and introduceLemmas session =
-    let strip = Properties.getDefault Properties.getBool "firstorder.lemmas.strip-atomic" false in
-    let freezeLemmas = Properties.getDefault Properties.getBool "firstorder.lemmas.freeze-lemmas" false in
-    let freezeSequent = Properties.getDefault Properties.getBool "firstorder.lemmas.freeze-sequent" false in
+    let get s d = Properties.getDefault Properties.getBool s d in
+    let strip = get "firstorder.lemmas.strip-atomic" false in
+    let freezeLemmas = get "firstorder.lemmas.freeze-lemmas" false in
+    let freezeSequent = get "firstorder.lemmas.freeze-sequent" false in
 
     (*  strip: Strip nonatomic formulas from a list of formulas.  *)
     let strip s =
@@ -1890,6 +1884,7 @@ struct
   * synchronous phase.
   ********************************************************************)
   and freeze session sequents sc fc =
+(* TODO this is simply fullAsync *)
     let async = cutThenTactical (finite session) (freeze session) in
     let seq = match sequents with [seq] -> seq | _ -> assert false in
       match match_inductable seq.lhs with
@@ -1900,7 +1895,7 @@ struct
             * induction is to bundle a frozen version of the fixed point
             * with the invariant *)
            G.orElseTactical
-             (fun _ ->
+             (fun _ sc fc ->
                 if Properties.getBool "firstorder.proofsearchdebug" then
                   Format.printf "%s@[<hov 2>Freeze@ %s@]\n%!"
                     (String.make
@@ -1909,19 +1904,35 @@ struct
                     (string_of_formula (Formula(i,(FOA.freeze a,f))));
                 freeze session
                   [{seq with lhs =
-                               before@[Formula(i,(FOA.freeze a,f))]@after }])
+                               before@[Formula(i,(FOA.freeze a,f))]@after }]
+                  sc fc)
+          (fun _ -> G.orElseTactical
              (cutThenTactical
                 (* The cut is needed here so that auto_intro doesn't try
                  * to induct on another Mu on the left. *)
-                (fun _ ->
+                (fun _ sc fc ->
                    if Properties.getBool "firstorder.proofsearchdebug" then
                      Format.printf "%s@[<hov 2>Induction@ %s@]\n%!"
                        (String.make
                           (match seq.bound with Some b -> max 0 b | None -> 0)
                           ' ')
                        (string_of_formula (Formula(i,(a,f)))) ;
-                   automaticIntro session `Left match_inductable [seq])
+                   automaticIntro session `Left match_inductable [seq] sc fc)
                 async)
+             (cutThenTactical
+                (* The cut is needed here so that auto_intro doesn't try
+                 * to unfold another Mu on the left. *)
+                (fun _ sc fc ->
+                   if Properties.getBool "firstorder.proofsearchdebug" then
+                     Format.printf "%s@[<hov 2>Unfold@ %s@]\n%!"
+                       (String.make
+                          (match seq.bound with Some b -> max 0 b | None -> 0)
+                          ' ')
+                       (string_of_formula (Formula(i,(a,f)))) ;
+                   intro `Left match_inductable session (Some "unfold") [seq]
+                     sc fc)
+                async)
+             [])
              [(* No arguments *)] sc fc
        | None ->
            begin match match_coinductable seq.rhs with
@@ -1935,6 +1946,7 @@ struct
                      (fun _ ->
                         automaticIntro session `Right match_coinductable [seq])
                      async)
+                   (* TODO unfold *)
                    [(*no args*)] sc fc
              | None ->
                  (* Don't wait to collect all results of the async phase,

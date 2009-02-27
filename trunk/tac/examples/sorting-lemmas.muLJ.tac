@@ -17,8 +17,6 @@ prove.
 % Qed.
 
 #lemma sorted "pi x\ pi l\ sorted (cons x l) => sorted l".
-simplify.
-mu_l.
 prove.
 
 % Requires lemma 'decide_leq_gt' when proved by hand; doesn't work automatically.
