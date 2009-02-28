@@ -6,7 +6,7 @@ tactex=`dirname $me`/tactex
 file=`basename $1`
 cd `dirname $1`
 
-$tactex --input $file --output $file.tex $2
-latex $file.tex
-dvips -E $file.dvi -o $file.ps
-gv $file.ps
+$tactex --input $file --output $file.tex $2 \
+ && latex $file.tex \
+ && dvips -E $file.dvi -o $file.ps \
+ && evince $file.ps

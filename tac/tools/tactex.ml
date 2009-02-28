@@ -126,7 +126,9 @@ let formulaRegexes =
     (Str.regexp ";", " \\vee{}");
     (Str.regexp "pi", "\\forall{}");
     (Str.regexp "sigma", "\\exists{}");
-    (Str.regexp "\\([a-zA-Z]\\)\\([0-9]+\\)", "\\1_{\\2}")
+    (Str.regexp "\\([a-zA-Z]\\)\\([0-9]+\\)", "\\1_{\\2}");
+    (Str.regexp "gamma", "\\gamma{}");
+    (Str.regexp "Gamma", "\\Gamma{}")
     ]
 let convertFormula s =
   List.fold_left
