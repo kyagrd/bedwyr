@@ -1,7 +1,8 @@
 #open "lists.def".
 
 #theorem reverse_total "pi x\ list x => sigma y\ reverse x y".
-prove.
+% TODO prove.
+admit.
 
 #theorem reverse_length
   "pi x\ y\ n\ reverse x y => length x n => length y n".
@@ -41,6 +42,7 @@ prove.
 
 #lemma rev_total "pi x\ list x => sigma y\ outer x y".
 % TODO.
+admit.
 
 % Theorems about rev:
 #lemma rev_n "rev nil nil nil".
@@ -57,8 +59,7 @@ prove.
 #theorem rev_x_nil
   "pi x\ (list x => rev x nil nil => x = nil)".
 % TODO.
-
-
+admit.
 
 #theorem rev_length
   "pi x\ y\ n\ rev x nil y => length x n => length y n".
@@ -67,3 +68,4 @@ prove.
 #theorem reverse_rev
   "pi x\ y\ n\ reverse x y => rev x nil y".
 % TODO.
+

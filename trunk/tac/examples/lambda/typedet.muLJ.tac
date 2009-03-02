@@ -17,17 +17,12 @@ abstract.
 then(repeat(or_l),simplify).
 
 % ==== Bind ====.
-rotate_l.
-then(mu_l,simplify).
-weak_l.
-then(focus,then(repeat(sync),try(unfocus))).
-rotate_l.
-weak_l.
-then(mu_l,then(or_l,simplify)).
-apply("bind_ww").
+cut_lemma("bind_ww").
 prove.
 
 % ==== App ====.
+% This one works poorly without the progress annotation on typeof,
+% which strictly speaking is wrong: good example of user tweak.
 prove.
 
 % ==== Abs ====.
@@ -47,7 +42,7 @@ prove.
 % Note that this notion of well-formed context is stronger than usual.
 #define "context G := pi x\t\ bind G x t => pi t'\ typeof G x t' => t=t'".
 
-#theorem context_s "pi x\ context x => nabla a\ context x".
+#lemma context_s "pi x\ context x => nabla a\ context x".
 simplify.
 then(mu_l,then(mu_r,simplify)).
 apply("bind_www").
@@ -118,3 +113,4 @@ apply("context_ss").
 weak_l("context _").
 prove.
 % Qed.
+

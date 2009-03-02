@@ -25,11 +25,13 @@ prove.
   "pi x\y\z\r\
     mult x y z => plus x z r =>
     mult x (s y) r".
-prove("3").
+% TODO prove.
+admit.
 
 % Theorem: x * y = z => y * x = z.
 #theorem mult_com
   "pi x\ y\ z\
     nat x => nat y => mult x y z =>
     mult y x z".
-prove("3").
+prove.
+% Qed.
