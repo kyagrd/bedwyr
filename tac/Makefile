@@ -42,16 +42,16 @@ VERSION=0.9.1
 FILES=Makefile INSTALL README README.lifting
 
 tarball:
-	rm -rf taci-$(VERSION)
-	mkdir taci-$(VERSION)
+	rm -rf tac-$(VERSION)
+	mkdir tac-$(VERSION)
 	for d in taci tools Stekki logics_gen ; do \
-	  mkdir taci-$(VERSION)/$$d ; \
-	  make -C $$d DISTDIR=../taci-$(VERSION)/$$d dist ; \
+	  mkdir tac-$(VERSION)/$$d ; \
+	  make -C $$d DISTDIR=../tac-$(VERSION)/$$d dist ; \
 	done
 	@for f in $(EXAMPLES) $(DEFS) $(TEST) ; do \
-	  cp --parents examples/$$f taci-$(VERSION) ; \
+	  cp --parents examples/$$f tac-$(VERSION) ; \
 	done
 	@for f in $(FILES) ; do \
-	  cp --parents $$f taci-$(VERSION) ; \
+	  cp --parents $$f tac-$(VERSION) ; \
 	done
-	tar cjvf taci-$(VERSION).tar.bz2 taci-$(VERSION)
+	tar cjvf tac-$(VERSION).tar.bz2 tac-$(VERSION)
