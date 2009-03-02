@@ -1,9 +1,5 @@
 #open "lists.def".
 
-#theorem reverse_total "pi x\ list x => sigma y\ reverse x y".
-% TODO prove.
-admit.
-
 #theorem reverse_length
   "pi x\ y\ n\ reverse x y => length x n => length y n".
 prove.
