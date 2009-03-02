@@ -1,6 +1,6 @@
 
 
-                      Experimenting with nabla in Taci
+                      Minimal generic quantification in Taci
 
                                  David Baelde
 
@@ -51,15 +51,15 @@ Examples of interest here:
      specification of simply typed lambda calculus. This is an experiment with 
      an unusual style, which mostly shows its weaknesses for now.
 
-II. How to use a very experimental tool
-=======================================
+II. How to use lifting in taci
+==============================
 
-The "abstract" tactic implements lifting. It is experimental and has a couple 
-unfriendly features:
+The "abstract" tactic implements lifting. It still has a few unfriendly
+issues:
 
  * Lifting is not automatically done as in the theoretical presentation of the 
    logic. It has to be done explicitely by calling the tactic "abstract".
-   It is also done implicitly by the "prove" and "apply" tactics.
+   It, however, done implicitly by the "prove" and "apply" tactics.
 
  * The lift_* predicate names do not exist: these names are displayed for 
    convenience, but you can't type them in. The system would understand that as 
@@ -71,7 +71,8 @@ unfriendly features:
    fixed points' bodies. It's the users' duty to not introduce a predicate that 
    would conflict with these.
 
-Keep in mind other general weaknesses of our prototype:
+Keep in mind other general difficulties of our approach, that are
+sometimes visible in our current implementation:
 
  * Taci works at the very low level of sequent calculus rules. This can often 
    be hidden by using compound tactics like simplify, async or prove. But 

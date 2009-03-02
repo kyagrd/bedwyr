@@ -38,7 +38,7 @@ notest:
 	cd examples ; find . -name '*.tac' \
 	  | grep -v -F "`echo $(TEST) | tr ' ' '\n'`"
 
-VERSION=0.5.0
+VERSION=0.9.1
 FILES=Makefile INSTALL README README.lifting
 
 tarball:
