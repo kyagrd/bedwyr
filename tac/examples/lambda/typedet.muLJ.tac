@@ -97,7 +97,7 @@ then(mu_l("context _"),prove).
 % ******** App.
 then(mu_l("typeof _ (app _ _) _"),then(repeat(or_l),simplify)).
 % The typeof judgement is an instance of the initial rule.
-cut("typeof g0 (app h10 h11) t'2").
+cut("typeof g0 (app h8 h9) t'2").
 prove.
 then(mu_l("context _"),prove).
 % The essential app-rule case is easier.
@@ -105,7 +105,7 @@ prove.
 
 % ******** Lambda.
 then(mu_l("typeof _ (lambda _ _) _"),then(repeat(or_l),simplify)).
-cut("typeof g0 (lambda h8 h14) t'3").
+cut("typeof g0 (lambda h6 h12) t'3").
 prove.
 then(mu_l("context _"),prove).
 % The real lambda-rule case.
@@ -113,4 +113,3 @@ apply("context_ss").
 weak_l("context _").
 prove.
 % Qed.
-
