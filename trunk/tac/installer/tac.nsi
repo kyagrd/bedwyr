@@ -6,8 +6,8 @@
 !include "VersionCompare.nsh"
 !include "path.nsh"
 
-; Grab the output from taci.  Assumes that perl is installed; would be better not to need it.
-!system '..\bin\taci --version | perl -pe "s/Taci version/!define VERSION/" > version.nsh'
+; Grab the output from taci.
+!system "FOR /F $\" tokens=3 $\" %t IN ('..\bin\taci --version') DO echo !define VERSION %t > version.nsh"
 !include "version.nsh"
 
 ; Installer Name:
@@ -50,7 +50,7 @@ Function .onInit
   Call GetDotNETVersion
   Pop $0
   ${If} $0 == "not found"
-    MessageBox MB_OK|MB_ICONSTOP "Tac requires the Microsoft .NET Framework version 2.0."
+    MessageBox MB_OK|MB_ICONSTOP "Tac requires the Microsoft .NET Framework version 2.0 or greater."
     Abort
   ${EndIf}
  
@@ -58,7 +58,7 @@ Function .onInit
  
   ${VersionCompare} $0 "2.0" $1
   ${If} $1 == 2
-    MessageBox MB_OK|MB_ICONSTOP "Tac requires the Microsoft .NET Framework version 2.0; version $0 is currently installed."
+    MessageBox MB_OK|MB_ICONSTOP "Tac requires the Microsoft .NET Framework version 2.0 or greater; version $0 is currently installed."
     Abort
   ${EndIf}
 FunctionEnd

@@ -111,7 +111,7 @@ namespace StickyTaci
       this.labelVersion.Name = "labelVersion";
       this.labelVersion.Size = new System.Drawing.Size(286, 12);
       this.labelVersion.TabIndex = 0;
-      this.labelVersion.Text = "version 0.9.0";
+      this.labelVersion.Text = "version 0.9.1";
       this.labelVersion.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
       // 
       // labelCopyright
