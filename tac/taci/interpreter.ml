@@ -106,32 +106,27 @@ struct
       Not_found -> None
 
   (*  helpMessage: delay so that taci.version gets set; yuck! *)
-  let helpMessage () = "Taci version " ^ (Properties.getString "taci.version") ^
-"
+  let helpMessage () =
+    "Taci version " ^ (Properties.getString "taci.version") ^ "!
 
-#clear.                     : Clear the screen.
-#debug <on | off>.          : Turn debugging on or off.
-#proof_output <dir>         : Print proofs to <dir/theorem name.xml>.
-#define <definition>.       : Add the given quoted definition to the current session.
-#exit.                      : Exit taci.
-#help.                      : Show this message.
-#include <files>            : Add the definitions in the given files to the
-                              current session.  File names should be quoted and
-                              space separated.
-#logic <name>.              : Load the specified logic.  The logic name should
-                              be quoted.
-#logics.                    : List all available logics.
-#open <files>               : Read each line in the given files as a command.
-                              File names should be quoted and space separated.
-#redo                       : Redo.
-#reset.                     : Reset the current session, removing all definitions
-                              and removing all sequents.
-#set <property> <value>     : Set the given property to a particular value.
-#tactical <name> <tactical> : Define a tactical with the given name and body.
-#tacticals.                 : List all available tacticals.
-#theorem <name> <theorem>.  : Prove the given quoted theorem in the current logic.
-#time <on | off>.           : Turn timing on or off.
-#undo.                      : Undo.
+#clear.                       Clear the screen.
+#debug <on|off>.              Enable/disable debugging.
+#time  <on|off>.              Enable/disable timing.
+#proof_output \"<dir>\".        Print proofs to <dir/theorem_name.xml>.
+#set \"<property>\" \"<value>\".  Set the given property to a particular value.
+
+#open \"<file>\".               Read commands from a file.
+#define \"<definition>\".       Add a fixed point definition
+                              to the current session.
+#theorem <name> \"<theorem>\".  Start proving a theorem.
+#tactical <name> <body>.      Define a new tactical.
+#tacticals.                   List all available tacticals.
+
+#undo.                        Undo last command.
+#reset.                       Reset the current session,
+                              removing all definitions and pending goals.
+#help.                        Show this message.
+#exit.                        Exit taci.
 "
 
   let startupMessage () = "Welcome to " ^ (helpMessage ())

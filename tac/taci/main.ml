@@ -31,7 +31,7 @@ let batchMode s =
   Properties.setString "output.batchfile" s
 
 let outputName = ref "console"
-let logicName = ref "none"
+let logicName = ref "muLJ"
 let printLogicInformation = ref false
 let printOutputInformation = ref false
 
@@ -39,12 +39,6 @@ let printOutputInformation = ref false
 let printVersion () =
   (print_endline ("Taci version " ^ (Properties.getString "taci.version"));
   exit 0)
-
-(**********************************************************************
-*printHelp:
-* Simply prints the usage information based on the speclist.
-**********************************************************************)
-let rec printHelp () = (Arg.usage speclist usage; exit 0)
 
 (**********************************************************************
 parseArgs:
@@ -57,18 +51,19 @@ parseArgs:
 *   output: specifies the output module to load
 *   outputs: lists all output modules
 **********************************************************************)
-and speclist = [("-b", Arg.String(batchMode), "batch mode");
-                ("--batch", Arg.String(batchMode), "batch mode");
-                ("--debug", Arg.Unit(debug), "enable debugging");
-                ("-help", Arg.Unit(printHelp), "");
-                ("--help", Arg.Unit(printHelp), "print usage information");
-                ("--logic", Arg.Set_string(logicName), "logic");
-                ("--logics", Arg.Set(printLogicInformation), "list logics");
-                ("--output", Arg.Set_string(outputName), "output");
-                ("--outputs", Arg.Set(printOutputInformation), "list outputs");
-                ("-v", Arg.Unit(printVersion), "print version information");
-                ("--version", Arg.Unit(printVersion), "print version information")]
-and usage = "Usage: taci --logic \"logic name\"\n\nOptions:"
+let speclist =
+  List.map (fun (n,f,descr) -> n,f, if descr="" then "" else "\t"^descr)
+  [("-b", Arg.String(batchMode), "");
+   ("--batch", Arg.String(batchMode), "Batch mode, takes a filename.");
+   ("--debug", Arg.Unit(debug), "Enable debugging.");
+   ("--logic", Arg.Set_string(logicName), "Select a logic.");
+   ("--logics", Arg.Set(printLogicInformation), "List available logics.");
+   ("--output", Arg.Set_string(outputName), "Select an output driver.");
+   ("--outputs", Arg.Set(printOutputInformation), "List outputs drivers.");
+   ("-v", Arg.Unit(printVersion), "");
+   ("--version", Arg.Unit(printVersion),
+                              "Print version information.")]
+let usage = "Usage: taci [options]\n\nOptions:"
 let parseArgs output =
     (Arg.parse speclist (fun s -> ()) usage)
 
