@@ -111,9 +111,9 @@ struct
 
 #clear.                       Clear the screen.
 #debug <on|off>.              Enable/disable debugging.
+#set \"<property>\" \"<value>\".  Set the given property to a particular value.
 #time  <on|off>.              Enable/disable timing.
 #proof_output \"<dir>\".        Print proofs to <dir/theorem_name.xml>.
-#set \"<property>\" \"<value>\".  Set the given property to a particular value.
 
 #open \"<file>\".               Read commands from a file.
 #define \"<definition>\".       Add a fixed point definition
@@ -127,6 +127,7 @@ struct
                               removing all definitions and pending goals.
 #help.                        Show this message.
 #exit.                        Exit taci.
+
 "
 
   let startupMessage () = "Welcome to " ^ (helpMessage ())
