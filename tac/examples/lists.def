@@ -32,6 +32,11 @@
     (sigma H\ T\ RT\
       L1 = cons H T, reverse T RT, append RT (cons H nil) L2)".
 
+#define
+  "rev {L1} L2 L3 :=
+    (L1 = nil, L2 = L3);
+    (sigma E\LS\ L1 = cons E LS, rev LS (cons E L2) L3)".
+
 #define "sublist {l} {m} :=
   (sigma h1\ h2\ k\
     append h1 k m,

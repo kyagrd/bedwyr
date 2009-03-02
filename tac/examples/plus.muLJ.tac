@@ -1,9 +1,6 @@
 % Proof of the commutativity of plus.
 #open "naturals.def".
 
-% Thawing (now the default) is needed here.
-#set "firstorder.frozens" "thaw".
-
 % Theorem: x + y = z => y + x = z.
 #theorem plus_com "pi x\ y\ z\ nat y => plus x y z => plus y x z".
 prove.

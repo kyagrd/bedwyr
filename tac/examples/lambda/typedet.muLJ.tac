@@ -1,7 +1,7 @@
 #open "lemmas.muLJ.tac".
 
 % This lemma is actually the most difficult bit of the proof.
-#theorem typeof_w "
+#lemma typeof_w "
   pi ta\l\m\t'\
    (nabla a\ typeof (cons (pair a ta) l) m (t' a)) =>
    (sigma t\ t'=(a\t), typeof l m t)
@@ -25,8 +25,6 @@ rotate_l.
 weak_l.
 then(mu_l,then(or_l,simplify)).
 apply("bind_ww").
-weak_l.
-simplify.
 prove.
 
 % ==== App ====.
@@ -60,7 +58,7 @@ weak_l("lift_typeof _ _ _").
 prove.
 % Qed.
 
-#theorem context_ss "pi c\t\ context c =>
+#lemma context_ss "pi c\t\ context c =>
                        nabla a\ context (cons (pair a t) c)".
 simplify.
 apply("context_s").

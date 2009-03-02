@@ -73,11 +73,17 @@ prove.
 % We need lemmas on this one.
 #set "firstorder.lemmas" "true".
 #set "firstorder.lemmas.bound" "0".
-#theorem sublist_refl "pi x\ list x => sublist x x".
+#lemma sublist_refl "pi x\ list x => sublist x x".
 % cut_lemma("append_nil_1").
 prove.
 % Qed.
 #set "firstorder.lemmas" "false".
+
+% Theorem: 
+%#theorem sublist_antisym "pi x\ y\ sublist x y, sublist y x => equal x y".
+%cut_lemma("append_nil_1").
+%prove.
+
 
 % Some 'traps' related to infinite progressings in the synchronous and
 % asynchronous phases.

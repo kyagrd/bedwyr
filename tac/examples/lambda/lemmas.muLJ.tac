@@ -26,7 +26,7 @@ prove.
 prove.
 % Qed.
 
-#theorem bind_www "pi l\x'\t'\ (nabla a\ bind l (x' a) (t' a))
+#lemma bind_www "pi l\x'\t'\ (nabla a\ bind l (x' a) (t' a))
               => sigma x\t\ x'=(a\x), t'=(a\t), bind l x t".
 prove.
 % Qed.
@@ -45,7 +45,7 @@ weak_l.
 prove.
 % Qed.
 
-#theorem lift_permute_s "pi l\l'\ (nabla x\ permute (l x) (l' x))
+#lemma lift_permute_s "pi l\l'\ (nabla x\ permute (l x) (l' x))
                          => nabla a\x\ permute (l x) (l' x)".
 simplify.
 then(mu_l,then(mu_r,then(and_r,simplify))).

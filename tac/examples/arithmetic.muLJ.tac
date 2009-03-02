@@ -31,16 +31,15 @@ induction("x\ nat x, pi y\ leq y x => sigma h\ half y h").
 prove.
 async.
 prove.
-% Note that prove alone is slower.
-then(and,prove).
+prove.
 % Qed.
 
 % Yet another one, probably the simplest.
 #theorem half_total "pi x\ nat x => sigma h\ half x h".
 simplify.
 then(
- induction("x\ (sigma h\ half x h); (sigma p\ x = s p, sigma h\ half p h)"),
- prove).
+  induction("x\ (sigma h\ half x h); (sigma p\ x = s p, sigma h\ half p h)"),
+  prove).
 % Qed.
 
 #theorem half_double "pi x\y\ double x y => half y x".
@@ -48,6 +47,14 @@ prove.
 % Qed.
 
 #theorem even_half_double "pi x\y\ even x => half x y => double y x".
+prove.
+% Qed.
+
+#theorem odd_half_s_double "pi x\y\z\ odd x => half x y => double y z => x = s z".
+prove.
+% Qed.
+
+#theorem plus_e_e_e "pi x\y\z\ even x => even y => plus x y z => even z".
 prove.
 % Qed.
 
@@ -64,19 +71,5 @@ prove.
 % Qed.
 
 #theorem ack_total "pi x\ nat x => pi y\ nat y => sigma a\ ack x y a, nat a".
-then(pi,imp).
-induction.
-async.
-prove.
-% We basically want to do the following:
-% induction(
-%  "y\ nat y, pi h\ (pi y1\ nat y1 => sigma a\ ack h y1 a, nat a) =>
-%        sigma a\ ack (s h) y a, nat a)").
-% We get that automatically with induction-unfold, with nat frozen in it.
-#set "firstorder.induction-unfold" "true".
-induction.
-% TODO understand why it's so much slower without doing async first.
-async.
-prove.
-prove.
-% Qed.
+prove("4").
+
