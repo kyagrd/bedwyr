@@ -16,13 +16,15 @@ prove.
 prove.
 % Qed.
 
+
 #lemma sorted "pi x\ pi l\ sorted (cons x l) => sorted l".
 prove.
 
 % Requires lemma 'decide_leq_gt' when proved by hand; doesn't work automatically.
 #lemma insert_sorted
    "pi x\ y\ z\ nat x => sorted y => insert x y z => sorted z".
-prove("3").
+% TODO.
+admit.
 
 % Requires lemma 'insert_sorted'.
 #theorem insertion_sort "pi x\ y\ nat_list x => sort x y => sorted y".

@@ -782,6 +782,15 @@ struct
                                     (FOA.Pi, (FOA.abstractVar v).FOA.polf f)))
                             elrhs eigenvars
                         in
+                        
+                        (*  Thawing.  *)
+                        let aelrhs' =
+                          if Properties.getBool "firstorder.thawasync" then
+                            modifyFormulaAnnotations unfreezeModifier aelrhs
+                          else
+                            aelrhs
+                        in
+                        
                         let aelrhs' =
                           if
                             Properties.getBool "firstorder.induction-unfold"
@@ -791,9 +800,9 @@ struct
                                         FOA.polarity = FOA.Positive ;
                                         FOA.freezing = FOA.Frozen },f in
                               FOA.positiveFormula
-                                (FOA.BinaryFormula(FOA.And,f,aelrhs))
+                                (FOA.BinaryFormula(FOA.And,f,aelrhs'))
                           else
-                            aelrhs
+                            aelrhs'
                         in
                         (* Abstract out the fv1..fvn. *)
                         let invariant =
@@ -821,12 +830,12 @@ struct
                                  lhs = [Formula (i',bst')] ;
                                  rhs = [Formula (i',st')] }
                           in
-                          (* TODO: check the other premise
+                          (* TODO: check the other premise so the proof is complete
                            *  (in the proof builder, to save work).  *)
                           sc "induction" [seq']
                   end
               | FOA.AtomicFormula p ->
-                  if p = "false" then sc "false" [] else (* TODO boooh *)
+                  if p = "false" then sc "false" [] else (* TODO: false should be special *)
                   if pol.FOA.polarity = FOA.Positive then fc () else
                     atomicInit i p args (fun k -> sc "init" [] ~k) fc seq.rhs
               | FOA.DBFormula _ -> assert false
@@ -1059,18 +1068,24 @@ struct
                                      (FOA.abstractVar v).FOA.polf f)))
                             elrhs getenv
                         in
+                        (*  Thawing.  *)
                         let aelrhs' =
-                          if
-                            Properties.getBool "firstorder.coinduction-unfold"
-                          then
+                          if Properties.getBool "firstorder.thawasync" then
+                            modifyFormulaAnnotations unfreezeModifier aelrhs
+                          else
+                            aelrhs
+                        in
+                        
+                        let aelrhs' =
+                          if Properties.getBool "firstorder.coinduction-unfold" then
                             let f = FOA.ApplicationFormula (p,List.rev fv) in
                             let f = { FOA.defaultAnnotation with
                                         FOA.polarity = FOA.Negative ;
                                         FOA.freezing = FOA.Frozen },f in
                               FOA.positiveFormula
-                                (FOA.BinaryFormula(FOA.Or,f,aelrhs))
+                                (FOA.BinaryFormula(FOA.Or,f,aelrhs'))
                           else
-                            aelrhs
+                            aelrhs'
                         in
                         (* Abstract out the fv1..fvn. *)
                         let invariant =
@@ -1100,7 +1115,7 @@ struct
                                  rhs = [Formula(i',bst')] }]
                   end
               | FOA.AtomicFormula p ->
-                  if p = "true" then sc "true" [] else
+                  if p = "true" then sc "true" [] else  (*  TODO: true should be special. *)
                   if pol.FOA.polarity = FOA.Negative then fc () else
                   atomicInit i p args (fun k -> sc "init" [] ~k) fc seq.lhs
               | FOA.DBFormula _ -> assert false
@@ -1972,18 +1987,10 @@ struct
   * property is set.  Then either introduces lemmas if that property
   * is set followed by focusing on a formula, or just focuses on a
   * formula immediately.
-  *
-  * TODO: Don't thaw everything here, do it in the invariant generation.
   ********************************************************************)
   and fullSync session seq sc fc =
-    let seq' =
-      if Properties.getBool "firstorder.thawasync" then
-        modifySequentAnnotations unfreezeModifier seq
-      else
-        seq
-    in
     let focuser () =
-      focusTactic session [seq']
+      focusTactic session [seq]
         (fun newSeqs oldSeqs pb k -> syncTactical session newSeqs sc k)
         fc
     in
@@ -1994,7 +2001,7 @@ struct
         (O.debug "No lemmas to try.\n";
         focuser ())
       else
-        introduceLemmas session [seq'] sc focuser
+        introduceLemmas session [seq] sc focuser
     else
       focuser ()
 

@@ -1,6 +1,8 @@
-#define "sk x :=
-  (sigma m\n\ x = app m n, sk m, sk n);
-  (x = k) ; (x = s) ; (sigma v\ x = var v)
+#define "sk {x} :=
+  (x = k) ;
+  (x = s) ;
+  (sigma m\n\ x = app m n, sk m, sk n) ;
+  (sigma v\ x = var v)
 ".
 
 #define "step x y :=
@@ -17,15 +19,16 @@
 prove.
 % Qed.
 
-#define "sk_subst t x v st :=
+#define "sk_subst {t} x v {st} :=
   (sigma m\n\sm\sn\ t = app m n,
      sk_subst m x v sm, sk_subst n x v sn, st = app sm sn);
-  (t = k, st = k) ; (t = s, st = s) ;
+  (t = k, st = k) ;
+  (t = s, st = s) ;
   (t = var x, st = v) ;
   (sigma y\ t = var y, (y=x => false), st = var y)
 ".
 
-#define "sk_abs t x st :=
+#define "sk_abs {t} x st :=
   ((t = k ; t = s), st = app k t);
   (sigma m\n\sm\sn\ t = app m n, sk_abs m x sm, sk_abs n x sn,
                     st = app (app s sm) sn);
@@ -49,20 +52,13 @@ prove.
 % Cas 2: on passe sous un app.
 then(mu_l,then(repeat(or_l),simplify)).
 then(pi_l,then(pi_l,imp_l)).
-axiom.
-weak_l("sk_subst _ _ _ _").
+prove.
 then(pi_l,then(pi_l,imp_l)).
-axiom.
-weak_l("sk_subst _ _ _ _").
+prove.
 % On n'a pas de eval big-step, faut bosser.
 induction("a\b\ pi c\d\ eval c d => eval (app a c) (app b d)").
 prove.
-then(or_l,simplify).
-then(induction("a\b\ pi c\ eval (app c a) (app c b)"),prove).
 prove.
-% Dernier cas, les variables.
-then(or_l,simplify).
-then(mu_l,then(repeat(or_l),prove)).
-then(mu_l,then(repeat(or_l),prove)).
+prove.
 % Qed.
 

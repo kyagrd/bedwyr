@@ -3,6 +3,10 @@
 #define "odd {x} := (x=(s o));(sigma y\ (x=(s (s y)),(odd y)))".
 #define "leq x {y} := (x=y);(sigma z\ (y=(s z),(leq x z)))".
 #define "gt {x} y := (x=s y);(sigma p\ (x=(s p),(gt p y)))".
+#define
+  "eq {x} {y} :=
+    (x = o, y = o);
+    (sigma xx\ yy\ x = s xx, y = s yy, eq xx yy)".
 
 #define
   "plus {x} y z :=
