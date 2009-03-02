@@ -35,9 +35,9 @@ let outline = ref false
 (**********************************************************************
 * Versioning Information:
 **********************************************************************)
-let version = "0.5.0"
+let version = "0.9.1"
 let printVersion () =
-  (print_endline ("tactex version " ^ version ^ ".");
+  (print_endline ("Tactex version " ^ version ^ ".");
   exit 0)
 
 let getInputChannel () =
