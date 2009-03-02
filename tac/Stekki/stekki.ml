@@ -4,6 +4,12 @@
  * ocamlopt -I +labltk str.cmxa unix.cmxa labltk.cmxa stekki.ml -o stekki    * 
  *****************************************************************************)
 
+(* Version information. *)
+let version = "0.9.1"
+let printVersion () =
+  (print_endline ("Tactex version " ^ version ^ ".");
+  exit 0)
+
 let debug = ref false
 let filename = ref None
 
@@ -21,10 +27,10 @@ let () =
           Printf.eprintf "Didn't find \"taci\" in $PATH!\n%!" ;
           exit 1
 
-
 let () =
   Arg.parse
-    [ "--debug", Arg.Set debug, "Turn debugging on." ]
+    [ ("--debug", Arg.Set debug, "print debugging information");
+      ("--version", Arg.Unit(printVersion), "print version information")]
     (fun f -> filename := Some f)
     "Usage: stekki [--debug] <filename>"
 
