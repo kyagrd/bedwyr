@@ -29,7 +29,7 @@ Building Tac on Linux:
   Building tactex requires that xml-light (available at
   http://www.motion-twin.com) be installed in your OCAML_LIBS/xml-light.
   To do it just run:
-      $ make -C tools
+      $ make tools
 
 Building Tac on Windows XP:
   The easiest way is to build Tac on Windows XP is using Microsoft Visual
