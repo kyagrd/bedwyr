@@ -1,7 +1,7 @@
 TEST=lists.muLJ.tac sim.muLJ.tac internal_checks.muLJ.tac tictactoe.muLJ.tac \
 	 lift-oddity.muLJ.tac ho_simple.muLJ.tac lambda/lemmas.muLJ.tac \
 	 copy.muLJ.tac buchi.muLJ.tac binarytree.muLJ.tac plus.muLJ.tac \
-	 arithmetic.muLJ.tac mult.muLJ.tac reverse.muLJ.tac sorting.muLJ.tac \
+	 arithmetic.muLJ.tac reverse.muLJ.tac sorting.muLJ.tac \
 	 comparison.muLJ.tac \
 	 sk.muLJ.tac picbisim.muLJ.tac picone.muLJ.tac
 DEFS=naturals.def lists.def tictactoe.def sorting.def lambda/definitions.def \
