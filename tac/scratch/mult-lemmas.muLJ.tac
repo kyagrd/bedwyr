@@ -1,5 +1,5 @@
 % Proof of the commutativity of mult.
-#open "naturals.def".
+#open "../examples/naturals.def".
 
 #set "firstorder.lemmas" "true".
 #set "firstorder.lemmas.bound" "0".
