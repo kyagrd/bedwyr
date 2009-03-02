@@ -1,7 +1,7 @@
 % Preliminary experiments on cut-elimination.
 % Study the difficulties of context-as-lists.
 
-#open "lists.def".
+#open "../examples/lists.def".
 
 #define "form P :=
   P = tt ; (sigma A\B\ P = and A B) ; (sigma A\B\ P = imp A B)".

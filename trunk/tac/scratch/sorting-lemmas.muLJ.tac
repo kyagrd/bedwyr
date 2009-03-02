@@ -1,4 +1,4 @@
-#open "sorting.def".
+#open "../examples/sorting.def".
 
 #set "firstorder.lemmas" "true".
 #set "firstorder.lemmas.bound" "1".
