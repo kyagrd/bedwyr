@@ -10,6 +10,11 @@ prove.
 prove.
 % Qed.
 
+#theorem t2 "pi x\ l\ k\ l2\ k2\
+  (flip l l2, move l x k, flip k k2) => move l2 x k2".
+prove.
+% Qed.
+
 #theorem flip_winner
   "pi b1\ pi b2\ pi w\ winner w b1, flip b1 b2 => winner w b2".
 prove.
@@ -32,11 +37,6 @@ prove("6").
 prove.
 % Qed.
 
-#theorem symmetry_xwins
-  "pi b1\ pi b2\ pi w\ xwins b1, symmetry b1 b2 => xwins b2".
-prove("6").
-% DM's machine, 3 hours, didn't finish. 17.07.08
-
-
-
-
+% Another theorem to consider, but it's too long in automated mode.
+% #theorem symmetry_xwins
+%   "pi b1\ pi b2\ pi w\ xwins b1, symmetry b1 b2 => xwins b2".
