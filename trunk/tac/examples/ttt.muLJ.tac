@@ -20,6 +20,8 @@ prove.
 prove.
 % Qed
 
+% From to this point it's too costly.
+
 #theorem symmetry_symmetric
   "pi b1\ pi b2\ symmetry b1 b2 => symmetry b2 b1".
 prove("6").
@@ -34,6 +36,7 @@ prove.
   "pi b1\ pi b2\ pi w\ xwins b1, symmetry b1 b2 => xwins b2".
 prove("6").
 % DM's machine, 3 hours, didn't finish. 17.07.08
+
 
 
 
