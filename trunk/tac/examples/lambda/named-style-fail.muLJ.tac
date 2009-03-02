@@ -49,7 +49,7 @@
    (pi m\t\ bind a m t => bind b m t), (pi m\t\ bind b m t => bind a m t)
 ".
 
-#theorem context_s "pi g\t\ context g => nabla a\ context (cons (pair a t) g)".
+#lemma context_s "pi g\t\ context g => nabla a\ context (cons (pair a t) g)".
 simplify.
 abstract.
 mu_r.
@@ -59,7 +59,7 @@ prove.
 prove.
 % Qed.
 
-#theorem bind_ww "pi g\m'\t\ (nabla a\ bind g (m' a) t) =>
+#lemma bind_ww "pi g\m'\t\ (nabla a\ bind g (m' a) t) =>
                     sigma m\ m'=(a\m), bind g m t".
 prove.
 % Qed.
@@ -96,10 +96,11 @@ induction("G\M\T\ (context G => pi T'\ (typeof G M T' => (T = T')))").
 % Subject reduction shows a weakness of this approach: it requires several
 % unification outside of the higher-order patterns fragment.
 % As a result we have to do a lot more by hand, and eventually get stuck.
-% (And we get all these warnings about abortions due to unhandled unifications.)
 % Note, however, that a more powerful unification algorithm could be used to
-% carry out the proof: this in not a problem of the logic, but a problem
-% of its implementation -- although a serious one in our opinion.
+% carry out the proof at these points: this in not a problem of the logic,
+% but a problem of its implementation -- although a serious one in our opinion.
+% But more fundamentally, we will see that this encoding does not give
+% "substitution for free" and is actually hard to reason about.
 
 #theorem subject_reduction "
   pi m\n\ one m n => pi g\t\ typeof g m t => typeof g n t
@@ -166,5 +167,3 @@ induction("g'\m'\t'\ pi g\m\t\
  % LAM: same mess.
  admit.
 % Not quite Qed.
-
-
