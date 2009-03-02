@@ -1,4 +1,4 @@
-#open "ttt.def".
+#open "tictactoe.def".
 
 #theorem flip_involution
   "pi b1\ pi b2\ pi b3\ flip b1 b2, flip b2 b3 => b1 = b3".
