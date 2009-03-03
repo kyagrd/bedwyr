@@ -7,6 +7,8 @@
     <link href="../slimmer.css" rel="stylesheet" type="text/css"/>
   </head>
 
+  <div class="narrow">
+
   <body>
    <h1 align=center>Tac:<br>
         A generic and adaptable interactive theorem prover
@@ -14,64 +16,178 @@
 
  <h2>Overview</h2>
 
-<p class="body">
-Tac is a framework for constructing and interacting with interactive
-theorem provers for various logics.  It is designed to allow for easy
-experimentation.  Tac is composed of several parts.
-  <ul>
-    <li>
-      The primary component of Tac is a
-      framework for implementing interactive theorem provers, and then interacting
-      with said provers.  This core, called "tac", allows logicians to easily implement
-      provers for logics of their choice, and then experiment with the provers.
-      It allows for easy loading of different logics at runtime.  This part of
-      the system acts a driver for reasoning with the logics.
-    </li>
-    <li>
-      In addition to the core framework there are several logics implemented
-      using tac.  These include a propositional logic and several first-order
-      logics.  The first-order logics include classical and intuitionistic variants,
-      and support universal, existential, and generic quantification, inductive
-      and coinductive defintions via fixpoints, induction and coinduction, and
-      automatic proof search based on focusing.
-    </li>
-    <li>
-      Taci is a command line interface to the tac core.
-    </li>
-    <li>
-      StickyTaci is a graphical user interface to Taci, written in C#.  It
-      allows end-users to easily interact with the generated theorem provers,
-      and provides such functionality as loading and saving of proofs, syntax
-      highlighting, and automatic discovery of loaded logics and available
-      tactics and tacticals.
-    </li>
-    <li>
-      Stekki is another graphic user interface, for use where the CLR is
-      unavailable; it is written in OCaml and uses Labltk.
-    </li>
-  </ul>
+ <p class="body">
+ Tac is a framework for implementing interactive
+ theorem provers with good support for both interactive proof development
+ and automated proof search.
+ While our main research focus is on <em>automated reasoning</em>,
+ it is useful to be able to interactively play with the logic when
+ developping automated tactics; moreover, an interactive system is often
+ useful to manually fill the gaps between automatically discovered proofs.
+ Currently, the main development within Tac is the logic &mu;LJ
+ and its automated focused inductive theorem proving tactic.
+ Tac provides several tools:
+ </p>
+ <ul>
+   <li>
+   <b>Taci</b> is a command line interface to the Tac core.
+   </li>
+   <li>
+   <b>StickyTaci</b> is a graphical user interface to Taci, written in C#. It
+   allows end-users to easily interact with the Tac-based theorem provers,
+   and provides such functionality as loading and saving of proofs, syntax
+   highlighting, and automatic discovery of loaded logics and available
+   tactics and tacticals.
+   </li>
+   <li>
+   <b>Stekki</b> is simpler graphic user interface, which should build
+   on most UNIX-based systems;
+   it is written in OCaml and uses Labltk.
+   </li>
+   <li>
+   Tac produces proofs in an XML format. The tool <b>tactex</b>
+   can be used to convert them to LaTeX, and allows some basic
+   focusing-based proof <em>outlining</em>.
+   </li>
+ </ul>
+ </p>
+
+ <h2>More about Tac/&mu;LJ</h2>
+
+ <p>
+ The logic &mu;LJ is a simple but powerful extension of first-order
+ logic with equality, least and greatest fixed points and minimal generic
+ quantification. It enjoys a focusing proof system on which our
+ implementation relies, for both automatic and interactive proof developments.
+ </p>
+ <p>
+ Learn more about &mu;LJ in
+ <a href="tac09.pdf"><em>Focused Inductive Theorem Proving</em></a>
+ by Baelde, Miller, Snow &amp; Viel
+ (submitted paper).
+ </p>
+ <p>
+ The distributed system comes with several example theorems.  They include
+ proofs of properties of Peano arithmetic, standard list predicates, the
+ pi-calculus, Buchi automata, and the simply typed lambda calculus.
+ </p>
+ <p>
+ Here is an illustrative list of the kinds of theorems for which the
+ automated tactic <code>prove</code> can quickly find proofs:
+ </p>
+ <ul>
+   <li>Commutativity and associativity of addition on natural numbers.
+   </li>
+   <li>Every natural number is either even or odd, the sum of two even numbers
+   is even, <em>double</em> is the inverse of <em>half</em> for even numbers.
+   </li>
+   <li>Reflexivity, symmetry and transitivity of inductively defined
+   equalities on lists and natural numbers.
+   </li>
+   <li>Reflexivity and transitivity of the ordering on natural numbers.
+   </li>
+   <li>Left and right neutrality of <em>nil</em> for list concatenation.
+   </li>
+   <li>Relationships between list reversal and length,
+   list concatenation and length.
+   </li>
+   <li>Antisymmetry of the subtree ordering on binary trees.
+   </li>
+   <li>Reflexivity and transitivity of simulation.
+   </li>
+   <li>Totality of the Ackermann function:
+   <code>pi x\ pi y\ nat x =&gt; nat y =&gt; sigma z\ ack x y z, nat z</code>.
+   </li>
+   <li>Totality of division by two:
+   <code>pi x\ nat x =&gt; sigma h\ half x h</code>.
+   </li>
+   <li>Involution of list reversal:
+   <code>pi x\ pi r\ reverse x r =&gt; reverse r x</code>.
+   </li>
+ </ul>
+
+ <p>As said above, Tac produces proofs. Here are a couple examples.
+ Most proofs are <em>outlined</em>: the asynchronous phase (invertible rules)
+ is collapsed into one rule, leaving only the more relevant information
+ in the proof. Even using this technique, we can only show here some of
+ the simplest proofs automatically discovered. Larger proofs would be
+ unreadability, but in fact not even manageable for LaTeX;
+ still, several of the Postcript files below
+ are known to <b>not work in Ghostview</b>.
+ </p>
+ <center>
+   <a href="leq_trans.xml.png">
+     <img alt="leq is transitive" src="leq_trans.xml.png" width="80%" />
+   </a>
+ </center>
+ <ul>
+   <li>From <a 
+     href="http://gforge.inria.fr/plugins/scmsvn/viewcvs.php/*checkout*/trunk/tac/examples/arithmetic.muLJ.tac?root=slimmer"
+     ><code>arithmetic.muLJ.tac</code></a>:
+   <ul>
+     <li>Commutativity of addition (<a href="plus_comm.xml.ps">PS</a>).</li>
+     <li>Inductive equality on natural numbers if symmetric
+     (<a href="eq_sym.xml.ps">PS</a>).
+     </li>
+     <li>The &leq; relationship on natural numbers is transitive
+     (<a href="leq_trans.xml.ps">PS</a>).
+     </li>
+     <li>Truncated division by two (<code>half</code>) is total,
+     with a hand-crafted invariant and only one induction (<a 
+       href="half_total.xml.ps">PS</a>) or proved automatically using
+     nested inductions (<a href="half_total.xml.auto.ps">PS</a>).
+     </li>
+     <li>Every natural number is either even or odd,
+     <a href="even_or_odd.xml.outlined.ps">PS</a>, see also the
+     <a href="even_or_odd.xml.ps">full proof</a> (not outlined).
+     </li>
+     <li>The Ackermann function is total (<a href="ack_total.xml.ps">PS</a>).
+     </li>
+   </ul>
+   </li>
+   <li>From <a 
+     href="http://gforge.inria.fr/plugins/scmsvn/viewcvs.php/*checkout*/trunk/tac/examples/sim.muLJ.tac?root=slimmer"><code>sim.muLJ.tac</code></a>:
+   simulation is reflexive (<a href="sim_refl.xml.ps">PS</a>)
+   and transitive (<a href="sim_trans.xml.ps">PS</a>).
+   </li>
+   <li>From <a 
+     href="http://gforge.inria.fr/plugins/scmsvn/viewcvs.php/*checkout*/trunk/tac/examples/copy.muLJ.tac?root=slimmer"><code>copy.muLJ.tac</code></a>:
+   inductive equality on &lambda;-terms implies term equality,
+   <a href="eq.xml.ps">PS</a>, <a href="eq.xml.png">PNG</a>
+   (<b>large</b> files, use a powerful viewer).
+   </li>
+   <li>From <a 
+     href="http://gforge.inria.fr/plugins/scmsvn/viewcvs.php/*checkout*/trunk/tac/examples/lambda/lemmas.muLJ.tac?root=slimmer"
+     ><code>lambda/lemmas.muLJ.tac</code></a>:
+   keys and variables found in a context that does not use a generic
+   variable cannot use it either
+   (<a href="bind_www.xml.ps">PS</a>).
+   </li>
+ </ul>
+
+<h2>Get Tac</h2>
+
+<p><b>Download:</b>
+Get the latest version of Tac's
+<a href="https://gforge.inria.fr/frs/?group_id=367">source code</a>,
+or get the latest version of Tac for Windows as an
+<a href="https://http://gforge.inria.fr/frs/download.php/5720/Tac-0.5.0.exe"
+  >installer</a>.
 </p>
 
-<p>
-The distributed system comes with several example theorems.  They include
-proofs of properties of peano arithmetic, standard list predicates, the
-pi-calculus, buchi automata, and the simply typed lambda calculus.
-</p>
-
-<p>
-The Tac system consists of two primary components: logics, which are OCaml modules
-implementing a particular signature, and a driver program, which loads
-logic modules and facilitates interaction with them.  Currently the most
-interesting logics implemented using the system are a first-order classical
-logic and a first-order intuitionist logic.  Both of these logics support
-universal, existential, and generic quantification, inductie and coinductive
-definitions via fixpoints, induction and coinduction, and automated proof
-search based on focusing.
+<p><b>Open source repository:</b>
+Active development versions are available from the 
+<a href="http://gforge.inria.fr/scm/?group_id=367">Slimmer SVN repository</a>
+hosted by INRIA's Gforge.  You can
+<a 
+  href="http://gforge.inria.fr/plugins/scmsvn/viewcvs.php/trunk/tac/?root=slimmer">browse the repository</a>,
+in particular our
+<a href="http://gforge.inria.fr/plugins/scmsvn/viewcvs.php/trunk/tac/examples/?root=slimmer">examples</a>.
 </p>
 
 <h2>Current developers</h2>
 <p>
-Tac is an open source project.  The first major versions was
+Tac is an open source project.  The first major version was
 released on 18 June 2008. We welcome contributions from
 others of both theorems and new features.  The developers
 behind the current distribution are:
@@ -98,22 +214,7 @@ in this material are those of the project participants and do not
 necessarily reflect the views of INRIA or the National Science Foundation. 
 </p>
 
-<h2>Links</h2>
-
-<p><font color=green><b>Download:</b></font>
-  Get the latest version of Tac's <a href="http://gforge.inria.fr/frs/?group_id=367">source code</a>,
-  or get the latest version of Tac for Windows as an <a href="http://gforge.inria.fr/frs/download.php/5720/Tac-0.5.0.exe">installer</a>.
-</p>
-
-<p><font color=green><b>Open source repository: </b></font> 
-  Active development versions are available from the 
-  <a href="http://gforge.inria.fr/scm/?group_id=367">Tac subversion repository</a>
-  hosted by INRIA's Gforge.  You can
-  <a href="http://gforge.inria.fr/plugins/scmsvn/viewcvs.php/trunk/tac/?root=slimmer">
-  browse the repository</a>, especially the
-  <a href="http://gforge.inria.fr/plugins/scmsvn/viewcvs.php/trunk/tac/examples/?root=slimmer">
-  examples</a>.
-</p>
+</div> <!-- narrow -->
 
 <script src="http://www.google-analytics.com/urchin.js"
             type="text/javascript">
