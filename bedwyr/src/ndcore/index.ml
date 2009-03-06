@@ -132,8 +132,6 @@ let empty = []
 
 exception Cannot_table
 
-let observe term = Term.observe (Norm.hnorm term)
-
 (** [create_node bindings terms data] compiles the terms into patterns
   * and associates them with a leaf containing the data.
   * Terms are expected to be reversed. *)
@@ -146,7 +144,9 @@ let create_node ~allow_eigenvar bindings terms data =
     in
       aux [] 0 bindings
   in
-  let rec compile bindings term = match observe term with
+  let rec compile bindings term =
+    let term = Norm.hnorm term in
+    match Term.observe term with
     | Term.DB i -> DB i, bindings
     | Term.NB i -> NB i, bindings
     | Term.Var ({Term.tag=Term.Constant} as v) ->
@@ -207,7 +207,7 @@ let update ~allow_eigenvar index terms data =
   (* Update_pattern returns the list of catches and the alternative
    * corresponding to the former index in reverse order. *)
   let rec update_pattern bindings catches former_alt pattern term =
-    match pattern, observe term with
+    match pattern, Term.observe (Norm.hnorm term) with
       | DB i, Term.DB j when i = j ->
           (false, DB i, bindings, catches, former_alt)
       | NB i, Term.NB j when i = j ->
@@ -302,7 +302,7 @@ let add ?(allow_eigenvar=true) index terms data =
 (* Filter a term through a pattern, raise Not_found on mismatch,
  * return the list of bindings and the reversed list of catches. *)
 let rec filter bindings catches pattern term =
-  match pattern, observe term with
+  match pattern, Term.observe (Norm.hnorm term) with
     | DB i, Term.DB j
     | NB i, Term.NB j when i=j -> bindings,catches
     | Cst (_,i), Term.Var j ->
