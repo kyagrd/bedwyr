@@ -149,7 +149,8 @@ let create_node ~allow_eigenvar bindings terms data =
   let rec compile bindings term = match observe term with
     | Term.DB i -> DB i, bindings
     | Term.NB i -> NB i, bindings
-    | Term.Var ({Term.tag=Term.Constant} as v) -> Cst (term,v), bindings
+    | Term.Var ({Term.tag=Term.Constant} as v) ->
+        Cst (Term.deref term,v), bindings
     | Term.Var ({Term.tag=Term.Eigen} as var) when allow_eigenvar ->
         let i,bindings = add bindings var in
           Var i, bindings
