@@ -36,6 +36,8 @@ let rec extract path t =
       | App (t,_) when hd = H -> t
       | _ -> atom "not_found"
 
+let fresh ~ts ~lts ~name ~tag = fresh ~ts ~lts ~name tag
+
 let var nm ts = fresh ~tag:Logic ~name:nm ~ts:ts ~lts:0
 let const nm ts = fresh ~tag:Constant ~name:nm ~ts:ts ~lts:0
 

@@ -562,7 +562,7 @@ struct
   ********************************************************************)
   let makeExistentialVar hint lvl lts =
     let hint = String.capitalize hint in
-    let var = Term.fresh ~name:hint ~lts:0 ~ts:lvl ~tag:Term.Logic in
+    let var = Term.fresh ~name:hint ~lts:0 ~ts:lvl Term.Logic in
     let rec raise_over x n =
       if n = 0 then x else
         Term.app (raise_over x (n-1)) [Term.nabla n]
@@ -572,7 +572,7 @@ struct
 
   let makeUniversalVar hint lvl lts =
     let lvl = lvl+1 in
-    let var = Term.fresh ~name:hint ~lts:0 ~ts:lvl ~tag:Term.Eigen in
+    let var = Term.fresh ~name:hint ~lts:0 ~ts:lvl Term.Eigen in
     let rec raise_over x n =
       if n = 0 then x else
         Term.app (raise_over x (n-1)) [Term.nabla n]

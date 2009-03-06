@@ -17,7 +17,7 @@
 (* Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA             *)
 (****************************************************************************)
 
-(** In this file we implement and index structure used for tabling.
+(** In this file we implement an index structure used for tabling.
   * An index represents a set of terms, in which eigenvariables may be allowed
   * but not logic variable -- since this requires suspensions.
   * The terms are abstracted over their eigenvars in the set.
@@ -52,7 +52,7 @@ type constraints = { max_vid : int ;
                      eq      : int array ;
                      lts     : int array }
 
-let dummy_var = Term.get_var (Term.var ~ts:(-1) ~lts:(-1) ~tag:Term.Constant)
+let dummy_var = Term.get_var (Term.fresh ~ts:(-1) ~lts:(-1) Term.Constant)
 
 exception Found of int
 
@@ -135,7 +135,7 @@ exception Cannot_table
 let observe term = Term.observe (Norm.hnorm term)
 
 (** [create_node bindings terms data] compiles the terms into patterns
-  * and associates them a leaf containing the data.
+  * and associates them with a leaf containing the data.
   * Terms are expected to be reversed. *)
 let create_node ~allow_eigenvar bindings terms data =
   let bindings = List.sort (fun (i,_) (j,_) -> compare i j) bindings in
@@ -462,13 +462,13 @@ let iter index f =
                for i = 0 to Array.length c.eq - 1 do
                  table.(c.vid.(i)) <-
                    if c.eq.(i) = i then
-                     Term.var ~tag:Term.Eigen ~ts:0 ~lts:0
+                     Term.fresh Term.Eigen ~ts:0 ~lts:0
                    else
                      table.(c.vid.(c.eq.(i))) ;
                  if c.eq.(i) = i then
                    l := table.(c.vid.(i)) :: !l
                done ;
-               let head = Term.var ~tag:Term.Eigen ~ts:0 ~lts:0 in
+               let head = Term.fresh Term.Eigen ~ts:0 ~lts:0 in
                let t = Term.app head (MZ.zip table mz) in
                let l = List.rev !l in
                let t =

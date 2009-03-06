@@ -37,6 +37,7 @@ type rawterm =
 
 val eq : term -> term -> bool
 val observe : term -> rawterm
+val deref : term -> term
 
 (** Binding a variable to a term in a destructive way,
   * saving and restoring previous states of the terms. *)
@@ -72,9 +73,7 @@ type namespace
 val save_namespace : unit -> namespace
 val restore_namespace : namespace -> unit
 
-val var : tag:tag -> ts:int -> lts:int -> term
-
-val fresh : name:string -> tag:tag -> lts:int -> ts:int -> term
+val fresh : ?name:string -> lts:int -> ts:int -> tag -> term
 val get_var_by_name : tag:tag -> ts:int -> lts:int -> string -> term
 val atom : string -> term
 

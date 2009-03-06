@@ -233,20 +233,20 @@ let fresh_id =
   let c = ref 0 in
     fun () -> incr c ; !c
 
-(** Generate a fresh variable. *)
-let var ~tag ~ts ~lts = Ptr (ref (V {id=fresh_id();tag=tag;ts=ts;lts=lts}))
-
 (** Generate a fresh variable, attach a naming hint to it. *)
-let fresh ~name ~tag ~lts ~ts =
+let fresh ?name ~lts ~ts tag =
   let v = {id=fresh_id();tag=tag;ts=ts;lts=lts} in
-    Hint.add v name ;
+    begin match name with
+      | Some name -> Hint.add v name
+      | None -> ()
+    end ;
     Ptr (ref (V v))
 
 module NS = Map.Make(struct type t = string let compare = compare end)
 type namespace = term NS.t
 
 (** [symbols] is used to obtain the exact same variable term for
-  * representing all instances of that variable -- used by the parser. *)
+  * representing all occurrences of that variable -- used by the parser. *)
 let symbols = ref NS.empty
 
 let save_namespace () = !symbols
@@ -261,7 +261,7 @@ let get_var_by_name ~tag ~ts ~lts name =
     | Not_found ->
         assert (name <> "") ;
         let lts = 0 in
-        let t = fresh ~tag ~ts ~lts ~name in
+        let t = fresh tag ~ts ~lts ~name in
           symbols := NS.add name t !symbols ;
           t
 

@@ -151,7 +151,7 @@ let isSpecialAtom a = a = "true" || a = "false"
 *makeAnonymousTerm:
 ********************************************************************)
 let makeAnonymousTerm () =
-  Term.fresh ~name:"_" ~tag:Term.Logic ~lts:max_int ~ts:max_int
+  Term.fresh ~name:"_" Term.Logic ~lts:max_int ~ts:max_int
 
 (**********************************************************************
 *getTermHeadAndArgs:
@@ -432,7 +432,7 @@ let string_of_definition (Definition(name,arity,body,ind)) =
 
 let abstract0 var = let rec x () = mapFormula x (Term.abstract var) in x
 
-let dummyvar = Term.var ~ts:0 ~lts:0 ~tag:Term.Constant
+let dummyvar = Term.fresh ~ts:0 ~lts:0 Term.Constant
 let lift = abstract0 dummyvar ()
 let rec lift_pred n p =
   if n>0 then lift_pred (n-1) (lift.predf p) else p
@@ -524,7 +524,7 @@ let eliminateNablas tv =
   (** [f pv tv form] computes [φ^pv_{rev(tv)}(form)]. *)
   let rec f pv tv =
     (* Printf.printf "...%s\n" (string_of_formula_ast ~generic:[] form) ; *)
-    let fresh () = Term.var ~ts:0 ~lts:0 ~tag:Term.Constant in
+    let fresh () = Term.fresh ~ts:0 ~lts:0 Term.Constant in
 
     (* Abstract term [t] over variables [tv]. *)
     let tf t =
@@ -757,7 +757,7 @@ let applyFixpoint argument =
   let rec normalizeAbstractions lambdas target arguments =
     let free (name,info) = if info then Term.free name else () in
     let makeFreeInfo name = (name, Term.is_free name) in
-    let makeArg name = Term.var ~tag:Term.Constant ~lts:0 ~ts:0 in
+    let makeArg name = Term.fresh Term.Constant ~lts:0 ~ts:0 in
     
     (*  Collect info about variable freeness. *)
     let freeInfo = List.map makeFreeInfo lambdas in
@@ -807,7 +807,7 @@ let applyFixpoint argument =
                     let argument =
                       if lifts = 0 then argument else
                         let fresh _ =
-                          Term.var ~ts:0 ~lts:0 ~tag:Term.Constant
+                          Term.fresh ~ts:0 ~lts:0 Term.Constant
                         in
                         let generics =
                           let rec mk =

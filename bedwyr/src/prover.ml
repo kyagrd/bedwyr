@@ -311,7 +311,7 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
             in begin match observe goal with
               | Lam (1,_) ->
                   let timestamp = timestamp + 1 in
-                  let var = Term.var ~lts:local ~tag:Eigen ~ts:timestamp in
+                  let var = Term.fresh ~lts:local Eigen ~ts:timestamp in
                   let goal = app goal [var] in
                     prove ~local ~timestamp ~level ~success ~failure goal
               | _ -> assert false
@@ -345,7 +345,7 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
                           timestamp, Logic
                   in
                   let var =
-                    Term.var ~ts:timestamp ~lts:local ~tag
+                    Term.fresh ~ts:timestamp ~lts:local tag
                   in
                     prove ~local ~level ~timestamp
                       ~success ~failure (app goal [var])
