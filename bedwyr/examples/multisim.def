@@ -1,0 +1,101 @@
+
+% Check inclusions of finite state automata
+% using the multi-simulation characterization.
+%
+% We use Bedwyr's tabling mechanism which actually builds
+% a (somehow minimal) multi-simulation establishing the query.
+
+mem X (cons X L).
+mem X (cons Y L) := mem X L.
+
+% lt : state -> state -> o.
+% The order is as folllows: accept < nat < even < odd.
+% We could have hardcoded the transivite closure for maximum efficiency,
+% but Bedwyr can handle it using loop detections.
+% However, we have to distinguish lt and lt0 so that loops are not too wild.
+
+lt0 accept nat.
+lt0 nat even.
+lt0 even odd.
+inductive lt X Y := lt0 X Y ; lt0 X Z, lt Z Y.
+
+% Union of sorted lists, removes redundancies.
+% union : state list -> state list -> state list -> o.
+
+union X nil X.
+union nil X X.
+union (cons X L) (cons X L') L'' := union L (cons X L') L''.
+union (cons X L) (cons Y L') (cons X L'') := lt X Y, union L (cons Y L') L''.
+union (cons X L) (cons Y L') (cons Y L'') := lt Y X, union (cons X L) L' L''.
+
+% We shall use the following types.
+%
+% state : type
+% label : type
+%
+% s, z : label
+% even, odd, even_odd, accept, ... : state
+
+% Declare accepting states.
+% accepts : state -> o
+
+accepts accept.
+
+% Given a non-deterministic transition relation p-a->p',
+% we would be able to handle checking that a list contains all transitions
+% p-a->p', but not to proof-search it in any reasonable way.
+% Instead, we give the transitions in a determinized way.
+%
+% The lists should be sorted, the relation should be functional AND TOTAL.
+% steps : state -> label -> state list -> o
+
+steps even z (cons accept nil).
+steps even s (cons odd nil).
+
+steps odd  s (cons even nil).
+steps odd  z nil.
+
+steps nat z (cons accept nil).
+steps nat s (cons nat nil).
+
+steps accept X nil.
+
+steps half   z (cons accept nil).
+steps half   s (cons is_z (cons half_s nil)).
+steps is_z   z (cons accept nil).
+steps is_z   s nil.
+steps half_s z nil.
+steps half_s s (cons half nil).
+
+% Non-deterministic version of steps.
+% step : state -> label -> state -> o.
+
+step P A P' := steps P A All, mem P' All.
+
+% Extension of acceptance and transitions to sets of states.
+
+multi_steps nil A nil.
+multi_steps (cons Q S) A L'' :=
+  steps Q A L, multi_steps S A L', union L L' L''.
+
+multi_accepts Q := mem S Q, accepts S.
+
+% The definition of multisim is with a subset of Q' (the maximal multi_steps
+% result) but it is sound to take all of them.
+
+coinductive multisim P Q :=
+  (pi A\ pi P'\ step P A P' => sigma Q'\ multi_steps Q A Q', multisim P' Q'),
+  (accepts P => multi_accepts Q).
+
+% Some extra checks that would work but pollute the table.
+% #assert (pi x\ multi_steps (cons even (cons odd nil)) z x =>
+%                x = (cons accept nil)).
+% #assert (pi x\ multi_steps (cons even (cons odd nil)) s x =>
+%                x = (cons even (cons odd nil))).
+% #assert (pi x\ multisim accept (cons accept x)).
+% #assert (multisim nat (cons nat nil)).
+
+#assert (multisim nat (cons even (cons odd nil))).
+#assert (multisim nat (cons half nil)).
+
+#show_table multisim.
