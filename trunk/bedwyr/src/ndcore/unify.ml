@@ -46,7 +46,7 @@ let constant tag =
   tag = Constant || tag = constant_like
 let variable tag =
   tag = instantiatable
-let fresh = var ~tag:instantiatable
+let fresh = fresh instantiatable
 
 (* Transforming a term to represent substitutions under abstractions *)
 let rec lift t n = match Term.observe t with

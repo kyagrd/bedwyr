@@ -53,7 +53,7 @@
                  when List.for_all (fun v -> v!=p) new_params ->
                  p::new_params,prolog
              | _  ->
-                 let v = Term.var ~ts:0 ~lts:0 ~tag:Term.Logic in
+                 let v = Term.fresh ~ts:0 ~lts:0 Term.Logic in
                    (v::new_params, (eq v p)::prolog))
         ([],[])
         params
@@ -151,7 +151,7 @@ binding:
 aexp:
 | LPAREN exp RPAREN { $2 }
 | ID                { if $1="_" then
-                        Term.fresh ~name:"_" ~tag:Term.Logic ~ts:0 ~lts:0
+                        Term.fresh ~name:"_" Term.Logic ~ts:0 ~lts:0
                       else
                         Term.atom $1 }
 | STRING            { Term.string $1 }

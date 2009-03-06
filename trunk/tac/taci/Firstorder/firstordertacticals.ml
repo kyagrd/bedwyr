@@ -310,7 +310,7 @@ struct
   let abs_of_pred arity pol pred =
     let args' =
       Listutils.mapi
-        (fun _ -> Term.fresh ~name:"*eta*" ~lts:0 ~ts:0 ~tag:Term.Constant)
+        (fun _ -> Term.fresh ~name:"*eta*" ~lts:0 ~ts:0 Term.Constant)
         arity
     in
 
@@ -713,7 +713,7 @@ struct
                           (* The details don't matter, we'll abstract that
                            * out soon enough. We only need that the fresh vars
                            * are not eigen. *)
-                          Term.fresh ~name:n ~ts:0 ~lts:0 ~tag:Term.Logic
+                          Term.fresh ~name:n ~ts:0 ~lts:0 Term.Logic
                         in
                         let fv,eigenvars,elrhs =
                           (* Essentially form
@@ -1009,7 +1009,7 @@ struct
                              use 'abstract' first to avoid this problem.\n";
                         
                         let fresh n =
-                          Term.fresh ~name:n ~ts:0 ~lts:0 ~tag:Term.Eigen
+                          Term.fresh ~name:n ~ts:0 ~lts:0 Term.Eigen
                         in
                         (* For now, don't treat the right hand-side,
                          * it is useless in the intuitionistic case,
