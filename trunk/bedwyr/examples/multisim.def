@@ -9,14 +9,18 @@ mem X (cons X L).
 mem X (cons Y L) := mem X L.
 
 % lt : state -> state -> o.
-% The order is as folllows: accept < nat < even < odd.
+% The order is as folllows: accept < nat < even < odd < ...
 % We could have hardcoded the transivite closure for maximum efficiency,
 % but Bedwyr can handle it using loop detections.
 % However, we have to distinguish lt and lt0 so that loops are not too wild.
 
 lt0 accept nat.
-lt0 nat even.
-lt0 even odd.
+lt0 nat    even.
+lt0 even   odd.
+lt0 odd    half.
+lt0 half   half_s.
+lt0 half_s is_z.
+lt0 is_z   loop.
 inductive lt X Y := lt0 X Y ; lt0 X Z, lt Z Y.
 
 % Union of sorted lists, removes redundancies.
@@ -67,6 +71,9 @@ steps is_z   s nil.
 steps half_s z nil.
 steps half_s s (cons half nil).
 
+steps loop   s (cons loop nil).
+steps loop   z (cons loop nil).
+
 % Non-deterministic version of steps.
 % step : state -> label -> state -> o.
 
@@ -77,6 +84,12 @@ step P A P' := steps P A All, mem P' All.
 multi_steps nil A nil.
 multi_steps (cons Q S) A L'' :=
   steps Q A L, multi_steps S A L', union L L' L''.
+
+subset nil nil.
+subset L (cons A L') := subset L L'.
+subset (cons A L) (cons A L') := subset L L'.
+
+multi_step X A Y := multi_steps X A X', subset Y X'.
 
 multi_accepts Q := mem S Q, accepts S.
 
@@ -96,6 +109,13 @@ coinductive multisim P Q :=
 % #assert (multisim nat (cons nat nil)).
 
 #assert (multisim nat (cons even (cons odd nil))).
-#assert (multisim nat (cons half nil)).
-
 #show_table multisim.
+#clear_table multisim.
+
+#assert (multisim nat (cons half nil)).
+#show_table multisim.
+#clear_table multisim.
+
+#assert (multisim nat (cons nat (cons loop nil))).
+#show_table multisim.
+#clear_table multisim.

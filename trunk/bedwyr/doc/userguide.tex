@@ -598,8 +598,8 @@ To use tabling on a predicate $p$, to be treated as an inductive predicate
 must be preceded by the keyword \texttt{inductive} 
 (likewise, \texttt{coinductive}).
 Note that a predicate cannot be designated as both inductive and co-inductive
-at the same time, as it will lead to contradiction (see 
-\cite{momigliano03types} for more details) in some cases. 
+at the same time, as it might lead to contradiction
+| see \cite{momigliano03types} for more details.
 
 The command \verb/#show_table pred/ allows one to inspect the contents of
 \verb.pred.'s table: formulas which have been proved or disproved.
@@ -629,6 +629,11 @@ Table for neq contains (P=Proven, D=Disproven):
 \end{verbatim}
 The two entries are undistinguishable by the user, but internally some
 extra information does separate them.
+
+Other tabling related commands are \verb/#clear_tables/ and
+\verb/#clear_table <pred>/ which clear all or some of the tabled entries.
+Notice that all tables are automatically cleared when new definitions
+are loaded, in order to ensure soundness.
 
 \subsubsection{A bisimulation example}
 
