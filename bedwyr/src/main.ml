@@ -199,9 +199,26 @@ and command lexbuf = function
           | _ -> raise Invalid_command
         end
 
-  (* Print the contents of a table *)
+  (* Tabling-related commands *)
   | "show_table",[p] ->
       System.show_table p
+  | "clear_tables",[] ->
+      Hashtbl.iter
+        (fun k v -> match v with
+           | (_,_,Some t) -> Table.reset t
+           | _ -> ())
+        System.defs
+  | "clear_table",[p] ->
+      begin match
+        try
+          let _,_,x = Hashtbl.find System.defs (Term.get_var p) in x
+        with _ -> None
+      with
+        | Some t ->
+            Table.reset t
+        | None -> 
+            Format.printf "Table not found.\n"
+      end
 
   (* Testing commands *)
   | "assert",[query] ->
