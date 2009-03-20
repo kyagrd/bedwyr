@@ -90,6 +90,9 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
   end ;
 
   let g = Norm.hnorm g in
+  let invalid_goal () =
+    failwith (sprintf "Invalid goal %s" (Pprint.term_to_string g))
+  in
 
   let prove_atom d args =
     if !debug then
@@ -125,6 +128,7 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
              * will overwrite it. *)
             let disprovable = ref true in
             let status = ref (Table.Working disprovable) in
+            let s0 = Term.save_state () in
             let table_update_success ts k =
               status := Table.Proved ;
               ignore (Stack.pop disprovable_stack) ;
@@ -135,14 +139,18 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
                * [failure] continuation. It _seems_ OK regarding the
                * cleanup handlers, which are just jumps to
                * previous states.
-               * It is actually quite useful in graph-alt.def. *)
-              success ts failure
+               * It is actually quite useful in examples/graph-alt.def. *)
+              success ts
+                (fun () ->
+                   Term.restore_state s0 ; failure ())
             in
             let table_update_failure () =
               begin match !status with
                 | Table.Proved ->
-                    (* This is just backtracking, don't worry. *)
-                    ()
+                    (* This is just backtracking, we are seeing the tabling
+                     * entry corresponding to a previous goal.
+                     * Never happens if we skipped the success continuation. *)
+                    assert false
                 | Table.Working _ ->
                     ignore (Stack.pop disprovable_stack) ;
                     if !disprovable then begin
@@ -150,7 +158,7 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
                       disprovable := false ;
                     end else
                       status := Table.Unset
-                | _ -> assert false
+                | Table.Disproved | Table.Unset -> assert false
               end ;
               failure ()
             in
@@ -216,7 +224,7 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
         (* Level 1: Implication *)
         | Var v when v == Logic.var_imp ->
             assert_level_one level ;
-            let (a,b) = match goals with [a;b] -> a,b | _ -> assert false in
+            let (a,b) = match goals with [a;b] -> a,b | _ -> invalid_goal () in
             let a = Norm.deep_norm a in
             let b = Norm.deep_norm b in
             let check_variables =
@@ -314,7 +322,7 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
                   let var = Term.fresh ~lts:local Eigen ~ts:timestamp in
                   let goal = app goal [var] in
                     prove ~local ~timestamp ~level ~success ~failure goal
-              | _ -> assert false
+              | _ -> invalid_goal ()
             end
 
         (* Local quantification *)
@@ -327,7 +335,7 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
                   let local = local + 1 in
                     prove ~local ~level ~timestamp ~success ~failure
                       (app goal [Term.nabla local])
-              | _ -> assert false
+              | _ -> invalid_goal ()
             end
 
         (* Existential quantification *)
@@ -349,7 +357,7 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
                   in
                     prove ~local ~level ~timestamp
                       ~success ~failure (app goal [var])
-              | _ -> assert false
+              | _ -> invalid_goal ()
             end
 
         (* Output *)
@@ -375,27 +383,37 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
                             failure ()
                     | _ -> assert false
                   end
-              | _ -> assert false
+              | _ -> invalid_goal ()
             end
 
         (* Check for definitions *)
         | Var v -> prove_atom hd goals
 
         (* Invalid goal *)
-        | _ ->
-            printf "Invalid goal %a!" Pprint.pp_term g ;
-            failure ()
+        | _ -> invalid_goal ()
       end
 
   (* Failure *)
-  | _ ->
-      printf "Invalid goal %a!" Pprint.pp_term g ;
-      failure ()
+  | _ -> invalid_goal ()
 
+(* Wrap prove with sanity checks. *)
 let prove ~success ~failure ~level ~timestamp ~local g =
+  let s0 = Term.save_state () in
+  let success ts k =
+    assert (Stack.is_empty disprovable_stack) ;
+    success ts k
+  in
+  let failure () =
+    assert (Stack.is_empty disprovable_stack) ;
+    assert (s0 = Term.save_state ()) ;
+    failure ()
+  in
   try
     prove ~success ~failure ~level ~timestamp ~local g
-  with e -> clear_disprovable () ; raise e
+  with e ->
+    clear_disprovable () ;
+    Term.restore_state s0 ;
+    raise e
 
 let toplevel_prove g =
   let s0 = Term.save_state () in
@@ -432,5 +450,4 @@ let toplevel_prove g =
       ~failure:(fun () ->
                   time () ;
                   if !found then printf "No more solutions.\n"
-                  else printf "No.\n" ;
-                  assert (s0 = Term.save_state ()))
+                  else printf "No.\n")
