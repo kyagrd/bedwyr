@@ -1,21 +1,28 @@
 #open "lemmas.muLJ.tac".
 
-#theorem typeof_subst "
-  pi g'\m'\t'\
-      (nabla x\ typeof (g' x) (m' x) (t' x))
-   => (pi x\    typeof (g' x) (m' x) (t' x))
-".
+#lemma typeof_w
+  "pi g\m\t\ typeof g m t => pi t'\ nabla x\ typeof (cons (pair x t') g) m t".
 simplify.
-abstract.
-induction("g'\m'\t'\ pi x\ typeof (g' x) (m' x) (t' x)").
+induction("g\m\t\ nabla x\ pi gg\
+    permute gg (cons (pair x t') g) => typeof gg m t)").
 prove.
-async.
-then(induction("l'\x'\t'\ pi x\ bind (l' x) (x' x) (t' x)"),prove).
+then(repeat(or_l),simplify).
+% BIND.
+apply("bind_s").
+prove.
+% APP.
+prove.
+% LAM.
+apply("lift_permute_s").
+weak_l("lift_permute _ _").
+pi_l.
+imp_l.
+force("Gg''","(x1\(x2\ (cons (pair x1 h1) (gg1 x2))))").
 prove.
 prove.
 % Qed.
 
-#theorem cut "
+#lemma cut "
  pi g\m\n\tm\tn\
   typeof g n tn => typeof (cons (pair n tn) g) m tm => typeof g m tm
 ".
@@ -26,7 +33,6 @@ induction("gg\m\tm\ pi g\ permute gg (cons (pair n tn) g) =>
 pi_l.
 force("G","g").
 prove.
-
 then(repeat(or_l),simplify).
 % BIND.
 prove.
@@ -44,21 +50,19 @@ weak_l.
 prove.
 then(imp_l,try(prove("0"))).
 weak_l.
-induction("g\n\t\ nabla a\ pi gg\
-    permute gg (cons (pair a h1) g) => typeof gg n t)").
-prove.
-then(repeat(or_l),simplify).
-% BIND.
-apply("bind_s").
-prove.
-% APP.
-prove.
-% LAM.
-apply("lift_permute_s").
-weak_l("lift_permute _ _").
-pi_l.
-imp_l.
-force("Gg''","(x1\(x2\ (cons (pair x1 h6) (gg1 x2))))").
+then(apply("typeof_w"),prove).
+% Qed.
+
+#lemma typeof_subst "
+  pi g'\m'\t'\
+      (nabla x\ typeof (g' x) (m' x) (t' x))
+   => (pi x\    typeof (g' x) (m' x) (t' x))
+".
+simplify.
+abstract.
+induction.
+async.
+then(induction("l'\x'\t'\ pi x\ bind (l' x) (x' x) (t' x)"),prove).
 prove.
 prove.
 % Qed.
@@ -70,9 +74,7 @@ prove.
     (pi a\b\c\ bind G (app a b) c => false) =>
     typeof G m t => typeof G n t
 ".
-abstract.
-repeat(pi).
-imp.
+simplify.
 induction.
 then(repeat(or_l),then(simplify,try(prove("0")))).
 % Doing a beta-reduction.
@@ -83,16 +85,16 @@ prove.
 apply("typeof_subst").
 apply("cut").
 % We have to admit it, because currently taci won't solve
-% the unification h = h8 h5 which would allow to conclude
+% the unification n0 = h7 h4 which would allow to conclude
 % by the axiom rule.
 then(rotate_l,then(weak_l,then(weak_l,then(weak_l,then(weak_l,weak_l))))).
 admit.
-
 % Going under an abstraction.
+abstract.
 async.
 prove.
 then(pi_l,then(pi_l,imp_l)).
-force("G'","(x\ cons (pair x t) g0)").
+force("G'","(x\ cons (pair x t) g1)").
 prove.
 prove.
 % Qed.
