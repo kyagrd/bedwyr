@@ -101,6 +101,26 @@ let rec check_flex_args l fts flts =
           | _ -> not_ll t
         end
 
+(** Simple occurs-check and level check to allow unification in very
+  * simple non-llambda cases (when check_flex_args fails).
+  * Assumes head-normalization of [t].
+  *
+  * XXX Note that the level checks are useless on the left (this is in fact
+  * true everywhere in this module) and that making them tighter on the right
+  * can be dangerous. In a nutshell: this is very simple but suffices. *)
+let can_bind v t =
+  let rec aux n t =
+    match observe t with
+      | Var v' -> if v' = v then false else v'.ts <= v.ts && v'.lts <= v.lts
+      | DB i -> i <= n
+      | NB j -> j <= v.lts
+      | Lam(n', t) -> aux (n+n') t
+      | App(h, ts) ->
+          aux n h && List.for_all (aux n) (List.map Norm.hnorm ts)
+      | Susp _ | Ptr _ -> assert false
+  in
+    aux 0 t
+
 (** [bvindex bv l n] return a nonzero index iff the db index [bv]
   * appears in [l]; the index is the position from the right, representing
   * the DeBruijn index of the abstraction capturing the argument.
@@ -361,7 +381,7 @@ let rec prune_same_var l1 l2 j bl = match l1,l2 with
       end
   | _ -> assert false
 
-(** [makesubst h1 t2 a1 n] unifies [App (h1,a1) = t2].
+(** [makesubst h1 t2 a1] unifies [App (h1,a1) = t2].
   * Given a term of the form [App (h1,a1)] where [h1] is a variable and
   * another term [t2], generate an LLambda substitution for [h1] if this is 
   * possible, making whatever pruning and raising substitution that are
@@ -370,10 +390,10 @@ let rec prune_same_var l1 l2 j bl = match l1,l2 with
   * [t2] is assumed to be in head normal form, [h1] and [a1] are assumed to be
   * dereferenced.
   * 
-  * Exceptions can be
-  * raised from this code if a non LLambda situation is discovered or
-  * there is failure in unification or a type mismatch (possible if an
-  * a priori type checking has not been done) is encountered.
+  * Exceptions can be raised from this code if there is
+  *  - a non LLambda situation or
+  *  - a failure in unification or
+  *  - a type mismatch (if an a priori type checking has not been done).
   *
   * The unification computation is split into two parts, one that
   * examines the top level structure of [t2] and the other that descends
@@ -518,8 +538,21 @@ let makesubst h1 t2 a1 =
       | _ -> Term.lambda (n+lev) (nested_subst t2 lev)
   in
 
-    check_flex_args a1 ts1 lts1 ;
-    toplevel_subst t2 0
+    match
+      try check_flex_args a1 ts1 lts1 ; None with
+        | NotLLambda error -> Some error
+    with
+      | None ->
+          (* We have a pattern, let's go for pattern unification. *)
+          toplevel_subst t2 0
+      | Some error ->
+          (* Not a pattern: try a very strict occurs-check to allow
+           * simple cases of the form v1=t2. *)
+          if a1 = [] && can_bind v1 t2 then
+            t2
+          else
+            not_ll error
+
 
 (** Unifying the arguments of two rigid terms with the same head, these
   * arguments being given as lists. Exceptions are raised if
