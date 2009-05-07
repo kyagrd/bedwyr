@@ -84,11 +84,7 @@ then(mu_l,then(repeat(or_l),simplify)).
 prove.
 apply("typeof_subst").
 apply("cut").
-% We have to admit it, because currently taci won't solve
-% the unification n0 = h7 h4 which would allow to conclude
-% by the axiom rule.
-then(rotate_l,then(weak_l,then(weak_l,then(weak_l,then(weak_l,weak_l))))).
-admit.
+axiom.
 % Going under an abstraction.
 abstract.
 async.
