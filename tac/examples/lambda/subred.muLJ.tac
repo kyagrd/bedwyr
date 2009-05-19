@@ -22,7 +22,7 @@ prove.
 prove.
 % Qed.
 
-#lemma cut "
+#lemma typeof_cut "
  pi g\m\n\tm\tn\
   typeof g n tn => typeof (cons (pair n tn) g) m tm => typeof g m tm
 ".
@@ -48,9 +48,8 @@ weak_l("typeof _ _ _").
 apply("permute_s").
 weak_l.
 prove.
-then(imp_l,try(prove("0"))).
-weak_l.
-then(apply("typeof_w"),prove).
+cut_lemma("typeof_w").
+prove.
 % Qed.
 
 #lemma typeof_subst "
@@ -83,8 +82,8 @@ prove.
 then(mu_l,then(repeat(or_l),simplify)).
 prove.
 apply("typeof_subst").
-apply("cut").
-axiom.
+apply("typeof_cut").
+prove.
 % Going under an abstraction.
 abstract.
 async.

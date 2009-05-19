@@ -217,8 +217,13 @@ struct
   * not implemented.
   ********************************************************************)
   let incl files session =
-    O.error "'#include.' not implemented.\n";
-    session
+    try
+      let defs = List.concat (List.map Firstorderlp.translateFile files) in
+      definitions defs session
+    with
+      Firstorderlp.Error s ->        
+        (O.error ("unable to include definitions: " ^ s ^ "\n");
+        session)
 
   (********************************************************************
   *lemmas:

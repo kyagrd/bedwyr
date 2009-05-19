@@ -1,6 +1,9 @@
 % Proof of the commutativity of mult.
 #open "../examples/naturals.def".
 
+% #lemma mult_total "pi x\y\ nat x => nat y => sigma z\ mult x y z".
+% admit.
+
 #set "firstorder.lemmas" "true".
 #set "firstorder.lemmas.bound" "0".
 
@@ -23,10 +26,9 @@ prove.
 
 #lemma mult_succ
   "pi x\y\z\r\
-    mult x y z => plus x z r =>
+    nat y => plus x z r => mult x y z =>
     mult x (s y) r".
-% TODO prove.
-admit.
+prove.
 
 % Theorem: x * y = z => y * x = z.
 #theorem mult_com
