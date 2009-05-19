@@ -309,7 +309,7 @@ struct
   ********************************************************************)
   let abs_of_pred arity pol pred =
     let args' =
-      Listutils.mapi
+      Listutils.mapn
         (fun _ -> Term.fresh ~name:"*eta*" ~lts:0 ~ts:0 Term.Constant)
         arity
     in

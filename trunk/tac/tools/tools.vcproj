@@ -106,7 +106,7 @@
 			<Tool
 				Name="VCCustomBuildTool"
 				Description="Compiling tools..."
-				CommandLine="ocamake xml-light.cmxa str.cmxa tactex.ml -opt -epp -o $(SolutionDir)bin\tactex.exe&#x0D;&#x0A;"
+				CommandLine="ocamake xml-light.cmxa str.cmxa tactex.ml -opt -epp -o $(SolutionDir)bin\tactex.exe&#x0D;&#x0A;ocamake mod2def.ml $(SolutionDir)taci\listutils.ml* $(SolutionDir)taci\option.ml* $(SolutionDir)taci\Firstorder\LP\*.ml* -opt -epp -o $(SolutionDir)bin\mod2def.exe&#x0D;&#x0A;"
 				Outputs="none"
 			/>
 			<Tool
@@ -192,6 +192,54 @@
 						Outputs=""
 					/>
 				</FileConfiguration>
+			</File>
+		</Filter>
+		<Filter
+			Name="Mod2Def"
+			>
+			<File
+				RelativePath="..\taci\Firstorder\LP\firstorderlp.ml"
+				>
+			</File>
+			<File
+				RelativePath="..\taci\Firstorder\LP\firstorderlp.mli"
+				>
+			</File>
+			<File
+				RelativePath="..\taci\listutils.ml"
+				>
+			</File>
+			<File
+				RelativePath="..\taci\listutils.mli"
+				>
+			</File>
+			<File
+				RelativePath="..\taci\Firstorder\LP\lpabsyn.ml"
+				>
+			</File>
+			<File
+				RelativePath="..\taci\Firstorder\LP\lpabsyn.mli"
+				>
+			</File>
+			<File
+				RelativePath="..\taci\Firstorder\LP\lplexer.mll"
+				>
+			</File>
+			<File
+				RelativePath="..\taci\Firstorder\LP\lpparser.mly"
+				>
+			</File>
+			<File
+				RelativePath=".\mod2def.ml"
+				>
+			</File>
+			<File
+				RelativePath="..\taci\option.ml"
+				>
+			</File>
+			<File
+				RelativePath="..\taci\option.mli"
+				>
 			</File>
 		</Filter>
 	</Files>

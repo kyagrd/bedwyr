@@ -212,20 +212,6 @@ struct
               (string_of_sequent mainseq) ^ "\n"
 
   (********************************************************************
-  *incl:
-  * Given a list of files, include all definitions in them.  This is
-  * not implemented.
-  ********************************************************************)
-  let incl files session =
-    try
-      let defs = List.concat (List.map Firstorderlp.translateFile files) in
-      definitions defs session
-    with
-      Firstorderlp.Error s ->        
-        (O.error ("unable to include definitions: " ^ s ^ "\n");
-        session)
-
-  (********************************************************************
   *lemmas:
   * Called by the interpreter to print the current set of lemmas.
   * This just prints the names of the lemmas.
@@ -504,6 +490,19 @@ struct
               (* Always remember constants used in the new definitions. *)
               initial_namespace = Term.save_namespace () }
 
+  (********************************************************************
+  *incl:
+  * Given a list of files, include all definitions in them.
+  ********************************************************************)
+  let incl files session =
+    try
+      let defs = List.concat (List.map Firstorderlp.translateFile files) in
+      definitions defs session
+    with
+      Firstorderlp.Error s ->        
+        (O.error ("unable to include definitions: " ^ s ^ "\n");
+        session)
+  
   (********************************************************************
   *pervasiveTacticals:
   * The tacticals exported by the logic.  Checks the Param module to

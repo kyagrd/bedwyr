@@ -1,6 +1,6 @@
 (**********************************************************************
 * Taci                                                                *
-* Copyright (C) 2007 Zach Snow, David Baelde                          *
+* Copyright (C) 2007-2008 Zach Snow, David Baelde, Alexandre Viel     *
 *                                                                     *
 * This program is free software; you can redistribute it and/or modify*
 * it under the terms of the GNU General Public License as published by*
@@ -16,16 +16,33 @@
 * along with this code; if not, write to the Free Software Foundation,*
 * Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA        *
 **********************************************************************)
+exception Error of string
 
-(**********************************************************************
-* Listutils
-***********************************************************************
-* Simple functions operating on lists... I actually thought there would
-* be more of them!
-**********************************************************************)
-val empty : 'a list -> bool
-val split3 : ('a * 'b * 'c) list -> ('a list * 'b list * 'c list)
-val combine3 : 'a list -> 'b list -> 'c list -> ('a * 'b * 'c) list
-val mapn : (int -> 'a) -> int -> 'a list
-val split_nth : int -> 'a list -> ('a list * 'a list)
-val unique : 'a list -> 'a list
+type constant = Constant of string * int * clause list
+and clause = Clause of term * term option
+and term =
+    AtomicTerm of string
+  | VariableTerm of string
+  | ApplicationTerm of term * term list
+  | ConjunctionTerm of term * term
+  | DisjunctionTerm of term * term
+  | ImplicationTerm of term * term
+  | AbstractionTerm of string * term
+  | PiTerm of term
+  | SigmaTerm of term
+
+val getConstantName : constant -> string
+val getConstantArity : constant -> int
+val getConstantClauses : constant -> clause list
+
+val getClauseHead : clause -> term
+val getClauseBody : clause -> term option
+
+val substitute : term -> string -> term -> term
+val string_of_term : term -> string
+
+val getTermFVS : term -> string list
+val getAtomName : term -> string
+val getApplicationHead : term -> term
+val getApplicationArguments : term -> term list
+val getVariableName : term -> string
