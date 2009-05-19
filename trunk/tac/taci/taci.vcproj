@@ -317,7 +317,7 @@
 					>
 				</File>
 				<File
-					RelativePath=".\Firstorder\firstorderlexer.mll"
+					RelativePath=".\Firstorder\firstorderlp.mli"
 					>
 				</File>
 				<File
@@ -340,6 +340,34 @@
 					RelativePath=".\Firstorder\firstordertypes.mli"
 					>
 				</File>
+				<Filter
+					Name="LP"
+					>
+					<File
+						RelativePath=".\Firstorder\LP\firstorderlp.ml"
+						>
+					</File>
+					<File
+						RelativePath=".\Firstorder\LP\firstorderlp.mli"
+						>
+					</File>
+					<File
+						RelativePath=".\Firstorder\LP\lpabsyn.ml"
+						>
+					</File>
+					<File
+						RelativePath=".\Firstorder\LP\lpabsyn.mli"
+						>
+					</File>
+					<File
+						RelativePath=".\Firstorder\LP\lplexer.mll"
+						>
+					</File>
+					<File
+						RelativePath=".\Firstorder\LP\lpparser.mly"
+						>
+					</File>
+				</Filter>
 			</Filter>
 			<Filter
 				Name="Nologic"

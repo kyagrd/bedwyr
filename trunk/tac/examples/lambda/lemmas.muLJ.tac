@@ -57,26 +57,12 @@ prove.
 % Qed.
 
 #lemma typeof_s "pi g\m\t\ typeof g m t => nabla a\ typeof g m t".
-simplify.
-abstract.
-induction.
-async.
-apply("bind_s").
-prove.
-prove.
+cut_lemma("bind_s").
 prove.
 % Qed.
 
 #lemma typeof_ww "pi g\m\t'\ (nabla a\ typeof g m (t' a)) =>
                      sigma t\ t'=(a\t), typeof g m t".
-simplify.
-abstract.
-induction.
-async.
-apply("bind_ww").
-prove.
-prove.
-then(focus,repeat(sync)).
-unfocus.
+cut_lemma("bind_ww").
 prove.
 % Qed.
