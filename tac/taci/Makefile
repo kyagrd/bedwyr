@@ -21,6 +21,9 @@ SOURCE= ndcore/term.ml ndcore/norm.ml ndcore/unify.ml ndcore/pprint.ml \
 	Firstorder/firstordertypes.ml \
 	Firstorder/firstordertacticals.ml \
 	Firstorder/firstorder.ml \
+  Firstorder/LP/firstorderlp.ml \
+  Firstorder/LP/lpabsyn.ml \
+  Firstorder/LP/lpparser.mly Firstorder/LP/lplexer.mll \
 	toplevellexer.mll toplevelparser.mly \
 	toplevel.ml interpreter.ml interface.ml logics_gen.ml logics.ml main.ml
 
@@ -39,7 +42,7 @@ logics_gen.ml: ../logics_gen/bin/Logics.in
 clean:
 	rm -f .depend
 	make -C ../logics_gen clean
-	for dir in . Nologic Propositional Firstorder ndcore ; do \
+	for dir in . Nologic Propositional Firstorder Firstorder/LP ndcore ; do \
 	  rm -f $$dir/*.cm* $$dir/*.o ; \
 	done
 	rm -f toplevellexer.ml toplevelparser.ml toplevelparser.mli

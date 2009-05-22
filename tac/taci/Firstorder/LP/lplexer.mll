@@ -57,6 +57,7 @@ rule token = parse
 
 | "pi"               { PI }
 | "sigma"            { SIGMA }
+| "nabla"            { NABLA }
 
 | "module"           { MODULE }
 

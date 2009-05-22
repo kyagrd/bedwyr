@@ -30,6 +30,7 @@ and term =
   | AbstractionTerm of string * term
   | PiTerm of term
   | SigmaTerm of term
+  | NablaTerm of term
 
 let getConstantName (Constant(n,_,_)) = n
 let getConstantArity (Constant(_,a,_)) = a
@@ -51,6 +52,7 @@ let rec substitute term id term' =
         if b = id then term else AbstractionTerm(b, s t)
     | PiTerm(t) -> PiTerm(s t)
     | SigmaTerm(t) -> SigmaTerm(s t)
+    | NablaTerm(t) -> NablaTerm(s t)
  
 let rec string_of_term t =
   let s t = "(" ^ (string_of_term t) ^ ")" in
@@ -73,6 +75,7 @@ let rec string_of_term t =
   | AbstractionTerm(b, t) -> b ^ "\\ " ^ (s t)
   | PiTerm(t) -> "pi " ^ (string_of_term t)
   | SigmaTerm(t) -> "sigma " ^ (string_of_term t)
+  | NablaTerm(t) -> "nabla " ^ (string_of_term t)
 
 let getTermFVS t =
   let rec fvs t bvs =
@@ -93,7 +96,8 @@ let getTermFVS t =
     | AbstractionTerm(b, t) -> fvs t (b :: bvs)
     
     | PiTerm(t)
-    | SigmaTerm(t) -> f t
+    | SigmaTerm(t)
+    | NablaTerm(t) -> f t
   in
   Listutils.unique (fvs t [])
 

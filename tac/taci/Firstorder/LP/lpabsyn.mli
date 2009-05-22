@@ -30,6 +30,8 @@ and term =
   | AbstractionTerm of string * term
   | PiTerm of term
   | SigmaTerm of term
+  | NablaTerm of term
+  
 
 val getConstantName : constant -> string
 val getConstantArity : constant -> int

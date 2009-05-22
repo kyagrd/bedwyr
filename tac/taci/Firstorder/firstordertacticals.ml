@@ -1328,38 +1328,50 @@ struct
   * terms that don't exist in the sequent it could still easily succeed.
   ********************************************************************)
   let forceTactical session args =
+    let unifier seqstring term side =
+      let seqterm = parseTerm seqstring in
+      let unterm = parseTerm term in
+      if Option.isSome seqterm && Option.isSome unterm then
+        let seqterm = Option.get seqterm in
+        let unterm = Option.get unterm in
+
+        (* pretactic: simply unifies the two terms. *)
+        let pretactic = fun seq sc fc ->
+          let result =
+            if side = "right" then
+              FOA.rightUnify seqterm unterm
+            else
+              FOA.leftUnify seqterm unterm
+          in
+          match result with
+              FOA.UnifySucceeded(s) ->
+                let fc' () =
+                  (FOA.undoUnify s;
+                  fc ())
+                in
+                let pb = List.hd in
+                sc [seq] pb fc'
+            | FOA.UnifyFailed -> fc ()
+            | FOA.UnifyError(s) ->
+                if Properties.getBool "firstorder.debug" then
+                  O.error (s ^ ".\n");
+                fc ()
+        in
+        G.makeTactical pretactic
+      else
+        (if Option.isNone seqterm then O.error "invalid sequent term.\n"
+        else ();
+        if Option.isNone unterm then O.error "invalid unification term.\n"
+        else ();
+        G.failureTactical)
+    in
     match args with
       | Absyn.String(seqstring)::Absyn.String(term)::[] ->
-            let seqterm = parseTerm seqstring in
-            let unterm = parseTerm term in
-            if Option.isSome seqterm && Option.isSome unterm then
-              let seqterm = Option.get seqterm in
-              let unterm = Option.get unterm in
-
-              (* pretactic: simply unifies the two terms. *)
-              let pretactic = fun seq sc fc ->
-                match FOA.rightUnify seqterm unterm with
-                    FOA.UnifySucceeded(s) ->
-                      let fc' () =
-                        (FOA.undoUnify s;
-                        fc ())
-                      in
-                      let pb = List.hd in
-                      sc [seq] pb fc'
-                  | FOA.UnifyFailed -> fc ()
-                  | FOA.UnifyError(s) ->
-                      if Properties.getBool "firstorder.debug" then
-                        O.error (s ^ ".\n");
-                      fc ()
-              in
-              G.makeTactical pretactic
-            
-            else
-              (if Option.isNone seqterm then O.error "invalid sequent term.\n"
-              else ();
-              if Option.isNone unterm then O.error "invalid unification term.\n"
-              else ();
-              G.failureTactical)
+          unifier seqstring term "right"
+      | Absyn.String(seqstring)::Absyn.String(term)::Absyn.String("right")::[] ->
+          unifier seqstring term "right"
+      | Absyn.String(seqstring)::Absyn.String(term)::Absyn.String("left")::[] ->
+          unifier seqstring term "left"
       | _ -> (G.invalidArguments "force")
 
   (********************************************************************
