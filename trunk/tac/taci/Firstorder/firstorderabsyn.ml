@@ -678,7 +678,7 @@ let rightUnify a b =
     | Failure s -> (Term.restore_state state; UnifyError s)
     | Unify.NotLLambda t ->
         (Term.restore_state state; 
-        UnifyError ("unification outside of higher-order patterns."))
+        UnifyError ("unification outside of higher-order patterns"))
 
 (********************************************************************
 *leftUnify:
@@ -694,7 +694,7 @@ let leftUnify a b =
     | Failure s -> (Term.restore_state state; UnifyError s)
     | Unify.NotLLambda t ->
         (Term.restore_state state; 
-        UnifyError ("unification outside of higher-order patterns."))
+        UnifyError ("unification outside of higher-order patterns"))
 
 (**********************************************************************
 *unifyList:

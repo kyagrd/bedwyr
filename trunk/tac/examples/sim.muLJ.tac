@@ -5,7 +5,7 @@
 pi.
 coinduction("p\q\ p=q").
 eq_r.
-simplify.
+async.
 sigma.
 and.
 axiom.
@@ -15,6 +15,7 @@ eq_r.
 #theorem sim_refl "pi p\ sim p p".
 prove.
 % Qed.
+
 
 % Simulation is transitive, slow motion.
 #theorem sim_trans "pi p\i\q\ sim p i => sim i q => sim p q".
@@ -27,4 +28,9 @@ prove.
 #theorem sim_trans "pi p\q\r\ sim p q => sim q r => sim p r".
 prove.
 % Qed.
+
+
+% Bisimulation is reflexive.
+#theorem bisim_refl "pi p\ bisim p p".
+prove.
 

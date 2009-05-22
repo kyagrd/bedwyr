@@ -45,7 +45,7 @@
 
 %token IMP COLONDASH COMMA DOT
 %token BSLASH LPAREN RPAREN CONS EQ
-%token PI SIGMA SEMICOLON MODULE
+%token PI SIGMA NABLA SEMICOLON MODULE
 
 %token <int> NUM
 %token <string> ID CID STRING
@@ -83,6 +83,7 @@ term:
   | exp exp_list                         {LPA.ApplicationTerm($1, $2)}
   | PI abstraction                       {LPA.PiTerm($2)}
   | SIGMA abstraction                    {LPA.SigmaTerm($2)}
+  | NABLA abstraction                    {LPA.NablaTerm($2)}
   | exp                                  {$1}
 
 exp:
@@ -112,3 +113,4 @@ clause_body:
   
 lp_module:
   | clauses                              {let cl = !constants in (constants := []; cl)}
+  | clauses EOF                          {let cl = !constants in (constants := []; cl)}
