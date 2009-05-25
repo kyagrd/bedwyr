@@ -33,3 +33,6 @@ axiom.
 axiom.
 prove.
 % Qed.
+
+#theorem fast_reverse_inverse "pi x\y\z\z'\ rev x y z => rev x y z' => z = z'".
+prove.

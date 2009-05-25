@@ -1,3 +1,6 @@
+member X (X :: L).
+member X (Y :: L) :- member X L.
+
 eval zero zero.
 eval tt tt.
 eval ff ff.
@@ -12,13 +15,16 @@ eval (abs T R) (abs T R).
 eval (app M N) V :- eval M (abs T R), eval (R N) V.
 eval (rec T R) V :- eval (R (rec T R)) V.
 
-of zero num.
-of tt bool.
-of ff bool.
-of (succ M) num :- of M num.
-of (pred M) num :- of M num.
-of (is_zero M) bool :- of M num.
-of (if M N1 N2) T :- of M bool, of N1 T, of N2 T.
-of (abs T R) (arr T U) :- pi n\ (of n T => of (R n) U).
-of (app M N) T :- of M (arr U T), of N U.
-of (rec T R) T :- pi n\ (of n T => of (R n) T).
+of Context zero num.
+of Context tt bool.
+of Context ff bool.
+of Context (succ M) num :- of Context M num.
+of Context (pred M) num :- of Context M num.
+of Context (is_zero M) bool :- of Context M num.
+of Context (if M N1 N2) T :- of Context M bool, of Context N1 T, of Context N2 T.
+of Context (abs T R) (arr T U) :-
+  nabla n\ of ((bind n T) :: Context) (R n) U.
+of Context (app M N) T :- of Context M (arr U T), of Context N U.
+of Context (rec T R) T :-
+  nabla n\ of ((bind n T) :: Context) (R n) T.
+of Context N T :- member (bind N T) Context.

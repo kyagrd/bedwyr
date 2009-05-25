@@ -336,9 +336,7 @@ struct
                   annot
               in
               if arity = List.length args then
-                annot,
-                FOA.ApplicationFormula
-                  (FOA.lift_pred lambdas body, args)
+                (annot, FOA.ApplicationFormula (FOA.lift_pred lambdas body, args))  
               else
                 raise (FOA.SemanticError("incorrect number of arguments \
                                           passed to '" ^ head ^"'"))

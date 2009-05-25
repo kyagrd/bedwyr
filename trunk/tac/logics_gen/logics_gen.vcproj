@@ -91,10 +91,11 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="$(ProjectDir)$(ConfigurationName)"
-			IntermediateDirectory="$(ConfigurationName)"
+			OutputDirectory="$(ProjectDir)"
+			IntermediateDirectory="$(ProjectDir)"
 			ConfigurationType="1"
 			CharacterSet="2"
+			DeleteExtensionsOnClean="*.obj;*.ilk;*.tlb;*.tli;*.tlh;*.tmp;*.rsp;*.pgc;*.pgd;*.meta;*.cmx;*.cmi;$(TargetPath)"
 			WholeProgramOptimization="1"
 			>
 			<Tool
@@ -102,8 +103,8 @@
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
-				Description=""
-				CommandLine="compile.bat &quot;$(TargetPath)&quot;  &quot;$(ProjectDir)bin\$(TargetFilename)&quot;&#x0D;&#x0A;"
+				Description="Compiling $(TargetFilename)..."
+				CommandLine="ocamake *.ml* -epp -opt -o &quot;$(SolutionDir)bin\logics_gen.exe&quot;&#x0D;&#x0A;"
 				Outputs="none"
 			/>
 			<Tool
@@ -177,14 +178,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\clean.bat"
-				>
-			</File>
-			<File
-				RelativePath=".\compile.bat"
-				>
-			</File>
-			<File
 				RelativePath=".\main.ml"
 				>
 			</File>
@@ -218,7 +211,7 @@
 			</File>
 		</Filter>
 		<File
-			RelativePath=".\bin\Logics.in"
+			RelativePath=".\clean.bat"
 			>
 		</File>
 	</Files>

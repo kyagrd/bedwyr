@@ -98,10 +98,11 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="$(ProjectDir)$(ConfigurationName)"
-			IntermediateDirectory="$(ConfigurationName)"
+			OutputDirectory="$(ProjectDir)"
+			IntermediateDirectory="$(ProjectDir)"
 			ConfigurationType="1"
 			CharacterSet="1"
+			DeleteExtensionsOnClean="*.obj;*.ilk;*.tlb;*.tli;*.tlh;*.tmp;*.rsp;*.pgc;*.pgd;*.meta;*.cm*;$(TargetPath)"
 			WholeProgramOptimization="1"
 			>
 			<Tool
@@ -111,6 +112,7 @@
 				Name="VCCustomBuildTool"
 				Description="Compiling $(TargetFilename)..."
 				CommandLine="ocamake *.ml*  Nologic/*.ml* Propositional/*.ml* Firstorder/*.ml* Firstorder/LP/*.ml* ../../bedwyr/src/ndcore/*.ml* str.cmxa unix.cmxa -epp -opt -lp &quot;-cclib 104857600&quot; -lp &quot;-cclib /F&quot; -o $(SolutionDir)bin\taci.exe&#x0D;&#x0A;"
+				AdditionalDependencies=""
 				Outputs="none"
 			/>
 			<Tool
@@ -297,6 +299,20 @@
 		<Filter
 			Name="Logics"
 			>
+			<File
+				RelativePath="..\logics_gen\bin\Logics.in"
+				>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCustomBuildTool"
+						Description="Generating logics interface..."
+						CommandLine="$(SolutionDir)bin\logics_gen --input &quot;$(SolutionDir)logics_gen\Logics.in&quot; --output &quot;$(SolutionDir)taci\Logics_gen&quot;&#x0D;&#x0A;"
+						Outputs="$(SolutionDir)taci\Logics_gen.mli;$(SolutionDir)taci\Logics_gen.ml"
+					/>
+				</FileConfiguration>
+			</File>
 			<Filter
 				Name="Firstorder"
 				>
@@ -457,18 +473,6 @@
 		<File
 			RelativePath=".\clean.bat"
 			>
-		</File>
-		<File
-			RelativePath=".\compile.bat"
-			>
-			<FileConfiguration
-				Name="Debug|Win32"
-				ExcludedFromBuild="true"
-				>
-				<Tool
-					Name="VCCustomBuildTool"
-				/>
-			</FileConfiguration>
 		</File>
 	</Files>
 	<Globals>
