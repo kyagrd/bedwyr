@@ -1,5 +1,16 @@
 TODO:
-  * Lemmas shou
+  * Support for adding lemmas to the automatically generated invariant.
+    You could back track over each lemma (that is, add only 1 at a time),
+    with a case where you add no lemma at all.
+
+  * Currently when processing definitions we don't check that the fixpoints
+    we are defining have the right number of arguments, we only check when
+    parsing formulas.  It's hard to check this in Firstorder.processPreDefinition,
+    because the matcher only looks at heads of applications.  It's hard to check
+    after the fact (in the same way as checkMonotonicity) because DBFormulas don't
+    track the arity of the formula they represent.
+  
+  * Firstorder.checkMonotonicity is broken (see p := pi x\ p => false).
 
   * The 'a polarized type in firstorderabsyn.ml could get factored out by
     pushing the annotation into relevant types.
@@ -17,11 +28,7 @@ TODO:
 
   * [David] Better syntax for higher-order terms
     Currently, (x\y\ ..) is not allowed, only (x\(y\ ..)).
-  
-  * Type checking.
-  
+    
   * Support for anonymous fixed points.
 
-  * Support for adding lemmas to the automatically generated invariant.
-    You could back track over each lemma (that is, add only 1 at a time),
-    with a case where you add no lemma at all.
+  * Type checking.

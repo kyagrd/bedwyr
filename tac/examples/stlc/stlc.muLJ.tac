@@ -1,6 +1,17 @@
 #include "stlc.mod".
 #open "diverge.def".
 
+
+#theorem eval_sr "pi e\v\t\ eval e v => of e t => of v t".
+prove.
+
+#theorem step_sr "pi e1\e2\t\ step e1 e2 => of e1 t => of e2 t".
+admit.
+
+#theorem nstep_sr "pi e1\e2\t\ nstep e1 e2 => of e1 t => of e2 t".
+admit.
+
+
 #lemma eval_det "pi e\v1\v2\ eval e v1 => eval e v2 => v1 = v2".
 prove.
 
@@ -19,15 +30,6 @@ examine.
 admit.
 
 #theorem nstep_det "pi e\r\ nstep e (abs r) => eval e (abs r)".
-admit.
-
-#theorem eval_sr "pi e\v\t\ eval e v => of e t => of v t".
-prove.
-
-#theorem step_sr "pi e1\e2\t\ step e1 e2 => of e1 t => of e2 t".
-admit.
-
-#theorem nstep_sr "pi e1\e2\t\ nstep e1 e2 => of e1 t => of e2 t".
 admit.
 
 #theorem self_diverge "diverge (app (abs (x\ (app x x))) (abs (x\ (app x x))))".

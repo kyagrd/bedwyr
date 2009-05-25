@@ -35,7 +35,7 @@ MLIS=$(wildcard $(MLS:.ml=.mli))
 taci: $(OBJ)
 	$(OCAMLC) $(I) unix$(A) str$(A) $(OBJ) -o $@
 
-logics_gen.ml: ../logics_gen/bin/Logics.in
+logics_gen.ml: ../logics_gen/Logics.in
 	make -C ../logics_gen
 	../logics_gen/logics_gen --input $(<) --output logics_gen
 

@@ -115,7 +115,8 @@ struct
   let defineTactical name tac session =
     let ts = session.tactics in
     let ts' = Logic.Table.add name tac ts in
-      { session with tactics = ts' }
+    (O.output ("Tactical: " ^ name ^ ".\n");
+    { session with tactics = ts' })
 
   let proof session = session.builder
 
@@ -315,7 +316,7 @@ struct
       *checkMonotonicity:
       * Determines whether a definition is monotonic.  A definition is
       * monotonic if none of its DB indices occur under an odd number
-      * of negations.  Has to use an thrown exception to indicate
+      * of negations.  Has to use a thrown exception to indicate
       * non-monotonic definitions because mapFormula only likes to
       * return formulas; probably inefficient, but not called often.
       ****************************************************************)
@@ -443,10 +444,12 @@ struct
       let processPreDefinition (FOA.Definition(name, ids, formula, ind)) =
         let formula' = abstractDefinition [name] formula in
         let result = FOA.Definition(name, ids, formula', ind) in
+
         if not (checkMonotonicity formula') then
           O.warning (Printf.sprintf
             "%s: non-monotonic definition.\n"
             name) ;
+
         Some result
       in
       List.map processPreDefinition predefs
@@ -476,12 +479,12 @@ struct
         
     let predefs = List.map (parseDefinition session.definitions) defstrings in
     if (List.exists (Option.isNone) predefs) then
-      (O.error "definitions contain errors.\n";
+      (O.error "definitions contain syntax errors.\n";
       session)
     else
       let defs = processPreDefinitions (List.map (Option.get) predefs) in
       if (List.exists (Option.isNone) defs) then
-        (O.error "definitions contain errors.\n";
+        (O.error "definitions contain semantic errors.\n";
         session)
       else
         let defs' = (List.map (Option.get) defs) in

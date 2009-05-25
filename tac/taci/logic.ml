@@ -399,14 +399,16 @@ struct
   (********************************************************************
   * Interfaces for Tacticals
   ********************************************************************) 
-  let orElseInterface session args = match args with
-      Absyn.Tactical(tac1)::Absyn.Tactical(tac2)::[] ->
-        (orElseTactical tac1 tac2)
+  let rec orElseInterface session args = match args with
+      Absyn.Tactical(tac1)::[] -> tac1
+    | Absyn.Tactical(tac1)::tacs ->
+        orElseTactical tac1 (orElseInterface session tacs)
     | _ -> invalidArguments "orelse"
 
-  let thenInterface session args = match args with
-      Absyn.Tactical(tac1)::Absyn.Tactical(tac2)::[] ->
-        (thenTactical tac1 tac2)
+  let rec thenInterface session args = match args with
+      Absyn.Tactical(tac1)::[] -> tac1
+    | Absyn.Tactical(tac1)::tacs ->
+        thenTactical tac1 (thenInterface session tacs) 
     | _ -> invalidArguments "then"
 
   let tryInterface session args = match args with
