@@ -5,6 +5,15 @@
 prove.
 
 #theorem step_det "pi e1\e2\e3\ step e1 e2 => step e1 e3 => e2 = e3".
+intros.
+induction.
+async.
+mu_l.
+async.
+weak_l("true").
+weak_l("true").
+examine.
+
 
 #theorem nstep_det "pi e\r1\r2\ nstep e (abs r1) => nstep e (abs r2) => r1 = r2".
 admit.
