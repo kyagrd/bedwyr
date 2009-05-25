@@ -14,8 +14,6 @@
 
 #define "context c := pi x\t\t'\ of c x t => of c x t' => t = t'".
 
-#theorem zero "pi t\ of nil zero t => t = num".
-prove.
 
 #theorem subject_reduction
   "pi p\v\t\c\ context c => eval p v => of c p t => of c v t".
