@@ -28,6 +28,7 @@ and term =
   | DisjunctionTerm of term * term
   | ImplicationTerm of term * term
   | AbstractionTerm of string * term
+  | EqualityTerm of term * term
   | PiTerm of term
   | SigmaTerm of term
   | NablaTerm of term

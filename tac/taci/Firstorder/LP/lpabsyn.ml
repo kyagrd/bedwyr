@@ -28,6 +28,7 @@ and term =
   | DisjunctionTerm of term * term
   | ImplicationTerm of term * term
   | AbstractionTerm of string * term
+  | EqualityTerm of term * term
   | PiTerm of term
   | SigmaTerm of term
   | NablaTerm of term
@@ -50,6 +51,7 @@ let rec substitute term id term' =
     | ImplicationTerm(l, r) -> ImplicationTerm(s l, s r)
     | AbstractionTerm(b, t) ->
         if b = id then term else AbstractionTerm(b, s t)
+    | EqualityTerm(l, r) -> EqualityTerm((s l), (s r))
     | PiTerm(t) -> PiTerm(s t)
     | SigmaTerm(t) -> SigmaTerm(s t)
     | NablaTerm(t) -> NablaTerm(s t)
@@ -73,6 +75,7 @@ let rec string_of_term t =
   | DisjunctionTerm(l, r) -> (s l) ^ "; " ^ (s r)
   | ImplicationTerm(l, r) -> (s l) ^ " => " ^ (s r)
   | AbstractionTerm(b, t) -> b ^ "\\ " ^ (s t)
+  | EqualityTerm(l, r) -> (s l) ^ " = " ^ (s r)
   | PiTerm(t) -> "pi " ^ (string_of_term t)
   | SigmaTerm(t) -> "sigma " ^ (string_of_term t)
   | NablaTerm(t) -> "nabla " ^ (string_of_term t)
@@ -91,6 +94,7 @@ let getTermFVS t =
     
     | ConjunctionTerm(l, r)
     | DisjunctionTerm(l, r)
+    | EqualityTerm(l, r)
     | ImplicationTerm(l, r) -> (f l) @ (f r)
     
     | AbstractionTerm(b, t) -> fvs t (b :: bvs)

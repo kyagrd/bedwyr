@@ -54,6 +54,7 @@ rule token = parse
 | ")"                { RPAREN }
 | "::"               { CONS }
 | "="                { EQ }
+| "!="               { NEQ }
 
 | "pi"               { PI }
 | "sigma"            { SIGMA }
