@@ -1,7 +1,7 @@
 
 O=.cmx
 A=.cmxa
-I=-I Nologic -I Propositional -I Firstorder -I ndcore
+I=-I Nologic -I Propositional -I Firstorder -I ndcore -I Firstorder/LP
 OCAMLC=ocamlopt
 OCAMLYACC=ocamlyacc
 OCAMLLEX=ocamllex
@@ -20,10 +20,10 @@ SOURCE= ndcore/term.ml ndcore/norm.ml ndcore/unify.ml ndcore/pprint.ml \
 	Firstorder/firstorderlexer.mll \
 	Firstorder/firstordertypes.ml \
 	Firstorder/firstordertacticals.ml \
+	Firstorder/LP/lpabsyn.ml \
+	Firstorder/LP/lplexer.mll Firstorder/LP/lpparser.mly \
+	Firstorder/LP/firstorderlp.ml \
 	Firstorder/firstorder.ml \
-  Firstorder/LP/firstorderlp.ml \
-  Firstorder/LP/lpabsyn.ml \
-  Firstorder/LP/lpparser.mly Firstorder/LP/lplexer.mll \
 	toplevellexer.mll toplevelparser.mly \
 	toplevel.ml interpreter.ml interface.ml logics_gen.ml logics.ml main.ml
 
