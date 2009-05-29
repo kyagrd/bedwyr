@@ -408,7 +408,7 @@ struct
   let rec thenInterface session args = match args with
       Absyn.Tactical(tac1)::[] -> tac1
     | Absyn.Tactical(tac1)::tacs ->
-        thenTactical tac1 (thenInterface session tacs) 
+        wrappedThenTactical false tac1 (fun () -> thenInterface session tacs)
     | _ -> invalidArguments "then"
 
   let tryInterface session args = match args with

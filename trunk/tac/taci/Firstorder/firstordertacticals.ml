@@ -836,6 +836,10 @@ struct
                   end
               | FOA.AtomicFormula p ->
                   if p = "false" then sc "false" [] else (* TODO: false should be special *)
+                  if p = "true" then
+                    let seq' = { seq with lhs = zip [] } in
+                    sc "true" [seq']
+                  else
                   if pol.FOA.polarity = FOA.Positive then fc () else
                     atomicInit i p args (fun k -> sc "init" [] ~k) fc seq.rhs
               | FOA.DBFormula _ -> assert false
