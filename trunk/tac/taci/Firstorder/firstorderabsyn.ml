@@ -371,7 +371,8 @@ let rec string_of_pattern_ast =
 let string_of_pattern_ast = string_of_pattern_ast.polp
 
 let string_of_term_ast ~generic t =
-  Pprint.term_to_string_full ~generic ~bound:[] t
+  let dbg = Properties.getBool "firstorder.term-debug" in
+  Pprint.term_to_string_full_debug ~generic ~bound:[] dbg t
 
 let rec string_of_formula_ast ~generic =
   let s=string_of_formula_ast in 

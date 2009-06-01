@@ -49,7 +49,11 @@ No logic does nothing!
   let theorem name s session =
     (print_endline ("No Logic can't prove '" ^ name ^ "': " ^ s ^ ".");
     session)
-    
+
+  let logicDefined id args session =
+    (O.error ("unknown directive: " ^ id ^ ".\n");
+    session)
+
   let lemmas session = session
   let proved session = session
   let definitions ds session = session

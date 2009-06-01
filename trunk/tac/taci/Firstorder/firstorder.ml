@@ -25,6 +25,7 @@
 **********************************************************************)
 let () = Properties.setBool "firstorder.proofsearchdebug" false
 let () = Properties.setBool "firstorder.debug" false
+let () = Properties.setBool "firstorder.term-debug" false
 let () = Properties.setInt "firstorder.defaultbound" 3
 (* The following is a bad name, for historical reasons *)
 let () = Properties.setBool "firstorder.asyncbound" true
@@ -427,7 +428,20 @@ struct
                    | _ ->
                        (FOA.mapFormula (fun () -> self) (fun x -> x)).FOA.predf
                           f) ;
-            FOA.polf  = (fun (p,f) -> p, self.FOA.formf f) ;
+            FOA.polf  =
+              (fun (p,f) ->
+                let f' = self.FOA.formf f in
+                match f' with
+                  | FOA.ApplicationFormula(FOA.FixpointFormula(ind,_,_,_),_) ->
+                      let pol =
+                        if ind = FOA.Inductive then
+                          FOA.Positive
+                        else
+                          FOA.Negative
+                      in
+                      ({p with FOA.polarity = pol}, f')
+                  | _ ->
+                      (p, f')) ;
             FOA.formf =
               (fun f ->
                  (FOA.mapFormula (fun () -> self) (fun x -> x)).FOA.formf f) }
@@ -506,6 +520,14 @@ struct
         (O.error ("unable to include definitions: " ^ s ^ "\n");
         session)
   
+  (********************************************************************
+  *logicDefined:
+  * Handle logic defined directives; there are none.
+  ********************************************************************)
+  let logicDefined id args session =
+    (O.error ("unknown directive: " ^ id ^ ".\n");
+    session)
+
   (********************************************************************
   *pervasiveTacticals:
   * The tacticals exported by the logic.  Checks the Param module to

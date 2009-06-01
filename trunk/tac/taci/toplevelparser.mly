@@ -30,7 +30,7 @@
 
 %token DOT SHARP LPAREN RPAREN COMMA
 %token HELP EXIT RESET OPEN INCLUDE TIME DEBUG PROOF_OUTPUT
-%token ON OFF CLEAR THEOREM LEMMA SET GET
+%token ON OFF CLEAR THEOREM LEMMA LEMMAS SET GET
 %token TACTICAL TACTICALS LOGIC LOGICS
 %token DEFINE UNDO REDO
 %token EOF
@@ -85,6 +85,7 @@ command
   
   | HELP                  {Absyn.Help}
   | LEMMA ID STRING       {Absyn.Lemma($2, $3)}
+  | LEMMAS                {Absyn.Lemmas}
   | THEOREM ID STRING     {Absyn.Theorem($2, $3)}
   | DEFINE stringlist     {Absyn.Definitions($2)}
   
@@ -96,6 +97,9 @@ command
   
   | SET STRING STRING     {Absyn.Set($2,$3)}
   | GET STRING            {Absyn.Get($2)}
+  
+  | ID                    {Absyn.LogicDefined($1, [])}
+  | ID stringlist         {Absyn.LogicDefined($1, $2)}
   ;
 
 stringlist

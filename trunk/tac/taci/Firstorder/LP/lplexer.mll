@@ -33,10 +33,13 @@ let idchar = ['A' - 'Z' 'a'-'z' '_' '/' '0'-'9' '\'' '?' '-' '`' '#' '$' '&' '!'
 let id = ['a' - 'z'] idchar *
 let cid = ['A' - 'Z' '_'] idchar *
 let blank = ' ' | '\t' | '\r'
+let line_comment = '%' [^'\n']* '\n'
 
 rule token = parse
+| "%progress"        { PROGRESS } (*  TODO: tweak greediness. *)
+
 | "/*"               { incr comment_level; comment lexbuf }
-| '%' [^'\n']* '\n'  { incrline lexbuf; token lexbuf }
+(*  | line_comment       { incrline lexbuf; token lexbuf } *)
 
 | blank              { token lexbuf }
 | '\n'               { incrline lexbuf; token lexbuf }
@@ -52,6 +55,8 @@ rule token = parse
 | "\\"               { BSLASH }
 | "("                { LPAREN }
 | ")"                { RPAREN }
+| "{"                { LBRACE }
+| "}"                { RBRACE }
 | "::"               { CONS }
 | "="                { EQ }
 | "!="               { NEQ }

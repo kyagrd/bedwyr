@@ -85,7 +85,8 @@ sig
   val definitions : string list -> session -> session
   val undo : session -> session
   val redo : session -> session
-
+  val logicDefined : string -> string list -> session -> session
+  
   type sequent
   val validSequent : session -> bool
   val sequents : session -> sequent list
