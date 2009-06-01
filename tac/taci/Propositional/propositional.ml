@@ -113,6 +113,14 @@ Tacticals:
     session)
 
   (********************************************************************
+  *logicDefined:
+  * Handle logic defined directives; there are none.
+  ********************************************************************)
+  let logicDefined id args session =
+    (O.error ("unknown directive: " ^ id ^ ".\n");
+    session)
+
+  (********************************************************************
   *theorem
   * Parses the argument into a term, and then prepares the session to
   * prove the term by inserting the term into a sequent on the right.

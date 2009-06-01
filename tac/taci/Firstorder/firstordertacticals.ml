@@ -1332,7 +1332,7 @@ struct
   * terms that don't exist in the sequent it could still easily succeed.
   ********************************************************************)
   let forceTactical session args =
-    let unifier seqstring term side =
+    let unifier seqstring term =
       let seqterm = parseTerm seqstring in
       let unterm = parseTerm term in
       if Option.isSome seqterm && Option.isSome unterm then
@@ -1341,12 +1341,7 @@ struct
 
         (* pretactic: simply unifies the two terms. *)
         let pretactic = fun seq sc fc ->
-          let result =
-            if side = "right" then
-              FOA.rightUnify seqterm unterm
-            else
-              FOA.leftUnify seqterm unterm
-          in
+          let result = FOA.rightUnify seqterm unterm in
           match result with
               FOA.UnifySucceeded(s) ->
                 let fc' () =
@@ -1371,11 +1366,7 @@ struct
     in
     match args with
       | Absyn.String(seqstring)::Absyn.String(term)::[] ->
-          unifier seqstring term "right"
-      | Absyn.String(seqstring)::Absyn.String(term)::Absyn.String("right")::[] ->
-          unifier seqstring term "right"
-      | Absyn.String(seqstring)::Absyn.String(term)::Absyn.String("left")::[] ->
-          unifier seqstring term "left"
+          unifier seqstring term
       | _ -> (G.invalidArguments "force")
 
   (********************************************************************

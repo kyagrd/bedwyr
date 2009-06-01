@@ -109,24 +109,34 @@ struct
   let helpMessage () =
     "Taci version " ^ (Properties.getString "taci.version") ^ "!
 
-#clear.                       Clear the screen.
-#debug <on|off>.              Enable/disable debugging.
-#set \"<property>\" \"<value>\".  Set the given property to a particular value.
-#time  <on|off>.              Enable/disable timing.
-#proof_output \"<dir>\".        Print proofs to <dir/theorem_name.xml>.
-
 #open \"<file>\".               Read commands from a file.
-#define \"<definition>\".       Add a fixed point definition
-                              to the current session.
+#define \"<definition>\".       Add a fixed point definition to the current session.
+#include \"<file\".             Read definitions from a Lambda Prolog file.
+
 #theorem <name> \"<theorem>\".  Start proving a theorem.
+#lemma <name> \"<lemma>\".      Start proving a lemma.
+#lemmas.                      List all available lemmas.
+
 #tactical <name> <body>.      Define a new tactical.
 #tacticals.                   List all available tacticals.
 
 #undo.                        Undo last command.
 #reset.                       Reset the current session,
                               removing all definitions and pending goals.
+
 #help.                        Show this message.
 #exit.                        Exit taci.
+
+#clear.                       Clear the screen.
+#debug <on|off>.              Enable/disable debugging.
+#time  <on|off>.              Enable/disable timing.
+#proof_output \"<dir>\".        Print proofs to <dir/theorem_name.xml>.
+
+#logic \"<logic>\".             Load the given logic.
+#logics.                      List all available logics.
+
+#get \"<property>\".            Get the given property.
+#set \"<property>\" \"<value>\".  Set the given property to a particular value.
 
 "
 
@@ -436,6 +446,8 @@ struct
             (session, Some (Properties(props))))
         | Absyn.Lemma(name, t) ->
             (L.lemma name t session, Some (Session(session)))
+        | Absyn.Lemmas ->
+            (L.lemmas session, Some (Session(session)))
         | Absyn.Theorem(name, t) ->
             (L.theorem name t session, Some (Session(session)))
         | Absyn.Definitions(ds) ->
@@ -467,6 +479,8 @@ struct
             else
               (O.error "No valid sequent.\n";
               (errorHandler session, Some(Session(session))))
+        | Absyn.LogicDefined(id, args) ->
+            (L.logicDefined id args session, Some (Session(session)))
     in
 
     (*  Handle the input and then save the session in the undo stack

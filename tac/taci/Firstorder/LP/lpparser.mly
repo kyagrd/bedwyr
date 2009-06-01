@@ -19,33 +19,70 @@
 %{
   module LPA = Lpabsyn
   let constants = ref []
-  let addClause cl =
-    let add name clause constant =
+  let addDefinition def =
+    let add name arity clause constant =
       if name = LPA.getConstantName constant then
-        let arity = LPA.getConstantArity constant in
-        LPA.Constant(name, arity, clause :: (LPA.getConstantClauses constant))
+        let clauses = LPA.getConstantClauses constant in
+        let progress = LPA.getConstantProgress constant in
+        let arity' = LPA.getConstantArity constant in
+        if arity <> arity' then
+          raise (LPA.Error("constant '" ^ name ^ "' defined with differing arities"))
+        else
+          LPA.Constant(name, arity, progress, clause :: clauses)
+      else
+        constant
+    in
+    let prog name progress constant =
+      if name = LPA.getConstantName constant then
+        let clauses = LPA.getConstantClauses constant in
+        let progress' = LPA.getConstantProgress constant in
+        let arity = List.length progress in
+        let arity' = LPA.getConstantArity constant in
+
+        if Option.isSome progress' then
+          raise (LPA.Error("constant '" ^ name ^ "' with multiple progress annotations"))
+        else if arity <> arity' then
+          raise (LPA.Error("constant '" ^ name ^ "' progress defined with differing arities"))
+        else
+          LPA.Constant(name, arity, Some progress, clauses)
       else
         constant
     in
     let find name constant =
       name = LPA.getConstantName constant
     in
-    let (LPA.Clause(head, body)) = cl in
-    let name = LPA.getAtomName (LPA.getApplicationHead head) in
-    if List.exists (find name) !constants then
-      constants := List.map (add name cl) !constants
-    else
-      let arity =
-        List.length
-          (LPA.getApplicationArguments (LPA.getClauseHead cl))
-      in
-      constants := (LPA.Constant(name, arity, [cl])) :: !constants
-    
+    let forceApplication head =
+      match head with
+          LPA.ApplicationTerm _ -> head
+        | LPA.AtomicTerm _ -> LPA.ApplicationTerm(head, [])
+        | _ -> raise (LPA.Error("clause with invalid head"))
+    in
+    match def with
+        LPA.ClauseDefinition(head, body) ->
+          let head = forceApplication head in
+          let cl = LPA.Clause(head, body) in
+          let name = LPA.getAtomName (LPA.getApplicationHead head) in
+          let arity =
+            List.length
+              (LPA.getApplicationArguments head)
+          in
+          if List.exists (find name) !constants then
+            constants := List.map (add name arity cl) !constants
+          else
+            constants := (LPA.Constant(name, arity, None, [cl])) :: !constants
+      | LPA.ProgressDefinition(id, progress) ->
+          if List.exists (find id) !constants then
+            constants := List.map (prog id progress) !constants
+          else
+            let arity = List.length progress in
+            constants := (LPA.Constant(id, arity, Some progress, [])) :: !constants
 %}
 
-%token IMP COLONDASH COMMA DOT
-%token BSLASH LPAREN RPAREN CONS EQ NEQ
-%token PI SIGMA NABLA SEMICOLON MODULE
+%token MODULE
+%token PROGRESS 
+%token IMP COLONDASH COMMA DOT CONS EQ NEQ
+%token PI SIGMA NABLA BSLASH
+%token LPAREN RPAREN LBRACE RBRACE SEMICOLON
 
 %token <int> NUM
 %token <string> ID CID STRING
@@ -74,13 +111,22 @@ lp_module:
   | clauses EOF                          {let cl = !constants in (constants := []; cl)}
 
 clauses:
-  | clause clauses                       {addClause $1}
-  | MODULE id DOT clauses                {()}
-  |                                      {()}
+  | clause clauses                        {addDefinition $1}
+  | PROGRESS ID progress_list DOT clauses {addDefinition (LPA.ProgressDefinition($2, $3))}
+  | MODULE ID DOT clauses                 {()}
+  |                                       {()}
+
+progress_list:
+  | progress progress_list               {$1 :: $2}
+  | progress                             {$1 :: []}
+  
+progress:
+  | LBRACE CID RBRACE                    {LPA.Progressing}
+  | CID                                  {LPA.NonProgressing}
 
 clause:
-  | term DOT                             {LPA.Clause($1, None)}
-  | term COLONDASH clause_body DOT       {LPA.Clause($1, Some $3)}
+  | term DOT                             {LPA.ClauseDefinition($1, None)}
+  | term COLONDASH clause_body DOT       {LPA.ClauseDefinition($1, Some $3)}
 
 clause_body:
   | term                                 {$1}

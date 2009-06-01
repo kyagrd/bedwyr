@@ -18,8 +18,18 @@
 **********************************************************************)
 exception Error of string
 
-type constant = Constant of string * int * clause list
+type constant = Constant of string * int * progress list option * clause list
+
 and clause = Clause of term * term option
+
+and definition =
+    ClauseDefinition of term * term option
+  | ProgressDefinition of string * progress list
+
+and progress =
+    Progressing
+  | NonProgressing
+
 and term =
     AtomicTerm of string
   | VariableTerm of string
@@ -33,9 +43,10 @@ and term =
   | SigmaTerm of term
   | NablaTerm of term
 
-let getConstantName (Constant(n,_,_)) = n
-let getConstantArity (Constant(_,a,_)) = a
-let getConstantClauses (Constant(_,_,cls)) = cls
+let getConstantName (Constant(n,_,_,_)) = n
+let getConstantArity (Constant(_,a,_,_)) = a
+let getConstantProgress (Constant(_,_,p,_)) = p
+let getConstantClauses (Constant(_,_,_,cls)) = cls
 
 let getClauseHead (Clause(head,_)) = head
 let getClauseBody (Clause(_, body)) = body
@@ -120,3 +131,10 @@ let getApplicationArguments app = match app with
 let getVariableName t = match t with
     (VariableTerm(s)) -> s
   | _ -> raise (Error "Lpabsyn.getVariableName: invalid term")
+
+
+let defaultProgress p i =
+  if Option.isSome p then
+    Option.get p
+  else
+    Listutils.mapn (fun i -> NonProgressing) i

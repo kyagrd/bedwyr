@@ -58,15 +58,32 @@ let translate ast =
   
   let translateConstant c =
     let def head body = head ^ " :=\n" ^ body in
-    let head name args = name ^ " " ^ args in
+    let head name args =
+      if args = "" then
+        name
+      else
+        name ^ " " ^ args
+    in
     let name = Lpabsyn.getConstantName c in
     let arity = Lpabsyn.getConstantArity c in
-    let args arity = String.concat " " (Listutils.mapn argument arity) in
+    let progress = Lpabsyn.getConstantProgress c in
+    let arg progress i =
+      if progress = Lpabsyn.Progressing then
+        "{" ^ (argument i) ^ "}"
+      else
+        argument i
+    in
+    let args arity progress =
+      let prog = Lpabsyn.defaultProgress progress arity in
+      String.concat " " (Listutils.mapi arg prog) in
     let body = 
       let clauses = Lpabsyn.getConstantClauses c in
-      "  " ^ (String.concat ";\n  " (List.map translateClause clauses))
+      if Listutils.empty clauses then
+        "  (false)"  (* parens so it matches (true)  *)
+      else
+        "  " ^ (String.concat ";\n  " (List.map translateClause clauses))
     in
-    def (head name (args arity)) body
+    def (head name (args arity progress)) body
 
   in
   List.map translateConstant ast

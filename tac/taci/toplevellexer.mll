@@ -84,6 +84,7 @@ rule command = parse
 | "logics"      {LOGICS}
 
 | "lemma"       {LEMMA}
+| "lemmas"      {LEMMAS}
 | "theorem"     {THEOREM}
 | "define"      {DEFINE}
 

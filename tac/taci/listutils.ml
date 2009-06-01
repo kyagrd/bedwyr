@@ -22,7 +22,8 @@ let rec combine3 l1 l2 l3 =
   | _ -> failwith "Listutils.split3: invalid arguments"
 
 (********************************************************************
-*mapn:
+*mapn: Given a function and an int, apply the function to all ints
+* from 0 to the given one.
 ********************************************************************)
 let mapn f n =
   let rec map f i n =
@@ -30,9 +31,25 @@ let mapn f n =
   in
   map f 0 n
 
+(********************************************************************
+*mapi:
+* Map with an integer index as well.
+********************************************************************)
+let mapi f l =
+  let rec map f l i =
+    match l with
+      [] -> []
+    | h::tl -> (f h i) :: (map f tl (i + 1))
+  in
+  map f l 0
+
+(********************************************************************
+*unique:
+* Remove duplicates from a list.  Should maintain the order.
+********************************************************************)
 let unique l =
   let insert l x = if List.exists ((=) x) l then l else x :: l in
-  List.fold_left insert [] l
+  List.rev (List.fold_left insert [] l)
 
 (********************************************************************
 *split_nth:

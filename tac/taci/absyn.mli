@@ -45,6 +45,7 @@ type command =
   | ProofOutput of string
 
   | Lemma of string * string
+  | Lemmas
   | Theorem of string * string
   | Definitions of string list
 
@@ -61,5 +62,7 @@ type command =
 
   | Set of string * string
   | Get of string
+  
+  | LogicDefined of string * string list
 
 val string_of_pretactical : pretactical -> string

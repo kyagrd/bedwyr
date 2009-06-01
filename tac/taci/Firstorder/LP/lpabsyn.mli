@@ -18,8 +18,18 @@
 **********************************************************************)
 exception Error of string
 
-type constant = Constant of string * int * clause list
+type constant = Constant of string * int * progress list option * clause list
+
 and clause = Clause of term * term option
+
+and definition =
+    ClauseDefinition of term * term option
+  | ProgressDefinition of string * progress list
+
+and progress =
+    Progressing
+  | NonProgressing
+
 and term =
     AtomicTerm of string
   | VariableTerm of string
@@ -36,6 +46,7 @@ and term =
 
 val getConstantName : constant -> string
 val getConstantArity : constant -> int
+val getConstantProgress : constant -> progress list option
 val getConstantClauses : constant -> clause list
 
 val getClauseHead : clause -> term
@@ -49,3 +60,5 @@ val getAtomName : term -> string
 val getApplicationHead : term -> term
 val getApplicationArguments : term -> term list
 val getVariableName : term -> string
+
+val defaultProgress : progress list option -> int -> progress list
