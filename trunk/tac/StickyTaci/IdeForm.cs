@@ -307,7 +307,7 @@ namespace StickyTaci
       Scintilla.NativeInterface.SavePointLeft += new EventHandler<ScintillaNet.NativeScintillaEventArgs>(Scintilla_SavePointLeft);
       Scintilla.ConfigurationManager.CustomLocation = Path.Combine(Path.GetDirectoryName(Application.ExecutablePath), "Data/tac.xml");
       Scintilla.ConfigurationManager.Language = "taci";
-      Scintilla.Margins.Margin0.Width = 20;
+      Scintilla.Margins.Margin0.Width = 42;
       Scintilla.Margins.Margin1.Width = 0;
       Scintilla.Margins.Margin2.Width = 16;
       Scintilla.Indentation.TabWidth = 2;

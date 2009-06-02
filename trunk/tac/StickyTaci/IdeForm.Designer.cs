@@ -58,6 +58,7 @@ namespace StickyTaci
       this.mainMenuTacDebug = new System.Windows.Forms.ToolStripMenuItem();
       this.mainMenuTacReset = new System.Windows.Forms.ToolStripMenuItem();
       this.mainMenuTacRestart = new System.Windows.Forms.ToolStripMenuItem();
+      this.mainMenuTacInterrupt = new System.Windows.Forms.ToolStripMenuItem();
       this.mainMenuTacTiming = new System.Windows.Forms.ToolStripMenuItem();
       this.toolStripSeparator7 = new System.Windows.Forms.ToolStripSeparator();
       this.mainMenuTacNextLine = new System.Windows.Forms.ToolStripMenuItem();
@@ -77,7 +78,6 @@ namespace StickyTaci
       this.outputSplitter = new System.Windows.Forms.SplitContainer();
       this.goalBox = new System.Windows.Forms.RichTextBox();
       this.outputBox = new System.Windows.Forms.RichTextBox();
-      this.mainMenuTacInterrupt = new System.Windows.Forms.ToolStripMenuItem();
       mainMenuTacOpen = new System.Windows.Forms.ToolStripMenuItem();
       this.mainMenu.SuspendLayout();
       this.mainSplitter.Panel1.SuspendLayout();
@@ -338,6 +338,15 @@ namespace StickyTaci
       this.mainMenuTacRestart.Text = "Re&start";
       this.mainMenuTacRestart.Click += new System.EventHandler(this.mainMenuTacRestart_Click);
       // 
+      // mainMenuTacInterrupt
+      // 
+      this.mainMenuTacInterrupt.Name = "mainMenuTacInterrupt";
+      this.mainMenuTacInterrupt.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Alt)
+                  | System.Windows.Forms.Keys.C)));
+      this.mainMenuTacInterrupt.Size = new System.Drawing.Size(214, 22);
+      this.mainMenuTacInterrupt.Text = "Interrupt";
+      this.mainMenuTacInterrupt.Click += new System.EventHandler(this.mainMenuTacInterrupt_Click);
+      // 
       // mainMenuTacTiming
       // 
       this.mainMenuTacTiming.CheckOnClick = true;
@@ -458,12 +467,11 @@ namespace StickyTaci
       this.inputBox.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
                   | System.Windows.Forms.AnchorStyles.Left)
                   | System.Windows.Forms.AnchorStyles.Right)));
-      this.inputBox.CurrentPos = 0;
       this.inputBox.Font = new System.Drawing.Font("Courier New", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-      this.inputBox.Location = new System.Drawing.Point(18, 0);
+      this.inputBox.Location = new System.Drawing.Point(4, 0);
       this.inputBox.Name = "inputBox";
       this.inputBox.Scrolling.HorizontalWidth = 256;
-      this.inputBox.Size = new System.Drawing.Size(330, 242);
+      this.inputBox.Size = new System.Drawing.Size(344, 242);
       this.inputBox.TabIndex = 0;
       this.inputBox.UseFont = true;
       // 
@@ -507,15 +515,6 @@ namespace StickyTaci
       this.outputBox.Size = new System.Drawing.Size(357, 146);
       this.outputBox.TabIndex = 0;
       this.outputBox.Text = "";
-      // 
-      // mainMenuTacInterrupt
-      // 
-      this.mainMenuTacInterrupt.Name = "mainMenuTacInterrupt";
-      this.mainMenuTacInterrupt.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Alt)
-                  | System.Windows.Forms.Keys.C)));
-      this.mainMenuTacInterrupt.Size = new System.Drawing.Size(214, 22);
-      this.mainMenuTacInterrupt.Text = "Interrupt";
-      this.mainMenuTacInterrupt.Click += new System.EventHandler(this.mainMenuTacInterrupt_Click);
       // 
       // IdeForm
       // 
