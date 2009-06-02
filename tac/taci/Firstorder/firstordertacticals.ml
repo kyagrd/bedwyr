@@ -1208,25 +1208,6 @@ struct
   let nuL = patternTac `Left  "nu _" ~arg:"unfold"
   let nuR = patternTac `Right "nu _" ~arg:"unfold"
 
-  let caseTactical session args =
-    match args with
-        []
-      | [Absyn.String(_)] ->
-          G.thenTactical
-            (muL session args)
-            (G.thenTactical
-              (G.repeatTactical (orL session []))
-              (G.repeatTactical (sigmaL session [])))
-      | _ -> G.invalidArguments "case"
-
-  let introsTactical session args =
-    match args with
-        [] ->
-          (G.thenTactical
-            (G.repeatTactical (piR session []))
-            (G.repeatTactical (impR session [])))
-      | _ -> G.invalidArguments "intros"
-
   let inductionTactical session = function
     | [] -> patternTac `Left "mu _" session []
     | [Absyn.String i] -> patternTac `Left "mu _" ~arg:i session []
@@ -2275,4 +2256,37 @@ struct
         [] -> sync_step session
       | _ -> G.invalidArguments "sync"
 
+  (********************************************************************
+  *casesTactical:
+  * Introduces a mu on the left and then breaks it into cleaned-up
+  * cases; doesn't introduce the mu if there's not one specified,
+  * which lets you perform case analysis on an already-unfolded mu,
+  * such as one resulting from an induction.
+  ********************************************************************)
+  let casesTactical session args =
+    match args with
+        [] ->
+          G.thenTactical
+            (G.repeatTactical (orL session args))
+            (simplifyTactical session args)
+      | [Absyn.String(_)] ->
+          G.thenTactical
+            (muL session args)
+            (G.thenTactical
+              (G.repeatTactical (orL session []))
+              (simplifyTactical session []))
+      | _ -> G.invalidArguments "cases"
+
+  (********************************************************************
+  *intros:
+  * Introduce asynchronous toplevel connectives on the right; used at
+  * the start of a proof.
+  ********************************************************************)
+  let introsTactical session args =
+    match args with
+        [] ->
+          (G.thenTactical
+            (G.repeatTactical (piR session []))
+            (G.repeatTactical (impR session [])))
+      | _ -> G.invalidArguments "intros"
 end
