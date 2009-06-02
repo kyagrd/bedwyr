@@ -97,6 +97,6 @@ sig
   
   val setBoundTactical : tactical
   
-  val caseTactical : tactical
+  val casesTactical : tactical
   val introsTactical : tactical
 end

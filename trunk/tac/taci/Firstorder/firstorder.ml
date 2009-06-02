@@ -600,8 +600,7 @@ struct
 
         ++ ("abstract", Tacticals.abstractTactical)
         
-        (*  Abella-style tacticals. *)
-        ++ ("case", Tacticals.caseTactical)
+        ++ ("cases", Tacticals.casesTactical)
         ++ ("intros", Tacticals.introsTactical)
     in
 
