@@ -22,6 +22,9 @@ val debug : bool ref
 type assoc = Left | Right | Both | Nonassoc
 val set_infix : (string * assoc) list -> unit
 
+val term_to_string_full_debug :
+  generic:string list -> bound:string list -> bool -> Term.term -> string
+
 val term_to_string_full :
   generic:string list -> bound:string list -> Term.term -> string
 
