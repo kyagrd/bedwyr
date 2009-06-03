@@ -110,6 +110,14 @@ let term_to_string_full ~generic ~bound term =
   in
     pp ~bound high_pr term
 
+(* Print a term; allows debugging.  See term_to_string_full. *)
+let term_to_string_full_debug ~generic ~bound dbg term =
+  let debug' = !debug in
+  let () = debug := dbg in
+  let s = term_to_string_full ~generic ~bound term in
+  (debug := debug';
+  s)
+
 let get_generic_names x =
   let nbs = Term.get_nablas x in
   let max_nb = List.fold_left max 0 nbs in
