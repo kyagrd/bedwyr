@@ -111,7 +111,7 @@ let rec check_flex_args l fts flts =
 let can_bind v t =
   let rec aux n t =
     match observe t with
-      | Var v' -> if v' = v then false else v'.ts <= v.ts && v'.lts <= v.lts
+      | Var v' -> v' <> v && v'.ts <= v.ts && v'.lts <= v.lts
       | DB i -> i <= n
       | NB j -> j <= v.lts
       | Lam(n', t) -> aux (n+n') t
@@ -538,20 +538,17 @@ let makesubst h1 t2 a1 =
       | _ -> Term.lambda (n+lev) (nested_subst t2 lev)
   in
 
-    match
-      try check_flex_args a1 ts1 lts1 ; None with
-        | NotLLambda error -> Some error
+    try
+      check_flex_args a1 ts1 lts1 ;
+      toplevel_subst t2 0
     with
-      | None ->
-          (* We have a pattern, let's go for pattern unification. *)
-          toplevel_subst t2 0
-      | Some error ->
+      | NotLLambda e ->
           (* Not a pattern: try a very strict occurs-check to allow
            * simple cases of the form v1=t2. *)
-          if a1 = [] && can_bind v1 t2 then
+          if a1 = [] && (Printf.printf "Foo!\n" ; can_bind v1 t2) then
             t2
           else
-            not_ll error
+            not_ll e
 
 
 (** Unifying the arguments of two rigid terms with the same head, these
