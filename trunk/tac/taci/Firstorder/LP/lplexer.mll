@@ -27,6 +27,23 @@
           pos_lnum = 1 + lexbuf.lex_curr_p.pos_lnum }
 
   let comment_level = ref 0
+  
+  (*  progress: given a list like 'A {B} Context {D}', parses it
+      into a list of Lpabsyn.progress values.  We parse directives
+      like %progress by hand so that they can look like comments,
+      and thereby not break compatibility with Lambda Prolog. *)
+  let progress arguments =
+    let split s =
+      Str.split (Str.regexp "[ \t\r]+") s
+    in
+    let check a =
+      if (String.get a 0) = '{' then
+        Lpabsyn.Progressing
+      else
+        Lpabsyn.NonProgressing
+    in
+    let args = split arguments in
+    List.map check args
 }
 
 let idchar = ['A' - 'Z' 'a'-'z' '_' '/' '0'-'9' '\'' '?' '-' '`' '#' '$' '&' '!' '~']
@@ -35,11 +52,13 @@ let cid = ['A' - 'Z' '_'] idchar *
 let blank = ' ' | '\t' | '\r'
 let line_comment = '%' [^'\n']* '\n'
 
+let args = (blank* (cid | '{' blank* cid blank* '}') blank*)+
+
 rule token = parse
-| "%progress"        { PROGRESS } (*  TODO: tweak greediness. *)
+| "%progress" blank* (id as i) blank* (args as a) '.' blank* '\n'  { PROGRESS(i, progress a) }
+| line_comment       { incrline lexbuf; token lexbuf }
 
 | "/*"               { incr comment_level; comment lexbuf }
-(*  | line_comment       { incrline lexbuf; token lexbuf } *)
 
 | blank              { token lexbuf }
 | '\n'               { incrline lexbuf; token lexbuf }
