@@ -2,16 +2,6 @@
 
 #tactical do then(right, repeat(orelse(sigma_r, orelse(and_r, eq_r)))).
 #tactical of_axiom then(mu_r, do).
-#tactical of_rec then(mu_r, then(left, do)).
-#tactical of_app then(mu_r, then(left, then(left, do))).
-#tactical of_abs then(mu_r, then(left, then(left, then(left, do)))).
-#tactical of_if then(mu_r, then(left, then(left, then(left, then(left, do))))).
-#tactical of_is_zero then(mu_r, then(left, then(left, then(left, then(left, then(left, do)))))).
-#tactical of_pred then(mu_r, then(left, then(left, then(left, then(left, then(left, then(left, do))))))).
-#tactical of_succ then(mu_r, then(left, then(left, then(left, then(left, then(left, then(left, then(left, do)))))))).
-#tactical of_ff then(mu_r, then(left, then(left, then(left, then(left, then(left, then(left, then(left, then(left, do))))))))).
-#tactical of_tt then(mu_r, then(left, then(left, then(left, then(left, then(left, then(left, then(left, then(left, then(left, do)))))))))).
-#tactical of_zero then(mu_r, then(left, then(left, then(left, then(left, then(left, then(left, then(left, then(left, then(left, then(left, repeat(orelse(sigma_r, orelse(and_r, eq_r)))))))))))))).
 #tactical invert then(mu_l("of _ _ _"), async).
 #tactical app then(repeat(pi_l), repeat(then(imp_l, try(axiom)))).
 

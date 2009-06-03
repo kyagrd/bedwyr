@@ -17,6 +17,7 @@ eval (abs T R) (abs T R).
 eval (app M N) V :- eval M (abs T R), eval (R N) V.
 eval (rec T R) V :- eval (R (rec T R)) V.
 
+%Note: this is not strictly correct.
 %progress of Context {V} T.
 of Context zero num.
 of Context tt bool.
