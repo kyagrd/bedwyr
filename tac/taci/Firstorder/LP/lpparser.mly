@@ -76,14 +76,17 @@
           else
             let arity = List.length progress in
             constants := (LPA.Constant(id, arity, Some progress, [])) :: !constants
+  let addProgress p =
+    let (id, progress) = p in
+    addDefinition (LPA.ProgressDefinition(id, progress))
 %}
 
-%token MODULE
-%token PROGRESS 
+%token MODULE 
 %token IMP COLONDASH COMMA DOT CONS EQ NEQ
 %token PI SIGMA NABLA BSLASH
 %token LPAREN RPAREN LBRACE RBRACE SEMICOLON
 
+%token <(string * Lpabsyn.progress list)> PROGRESS
 %token <int> NUM
 %token <string> ID CID STRING
 %token EOF
@@ -112,7 +115,7 @@ lp_module:
 
 clauses:
   | clause clauses                        {addDefinition $1}
-  | PROGRESS ID progress_list DOT clauses {addDefinition (LPA.ProgressDefinition($2, $3))}
+  | PROGRESS clauses                      {addProgress $1}
   | MODULE ID DOT clauses                 {()}
   |                                       {()}
 
