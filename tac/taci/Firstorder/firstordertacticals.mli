@@ -99,4 +99,6 @@ sig
   
   val casesTactical : tactical
   val introsTactical : tactical
+  
+  val findTactical : tactical
 end
