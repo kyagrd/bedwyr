@@ -1,4 +1,4 @@
-#include "stlc-weak.mod".
+#include "stlc-strong.mod".
 
 #tactical invert then(mu_l("of _ _ _"), async).
 #tactical app then(repeat(pi_l), repeat(then(imp_l, try(axiom)))).
@@ -8,10 +8,13 @@
 ".
 
 #define "context c :=
-  (pi x\t1\t2\ bind x t1 c => bind x t2 c => t1 = t2),
   (pi x\t\ bind x t c =>
-    (pi r\ (x = abs r) => false),
+    (pi t\r\ (x = abs t r) => false),
     (pi l\r\ (x = app l r) => false))".
+
+#lemma context_lift "pi c\ context c => nabla x\ context c".
+prove.
+% Qed.
 
 #lemma permute_lift "pi l\ l'\ permute l l' => nabla x\ permute l l'".
 simplify.
@@ -21,19 +24,23 @@ weak_l.
 prove.
 weak_l.
 prove.
+% Qed.
 
 #lemma lift_permute_s
   "pi l\l'\ (nabla x\ permute (l x) (l' x)) =>
     nabla a\x\ permute (l x) (l' x)".
 simplify.
 then(mu_l, mu_r, and_r, simplify).
-weak_l("pi m\ pi t\ (bind m t (l' _) => _)").
-prove.
-weak_l.
-prove.
+  weak_l("pi m\ pi t\ (bind m t (l' _) => _)").
+  prove.
+
+  weak_l.
+  prove.
+% Qed.
 
 #lemma bind_s "pi l\x\t\ bind x t l => nabla a\ bind x t l".
 prove.
+% Qed.
 
 #lemma of_weak "
   pi g\m\t\ of g m t => pi t'\ nabla x\ of (cons (pair x t') g) m t".
@@ -82,7 +89,7 @@ induction("gg\m\tm\ pi g\ permute gg (cons (pair n tn) g) =>
   
     % abstraction.
     then(pi_l, imp_l).
-  
+
       % cons maintains permutation.
       force("G0", "(n1\ cons (pair n1 h) g0)").
       weak_l("of _ _ _").
@@ -106,7 +113,7 @@ induction("gg\m\tm\ pi g\ permute gg (cons (pair n tn) g) =>
 simplify.
 abstract.
 induction.
-cases.
+async.
   prove.
   prove.
   then(induction("l'\x'\t'\ pi x\ bind (l' x) (x' x) (t' x)"),prove).
@@ -118,19 +125,46 @@ intros.
 induction.
 cases.
 
-  % Abstraction (weak).
+  % Abstraction.
+  abstract.
+  mu_l("of _ _ _").
+  async.
+  then(pi_l, pi_l, imp_l).
+    apply("context_lift").
+    force("C'", "(x1\ cons (pair x1 h9) h8)").
+    weak_l("context _").
+    weak_l("lift_of _ _ _").
+    mu_r.
+      repeat(pi).
+      imp.
+      and.
+      prove.
+      prove.
+    prove.
+    prove.
+
+  % Application (1).
+  invert.
+  app.
+  invert.
+  apply("of_subst").
+  apply("of_cut").
   axiom.
 
-  % Application.
-  invert.
-    app.
-    invert.
-      apply("of_subst").
-      apply("of_cut").
-      axiom.
+  prove.    % bind absurd.
+  prove.    % bind absurd.
 
-      prove.    % bind absurd.
-    prove.    % bind absurd.
+  % Application (2).
+  invert.
+  prove.
+
+  prove.    % bind absurd.
+  
+  % Application (3).
+  invert.
+  prove.
+
+  prove.    % bind absurd.
 % Qed.
 
 #lemma eval_det "pi e\v1\v2\ eval e v1 => eval e v2 => v1 = v2".
