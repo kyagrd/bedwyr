@@ -1211,12 +1211,14 @@ struct
   let inductionTactical session = function
     | [] -> patternTac `Left "mu _" session []
     | [Absyn.String i] -> patternTac `Left "mu _" ~arg:i session []
+    | [Absyn.String "auto"; Absyn.String p] -> patternTac `Left p session []
     | [Absyn.String i; Absyn.String p] -> patternTac `Left p ~arg:i session []
     | _ -> (fun _ _ fc -> O.error "Invalid arguments.\n" ; fc ())
 
   let coinductionTactical session = function
     | [] -> patternTac `Right "nu _" session []
     | [Absyn.String i] -> patternTac `Right "nu _" ~arg:i session []
+    | [Absyn.String "auto"; Absyn.String p] -> patternTac `Right p session []
     | [Absyn.String i; Absyn.String p] -> patternTac `Right p ~arg:i session []
     | _ -> (fun _ _ fc -> O.error "Invalid arguments.\n" ; fc ())
 
@@ -2289,4 +2291,19 @@ struct
             (G.repeatTactical (piR session []))
             (G.repeatTactical (impR session [])))
       | _ -> G.invalidArguments "intros"
+      
+  (********************************************************************
+  *findTactical:
+  * Check that the given formula appears in the sequent; if none is
+  * passed it succeeds as 'id' would.
+  ********************************************************************)
+  let findTactical session args =
+    let tactic session seq f zip lhs rhs sc fc =
+      sc [seq]
+    in
+    G.orElseTactical
+      (makeSimpleTactical "find" (matchLeft, "_") tactic session args)
+      (makeSimpleTactical "find" (matchRight, "_") tactic session args)
+
+          
 end

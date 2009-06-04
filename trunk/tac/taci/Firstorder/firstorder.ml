@@ -602,6 +602,8 @@ struct
         
         ++ ("cases", Tacticals.casesTactical)
         ++ ("intros", Tacticals.introsTactical)
+        
+        ++ ("find", Tacticals.findTactical)
     in
 
     (* Which structural rules to admit. *)
