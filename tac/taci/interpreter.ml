@@ -64,7 +64,7 @@ struct
   let getTiming () =
     (Sys.time ()) -. !startTime
 
-  (*  home_unrelate: *)
+  (* Translate relative paths using the ~ UNIX notation to absolute ones. *)
   let home_unrelate =
     let home =
       try Some (Sys.getenv "HOME") with Not_found -> None
