@@ -81,12 +81,12 @@ let rec interpret interp =
     0)
   with
     Interface.Logic (s) ->
-      let interp = Logics.getLogicInterpreter (!outputName) (s) in
-      if (Option.isSome interp) then
-        (interpret (Option.get interp))
-      else
-        (print_endline "Error: unable to load logic.";
-        1)
+      begin match Logics.getLogicInterpreter (!outputName) (s) with
+        | Some interp -> interpret interp
+        | None ->
+            print_endline "Error: unable to load logic.";
+            1
+      end
   | Interface.BatchFailure ->
       (print_endline "Error: batch file contains errors.";
       2)
