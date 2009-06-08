@@ -325,16 +325,36 @@ let rec string_of_formula ~generic ~names ch =
           let f ch = (s ~names ch).polf in
           pf "@[<1>(%a%a%a)@]" f l printConnective c f r
       | EqualityFormula(l,r) ->
-          let s1 = (string_of_term ~norm:Norm.deep_norm ~generic names l) in
-          let s2 = (string_of_term ~norm:Norm.deep_norm ~generic names r) in
-          pf "@[<1>(%s@ =@ %s)@]" s1 s2
+          let ptm ch t =
+            Pprint.pp_preabstracted ~generic ~bound:names ch
+              (Norm.deep_norm t)
+          in
+            pf "@[<1>(%a@ =@ %a)@]" ptm l ptm r
       | QuantifiedFormula(q,f) -> 
-          let q = getQuantifierName q in 
-          pf "@[<1>(%s %a)@]" q (fun ch -> (s ~names ch).abstf) f
+          let vars,body =
+            let rec get vars = function
+              | QuantifiedFormula
+                  (q',
+                   AbstractionFormula (hint, AbstractionBody (_,f)))
+                when q=q' ->
+                  get ((Term.get_dummy_name hint)::vars) f
+              | f ->
+                  List.rev vars, f
+            in
+              get [] (QuantifiedFormula (q,f))
+          in
+          let names = List.rev_append vars names in
+            pf "@[<1>(%s %s\\@ %a)@]"
+              (getQuantifierName q)
+              (String.concat "\\" vars)
+              (fun ch -> (s ~names ch).formf) body ;
+            List.iter Term.free vars
       | ApplicationFormula(f,tl) ->
           pf "@[<2>%a%a@]" (fun ch -> (s ~names ch).predf) f
             (fun ch -> List.iter (fun t ->
-              pf "@ %s" (string_of_term ~norm:Norm.deep_norm ~generic names t)))
+              pf "@ %a"
+                (Pprint.pp_preabstracted ~generic ~bound:names)
+                (Norm.deep_norm t)))
             tl)
           }
 

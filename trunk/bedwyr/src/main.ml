@@ -223,19 +223,21 @@ and command lexbuf = function
   (* Testing commands *)
   | "assert",[query] ->
       if !test then begin
-        Format.printf "Checking that %a...\n%!" Pprint.pp_term query ;
+        Format.printf "@[<hv 2>Checking that@ %a@,...@]@\n%!"
+          Pprint.pp_term query ;
         Prover.prove ~level:Prover.One ~local:0 ~timestamp:0 query
           ~success:(fun _ _ -> ()) ~failure:(fun () -> raise Assertion_failed)
       end
   | "assert_not",[query] ->
       if !test then begin
-        Format.printf "Checking that %a is false...\n%!" Pprint.pp_term query ;
+        Format.printf "@[<hv 2>Checking that@ %a@ is false...@]@\n%!"
+          Pprint.pp_term query ;
         Prover.prove ~level:Prover.One ~local:0 ~timestamp:0 query
           ~success:(fun _ _ -> raise Assertion_failed) ~failure:ignore
       end
   | "assert_raise",[query] ->
       if !test then begin
-        Format.printf "Checking that %a causes an error...\n%!"
+        Format.printf "@[<hv 2>Checking that@ %a@ causes an error...@]@\n%!"
           Pprint.pp_term query ;
         if
           try

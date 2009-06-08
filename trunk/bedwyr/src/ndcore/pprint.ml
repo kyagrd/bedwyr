@@ -53,7 +53,7 @@ let parenthesis x = "(" ^ x ^ ")"
   * other name. The good way to ensure that is to use Term.get_dummy_name and
   * [Term.free].
   * The input term should be fully normalized. *)
-let term_to_string_full ~generic ~bound term =
+let print_full ~generic ~bound chan term =
   let get_nth list n s =
     try
       List.nth list n
@@ -62,53 +62,75 @@ let term_to_string_full ~generic ~bound term =
   in
   
   let high_pr = 1 + get_max_priority () in
-  let rec pp ~bound pr term =
+  let rec pp ~bound pr chan term =
     match observe term with
       | Var v ->
           let name = Term.get_name term in
           if !debug then
-            Printf.sprintf "%s[%d/%d]" name v.ts v.lts
+            Format.fprintf chan "%s[%d/%d]" name v.ts v.lts
           else
-            name
-      | NB i -> get_nth generic (i-1) ("nabla(" ^ (string_of_int (i - 1)) ^ ")")
-      | DB i -> get_nth bound (i-1) ("db(" ^ (string_of_int (i - 1)) ^ ")")
+            Format.fprintf chan "%s" name
+      | NB i ->
+          Format.fprintf chan "%s"
+            (get_nth generic (i-1) ("nabla(" ^ (string_of_int (i - 1)) ^ ")"))
+      | DB i ->
+          Format.fprintf chan "%s"
+            (get_nth bound (i-1) ("db(" ^ (string_of_int (i - 1)) ^ ")"))
       | App (t,ts) ->
           begin match (observe t, ts) with
             | Var {tag=Constant}, [a; b] when is_infix (get_name t) ->
                 let op = get_name t in
                 let op_p = priority op in
                 let assoc = get_assoc op in
-                let pr_left, pr_right = begin match assoc with
+                let pr_left, pr_right = match assoc with
                   | Left -> op_p, op_p+1
                   | Right -> op_p+1, op_p
                   | _ -> op_p, op_p
-                  end in
-                let res =
-                  (pp ~bound pr_left a)
-                  ^ " " ^ op ^ " " ^
-                  (pp ~bound pr_right b)
                 in
-                  if op_p >= pr then res else parenthesis res
+                let print =
+                  if op_p >= pr then
+                    Format.fprintf chan "@[%a@ %s@ %a@]"
+                  else
+                    Format.fprintf chan "@[<1>(%a@ %s@ %a)@]"
+                in
+                  print (pp ~bound pr_left) a op (pp ~bound pr_right) b
             | _ ->
-                let res =
-                  String.concat " "
-                    (List.map (pp ~bound high_pr) (t::ts))
+                let print =
+                  if pr=0 then
+                    Format.fprintf chan "@[<2>%a %a%a@]"
+                   else
+                    Format.fprintf chan "@[<3>(%a %a%a)@]"
                 in
-                  if pr = 0 then res else parenthesis res
+                  print (pp ~bound high_pr)
+                    t
+                    (pp ~bound high_pr) (List.hd ts)
+                    (fun chan ->
+                      List.iter (Format.fprintf chan "@ %a" (pp ~bound high_pr)))
+                    (List.tl ts)
           end
       | Lam (i,t) ->
           assert (i<>0) ;
           (* Get [i] more dummy names for the new bound variables.
            * Release them after the printing of this term. *)
           let more = Term.get_dummy_names ~start:1 i "x" in
-          let t = pp ~bound:(List.rev_append more bound) 0 t in
-          let res = (String.concat "\\" more)^"\\"^t in
-            List.iter Term.free more ;
-            if pr = 0 then res else parenthesis res
-      | Susp (t,_,_,l) -> Printf.sprintf "<%d:%s>" (List.length l) (pp ~bound pr t)
+          let head = String.concat "\\" more in
+          let print =
+            if pr=0 then
+              Format.fprintf chan "%s\\@ %a"
+            else
+              Format.fprintf chan "@[<1>(%s\\@ %a)@]"
+          in
+            print head (pp ~bound:(List.rev_append more bound) 0) t ;
+            List.iter Term.free more
+      | Susp (t,_,_,l) ->
+          Format.fprintf chan "<%d:%a>" (List.length l) (pp ~bound pr) t
       | Ptr  _ -> assert false (* observe *)
   in
-    pp ~bound high_pr term
+    Format.fprintf chan "@[%a@]" (pp ~bound high_pr) term
+
+let term_to_string_full ~generic ~bound tm =
+  print_full ~generic ~bound Format.str_formatter tm ;
+  Format.flush_str_formatter ()
 
 (* Print a term; allows debugging.  See term_to_string_full. *)
 let term_to_string_full_debug ~generic ~bound dbg term =
@@ -123,20 +145,22 @@ let get_generic_names x =
   let max_nb = List.fold_left max 0 nbs in
     Term.get_dummy_names ~start:1 max_nb "n"
 
-let term_to_string ?(bound=[]) term =
+let print ?(bound=[]) chan term =
   let term = Norm.deep_norm term in
   let generic = get_generic_names term in
-  let s = term_to_string_full ~generic ~bound term in
+  let s = print_full ~generic ~bound chan term in
     List.iter Term.free generic ;
     s
 
-(** Formatter *)
-let pp_term out term =
-  fprintf out "%s" (term_to_string term)
+let term_to_string ?(bound=[]) tm =
+  print ~bound Format.str_formatter tm ;
+  Format.flush_str_formatter ()
+
+let pp_term out term = print out term
 
 (** Output to stdout *)
 let print_term ?(bound=[]) term =
-  printf "%s" (term_to_string ~bound term)
+  print ~bound Format.std_formatter term
 
 (** Utility for tools such as Taci which push down formula-level abstractions
   * to term level abstractions. Dummy names should be created (and freed)
@@ -144,11 +168,17 @@ let print_term ?(bound=[]) term =
   * function, which won't display the lambda prefix.
   * The input term should have at least [List.length bound] abstractions
   * at toplevel. *)
-let term_to_string_preabstracted ~generic ~bound term =
+let pp_preabstracted ~generic ~bound chan term =
   (* let term = Norm.hnorm term in *)
   let len = List.length bound in
     match observe term with
       | Lam (n,term) ->
           assert (len <= n) ;
-          term_to_string_full ~generic ~bound (lambda (n-len) term)
-      | _ -> (* assert (bound = []);*) term_to_string_full ~generic ~bound term
+          print_full ~generic ~bound chan (lambda (n-len) term)
+      | _ ->
+          (* assert (bound = []); *)
+          print_full ~generic ~bound chan term
+
+let term_to_string_preabstracted ~generic ~bound term =
+  pp_preabstracted ~generic ~bound Format.str_formatter term ;
+  Format.flush_str_formatter ()
