@@ -70,7 +70,8 @@ struct
   * Convert a sequent to a string, including the sequent's level.
   ********************************************************************)
   let string_of_sequent seq =
-    let top       = String.concat "\n" (List.map string_of_formula seq.lhs) in
+    let s f i = (string_of_int (i + 1)) ^ (string_of_formula f) in
+    let top = String.concat "\n" (Listutils.mapi s seq.lhs) in
     let bottom    = String.concat "\n" (List.map string_of_formula seq.rhs) in
     let separator = String.make (max (min (String.length bottom) 72) 16) '-' in
     (* top should always start with an empty line (it looks better)
@@ -566,7 +567,7 @@ struct
         ++ ("eq_l", Tacticals.eqL)
         ++ ("eq_r", Tacticals.eqR)
 
-        ++ ("axiom", Tacticals.axiom)
+        ++ ("axiom", Tacticals.axiomTactical)
 
         ++ ("mu_l", Tacticals.muL)
         ++ ("mu_r", Tacticals.muR)
@@ -584,7 +585,7 @@ struct
         ++ ("false", Tacticals.falseL)
         ++ ("trivial", Tacticals.trueR || Tacticals.falseL)
 
-        ++ ("apply", Tacticals.applyTactical)
+        ++ ("apply", Tacticals.abstractApplyTactical)
         ++ ("cut", Tacticals.cutTactical)
         ++ ("cut_lemma", Tacticals.cutLemmaTactical)
         ++ ("force", Tacticals.forceTactical)

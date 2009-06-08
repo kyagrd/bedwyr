@@ -340,7 +340,7 @@ struct
 
   (********************************************************************
   *cutThenTactical:
-  * Exported nterface to wrapped version.
+  * Exported interface to wrapped version.
   ********************************************************************)
   let cutThenTactical save tac1 tac2 =
     fun sequents sc fc ->

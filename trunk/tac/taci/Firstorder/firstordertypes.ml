@@ -228,7 +228,7 @@ struct
     let generic = Term.get_dummy_names ~start:1 local.context "n" in
     let result = (FOA.string_of_formula_ast ~generic).FOA.formf t in
       List.iter Term.free generic ;
-      (String.concat "," generic) ^ ">> " ^ (annotateFormula a result)
+      (String.concat "," generic) ^ ">>" ^ (annotateFormula a result)
 
   (********************************************************************
   *escapeTerm:

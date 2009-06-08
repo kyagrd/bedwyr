@@ -56,7 +56,8 @@ sig
   
   val eqL : tactical
   val eqR : tactical
-  val axiom : tactical
+  
+  val axiomTactical : tactical
   
   val muL : tactical
   val muR : tactical
@@ -81,7 +82,7 @@ sig
   val trueR : tactical
   val falseL : tactical
   
-  val applyTactical : tactical
+  val abstractApplyTactical : tactical
   val cutTactical : tactical
   val cutLemmaTactical : tactical
   val forceTactical : tactical
