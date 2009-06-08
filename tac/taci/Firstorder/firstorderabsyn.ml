@@ -190,6 +190,11 @@ let getConnective = function
   | Or -> "; "
   | Imp -> " => "
 
+let printConnective ch = function
+  | And -> Format.fprintf ch ",@ "
+  | Or -> Format.fprintf ch ";@ "
+  | Imp -> Format.fprintf ch " =>@ "
+
 let getQuantifierName = function 
     Pi -> "pi" 
   | Sigma -> "sigma" 
@@ -296,44 +301,42 @@ let string_of_pattern _ = ""
 let string_of_term ?(norm=fun x->x) ~generic names t =
   Pprint.term_to_string_preabstracted ~generic ~bound:names (norm t)
 
-let rec string_of_formula ~generic ~names =
+let rec string_of_formula ~generic ~names ch =
+  let pf s = Format.fprintf ch s in
   let s = string_of_formula ~generic in
-  { polf = (fun (p,f) -> (s ~names).formf f) ;
+  { polf = (fun (p,f) -> pf "%a" (fun ch -> (s ~names ch).formf) f) ;
     predf = (function
         FixpointFormula(_,name,_,_)
-      | AtomicFormula(name) -> name
+      | AtomicFormula(name) -> pf "%s" name
       | DBFormula(l,n,i) -> 
           (*  TODO: eep!  Such hackery! *)
           let rec name l = if l=0 then n else "lift_" ^ name (l-1) in
-          name l) ;
+          pf "%s" (name l));
 
     abstf = (function
         AbstractionFormula (hint,f) ->
           let hint = Term.get_dummy_name hint in 
-          let s = hint ^ "\\ " ^ ((s ~names:(hint::names)).abstf f) in 
-            (Term.free hint; s)
-      | AbstractionBody (f) -> (s ~names).polf f) ; 
+          (pf "%s\\\\@ %a" hint (fun ch -> (s ~names:(hint::names) ch).abstf) f;
+          Term.free hint)
+      | AbstractionBody(f) -> pf "%a" (fun ch -> (s ~names ch).polf) f) ; 
 
     formf = (function
         BinaryFormula(c,l,r) ->
-          let s1 = ((s ~names).polf l) in
-          let s2 = ((s ~names).polf r) in
-          "(" ^ s1 ^ (getConnective c) ^ s2 ^ ")"
+          let f ch = (s ~names ch).polf in
+          pf "@[<1>(%a%a%a)@]" f l printConnective c f r
       | EqualityFormula(l,r) ->
           let s1 = (string_of_term ~norm:Norm.deep_norm ~generic names l) in
           let s2 = (string_of_term ~norm:Norm.deep_norm ~generic names r) in
-          "(" ^ s1 ^ " = " ^ s2 ^ ")"
+          pf "@[<1>(%s@ =@ %s)@]" s1 s2
       | QuantifiedFormula(q,f) -> 
-          let s1 = getQuantifierName q in 
-          let s2 = (s ~names).abstf f in 
-          (s1 ^ " " ^ s2)
+          let q = getQuantifierName q in 
+          pf "@[<1>(%s %a)@]" q (fun ch -> (s ~names ch).abstf) f
       | ApplicationFormula(f,tl) ->
-          let args =
-            String.concat " "
-              (List.map (string_of_term ~norm:Norm.deep_norm ~generic names) tl)
-          in
-          let name = (s ~names).predf f in
-          if args = "" then name else name ^ " " ^ args)}
+          pf "@[<2>%a%a@]" (fun ch -> (s ~names ch).predf) f
+            (fun ch -> List.iter (fun t ->
+              pf "@ %s" (string_of_term ~norm:Norm.deep_norm ~generic names t)))
+            tl)
+          }
 
 let rec string_of_pattern_ast =
   let s = string_of_pattern_ast in
@@ -419,11 +422,26 @@ let string_of_fixpoint = function
     Inductive -> "inductive"
   | CoInductive -> "coinductive"
 
-let string_of_formula = string_of_formula ~names:[]
-
 let string_of_definition (Definition(name,arity,body,ind)) =
-  (string_of_fixpoint ind) ^ " " ^ name ^ " " ^
-  ((string_of_formula ~generic:[]).abstf body)
+  (Format.fprintf (Format.str_formatter) "%s %s :=@ %a" (string_of_fixpoint ind) name
+    (fun ch -> (string_of_formula ~generic:[] ~names:[] ch).abstf) body;
+  Format.flush_str_formatter ())
+
+let string_of_formula ~generic=
+  { polf = (fun f ->
+      ((string_of_formula ~names:[] ~generic Format.str_formatter).polf f;
+      Format.flush_str_formatter ()));
+    predf = (fun f ->
+      ((string_of_formula ~names:[] ~generic Format.str_formatter).predf f;
+      Format.flush_str_formatter ()));
+    abstf = (fun f ->
+      ((string_of_formula ~names:[] ~generic Format.str_formatter).abstf f;
+      Format.flush_str_formatter ()));
+    formf = (fun f ->
+      ((string_of_formula ~names:[] ~generic Format.str_formatter).formf f;
+      Format.flush_str_formatter ()))
+  }
+
     
 (**********************************************************************
 *abstract:

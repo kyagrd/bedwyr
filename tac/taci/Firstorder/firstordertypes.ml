@@ -219,10 +219,9 @@ struct
 
   let string_of_formula (Formula(local,(a,t))) =
     let generic = Term.get_dummy_names ~start:1 local.context "n" in
-    let result = (FOA.string_of_formula ~generic).FOA.formf t in
-      List.iter Term.free generic ;
-      " " ^ (String.concat "," generic) ^ ">>" ^
-      (annotateFormula a result)
+    (List.iter Term.free generic ;
+    " " ^ (String.concat "," generic) ^ ">>" ^
+    (annotateFormula a ((FOA.string_of_formula ~generic).FOA.formf t)))
 
   let string_of_formula_ast (Formula(local,(a,t))) =
     let generic = Term.get_dummy_names ~start:1 local.context "n" in
@@ -459,7 +458,7 @@ struct
           ((FOA.string_of_formula ~generic:[]).FOA.polf formula)) ;
         O.debug (Printf.sprintf
           "Firstorder.parseFormula: formula ast: %s.\n"
-          ((FOA.string_of_formula_ast ~generic:[]).FOA.polf formula)) ;
+          ((FOA.string_of_formula ~generic:[]).FOA.polf formula)) ;
 
         Some formula
     with
