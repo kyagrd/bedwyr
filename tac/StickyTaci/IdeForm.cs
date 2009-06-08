@@ -297,6 +297,7 @@ namespace StickyTaci
       currentLineImagePanel.Show();
       
       goalBox.Font = m_GoalFont;
+      goalBox.KeyDown += new KeyEventHandler(goalBox_KeyDown);
       
       outputBox.Font = m_OutputFont;
       outputBox.SelectionFont = m_OutputFont;
@@ -360,6 +361,23 @@ namespace StickyTaci
     #endregion
 
     #region Control Event Handlers
+    private void goalBox_KeyDown(object sender, KeyEventArgs e)
+    {
+      switch(e.KeyData)
+      {
+        case Keys.Control | Keys.A:
+          goalBox.SelectAll();
+          e.Handled = true;
+          break;
+        case Keys.Control | Keys.C:
+          if(goalBox.SelectedText.Length != 0)
+            Clipboard.SetDataObject(goalBox.SelectedText);
+          e.Handled = true;
+          break;
+        default:
+          break;
+      }
+    }
 
 
     private void mainMenuFilePrintPreview_Click(object sender, EventArgs e)

@@ -28,6 +28,41 @@ struct
   type tactical = (FOT.session, tactic) Logic.tactical
 
   (********************************************************************
+  *Generalized Patterns:
+  * The following are used to allow patterns like '#1', which is an
+  * index.  Totally hackish.
+  ********************************************************************)
+  type pattern =
+      Pattern of FOA.pattern_annotation FOA.polarized_pattern
+    | Index of int
+  
+  let parseIndexPattern s =
+    if String.get s 0 = '#' then
+      try
+        Some (Index (int_of_string (String.sub s 1 (String.length s - 1))))
+      with
+        _ -> None
+    else
+      None
+
+  let parseGeneralPattern s =
+    let p = parseIndexPattern s in
+    if Option.isSome p then
+      p
+    else
+      let p = parsePattern s in
+      if Option.isSome p then
+        Some (Pattern (Option.get p))
+      else
+        None
+ 
+  let matchGeneralPattern defaultPattern pattern =
+    match (defaultPattern, pattern) with
+        (Pattern(p), Pattern(p')) -> FOA.matchPattern p p'
+      | (Pattern(_), Index(_)) -> true  (*  We'll pretend it's always more specifc; this is bad.  *)
+      | _ -> assert false (*  Default patterns should never be indices. *)
+
+  (********************************************************************
   *Tacticals:
   ********************************************************************)
   
@@ -44,7 +79,7 @@ struct
   module G = Logic.GenericTacticals (FirstorderSig) (O)
   
   (********************************************************************
-  *genericTacticals
+  *genericTacticals:
   ********************************************************************)
   let genericTacticals = G.tacticals
 
@@ -105,27 +140,48 @@ struct
       subs = proofs }
 
   (********************************************************************
-  *findFormula:
-  * Given a template and a list of formulas F, returns the first formula
-  * that matches the template along with its context in F.
+  *makeMatcher:
+  * A matcher is a function that takes a list of formulas and returns
+  * a zipper into the formulas pointing at the relevant formula.
+  * This function constructs a matcher given a test function for
+  * deciding which formula is relevant based on the formula and its
+  * index in the list of formulas.
   ********************************************************************)
-  let findFormula pattern formulas =
-    let rec find front formulas =
-      match formulas with
-        [] ->
-          let () = O.debug "Firstorder.findFormula: not found.\n" in
-          None
-      | (Formula(_,formula) as f)::fs ->
-          if FOA.matchFormula pattern formula then
-            let () =
-              O.debug ("Firstorder.findFormula: found: " ^
-                       (string_of_formula f ^ ".\n"))
-            in
-              Some(f, List.rev front, fs)
+  let matcherTest test = test
+  let makeMatcher test formulas =
+    let rec aux i acc = function
+      | f::tl ->
+          if test f i then
+            Some (f, List.rev acc, tl)
           else
-            find (f::front) fs
+            aux (i + 1) (f::acc) tl
+      | [] -> None
     in
-      find [] formulas
+    aux 0 [] formulas
+  
+  (********************************************************************
+  *makeFormulaMatcher:
+  * Like above, but test doesn't take an index.
+  ********************************************************************)
+  let formulaTest test = fun f i -> test f
+  let makeFormulaMatcher test = makeMatcher (formulaTest test)
+  
+  (********************************************************************
+  *patternTest:
+  * Given a pattern, produces a match test.
+  ********************************************************************)
+  let patternTest pattern = fun (Formula(_,f)) index ->
+      match pattern with
+    | Index(n) -> index = (n - 1) (* Index from 1 *)
+    | Pattern(p) -> FOA.matchFormula p f
+
+  (********************************************************************
+  *patternMatcher:
+  * Constructs a matcher from a general pattern.
+  ********************************************************************)
+  let patternMatcher pattern = makeMatcher (patternTest pattern)
+  let patternMatcherWithDefault pattern defaultTest =
+    makeMatcher (fun f i -> (patternTest pattern f i) && (defaultTest f i))
 
   (********************************************************************
   *matchLeft, matchRight:
@@ -139,7 +195,7 @@ struct
   let matchLeft pattern after sequent =
     let lhs = match after with Some a -> a | None -> sequent.lhs in
     let rhs = sequent.rhs in
-    let result = findFormula pattern lhs in
+    let result = patternMatcher pattern lhs in
     match result with
       Some(f,before,after) -> Some(f,before,after,lhs,rhs)
     | None -> None
@@ -147,7 +203,7 @@ struct
   let matchRight pattern after sequent =
     let lhs = sequent.lhs in
     let rhs = match after with Some a -> a | None -> sequent.rhs in
-    let result = findFormula pattern rhs in
+    let result = patternMatcher pattern rhs in
     match result with
       Some(f,before,after) -> Some(f,before,after,lhs,rhs)
     | None -> None
@@ -202,7 +258,7 @@ struct
         (G.invalidArguments (name ^ ": incorrect number of arguments."))
       else
       
-      let defaultPattern = parsePattern default in
+      let defaultPattern = parseGeneralPattern default in
       
       if Option.isSome defaultPattern then
         let defaultPattern = Option.get defaultPattern in
@@ -210,10 +266,10 @@ struct
             [] ->
               (makeTactical name (matchbuilder defaultPattern) tactic session)
           | Absyn.String(s)::[] ->
-              let pattern = parsePattern s in
+              let pattern = parseGeneralPattern s in
               if (Option.isSome pattern) then
                 let pattern = Option.get pattern in
-                if not (FOA.matchPattern defaultPattern pattern) then
+                if not (matchGeneralPattern defaultPattern pattern) then
                   G.invalidArguments
                     (name ^ ": pattern does not match default pattern")
                 else
@@ -1150,28 +1206,15 @@ struct
       | `Left -> G.makeTactical left
       | `Right -> G.makeTactical right
 
-  (** Utility for creating matchers easily. TODO: get rid of that, and only
-    * use patterns. *)
-  let make_matcher test formulas =
-    let rec aux acc = function
-      | f::tl -> if test f then Some (f,List.rev acc,tl) else aux (f::acc) tl
-      | [] -> None
-    in
-    aux [] formulas
-
   (* Easy wrapper for tactics without arguments. *)
-  let specialize ?arg side default_matcher session args =
+  let specialize ?arg side defaultTest session args =
     match args with
       | [Absyn.String s] ->
-          begin match parsePattern s with
-            | Some pattern ->
-                intro
-                  side (findFormula pattern)
-                  session arg
+          (match parseGeneralPattern s with
+            | Some p -> intro side (patternMatcherWithDefault p defaultTest) session arg
             | None ->
-                O.error "invalid pattern" ; fun s sc fc -> fc ()
-          end
-      | [] -> intro side default_matcher session arg
+                O.error "invalid pattern" ; fun s sc fc -> fc ())
+      | [] -> intro side (makeMatcher defaultTest) session arg
       | _ ->
           O.error "too many arguments" ; fun s sc fc -> fc ()
 
@@ -1179,8 +1222,8 @@ struct
   let patternTac ?arg side defaultPattern session args =
     match parsePattern defaultPattern with
       | Some (pattern) ->
-          specialize ?arg side (findFormula pattern) session args
-      | None -> assert false
+          specialize ?arg side (patternTest (Pattern pattern)) session args
+      | None -> assert false (* patternTac is only called with constants. *)
 
   (* {1 Specialized basic manual tactics} *)
 
@@ -1224,7 +1267,7 @@ struct
 
   let axiom_atom =
     specialize `Any
-      (make_matcher
+      (formulaTest
          (function
             | Formula(_,(_,FOA.ApplicationFormula ((FOA.AtomicFormula _),_))) ->
                 true
@@ -1233,7 +1276,7 @@ struct
 
   let axiom_mu =
     specialize `Right
-      (make_matcher
+      (formulaTest
          (function
             | Formula(_,
                 (_,FOA.ApplicationFormula
@@ -1243,14 +1286,15 @@ struct
 
   let axiom_nu =
     specialize `Left
-      (make_matcher
+      (formulaTest
          (function
             | Formula(_,
                 (_,FOA.ApplicationFormula
                     ((FOA.FixpointFormula (FOA.CoInductive,_,_,_)),_))) -> true
             | _ -> false))
       ~arg:"init"
-  let axiom s a =
+
+  let axiomTactical s a =
     G.orElseTactical (axiom_atom s a)
       (G.orElseTactical (axiom_mu s a) (axiom_nu s a))
 
@@ -1388,7 +1432,7 @@ struct
     * Apply all non-branching invertible rules.
     * Handling units (true/false) requires to work on atoms on both sides. *)
   let simplify_matcher_l = (* TODO use annotations more ? *)
-    make_matcher
+    makeFormulaMatcher
       (fun (Formula(i,(_,f))) ->
          match f with
            | FOA.BinaryFormula (FOA.And,_,_)
@@ -1398,7 +1442,7 @@ struct
            | _ -> false)
 
   let simplify_matcher_r =
-    make_matcher
+    makeFormulaMatcher
       (fun (Formula(i,(_,f))) ->
          match f with
            | FOA.QuantifiedFormula ((FOA.Nabla|FOA.Pi),_)
@@ -1549,8 +1593,9 @@ struct
     * The freeze tactic works the same way, even though it has nothing to do
     * with decide. *)  
 
-  (*  matcher: helper to make a matcher.  *)
-  let matcher fl = make_matcher (fun (Formula(i,f)) -> fl f)
+  (*  matcher: helper to make a matcher on an abstract syntax formula without
+      an annotation.  *)
+  let matcher fl = makeMatcher (fun (Formula(i,f)) i -> fl f)
   
   (* Find a formula on the right satisfying fr,
   * succeed with the sequent resulting of the application of focus to it.
@@ -1646,12 +1691,12 @@ struct
   ********************************************************************)
   and unfocus =
     let matcher_l =
-      make_matcher
+      makeFormulaMatcher
         (fun (Formula(i,(a,f))) ->
            a.FOA.control=FOA.Focused && a.FOA.polarity=FOA.Positive)
     in
     let matcher_r =
-      make_matcher
+      makeFormulaMatcher
         (fun (Formula(i,(a,f))) ->
            a.FOA.control=FOA.Focused && a.FOA.polarity=FOA.Negative)
     in
@@ -1693,15 +1738,15 @@ struct
     cutRepeatTactical
       (G.orElseListTactical
          [ automaticIntro session `Left
-             (make_matcher
+             (makeFormulaMatcher
                (fun (Formula(i,(a,f))) ->
                   not (isFixpoint f || a.FOA.polarity=FOA.Negative))) ;
            automaticIntro session `Right
-             (make_matcher
+             (makeFormulaMatcher
                (fun (Formula(i,(a,f))) ->
                   not (isFixpoint f || a.FOA.polarity=FOA.Positive))) ;
            intro `Left
-             (make_matcher
+             (makeFormulaMatcher
                 (function
                    | Formula(i,(({FOA.freezing=FOA.Unfrozen} as a),
                        (FOA.ApplicationFormula(
@@ -1716,7 +1761,7 @@ struct
                    | _ -> false))
              session (Some "unfold") ;
            intro `Right
-             (make_matcher
+             (makeFormulaMatcher
                 (function
                    | Formula(i,(({FOA.freezing=FOA.Unfrozen} as a),
                        (FOA.ApplicationFormula(
@@ -1735,7 +1780,7 @@ struct
   (* TODO: note that the treatment of fixed points is not based on polarities
    * but the roles of mu/nu are hardcoded. *)
   and match_inductable =
-    make_matcher
+    makeFormulaMatcher
       (fun (Formula(i,(a,f))) ->
          match f with
            | FOA.ApplicationFormula
@@ -1744,7 +1789,7 @@ struct
            | _ -> false)
   
   and match_coinductable =
-    make_matcher
+    makeFormulaMatcher
       (fun (Formula(i,(a,f))) ->
          match f with
            | FOA.ApplicationFormula
@@ -1757,11 +1802,11 @@ struct
     let body =
       (G.orElseTactical
         (automaticIntro session `Left
-          (make_matcher
+          (makeFormulaMatcher
              (fun (Formula(i,(a,f))) ->
                a.FOA.control=FOA.Focused && a.FOA.polarity=FOA.Negative)))
         (automaticIntro session `Right
-          (make_matcher
+          (makeFormulaMatcher
              (fun (Formula(i,(a,f))) ->
                a.FOA.control=FOA.Focused && a.FOA.polarity=FOA.Positive))))
     in
@@ -2200,7 +2245,7 @@ struct
         Not_found -> (O.error "undefined lemma.\n" ; G.failureTactical))
     in
     match args with
-      [Absyn.String(s)] -> apply s true
+    | [Absyn.String(s)] -> apply s true
     | [Absyn.String(s); Absyn.String(mode)] ->
         if mode = "reduce" then
           apply s true
@@ -2210,8 +2255,41 @@ struct
           G.invalidArguments "apply"
     | _ -> G.invalidArguments "apply"
 
-  let applyTactical s a =
-    G.thenTactical (abstractTactical s []) (applyTactical s a)
+  (********************************************************************
+  *abstractApplyTactical:
+  * The front-end to applyTactical.  It first abstracts the sequent and
+  * then passes its arguments to apply.  If the first argument is
+  * an index instead of a lemma it treats the first argument as pointing
+  * at a lemma and it first introduces universals and then applies
+  * the given arguments to each the left side of each implication.
+  ********************************************************************)
+  let abstractApplyTactical session args =
+    let isIndexPattern s =
+      Option.isSome (parseIndexPattern s)
+    in
+
+    match args with
+      | (Absyn.String(s) as hyp)::args when isIndexPattern s ->
+          let body arg = match arg with
+              Absyn.String(s) -> (axiomTactical session [arg])
+            | Absyn.Tactical(t) -> t
+          in
+          let rec tac args = match args with
+              [] -> G.idTactical
+            | arg::args' ->
+                (G.thenTactical
+                  (impL session [hyp])
+                  (G.orElseTactical
+                    (G.completeTactical (body arg))
+                    (tac args')))
+          in
+          G.thenTactical
+            (G.repeatTactical (piL session [hyp]))
+            (tac args)
+      | _ ->
+          G.thenTactical
+            (abstractTactical session [])
+            (applyTactical session args)
 
   (********************************************************************
   *admitTactical:
@@ -2305,5 +2383,4 @@ struct
       (makeSimpleTactical "find" (matchLeft, "_") tactic session args)
       (makeSimpleTactical "find" (matchRight, "_") tactic session args)
 
-          
 end

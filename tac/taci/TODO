@@ -1,16 +1,16 @@
 BUGS:
   * Firstorder.checkMonotonicity is broken (see p := pi x\ p => false).
- 
+
   * Manually specifying polarities is broken when it comes to definitions.  When
     a definition is read, all of the mutually defined fixpoints are first treated
     as atoms -- this gives them a negative polarity.  Then they are replaced by
     a DB index, which retains the negative polarity, so that later when a substitution
     occurs the fixpoint is automatically given a negative polarity.  To fix this
-    we are forcing that mu has a positive polarity, nu a negative polarity; this
+    we are forcing that mu has a positive polarity, and nu a negative polarity; this
     overrides any polarities specified by the user in this case (but only this
-    case, polarity games can still be played in non-mutually defined fixpoint
+    case; polarity games can still be played in non-mutually defined fixpoint
     applications).
-    
+  
   * Currently when processing definitions we don't check that the fixpoints
     we are defining have the right number of arguments, we only check when
     parsing formulas.  It's hard to check this in Firstorder.processPreDefinition,
@@ -35,7 +35,7 @@ TODO:
     polarized -- which caused bugs, and might cause more.
 
   * Output modules shouldn't take strings but formatters, in order to allow
-    thinks like: O.debug "%s: invalid level %d" bla bli
+    thinks like: O.debug "%s: invalid level %d" bla bli,
 
   * [David] Better syntax for higher-order terms
     Currently, (x\y\ ..) is not allowed, only (x\(y\ ..)).
