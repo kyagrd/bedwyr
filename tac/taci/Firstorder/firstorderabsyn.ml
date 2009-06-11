@@ -310,14 +310,15 @@ let rec string_of_formula ~generic ~names ch =
       | AtomicFormula(name) -> pf "%s" name
       | DBFormula(l,n,i) -> 
           (*  TODO: eep!  Such hackery! *)
-          let rec name l = if l=0 then n else "lift_" ^ name (l-1) in
+          let rec name l = if l = 0 then n else "lift_" ^ name (l-1) in
           pf "%s" (name l));
 
     abstf = (function
         AbstractionFormula (hint,f) ->
           let hint = Term.get_dummy_name hint in 
-          (pf "%s\\\\@ %a" hint (fun ch -> (s ~names:(hint::names) ch).abstf) f;
-          Term.free hint)
+          (pf "%s\\\\@ %a" hint
+            (fun ch f -> (s ~names:(hint::names) ch).abstf f; Term.free hint)
+            f)
       | AbstractionBody(f) -> pf "%a" (fun ch -> (s ~names ch).polf) f) ; 
 
     formf = (function
@@ -344,7 +345,7 @@ let rec string_of_formula ~generic ~names ch =
               get [] (QuantifiedFormula (q,f))
           in
           let names = List.rev_append vars names in
-            pf "@[<1>(%s %s\\@ %a)@]"
+            pf "@[<1>(%s %s\\\\@ %a)@]"
               (getQuantifierName q)
               (String.concat "\\" vars)
               (fun ch -> (s ~names ch).formf) body ;
@@ -1032,11 +1033,11 @@ let rec matchFormula pattern formula =
       | _ -> false
 
   (********************************************************************
-  *matchFormulas:
+  *matchAnnotatedFormula:
   * Recurse over the structure of a formula and a pattern, matching
   * them.
   ********************************************************************)
-  and matchFormulas pattern formula =
+  and matchAnnotatedFormula pattern formula =
     let (annotation, formula) = formula in
     let (patternAnnotation, pattern) = pattern in
     
@@ -1050,14 +1051,14 @@ let rec matchFormula pattern formula =
     | (ApplicationPattern(head,tl), ApplicationFormula(head',tl')) ->
         matchPredicates (head,tl) (head', tl')
     | (BinaryPattern(c, l,r), BinaryFormula(c', l', r')) ->
-        (c = c') && (matchFormulas l l') && (matchFormulas r r')
+        (c = c') && (matchAnnotatedFormula l l') && (matchAnnotatedFormula r r')
     | (EqualityPattern(t1, t2), EqualityFormula(t1', t2')) ->
         (success (rightUnify t1 t1')) && (success (rightUnify t2 t2'))
     | (QuantifiedPattern(q, f), QuantifiedFormula(q', f')) ->
         (q = q') && (matchAbstractionFormula f f')
     | (p,f) -> false
   in
-  let result = (matchFormulas pattern formula) in
+  let result = (matchAnnotatedFormula pattern formula) in
   
   (*  Restore the binding state so later matches can work,
       and return the result.  *)

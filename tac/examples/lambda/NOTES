@@ -29,7 +29,7 @@ is a term abstraction and that n cannot occur in types. This would take
 another inductive definition, to restrict to well-formed types or describe 
 what it is to be abstracted over a term only.
 
-If we do not explicit the type in (lambda M), then we have to argue
+If we do not make explicit the type in (lambda M), then we have to argue
 in the process of inducting why the left hand-side of arrows cannot
 have nabla variables occurring in it. This is actually impossible in the 
 absence of typing: a generic term variable can actually be used as a type.
