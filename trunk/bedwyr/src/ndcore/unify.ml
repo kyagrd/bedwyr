@@ -452,15 +452,13 @@ let makesubst h1 t2 a1 =
       | Term.App (h2,a2) ->
           begin match Term.observe h2 with
             | Term.Var {tag=tag} when constant tag ->
-                let a2 = List.map Norm.hnorm a2 in
                 Term.app
                   (nested_subst h2 lev)
-                  (List.map (fun x -> nested_subst x lev) a2)
+                  (List.map (fun x -> nested_subst (Norm.hnorm x) lev) a2)
             | Term.DB _ | Term.NB _ ->
-                let a2 = List.map Norm.hnorm a2 in
                 Term.app
                   (nested_subst h2 lev)
-                  (List.map (fun x -> nested_subst x lev) a2)
+                  (List.map (fun x -> nested_subst (Norm.hnorm x) lev) a2)
             | Term.Var v2 when variable v2.tag ->
                 if Term.eq h2 h1 then raise OccursCheck ;
                 let a2 = List.map Norm.hnorm a2 in
@@ -480,7 +478,10 @@ let makesubst h1 t2 a1 =
                     else 
                       Term.app h2 a1'
             | Var _ -> failwith "logic variable on the left"
-            | _ -> assert false
+            | Ptr _ -> assert false
+            | Susp _ -> assert false
+            | App _ -> assert false
+            | Lam _ -> assert false
           end
       | Var _ -> failwith "logic variable on the left"
       | _ -> assert false
@@ -545,7 +546,7 @@ let makesubst h1 t2 a1 =
       | NotLLambda e ->
           (* Not a pattern: try a very strict occurs-check to allow
            * simple cases of the form v1=t2. *)
-          if a1 = [] && (Printf.printf "Foo!\n" ; can_bind v1 t2) then
+          if a1 = [] && (can_bind v1 t2) then
             t2
           else
             not_ll e

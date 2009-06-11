@@ -336,27 +336,51 @@ struct
         f = f' && name = name'
     | _ -> false
 
-  let fixpointInit i p params sc fc =
-    let rec attempts = function
-      | [] -> fc ()
-      | Formula(i',(_,FOA.ApplicationFormula(p',params')))::formulas ->
+  (*
+  let fixpointInit i p params sc fc matcher formulas =
+    let rec attempts formulas = match (matcher formulas) with
+      | None -> fc ()
+      | Some(Formula(i',(_,FOA.ApplicationFormula(p',params'))),_,formulas') ->
           if fixpointEq p p' &&
              (i.context=i'.context || not Param.strictNabla) then
-            begin match FOA.unifyList FOA.rightUnify params params' with
+            (match FOA.unifyList FOA.rightUnify params params' with
               | FOA.UnifySucceeded bind ->
-                  sc (fun () -> FOA.undoUnify bind ; attempts formulas)
+                  sc (fun () -> FOA.undoUnify bind ; attempts formulas')
               | FOA.UnifyFailed ->
-                  attempts formulas
+                  attempts formulas'
               | FOA.UnifyError s ->
                   if Properties.getBool "firstorder.debug" then
                     O.error (s ^ ".\n");
-                  attempts formulas
+                  attempts formulas')
+          else
+            attempts formulas'
+      | Some(_,_,formulas') -> assert false
+    in
+    attempts formulas
+  *)
+  
+  let fixpointInit i p params sc fc matcher formulas =
+    let rec attempts formulas index = match formulas with
+      | [] -> fc ()
+      | (Formula(i',(_,FOA.ApplicationFormula(p',params'))) as f)::formulas ->
+          if fixpointEq p p' &&
+             (i.context=i'.context || not Param.strictNabla) &&
+             matcher f index then
+            begin match FOA.unifyList FOA.rightUnify params params' with
+              | FOA.UnifySucceeded bind ->
+                  sc (fun () -> FOA.undoUnify bind ; attempts formulas (index + 1))
+              | FOA.UnifyFailed ->
+                  attempts formulas (index + 1)
+              | FOA.UnifyError s ->
+                  if Properties.getBool "firstorder.debug" then
+                    O.error (s ^ ".\n");
+                  attempts formulas (index + 1)
             end
           else
-            attempts formulas
-      | _::formulas -> attempts formulas
+            attempts formulas (index + 1)
+      | _::formulas -> attempts formulas (index + 1)
     in
-    attempts
+    attempts formulas 0
 
   (********************************************************************
   *abs_of_pred:
@@ -462,8 +486,6 @@ struct
   type internal_sc =
     ?k:(unit -> unit) -> ?b:(Term.term list) -> string -> sequent list -> unit
 
-  let initial_progressing_bound = Some 10
-
   (** [intro] will be our do-it-all tactic: it takes a matcher, and applies
     * a rule with a matched formula as the active one.
     *
@@ -477,8 +499,17 @@ struct
     * an additive disjunction if no [arg] is passed.
     *
     * The [intro] tactic will be conveniently wrapped in several specialized
-    * tactics for the user, using [arg] to force choices. *)
-  let intro side matcher session arg =
+    * tactics for the user, using [arg] to force choices.
+    *
+    * Note: 'axt' is the 'axiom tester'.  Axiom is the only thing that works on
+    * both sides of the sequent.  In the case of axiom on mu, the pattern is used
+    * to pick the formula on the right (uselessly as there's only 1).  Then it
+    * defaults to picking the first mu on the left, then the second, etc.  This
+    * is fine in the automatic case, but since the low-level tacticals use intro,
+    * axiom on mu was broken in that it wouldn't let you pick what to use on the 
+    * left.  The axiom tester lets you say 'only use those formulas on the left
+    * that meet the test. *)
+  let intro ?axt:(axt = fun _ _ -> true) side matcher session arg =
     (* Propagate the focused flag from f to its subformulas. Meant to be used as
      * part of the zipper. *)
     let propagate (super,_) (Formula(i,(sub,sf))) =
@@ -674,7 +705,7 @@ struct
                         if pol.FOA.polarity = FOA.Positive then fc () else
                         fixpointInit i p args
                           (fun k -> sc "init_nu" [] ~k)
-                          fc seq.rhs
+                          fc axt seq.rhs
                     | None ->
                         let fc () =
                           unfoldFixpoint "nu_l"
@@ -683,8 +714,7 @@ struct
                           if pol.FOA.polarity = FOA.Positive then fc () else
                             fixpointInit i p args
                               (fun k -> sc "init_nu" [] ~k)
-                              fc
-                              seq.rhs
+                              fc axt seq.rhs
                     | s -> assert false
                   end
               | FOA.FixpointFormula (FOA.Inductive,name,argnames,body) ->
@@ -878,7 +908,7 @@ struct
                         in
                         let i' =
                           { (* i with *) context = 0 ;
-                            progressing_bound = initial_progressing_bound }
+                            progressing_bound = Some (Properties.getInt "firstorder.progressingbound")}
                         in
                         if outOfBound seq.bound then fc () else
                           let seq' = 
@@ -1015,7 +1045,7 @@ struct
                         if pol.FOA.polarity = FOA.Negative then fc () else
                         fixpointInit i p args
                           (fun k -> sc "init_mu" [] ~k)
-                          fc seq.lhs
+                          fc axt seq.lhs
                     | None ->
                         let fc () =
                           unfoldFixpoint "mu_r"
@@ -1024,8 +1054,7 @@ struct
                           if pol.FOA.polarity = FOA.Negative then fc () else
                             fixpointInit i p args
                               (fun k -> sc "init_mu" [] ~k)
-                              fc
-                              seq.lhs
+                              fc axt seq.lhs
                     | s -> O.error "Invalid parameter." ; fc ()
                   end
               | FOA.FixpointFormula (FOA.CoInductive,name,argnames,body) ->
@@ -1165,7 +1194,7 @@ struct
                         in
                         let i' =
                           { (* i with *) context = 0 ;
-                            progressing_bound = initial_progressing_bound }
+                            progressing_bound = Some (Properties.getInt "firstorder.progressingbound") }
                         in
                           if outOfBound seq.bound then fc () else
                             (*  TODO: check the other premise.  *)
@@ -1190,12 +1219,12 @@ struct
           | Some (f,before',after) ->
               let before = before @ before' in
               let zip l = before @ l @ after in
-              let parse_more () = parse (before @ [f]) after in
+              let parseMore () = parse (before @ [f]) after in
                 formTac
                   sequent f zip
-                  (fun ?(k=parse_more) ?b name sequents ->
+                  (fun ?(k = parseMore) ?b name sequents ->
                      sc sequents (makeProofBuilder name ?b ~f sequent) k)
-                  parse_more
+                  parseMore
       in
       parse [] (get_hs sequent)
     in
@@ -1206,15 +1235,16 @@ struct
       | `Left -> G.makeTactical left
       | `Right -> G.makeTactical right
 
-  (* Easy wrapper for tactics without arguments. *)
-  let specialize ?arg side defaultTest session args =
+  (* Easy wrapper for tactics without arguments; see intro for a description of the
+   * arguments, etc. *)
+  let specialize ?arg ?axt:(axt = fun _ _ -> true) side defaultTest session args =
     match args with
       | [Absyn.String s] ->
           (match parseGeneralPattern s with
-            | Some p -> intro side (patternMatcherWithDefault p defaultTest) session arg
+            | Some p -> intro side (patternMatcherWithDefault p defaultTest) session arg ~axt
             | None ->
                 O.error "invalid pattern" ; fun s sc fc -> fc ())
-      | [] -> intro side (makeMatcher defaultTest) session arg
+      | [] -> intro side (makeMatcher defaultTest) session arg ~axt
       | _ ->
           O.error "too many arguments" ; fun s sc fc -> fc ()
 
@@ -1266,7 +1296,7 @@ struct
     | _ -> (fun _ _ fc -> O.error "Invalid arguments.\n" ; fc ())
 
   let axiom_atom =
-    specialize `Any
+    specialize `Left
       (formulaTest
          (function
             | Formula(_,(_,FOA.ApplicationFormula ((FOA.AtomicFormula _),_))) ->
@@ -1274,15 +1304,27 @@ struct
             | _ -> false))
       ~arg:"init"
 
-  let axiom_mu =
-    specialize `Right
-      (formulaTest
-         (function
-            | Formula(_,
-                (_,FOA.ApplicationFormula
-                    ((FOA.FixpointFormula (FOA.Inductive,_,_,_)),_))) -> true
-            | _ -> false))
-      ~arg:"init"
+  let axiom_mu session args =
+    let tactical axt =
+      specialize `Right
+        (formulaTest
+           (function
+              | Formula(_,
+                  (_,FOA.ApplicationFormula
+                      ((FOA.FixpointFormula (FOA.Inductive,_,_,_)),_))) -> true
+              | _ -> false))
+        ~arg:"init"
+        ~axt:axt
+    in
+    match args with
+      | [] -> tactical (fun _ _ -> true) session args
+      | [Absyn.String(s)] ->
+          let pattern = parseGeneralPattern s in
+          if Option.isSome pattern then
+            tactical (patternTest (Option.get pattern)) session args
+          else
+            G.invalidArguments "axiom"
+      | _ -> G.invalidArguments "axiom"
 
   let axiom_nu =
     specialize `Left
@@ -1958,7 +2000,7 @@ struct
                   sc fc)
           (fun _ -> G.orElseTactical
              (cutThenTactical
-                (* The cut is needed here so that auto_intro doesn't try
+                (* The cut is needed here so that automaticIntro doesn't try
                  * to induct on another Mu on the left. *)
                 (fun _ sc fc ->
                    if Properties.getBool "firstorder.proofsearchdebug" then
@@ -1970,7 +2012,7 @@ struct
                    automaticIntro session `Left match_inductable [seq] sc fc)
                 async)
              (cutThenTactical
-                (* The cut is needed here so that auto_intro doesn't try
+                (* The cut is needed here so that automaticIntro doesn't try
                  * to unfold another Mu on the left. *)
                 (fun _ sc fc ->
                    if Properties.getBool "firstorder.proofsearchdebug" then
@@ -2070,7 +2112,7 @@ struct
   ********************************************************************)
   and setBound session syncBound lemmaBound =
     let set (Formula (i,f)) =
-      Formula ({ i with progressing_bound = initial_progressing_bound },f)
+      Formula ({ i with progressing_bound = Some (Properties.getInt "firstorder.progressingbound")},f)
     in
     fun seqs sc fc ->
       match seqs with
@@ -2108,7 +2150,7 @@ struct
   ********************************************************************)
   and setBoundTactical session args =
     let lemmaBound = Properties.getInt "firstorder.lemmas.bound" in
-    let syncBound = (Properties.getInt "firstorder.defaultbound") in
+    let syncBound = Properties.getInt "firstorder.bound" in
     match args with
         [Absyn.String s] ->
           setBound session (stringToIntDefault s 0) lemmaBound
@@ -2148,7 +2190,7 @@ struct
           let maxBound = stringToIntDefault s' 0 in
           construct (min maxBound minBound) (max minBound maxBound)
       | [] ->
-          construct 0 (max (Properties.getInt "firstorder.defaultbound") 0)
+          construct 0 (max (Properties.getInt "firstorder.bound") 0)
       | _ -> G.invalidArguments "prove"
 
   let unfocusTactic =

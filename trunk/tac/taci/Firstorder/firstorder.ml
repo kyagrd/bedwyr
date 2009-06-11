@@ -26,10 +26,8 @@
 let () = Properties.setBool "firstorder.proofsearchdebug" false
 let () = Properties.setBool "firstorder.debug" false
 let () = Properties.setBool "firstorder.term-debug" false
-let () = Properties.setInt "firstorder.defaultbound" 3
-(* The following is a bad name, for historical reasons *)
-let () = Properties.setBool "firstorder.asyncbound" true
-let () = Properties.setInt "firstorder.defaultasyncbound" 10
+let () = Properties.setInt "firstorder.bound" 3
+let () = Properties.setInt "firstorder.progressingbound" 10
 let () = Properties.setBool "firstorder.lemmas" false
 let () = Properties.setInt "firstorder.lemmas.bound" 1
 let () = Properties.setString "firstorder.frozens" "thaw"
