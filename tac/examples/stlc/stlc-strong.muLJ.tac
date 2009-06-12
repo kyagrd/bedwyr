@@ -131,7 +131,7 @@ cases.
   async.
   then(pi_l, pi_l, imp_l).
     apply("context_lift").
-    force("C'", "(x1\ cons (pair x1 h9) h8)").
+    force("C'", "(x1\ cons (pair x1 h7) h8)").
     weak_l("context _").
     weak_l("lift_of _ _ _").
     mu_r.
@@ -166,6 +166,3 @@ cases.
 
   prove.    % bind absurd.
 % Qed.
-
-#lemma eval_det "pi e\v1\v2\ eval e v1 => eval e v2 => v1 = v2".
-prove.
