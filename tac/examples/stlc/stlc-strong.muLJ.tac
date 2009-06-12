@@ -58,7 +58,7 @@ induction("g\m\t\ nabla x\ pi g'\ permute g' (cons (pair x t') g) =>
     apply("lift_permute_s").
     weak_l("lift_permute _ _").
     then(pi_l, imp_l).
-    force("G'''", "(x1\(x2\ cons (pair x1 h) (g' x2)))").
+    force("G'''", "(x1\(x2\ cons (pair x1 h0) (g' x2)))").
     prove.
     prove.
 
@@ -91,7 +91,7 @@ induction("gg\m\tm\ pi g\ permute gg (cons (pair n tn) g) =>
     then(pi_l, imp_l).
 
       % cons maintains permutation.
-      force("G0", "(n1\ cons (pair n1 h) g0)").
+      force("G0", "(n1\ cons (pair n1 h0) g0)").
       weak_l("of _ _ _").
       apply("permute_lift").
       weak_l("permute _ _").
