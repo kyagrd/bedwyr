@@ -4,6 +4,17 @@
 #tactical of_axiom then(mu_r, do).
 #tactical invert then(mu_l("of _ _ _"), async).
 #tactical app then(repeat(pi_l), repeat(then(imp_l, try(axiom)))).
+#tactical bind_absurd then(
+    find("bind _ _ _"),
+    find("context _"),
+    repeat(weak_l("pi _")),
+    repeat(weak_l("_ => _")),
+    repeat(weak_l("_ , _")),
+    repeat(weak_l("sub _ _ _")),
+    repeat(weak_l("cut _ _")),
+    mu_l("context _"),
+    prove("0")).
+
 
 #define "permute a b :=
   (pi m\t\ bind m t a => bind m t b), (pi m\t\ bind m t b => bind m t a)
@@ -171,8 +182,8 @@ cases.
   weak_l("of _ _ (arr _ _)").
   apply("of_cut").
   axiom.
-  prove.
-  prove.  % bind absurd.
+  bind_absurd.
+  bind_absurd.
 
   % rec.
   contract_l("of _ _ _").
@@ -181,10 +192,9 @@ cases.
   apply("of_subst").
   apply("of_cut").
   axiom.
-  prove.  % bind absurd.
+  bind_absurd.
 % Qed.
 
 #theorem eval_determinacy "pi e\v1\v2\ eval e v1 => eval e v2 => v1 = v2".
 prove.
-
 
