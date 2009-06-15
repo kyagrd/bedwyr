@@ -601,33 +601,31 @@ let eliminateNablas tv =
         end
     in
 
-      {polf = (fun (p,form) -> (p,(f pv tv).formf form)) ;
+      {formf = (fun _ -> assert false) ;
 
-       formf = (function
+       polf = (fun (p,form) ->
+       match form with
         (** Generic abstraction commutes with all connectives. *)
         | BinaryFormula (c,a,b) ->
-            BinaryFormula (c, (f pv tv).polf a, (f pv tv).polf b)
+            p, BinaryFormula (c, (f pv tv).polf a, (f pv tv).polf b)
         | EqualityFormula (u,v) ->
-            EqualityFormula (tf u, tf v)
+            p, EqualityFormula (tf u, tf v)
         | QuantifiedFormula(q,form) ->
             begin match q with
               Pi
-            | Sigma -> QuantifiedFormula(q,(f pv tv).abstf form)
-                  | Nabla ->
+            | Sigma -> p, QuantifiedFormula(q,(f pv tv).abstf form)
+            | Nabla ->
                   let head = fresh () in
                   let tv = head :: tv in
                     begin match apply [head] form with
                       | None -> failwith "not a formula"
                       | Some (AbstractionBody (form)) ->
-                          (* A nabla's polarity has to be the same as that of the
-                           * connective under it, because it will override it.
-                           * It should be ensured by construction. *)
-                          snd ((f pv tv).polf form)
+                          (f pv tv).polf form
                       | Some (AbstractionFormula _) ->
                           failwith "nabla elimination was incomplete"
                     end
             end
-        | ApplicationFormula (form,terms) -> (f pv tv).predf form terms) ;
+        | ApplicationFormula (form,terms) -> p, (f pv tv).predf form terms) ;
  
       abstf = (function
           AbstractionFormula (name,_) as form ->
