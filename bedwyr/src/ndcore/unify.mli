@@ -32,6 +32,5 @@ sig
 end
 
 module Make : functor (P:Param) -> sig
-  val unify : Term.term -> Term.term -> unit
   val pattern_unify : Term.term -> Term.term -> unit
 end
