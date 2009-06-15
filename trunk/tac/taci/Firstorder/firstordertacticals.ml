@@ -335,29 +335,6 @@ struct
     | FOA.FixpointFormula (f,name,_,_), FOA.FixpointFormula (f',name',_,_) ->
         f = f' && name = name'
     | _ -> false
-
-  (*
-  let fixpointInit i p params sc fc matcher formulas =
-    let rec attempts formulas = match (matcher formulas) with
-      | None -> fc ()
-      | Some(Formula(i',(_,FOA.ApplicationFormula(p',params'))),_,formulas') ->
-          if fixpointEq p p' &&
-             (i.context=i'.context || not Param.strictNabla) then
-            (match FOA.unifyList FOA.rightUnify params params' with
-              | FOA.UnifySucceeded bind ->
-                  sc (fun () -> FOA.undoUnify bind ; attempts formulas')
-              | FOA.UnifyFailed ->
-                  attempts formulas'
-              | FOA.UnifyError s ->
-                  if Properties.getBool "firstorder.debug" then
-                    O.error (s ^ ".\n");
-                  attempts formulas')
-          else
-            attempts formulas'
-      | Some(_,_,formulas') -> assert false
-    in
-    attempts formulas
-  *)
   
   let fixpointInit i p params sc fc matcher formulas =
     let rec attempts formulas index = match formulas with
