@@ -25,7 +25,8 @@
 **********************************************************************)
 let () = Properties.setBool "firstorder.proofsearchdebug" false
 let () = Properties.setBool "firstorder.debug" false
-let () = Properties.setBool "firstorder.term-debug" false
+let () = Properties.setBool "firstorder.termdebug" false
+let () = Properties.setBool "firstorder.show-annotations" false
 let () = Properties.setInt "firstorder.bound" 3
 let () = Properties.setInt "firstorder.progressingbound" 10
 let () = Properties.setBool "firstorder.lemmas" false

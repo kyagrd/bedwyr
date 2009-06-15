@@ -211,7 +211,7 @@ struct
 
   let annotateFormula ann formula =
     (FOA.string_of_control ann.FOA.control) ^
-    (if Properties.getBool "firstorder.proofsearchdebug" then
+    (if Properties.getBool "firstorder.show-annotations" then
        FOA.string_of_polarity ann.FOA.polarity
      else "") ^
     formula ^

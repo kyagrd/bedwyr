@@ -22,8 +22,8 @@ closed Context (all T1 T2) :-
   nabla x\ closed ((pair x T1)::Context) (T2 x).
 
 type Context top.
-type Context X :- bind X type Context.
+type Context X :- bind X U Context.
 type Context (arrow T1 T2) :- type Context T1, type Context T2.
 type Context (all T1 T2) :-
   type Context T1,
-  nabla x\ type ((pair x type)::Context) (T2 x).
+  nabla x\ type ((pair x T1)::Context) (T2 x).

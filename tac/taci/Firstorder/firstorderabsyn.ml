@@ -395,7 +395,7 @@ let rec string_of_pattern_ast =
 let string_of_pattern_ast = string_of_pattern_ast.polp
 
 let string_of_term_ast ~generic t =
-  let dbg = Properties.getBool "firstorder.term-debug" in
+  let dbg = Properties.getBool "firstorder.termdebug" in
   Pprint.term_to_string_full_debug ~generic ~bound:[] dbg t
 
 let rec string_of_formula_ast ~generic =
@@ -469,7 +469,6 @@ let string_of_formula ~generic=
 * Abstracts the given formula over the given name. Doesn't go through
 * mu/nu abstractions.
 **********************************************************************)
-
 let abstract0 var = let rec x () = mapFormula x (Term.abstract var) in x
 
 let dummyvar = Term.fresh ~ts:0 ~lts:0 Term.Constant

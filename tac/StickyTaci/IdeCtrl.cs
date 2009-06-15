@@ -63,6 +63,7 @@ namespace StickyTaci
       set
       {
         m_FileName = value;
+        Form.Text = m_FileName + " - StickyTaci";
       }
     }
 
