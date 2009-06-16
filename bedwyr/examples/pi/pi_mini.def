@@ -5,3 +5,7 @@ test 0 := bisim (in a x\ in a y\ z) (in a x\ nu w\ in a y\ w).
 test 1 := bisim (in a x\ nu y\ match x y\ out c c z) (in a x\ z).
 test 2 := bisim (nu x\ out a x (in c y\ match x y (out c c z)))
                 (nu x\ out a x (in c y\ z)).
+
+#assert (test 0).
+#assert (test 1).
+#assert_not (test 2).

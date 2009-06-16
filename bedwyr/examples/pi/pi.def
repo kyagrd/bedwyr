@@ -30,6 +30,7 @@
 % type  one    p -> a -> p -> o.
 % type  onep   p -> (n -> a) -> (n -> p) -> o.
 
+% {{{
 % Type checking for names, actions, and processes are implemented directly
 % This is useful since Bedwyr does not do any static checking of syntax.
 
@@ -68,6 +69,8 @@ typecheck := pi N\ pi P\ example N P => prv picheck (proc P).
 % Tell us which clause does not type check (if any).
 whichwrong N := sigma P\ example N P, (prv picheck (proc P) => false).
 
+% }}}
+% {{{
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%                 A few example processes                %%%%
@@ -93,6 +96,8 @@ example 12 (bang P) := example 1 P.
 
 example 13 (bang (nu x\ par (out x a z) (in x y\ out c y z))).
 example 14 (bang (taup (out c a z))).
+
+% }}}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%     One step transition rules for the pi-calculus      %%%%
@@ -180,6 +185,14 @@ coinductive bisim P Q :=
 	(pi X\ pi N\ onep Q (up X) N => sigma M\ onep P (up X) M &
 					nabla w\ bisim (N w) (M w)).
 
+#assert (bisim (in a x\ in a y\ z) (in a x\ nu w\ in a y\ z)).
+#assert (pi P\ bisim (in a x\ nu y\ match x y P)
+                     (in a x\ z)).
+#assert_not (P = out a a z,
+             bisim (nu x\ out a x (in c y\ match x y P))
+                   (nu x\ out a x (in c y\ z))).
+
+% {{{
 % Weak bisimulation ===========================================================
 
 taus P QQ := one P tau Q, taus Q QQ.
@@ -220,4 +233,4 @@ coinductive weak_bisim P Q :=
 
 	(pi X\ pi N\ onep Q (up X) N => sigma M\ weak_onep P (up X) M &
 					nabla w\ weak_bisim (M w) (N w)).
-
+% }}}

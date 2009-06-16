@@ -91,7 +91,7 @@ separating_trace P Q T := trace P T, peng T, (trace Q T => false).
 %   src/bedwyr examples/mute.def -e "separate i g." | examples/mute.pl
 
 separate P Q :=
-  sigma T\ 
+  sigma T\
     trace P T, print (left T), trace Q T, print (right T), false.
 
 % A. Type check ===============================================================

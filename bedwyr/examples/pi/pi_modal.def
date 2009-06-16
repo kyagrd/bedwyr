@@ -56,7 +56,6 @@ sat P (boxInE X A) := sigma y\ pi Q\ onep P (dn X) Q => sat (Q y) (A y).
 sat P (diaInE X A) := pi y\ sigma Q\ onep P (dn X) Q, sat (Q y) (A y).
 
 
-%
 % A complete encoding: using explicit list of names.
  
 member X (cons Y L) := (X = Y) ; member X L.
@@ -68,24 +67,32 @@ lsat L P (boxMatch X Y A) := (X = Y) => lsat L P A.
 lsat L P (diaMatch X Y A) := (X = Y), lsat L P A.
 lsat L P (boxAct X A) := pi P1\ one P X P1 => lsat L P1 A.
 lsat L P (diaAct X A) := sigma P1\ one P X P1, lsat L P1 A.
-lsat L P (boxOut X A) := pi Q\ onep P (up X) Q => nabla y\ lsat (cons y L) (Q y) (A y).
-lsat L P (diaOut X A) := sigma Q\ onep P (up X) Q, nabla y\ lsat (cons y L) (Q y) (A y).
-lsat L P (boxIn X A) := pi Q\ onep P (dn X) Q => 
-         nabla w\ pi y\ (member y (cons w L) => lsat (cons w L) (Q y) (A y)).
-lsat L P (diaIn X A) := sigma Q\ onep P (dn X) Q, 
-         nabla w\ sigma y\ (member y (cons w L), lsat (cons w L) (Q y) (A y)).
-lsat L P (boxInL X A) := pi Q\ onep P (dn X) Q => 
-         nabla w\ sigma y\ (member y (cons w L), lsat (cons w L) (Q y) (A y)).
-lsat L P (diaInL X A) := sigma Q\ onep P (dn X) Q, 
-         nabla w\ pi y\ (member y (cons w L) => lsat (cons w L) (Q y) (A y)).
-lsat L P (boxInE X A) := nabla w\ sigma y\ 
-         (member y (cons w L), 
-          pi Q\ onep P (dn X) Q => lsat (cons w L) (Q y) (A y)).
-lsat L P (diaInE X A) := nabla w\ pi y\ member y (cons w L) => 
-          sigma Q\ onep P (dn X) Q, lsat (cons w L) (Q y) (A y).
+lsat L P (boxOut X A) :=
+  pi Q\ onep P (up X) Q => nabla y\ lsat (cons y L) (Q y) (A y).
+lsat L P (diaOut X A) :=
+  sigma Q\ onep P (up X) Q, nabla y\ lsat (cons y L) (Q y) (A y).
+lsat L P (boxIn X A) :=
+  pi Q\ onep P (dn X) Q => 
+    nabla w\ pi y\ (member y (cons w L) => lsat (cons w L) (Q y) (A y)).
+lsat L P (diaIn X A) :=
+  sigma Q\ onep P (dn X) Q, 
+    nabla w\ sigma y\ (member y (cons w L), lsat (cons w L) (Q y) (A y)).
+lsat L P (boxInL X A) :=
+  pi Q\ onep P (dn X) Q => 
+    nabla w\ sigma y\ (member y (cons w L), lsat (cons w L) (Q y) (A y)).
+lsat L P (diaInL X A) :=
+  sigma Q\ onep P (dn X) Q, 
+    nabla w\ pi y\ (member y (cons w L) => lsat (cons w L) (Q y) (A y)).
+lsat L P (boxInE X A) :=
+  nabla w\ sigma y\ 
+    (member y (cons w L), 
+       pi Q\ onep P (dn X) Q => lsat (cons w L) (Q y) (A y)).
+lsat L P (diaInE X A) :=
+  nabla w\ pi y\ member y (cons w L) => 
+    sigma Q\ onep P (dn X) Q, lsat (cons w L) (Q y) (A y).
 
 
-% Type checking processes and assertions =========================================
+% Type checking processes and assertions ======================================
 
 
 atom (form A).
@@ -100,17 +107,25 @@ formcheck (form (boxMatch X Y A)) (and (name X) (and (name Y) (form A))).
 formcheck (form (diaMatch X Y A)) (and (name X) (and (name Y) (form A))).
 formcheck (form (boxAct X A)) (and (name X) (form A)).
 formcheck (form (diaAct X A)) (and (name X) (form A)).
-formcheck (form (boxOut X A)) (and (name X) (forall u\ (name u) -> (form (A u)))).
-formcheck (form (diaOut X A)) (and (name X) (forall u\ (name u) -> (form (A u)))).
-formcheck (form (boxIn  X A)) (and (name X) (forall u\ (name u) -> (form (A u)))).
-formcheck (form (diaIn  X A)) (and (forall u\ (name u) -> (form (A u))) (name X)).
-formcheck (form (boxInL X A)) (and (name X) (forall u\ (name u) -> (form (A u)))).
-formcheck (form (diaInL X A)) (and (name X) (forall u\ (name u) -> (form (A u)))).
-formcheck (form (boxInE X A)) (and (name X) (forall u\ (name u) -> (form (A u)))).
-formcheck (form (diaInE X A)) (and (name X) (forall u\ (name u) -> (form (A u)))).
+formcheck (form (boxOut X A))
+          (and (name X) (forall u\ (name u) -> (form (A u)))).
+formcheck (form (diaOut X A))
+          (and (name X) (forall u\ (name u) -> (form (A u)))).
+formcheck (form (boxIn  X A))
+          (and (name X) (forall u\ (name u) -> (form (A u)))).
+formcheck (form (diaIn  X A))
+          (and (forall u\ (name u) -> (form (A u))) (name X)).
+formcheck (form (boxInL X A))
+          (and (name X) (forall u\ (name u) -> (form (A u)))).
+formcheck (form (diaInL X A))
+          (and (name X) (forall u\ (name u) -> (form (A u)))).
+formcheck (form (boxInE X A))
+          (and (name X) (forall u\ (name u) -> (form (A u)))).
+formcheck (form (diaInE X A))
+          (and (name X) (forall u\ (name u) -> (form (A u)))).
 
 
-% Some examples =================================================================
+% Some examples ===============================================================
 
 % Encoding the judgment x(y).0 |= <x(u)>[x = u] false.
 % This judgment should be provable in MPW logic
@@ -118,7 +133,8 @@ assert  1 (diaIn x (u\ (boxMatch x u bot))).
 process 1 (in x (y\ z)).
 
 % The 'excluded middle' on names
-assert  2 (diaInL x (y\ diaInL x (u\ lor (diaMatch y u top) (boxMatch y u bot)))).
+assert  2
+  (diaInL x (y\ diaInL x (u\ lor (diaMatch y u top) (boxMatch y u bot)))).
 process 2 (in x (y\ in x u\ z)).
 
 % Process 3 and 4 are strongly bisimilar, hence should satisfy
@@ -133,21 +149,28 @@ process 4 (in x u\ nu y\ ((plus (taup (taup z))
 
 typecheck_proc := pi P\ pi N\ process N P => prv picheck (proc P).
 typecheck_form := pi A\ pi N\ assert N A => prv formcheck (form A).
-
 wrong_form N := sigma P\ assert N P, (prv formcheck (form P) => false).
+
+#assert typecheck_proc.
+#assert typecheck_form.
+#assert_not (wrong_form N).
+
 
 % Counterexample to the completeness of sat: 
 % This will generate an exception
 test1 := process 1 P, assert 1 A, sat P A.
+#assert_raise test1.
 
 % However, lsat is complete
 test2 := process 1 P, assert 1 A, lsat (cons x nil) P A.
+#assert test2.
 
 % The excluded middle example is not provable using sat,
 % but is provable using lsat.
 test3 := process 2 P, assert 2 A, sat P A.
 test4 := process 2 P, assert 2 A, lsat (cons x nil) P A.
+#assert_not test3.
+#assert test4.
 
 test5 := process 3 P, process 4 Q, assert 3 A, sat P A, sat Q A.
-
-
+#assert test5.

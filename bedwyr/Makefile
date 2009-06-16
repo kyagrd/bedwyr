@@ -7,11 +7,13 @@ src/Makefile: src/Makefile.in configure
 configure: configure.ac
 	autoconf
 
-XPL = examples/scoping.def examples/internal/checks.def \
-      examples/miniml.def examples/internal/typecheck.def \
-      examples/3bits.def examples/lambda.def examples/progs.def \
-      examples/graph-alt.def examples/minmax.def examples/multisim.def \
-      examples/tictactoe.def examples/pi/pi_nat.def examples/pi/pi_church.def
+XPL = internal/scoping.def internal/checks.def \
+      miniml.def internal/typecheck.def \
+      3bits.def lambda.def progs.def \
+      graph-alt.def minmax.def multisim.def \
+      tictactoe.def \
+	  pi/pi_trace.def pi/corr-assert.def pi/pi_modal.def \
+	  pi/pi_mini.def pi/pi_nat.def pi/pi_church.def
 test: src/Makefile
 	@echo Testing the core LLambda library
 	make -C src test
@@ -19,7 +21,7 @@ test: src/Makefile
 	make -C src bedwyr
 	@time for i in $(XPL) ; do \
 	  echo "==== Running tests in $$i ====" ; \
-	  if src/bedwyr -t -I $$i ; then echo "All done." ; else break ; fi ; \
+	  if src/bedwyr -t -I examples/$$i ; then echo "All done." ; else break ; fi ; \
 	done
 
 .PHONY: doc
