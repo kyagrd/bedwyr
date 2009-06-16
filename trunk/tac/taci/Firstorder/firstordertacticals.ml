@@ -2181,6 +2181,19 @@ struct
     fun _ _ -> unfocusTactic
 
   (********************************************************************
+  *findTactical:
+  * Check that the given formula appears in the sequent; if none is
+  * passed it succeeds as 'id' would.
+  ********************************************************************)
+  let findTactical session args =
+    let tactic session seq f zip lhs rhs sc fc =
+      sc [seq]
+    in
+    G.orElseTactical
+      (makeSimpleTactical "find" (matchLeft, "_") tactic session args)
+      (makeSimpleTactical "find" (matchRight, "_") tactic session args)
+
+  (********************************************************************
   *cutLemmaTactical:
   * Searches the list of lemmas and adds the lemma of the given name
   * to the hypotheses.  Additionally modifies the proof builder to insert
@@ -2303,7 +2316,9 @@ struct
                     (tac args')))
           in
           G.thenTactical
-            (G.repeatTactical (piL session [hyp]))
+            (G.orElseTactical
+              (G.repeatTactical (piL session [hyp]))
+              (findTactical session [hyp]))
             (tac args)
       | _ ->
           G.thenTactical
@@ -2388,18 +2403,5 @@ struct
             (G.repeatTactical (piR session []))
             (G.repeatTactical (impR session [])))
       | _ -> G.invalidArguments "intros"
-      
-  (********************************************************************
-  *findTactical:
-  * Check that the given formula appears in the sequent; if none is
-  * passed it succeeds as 'id' would.
-  ********************************************************************)
-  let findTactical session args =
-    let tactic session seq f zip lhs rhs sc fc =
-      sc [seq]
-    in
-    G.orElseTactical
-      (makeSimpleTactical "find" (matchLeft, "_") tactic session args)
-      (makeSimpleTactical "find" (matchRight, "_") tactic session args)
 
 end
