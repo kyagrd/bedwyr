@@ -7,7 +7,7 @@ a (s (s z)).
 leq z N.
 leq (s N) (s M) := leq N M.
 
-% Now the decide the maximum of a given predicate.  In the first-order
+% Now decide the maximum of a given predicate.  In the first-order
 % setting we could write just:
 %    maxa N := a N, pi x\ a x => leq x N.
 % but it seems that Bedwyr allows for predicates to be arguments. 

@@ -18,7 +18,8 @@
 % In this example we *do not* implement the type system for correspondence
 % assertions in the above paper. Rather, we generate all the traces
 % produced by a process and check that each trace is safe. Hence ours
-% is more like a model checking approach to the correspondence assertions problem.
+% is more like a model checking approach to the correspondence assertions
+% problem.
 
 
 % Operational semantics for finite pi-calculus with assertions.
@@ -105,23 +106,27 @@ inductive iscorr L (nu x\(T x)) := nabla x\ iscorr L (T x).
 
 
 safe P := 
-   pi T\ (trace P T, print "Checking trace: ", print T)  =>  iscorr nil T.
-  
+   pi T\ (trace P T, print ("Checking trace:" T))  =>  iscorr nil T.
+ 
 
 sender (c\ (nu m\ nu ack\ out c m (out c ack (in ack y\ end m z)))).
 rcver  (c\ in c m\ in c ack\ begin m (out ack m z)).
 
-% Example 0: unsafe
-example 0 (nu x\par (begin x z) (end x z)).
+% Example 0: unsafe.
+example 0 (nu x\ par (begin x z) (end x z)).
+#assert_not (example 0 P, safe P).
 
-% Example 1: safe. Channel c is restricted
+% Example 1: safe. Channel c is restricted.
 example 1 (nu c\ par (P c) (Q c)) := sender P, rcver Q.
+#assert (example 1 P, safe P).
 
 % Example 2: unsafe. 
 example 2 (par P Q) := sender M, rcver N, P = M c, Q = N c.
+#assert_not (example 2 P, safe P).
 
 % Example 3: safe
 example 3 (nu c\ par (S c) (par (R c) (R c))) :=
   sender S, rcver R.
+#assert (example 3 P, safe P).
 
-% TODO: implement more complicated example from [Gordon & Jeffrey].
+% TODO: implement more complicated examples from [Gordon & Jeffrey].

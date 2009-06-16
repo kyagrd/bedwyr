@@ -25,3 +25,5 @@ separating_trace P Q T := trace P T, (trace Q T => false).
 % More [y] ? y
 % No more solutions.
 % ?=
+
+#assert (example 5 P, example 6 Q, separating_trace P Q T).
