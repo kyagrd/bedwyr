@@ -22,7 +22,7 @@ let unify =
                   let constant_like  = Eigen
                 end)
   in
-    Unify.unify
+    Unify.pattern_unify
 
 (* Extracting a variable at some position in a term,
  * used when we know a variable should be there, but don't know what it is
