@@ -27,8 +27,8 @@
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
-				Description=""
-				CommandLine="compile.bat &quot;$(TargetPath)&quot;  &quot;$(ProjectDir)bin\$(TargetFilename)&quot;&#x0D;&#x0A;"
+				Description="Compiling $(TargetFilename)..."
+				CommandLine="ocamake *.ml* -epp -opt -o &quot;$(SolutionDir)bin\logics_gen.exe&quot;&#x0D;&#x0A;"
 				Outputs="none"
 			/>
 			<Tool

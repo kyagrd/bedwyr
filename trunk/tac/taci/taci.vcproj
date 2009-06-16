@@ -29,7 +29,7 @@
 			<Tool
 				Name="VCCustomBuildTool"
 				Description="Compiling $(TargetFilename)..."
-				CommandLine="compile.bat &quot;$(TargetPath)&quot;  &quot;$(SolutionDir)bin\&quot;&#x0D;&#x0A;"
+				CommandLine="ocamake *.ml*  Nologic/*.ml* Propositional/*.ml* Firstorder/*.ml* Firstorder/LP/*.ml* ../../bedwyr/src/ndcore/*.ml* str.cmxa unix.cmxa -epp -opt -lp &quot;-cclib 104857600&quot; -lp &quot;-cclib /F&quot; -o $(SolutionDir)bin\taci.exe&#x0D;&#x0A;"
 				AdditionalDependencies=""
 				Outputs="none"
 			/>
@@ -302,6 +302,16 @@
 			<File
 				RelativePath="..\logics_gen\bin\Logics.in"
 				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCustomBuildTool"
+						Description="Generating logics interface..."
+						CommandLine="$(SolutionDir)bin\logics_gen --input &quot;$(SolutionDir)logics_gen\Logics.in&quot; --output &quot;$(SolutionDir)taci\Logics_gen&quot;"
+						Outputs="$(SolutionDir)taci\Logics_gen.mli;$(SolutionDir)taci\Logics_gen.ml"
+					/>
+				</FileConfiguration>
 				<FileConfiguration
 					Name="Release|Win32"
 					>
