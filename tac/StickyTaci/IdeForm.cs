@@ -34,6 +34,40 @@ namespace StickyTaci
     private delegate void MethodInvoker1(object o1);
     private delegate void MethodInvoker2(object o1, object o2);
 
+    #region Handler Classes
+    private class TacticalHandler
+    {
+      private IdeCtrl m_Ctrl = null;
+      private string m_Tactical = "";
+      public TacticalHandler(IdeCtrl ctrl, string tac)
+      {
+        m_Ctrl = ctrl;
+        m_Tactical = tac;
+      }
+
+      public void OnClick(object instance, EventArgs e)
+      {
+        m_Ctrl.OnTactical(m_Tactical);
+      }
+    }
+
+    private class LogicHandler
+    {
+      private IdeCtrl m_Ctrl = null;
+      private Logic m_Logic = null;
+      public LogicHandler(IdeCtrl ctrl, Logic l)
+      {
+        m_Ctrl = ctrl;
+        m_Logic = l;
+      }
+
+      public void OnClick(object instance, EventArgs e)
+      {
+        m_Ctrl.OnLogic(m_Logic);
+      }
+    }
+    #endregion
+
     public bool Computing
     {
       set
@@ -56,37 +90,6 @@ namespace StickyTaci
       get
       {
         return m_Dirty;
-      }
-    }
-
-    private class TacticalHandler
-    {
-      private IdeCtrl m_Ctrl = null;
-      private string m_Tactical = "";
-      public TacticalHandler(IdeCtrl ctrl, string tac)
-      {
-        m_Ctrl = ctrl;
-        m_Tactical = tac;
-      }
-
-      public void OnClick(object instance, EventArgs e)
-      {
-        m_Ctrl.OnTactical(m_Tactical);
-      }
-    }
-    private class LogicHandler
-    {
-      private IdeCtrl m_Ctrl = null;
-      private Logic m_Logic = null;
-      public LogicHandler(IdeCtrl ctrl, Logic l)
-      {
-        m_Ctrl = ctrl;
-        m_Logic = l;
-      }
-
-      public void OnClick(object instance, EventArgs e)
-      {
-        m_Ctrl.OnLogic(m_Logic);
       }
     }
 
@@ -188,12 +191,14 @@ namespace StickyTaci
         
         InvokeDelegate(Scintilla, (MethodInvoker)delegate()
         {
+          //Inform Scintilla's SimpleLexer that the current line has changed,
+          //then color.
           Scintilla.NativeInterface.SetProperty("lexer.simple.currentline", m_CurrentLine.ToString());
           Scintilla.Lexing.Colorize(Scintilla.Lines[previous].StartPosition, Scintilla.Lines[previous].EndPosition);
           Scintilla.Lexing.Colorize(Scintilla.Lines[m_CurrentLine].StartPosition, Scintilla.Lines[m_CurrentLine].EndPosition);
         });
 
-        UpdateCurrentLineMarker();
+        UpdateCurrentLineMarker(m_CurrentLine);
       }
     }
 
@@ -210,85 +215,45 @@ namespace StickyTaci
       }
     }
 
-    #region Font Information -- OBSOLETE
-    private Font m_InputFont = new Font("Courier New", 8.25f, FontStyle.Regular);
-    private Font m_OutputFont = new Font("Courier New", 8.25f, FontStyle.Regular);
-    private Font m_GoalFont = new Font("Courier New", 8.25f, FontStyle.Regular);
-    #endregion
+    new private Font DefaultFont = new Font("Courier New", 8.25f, FontStyle.Regular);
 
     #region Coloring Information
-    private Color m_DebugColor = Color.Maroon;
     public Color DebugColor
     {
-      get
-      {
-        return m_DebugColor;
-      }
-      set
-      {
-        m_DebugColor = value;
-      }
+      get;
+      set;
     }
-
-    private Color m_ErrorColor = Color.Red;
     public Color ErrorColor
     {
-      get
-      {
-        return m_ErrorColor;
-      }
-      set
-      {
-        m_ErrorColor = value;
-      }
+      get;
+      set;
     }
-
-    private Color m_WarningColor = Color.Red;
     public Color WarningColor
     {
-      get
-      {
-        return m_WarningColor;
-      }
-      set
-      {
-        m_WarningColor = value;
-      }
+      get;
+      set;
     }
-
-    private Color m_OutputColor = Color.Black;
     public Color OutputColor
     {
-      get
-      {
-        return m_OutputColor;
-      }
-      set
-      {
-        m_OutputColor = value;
-      }
+      get;
+      set;
     }
-
-    private Color m_GoalColor = Color.Black;
     public Color GoalColor
     {
-      get
-      {
-        return m_GoalColor;
-      }
-      set
-      {
-        m_GoalColor = value;
-      }
+      get;
+      set;
     }
     #endregion
 
     #region Constructors
     public IdeForm(IdeCtrl ctrl)
     {
+      Font DefaultFont = new Font("Courier New", 8.25f, FontStyle.Regular);
+
       InitializeComponent();
       m_Ctrl = ctrl;
 
+      //Curent Line Initialization.
       m_ComputingImage = Image.FromFile(Path.Combine(Ctrl.ApplicationPath, "Data/CurrentLineBusy.bmp"));
       m_NotComputingImage = Image.FromFile(Path.Combine(Ctrl.ApplicationPath, "Data/CurrentLine.bmp"));
       m_CurrentLineImage = m_NotComputingImage;
@@ -296,14 +261,23 @@ namespace StickyTaci
       currentLineImagePanel.Paint += new PaintEventHandler(currentLineImagePanel_Paint);
       currentLineImagePanel.Show();
       
-      goalBox.Font = m_GoalFont;
+      //Output Initialization.
+      GoalColor = Color.Black;
+      goalBox.Font = DefaultFont;
       goalBox.KeyDown += new KeyEventHandler(goalBox_KeyDown);
-      
-      outputBox.Font = m_OutputFont;
-      outputBox.SelectionFont = m_OutputFont;
 
-      Scintilla.Font = m_InputFont;
-      //Scintilla.KeyDown += new KeyEventHandler(Scintilla_KeyDown);
+      OutputColor = Color.Black;
+      WarningColor = Color.Red;
+      DebugColor = Color.Maroon;
+      ErrorColor = Color.Red;
+      outputBox.Font = DefaultFont;
+      outputBox.SelectionFont = DefaultFont;
+
+      //Scintilla Initialization.
+      Scintilla.Font = DefaultFont;
+      Scintilla.Scroll += new EventHandler<ScrollEventArgs>(Scintilla_Scroll);
+      Scintilla.NativeInterface.UpdateUI += new EventHandler<ScintillaNet.NativeScintillaEventArgs>(Scintilla_UpdateUI);
+      Scintilla.MouseWheel += new MouseEventHandler(Scintilla_MouseWheel);
       Scintilla.NativeInterface.SavePointReached += new EventHandler<ScintillaNet.NativeScintillaEventArgs>(Scintilla_SavePointReached);
       Scintilla.NativeInterface.SavePointLeft += new EventHandler<ScintillaNet.NativeScintillaEventArgs>(Scintilla_SavePointLeft);
       Scintilla.ConfigurationManager.CustomLocation = Path.Combine(Path.GetDirectoryName(Application.ExecutablePath), "Data/tac.xml");
@@ -316,28 +290,31 @@ namespace StickyTaci
       Scintilla.IsBraceMatching = true;
       Scintilla.NativeInterface.SetProperty("lexer.simple.singlequote", "0");
 
-      
+      //Menu Initialization.
       mainMenuEdit.DropDownOpening += new EventHandler(mainMenuEdit_DropDownOpening);
       mainMenuTacTacticals.DropDownOpening += new EventHandler(mainMenuTacTacticals_DropDownOpening);
       mainMenuTacTacticals.DropDownItems.Add("*dummy*");
       mainMenuTacLogics.DropDownOpening += new EventHandler(mainMenuTacLogics_DropDownOpening);
       mainMenuTacLogics.DropDownItems.Add("*dummy*");
 
+      mainMenuTacCurrentLine.ShortcutKeys =
+        System.Windows.Forms.Keys.Control |
+        System.Windows.Forms.Keys.Alt |
+        System.Windows.Forms.Keys.Enter;
+
       mainMenuTacStart.ShortcutKeys =
-        ((System.Windows.Forms.Keys)
-          ((System.Windows.Forms.Keys.Control |
-          System.Windows.Forms.Keys.Alt)|
-          System.Windows.Forms.Keys.PageUp));
+        System.Windows.Forms.Keys.Control |
+        System.Windows.Forms.Keys.Alt|
+        System.Windows.Forms.Keys.PageUp;
+
       mainMenuTacEnd.ShortcutKeys =
-        ((System.Windows.Forms.Keys)
-          ((System.Windows.Forms.Keys.Control |
-          System.Windows.Forms.Keys.Alt) |
-          System.Windows.Forms.Keys.PageDown));
+        System.Windows.Forms.Keys.Control |
+        System.Windows.Forms.Keys.Alt |
+        System.Windows.Forms.Keys.PageDown;
 
       TacticalsChanged = true;
       CurrentLine = 0;
     }
-
     #endregion
 
     #region Overridden Protected Methods
@@ -542,6 +519,12 @@ namespace StickyTaci
       Ctrl.OnPreviousLine();
     }
 
+
+    private void mainMenuTacCurrentLine_Click(object sender, EventArgs e)
+    {
+      Ctrl.OnCurrentLine();
+    }
+
     private void mainMenuTacStart_Click(object sender, EventArgs e)
     {
       Ctrl.OnStart();
@@ -567,6 +550,21 @@ namespace StickyTaci
     #endregion
 
     #region Scintilla Event Handlers
+    private void Scintilla_MouseWheel(object sender, MouseEventArgs e)
+    {
+      UpdateCurrentLineMarker(CurrentLine);
+    }
+
+    private void Scintilla_Scroll(object sender, ScrollEventArgs e)
+    {
+      UpdateCurrentLineMarker(CurrentLine);
+    }
+
+    private void Scintilla_UpdateUI(object sender, ScintillaNet.NativeScintillaEventArgs e)
+    {
+      UpdateCurrentLineMarker(CurrentLine);
+    }
+
     private void Scintilla_SavePointReached(object sender, EventArgs e)
     {
       m_Dirty = false;
@@ -579,7 +577,7 @@ namespace StickyTaci
 
     void Scintilla_KeyDown(object sender, KeyEventArgs e)
     {
-      UpdateCurrentLineMarker();
+      UpdateCurrentLineMarker(CurrentLine);
     }
     #endregion
 
@@ -596,7 +594,6 @@ namespace StickyTaci
     {
       InvokeDelegate(this, (MethodInvoker)delegate()
       {
-        outputBox.SelectionFont = m_OutputFont;
         outputBox.SelectionColor = OutputColor;
         outputBox.SelectedText = s;
         outputBox.ScrollToCaret();
@@ -623,7 +620,6 @@ namespace StickyTaci
     {
       InvokeDelegate(this, (MethodInvoker)delegate()
       {
-        outputBox.SelectionFont = m_OutputFont;
         outputBox.SelectionColor = WarningColor;
         outputBox.SelectedText = "Warning: " + s;
         outputBox.ScrollToCaret();
@@ -634,7 +630,6 @@ namespace StickyTaci
     {
       InvokeDelegate(this, (MethodInvoker)delegate()
       {
-        outputBox.SelectionFont = m_OutputFont;
         outputBox.SelectionColor = DebugColor;
         outputBox.SelectedText = "Debug: " + s;
         outputBox.ScrollToCaret();
@@ -645,8 +640,6 @@ namespace StickyTaci
     {
       InvokeDelegate(this, (MethodInvoker)delegate()
       {
-        //outputBox.Clear();
-        outputBox.SelectionFont = m_OutputFont;
         outputBox.SelectionColor = ErrorColor;
         outputBox.SelectedText = "Error: " + s;
         outputBox.ScrollToCaret();
@@ -672,19 +665,19 @@ namespace StickyTaci
     }
 
 
-    public bool GetNextLine(ref string line)
+    public string GetNextLine()
     {
       if(CurrentLine >= Scintilla.Lines.Count)
       {
-        return false;
+        return null;
       }
       else
       {
-        line = Scintilla.Lines[CurrentLine].Text;
+        string line = Scintilla.Lines[CurrentLine].Text;
         if(CurrentLine == (Scintilla.Lines.Count - 1) && line == "")
-          return false;
+          return null;
         CurrentLine++;
-        return true;
+        return line;
       }
     }
 
@@ -696,18 +689,21 @@ namespace StickyTaci
       }
       else
       {
-        line = Scintilla.Lines[CurrentLine - 1].Text;
         --CurrentLine;
+        line = Scintilla.Lines[CurrentLine].Text;
         return true;
       }
     }
 
-    public void Clear()
+    public void NewFile()
     {
       outputBox.Clear();
       Scintilla.Text = "";
       goalBox.Clear();
+      
       SavePoint();
+      Scintilla.UndoRedo.EmptyUndoBuffer();
+      
       return;
     }
 
@@ -715,15 +711,24 @@ namespace StickyTaci
     {
       File.WriteAllText(filename, Scintilla.Text, Encoding.ASCII);
       SavePoint();
+
+      //Don't clear the undo buffer; user may need to undo *especially*
+      //after a save.
       return;
     }
 
     public void LoadFile(string filename)
     {
+      outputBox.Clear();
+      goalBox.Clear();
+
       Scintilla.ResetText();
       Scintilla.AppendText(File.ReadAllText(filename, Encoding.ASCII));
       Scintilla.Caret.Position = 0;
+      
       SavePoint();
+      Scintilla.UndoRedo.EmptyUndoBuffer();
+      
       return;
     }
     
@@ -746,15 +751,13 @@ namespace StickyTaci
     private void SavePoint()
     {
       Scintilla.NativeInterface.SetSavePoint();
-      Scintilla.UndoRedo.EmptyUndoBuffer();
       m_Dirty = false;
       return;
     }
 
-    private void UpdateCurrentLineMarker()
+    private void UpdateCurrentLineMarker(int line)
     {
       //Show current line marker:
-      int line = (int)CurrentLine;
       int y = 0;
       if(line == Scintilla.Lines.Count)
       {
@@ -765,11 +768,9 @@ namespace StickyTaci
         Point inc = new Point(0, Scintilla.PointYFromPosition(Scintilla.Lines[CurrentLine].StartPosition));
         Point inw = PointToClient(Scintilla.PointToScreen(inc));
         y = inw.Y;
-        y -= Font.Height;
-        y -= Font.Height;
+        y -= 2 * Font.Height;
       }
-      Point p = new Point(1, y);
-      currentLineImagePanel.Location = p;
+      currentLineImagePanel.Location = new Point(1, y);
     }
     #endregion
   }

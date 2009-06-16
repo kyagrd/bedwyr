@@ -119,9 +119,10 @@ namespace StickyTaci
 
     public void Interrupt()
     {
-      //Poor me, no SIG_INT on Windows.
+      //Poor me, no SIG_INT on Windows; you must ^C the taci window.
       return;
     }
+
     public void Restart()
     {
       if(m_Taci != null)
