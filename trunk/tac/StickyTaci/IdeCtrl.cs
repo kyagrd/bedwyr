@@ -26,10 +26,9 @@ namespace StickyTaci
 {
   public class IdeCtrl
   {
-    
+    #region Properties
     private string m_Line = "";
 
-    #region Properties
     public string ApplicationPath
     {
       get
@@ -79,26 +78,16 @@ namespace StickyTaci
       }
     }
 
-    private IdeForm m_Form = null;
     public IdeForm Form
     {
-      get
-      {
-        return m_Form;
-      }
-      set
-      {
-        m_Form = value;
-      }
+      get;
+      set;
     }
 
-    private Taci m_Taci = null;
     public Taci Taci
     {
-      get
-      {
-        return m_Taci;
-      }
+      get;
+      private set;
     }
     #endregion
 
@@ -107,7 +96,7 @@ namespace StickyTaci
     {
       if(Taci == null)
       {
-        m_Taci = new Taci(path, "--output xml --logic " + logic);
+        Taci = new Taci(path, "--output xml --logic " + logic);
         CurrentLogic = logic;
 
         Taci.Output += new Taci.IOHandler<string>(Taci_Output);
@@ -174,12 +163,12 @@ namespace StickyTaci
     }
 
 
-    void Taci_Debug(Taci instance, string data)
+    private void Taci_Debug(Taci instance, string data)
     {
       Form.Debug(data);
     }
 
-    void Taci_Warning(Taci instance, string data)
+    private void Taci_Warning(Taci instance, string data)
     {
       Form.Warning(data);
     }
@@ -203,6 +192,14 @@ namespace StickyTaci
         Form.Computing = true;
       else if(data == "end-computation")
         Form.Computing = false;
+    }
+
+    private void Taci_Exit(object instance)
+    {
+      if(instance == Taci)
+      {
+        Form.Close();
+      }
     }
     #endregion
 
@@ -273,7 +270,7 @@ namespace StickyTaci
       if((Form.Dirty && SaveMessage()) || !Form.Dirty)
       {
         FileName = "";
-        Form.Clear();
+        Form.NewFile();
         OnTacReset();
       }
     }
@@ -283,14 +280,6 @@ namespace StickyTaci
       if(!Form.Dirty || (Form.Dirty && SaveMessage()))
       {
         Taci.Shutdown();
-      }
-    }
-
-    public void Taci_Exit(object instance)
-    {
-      if(instance == Taci)
-      {
-        Form.Close();
       }
     }
 
@@ -337,31 +326,6 @@ namespace StickyTaci
       }
     }
 
-    private void Open()
-    {
-      OpenFileDialog dlg = new OpenFileDialog();
-      dlg.Filter = "StickyTaci Session (*.tac)|*.tac|All Files (*.*)|*.*";
-
-      if(dlg.ShowDialog() == DialogResult.OK)
-      {
-        OnTacReset();
-        Form.Clear();
-
-        //Get the logic name:
-        string logic = GetLogicName(dlg.FileName);
-        if(logic != "")
-        {
-          OnLogic(logic);
-        }
-        else
-        {
-          MessageBox.Show("Unable to load session logic: logic not specified.", "StickyTaci - Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-        }
-        Form.LoadFile(dlg.FileName);
-        FileName = dlg.FileName;
-      }
-    }
-
     public void OnHelpTaci()
     {
       Taci.Write(Taci.HELP + ".");
@@ -398,8 +362,8 @@ namespace StickyTaci
 
     public bool OnNextLine()
     {
-      string line = "";
-      if(Form.GetNextLine(ref line))
+      string line = Form.GetNextLine();
+      if(line != null)
       {        
         line = line.Trim();
         
@@ -439,6 +403,11 @@ namespace StickyTaci
     public void OnEnd()
     {
       OnAll((int)Form.Scintilla.Lines.Count);
+    }
+
+    public void OnCurrentLine()
+    {
+      OnAll(Form.Scintilla.Caret.LineNumber);
     }
 
     public void OnInterrupt()
@@ -487,12 +456,11 @@ namespace StickyTaci
     public void OnAll(int line)
     {
       //Run each line upto the given one.
-      int i = 0;
+      System.Diagnostics.Debug.WriteLine("On All: " + Form.Scintilla.Caret.LineNumber);
       int maxIterations = Form.Scintilla.Lines.Count + 1;
-      while(CurrentLine < line && i < maxIterations)
+      for(int i = 0; i < maxIterations && CurrentLine < line; i++)
       {
         OnNextLine();
-        i++;
       }
     }
     #endregion
@@ -513,6 +481,30 @@ namespace StickyTaci
       else
       {
         return false;
+      }
+    }
+
+    private void Open()
+    {
+      OpenFileDialog dlg = new OpenFileDialog();
+      dlg.Filter = "StickyTaci Session (*.tac)|*.tac|All Files (*.*)|*.*";
+
+      if(dlg.ShowDialog() == DialogResult.OK)
+      {
+        OnTacReset();
+
+        //Get the logic name:
+        string logic = GetLogicName(dlg.FileName);
+        if(logic != "")
+        {
+          OnLogic(logic);
+        }
+        else
+        {
+          MessageBox.Show("Unable to load session logic: logic not specified.", "StickyTaci - Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+        Form.LoadFile(dlg.FileName);
+        FileName = dlg.FileName;
       }
     }
 

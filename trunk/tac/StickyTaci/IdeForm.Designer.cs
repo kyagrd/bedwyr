@@ -63,6 +63,7 @@ namespace StickyTaci
       this.toolStripSeparator7 = new System.Windows.Forms.ToolStripSeparator();
       this.mainMenuTacNextLine = new System.Windows.Forms.ToolStripMenuItem();
       this.mainMenuTacPreviousLine = new System.Windows.Forms.ToolStripMenuItem();
+      this.mainMenuTacCurrentLine = new System.Windows.Forms.ToolStripMenuItem();
       this.mainMenuTacStart = new System.Windows.Forms.ToolStripMenuItem();
       this.mainMenuTacEnd = new System.Windows.Forms.ToolStripMenuItem();
       this.toolStripSeparator6 = new System.Windows.Forms.ToolStripSeparator();
@@ -299,6 +300,7 @@ namespace StickyTaci
             this.toolStripSeparator7,
             this.mainMenuTacNextLine,
             this.mainMenuTacPreviousLine,
+            this.mainMenuTacCurrentLine,
             this.mainMenuTacStart,
             this.mainMenuTacEnd,
             this.toolStripSeparator6,
@@ -376,6 +378,13 @@ namespace StickyTaci
       this.mainMenuTacPreviousLine.Size = new System.Drawing.Size(214, 22);
       this.mainMenuTacPreviousLine.Text = "&Previous Line";
       this.mainMenuTacPreviousLine.Click += new System.EventHandler(this.mainMenuTacPreviousLine_Click);
+      // 
+      // mainMenuTacCurrentLine
+      // 
+      this.mainMenuTacCurrentLine.Name = "mainMenuTacCurrentLine";
+      this.mainMenuTacCurrentLine.Size = new System.Drawing.Size(214, 22);
+      this.mainMenuTacCurrentLine.Text = "C&urrent Line";
+      this.mainMenuTacCurrentLine.Click += new System.EventHandler(this.mainMenuTacCurrentLine_Click);
       // 
       // mainMenuTacStart
       // 
@@ -490,7 +499,7 @@ namespace StickyTaci
       // 
       this.outputSplitter.Panel2.Controls.Add(this.outputBox);
       this.outputSplitter.Size = new System.Drawing.Size(357, 242);
-      this.outputSplitter.SplitterDistance = 92;
+      this.outputSplitter.SplitterDistance = 180;
       this.outputSplitter.TabIndex = 0;
       // 
       // goalBox
@@ -501,7 +510,7 @@ namespace StickyTaci
       this.goalBox.Location = new System.Drawing.Point(0, 0);
       this.goalBox.Name = "goalBox";
       this.goalBox.ReadOnly = true;
-      this.goalBox.Size = new System.Drawing.Size(357, 92);
+      this.goalBox.Size = new System.Drawing.Size(357, 180);
       this.goalBox.TabIndex = 0;
       this.goalBox.Text = "";
       // 
@@ -512,7 +521,7 @@ namespace StickyTaci
       this.outputBox.Location = new System.Drawing.Point(0, 0);
       this.outputBox.Name = "outputBox";
       this.outputBox.ReadOnly = true;
-      this.outputBox.Size = new System.Drawing.Size(357, 146);
+      this.outputBox.Size = new System.Drawing.Size(357, 58);
       this.outputBox.TabIndex = 0;
       this.outputBox.Text = "";
       // 
@@ -593,6 +602,7 @@ namespace StickyTaci
     private System.Windows.Forms.ToolStripSeparator toolStripSeparator8;
     private System.Windows.Forms.ToolStripMenuItem mainMenuFilePrintPreview;
     private System.Windows.Forms.ToolStripMenuItem mainMenuTacInterrupt;
+    private System.Windows.Forms.ToolStripMenuItem mainMenuTacCurrentLine;
   }
 }
 
