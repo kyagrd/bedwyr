@@ -412,7 +412,8 @@ namespace StickyTaci
 
     public void OnInterrupt()
     {
-      Taci.Interrupt();
+      MessageBox.Show("To interrupt taci click on the taci command line window and type Ctrl+C.", "StickyTaci", MessageBoxButtons.OK, MessageBoxIcon.Information);
+      return;
     }
 
     public void OnPreviousLine()
@@ -456,7 +457,6 @@ namespace StickyTaci
     public void OnAll(int line)
     {
       //Run each line upto the given one.
-      System.Diagnostics.Debug.WriteLine("On All: " + Form.Scintilla.Caret.LineNumber);
       int maxIterations = Form.Scintilla.Lines.Count + 1;
       for(int i = 0; i < maxIterations && CurrentLine < line; i++)
       {
