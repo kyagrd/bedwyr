@@ -278,6 +278,7 @@ namespace StickyTaci
       Scintilla.Scroll += new EventHandler<ScrollEventArgs>(Scintilla_Scroll);
       Scintilla.NativeInterface.UpdateUI += new EventHandler<ScintillaNet.NativeScintillaEventArgs>(Scintilla_UpdateUI);
       Scintilla.MouseWheel += new MouseEventHandler(Scintilla_MouseWheel);
+
       Scintilla.NativeInterface.SavePointReached += new EventHandler<ScintillaNet.NativeScintillaEventArgs>(Scintilla_SavePointReached);
       Scintilla.NativeInterface.SavePointLeft += new EventHandler<ScintillaNet.NativeScintillaEventArgs>(Scintilla_SavePointLeft);
       Scintilla.ConfigurationManager.CustomLocation = Path.Combine(Path.GetDirectoryName(Application.ExecutablePath), "Data/tac.xml");
