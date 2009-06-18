@@ -29,9 +29,9 @@ prove.
 simplify.
 induction("x\ nat x, pi y\ leq y x => sigma h\ half y h").
 prove.
-async.
-prove.
-prove.
+cases.
+  prove.
+  prove.
 % Qed.
 
 % Yet another one, probably the simplest.
