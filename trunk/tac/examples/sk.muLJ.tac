@@ -41,24 +41,25 @@ prove.
      sk_abs t x at =>
      pi y\st\ sk_subst t x y st =>
        eval (app at y) st".
-repeat(pi).
-imp.
+intros.
+
 % Induction sur la relation d'abstraction.
-induction("t\x\at\ pi y\st\ sk_subst t x y st => eval (app at y) st").
-prove.
-then(repeat(or_l),simplify).
-% Cas 1: on a t = st2.
-prove.
-% Cas 2: on passe sous un app.
-then(mu_l,then(repeat(or_l),simplify)).
-then(pi_l,then(pi_l,imp_l)).
-prove.
-then(pi_l,then(pi_l,imp_l)).
-prove.
-% On n'a pas de eval big-step, faut bosser.
-induction("a\b\ pi c\d\ eval c d => eval (app a c) (app b d)").
-prove.
-prove.
-prove.
+induction.
+cases.
+
+  % Cas 1: on a t = st2.
+  prove.
+
+  % Cas 2: on passe sous un app.
+  cases("#3").
+  apply("#1", axiom).
+  apply("#2", axiom).
+  % On n'a pas de eval big-step, faut bosser.
+  induction("a\b\ pi c\d\ eval c d => eval (app a c) (app b d)").
+    prove.
+    prove.
+
+  % Cas 3: on var.
+  prove.
 % Qed.
 

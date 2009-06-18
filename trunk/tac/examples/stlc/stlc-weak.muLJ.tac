@@ -26,7 +26,7 @@ prove.
     nabla a\x\ permute (l x) (l' x)".
 simplify.
 then(mu_l, mu_r, and_r, simplify).
-weak_l("pi m\ pi t\ (bind m t (l' _) => _)").
+weak_l("#2").
 prove.
 weak_l.
 prove.
@@ -49,9 +49,9 @@ induction("g\m\t\ nabla x\ pi g'\ permute g' (cons (pair x t') g) =>
     % Abstraction.
     apply("lift_permute_s").
     weak_l("lift_permute _ _").
-    then(pi_l, imp_l).
-    force("G'''", "(x1\(x2\ cons (pair x1 h0) (g' x2)))").
-    prove.
+    intros("#1").
+      force("G'''", "(x1\(x2\ cons (pair x1 h0) (g' x2)))").
+      prove.
     prove.
 
     % Application.
@@ -80,7 +80,7 @@ induction("gg\m\tm\ pi g\ permute gg (cons (pair n tn) g) =>
   cases.
   
     % abstraction.
-    then(pi_l, imp_l).
+    intros("#1").
   
       % cons maintains permutation.
       force("G0", "(n1\ cons (pair n1 h0) g0)").
@@ -89,7 +89,7 @@ induction("gg\m\tm\ pi g\ permute gg (cons (pair n tn) g) =>
       weak_l("permute _ _").
       prove.
 
-      cut_lemma("of_weak").
+      apply("of_weak").
       prove.
 
     % application.

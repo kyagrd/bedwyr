@@ -91,7 +91,6 @@ and_r.
     sub c x (all a b) => sub c (all a b) (all a' b') =>
       sub c x (all a' b')".
 intros.
-intros.
 induction("auto", "sub c x (all a b)").
 and_r.
   % induction target.
@@ -107,11 +106,8 @@ and_r.
     then(mu_r, left, left, right).
     instantiate.
     axiom.
-    apply("#3", eq_r).
-    apply("#3", axiom, axiom, axiom).
-    apply("#3", id).
-      prove.
-    apply("#3", axiom, axiom).
+    apply("#3", eq_r, axiom, axiom, axiom, prove, axiom).
+    axiom.
 
     % sub - all.
     weak_l("#2"). % unusable hypothesis.
@@ -128,6 +124,7 @@ and_r.
       instantiate.
         mu_l("#4").
         apply("#4", axiom, axiom).
+        axiom.
 
         nabla_r.
         mu_l("#5").
@@ -136,6 +133,7 @@ and_r.
         apply("#5", then(apply("context_w"), axiom), axiom).
         mu_l("#6").
         apply("#6", axiom, axiom).
+        axiom.
 
 #set "firstorder.induction-unfold" "false".
 
@@ -162,17 +160,14 @@ and_r.
     prove.
 
     % bind (transitive).
-    repeat(pi_l("#3")).
-    force("B", "b2").
-    force("A0", "a03").
-    imp_l("#3").
+    intros("#3").
+      force("A0", "a03").
       repeat(weak_l("#4")).
       repeat(weak_l("mu _")).
       cases.
         prove.
         prove.
-        then(left, right).
-        instantiate.
+        then(left, right, instantiate).
           weak_l("#2").
           prove.
           weak_l.
@@ -200,6 +195,7 @@ and_r.
         prove.
       cut_lemma("sub_arrow").
       apply("#11", "context h5", "cut _ h26", "cut _ h27", "_", "_").
+      axiom.
 
     % all.
     weak_l("#2").
@@ -220,15 +216,14 @@ and_r.
         apply("#3", axiom).
         apply("#4", axiom).
         apply("#10", axiom, axiom, axiom).
-        apply("#10", id).
+        intros("#10").
           force("A'", "h46").
           force("B0", "h50").
-          apply("#5", id).
+          intros("#5").
             apply("context_w").
             force("C", "(x\ cons (pair x T) h45)").
             axiom.
           prove.
-        force("X", "all h9 h10").
         cut("sub h45 (all h51 h50) (all h46 h47)").
           then(mu_r, right).
           prove.
@@ -236,6 +231,7 @@ and_r.
           then(mu_r, right).
           prove.
         apply("#10", axiom, axiom).
+        axiom.
 
   % Narrowing.
   intros.
