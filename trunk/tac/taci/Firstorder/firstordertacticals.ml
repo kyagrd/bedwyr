@@ -2309,11 +2309,9 @@ struct
           let rec tac args = match args with
               [] -> G.idTactical
             | arg::args' ->
-                (G.thenTactical
+                (G.andThenTactical
                   (impL session [hyp])
-                  (G.orElseTactical
-                    (G.completeTactical (body arg))
-                    (tac args')))
+                  [G.completeTactical (body arg); tac args'])
           in
           G.thenTactical
             (G.orElseTactical
@@ -2399,9 +2397,20 @@ struct
   let introsTactical session args =
     match args with
         [] ->
-          (G.thenTactical
-            (G.repeatTactical (piR session []))
-            (G.repeatTactical (impR session [])))
+          G.repeatTactical
+            (G.orElseListTactical
+              [piR session [];
+              nablaR session [];
+              impR session []])
+      | [Absyn.String(s)] ->
+          G.thenTactical
+            (G.orElseTactical
+              (G.repeatTactical
+                (G.orElseListTactical
+                  [piL session args;
+                  nablaL session args]))
+              (findTactical session args))
+            (impL session args)
       | _ -> G.invalidArguments "intros"
 
 end
