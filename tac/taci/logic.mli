@@ -152,6 +152,7 @@ sig
   val orElseListTactical : logic_tactic list -> logic_tactic
   val cutThenTactical : (unit -> unit -> unit) -> logic_tactic -> logic_tactic -> logic_tactic
   val thenTactical : logic_tactic -> logic_tactic -> logic_tactic
+  val andThenTactical : logic_tactic -> logic_tactic list -> logic_tactic
   val repeatTactical : logic_tactic -> logic_tactic
   val cutRepeatTactical : (unit -> unit -> unit) -> logic_tactic -> logic_tactic
   val firstTactical : logic_tactic -> logic_tactic
