@@ -10,5 +10,3 @@ of Context X T :- bind X T Context.
 %progress eval {E} V.
 eval (abs T R) (abs T R') :- nabla n\ eval (R n) (R' n).
 eval (app M N) V :- eval M (abs T R), eval (R N) V.
-eval (app M N) (app M' N) :- eval M M'.
-eval (app M N) (app M N') :- eval N N'.

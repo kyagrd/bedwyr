@@ -15,10 +15,8 @@
     mu_l("context _"),
     prove("0")).
 
-
 #define "permute a b :=
-  (pi m\t\ bind m t a => bind m t b), (pi m\t\ bind m t b => bind m t a)
-".
+  (pi m\t\ bind m t a => bind m t b), (pi m\t\ bind m t b => bind m t a)".
 
 #define "context c :=
   (pi x\t1\t2\ bind x t1 c => bind x t2 c => t1 = t2),
@@ -35,30 +33,29 @@
     (pi r\t\ (x = rec t r) => false))".
 
 #lemma permute_lift "pi l\ l'\ permute l l' => nabla x\ permute l l'".
-simplify.
+intros.
 then(mu_l,then(mu_r,then(and_r,simplify))).
-rotate_l.
-weak_l.
-prove.
-weak_l.
-prove.
+  weak_l("#2").
+  prove.
+  weak_l.
+  prove.
 
 #lemma lift_permute_s
   "pi l\l'\ (nabla x\ permute (l x) (l' x)) =>
     nabla a\x\ permute (l x) (l' x)".
 simplify.
 then(mu_l,then(mu_r,then(and_r,simplify))).
-weak_l("pi m\ pi t\ (bind m t (l' _) => _)").
-prove.
-weak_l.
-prove.
+  weak_l("#2").
+  prove.
+  weak_l.
+  prove.
 
 #lemma bind_s "pi l\x\t\ bind x t l => nabla a\ bind x t l".
 prove.
 
 #lemma of_weak "
   pi g\m\t\ of g m t => pi t'\ nabla x\ of (cons (pair x t') g) m t".
-simplify.
+intros.
 induction("g\m\t\ nabla x\ pi g'\ permute g' (cons (pair x t') g) =>
   of g' m t").
 
@@ -67,28 +64,28 @@ induction("g\m\t\ nabla x\ pi g'\ permute g' (cons (pair x t') g) =>
 
   % Inductive.
   cases.
-  
-  iterate(try(prove("1"))).
+    % easy cases.
+    iterate(try(prove("1"))).
 
-  % Abstraction.
-  apply("lift_permute_s").
-  weak_l("lift_permute _ _").
-  then(pi_l, imp_l).
-  force("G'''", "(x1\(x2\ cons (pair x1 h7) (g'6 x2)))").
-  prove.
-  prove.
+    % abstraction.
+    apply("lift_permute_s").
+    weak_l("lift_permute _ _").
+    intros("#1").
+      force("G'''", "(x1\(x2\ cons (pair x1 h7) (g'6 x2)))").
+      prove.
+    prove.
 
-  % Rec.
-  apply("lift_permute_s").
-  weak_l("lift_permute _ _").
-  then(pi_l, imp_l).
-  force("G'''0", "(x1\(x2\ cons (pair x1 h13) (g'8 x2)))").
-  prove.
-  prove.
+    % rec.
+    apply("lift_permute_s").
+    weak_l("lift_permute _ _").
+    intros("#1").
+      force("G'''0", "(x1\(x2\ cons (pair x1 h13) (g'8 x2)))").
+      prove.
+    prove.
 
-  % Bind.
-  apply("bind_s").
-  prove.
+    % bind.
+    apply("bind_s").
+    prove.
 % Qed.
 
 
@@ -100,39 +97,40 @@ intros.
 induction("gg\m\tm\ pi g\ permute gg (cons (pair n tn) g) =>
            of g n tn => of g m tm").
 
-  % Invariant.
+  % invariant.
   pi_l.
   force("G", "g").
   prove.
 
-  % Inductive.
+  % inductive.
   cases.
-  iterate(try(prove("1"))).
-  
-  % abstraction.
-  then(pi_l, imp_l).
-  force("G0", "(n1\ cons (pair n1 h7) g7)").
-  weak_l("of _ _ _").
-  apply("permute_lift").
-  weak_l("permute _ _").
-  prove.
+    % easy pairs.
+    iterate(try(prove("1"))).
+    
+    % abstraction.
+    intros("#1").
+      force("G0", "(n1\ cons (pair n1 h7) g7)").
+      weak_l("of _ _ _").
+      apply("permute_lift").
+      weak_l("permute _ _").
+      prove.
 
-  cut_lemma("of_weak").
-  prove.
+    cut_lemma("of_weak").
+    prove.
 
-  % rec.
-  then(pi_l, imp_l).
-  force("G1", "(n1\ cons (pair n1 h13) g9)").
-  weak_l("of _ _ _").
-  apply("permute_lift").
-  weak_l("permute _ _").
-  prove.
+    % rec.
+    intros("#1").
+      force("G1", "(n1\ cons (pair n1 h13) g9)").
+      weak_l("of _ _ _").
+      apply("permute_lift").
+      weak_l("permute _ _").
+      prove.
 
-  cut_lemma("of_weak").
-  prove.
+    cut_lemma("of_weak").
+    prove.
 
-  % bind.
-  prove.
+    % bind.
+    prove.
 % Qed.
 
 #lemma of_subst
@@ -160,7 +158,7 @@ cases.
   prove.  % pred zero.
 
   % pred n.
-  then(pi_l, pi_l, imp_l).
+  intros("#1").
     axiom.
     imp_l.
       prove.
@@ -175,23 +173,28 @@ cases.
   prove.  % abstraction.
 
   % application.
-  invert.
-  app.
-  invert.
-  apply("of_subst").
-  weak_l("of _ _ (arr _ _)").
-  apply("of_cut").
-  axiom.
-  bind_absurd.
-  bind_absurd.
+  cases("#4").
+    apply("#1", axiom, axiom).
+    apply("#2", axiom).
+    force("T0", "h23").
+    intros("#2").
+      cases("#1").
+        apply("of_subst").
+        apply("of_cut").
+        axiom.
 
+        bind_absurd.
+      prove.
+    bind_absurd.
+  
   % rec.
   contract_l("of _ _ _").
-  then(mu_l("of _ _ _"), repeat(or_l), simplify).
-  app.
+  cases("#3").
+  apply("#1", axiom).
+  force("T1", "h37").
   apply("of_subst").
   apply("of_cut").
-  axiom.
+  prove.
   bind_absurd.
 % Qed.
 
