@@ -35,25 +35,23 @@ prove.
 prove.
 % Qed.
 
-#lemma permute_s "pi l\l'\ permute l l' => nabla a\ permute l l'".
-simplify.
-then(mu_l,then(mu_r,then(and_r,simplify))).
-rotate_l.
-weak_l.
-prove.
-weak_l.
-prove.
+#lemma permute_w "pi l\l'\ permute l l' => nabla a\ permute l l'".
+intros.
+then(mu_l, mu_r, and_r, simplify).
+  weak_l("#2").
+  prove.
+  weak_l.
+  prove.
 % Qed.
 
 #lemma lift_permute_s "pi l\l'\ (nabla x\ permute (l x) (l' x))
                          => nabla a\x\ permute (l x) (l' x)".
 simplify.
-then(mu_l,then(mu_r,then(and_r,simplify))).
-rotate_l.
-weak_l.
-prove.
-weak_l.
-prove.
+then(mu_l, mu_r, and_r, simplify).
+  weak_l("#2").
+  prove.
+  weak_l.
+  prove.
 % Qed.
 
 #lemma typeof_s "pi g\m\t\ typeof g m t => nabla a\ typeof g m t".

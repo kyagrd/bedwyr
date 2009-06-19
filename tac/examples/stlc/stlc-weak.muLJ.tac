@@ -1,11 +1,7 @@
 #include "stlc-weak.mod".
 
-#tactical invert then(mu_l("of _ _ _"), async).
-#tactical app then(repeat(pi_l), repeat(then(imp_l, try(axiom)))).
-
 #define "permute a b :=
-  (pi m\t\ bind m t a => bind m t b), (pi m\t\ bind m t b => bind m t a)
-".
+  (pi m\t\ bind m t a => bind m t b), (pi m\t\ bind m t b => bind m t a)".
 
 #define "context c :=
   (pi x\t1\t2\ bind x t1 c => bind x t2 c => t1 = t2),
@@ -13,30 +9,30 @@
     (pi r\ (x = abs r) => false),
     (pi l\r\ (x = app l r) => false))".
 
-#lemma permute_lift "pi l\ l'\ permute l l' => nabla x\ permute l l'".
-simplify.
+#lemma permute_w "pi l\ l'\ permute l l' => nabla x\ permute l l'".
+intros.
 then(mu_l, mu_r, and_r, simplify).
-weak_l("#2").
-prove.
-weak_l.
-prove.
+  weak_l("#2").
+  prove.
+  weak_l.
+  prove.
 
 #lemma lift_permute_s
   "pi l\l'\ (nabla x\ permute (l x) (l' x)) =>
     nabla a\x\ permute (l x) (l' x)".
 simplify.
 then(mu_l, mu_r, and_r, simplify).
-weak_l("#2").
-prove.
-weak_l.
-prove.
+  weak_l("#2").
+  prove.
+  weak_l.
+  prove.
 
-#lemma bind_s "pi l\x\t\ bind x t l => nabla a\ bind x t l".
+#lemma bind_w "pi l\x\t\ bind x t l => nabla a\ bind x t l".
 prove.
 
 #lemma of_weak "
   pi g\m\t\ of g m t => pi t'\ nabla x\ of (cons (pair x t') g) m t".
-simplify.
+intros.
 induction("g\m\t\ nabla x\ pi g'\ permute g' (cons (pair x t') g) =>
   of g' m t").
 
@@ -46,7 +42,7 @@ induction("g\m\t\ nabla x\ pi g'\ permute g' (cons (pair x t') g) =>
   % Inductive.
   cases.
   
-    % Abstraction.
+    % abstraction.
     apply("lift_permute_s").
     weak_l("lift_permute _ _").
     intros("#1").
@@ -58,7 +54,7 @@ induction("g\m\t\ nabla x\ pi g'\ permute g' (cons (pair x t') g) =>
     prove.
 
     % Bind.
-    apply("bind_s").
+    apply("bind_w").
     prove.
 % Qed.
 
@@ -85,7 +81,7 @@ induction("gg\m\tm\ pi g\ permute gg (cons (pair n tn) g) =>
       % cons maintains permutation.
       force("G0", "(n1\ cons (pair n1 h0) g0)").
       weak_l("of _ _ _").
-      apply("permute_lift").
+      apply("permute_w").
       weak_l("permute _ _").
       prove.
 
@@ -117,19 +113,24 @@ intros.
 induction.
 cases.
 
-  % Abstraction (weak).
+  % abstraction (weak).
   axiom.
 
-  % Application.
-  invert.
-    app.
-    invert.
-      apply("of_subst").
-      apply("of_cut").
-      axiom.
+  % application.
+  cases("#4").
+    apply("#1", axiom, axiom).
+    apply("#2", axiom).
+    force("T", "h6").
+    intros("#2").
+      cases("#1").
+        apply("of_subst").
+        apply("of_cut").
+        axiom.
 
-      prove.    % bind absurd.
-    prove.    % bind absurd.
+        prove.    % bind absurd.
+      prove.
+
+    prove. %bind absurd.
 % Qed.
 
 #lemma eval_det "pi e\v1\v2\ eval e v1 => eval e v2 => v1 = v2".
