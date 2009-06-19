@@ -59,12 +59,12 @@ and_r.
   prove.
   
   % inductive case.
-  simplify.
-  cases.
+  then(simplify,cases).
     % sub - bind reflexive.
     bind_absurd.
     
     % sub - bind transitive.
+    then(mu_r,left,left,right). % TODO tactical bind_trans.
     prove.
 
     % sub - arrow.
@@ -97,13 +97,13 @@ and_r.
   prove.
 
   % inductive case.
-  simplify.
-  cases.
+  then(simplify,cases).
+
     % sub - bind reflexive.
     bind_absurd.
     
     % sub - bind transitive.
-    then(mu_r, left, left, right).
+    then(mu_r, left, left, right). % TODO tactical.
     instantiate.
     axiom.
     apply("#3", eq_r, axiom, axiom, axiom, prove, axiom).
@@ -137,76 +137,108 @@ and_r.
 
 #set "firstorder.induction-unfold" "false".
 
+#define "outer_inv g a1 :=
+   (a1 = top);
+   (sigma t\ bind a1 t g);
+   (sigma t1\t2\
+      a1 = (arrow t1 t2),
+      (context g =>
+       ((pi c\ context c => cut c t1),
+        (pi c\ context c => narrowing c t1))),
+      (context g =>
+       ((pi c\ context c => cut c t2),
+        (pi c\ context c => narrowing c t2))));
+   (sigma t1\t2\
+      a1 = (all t1 t2),
+      (context g =>
+       ((pi c\ context c => cut c t1),
+        (pi c\ context c => narrowing c t1))),
+      (nabla x\ context (cons (pair x t1) g) =>
+          (pi c\ context c => cut c (t2 x)),
+          (pi c\ context c => narrowing c (t2 x))))".
+
 #theorem sub_dual
   "pi g\t\ context g => type g t => 
     ((pi c\ context c => cut c t), (pi c\ context c => narrowing c t))".
 intros.
 induction("auto", "type _ _").
 intros.
-and_r.
+cut("pi g\ context g => cut g a10").
 
   % Transitivity.
   intros.
   then(mu_r, intros).
-  #set "firstorder.induction-unfold" "true".
-  induction("auto", "sub c a a1").
+  induction(
+   "g\a\b\ (sub g a b)*,
+      pi c\gt\ context gt => outer_inv gt b => context g =>
+               sub g b c => sub g a c",
+   "sub g0 a3 a10").
+
+  % Invariant => goal.
+  simplify.
+  intros("#5").
+  force("Gt","a00").
+  axiom.
+  intros("#5").
+  repeat(weak_l("mu _")).
+  cases.
+  then(mu_r,prove("0")).
+  then(mu_r,prove("0")).
+  then(mu_r,left,right).
+  instantiate.
+  then(weak_l("#2"),prove).
+  then(weak_l,prove).
+  then(mu_r,right).
+  instantiate.
+  then(weak_l("#2"),prove).
+  weak_l.
+  prove.
+  apply("#5","_","_").
+  axiom.
+
+  % Invariance.
   and_r.
     prove.
   cases.
     % top.
+    weak_l("outer_inv _ _").
     prove.
 
     % bind (reflexive).
+    weak_l("outer_inv _ _").
     prove.
 
     % bind (transitive).
-    intros("#3").
-      force("A0", "a03").
-      repeat(weak_l("#4")).
-      repeat(weak_l("mu _")).
-      cases.
-        prove.
-        prove.
-        then(left, right, instantiate).
-          weak_l("#2").
-          prove.
-          weak_l.
-          prove.
-        then(right, instantiate).
-          weak_l("#2").
-          prove.
-          weak_l.
-          prove.
-    weak_l("#4").
-    then(mu_r, left, left, right).
+    apply("#3","_","_","_").
+    then(mu_r, left, left, right). % TODO tactical.
     prove.
     
-    % arrow.  
+    % arrow.
     weak_l("#2").
     weak_l("#3").
-    cases.
+    cases("outer_inv _ _").
       bind_absurd.
-      apply("#3", axiom).
       apply("#4", axiom).
+      apply("#5", axiom).
       simplify.
-      repeat(then(pi_l, imp_l, try(axiom("context h5")))).
-      cut("sub h5 (arrow h6 h7) (arrow h26 h27)").
+      repeat(then(pi_l, imp_l, try(axiom("context h37")))).
+      cut("sub h37 (arrow h38 h39) (arrow h46 h47)").
         then(mu_r, left, right).
         prove.
       cut_lemma("sub_arrow").
-      apply("#11", "context h5", "cut _ h26", "cut _ h27", "_", "_").
+      apply("#11", "context h37", "cut _ h46", "cut _ h47", "_", "_").
       axiom.
 
     % all.
     weak_l("#2").
     weak_l("#3").
-    cases.
+    cases("outer_inv _ _").
       bind_absurd.
  
-      apply("#3", axiom).
-      apply("#4", then(apply("context_w"), axiom)).
+      apply("#4", axiom).
+      apply("#5", then(apply("context_w"), axiom)).
       simplify.
-      weak_l("context h36").
+      weak_l("#3").
       cases("#8").
         prove.
         bind_absurd.
@@ -216,21 +248,20 @@ and_r.
         apply("#3", axiom).
         apply("#4", axiom).
         apply("#10", axiom, axiom, axiom).
+        force("A'","h61").
+        force("B","h65").
+        force("B'","h62").
         intros("#10").
-          force("A'", "h46").
-          force("B0", "h50").
           intros("#5").
             apply("context_w").
-            force("C", "(x\ cons (pair x T) h45)").
             axiom.
           prove.
-        cut("sub h45 (all h51 h50) (all h46 h47)").
+        imp_l.
           then(mu_r, right).
           prove.
-        cut("sub h45 (all h9 h10) (all h51 h50)").
+        imp_l.
           then(mu_r, right).
           prove.
-        apply("#10", axiom, axiom).
         axiom.
 
   % Narrowing.
@@ -296,3 +327,4 @@ and_r.
     instantiate.
       prove.
     
+
