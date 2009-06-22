@@ -42,6 +42,8 @@ struct
 open P
 open Term
 
+let (isLeft, isRight) = (P.instantiatable = Eigen, P.instantiatable = Logic)
+
 let constant tag =
   tag = Constant || tag = constant_like
 let variable tag =
@@ -111,7 +113,8 @@ let rec check_flex_args l fts flts =
 let can_bind v t =
   let rec aux n t =
     match observe t with
-      | Var v' -> v' <> v && v'.ts <= v.ts && v'.lts <= v.lts
+      | Var v' ->
+          (isLeft || (v' <> v && v'.ts <= v.ts)) && v'.lts <= v.lts
       | DB i -> i <= n
       | NB j -> j <= v.lts
       | Lam(n', t) -> aux (n+n') t
@@ -441,7 +444,7 @@ let makesubst h1 t2 a1 =
       | Term.Var v2 when variable v2.tag ->
           if Term.eq c h1 then raise OccursCheck ;
           let (changed,a1',a2') = raise_and_invert v1 v2 a1 [] lev in
-            if changed || ts1<v2.ts || lts1<v2.lts then
+            if changed || not (lts1 >= v2.lts && (isLeft || ts1 >= v2.ts)) then
               let h'= fresh ~lts:(min lts1 v2.lts) ~ts:(min ts1 v2.ts) in
                 Term.bind c (Term.app h' a2') ;
                 Term.app h' a1'
@@ -471,7 +474,7 @@ let makesubst h1 t2 a1 =
                         (Term.lambda (List.length a2) (Term.app h' a2')) ;
                       Term.app h' a1'
                   else
-                    if ts1<ts2 || lts1<lts2 then
+                    if not (lts1 >= lts2 && (isLeft || ts1 >= ts2)) then
                       let h' = fresh ~lts:(min lts1 v2.lts) ~ts:ts1 in
                         Term.bind h2 h' ;
                         Term.app h' a1'
@@ -508,7 +511,7 @@ let makesubst h1 t2 a1 =
           if h1=t2 then
             if n=0 && lev=0 then h1 else raise TypesMismatch
           else begin
-            if lts1<v2.lts || ts1<v2.ts then
+            if not (lts1 >= v2.lts && (isLeft || (ts1 >= v2.ts))) then
               Term.bind t2
                 (fresh ~lts:(min lts1 v2.lts) ~ts:(min ts1 v2.ts)) ;
             Term.lambda (lev+n) t2

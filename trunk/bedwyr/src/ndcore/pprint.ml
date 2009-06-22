@@ -26,6 +26,11 @@ type assoc = Left | Right | Both | Nonassoc
   
 let debug = ref false
 
+let string_of_tag = function
+  | Eigen -> "e"
+  | Constant -> "c"
+  | Logic -> "l"
+
 (* List of infix operators sorted by priority. *)
 let infix : (string * assoc) list ref = ref []
 let set_infix l = infix := l
@@ -67,7 +72,7 @@ let print_full ~generic ~bound chan term =
       | Var v ->
           let name = Term.get_name term in
           if !debug then
-            Format.fprintf chan "%s[%d/%d]" name v.ts v.lts
+            Format.fprintf chan "%s[%d/%d/%s]" name v.ts v.lts (string_of_tag v.tag)
           else
             Format.fprintf chan "%s" name
       | NB i ->
