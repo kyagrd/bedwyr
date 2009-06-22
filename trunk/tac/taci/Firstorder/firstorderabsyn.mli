@@ -40,6 +40,10 @@ type fixpoint =
     Inductive
   | CoInductive
 
+type alias =
+    Alias
+  | Fixpoint
+
 type quantifier =
     Pi
   | Sigma
@@ -53,7 +57,7 @@ type connective =
 type 'a polarized = ('a * 'a formula)
 
 and 'a predicate = 
-    FixpointFormula of fixpoint * string *
+    FixpointFormula of fixpoint * alias * string *
                        (string * progress) list * 'a abstraction
   | DBFormula of int * string * int
   | AtomicFormula of string
@@ -282,3 +286,5 @@ val abstractWithoutLambdas :
   ('a,'a polarized,'a predicate,'a abstraction,'a formula) map_formula
 
 val isSpecialAtom : string -> bool
+
+val freshName : string -> (string * (unit -> unit))

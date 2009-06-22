@@ -419,7 +419,7 @@ struct
                                    in
                                      FOA.lift_pred bound_terms
                                        (FOA.FixpointFormula
-                                          (ind,head,argnames,f'))
+                                          (ind,FOA.Fixpoint,head,argnames,f'))
                                | None ->
                                   (if not (FOA.isSpecialAtom head) then
                                     O.warning ("unbound atom '" ^ head ^ "'.\n") ;
@@ -432,7 +432,7 @@ struct
               (fun (p,f) ->
                 let f' = self.FOA.formf f in
                 match f' with
-                  | FOA.ApplicationFormula(FOA.FixpointFormula(ind,_,_,_),_) ->
+                  | FOA.ApplicationFormula(FOA.FixpointFormula(ind,_,_,_,_),_) ->
                       let pol =
                         if ind = FOA.Inductive then
                           FOA.Positive
