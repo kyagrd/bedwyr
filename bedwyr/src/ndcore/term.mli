@@ -74,6 +74,7 @@ val save_namespace : unit -> namespace
 val restore_namespace : namespace -> unit
 
 val fresh : ?name:string -> lts:int -> ts:int -> tag -> term
+val fresh_name : string -> string
 val get_var_by_name : tag:tag -> ts:int -> lts:int -> string -> term
 val atom : string -> term
 
@@ -85,6 +86,7 @@ val get_dummy_names : ?start:int -> int -> string -> string list
 
 val free    : string -> unit
 val is_free : string -> bool
+
 
 (** Other common manipulations. *)
 

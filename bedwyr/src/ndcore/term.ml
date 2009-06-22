@@ -422,3 +422,7 @@ struct
   let (//) = lambda
   let (^^) = app
 end
+
+let fresh_name name =
+  let v = fresh ~name:name Constant ~lts:0 ~ts:0 in
+  get_name v
