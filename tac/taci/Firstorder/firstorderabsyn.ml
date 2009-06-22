@@ -29,6 +29,10 @@ type fixpoint =
     Inductive
   | CoInductive
 
+type alias =
+    Alias
+  | Fixpoint
+
 type quantifier =
     Pi
   | Sigma
@@ -65,7 +69,7 @@ let delay a = { a with control = Delayed }
 type 'a polarized = ('a * 'a formula)
 
 and 'a predicate =
-    FixpointFormula of fixpoint * string * (string * progress) list * 'a abstraction
+    FixpointFormula of fixpoint * alias * string * (string * progress) list * 'a abstraction
   | DBFormula of int * string * int
   | AtomicFormula of string
 
@@ -183,7 +187,7 @@ let getTermHeadAndArgs t =
 
 let getDefinitionArity (Definition(_,a,_,_)) = List.length a
 let getDefinitionBody (Definition(_,_,b,_)) = b
-let predicateofDefinition (Definition(n,p,b,t)) = FixpointFormula(t,n,p,b)
+let predicateofDefinition (Definition(n,p,b,t)) = FixpointFormula(t,Fixpoint,n,p,b)
 
 let getConnective = function
     And -> ", "
@@ -205,7 +209,7 @@ let getFixpointName = function
   | CoInductive -> "nu"
 
 let getApplicationKind = function
-    FixpointFormula(fix,_,_,_) -> getFixpointName fix
+    FixpointFormula(fix,_,_,_,_) -> getFixpointName fix
   | DBFormula(_) -> "db"
   | AtomicFormula(_) -> "atom"
 
@@ -215,15 +219,15 @@ let getConnectiveName = function
   | Imp -> "imp"
 
 let getApplicationName = function
-    FixpointFormula(_,name,_,_)
+    FixpointFormula(_,_,name,_,_)
   | DBFormula(_,name,_) -> name
   | AtomicFormula(name) -> name
 
 let mapFormula x termsf = {
   polf = (fun (p,f) -> p,(x ()).formf f) ; 
   predf = (function 
-    | FixpointFormula(fix,name,args,f) ->
-        FixpointFormula (fix,name,args,(x ()).abstf f)
+    | FixpointFormula(fix,alias,name,args,f) ->
+        FixpointFormula (fix,alias,name,args,(x ()).abstf f)
     | AtomicFormula(head) -> AtomicFormula(head)
     | DBFormula(a,b,c) -> DBFormula(a,b,c)) ;
   abstf = (function
@@ -240,8 +244,8 @@ let mapFormula x termsf = {
 let mapFormula2 f1 f2 x termsf a = {
   polf = (fun (p,f) -> p,(x a).formf f) ; 
   predf = (fun f tl -> ApplicationFormula((match f with 
-    | FixpointFormula(fix,name,args,f) ->
-        FixpointFormula (fix,name,args,(x a).abstf f)
+    | FixpointFormula(fix,alias,name,args,f) ->
+        FixpointFormula (fix,alias,name,args,(x a).abstf f)
     | AtomicFormula(head) -> AtomicFormula(head)
     | DBFormula(a,b,c) -> DBFormula(a,b,c)),tl)) ;
   abstf = (function
@@ -306,7 +310,7 @@ let rec string_of_formula ~generic ~names ch =
   let s = string_of_formula ~generic in
   { polf = (fun (p,f) -> pf "%a" (fun ch -> (s ~names ch).formf) f) ;
     predf = (function
-        FixpointFormula(_,name,_,_)
+        FixpointFormula(_,_,name,_,_)
       | AtomicFormula(name) -> pf "%s" name
       | DBFormula(l,n,i) -> 
           (*  TODO: eep!  Such hackery! *)
@@ -403,7 +407,7 @@ let rec string_of_formula_ast ~generic =
     { polf = (fun (p,f) -> (s ~generic).formf f) ;
 
       predf = (function
-       FixpointFormula(i,name,_,f) -> 
+       FixpointFormula(i,_,name,_,f) -> 
          (getFixpointName i) ^ "[" ^ name ^ ": " ^ ((s ~generic).abstf f) ^ "]"
      | AtomicFormula(name) -> 
          "atom["^name^"]"
@@ -671,11 +675,11 @@ let eliminateNablas tv =
                  in
                  let wrap t = Norm.deep_norm (wrap t) in
                    List.map wrap terms)
-        | FixpointFormula (i,name,args,body) ->
+        | FixpointFormula (i,alias,name,args,body) ->
             let (names,progs) = List.split args in
             let n,a,b = abstract_body name names body in
             ApplicationFormula
-              (FixpointFormula(i,n,List.combine a progs,b), List.map tf terms)
+              (FixpointFormula(i,alias,n,List.combine a progs,b), List.map tf terms)
       )}
 
   in
@@ -827,8 +831,8 @@ let applyFixpoint argument =
     formf = (mapFormula (ff lam db) tf).formf ;
 
     predf = (function
-      | FixpointFormula (i,name,args,body) ->
-          FixpointFormula (i,name,args,(ff lam (db+1) ()).abstf body)
+      | FixpointFormula (i,alias,name,args,body) ->
+          FixpointFormula (i,alias,name,args,(ff lam (db+1) ()).abstf body)
       | DBFormula(_) -> failwith "Firstorderabsyn.applyFixpoint: \
                                   encountered invalid DB."
       | AtomicFormula(name) -> AtomicFormula name) ;
@@ -1007,13 +1011,13 @@ let rec matchFormula pattern formula =
     let (pattern, tl) = p1 in
     let (pred, tl') = p2 in
     match (pattern, pred) with
-        (AtomicPattern(name), FixpointFormula(_, name', _, _))
+        (AtomicPattern(name), FixpointFormula(_, _, name', _, _))
       | (AtomicPattern(name), AtomicFormula(name')) ->
           (name = name') && (List.length tl = List.length tl') &&
           (List.for_all success (List.map2 rightUnify tl tl'))
       | (AnonymousPredicate, _)
-      | (AnonymousMu, FixpointFormula(Inductive, _, _, _))
-      | (AnonymousNu, FixpointFormula(CoInductive, _, _, _)) -> true
+      | (AnonymousMu, FixpointFormula(Inductive, _, _, _, _))
+      | (AnonymousNu, FixpointFormula(CoInductive, _, _, _, _)) -> true
       | _ -> false
   in
   
@@ -1063,3 +1067,8 @@ let rec matchFormula pattern formula =
   result)
 
 let abstractVarWithoutLambdas var = abstractVarWithoutLambdas var ()
+
+let freshName name =
+  let ns = Term.save_namespace () in
+  let name' = Term.fresh_name name in
+  (name', fun () -> Term.restore_namespace ns)

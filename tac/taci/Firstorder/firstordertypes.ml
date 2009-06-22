@@ -327,9 +327,9 @@ struct
                      | Some p -> p
                      | None ->
                          begin match body with
-                           | FOA.FixpointFormula (FOA.Inductive,_,_,_) ->
+                           | FOA.FixpointFormula (FOA.Inductive,_,_,_,_) ->
                                FOA.Positive
-                           | FOA.FixpointFormula (FOA.CoInductive,_,_,_) ->
+                           | FOA.FixpointFormula (FOA.CoInductive,_,_,_,_) ->
                                FOA.Negative
                            | _ -> assert false
                          end)

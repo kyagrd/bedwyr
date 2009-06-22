@@ -332,7 +332,7 @@ struct
   (* This is currently rather weak. Comparing the bodies will eventually be
    * needed, but implies using Term.eq for the leafs. *)
   let fixpointEq p p' = match p,p' with
-    | FOA.FixpointFormula (f,name,_,_), FOA.FixpointFormula (f',name',_,_) ->
+    | FOA.FixpointFormula(f,_,name,_,_), FOA.FixpointFormula (f',_,name',_,_) ->
         f = f' && name = name'
     | _ -> false
   
@@ -382,7 +382,7 @@ struct
   let unfoldFixpoint rulename pol pred arity args mkseq sc fc =
     let body =
       match pred with
-        | FOA.FixpointFormula (_,_,_,body) -> body
+        | FOA.FixpointFormula (_,_,_,_,body) -> body
         | _ -> assert false
     in
     let abst = abs_of_pred arity pol pred in
@@ -485,8 +485,11 @@ struct
     * is fine in the automatic case, but since the low-level tacticals use intro,
     * axiom on mu was broken in that it wouldn't let you pick what to use on the 
     * left.  The axiom tester lets you say 'only use those formulas on the left
-    * that meet the test. *)
-  let intro ?axt:(axt = fun _ _ -> true) side matcher session arg =
+    * that meet the test.
+    *
+    * Note: namedInvariant is a boolean that determines whether the inferred
+    * invariant should be packaged in an alias mu. *)
+  let intro ?axt:(axt = fun _ _ -> true) ?namedInvariant:(namedInvariant = false) side matcher session arg =
     (* Propagate the focused flag from f to its subformulas. Meant to be used as
      * part of the zipper. *)
     let propagate (super,_) (Formula(i,(sub,sf))) =
@@ -672,7 +675,7 @@ struct
                 unfoldFixpoint ruleName pol p arity args mkseq sc fc
             in
             begin match p with
-              | FOA.FixpointFormula (FOA.CoInductive,name,argnames,body) ->
+              | FOA.FixpointFormula (FOA.CoInductive,_,name,argnames,body) ->
                   assert (arity = List.length argnames) ;
                   (* This is synchronous. *)
                   begin match arg with
@@ -694,7 +697,7 @@ struct
                               fc axt seq.rhs
                     | s -> assert false
                   end
-              | FOA.FixpointFormula (FOA.Inductive,name,argnames,body) ->
+              | FOA.FixpointFormula (FOA.Inductive,_,name,argnames,body) ->
                   let onlynames = List.map fst argnames in
                   assert (arity = List.length argnames) ;
                   (* This is asynchronous.
@@ -874,11 +877,36 @@ struct
                             (FOA.AbstractionBody aelrhs')
                             fv
                         in
+                        
+                        let (invariant', tfc) =
+                          if namedInvariant then
+                            let (invariantName, tfc) = FOA.freshName (name ^ "_invariant") in
+                            let invariantMu =
+                              let args =
+                                Listutils.mapn
+                                  (fun i -> ("a" ^ (string_of_int i), FOA.Unknown))
+                                  (List.length fv)
+                              in
+                              FOA.FixpointFormula(FOA.Inductive, FOA.Alias, invariantName, args, invariant)
+                            in
+                            let invariantApp = 
+                              FOA.positiveFormula
+                                (FOA.ApplicationFormula(invariantMu, List.rev fv))
+                            in
+                            (List.fold_left
+                              (fun f v -> (FOA.abstractVar v).FOA.abstf f)
+                              (FOA.AbstractionBody invariantApp)
+                              fv,
+                            tfc)
+                          else
+                            (invariant, fun () -> ())
+                        in
+
                         let _,lvl',st',bst' =
                           Option.get (fixpoint_St_St'_BSt'
                                         ~session ~lvl:seq.lvl ~body
                                         ~argnames:onlynames
-                                        ~s:invariant ~t:args)
+                                        ~s:invariant' ~t:args)
                         in
                         let seq =
                           { seq with bound = updateBound seq.bound }
@@ -895,7 +923,7 @@ struct
                           in
                           (* TODO: check the other premise so the proof is complete
                            *  (in the proof builder, to save work).  *)
-                          sc "induction" [seq']
+                          sc ~k:(fun () -> tfc (); fc ()) "induction" [seq']
                   end
               | FOA.AtomicFormula p ->
                   if p = "false" then sc "false" [] else (* TODO: false should be special *)
@@ -1012,7 +1040,7 @@ struct
                 unfoldFixpoint ruleName pol p arity args mkseq sc fc
             in
             begin match p with
-              | FOA.FixpointFormula (FOA.Inductive,name,argnames,body) ->
+              | FOA.FixpointFormula (FOA.Inductive,alias,name,argnames,body) ->
                   assert (arity = List.length argnames) ;
                   (* This is synchronous. *)
                   begin match arg with
@@ -1034,7 +1062,7 @@ struct
                               fc axt seq.lhs
                     | s -> O.error "Invalid parameter." ; fc ()
                   end
-              | FOA.FixpointFormula (FOA.CoInductive,name,argnames,body) ->
+              | FOA.FixpointFormula (FOA.CoInductive,alias,name,argnames,body) ->
                   let onlynames = List.map fst argnames in
                   assert (arity = List.length argnames) ;
                   (* This is asynchronous.
@@ -1160,11 +1188,36 @@ struct
                             (FOA.AbstractionBody aelrhs')
                             fv
                         in
+                        
+                        let (invariant', tfc) =
+                          if namedInvariant then
+                            let (invariantName, tfc) = FOA.freshName (name ^ "_invariant") in
+                            let invariantMu =
+                              let args =
+                                Listutils.mapn
+                                  (fun i -> ("a" ^ (string_of_int i), FOA.Unknown))
+                                  (List.length fv)
+                              in
+                              FOA.FixpointFormula(FOA.Inductive, FOA.Alias, invariantName, args, invariant)
+                            in
+                            let invariantApp = 
+                              FOA.positiveFormula
+                                (FOA.ApplicationFormula(invariantMu, List.rev fv))
+                            in
+                            (List.fold_left
+                              (fun f v -> (FOA.abstractVar v).FOA.abstf f)
+                              (FOA.AbstractionBody invariantApp)
+                              fv,
+                            tfc)
+                          else
+                            (invariant, fun () -> ())
+                        in
+                        
                         let _,lvl',st',bst' =
                           Option.get (fixpoint_St_St'_BSt'
                                         ~session ~lvl:seq.lvl ~body
                                         ~argnames:onlynames
-                                        ~s:invariant ~t:args)
+                                        ~s:invariant' ~t:args)
                         in
                         let seq =
                           { seq with bound = updateBound seq.bound }
@@ -1173,9 +1226,12 @@ struct
                           { (* i with *) context = 0 ;
                             progressing_bound = Some (Properties.getInt "firstorder.progressingbound") }
                         in
-                          if outOfBound seq.bound then fc () else
+                          if outOfBound seq.bound then
+                            fc ()
+                          else
                             (*  TODO: check the other premise.  *)
-                            sc "coinduction"
+                            sc ~k:(fun () -> tfc (); fc ()) 
+                              "coinduction"
                               [{ seq with lvl = lvl' ;
                                  lhs = [Formula(i',st')] ;
                                  rhs = [Formula(i',bst')] }]
@@ -1214,22 +1270,22 @@ struct
 
   (* Easy wrapper for tactics without arguments; see intro for a description of the
    * arguments, etc. *)
-  let specialize ?arg ?axt:(axt = fun _ _ -> true) side defaultTest session args =
+  let specialize ?arg ?axt:(axt = fun _ _ -> true) ?namedInvariant:(namedInvariant = false) side defaultTest session args =
     match args with
       | [Absyn.String s] ->
           (match parseGeneralPattern s with
-            | Some p -> intro side (patternMatcherWithDefault p defaultTest) session arg ~axt
+            | Some p -> intro side (patternMatcherWithDefault p defaultTest) session arg ~axt ~namedInvariant
             | None ->
                 O.error "invalid pattern" ; fun s sc fc -> fc ())
-      | [] -> intro side (makeMatcher defaultTest) session arg ~axt
+      | [] -> intro side (makeMatcher defaultTest) session arg ~axt ~namedInvariant
       | _ ->
           O.error "too many arguments" ; fun s sc fc -> fc ()
 
   (* Even more wrapping: pass a pattern instead of a matcher.. *)
-  let patternTac ?arg side defaultPattern session args =
+  let patternTac ?arg ?namedInvariant:(namedInvariant = false) side defaultPattern session args =
     match parsePattern defaultPattern with
       | Some (pattern) ->
-          specialize ?arg side (patternTest (Pattern pattern)) session args
+          specialize ?arg ~namedInvariant side (patternTest (Pattern pattern)) session args
       | None -> assert false (* patternTac is only called with constants. *)
 
   (* {1 Specialized basic manual tactics} *)
@@ -1263,6 +1319,14 @@ struct
     | [Absyn.String i] -> patternTac `Left "mu _" ~arg:i session []
     | [Absyn.String "auto"; Absyn.String p] -> patternTac `Left p session []
     | [Absyn.String i; Absyn.String p] -> patternTac `Left p ~arg:i session []
+    | [Absyn.String "auto"; Absyn.String p; Absyn.String "true"] ->
+        patternTac ~namedInvariant:true `Left p session []
+    | [Absyn.String i; Absyn.String p; Absyn.String "true"] ->
+        patternTac ~namedInvariant:true `Left p ~arg:i session []
+    | [Absyn.String "auto"; Absyn.String p; Absyn.String "false"] ->
+        patternTac ~namedInvariant:false `Left p session []
+    | [Absyn.String i; Absyn.String p; Absyn.String "false"] ->
+        patternTac ~namedInvariant:false `Left p ~arg:i session []
     | _ -> (fun _ _ fc -> O.error "Invalid arguments.\n" ; fc ())
 
   let coinductionTactical session = function
@@ -1288,7 +1352,7 @@ struct
            (function
               | Formula(_,
                   (_,FOA.ApplicationFormula
-                      ((FOA.FixpointFormula (FOA.Inductive,_,_,_)),_))) -> true
+                      ((FOA.FixpointFormula (FOA.Inductive,_,_,_,_)),_))) -> true
               | _ -> false))
         ~arg:"init"
         ~axt:axt
@@ -1309,7 +1373,7 @@ struct
          (function
             | Formula(_,
                 (_,FOA.ApplicationFormula
-                    ((FOA.FixpointFormula (FOA.CoInductive,_,_,_)),_))) -> true
+                    ((FOA.FixpointFormula (FOA.CoInductive,_,_,_,_)),_))) -> true
             | _ -> false))
       ~arg:"init"
 
@@ -1770,8 +1834,9 @@ struct
                    | Formula(i,(({FOA.freezing=FOA.Unfrozen} as a),
                        (FOA.ApplicationFormula(
                           FOA.FixpointFormula(
-                            FOA.Inductive,_,argnames,_),args) as f)))
-                     when unfoldingProgresses `Left argnames args ->
+                            FOA.Inductive, alias,_,argnames,_),args) as f)))
+                     when alias = FOA.Alias ||
+                          unfoldingProgresses `Left argnames args ->
                        if Properties.getBool "firstorder.proofsearchdebug" then
                          Format.printf "%s@[<hov 2>Unfold left@ %s@]\n%!"
                            ""
@@ -1785,8 +1850,9 @@ struct
                    | Formula(i,(({FOA.freezing=FOA.Unfrozen} as a),
                        (FOA.ApplicationFormula(
                           FOA.FixpointFormula(
-                            FOA.CoInductive,_,argnames,_),args) as f)))
-                     when unfoldingProgresses `Right argnames args ->
+                            FOA.CoInductive,alias,_,argnames,_),args) as f)))
+                     when alias = FOA.Alias ||
+                          unfoldingProgresses `Right argnames args ->
                        if Properties.getBool "firstorder.proofsearchdebug" then
                          Format.printf "%s@[<hov 2>Unfold right@ %s@]\n%!"
                            ""
@@ -1803,7 +1869,7 @@ struct
       (fun (Formula(i,(a,f))) ->
          match f with
            | FOA.ApplicationFormula
-              (FOA.FixpointFormula (FOA.Inductive,_,_,_), _) ->
+              (FOA.FixpointFormula (FOA.Inductive,FOA.Fixpoint,_,_,_), _) ->
               a.FOA.freezing = FOA.Unfrozen
            | _ -> false)
   
@@ -1812,7 +1878,7 @@ struct
       (fun (Formula(i,(a,f))) ->
          match f with
            | FOA.ApplicationFormula
-              (FOA.FixpointFormula (FOA.CoInductive,_,_,_), _) ->
+              (FOA.FixpointFormula (FOA.CoInductive,FOA.Fixpoint,_,_,_), _) ->
               a.FOA.freezing = FOA.Unfrozen
            | _ -> false)
 
