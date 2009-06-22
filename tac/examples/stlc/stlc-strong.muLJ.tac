@@ -53,7 +53,7 @@ induction("g\m\t\ nabla x\ pi g'\ permute g' (cons (pair x t') g) =>
     apply("lift_permute_s").
     weak_l("lift_permute _ _").
     then(pi_l, imp_l).
-    force("G'''", "(x1\(x2\ cons (pair x1 h0) (g' x2)))").
+    force("G'''", "(x1\(x2\ cons (pair x1 t0) (g' x2)))").
     prove.
     prove.
 
@@ -86,7 +86,7 @@ induction("gg\m\tm\ pi g\ permute gg (cons (pair n tn) g) =>
     then(pi_l, imp_l).
 
       % cons maintains permutation.
-      force("G0", "(n1\ cons (pair n1 h0) g0)").
+      force("G0", "(n1\ cons (pair n1 t) g0)").
       weak_l("of _ _ _").
       apply("permute_w").
       weak_l("permute _ _").
@@ -125,7 +125,7 @@ cases.
   cases("#3").
   intros("#1").
     apply("context_lift").
-    force("C'", "(x1\ cons (pair x1 h3) h4)").
+    force("C'", "(x1\ cons (pair x1 t3) context0)").
     weak_l("context _").
     weak_l("lift_of _ _ _").
     prove.
@@ -136,7 +136,7 @@ cases.
   cases("#4").
     apply("#1", axiom, axiom).
     apply("#2", axiom).
-    force("T", "h16").
+    force("T", "t6").
     intros("#2").
       cases("#1").
         apply("of_subst").
@@ -151,5 +151,6 @@ cases.
 
 #lemma eval_det "pi e\v1\v2\ eval e v1 => eval e v2 => v1 = v2".
 prove.
+
 
 
