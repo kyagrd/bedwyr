@@ -119,11 +119,11 @@ struct
     let sq = ("'", "&apos;") in
     let dq = ("\"", "&quot;") in
     let cr = ("\r", "") in    
-    let nl = ("\n", "\\n") in
+    let nl = ("\n", "&#x000A;") in
     let amp = ("&", "&amp;") in
     let lt = ("<", "&lt;") in
     let gt = (">", "&gt;") in
-    let slash = ("\\", "\\\\") in
+    let slash = ("\\", "&#x005C;") in
     (List.map (fun (r,s) -> (Str.regexp r, s)) [sq;dq;cr;nl;amp;lt;gt;slash])
   
   let escape s =
