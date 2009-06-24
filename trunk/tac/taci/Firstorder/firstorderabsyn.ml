@@ -320,7 +320,7 @@ let rec string_of_formula ~generic ~names ch =
     abstf = (function
         AbstractionFormula (hint,f) ->
           let hint = Term.get_dummy_name hint in 
-          (pf "%s\\\\@ %a" hint
+          (pf "%s\\@ %a" hint
             (fun ch f -> (s ~names:(hint::names) ch).abstf f; Term.free hint)
             f)
       | AbstractionBody(f) -> pf "%a" (fun ch -> (s ~names ch).polf) f) ; 
@@ -349,7 +349,7 @@ let rec string_of_formula ~generic ~names ch =
               get [] (QuantifiedFormula (q,f))
           in
           let names = List.rev_append vars names in
-            pf "@[<1>(%s %s\\\\@ %a)@]"
+            pf "@[<1>(%s %s\\@ %a)@]"
               (getQuantifierName q)
               (String.concat "\\" vars)
               (fun ch -> (s ~names ch).formf) body ;
