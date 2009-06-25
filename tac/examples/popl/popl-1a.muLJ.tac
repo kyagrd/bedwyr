@@ -9,9 +9,11 @@ prove.
     repeat(weak_l("_ => _")),
     repeat(weak_l("_ , _")),
     repeat(weak_l("sub _ _ _")),
+    repeat(weak_l("outer_inv _ _")),
     repeat(weak_l("cut _ _")),
     prove("1")).
 #tactical instantiate then(repeat(sigma), repeat(then(and_r, try(eq_r)))).
+#tactical sub_bind_refl then(mu_r,left,left,left,right).
 #tactical sub_bind_trans then(mu_r,left,left,right).
 #tactical sub_arrow then(mu_r,left,right).
 #tactical sub_all then(mu_r,right).
@@ -46,6 +48,18 @@ prove.
   "pi c\t\ context c => nabla x\ context (cons (pair x t) c)".
 prove.
 
+% #lemma lift_context_w
+%   "nabla n\ pi c\t\ context c => nabla x\ context (cons (pair x t) c)".
+% prove.
+% Not quite a lifting, has exchange too.
+#lemma lift_context_w
+  "pi c\ pi t\ nabla n\ context (c n) =>
+     nabla x\ context (cons (pair n (t x)) (c x))".
+prove.
+
+#lemma context_s "pi c\ (nabla a\ context c) => context c".
+prove.
+
 % The simpler form is also useful.
 #lemma context_w0
   "pi c\ context c => nabla a\ context c".
@@ -60,27 +74,38 @@ prove.
 #lemma lift_gcut_cut "nabla a\ pi x\ gcut x => pi c\ context c => cut c x".
 prove.
 
+% Lifting a theorem always yields a theorem as long as no atoms are used.
+% Often, the same proof script works, but in some cases like here extra
+% steps have to be taken, notably involving generic exchange.
 #lemma lift_gcut_w "nabla b\ pi x\ gcut x => nabla a\ gcut x".
-abstract.
-simplify.
-coinduction.
-  then(and_r,simplify).
-    then(nu_l,and_l,weak_l,nu_l,and_l,weak_l("#2")).
-    admit. % TODO we need generic exchange on cut.
-    prove.
+admit.
 
-% Check wether (nabla a\ gcut x) => gcut x,
-% which involves (nabla a\ cut x) => cut x.
+#lemma lift_gcut_wx "pi x\ nabla a\ gcut (x a) => nabla b\ gcut (x b)".
+admit.
 
 #lemma gnarrowing_narrowing
    "pi x\ gnarrowing x => pi c\ context c => narrowing c x".
+prove.
+
+#lemma gnarrowing_w "pi x\ gnarrowing x => nabla a\ gnarrowing x".
 prove.
 
 #lemma lift_gnarrowing_narrowing
   "nabla a\ pi x\ gnarrowing x => pi c\ context c => narrowing c x".
 prove.
 
-#lemma bind_w
+#lemma lift_gnarrowing_w
+  "nabla b\ pi x\ gnarrowing x => nabla a\ gnarrowing x".
+admit.
+
+#lemma lift_gnarrowing_wx
+  "pi x\ nabla a\ gnarrowing (x a) => nabla b\ gnarrowing (x b)".
+admit.
+
+#lemma bind_w "pi x\t\c\ bind x t c => nabla a\ bind x t c".
+prove.
+
+#lemma bind_ctxt_w
   "pi x\t\c\ bind x t c => pi t'\ nabla n\ bind x t (cons (pair n t') c)".
 intros.
 induction.
@@ -97,45 +122,115 @@ cases.
 prove.
 
 #lemma permute_w
+  "pi c\c'\ permute c c' => nabla a\ permute c c'".
+simplify.
+then(mu_l,mu_r).
+% TODO use andthen when fixed.
+then(and_l,and_r).
+  weak_l("#2").
+  then(cut_lemma("bind_w"),cut_lemma("bind_s"),prove).
+  weak_l("#1").
+  then(cut_lemma("bind_w"),cut_lemma("bind_s"),prove).
+
+#lemma permute_weakening
   "pi c\ta\tb\c'\
     (nabla a\ permute (c' a) (cons (pair a ta) c)) =>
     (nabla b\a\ permute (cons (pair b tb) (c' a))
                         (cons (pair b tb) (cons (pair a ta) c)))".
 admit.
 
-#lemma sub_w
-  "pi c\a\b\ sub c a b => pi t\ nabla x\ sub (cons (pair x t) c) a b".
-simplify.
-induction(
-   "c\a\b\ nabla x\ pi c'\ permute c' (cons (pair x t) c) => sub c' a b").
-then(nabla, pi_l).
-force("C'","(n1\ cons (pair n1 t) c)").
-prove.
+#lemma lift_permute_weakening
+  "pi c\c'\t\t'\
+ nabla x\ permute (c x) (cons (pair x (t x)) (c' x)) =>
+  nabla y\ permute (cons (pair x (t' y)) (c y))
+                   (cons (pair y (t y)) (cons (pair x (t' y)) (c' y)))".
+admit.
+
+#lemma sub_w "pi c\s\t\ sub c s t => nabla x\ sub c s t".
+intros.
+abstract.
+induction.
 cases.
   % Top.
   prove.
   % Bind_refl.
+  sub_bind_refl.
+  instantiate.
+  force("U'", "(x\ u)").
   apply("bind_w").
-  then(mu_l("lift_permute _ _"),mu_r,prove).
+  axiom.
   % Bind_trans.
-  abstract.
-  apply("#2","_").
-  apply("bind_w").
-  then(mu_l("lift_permute _ _"),sub_bind_trans,prove).
+  then(mu_r, left, left, right).
+  instantiate.
+    force("U'0", "(x\ u0)").
+    apply("bind_w").
+    axiom.
+  prove.
   % Arrow.
-  abstract.
-  apply("#1","_").
-  apply("#2","_").
+  prove.
+  % All.
+  prove.
+% Qed.
+
+#lemma sub_ctxt_inclusion
+  "pi c\a\b\ sub c a b =>
+    pi c'\ (pi x\t\ bind x t c => bind x t c') => sub c' a b".
+simplify.
+induction.
+cases.
+  % Top.
+  prove.
+  % Bind_refl.
+  then(sub_bind_refl,prove).
+  % Bind_trans.
+  then(sub_bind_trans,prove).
+  % Arrow.
+  intros("#1").
+    then(weak_l,prove).
+  intros("#2").
+    then(weak_l,prove).
   prove.
   % All.
   abstract.
-  apply("#1","_").
+  intros("#1").
+    then(weak_l,prove).
   then(sub_all,instantiate).
     axiom.
     weak_l.
-    apply("permute_w").
     intros("#1").
+      force("C''","(x1\ cons (pair x1 t10) c'4)").
+      cut_lemma("bind_w").
+      cut_lemma("bind_s").
+      prove.
+    axiom.
+% Qed.
+
+#lemma lift_sub_ctxt_inclusion "nabla n\
+  pi c\a\b\ sub c a b =>
+    pi c'\ (pi x\t\ bind x t c => bind x t c') => sub c' a b".
 admit.
+
+#lemma lift_lift_sub_ctxt_inclusion "nabla n\m\
+  pi c\a\b\ sub c a b =>
+    pi c'\ (pi x\t\ bind x t c => bind x t c') => sub c' a b".
+admit.
+
+#lemma sub_weakening
+  "pi c\a\b\ sub c a b => pi t\ nabla x\ sub (cons (pair x t) c) a b".
+simplify.
+cut("nabla n\ pi x\t\ bind x t c => bind x t (cons (pair n t) c)"). 
+then(weak_l,prove).
+cut_lemma("lift_sub_ctxt_inclusion").
+apply("sub_w").
+weak_l("sub _ _ _").
+prove.
+% Qed.
+
+% Not only a lifting, has exchange too.
+#lemma lift_sub_weakening
+  "pi c\a\b\t\
+    nabla n\ sub (c n) (a n) (b n) =>
+     nabla x\ sub (cons (pair n (t x)) (c x)) (a x) (b x)".
 admit.
 
 % ESSENTIAL CASES FOR CUT.
@@ -213,8 +308,7 @@ and_r.
       bind_absurd.
 
       % sub - all.
-      then(mu_r, right).
-      instantiate.
+      then(sub_all,instantiate).
         mu_l("#4").
         apply("#4", axiom, axiom).
         axiom.
@@ -247,7 +341,48 @@ and_r.
 #lemma outer_inv_w
    "pi c\x\ outer_inv c x => nabla a\ outer_inv c x".
 simplify.
-admit.
+cases.
+cases("#1").
+  % Top.
+  prove.
+  % Bind.
+  then(mu_r,left,left,right).
+  apply("bind_w").
+    prove.
+  % Arrow.
+  then(mu_r,left,right,instantiate,simplify).
+  apply("context_s").
+  apply("#1","_").
+  repeat(weak_l("#2")).
+  then(simplify,and_r).
+    then(apply("gcut_w"),axiom).
+    then(apply("gnarrowing_w"),axiom).
+  apply("context_s").
+  weak_l.
+  apply("#1","_").
+  repeat(weak_l("#2")).
+  then(simplify,and_r).
+    then(apply("gcut_w"),axiom).
+    then(apply("gnarrowing_w"),axiom).
+  % All.
+  then(mu_r,right,instantiate,simplify).
+  apply("context_s").
+  apply("#1","_").
+  repeat(weak_l("#2")).
+  then(simplify,and_r).
+    then(apply("gcut_w"),axiom).
+    then(apply("gnarrowing_w"),axiom).
+  weak_l.
+  cut("nabla n\m\ context c0").
+    weak_l.
+    prove.
+  imp_l.
+    then(weak_l,prove).
+  repeat(weak_l("#2")).
+  then(and_r,simplify).
+    then(apply("lift_gcut_wx"),axiom).
+    then(apply("lift_gnarrowing_wx"),axiom).
+% Qed.
 
 #lemma cut_hered
   "pi ct\x\ outer_inv ct x => context ct => pi c\ context c => cut c x".
@@ -256,7 +391,7 @@ then(mu_r,intros).
 induction("auto","sub _ _ x1").
 and.
   % Induction target.
-  prove.
+  then(mu_r,prove("0")).
   % Invariance.
   cases.
     % top.
@@ -275,7 +410,7 @@ and.
     % arrow.
     weak_l("#2").
     weak_l("#3").
-% BUG, kills a goal    andthen(cases("outer_inv _ _"),bind_absurd).
+    % TODO andthen(cases("outer_inv _ _"),bind_absurd).
     cases("outer_inv _ _").
     bind_absurd.
     apply("#3", axiom).
@@ -283,8 +418,7 @@ and.
     simplify.
     repeat(weak_l("gnarrowing _")).
     weak_l("context ct3").
-% BUG same    andthen(apply("gcut_cut"),axiom,weak_l("gcut _")).
-%    andthen(apply("gcut_cut"),axiom,weak_l("gcut _")).
+    % TODO same bug: andthen(apply("gcut_cut"),axiom,weak_l("gcut _")).
     apply("gcut_cut").
       axiom.
     weak_l("gcut _").
@@ -300,28 +434,38 @@ and.
     % all.
     weak_l("#2").
     weak_l("#3").
+    cases("sub _ (all _ _) _").
+      prove.
+      bind_absurd.
+      bind_absurd.
+    cut("sub context14 (all s12 s22) (all s13 s23)").
+    then(sub_all,instantiate,simplify,axiom).
+    cut("sub context14 (all s13 s23) (all t17 t27)").
+    then(sub_all,instantiate,simplify,axiom).
+    then(weak_l("sub _ _ _"),weak_l("sub _ _ _"),
+         weak_l("sub _ _ _"),weak_l("sub _ _ _")).
     cases("outer_inv _ _").
-    bind_absurd.
-
-     apply("#3", axiom).
-     apply("#4", then(apply("context_w"), axiom)).
-     simplify.
-     weak_l("context ct4").
-     cut("cut context10 a7").
-       admit.
-     cut("narrowing context10 a7").
-       admit.
-     weak_l("gcut _").
-     weak_l("gnarrowing _").
-
-     cases("sub _ (all _ _) _").
-       prove.
-       bind_absurd.
-       bind_absurd.
-
-       cut_lemma("sub_all").
-       apply("#10", axiom, axiom, axiom).
-admit.
+      bind_absurd.
+    apply("#1", axiom).
+    apply("#2", then(apply("context_w"), axiom)).
+    simplify.
+    weak_l("#4").
+    weak_l("context ct4").
+    apply("gcut_cut").
+      axiom.
+    apply("gnarrowing_narrowing").
+      axiom.
+    weak_l("gcut _").
+    weak_l("gnarrowing _").
+    apply("context_w").
+    apply("lift_gcut_cut").
+      axiom.
+     weak_l("lift_context _").
+     weak_l("lift_gcut _").
+     cut_lemma("sub_all").
+     abstract.
+     apply("#7", axiom,axiom,axiom,axiom,axiom,axiom).
+     axiom.
 
 #set "firstorder.induction-unfold" "false".
 
@@ -374,9 +518,16 @@ cut("gcut a10").
      permute (g x) (cons (pair x t) c) =>
        sub (cons (pair x s) c) (u x) (v x)",
     "lift_sub _ _ _").
-  % apply("#4",axiom,axiom,axiom).
-  % prove.
-admit.
+  
+  % Invariant => goal.
+  abstract.
+  apply("#4",
+     then(apply("context_w0"),axiom),
+     then(apply("sub_w"),axiom),
+     then(apply("gcut_w"),axiom)).
+  intros("#4").
+    then(repeat(weak_l),prove).
+  axiom.
 
   % Invariance.
   abstract.
@@ -394,27 +545,33 @@ admit.
     weak_l.
     weak_l("#6").
     cases("lift_bind _ _ _").
+
       % Bind-trans on the narrowed variable.
       then(sub_bind_trans,instantiate).
       prove.
       cut("nabla x2\ context (cons (pair x2 (s'2 x2)) (c'4 x2))").
       then(weak_l,repeat(weak_l("#2")),prove).
-      % apply("context_w").
-      % apply("gcut_w").
-      %   axiom.
-      nu_l("lift_gcut _").
-      and_l.
       weak_l("lift_context _").
+      apply("lift_gcut_cut").
+        axiom.
+        weak_l("lift_gcut _").
+      cut("nabla n\ sub (cons (pair n (s'2 n)) (c'4 n)) (s'2 n) (t'3 n)").
+      cut_lemma("lift_sub_ctxt_inclusion").
       abstract.
-      apply("#3","_").
-      weak_l("lift_lift_gcut _").
-%      weak_l("gcut _").
-%      apply("sub_w").
-%      weak_l("sub _ _ _").
-%      weak_l("context _").
-      cut("nabla x2\ sub (cons (pair x2 (s'2 x2)) (c'4 x2)) (s'2 x2) (t'3 x2)").
-      admit.
-      then(abstract,mu_l("lift_cut _ _"),repeat(freeze),prove).
+      intros("#5").
+        % TODO wtf?
+        force("C'","c'4").
+        force("A'","s'2").
+        force("B'","t'3").
+        axiom.
+      intros("#5").
+        force("C''","(x2\ cons (pair x2 (s'2 x2)) (c'4 x2))").
+        then(repeat(weak_l),prove).
+      axiom.
+      weak_l("#2").
+      weak_l("lift_context _").
+      prove.
+
       % Bind-trans on another variable.
       sub_bind_trans.
       instantiate.
@@ -431,28 +588,28 @@ admit.
     apply("#1", axiom,axiom,axiom,axiom).
     then(sub_all,instantiate).
     axiom.
-    pi_l.
-    force("C''","(x2\ (x3\ (cons (pair x2 (t1'0 x3)) (c'3 x3))))").
-%    apply("#2",
-%      then(apply("lift_context_w"),axiom),
-%      then(apply("lift_sub_w"),axiom),
-%      then(apply("lift_gcut_w"),axiom)).
-    intros("#2").
-    admit.
-    intros("#2").
-      force("T''","(x2\(x3\ t'7 x3))").
-      force("S''","(x2\(x3\ s'4 x3))").
-      admit.
-    intros("#2").
-      admit.
-    intros("#2").
-      then(weak_l,weak_l,weak_l,weak_l).
-      admit.
+    repeat(pi_l).
+    force("T''","(x2\(x3\ t'7 x3))").
+    force("C''0","(x2\ (x3\ (cons (pair x2 (t1'0 x3)) (c'3 x3))))").
+    apply("#2",
+      then(apply("lift_context_w"),axiom)).
+    imp_l.
+      then(weak_l,apply("lift_sub_weakening"),axiom).
+    imp_l.
+      apply("lift_gcut_w").
+      axiom.
+      % TODO that should be an axiom but gcut has been unfolded.
+      then(repeat(weak_l("mu _")),prove).
+    apply("#2",then(apply("lift_permute_weakening"),axiom)).
     weak_l.
     repeat(weak_l("#2")).
-  % need to reorder.
-  admit.
-    
+    apply("lift_lift_sub_ctxt_inclusion").
+    force("C'''",
+     "(x2\(x3\ cons (pair x2 (t1'0 x3))
+                (cons (pair x3 (s'4 x3)) (c'3 x3))))").
+    then(weak_l,prove).
+    axiom.
+
   % The ingredients of proving narrowing admit weakening.
   simplify.
   instantiate.
@@ -464,3 +621,4 @@ admit.
   axiom.
 
 % Qed.
+
