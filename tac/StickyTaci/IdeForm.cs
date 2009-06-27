@@ -164,7 +164,6 @@ namespace StickyTaci
         {
           Scintilla.Lexing.Keywords[1] = tacticals;
           Scintilla.AutoComplete.ListString = commands + " " + tacticals;
-          
         });
       }
     }
@@ -724,7 +723,14 @@ namespace StickyTaci
       goalBox.Clear();
 
       Scintilla.ResetText();
-      Scintilla.AppendText(File.ReadAllText(filename, Encoding.ASCII));
+      try
+      {
+        Scintilla.AppendText(File.ReadAllText(filename, Encoding.ASCII));
+      }
+      catch(Exception e)
+      {
+        MessageBox.Show("Unable to load specified file: " + e.Message, "StickyTaci - Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+      }
       Scintilla.Caret.Position = 0;
       
       SavePoint();

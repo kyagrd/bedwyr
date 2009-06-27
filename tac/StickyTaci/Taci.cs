@@ -98,7 +98,6 @@ namespace StickyTaci
     {
       m_Path = path;
       CurrentLogic = logic;
-      System.Diagnostics.Debug.WriteLine("Executing '" + path + m_Arguments + "'.");
 
       m_Commands.Add("#clear");
       m_Commands.Add("#debug");
@@ -123,6 +122,7 @@ namespace StickyTaci
       {
         m_Taci.Kill();
         m_Taci.Close();
+        m_Taci = null;
       }
 
       ProcessStartInfo si = new ProcessStartInfo(m_Path, m_Arguments);
@@ -143,7 +143,6 @@ namespace StickyTaci
       return;
     }
 
-   
     public void Write(string s)
     {
       System.Diagnostics.Debug.WriteLine("Taci: " + s);
@@ -203,12 +202,6 @@ namespace StickyTaci
     private void ParseOutput(XmlDocument doc)
     {
       XmlNodeList outputs = doc.GetElementsByTagName("Output");
-      if(outputs.Count == 0)
-      {
-        System.Diagnostics.Debug.WriteLine("No <Output> nodes.");
-        return;
-      }
-
       foreach(XmlNode output in outputs)
       {
         XmlAttribute type = output.Attributes["type"];
@@ -228,10 +221,10 @@ namespace StickyTaci
       s = s.Replace("&lt;", "<");
       s = s.Replace("&gt;", ">");
       s = s.Replace("&amp;", "&");
-      s = s.Replace("\\\\", "\\");
+      s = s.Replace("&#x005C;", "\\");
       s = s.Replace("&quot;", "\"");
       s = s.Replace("&apos;", "'");
-      s = s.Replace("\\n", "\n");
+      s = s.Replace("&#x000A;", "\n");
       
       return s;
     }
