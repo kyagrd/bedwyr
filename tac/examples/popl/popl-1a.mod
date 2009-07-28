@@ -16,15 +16,16 @@ sub Context (all S1 S2) (all T1 T2) :-
   nabla x\ sub ((pair x T1)::Context) (S2 x) (T2 x).
 
 % Typing
-of Context (abs T1 E) (arrow T1 T2) :-
-  nabla x\ of (cons (pair x T1) Context) (E x) T2.
-of Context (app E1 E2) T12 :-
-  of Context E1 (arrow T11 T12), of Context E2 T11.
-of Context (tabs T1 E) (all T1 T2) :-
-  pi x\ sub Context x T1 => of Context (E x) (T2 x).
-of Context (tapp E T2) (T12 T2) :-
-  of Context E (all T11 T12), sub Context T2 T11.
-of Context E T :- of Context E S, sub Context S T.
+of OfContext SubContext X T :- bind X T OfContext.
+of OfContext SubContext (abs T1 E) (arrow T1 T2) :-
+  nabla x\ of ((pair x T1)::OfContext) SubContext (E x) T2.
+of OfContext SubContext (app E1 E2) T12 :-
+  of OfContext SubContext E1 (arrow T11 T12), of OfContext SubContext E2 T11.
+of OfContext SubContext (tabs T1 E) (all T1 T2) :-
+  nabla x\ of OfContext ((pair x T1)::SubContext) (E x) (T2 x).
+of OfContext SubContext (tapp E T2) (T12 T2) :-
+  of OfContext SubContext E (all T11 T12), sub SubContext T2 T11.
+of OfContext SubContext E T :- of OfContext SubContext E S, sub SubContext S T.
 
 
 % Small step evaluation
@@ -57,3 +58,5 @@ type Context (arrow T1 T2) :- type Context T1, type Context T2.
 type Context (all T1 T2) :-
   type Context T1,
   nabla x\ type ((pair x T1)::Context) (T2 x).
+
+  
