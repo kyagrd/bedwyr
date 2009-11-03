@@ -54,10 +54,6 @@ prove.
 prove.
 % Qed.
 
-#theorem plus_e_e_e "pi x\y\z\ even x => even y => plus x y z => even z".
-prove.
-% Qed.
-
 #theorem test_ack "sigma a\ ack (s (s o)) (s (s o)) a, a = a".
 sigma.
 and.
