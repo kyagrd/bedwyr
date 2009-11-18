@@ -98,6 +98,8 @@ namespace StickyTaci
       {
         Taci = new Taci(path, "--output xml --logic " + logic);
         CurrentLogic = logic;
+        Taci.CurrentDirectory = Path.GetDirectoryName(path);
+
 
         Taci.Output += new Taci.IOHandler<string>(Taci_Output);
         Taci.Goal += new Taci.IOHandler<string>(Taci_Goal);
@@ -493,7 +495,10 @@ namespace StickyTaci
       {
         OnTacReset();
 
-        //Get the logic name:
+        //Get the new working directory name.
+        Taci.CurrentDirectory = Path.GetDirectoryName(dlg.FileName);
+
+        //Get the logic name.
         string logic = GetLogicName(dlg.FileName);
         if(logic != "")
         {
@@ -502,6 +507,7 @@ namespace StickyTaci
         else
         {
           MessageBox.Show("Unable to load session logic: logic not specified.", "StickyTaci - Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+          OnLogic("muLJ");
         }
         Form.LoadFile(dlg.FileName);
         FileName = dlg.FileName;

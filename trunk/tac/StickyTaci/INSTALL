@@ -44,11 +44,11 @@ Rebuilding Scintilla with LexSimple.cxx:
     val SCE_SIMPLE_OLDLINE=10
 
   Note the you should make sure that SCLEX_SIMPLE=91 doesn't interfere with other
-  lexers defined in the file; it shouldn't.
+  lexers defined in the file; it shouldn't for Scintilla 1.77.
   
-  Then, you'll need to regenerate the interface using HFace.py and/or Face.py,
-  and finally recompile Scintilla.  Then, copy the binary (SciLexer.dll) to
-  "/tac/StickyTaci/".  And that's it for Scintilla.
+  Then, you'll need to regenerate the interfaces using HFacer.py and Face.py,
+  and finally recompile Scintilla.  Then, copy the binary (SciLexer.dll or
+  similary) to "/tac/StickyTaci/".  And that's it for Scintilla.
 
 Rebuilding Scintilla.NET:
   This part is a tiny bit more involved.  The problem is that Scintilla.NET
@@ -56,13 +56,13 @@ Rebuilding Scintilla.NET:
   'configurations'; at least, hardcoded them in the project file.  Again,
   let's call the Scintilla.NET directory "/ScintillaNET"; you can get the
   source at http://www.codeplex.com/ScintillaNET; be sure to use version 2.0.
-  
+
   First, you'll need to open the solution for Scintilla.NET and add some
   files to "/ScintillaNET/source/Configuration/Builtin", specifically
   ".../LexerKeywordListNames/simple.txt" and ".../LexerStyleNames/simple.txt".
-  Use /tac/StickyTaci/simple_keywords.txt for the former, and
-  /tac/StickyTaci/simple_style.txt for the latter; be sure to rename them to
-  "simple.txt".  Also, be sure that you mark these files to be embedded in
+  Use "/tac/StickyTaci/simple_keywords.txt" for the former, and
+  "/tac/StickyTaci/simple_style.txt" for the latter; be sure to rename them each
+  to "simple.txt".  Also, be sure that you mark these files to be embedded in
   the generated binary!
   
   Next, modify the file "Enums.cs" so that the public enum 'Lexer' includes
