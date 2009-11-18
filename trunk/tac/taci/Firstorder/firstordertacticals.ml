@@ -404,7 +404,7 @@ struct
 
   (** Given a body [b], and a (co)invariant [s] as a string, and parameters [t],
     * computes [s t], [s t'] and [b s t']. *)
-  let fixpoint_St_St'_BSt' ~session ~lvl ~body ~argnames ~s ~t =
+  let fixpoint_St_St'_BSt' ~session ~lvl ~body ~argnames ?left_s ~s ~t () =
     let rec makeArgs lvl = function
       | [] -> (lvl, [])
       | a::aa ->
@@ -412,10 +412,12 @@ struct
           let (lvl'', aa') = makeArgs lvl' aa in
             (lvl'',  a'::aa')
     in
+    let left_s = match left_s with None -> s | Some left -> left in
     let (lvl',t') = makeArgs lvl argnames in
       begin match
-        FOA.fullApply t s, FOA.fullApply t' s,
-        (FOA.applyFixpoint s).FOA.abstf body
+        FOA.fullApply t s,
+        FOA.fullApply t' s,
+        (FOA.applyFixpoint left_s).FOA.abstf body
       with
         | Some st, Some st', Some bs ->
             begin match FOA.fullApply t' bs with
@@ -489,7 +491,9 @@ struct
     *
     * Note: namedInvariant is a boolean that determines whether the inferred
     * invariant should be packaged in an alias mu. *)
-  let intro ?axt:(axt = fun _ _ -> true) ?namedInvariant:(namedInvariant = false) side matcher session arg =
+  let intro ?axt:(axt = fun _ _ -> true)
+            ?namedInvariant:(namedInvariant = false)
+            side matcher session arg =
     (* Propagate the focused flag from f to its subformulas. Meant to be used as
      * part of the zipper. *)
     let propagate (super,_) (Formula(i,(sub,sf))) =
@@ -645,7 +649,7 @@ struct
              * unfoldings: both can be done infinitely many times, but in
              * pratice, progressing unfoldings are "less dangerous" and "more
              * informative".
-             * Before we used to consume a so-called async_bound for every
+             * Before we used to consume the progressing_bound for every
              * asynchronous unfolding, which was always progressing.
              * Now the progressing_bound is decreased for any progressing
              * unfolding while the normal bound is decreased otherwise. *)
@@ -713,7 +717,7 @@ struct
                           begin match
                             fixpoint_St_St'_BSt'
                               ~session ~lvl:seq.lvl
-                              ~body ~argnames:onlynames ~s ~t:args
+                              ~body ~argnames:onlynames ~s ~t:args ()
                           with
                             | Some (st,lvl',st',bst') ->
                                 let i' = { i with context = 0 } in
@@ -856,64 +860,82 @@ struct
                           else
                             aelrhs
                         in
-                        
-                        let aelrhs' =
+
+                        let apply pred = 
+                          FOA.positiveFormula
+                            (FOA.ApplicationFormula (pred, List.rev fv))
+                        in
+                        let abstract form =
+                          List.fold_left
+                            (fun f v -> (FOA.abstractVar v).FOA.abstf f)
+                            (FOA.AbstractionBody form)
+                            fv
+                        in
+
+                        (*  Wrap the invariant in an alias.  *)
+                        let aelrhs', tfc =
+                          if not namedInvariant then
+                            aelrhs', fun () -> ()
+                          else
+                            let (invariantName, tfc) =
+                              FOA.freshName (name ^ "_invariant")
+                            in
+                            let invariantMu =
+                              let args =
+                                (* TODO use onlynames/argnames *)
+                                Listutils.mapn
+                                  (fun i ->
+                                     ("a" ^ (string_of_int i), FOA.Unknown))
+                                  (List.length fv)
+                              in
+                              FOA.FixpointFormula
+                                (FOA.Inductive, FOA.Alias,
+                                 invariantName, args,
+                                 abstract aelrhs')
+                            in
+                              (* Convert predicate to abstraction. *)
+                              apply invariantMu,
+                              tfc
+                        in
+
+                        (*  Embed the fixpoint in its invariant.
+                         *  It's sound to not embed it on the right.  *)
+                        let left_inv,right_inv =
                           if
                             Properties.getBool "firstorder.induction-unfold"
                           then
-                            let f = FOA.ApplicationFormula (p,List.rev fv) in
-                            let f = { FOA.defaultAnnotation with
-                                        FOA.polarity = FOA.Positive ;
-                                        FOA.freezing = FOA.Frozen },f in
-                              FOA.positiveFormula
-                                (FOA.BinaryFormula(FOA.And,f,aelrhs'))
-                          else
-                            aelrhs'
-                        in
-                        (* Abstract out the fv1..fvn. *)
-                        let invariant =
-                          List.fold_left
-                            (fun f v -> (FOA.abstractVar v).FOA.abstf f)
-                            (FOA.AbstractionBody aelrhs')
-                            fv
-                        in
-                        
-                        let (invariant', tfc) =
-                          if namedInvariant then
-                            let (invariantName, tfc) = FOA.freshName (name ^ "_invariant") in
-                            let invariantMu =
-                              let args =
-                                Listutils.mapn
-                                  (fun i -> ("a" ^ (string_of_int i), FOA.Unknown))
-                                  (List.length fv)
-                              in
-                              FOA.FixpointFormula(FOA.Inductive, FOA.Alias, invariantName, args, invariant)
+                            let f =
+                              { FOA.defaultAnnotation with
+                                  FOA.polarity = FOA.Positive ;
+                                  FOA.freezing = FOA.Frozen },
+                              (snd (apply p))
                             in
-                            let invariantApp = 
-                              FOA.positiveFormula
-                                (FOA.ApplicationFormula(invariantMu, List.rev fv))
-                            in
-                            (List.fold_left
-                              (fun f v -> (FOA.abstractVar v).FOA.abstf f)
-                              (FOA.AbstractionBody invariantApp)
-                              fv,
-                            tfc)
+                              abstract
+                                (FOA.positiveFormula
+                                   (FOA.BinaryFormula(FOA.And,
+                                                      f,
+                                                      aelrhs'))),
+                              abstract aelrhs'
                           else
-                            (invariant, fun () -> ())
+                            abstract aelrhs', abstract aelrhs'
                         in
 
                         let _,lvl',st',bst' =
                           Option.get (fixpoint_St_St'_BSt'
                                         ~session ~lvl:seq.lvl ~body
                                         ~argnames:onlynames
-                                        ~s:invariant' ~t:args)
+                                        ~s:right_inv
+                                        ~left_s:left_inv
+                                        ~t:args ())
                         in
                         let seq =
                           { seq with bound = updateBound seq.bound }
                         in
                         let i' =
                           { (* i with *) context = 0 ;
-                            progressing_bound = Some (Properties.getInt "firstorder.progressingbound")}
+                            progressing_bound =
+                              Some (Properties.getInt
+                                      "firstorder.progressingbound")}
                         in
                         if outOfBound seq.bound then fc () else
                           let seq' = 
@@ -921,12 +943,13 @@ struct
                                  lhs = [Formula (i',bst')] ;
                                  rhs = [Formula (i',st')] }
                           in
-                          (* TODO: check the other premise so the proof is complete
-                           *  (in the proof builder, to save work).  *)
+                          (* TODO: check the left-out subproofs,
+                           *       in the proof builder to save work. *)
                           sc ~k:(fun () -> tfc (); fc ()) "induction" [seq']
                   end
               | FOA.AtomicFormula p ->
-                  if p = "false" then sc "false" [] else (* TODO: false should be special *)
+                  (* TODO: false should be special *)
+                  if p = "false" then sc "false" [] else
                   if p = "true" then
                     let seq' = { seq with lhs = zip [] } in
                     sc "true" [seq']
@@ -1078,7 +1101,7 @@ struct
                           begin match
                             fixpoint_St_St'_BSt'
                               ~session ~lvl:seq.lvl
-                              ~body ~argnames:onlynames ~s ~t:args
+                              ~body ~argnames:onlynames ~s ~t:args ()
                           with
                             | Some (st,lvl',st',bst') ->
                                 let i'   = { i with context = 0 } in
@@ -1169,7 +1192,7 @@ struct
                           else
                             aelrhs
                         in
-                        
+
                         let aelrhs' =
                           if Properties.getBool "firstorder.coinduction-unfold" then
                             let f = FOA.ApplicationFormula (p,List.rev fv) in
@@ -1217,14 +1240,15 @@ struct
                           Option.get (fixpoint_St_St'_BSt'
                                         ~session ~lvl:seq.lvl ~body
                                         ~argnames:onlynames
-                                        ~s:invariant' ~t:args)
+                                        ~s:invariant' ~t:args ())
                         in
                         let seq =
                           { seq with bound = updateBound seq.bound }
                         in
                         let i' =
                           { (* i with *) context = 0 ;
-                            progressing_bound = Some (Properties.getInt "firstorder.progressingbound") }
+                            progressing_bound =
+                              Some (Properties.getInt "firstorder.progressingbound") }
                         in
                           if outOfBound seq.bound then
                             fc ()
@@ -1681,9 +1705,14 @@ struct
   let matcher fl = makeMatcher (fun (Formula(i,f)) i -> fl f)
   
   (* Find a formula on the right satisfying fr,
-  * succeed with the sequent resulting of the application of focus to it.
-  * On failure, if b, keep searching on the left with tac_l and fl. *)
-  let rec tac_r before after seq sc (fc : unit -> unit) focuser fl fr b =
+   * succeed with the sequent resulting of the application of focus to it,
+   * contracting it if needed (and allowed by the logic).
+   * On failure, if b, keep searching on the left with tac_l and fl. *)
+  let rec tac_r ~contract
+    before after seq
+    sc (fc : unit -> unit)
+    focuser fl fr b
+  =
     match matcher fr after with
       | Some (f,before',after) ->
           let before = before @ before' in
@@ -1695,15 +1724,36 @@ struct
                    ' ')
                 (string_of_formula f) ;
             sc
-              [{ seq with rhs = before @ [ focuser f ] @ after }]
-              (fun () -> tac_r (before@[f]) after seq sc fc focuser fl fr b)
+              [ let contract =
+                  contract &&
+                  not (Param.intuitionistic || outOfBound seq.contract_bound)
+                in
+                let contract_bound =
+                  if contract then
+                    updateBound seq.contract_bound
+                  else
+                    seq.contract_bound
+                in
+                  { seq with
+                    contract_bound = contract_bound ;
+                    rhs = before @
+                          (if contract then [f; focuser f] else [focuser f])
+                          @ after } ]
+              (fun () ->
+                 tac_r ~contract (before@[f]) after seq sc fc focuser fl fr b)
       | None ->
           if b then
-            tac_l [] seq.lhs seq sc fc focuser fl fr false
+            tac_l ~contract
+              [] seq.lhs seq sc fc
+              focuser fl fr false
           else
             (fc : unit -> unit) ()
 
-  and tac_l before after seq sc (fc : unit -> unit) focuser fl fr b =
+  and tac_l ~contract
+    before after seq
+    sc (fc : unit -> unit)
+    focuser fl fr b
+  =
     match matcher fl after with
       | Some (f,before',after) ->
           let before = before @ before' in
@@ -1714,11 +1764,29 @@ struct
                  ' ')
               (string_of_formula f) ;
           sc
-            [{ seq with lhs = before @ [ focuser f ] @ after }]
-            (fun () -> tac_l (before@[f]) after seq sc fc focuser fl fr b)
+            [ let contract = contract && not (outOfBound seq.contract_bound) in
+              let contract_bound =
+                if contract then
+                  updateBound seq.contract_bound
+                else
+                  seq.contract_bound
+              in
+                if contract &&
+                   Properties.getBool "firstorder.proofsearchdebug" then
+                  Format.printf "Contract (%s).\n%!"
+                  (match contract_bound with
+                     | Some x -> string_of_int x | None -> "*") ;
+                { seq with
+                  contract_bound = contract_bound ;
+                  lhs = before @ [focuser f] @ after @
+                        (if contract then [f] else []) } ]
+            (fun () ->
+               tac_l ~contract (before@[f]) after seq sc fc focuser fl fr b)
       | None ->
           if b then
-            tac_r [] seq.rhs seq sc (fc : unit -> unit) focuser fl fr false
+            tac_r ~contract
+              [] seq.rhs seq sc (fc : unit -> unit)
+              focuser fl fr false
           else
             (fc : unit -> unit) ()
 
@@ -1733,7 +1801,7 @@ struct
         {proof with params = ("focus", "true")::(proof.params)}
       in
       let sc s k = sc s pb k in
-      tac_l
+      tac_l ~contract:true
         [] seq.lhs seq sc fc 
         focusFormula
         (fun (a,_) -> a.FOA.control<>FOA.Focused &&
@@ -1749,23 +1817,27 @@ struct
   * A tactic for manually focusing on something on the right.
   ********************************************************************)
   and focusRightTactic = fun seq sc fc ->
-    tac_r
+    tac_r ~contract:true
       [] seq.rhs seq sc fc focusFormula
       (fun (a,_) -> a.FOA.control<>FOA.Focused &&
                     a.FOA.polarity=FOA.Negative)
       (fun (a,_) -> a.FOA.control<>FOA.Focused &&
                     a.FOA.polarity=FOA.Positive)
-      true
+      false (* no, we don't want to fallback to focusing on the left *)
 
   (********************************************************************
   *freezeLeftTactic:
-  * A tactic for manually freezing something on the left.
+  * A tactic for manually freezing, starting on the left, then right.
   ********************************************************************)
   and freezeLeftTactic = fun seq sc fc ->
-    tac_l
+    tac_l ~contract:false
       [] seq.lhs seq sc fc freezeFormula
-      (fun (a,f) -> a.FOA.freezing=FOA.Unfrozen && isFixpoint f)
-      (fun (a,f) -> a.FOA.freezing=FOA.Unfrozen && isFixpoint f)
+      (fun (a,f) -> a.FOA.freezing=FOA.Unfrozen &&
+                    a.FOA.polarity=FOA.Positive &&
+                    isFixpoint f)
+      (fun (a,f) -> a.FOA.freezing=FOA.Unfrozen &&
+                    a.FOA.polarity=FOA.Negative &&
+                    isFixpoint f)
       true
 
   (********************************************************************
@@ -1837,6 +1909,7 @@ struct
                             FOA.Inductive, alias,_,argnames,_),args) as f)))
                      when alias = FOA.Alias ||
                           unfoldingProgresses `Left argnames args ->
+                       (* The bound is checked within [intro]. *)
                        if Properties.getBool "firstorder.proofsearchdebug" then
                          Format.printf "%s@[<hov 2>Unfold left@ %s@]\n%!"
                            ""
@@ -2026,9 +2099,7 @@ struct
        | Some (Formula(i,(a,f)), before, after) ->
            (* Unfolding might sometimes yield simpler proofs,
             * but trying it everytime seems costly...
-            * TODO: a way of getting a quasi-unfolding for free inside the
-            * induction is to bundle a frozen version of the fixed point
-            * with the invariant *)
+            * See (co)induction-unfold for a good compromise. *)
            G.orElseTactical
              (fun _ sc fc ->
                 if Properties.getBool "firstorder.proofsearchdebug" then
@@ -2096,9 +2167,18 @@ struct
   * by the rest of the prove tactic.
   ********************************************************************)
   and asyncTactical session args =
-    G.thenTactical
-      (setBoundTactical session args)
-      (G.thenTactical (finite session) clearBounds)
+    fun seqs sc fc ->
+      let seq = List.hd seqs in
+      if seq.bound = None &&
+         seq.lemma_bound = None &&
+         seq.contract_bound = None
+      then
+        G.thenTactical
+          (setBoundTactical session args)
+          (G.thenTactical (finite session) clearBounds)
+          seqs sc fc
+      else
+        finite session seqs sc fc
 
   (** Complete focused proof-search starting with a decide rule. *)
   (********************************************************************
@@ -2153,17 +2233,19 @@ struct
   *setBound:
   * Sets the synchronous and lemma bounds.
   ********************************************************************)
-  and setBound session syncBound lemmaBound =
+  and setBound session ~sync ~lemma ~contract =
+    let progressing_bound = Some (Properties.getInt "firstorder.progressingbound") in
     let set (Formula (i,f)) =
-      Formula ({ i with progressing_bound = Some (Properties.getInt "firstorder.progressingbound")},f)
+      Formula ({ i with progressing_bound = progressing_bound },f)
     in
     fun seqs sc fc ->
       match seqs with
        | (seq::tl) ->
           let seq' =
             [{seq with
-                bound = Some syncBound;
-                lemma_bound = Some lemmaBound;
+                bound = Some sync ;
+                lemma_bound = Some lemma ;
+                contract_bound = Some contract ;
                 lhs = List.map set seq.lhs ;
                 rhs = List.map set seq.rhs }]
           in
@@ -2182,7 +2264,7 @@ struct
     in
     fun seqs sc fc ->
       let clear seq =
-        { seq with bound = None; lemma_bound = None ;
+        { seq with bound = None; lemma_bound = None; contract_bound = None;
            lhs = List.map unset seq.lhs ; rhs = List.map unset seq.rhs }
       in
       sc (List.map clear seqs) [] (fun proofs -> proofs) fc
@@ -2192,14 +2274,18 @@ struct
   * Toplevel interface to setBound.
   ********************************************************************)
   and setBoundTactical session args =
-    let lemmaBound = Properties.getInt "firstorder.lemmas.bound" in
-    let syncBound = Properties.getInt "firstorder.bound" in
+    let lemma = Properties.getInt "firstorder.lemmas.bound" in
+    let sync = Properties.getInt "firstorder.bound" in
+    let contract = Properties.getInt "firstorder.contractions.bound" in
     match args with
         [Absyn.String s] ->
-          setBound session (stringToIntDefault s 0) lemmaBound
+          setBound session ~sync:(stringToIntDefault s 0) ~lemma ~contract
       | [(Absyn.String s1); (Absyn.String s2)] ->
-          setBound session (stringToIntDefault s1 0) (stringToIntDefault s2 0)
-      | [] -> setBound session syncBound lemmaBound
+          setBound session
+            ~sync:(stringToIntDefault s1 0)
+            ~lemma:(stringToIntDefault s2 0)
+            ~contract
+      | [] -> setBound session ~sync ~lemma ~contract
       | _ -> G.invalidArguments "set_bound"
   
   (*******************************************************************
@@ -2215,14 +2301,19 @@ struct
     let abstractAsync =
       G.thenTactical (abstractTactical session []) (fullAsync session)
     in
-    let lemmaBound = Properties.getInt "firstorder.lemmas.bound" in
+    let lemma = Properties.getInt "firstorder.lemmas.bound" in
+    let contract = Properties.getInt "firstorder.contractions.bound" in
     let rec construct i max =
       if i = max then
-        (G.thenTactical (setBound session max lemmaBound) abstractAsync)
+        G.thenTactical
+          (setBound session ~sync:max ~lemma ~contract)
+          abstractAsync
       else
-        (G.orElseTactical
-          (G.thenTactical (setBound session i lemmaBound) abstractAsync)
-          (construct (i + 1) max))
+        G.orElseTactical
+          (G.thenTactical
+             (setBound session ~sync:i ~lemma ~contract)
+             abstractAsync)
+          (construct (i + 1) max)
     in
     match args with
         [Absyn.String(s)] ->

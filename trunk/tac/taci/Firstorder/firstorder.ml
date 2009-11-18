@@ -27,10 +27,11 @@ let () = Properties.setBool "firstorder.proofsearchdebug" false
 let () = Properties.setBool "firstorder.debug" false
 let () = Properties.setBool "firstorder.termdebug" false
 let () = Properties.setBool "firstorder.show-annotations" false
-let () = Properties.setInt "firstorder.bound" 3
-let () = Properties.setInt "firstorder.progressingbound" 10
+let () = Properties.setInt  "firstorder.bound" 3
+let () = Properties.setInt  "firstorder.contractions.bound" (-1)
+let () = Properties.setInt  "firstorder.progressingbound" 10
 let () = Properties.setBool "firstorder.lemmas" false
-let () = Properties.setInt "firstorder.lemmas.bound" 1
+let () = Properties.setInt  "firstorder.lemmas.bound" 1
 let () = Properties.setString "firstorder.frozens" "thaw"
 let () = Properties.setBool "firstorder.induction-unfold" false
 let () = Properties.setBool "firstorder.coinduction-unfold" false
@@ -247,6 +248,7 @@ struct
                   builder = Logic.idProofBuilder ;
                   sequents = [{ bound = None ;
                                 lemma_bound = None ;
+                                contract_bound = None ;
                                 lvl=0 ; lhs=[] ; rhs=[makeFormula f] }] ;
                   theorem_name = Some name;
                   theorem = Some f}
