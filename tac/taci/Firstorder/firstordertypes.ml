@@ -55,6 +55,7 @@ sig
     rhs : formula list ;
     bound : int option ;
     lemma_bound : int option ;
+    contract_bound : int option
   }
 
   (********************************************************************
@@ -180,6 +181,7 @@ struct
     rhs : formula list ;
     bound : int option ;
     lemma_bound : int option ;
+    contract_bound : int option
   }
 
   type proof = {
