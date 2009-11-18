@@ -53,19 +53,21 @@ prove.
 prove.
 
 #lemma absurd_tabs
-  "pi oc\sc\t\e\l\r\ context oc => context sc => of oc sc (tabs t e) (arrow l r) =>
+  "pi oc\sc\t\e\l\r\
+    context oc => context sc =>
+    of oc sc (tabs t e) (arrow l r) =>
     false".
 intros.
 induction("auto", "of _ _ _ _").
 cases.
   bind_absurd.
   prove.
-
-
 % Qed.
 
 #lemma absurd_abs
-  "pi oc\sc\t1\e\t2\t3\ context oc => context sc => of oc sc (abs t1 e) (all t2 t3) =>
+  "pi oc\sc\t1\e\t2\t3\
+    context oc => context sc =>
+    of oc sc (abs t1 e) (all t2 t3) =>
     false".
 prove.
 % Qed.
@@ -76,66 +78,39 @@ prove.
     progresses e1 => progresses e2 =>
       progresses (app e1 e2)".
 intros.
-induction("auto", "of _ _ _ _").
-and_r.
-  cases.
-    prove.
-    prove.
-    prove.
-    prove.
-    then(mu_r, left, right).
-    instantiate.
-      force("T12", "t120").
-      eq_r.
-      prove.
-      prove.
-    prove.
-  cases.
-    bind_absurd.
-    weak_l("#2").
-    weak_l("#3").
-    cases("#5").
-      cases("#6").
-        cases("#5").
-          prove.
-
-          cut_lemma("absurd_tabs").
-          prove.        
+then(induction("auto", "of _ _ _ _"),cases).
+  bind_absurd.
+  weak_l("#2").
+  weak_l("#3").
+  cases("#5").
+    cases("#6").
+      cases("#5").
         prove.
+         cut_lemma("absurd_tabs").
+        prove.        
       prove.
     prove.
+  prove.
 % Qed.
 
 #set "firstorder.induction-unfold" "true".
 #lemma tapp_progresses
-  "pi oc\sc\e\t\ty\ context oc => context sc => of oc sc (tapp e ty) t =>
-    progresses e =>
-      progresses (tapp e ty)".
+  "pi oc\sc\e\t\ty\
+     context oc => context sc =>
+     of oc sc (tapp e ty) t =>
+     progresses e =>
+     progresses (tapp e ty)".
 intros.
-induction("auto", "of _ _ _ _").
-and_r.
-  cases.
-    prove.
-    prove.
-    prove.
-    prove.
-    then(mu_r, left, right).
-    instantiate.
-      force("T12", "t120").
-      eq_r.
-      prove.
-      prove.
-    prove.
-  cases.
-    bind_absurd.
-    weak_l("#2").
+then(induction("auto", "of _ _ _ _"),cases).
+  bind_absurd.
+  weak_l("#2").
+  cases("#5").
     cases("#5").
-      cases("#5").
-        cut_lemma("absurd_abs").
-        prove.
-        prove.
+      cut_lemma("absurd_abs").
+      prove.
       prove.
     prove.
+  prove.
 % Qed.
 
 % Progress.
@@ -144,75 +119,32 @@ and_r.
   "pi oc\sc\e\t\ context sc => of nil sc e t =>
     progresses e".
 intros.
-induction("auto", "of _ _ _ _").
-and_r.
-  cases.
-    prove.
-    prove.
-    prove.
-    prove.
-    then(mu_r, left, right).
-    instantiate.
-      force("T12", "t120").
-      eq_r.
-      prove.
-      prove.
-    prove.
-  cases.
-    prove.
+then(induction("auto", "of _ _ _ _"),cases).
+  prove.
 
-    prove.
+  prove.
 
-    apply("#2", eq, axiom).
-    apply("#4", eq, axiom).
-    cut_lemma("app_progresses").
-    intros("#6").
-      force("Oc", "nil").
-      prove.
+  apply("#2", eq, axiom).
+  apply("#4", eq, axiom).
+  cut_lemma("app_progresses").
+  intros("#6").
+    force("Oc", "nil").
     prove.
+  prove.
 
-    prove.
+  prove.
 
-    apply("#2", eq, axiom).
-    cut_lemma("tapp_progresses").
-    intros("#5").
-      force("Oc0", "nil").
-      prove.
+  apply("#2", eq, axiom).
+  cut_lemma("tapp_progresses").
+  intros("#5").
+    force("Oc0", "nil").
     prove.
+  prove.
 
-    prove.
+  prove.
 % Qed.
 
-#lemma invert_abs
-  "pi c\s1\e\t1\t2\ context c => of c (abs s1 e) (arrow t1 t2) =>
-    (sigma s2\ nabla x\
-      of (cons (pair x s1) c) (e x) s2,
-      sub c t1 s1,
-      sub c s2 t2)".
-admit.
-
-#lemma invert_tabs
-  "pi c\s1\e\t1\t2\ context c => of c (tabs s1 e) (all t1 t2) =>
-    (sigma s2\ nabla x\
-      of (cons (pair x s1) c) (e x) (s2 x),
-      sub c t1 s1,
-      sub (cons (pair x t1) c) (s2 x) (t2 x))".
-admit.
-
-#lemma transitivity
-  "pi g\t\ context g => type g t => pi c\ context c => cut c t".
-admit.
-
-#set "firstorder.induction-unfold" "false".
-#lemma of_sub_trans
-  "pi c\e\s\t\ of c e s => sub c s t => of c e t".
-prove.
-
-#lemma lift_of_sub_trans
-  "pi c\e\s\t\ nabla x\ of (c x) e s => sub (c x) s t =>
-    of (c x) e t".
-prove.
-% Qed.
+% === Preservation ===.
 
 #lemma sub_w "pi c\s\t\ sub c s t => nabla x\ sub c s t".
 intros.
@@ -236,6 +168,67 @@ cases.
 
   prove.
   prove.
+% Qed.
+
+#set "firstorder.induction-unfold" "true".
+#lemma invert_abs
+  "pi s1\e\t1\t2\
+    of nil nil (abs s1 e) (arrow t1 t2) =>
+    (sigma s2\ nabla x\
+      of (cons (pair x s1) nil) nil (e x) s2,
+      (t1=s1 ; sub nil t1 s1),
+      (s2=t2 ; sub nil s2 t2))".
+simplify.
+then(induction("auto", "of _ _ _ _"),cases).
+% Bind: absurd.
+bind_absurd.
+% Abs: invert.
+prove.
+% Subtyping.
+then(mu_l("sub _ _ _"),cases).
+bind_absurd.
+bind_absurd.
+weak_l.
+apply("#1",eq_r,eq_r,eq_r,eq_r).
+simplify.
+sigma.
+abstract.
+repeat(and_r).
+axiom.
+then(or_l,simplify).
+apply("sub_w").
+prove.
+% Uses transitivity of subtyping, lifted.
+admit.
+weak_l("_;_").
+weak_l("sub _ _ _").
+then(or_l,simplify).
+apply("sub_w").
+prove.
+admit.
+% Qed.
+
+#lemma invert_tabs
+  "pi c\s1\e\t1\t2\ context c => of c (tabs s1 e) (all t1 t2) =>
+    (sigma s2\ nabla x\
+      of (cons (pair x s1) c) (e x) (s2 x),
+      sub c t1 s1,
+      sub (cons (pair x t1) c) (s2 x) (t2 x))".
+admit.
+
+#lemma transitivity
+  "pi g\t\ context g => type g t => pi c\ context c => cut c t".
+admit.
+
+#set "firstorder.induction-unfold" "false".
+#lemma of_sub_trans
+  "pi c\e\s\t\ of c e s => sub c s t => of c e t".
+prove.
+
+#lemma lift_of_sub_trans
+  "pi c\e\s\t\ nabla x\ of (c x) e s => sub (c x) s t =>
+    of (c x) e t".
+prove.
 % Qed.
 
 #lemma sub_w_context "pi c\s\t\ sub c s t => nabla x\ pi ty\ sub (cons (pair x ty) c) s t".
@@ -439,5 +432,4 @@ cases.
   admit.
   admit.
   admit.
-
 
