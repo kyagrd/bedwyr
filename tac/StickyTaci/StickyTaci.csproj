@@ -2,7 +2,7 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProductVersion>9.0.21022</ProductVersion>
+    <ProductVersion>9.0.30428</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{A720FAD9-07CF-40EB-9F49-79CB50527CB8}</ProjectGuid>
     <OutputType>WinExe</OutputType>
@@ -50,7 +50,7 @@
     <UseVSHostingProcess>false</UseVSHostingProcess>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="ScintillaNet, Version=2.0.3068.26807, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="ScintillaNet, Version=2.2.3586.20849, Culture=neutral, PublicKeyToken=948d6c9751444115, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>.\ScintillaNet.dll</HintPath>
     </Reference>

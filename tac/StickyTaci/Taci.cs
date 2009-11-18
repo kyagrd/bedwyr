@@ -21,6 +21,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Diagnostics;
 using System.Xml;
+using System.IO;
 
 namespace StickyTaci
 {
@@ -80,7 +81,7 @@ namespace StickyTaci
     private string m_Data;
     private string m_Path;
     private string m_Arguments;
-    private string m_CurrentLogic = "";
+    private string m_CurrentLogic = "";    
     public string CurrentLogic
     {
       get
@@ -93,10 +94,17 @@ namespace StickyTaci
         m_Arguments = " --logic " + value + " --output xml";
       }
     }
-    
+
+    public string CurrentDirectory
+    {
+      get;
+      set;
+    }
+
     public Taci(string path, string logic)
     {
       m_Path = path;
+      CurrentDirectory = Path.GetDirectoryName(path);
       CurrentLogic = logic;
 
       m_Commands.Add("#clear");
@@ -129,6 +137,7 @@ namespace StickyTaci
       si.UseShellExecute = false;
       si.RedirectStandardInput = true;
       si.RedirectStandardOutput = true;
+      si.WorkingDirectory = CurrentDirectory;
 
       m_Taci = new Process();
       m_Taci.StartInfo = si;
