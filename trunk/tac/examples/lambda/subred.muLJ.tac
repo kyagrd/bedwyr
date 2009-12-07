@@ -16,7 +16,7 @@ induction("g\m\t\ nabla x\ pi gg\
     apply("lift_permute_s").
     weak_l("lift_permute _ _").
     intros("#1").
-      force("Gg''","(x1\(x2\ (cons (pair x1 h1) (gg1 x2))))").
+      force("Gg''","(x1\(x2\ (cons (pair x1 a) (gg1 x2))))").
       prove.
       prove.
 % Qed.
@@ -40,7 +40,7 @@ induction("gg\m\tm\ pi g\ permute gg (cons (pair n tn) g) =>
     prove.
     % LAMBDA.
     intros("#1").
-      force("G0","(n1\ cons (pair n1 h1) g3)").
+      force("G0","(n1\ cons (pair n1 a) g3)").
       weak_l("typeof _ _ _").
       apply("permute_w").
       weak_l.
@@ -91,3 +91,4 @@ cases.
       prove.
     prove.
 % Qed.
+
