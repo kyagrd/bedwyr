@@ -1,46 +1,7 @@
-#include "popl-1a.mod".
+#open "popl.def".
 
 #lemma sub_refl "pi l\t\ closed l t => sub l t t".
 prove.
-
-#tactical bind_absurd then(
-    find("bind _ _ _"),
-    repeat(weak_l("pi _")),
-    repeat(weak_l("_ => _")),
-    repeat(weak_l("_ , _")),
-    repeat(weak_l("sub _ _ _")),
-    repeat(weak_l("outer_inv _ _")),
-    repeat(weak_l("cut _ _")),
-    prove("1")).
-#tactical instantiate then(repeat(sigma), repeat(then(and_r, try(eq_r)))).
-#tactical sub_bind_refl then(mu_r,left,left,left,right).
-#tactical sub_bind_trans then(mu_r,left,left,right).
-#tactical sub_arrow then(mu_r,left,right).
-#tactical sub_all then(mu_r,right).
-
-#define "context c :=
-  pi x\t\ bind x t c =>
-    (x = top => false),
-    (pi t1\t2\ x = (arrow t1 t2) => false),
-    (pi t1\t2\ x = (all t1 t2) => false)".
-
-#define "permute c c' :=
-  (pi x\t\ bind x t c => bind x t c'),
-  (pi x\t\ bind x t c' => bind x t c)".
-
-#define "cut {c} {x} := pi a\b\ sub c a x => sub c x b => sub c a b".
-#define "coinductive gcut {x} :=
-  (pi c\ context c => cut c x),
-  (nabla y\ gcut x)".
-
-#define "narrowing {c} {t} :=
-  pi s\t1\t2\ sub c s t =>
-    nabla x\ context (cons (pair x t) c) =>
-      sub (cons (pair x t) c) (t1 x) (t2 x) =>
-        sub (cons (pair x s) c) (t1 x) (t2 x)".
-#define "coinductive gnarrowing {t} :=
-  (pi c\ context c => narrowing c t),
-  (nabla y\ gnarrowing t)".
 
 % SIMPLE STRUCTURAL LEMMAS.
 
@@ -241,37 +202,32 @@ admit.
     sub c x (arrow a b) => sub c (arrow a b) y =>
       sub c x y".
 intros.
-induction("auto", "sub c x (arrow a b)").
-and_r.
-  % induction target.
+then(induction("auto", "sub c x (arrow a b)"),cases).
+  % sub - bind reflexive.
+  bind_absurd.
+
+  % sub - bind transitive.
+  sub_bind_trans.
   prove.
-  
-  % inductive case.
-  then(simplify,cases).
-    % sub - bind reflexive.
-    bind_absurd.
-    
-    % sub - bind transitive.
-    sub_bind_trans.
+
+  % sub - arrow.
+  weak_l("#2").
+  weak_l("#3").
+  cases("#6").
+    % sub - top.
     prove.
 
+    % sub - bind reflexive.
+    bind_absurd.
+
+    %sub - bind transitive.
+    bind_absurd.
+
     % sub - arrow.
-    weak_l("#2").
-    weak_l("#3").
-    cases("#6").
-      % sub - top.
-      prove.
-
-      % sub - bind reflexive.
-      bind_absurd.
-
-      %sub - bind transitive.
-      bind_absurd.
-
-      % sub - arrow.
-      repeat(mu_l("cut _ _")).
-      sub_arrow.
-      prove.
+    repeat(mu_l("cut _ _")).
+    sub_arrow.
+    prove.
+% Qed.
 
 #lemma sub_all
   "pi c\a\b\a'\b'\x\ context c => cut c a => narrowing c a =>
@@ -279,48 +235,41 @@ and_r.
     sub c x (all a b) => sub c (all a b) (all a' b') =>
       sub c x (all a' b')".
 intros.
-induction("auto", "sub c x (all a b)").
-and_r.
-  % induction target.
-  prove.
+then(induction("auto", "sub c x (all a b)"),cases).
 
-  % inductive case.
-  then(simplify,cases).
+  % sub - bind reflexive.
+  bind_absurd.
 
+  % sub - bind transitive.
+  sub_bind_trans.
+  instantiate.
+  axiom.
+  apply("#3", eq_r, axiom, axiom, axiom, prove, axiom).
+  axiom.
+
+  % sub - all.
+  weak_l("#2"). % unusable hypothesis.
+  weak_l("#3"). % unusable hypothesis.
+  cases("#7").
     % sub - bind reflexive.
     bind_absurd.
-    
+
     % sub - bind transitive.
-    sub_bind_trans.
-    instantiate.
-    axiom.
-    apply("#3", eq_r, axiom, axiom, axiom, prove, axiom).
-    axiom.
+    bind_absurd.
 
     % sub - all.
-    weak_l("#2"). % unusable hypothesis.
-    weak_l("#3"). % unusable hypothesis.
-    cases("#7").
-      % sub - bind reflexive.
-      bind_absurd.
-
-      % sub - bind transitive.
-      bind_absurd.
-
-      % sub - all.
-      then(sub_all,instantiate).
-        mu_l("#4").
-        apply("#4", axiom, axiom).
-        axiom.
-
-        nabla_r.
-        mu_l("#5").
-        apply("#5", axiom).
-        nabla_l.
-        apply("#5", then(apply("context_w"), axiom), axiom).
-        mu_l("#6").
-        apply("#6", axiom, axiom).
-        axiom.
+    then(sub_all,instantiate).
+      mu_l("#4").
+      apply("#4", axiom, axiom).
+      axiom.
+      nabla_r.
+      mu_l("#5").
+      apply("#5", axiom).
+      nabla_l.
+      apply("#5", then(apply("context_w"), axiom), axiom).
+      mu_l("#6").
+      apply("#6", axiom, axiom).
+      axiom.
 
 % MAIN LEMMA FOR CUT.
 
@@ -388,84 +337,80 @@ cases("#1").
   "pi ct\x\ outer_inv ct x => context ct => pi c\ context c => cut c x".
 intros.
 then(mu_r,intros).
-induction("auto","sub _ _ x1").
-and.
-  % Induction target.
-  then(mu_r,prove("0")).
-  % Invariance.
-  cases.
-    % top.
-    weak_l("outer_inv _ _").
-    prove.
+then(induction("auto","sub _ _ x1"),cases).
+  % top.
+  weak_l("outer_inv _ _").
+  prove.
 
-    % bind (reflexive).
-    weak_l("outer_inv _ _").
-    prove.
+  % bind (reflexive).
+  weak_l("outer_inv _ _").
+  prove.
 
-    % bind (transitive).
-    apply("#3","_","_","_").
-    sub_bind_trans.
-    prove.
+  % bind (transitive).
+  apply("#3","_","_","_").
+  sub_bind_trans.
+  prove.
 
-    % arrow.
-    weak_l("#2").
-    weak_l("#3").
-    % TODO andthen(cases("outer_inv _ _"),bind_absurd).
-    cases("outer_inv _ _").
-    bind_absurd.
-    apply("#3", axiom).
-    apply("#4", axiom).
-    simplify.
-    repeat(weak_l("gnarrowing _")).
-    weak_l("context ct3").
-    % TODO same bug: andthen(apply("gcut_cut"),axiom,weak_l("gcut _")).
-    apply("gcut_cut").
-      axiom.
-    weak_l("gcut _").
-    apply("gcut_cut").
-      axiom.
-    weak_l("gcut _").
-    cut("sub context9 (arrow s11 s21) (arrow a6 b8)").
-      then(sub_arrow,instantiate,axiom).
-    cut_lemma("sub_arrow").
-    apply("#8", "_", "cut _ a6", "cut _ b8", "_", "_").
+  % arrow.
+  weak_l("#2").
+  weak_l("#3").
+  % TODO andthen(cases("outer_inv _ _"),bind_absurd).
+  cases("outer_inv _ _").
+  bind_absurd.
+  apply("#3", axiom).
+  apply("#4", axiom).
+  simplify.
+  repeat(weak_l("gnarrowing _")).
+  weak_l("context ct3").
+  % TODO same bug: andthen(apply("gcut_cut"),axiom,weak_l("gcut _")).
+  apply("gcut_cut").
     axiom.
+  weak_l("gcut _").
+  apply("gcut_cut").
+    axiom.
+  weak_l("gcut _").
+  cut("sub context9 (arrow s11 s21) (arrow a6 b11)").
+    then(sub_arrow,instantiate,axiom).
+  cut_lemma("sub_arrow").
+  apply("#8", "_", "cut _ a6", "cut _ b11", "_", "_").
+  axiom.
 
-    % all.
-    weak_l("#2").
-    weak_l("#3").
-    cases("sub _ (all _ _) _").
-      prove.
-      bind_absurd.
-      bind_absurd.
-    cut("sub context14 (all s12 s22) (all s13 s23)").
-    then(sub_all,instantiate,simplify,axiom).
-    cut("sub context14 (all s13 s23) (all t17 t27)").
-    then(sub_all,instantiate,simplify,axiom).
-    then(weak_l("sub _ _ _"),weak_l("sub _ _ _"),
-         weak_l("sub _ _ _"),weak_l("sub _ _ _")).
-    cases("outer_inv _ _").
-      bind_absurd.
-    apply("#1", axiom).
-    apply("#2", then(apply("context_w"), axiom)).
-    simplify.
-    weak_l("#4").
-    weak_l("context ct4").
-    apply("gcut_cut").
-      axiom.
-    apply("gnarrowing_narrowing").
-      axiom.
-    weak_l("gcut _").
-    weak_l("gnarrowing _").
-    apply("context_w").
-    apply("lift_gcut_cut").
-      axiom.
-     weak_l("lift_context _").
-     weak_l("lift_gcut _").
-     cut_lemma("sub_all").
-     abstract.
-     apply("#7", axiom,axiom,axiom,axiom,axiom,axiom).
-     axiom.
+  % all.
+  weak_l("#2").
+  weak_l("#3").
+  cases("sub _ (all _ _) _").
+    prove.
+    bind_absurd.
+    bind_absurd.
+  cut("sub context14 (all s12 s22) (all s13 s23)").
+  then(sub_all,instantiate,simplify,axiom).
+  cut("sub context14 (all s13 s23) (all t14 t24)").
+  then(sub_all,instantiate,simplify,axiom).
+  then(weak_l("sub _ _ _"),weak_l("sub _ _ _"),
+       weak_l("sub _ _ _"),weak_l("sub _ _ _")).
+  cases("outer_inv _ _").
+    bind_absurd.
+  apply("#1", axiom).
+  apply("#2", then(apply("context_w"), axiom)).
+  simplify.
+  weak_l("#4").
+  weak_l("context ct4").
+  apply("gcut_cut").
+    axiom.
+  apply("gnarrowing_narrowing").
+    axiom.
+  weak_l("gcut _").
+  weak_l("gnarrowing _").
+  apply("context_w").
+  apply("lift_gcut_cut").
+    axiom.
+   weak_l("lift_context _").
+   weak_l("lift_gcut _").
+   cut_lemma("sub_all").
+   abstract.
+   apply("#7", axiom,axiom,axiom,axiom,axiom,axiom).
+   axiom.
+% Qed.
 
 #set "firstorder.induction-unfold" "false".
 
@@ -518,7 +463,7 @@ cut("gcut a10").
      permute (g x) (cons (pair x t) c) =>
        sub (cons (pair x s) c) (u x) (v x)",
     "lift_sub _ _ _").
-  
+
   % Invariant => goal.
   abstract.
   apply("#4",
@@ -577,7 +522,7 @@ cut("gcut a10").
       instantiate.
       then(mu_r,right,instantiate,axiom).
       axiom.
-      
+
     % arrow.
     apply("#1", axiom,axiom,axiom,axiom).
     apply("#2", axiom,axiom,axiom,axiom).
@@ -621,4 +566,5 @@ cut("gcut a10").
   axiom.
 
 % Qed.
+
 
