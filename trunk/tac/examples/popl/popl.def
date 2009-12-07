@@ -1,0 +1,119 @@
+#include "popl-1a.mod".
+
+#define "context c :=
+  pi x\t\ bind x t c =>
+    (x = top => false),
+    (pi t1\t2\ x = (arrow t1 t2) => false),
+    (pi t1\t2\ x = (all t1 t2) => false),
+    (pi t\e\ x = (abs t e) => false),
+    (pi t\e\ x = (tabs t e) => false),
+    (pi e1\e2\ x = (app e1 e2) => false),
+    (pi t\e\ x = (tapp t e) => false)".
+
+#define "permute c c' :=
+  (pi x\t\ bind x t c => bind x t c'),
+  (pi x\t\ bind x t c' => bind x t c)".
+
+#define "cut {c} {x} := pi a\b\ sub c a x => sub c x b => sub c a b".
+#define "coinductive gcut {x} :=
+  (pi c\ context c => cut c x),
+  (nabla y\ gcut x)".
+
+#define "narrowing {c} {t} :=
+  pi s\t1\t2\ sub c s t =>
+    nabla x\ context (cons (pair x t) c) =>
+      sub (cons (pair x t) c) (t1 x) (t2 x) =>
+        sub (cons (pair x s) c) (t1 x) (t2 x)".
+#define "coinductive gnarrowing {t} :=
+  (pi c\ context c => narrowing c t),
+  (nabla y\ gnarrowing t)".
+
+#tactical bind_absurd then(
+    find("bind _ _ _"),
+    repeat(weak_l("pi _")),
+    repeat(weak_l("_ => _")),
+    repeat(weak_l("_ , _")),
+    repeat(weak_l("sub _ _ _")),
+    repeat(weak_l("outer_inv _ _")),
+    repeat(weak_l("cut _ _")),
+    prove("1")).
+#tactical instantiate    then(repeat(sigma), repeat(then(and_r, try(eq_r)))).
+#tactical sub_bind_refl  then(mu_r,left,left,left,right).
+#tactical sub_bind_trans then(mu_r,left,left,right).
+#tactical sub_arrow      then(mu_r,left,right).
+#tactical sub_all        then(mu_r,right).
+
+#lemma context_w
+  "pi c\t\ context c => nabla x\ context (cons (pair x t) c)".
+prove.
+% Qed.
+
+#lemma permute_w "pi l\ l'\ permute l l' => nabla x\ permute l l'".
+intros.
+then(mu_l, mu_r, and_r, simplify).
+  weak_l("#2").
+  prove.
+  weak_l.
+  prove.
+% Qed.
+
+#lemma lift_permute_s
+  "pi l\l'\ (nabla x\ permute (l x) (l' x)) =>
+    nabla a\x\ permute (l x) (l' x)".
+simplify.
+then(mu_l, mu_r, and_r, simplify).
+  weak_l("#2").
+  prove.
+  weak_l.
+  prove.
+% Qed.
+
+#lemma permute_refl
+  "pi m\n\ permute m n => permute n m".
+prove.
+% Qed.
+
+#lemma bind_w "pi l\x\t\ bind x t l => nabla a\ bind x t l".
+prove.
+% Qed.
+
+#lemma bind_s
+  "pi c\x'\t'\ (nabla n\ bind (x' n) (t' n) c) =>
+    sigma x\t\ x' = (a\ x), t' = (a\ t), bind x t c".
+prove.
+% Qed.
+
+#lemma sub_w "pi c\s\t\ sub c s t => nabla x\ sub c s t".
+intros.
+abstract.
+induction.
+cases.
+  prove.
+
+  then(mu_r, left, left, left, right).
+  instantiate.
+  force("U'", "(x\ u)").
+  apply("bind_w").
+  axiom.
+
+  then(mu_r, left, left, right).
+  instantiate.
+    force("U'0", "(x\ u0)").
+    apply("bind_w").
+    axiom.    
+  prove.
+
+  prove.
+  prove.
+% Qed.
+
+#lemma sub_s "pi c\s\t\ (nabla n\ sub c s t) => sub c s t".
+simplify.
+abstract.
+then(induction,cases).
+prove.
+then(cut_lemma("bind_s"),prove).
+then(cut_lemma("bind_s"),prove).
+prove.
+prove.
+% Qed.
