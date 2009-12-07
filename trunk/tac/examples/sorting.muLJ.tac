@@ -38,17 +38,15 @@ cases.
   % Leq Case.
   prove.
   % Gt Case.
-  and.
+  simplify.
+  cases("sorted _").
+    % sorted one.
     prove.
-  
-    simplify.
-    cases("sorted _").
-      prove.
-      cases("insert _ _ _").
-      cut_lemma("gt_leq").
-      prove.
-      
-      prove.
+    cases("insert _ _ _").
+    cut_lemma("gt_leq").
+    prove.
+    % sorted two.
+    prove.
 % Qed.
 #set "firstorder.induction-unfold" "false".
 
