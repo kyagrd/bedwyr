@@ -1,0 +1,104 @@
+Arithmetic/Geometric Mean
+-------------------------
+
+------
+Summary:
+
+Higher Order
+Unusual Induction Scheme
+Extra lemmata required
+Challenges Rippling
+
+------
+Definitions:
+
+< (less) 
+-------
+
+nat -> nat -> bool 
+
+(X < 0) = false 
+(0 < (s Y)) = true 
+((s X) < (s Y)) = (X < Y) 
+
+* (times) 
+---------
+
+nat -> nat -> nat
+
+(X * 0) = 0
+(X * (s Y)) = ((X * Y) + X)
+
+exp
+---
+
+nat -> nat -> nat 
+
+(exp X 0) = 1
+(exp X (s Y)) = ((exp X Y) * X) 
+
+leq 
+---
+
+nat -> nat -> bool 
+
+(leq 0 Y) = true
+(leq (s X) 0) = false 
+(leq (s X) (s Y)) = (leq X Y) 
+
+sum 
+---
+
+nat -> nat -> (nat -> nat) -> nat 
+
+(sum X 0 F) = (F 0) 
+((s Y) < X) -> (sum X (s Y) F) = 0
+(not ((s Y) < X)) -> (sum (s Y) F) = ((F (s Y)) + (sum X Y F))
+
+prod
+----
+
+nat -> nat -> (nat -> nat) -> nat 
+
+(prod X 0 F) = (F 0) 
+((s Y) < X) -> (prod X (s Y) F) = (s 0)
+(not ((s Y) < X)) -> (prod X (s Y) F) = ((F (s Y)) * (prod X Y F))
+
+------
+Theorem
+
+forall n:nat,a:(nat -> nat).  
+	(leq ((exp n n) * (prod n a)) (exp (sum n a) n))
+
+--------
+Comments:
+
+There are at least two possible induction schemes that can be used for
+this proof.  One with the step cases (P(n) -> P(2n)) and (P(s(n)) ->
+P(n)) and (forall m. (m < n) -> P(m)) -> P(n)) called variously course
+of values induction, strong induction and other names.  The discussion 
+here is based upon a proof using the first of these.
+
+It needs several lemmata (given below)
+
+(exp (X * Y) Z) = (exp X Z) * (exp Y Z)
+((X * Y) * Z) = (Y * (X * Z))
+(prod N (lambda i. (X * (F i)))) = (exp X N) * (prod N F)
+(sum (2 * N) F) = (sum N (lambda i. ((F ((2 * i) - 1)) + (F (2 * i)))))
+(prod (2 * N) F) = (prod N (lambda i. ((F ((2 * i) - 1)) * (F (2 * i)))))
+(exp X (Y * Z)) = (exp (exp X Y) Z)
+(sum N F) + (sum N G) = (sum N (lambda i. (F i) + (G i)))
+(sum N (lambda i. X * (F i))) = X * (sum N F)(leq (X * Z) (X * Y)) => (leq Z Y)
+(leq (X * Z) (X * Y)) => (leq Z Y)
+
+Even with these lemmata the rewriting involved presents several
+challenges to rippling (e.g. sinks need to be proved equal) and
+rippling has to take place in the induction hypothesis for the second
+step case.  I don't know how these might effect other theorem provers
+- Louise Dennis
+
+------
+Source:
+
+Alan Bundy
+Edinburgh MRG Group Blue Book Note 524

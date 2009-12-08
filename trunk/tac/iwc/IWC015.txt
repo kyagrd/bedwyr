@@ -1,0 +1,73 @@
+Paulson's Problem
+-----------------
+
+------
+Summary:
+Non-standard induction scheme
+Lemma needed
+Problems for Rippling
+------
+
+------
+Definitions:
+
+app
+---
+
+(list T) -> (list T) -> (list T)
+
+(app nil L) = L
+(app (cons H T) L) = (cons H (app T L)) 
+
+foldleft 
+--------
+
+(T -> T -> T) -> T -> (list T) -> T
+
+(foldleft F A nil) = A
+(foldleft F A (cons H T)) = (foldleft F (F A H) T)
+
+
+------
+
+Theorem:
+
+forall o:(t->t->t). forall l:(list t). forall x,y,e:t
+	(o x e) = x and (o (o x y) z) = (o x (o y z)) -> 
+		(o y (foldleft o e l)) = (foldleft o y l)
+
+------
+Comments:
+
+Paulson presents two proofs of this.  In both cases he uses
+non-structural induction to justify the use of a non-standard but
+structural induction scheme.
+
+The two schemes are:
+
+P([])  P(l) => P (app L [X])
+----------------------------
+	A L. P(L)
+
+and
+
+P([]) P([x]) P(x::l) => P (x_1::(x_2::l))
+-----------------------------------------	
+	A L. P(L)
+
+With the first of these schemes a rippling proof goes through fairly
+easily (given the lemma 
+     foldleft F X (app L M)) = (foldleft F (foldleft F X L) M))
+
+The second presents some fairly serious challenges to rippling.
+
+Another suggested lemma is
+
+(foldleft F X (app L (cons H nil))) = (F (foldleft F X L) H)
+
+------
+Source:
+
+L. C. Paulson, ML for the Working Programmer.
+
+Above comments taken from Edinburgh Dream Group BBNote 1188

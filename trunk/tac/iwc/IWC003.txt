@@ -1,0 +1,41 @@
+Case Analysis
+-------------
+
+Summary:
+Requires Case Analysis
+Not and equality theorem
+
+------
+
+Definitions:
+
+app
+---
+
+(app nil Z) = Z
+(app (X::Y) Z) = X::(app Y Z)
+
+member
+------
+
+(member X nil) = false
+(not (X = Y)) -> (member X (Y::Z)) = (member X Z)
+(X = Y) -> (member X (Y::Z)) = true
+
+------
+
+Theorem:
+
+forall x:A, z:list(A).
+	(member X Y) -> (member X (app Y Z))
+
+------
+Comments:
+
+This is here because lclam is no good at case splits.  I'm not sure if
+this is a problem particular to lclam or a more general problem.
+
+------
+Source:
+
+Andrew Ireland
