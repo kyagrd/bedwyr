@@ -109,7 +109,7 @@ let parseFile filename =
   try
     parse (Lexing.from_channel (open_in filename))
   with
-    Sys_error s -> raise (Error ("unable to open '" ^ filename ^ "'"))
+    Sys_error(s) -> raise (Error ("unable to open '" ^ filename ^ "': " ^ s ^ "'"))
     
 let parseChannel c =
   parse (Lexing.from_channel c)
