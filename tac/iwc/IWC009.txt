@@ -1,0 +1,49 @@
+"Pete's Nasty Theorem"
+----------------------
+
+------
+Summary:
+Problems for Rippling (Hole-less Wave Front)
+
+------
+Definitions:
+
+<>
+--
+list append
+
+split_list
+----------
+(list, list) -> list
+
+split_list(nil, w) = w
+length(w) = 6 -> split_list(a::x, w) = w::split_list(a::x, nil)
+not(length(w)=6) -> split_list(a::x, w) = split_list(x, w <> [a])
+
+
+new_split
+---------
+(list, list, int) -> list
+
+new_split(nil, w, d) = w
+(d = 6) -> new_split(a::x, w, d) = w::new_split(a::x, nil, length(nil))
+(not (d = 6)) -> new_split(a::x, w, d) = new_split(x, w <> [a], s(d))
+
+Theorem
+-------
+
+forall x, w: list.
+	new_split(x, w, (length(w))) = split_list(x, w)
+
+Comments
+--------
+
+This poses a problem for rippling since it is hard to annotate the
+definitions of wave rules (although a number of solutions have been
+proferred I'm not aware that any have been implemented).
+
+Source
+------
+Pete Madden
+
+Edinburgh MRG Group BBNotes 725 and 1311

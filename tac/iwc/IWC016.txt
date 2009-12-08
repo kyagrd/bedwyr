@@ -1,0 +1,48 @@
+The Whisky Problem
+------------------
+
+------
+Summary:
+Needs some sort of Generalisation
+------
+
+------
+Definitions:
+
+p(0, 0)
+p(X, 0) -> p(h(X), 0)
+p(h(X), Y) -> p(X, s(Y))
+
+------
+
+Theorem:
+forall y. p(0, y)
+
+------
+Comments:
+
+This is a proof from the domain of first order temporal logic.
+
+For it to go through the original conjecture needs to be 
+generalised to:
+
+forall y, n. p(h^n(0), y) (where h^n means n applications of h - which is
+second order)
+
+or 
+
+a new function h* needs to be introduced
+
+h*(0, X) = X
+h*(s(n), X) = h(h*(n, X))
+
+and the conjecture generalised to
+
+forall y, n. p(h*(n, 0), y)
+
+------
+Source:
+
+Logics group at Liverpool.  In particular Michael Fisher and Anatoli Degtyarev.  Problem originally attributed to Regimantas Pliuskevicius.
+
+

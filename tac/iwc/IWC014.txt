@@ -1,0 +1,74 @@
+Harald's Problem
+----------------
+
+------
+Summary:
+Complex Induction
+Needs a Lemma
+Higher Order
+------
+
+------
+Definitions:
+
+app 
+---
+
+(list T) -> (list T) -> (list T)
+
+(app nil L) = L
+(app (cons H T) L) = (cons H (app T L)) 
+
+foldleft 
+--------
+
+(T -> T -> T) -> T -> (list T) -> T
+
+       (foldleft F A nil) = A
+(foldleft F A (cons H T)) = (foldleft F (F A H) T)
+
+foldright 
+---------
+
+(T -> T -> T) -> T -> (list T) -> T
+
+(foldlright F A nil) = A
+(foldright F A (cons H T)) = (F H (foldright F A T))map 
+
+(A -> B) -> (list A) -> (list B)
+
+
+------
+
+Theorem:
+
+forall o1,o2:(t->t->t). forall l:(list t). forall x,y,z,a:t
+(o1 a x) = (o2 x a) and (o1 (o2 x y) z) = (o2 x (o1 y z))  -> 
+                             (foldleft o1 a l) = (foldright o2 a l)
+
+------
+Comments:
+
+Allegedly easy to understand when expressed as Ellipsis.
+
+A key lemma suggested is 
+
+foldleft(F, A, (app L [e])) = F (foldleft(F, A, L), E)
+
+NB.  It is probably not unreasonable to assume the presence of this lemma
+in a well developed theory.
+
+and a suggested induction rule is
+
+P([]),	P([E]), P(T) & P(H::T) & P(app T [E]) => P(app H::T [E])
+----------------------------------------------------------------
+		A L. P(L)
+
+Which gives 3 induction hypotheses in the step case.
+
+------
+Source:
+
+Harald Ganzinger
+
+Above comments taken from Edinburgh Dream Group BBNote 978 by Alan Bundy.

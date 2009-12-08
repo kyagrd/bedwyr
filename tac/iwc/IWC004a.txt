@@ -1,0 +1,55 @@
+Rotate Length
+-------------
+
+Summary:
+Requires a Generalisation
+
+------
+
+Definitions:
+
+len
+---
+
+(len nil) = 0
+(len (X::Y)) = (s (len Y))
+
+app
+---
+
+(app nil Z) = Z
+(app (X::Y) Z) = (X::(app Y Z))
+
+rotate
+------
+
+(rotate 0 Z) = Z
+(rotate (s N) nil) = nil
+(rotate (s N) (Y::Z)) = (rotate X (app Z (Y::nil)))
+
+app
+---
+
+(app (app X Y) Z) = (app X (app Y Z))
+(app (app X (Y::nil)) Z) = (app X (Y::Z))
+
+------
+
+Theorem:
+
+forall x: list(A).
+	(rotate (len X) X) = X
+
+------
+
+Comments:
+
+A generalisation step is required.  One of these would be to transform
+the theorem into LEM001.
+
+------
+
+Source:
+
+Andrew Ireland
+

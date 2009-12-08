@@ -1,0 +1,37 @@
+All number are odd or even
+--------------------------
+
+------
+Summary:
+Mutual Recursion
+Not Equality
+
+------
+Defintions:
+
+evenm
+-----
+
+nat -> bool
+
+(evenm 0) = true
+(evenm (s N)) = (oddm N)
+
+oddm
+----
+
+nat -> bool
+
+(oddm 0) = false
+(oddm (s N)) = (evenm N)
+
+Theorem
+-------
+
+forall n:nat
+	(evenm n) or (oddm n)
+
+Source
+------
+
+Alan Bundy

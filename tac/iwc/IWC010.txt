@@ -1,0 +1,109 @@
+Quicksort
+---------
+
+------
+Summary:
+Destructor Style Induction Scheme
+Additional Lemmas
+
+------
+Definitions:
+
+grtlist
+-------
+
+nat -> (list nat) -> (list nat)
+
+(grtlist X nil) = nil
+(leq H X) -> (grtlist X (cons H T)) = (grtlist X T)
+(not (leq H X)) -> (grtlist X (cons H T)) = (cons H (grtlist X T))
+
+leq
+--- 
+
+nat -> nat -> bool 
+
+(leq 0 Y) = true
+(leq (s X) 0) = false 
+(leq (s X) (s Y)) = (leq X Y) 
+
+leqlist 
+-------
+
+nat -> (list nat) -> (list nat)
+
+(leqlist X nil) = nil
+(leq H X) -> (leqlist X (cons H T)) = (cons H (leqlist X T))
+(not (leq H X)) -> (leqlist X (cons H T)) = (leqlist X T)
+
+occ
+--- 
+
+nat -> (list nat) -> nat
+
+(occ X nil) = 0
+X = H -> (occ X (cons H T)) = (s (occ X T))
+X \= H -> (occ X (cons H T)) = (occ X T)
+
+qsort
+-----
+
+(list nat) -> (list nat)
+
+(qsort nil) = nil
+(qsort (cons H T)) = (app (qsort (leqlist H T)) (cons H (qsort (grtlist H T))))
+
+sorted
+------
+
+(list nat) -> bool
+
+(sorted nil) = true
+(sorted (cons X nil)) = true
+T \= nil and (not (leq H (hd T))) -> (sorted (cons H T)) = false
+T \= nil and (leq H (hd T)) ->       (sorted (cons H T)) = (sorted T)
+
+------
+Theorem:
+forall l:(list nat).  (sorted (qsort l))
+
+forall l:(list nat).  (occ x (qsort l)) = (occ x l)
+
+------
+Comments:
+
+Proved in RRL (using split instead of grtlist and
+leqlist which takes < and > as arguments), Walther describes an 
+approach in Mathematical Induction in the Handbook of Automated
+Reasoning and Bronsard, Reddy and Hasker look at the problem in
+Induction Using Term Orders in JAR 16.
+
+A destructor style induction is needed.
+
+Possible Lemmas:
+
+sorted L) and (sorted M) -> (sorted (app L M))
+(occ X (app L M)) = (occ X L) + (occ X M)
+(leq X Y) -> (occ X (leqlist Y L)) = (occ X L)
+(not (leq X Y)) -> (occ (leqlist Y L)) = 0
+(leq X Y) -> (occ X (grtlist Y L)) = 0
+(not (leq X Y)) -> (occ (grtlist Y L)) = (occ X L)
+
+
+
+------
+Source:
+
+Various
+
+F. Bronsard, U. Reddy, R. Hasker, Induction using Term Orders.  J. of
+Automated Reasoning Vol 16, Nos 1-2, 3-37, 1996
+
+C. Walther, Mathematical Induction.  In D. Gabbay, C. Hogger and
+J. Robinson (eds), Handbook of Logic in Artificial Intelligence and
+Logice Programming, v 2. 127-228, OUP, 1994.
+
+H. Zhang, D. Kapur, M. Krishnamoorthy.  A Mechnaizable Induction
+Principle for Equational Specifications.  In E. Lush and R. Overbeek
+(eds).  Proc 9th International Conference on Automated Induction,
+152-181, Springer-Verlag, 1988.

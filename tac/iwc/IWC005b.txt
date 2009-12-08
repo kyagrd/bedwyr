@@ -1,0 +1,80 @@
+Binomial Theorem
+----------------
+
+Summary:
+--------
+
+Non Trivial Lemmas needed
+Variant may be harder (not investigated)
+
+------
+Definitions:
+
+* (times)
+--------- 
+
+nat -> nat -> nat
+
+(X * 0) = 0
+(X * (s Y)) = ((X * Y) + X)
+
+choose
+-------
+
+nat -> nat -> nat
+
+(choose X 0) = (s 0)
+(choose 0 (s Y)) = 0
+(choose (s X) (s Y)) = ((choose X (s Y)) + (choose X Y))
+
+
+exp 
+---
+
+nat -> nat -> nat 
+
+(exp X 0) = 1 
+(exp X (s Y)) = ((exp X Y) * X) 
+
+
+sum 
+---
+
+nat -> nat -> (nat -> nat) -> nat 
+
+(sum X 0 F) = (F 0) 
+((s Y) < X) -> (sum X (s Y) F) = 0
+(not ((s Y) < X)) -> (sum (s Y) F) = ((F (s Y)) + (sum X Y F))
+
+------
+
+Theorem:
+
+forall x,n: nat
+	(exp (x + y) n) = (sum 0 n (lambda i. (choose n i) * (exp x i) * (exp y (n - i))))
+
+------
+
+Comments:
+
+Requires several non-trivial lemmas.  A simple first order version has
+been proved by SPIKE.
+
+Possible lemmas include
+(choose N K) = (choose N (N - K))
+(sum N M (lambda i. ((F i) + (G i))) = ((sum N M F) + (sum N M G))
+(sum N M (lambda i. (T * (G i)))) = (T * (sum N M G))
+(not (s M) N) -> (sum N (s M) F) = ((F N) + (sum N M (lambda i. (F (s i)))))
+
+------
+
+Variants:
+
+(choose n i) can be replaced with (quot (fac n) ((fac i) * (fac (n - i))))
+
+------
+
+Source:
+
+MRG Group BBNote 903
+
