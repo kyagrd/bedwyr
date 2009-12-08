@@ -381,15 +381,16 @@ struct
 
     let executeFile session file =
       try
-        let infile = open_in file in
+        let () = Sys.chdir (Filename.dirname file) in
+        let infile = open_in (Filename.basename file) in
         let commands = Toplevel.parseChannelCommandList infile in
         List.fold_left executeCommand session commands
       with
         Sys_error(s) ->
-          (O.error ("unable to open file '" ^ file ^ "': " ^ s ^ ".\n");
+          (O.error ("unable to open '" ^ file ^ "': " ^ s ^ "\n");
           errorHandler session)
       | Absyn.SyntaxError(s) ->
-          (O.error ("in file '" ^ file ^ "': " ^ s ^ ".\n");
+          (O.error ("in file '" ^ file ^ "': " ^ s ^ "\n");
           errorHandler session)
     in
     List.fold_left executeFile session files
