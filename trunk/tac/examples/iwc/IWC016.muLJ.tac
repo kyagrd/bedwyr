@@ -1,4 +1,8 @@
-#open "../naturals.def".
+% Whisky problem
+% Summary:
+% Requires generalization.
+
+#define "nat {x} := x=o ; sigma y\ x = s y, nat y".
 
 #define
   "p {x} y :=
