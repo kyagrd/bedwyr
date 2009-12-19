@@ -39,22 +39,26 @@ prove.
   app x (cons h y) z => app x (cons h nil) xh => app xh y z".
 prove.
 
+#lemma app_list "pi x\y\z\ app x y z => list x".
+prove.
+
+#lemma app_cons_3 "pi x\y\z\h\a\b\
+   app x y z => app y a b =>
+   sigma yh\zh\ app y (cons h nil) yh, app z (cons h nil) zh, app x yh zh".
+cut_lemma("app_list").
+prove.
+
 #lemma generalization "pi x\y\n\
-   len x n => list x => list y =>
-     pi xy\yx\ app x y xy => app y x yx => rotate n xy yx".
+   len x n => pi xy\yx\ app x y xy => app y x yx => rotate n xy yx".
 simplify.
-then(induction,cases).
+then(induction,async).
 % Base case: nil.
 prove.
 % Case: cons.
-then(mu_l("app (cons _ _) _ _"),cases).
 then(mu_r,right,
      repeat(sigma),repeat(and),iterate(try(eq))).
-then(apply("app_cons_1"),simplify).
+then(apply("app_cons_3"),simplify).
 apply("app_cons_2").
-repeat(pi_l).
-cut("list Y").
-admit.
 prove.
 % Qed.
 
@@ -65,5 +69,6 @@ prove.
 cut_lemma("generalization").
 cut_lemma("app").
 prove.
+
 
 
