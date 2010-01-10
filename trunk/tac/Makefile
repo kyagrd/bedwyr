@@ -4,6 +4,7 @@ TEST=lists.muLJ.tac sim.muLJ.tac internal_checks.muLJ.tac tictactoe.muLJ.tac \
 	 arithmetic.muLJ.tac comparison.muLJ.tac \
 	 reverse.muLJ.tac sorting.muLJ.tac \
 	 sk.muLJ.tac picbisim.muLJ.tac picone.muLJ.tac \
+	 prop-calc.muLJ.tac \
 	 iwc/IWC002.muLJ.tac iwc/IWC003.muLJ.tac iwc/IWC004.muLJ.tac \
 	 iwc/IWC006.muLJ.tac iwc/IWC007.muLJ.tac iwc/IWC016.muLJ.tac
 
