@@ -44,7 +44,7 @@ nat -> nat -> (nat -> nat) -> nat
 
 (sum X 0 F) = (F 0) 
 ((s Y) < X) -> (sum X (s Y) F) = 0
-(not ((s Y) < X)) -> (sum (s Y) F) = ((F (s Y)) + (sum X Y F))
+(not ((s Y) < X)) -> (sum X (s Y) F) = ((F (s Y)) + (sum X Y F))
 
 ------
 

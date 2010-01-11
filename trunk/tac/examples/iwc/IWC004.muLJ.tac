@@ -26,7 +26,7 @@ prove.
 #theorem test_2 "pi n\ nat n => rotate n (cons foo nil) (cons foo nil)".
 prove.
 
-% Test.
+% Challenge.
 
 % app X (app Y (H::nil)) = app (app X Y) (H::nil).
 #lemma app_cons_1 "pi x\y\z\h\
@@ -55,10 +55,8 @@ then(induction,async).
 % Base case: nil.
 prove.
 % Case: cons.
-then(mu_r,right,
-     repeat(sigma),repeat(and),iterate(try(eq))).
-then(apply("app_cons_3"),simplify).
-apply("app_cons_2").
+cut_lemma("app_cons_3").
+cut_lemma("app_cons_2").
 prove.
 % Qed.
 
@@ -69,6 +67,4 @@ prove.
 cut_lemma("generalization").
 cut_lemma("app").
 prove.
-
-
-
+% Qed.
