@@ -78,17 +78,13 @@ prove.
 
 #lemma step "pi x\l\o\ nat x => order o => alphaorder l o => sigma y\z\
    alphaelem x y, combine y o z".
-simplify.
-apply("nat_alphaelem_aelem").
-simplify.
-apply("combine_total").
+cut_lemma("nat_alphaelem_aelem").
+cut_lemma("combine_total").
 prove.
 
 #lemma list_alphaorder_order "pi x\ list x => sigma y\ alphaorder x y, order y".
-simplify.
-then(induction,cases).
+cut_lemma("step").
 prove.
-then(apply("step"),prove).
 
 % Compute the final abstraction.
 
@@ -172,7 +168,9 @@ prove.
   prefix x y => alphaorder x ox => alphaorder y oy =>
   aprefix (alist true false ox) (alist true false oy)".
 simplify.
-then(induction,prove).
+% Here "prove" needs a little help:
+% we indicate by which induction to start.
+then(induction("auto","prefix _ _"),prove).
 
 #lemma alphaelem_unique "pi x\y\z\ alphaelem x y => alphaelem x z => y=z".
 prove.
@@ -186,7 +184,11 @@ cases("prefix _ _").
 prove.
 cases("prefix _ _").
 prove.
+% Async performs progressing unfoldings.
 async.
+% At this point we can cut all those lemmas and conclude using prove,
+% but this wouldn't make for a clearer or more concise proof,
+% especially since lemmas used twice have to be cut-in twice.
 cut("ahd=ahd1").
   then(cut_lemma("alphaelem_unique"),prove).
 cut("ahd0=ahd2").
@@ -198,4 +200,3 @@ weak_l("aprefix _ _").
 apply("cons_step").
 axiom.
 % Qed.
-
