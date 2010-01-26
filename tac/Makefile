@@ -12,7 +12,11 @@ TEST=lists.muLJ.tac sim.muLJ.tac internal_checks.muLJ.tac tictactoe.muLJ.tac \
 DEFS=naturals.def lists.def tictactoe.def sorting.def lambda/definitions.def \
      binarytrees.def bisimulation.def picalculus.def
 EXAMPLES=lambda/subred.muLJ.tac lambda/typedet.muLJ.tac \
-		 lambda/named-style-fail.muLJ.tac
+		 lambda/named-style-fail.muLJ.tac \
+		 iwc/IWC012.muLJ.tac \
+		 popl/popl-1a.muLJ.tac popl/popl-2a-preservation.muLJ.tac \
+		 popl/popl-2a-progress.muLJ.tac pcf/pcf.muLJ.tac \
+		 stlc/stlc-strong.muLJ.tac stlc/stlc-weak.muLJ.tac
 
 .PHONY: test notest taci/taci Stekki/stekki tools taci stekki clean
 all: taci/taci
@@ -45,7 +49,7 @@ notest:
 	cd examples ; find . -name '*.tac' \
 	  | grep -v -F "`echo $(TEST) | tr ' ' '\n'`"
 
-VERSION=0.9.1
+VERSION=0.9.2
 FILES=Makefile INSTALL README README.lifting
 
 tarball:

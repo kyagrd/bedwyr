@@ -33,6 +33,6 @@ clean:
 	$(OCAMLLEX) $<
 
 dist:
-	for f in $(SOURCE) Makefile bin/Logics.in ; do \
+	for f in $(SOURCE) Makefile Logics.in ; do \
 	  cp --parents $$f $(DISTDIR) ; \
 	done
