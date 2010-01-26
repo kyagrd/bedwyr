@@ -214,6 +214,10 @@
 			RelativePath=".\clean.bat"
 			>
 		</File>
+		<File
+			RelativePath=".\Logics.in"
+			>
+		</File>
 	</Files>
 	<Globals>
 	</Globals>
