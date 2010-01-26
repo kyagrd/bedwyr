@@ -4,6 +4,10 @@
 prove.
 % Qed.
 
+#theorem even_or_even_sss "pi x\ nat x => even x ; even (s (s (s x)))".
+prove.
+% Qed.
+
 #theorem even_or_odd "pi x\ nat x => even x ; odd x".
 prove.
 % Qed.
@@ -68,4 +72,4 @@ prove.
 
 #theorem ack_total "pi x\ nat x => pi y\ nat y => sigma a\ ack x y a, nat a".
 prove("4").
-
+% Qed.
