@@ -35,7 +35,7 @@ let outline = ref false
 (**********************************************************************
 * Versioning Information:
 **********************************************************************)
-let version = "1.0"
+let version = "0.1.0"
 let printVersion () =
   (print_endline ("mod2def version " ^ version ^ ".");
   exit 0)

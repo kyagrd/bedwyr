@@ -35,7 +35,7 @@ let outline = ref false
 (**********************************************************************
 * Versioning Information:
 **********************************************************************)
-let version = "0.9.1"
+let version = "0.9.2"
 let printVersion () =
   (print_endline ("Tactex version " ^ version ^ ".");
   exit 0)
