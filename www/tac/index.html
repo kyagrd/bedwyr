@@ -62,18 +62,24 @@
  </p>
  <p>
  Learn more about &mu;LJ in
- <a href="tac09.pdf"><em>Focused Inductive Theorem Proving</em></a>
- by Baelde, Miller, Snow &amp; Viel
- (submitted paper).
+ <a href="tac-2010.pdf"><em>Focused Inductive Theorem Proving</em></a>
+ by Baelde, Miller &amp; Snow (submitted paper).
  </p>
  <p>
  The distributed system comes with several example theorems.  They include
  proofs of properties of Peano arithmetic, standard list predicates, the
- pi-calculus, Buchi automata, and the simply typed lambda calculus.
+ pi-calculus, Buchi automata, and lambda calculus variants (e.g., PCF,
+ F<super>&leq;</super>).
  </p>
  <p>
- Here is an illustrative list of the kinds of theorems for which the
- automated tactic <code>prove</code> can quickly find proofs:
+ Tac can be used to interactively write proofs. For example,
+ in the domain of operational semantics, we have developed proofs
+ of subject reduction, determinacy of typing, transitivity of
+ subtyping for a variety of systems.
+ To help in this tedious task, Tac offers a powerful automated
+ tactic named <code>prove</code>, which can prove several theorems
+ or proof obligations.
+ Here is a list of such theorems:
  </p>
  <ul>
    <li>Commutativity and associativity of addition on natural numbers.
@@ -104,6 +110,8 @@
    <li>Involution of list reversal:
    <code>pi x\ pi r\ reverse x r =&gt; reverse r x</code>.
    </li>
+   <li>Verifying abstractions in model-checking</li>
+   <li>Hilbert's deduction theorem for combinators</li>
  </ul>
 
  <p>As said above, Tac produces proofs. Here are a couple examples.
@@ -193,12 +201,12 @@ behind the current distribution are:
 </p>
 
 <ul>
-  <li> <a href="http://www.lix.polytechnique.fr/~dbaelde">David
-  Baelde</a> & <a
+  <li> <a
   href="http://www.lix.polytechnique.fr/Labo/Dale.Miller/">Dale
   Miller</a> & Alexandre Viel (INRIA & LIX/Ecole Polytechnique) 
   </li>
-  <li> <a href="http://www.cs.umn.edu/~snow/">Zach Snow</a>
+  <li> <a href="http://www.lix.polytechnique.fr/~dbaelde">David
+  Baelde</a> & <a href="http://www.cs.umn.edu/~snow/">Zach Snow</a>
   (University of Minnesota - Minneapolis)  
   </li>
 </ul>

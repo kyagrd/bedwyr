@@ -22,7 +22,10 @@ h1
 
 h2,h3 {font-weight: bold; font-size: medium; margin-bottom: 0;}
 
-p {margin-top: 0;}
+/* DB: If somebody wants to restore smaller margins between <p>,
+ * we should do it in a more subtle way (e.g. half both margin-top and -bottom)
+ * to avoid that <ul> get different spacing than <p>.
+ * p {margin-top: 0;} */
 a:hover { text-decoration: underline; }
 a:active { text-decoration: underline; }
 a:visited { color: rgb(96,0,32); }
