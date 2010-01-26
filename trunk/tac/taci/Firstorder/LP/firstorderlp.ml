@@ -99,6 +99,8 @@ let parse stream =
   with
     | Lpabsyn.Error(s) ->
         raise (Error(s))
+    | Failure(s) ->
+        raise (Error(s))
     | Parsing.Parse_error ->
         raise (Error("syntax error"))
 
