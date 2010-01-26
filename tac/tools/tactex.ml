@@ -42,13 +42,13 @@ let printVersion () =
 
 let getInputChannel () =
   if !inputName = "" then
-    (print_endline ("Error: no input file specified.");
+    (print_endline ("Error : no input file specified.");
     exit (-1))
   else
     try
       open_in !inputName
     with _ ->
-      (print_endline ("Error: unable to open file '" ^ !inputName ^ "'");
+      (print_endline ("Error : unable to open file '" ^ !inputName ^ "'");
       exit (-1))
 
 let getOutputChannel () =
@@ -64,7 +64,7 @@ let getOutputChannel () =
     try
       open_out name
     with _ ->
-      (print_endline ("Error: unable to open file '" ^ name ^ "'");
+      (print_endline ("Error : unable to open file '" ^ name ^ "'");
       exit (-1))
 
 (**********************************************************************
@@ -89,7 +89,7 @@ let footer =
 
 (*  fail: incredible error handling! *)
 let fail expected x =
-  prerr_endline ("Error: XML is not a '" ^ expected ^ "': " ^ Xml.to_string x) ;
+  prerr_endline ("Error : XML node is not a '" ^ expected ^ "': " ^ Xml.to_string x) ;
   exit (-1)
 
 (**********************************************************************
@@ -311,4 +311,9 @@ let main () =
   
 
 (*  Entrypoint  *)
-let () = main ()
+let () =
+  try
+    main ()
+  with
+    Xml.Error(s1,s2) -> Printf.printf "%s(%i) : Error : %s" !inputName (Xml.line s2) (Xml.error_msg s1) 
+
