@@ -29,7 +29,7 @@ cases.
   intros("#1").
     apply("lift_permute_s").
     weak_l.
-    force("M'","h4").
+    force("M'","h3").
     force("Ta'","(a\ta2)").
     force("L'","(a\ cons (pair a h2) l2)").
     prove.
@@ -65,25 +65,15 @@ then(mu_l,then(or_l,simplify)).
   prove.
 % Qed.
 
+#set "firstorder.induction-unfold" "true".
 #theorem type_determinacy
   "pi g\x\t\ typeof g x t => context g => pi t'\ typeof g x t' => t=t'".
 intros.
-induction("g\x\t\
-           typeof g x t, (context g => pi t'\ (typeof g x t' => (t = t')))").
+induction.
+cases.
 prove.
-
-and.
-  prove.
-
-  cases.
-
-    % ******** Initial-rule case.
-    prove.
-
-    % ******** App.
-    prove.
-
-    % ******** Lambda.
-    cut_lemma("context_ss").
-    prove.
+prove.
+cut_lemma("context_ss").
+prove.
 % Qed.
+

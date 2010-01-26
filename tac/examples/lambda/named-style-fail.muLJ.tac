@@ -117,9 +117,9 @@ prove.
 % The only interesting case: the beta redex.
 async.
 induction("g'\m'\t'\ pi g\m\t\
- (nabla x\ permute (g' x) (cons (pair x h12) g),
+ (nabla x\ permute (g' x) (cons (pair x a) g),
            (m' x)=(m (var x)), (t' x)=t) =>
- (typeof g h11 h12) => typeof g (m h11) t").
+ (typeof g m21 a) => typeof g (f0 m21) t").
 % Invariant => goal.
  repeat(pi_l).
  imp.
@@ -128,18 +128,17 @@ induction("g'\m'\t'\ pi g\m\t\
  force("G","g").
  prove.
  % Non-llambda unification, needs help.
- force("M","h10").
+ force("M","f0").
  eq_r.
  eq_r.
  imp.
  axiom.
- % Almost there, modulo non-llambda.
- admit.
+ axiom.
 
 % Invariance.
- then(repeat(or_l),simplify).
+ cases.
  % BIND.
- cut("nabla x\ bind (cons (pair x h12) g3) (h14 x) h15").
+ cut("nabla x\ bind (cons (pair x a) g3) (v' x) h").
  prove.
  nabla.
  then(mu_l("bind _ _ _"),then(or_l,simplify)).
@@ -167,3 +166,4 @@ induction("g'\m'\t'\ pi g\m\t\
  % LAM: same mess.
  admit.
 % Not quite Qed.
+

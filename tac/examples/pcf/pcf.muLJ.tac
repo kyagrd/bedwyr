@@ -71,7 +71,7 @@ induction("g\m\t\ nabla x\ pi g'\ permute g' (cons (pair x t') g) =>
     apply("lift_permute_s").
     weak_l("lift_permute _ _").
     intros("#1").
-      force("G'''", "(x1\(x2\ cons (pair x1 h7) (g'6 x2)))").
+      force("G'''", "(x1\(x2\ cons (pair x1 t1) (g'6 x2)))").
       prove.
     prove.
 
@@ -79,7 +79,7 @@ induction("g\m\t\ nabla x\ pi g'\ permute g' (cons (pair x t') g) =>
     apply("lift_permute_s").
     weak_l("lift_permute _ _").
     intros("#1").
-      force("G'''0", "(x1\(x2\ cons (pair x1 h13) (g'8 x2)))").
+      force("G'''0", "(x1\(x2\ cons (pair x1 t3) (g'8 x2)))").
       prove.
     prove.
 
@@ -109,7 +109,7 @@ induction("gg\m\tm\ pi g\ permute gg (cons (pair n tn) g) =>
     
     % abstraction.
     intros("#1").
-      force("G0", "(n1\ cons (pair n1 h7) g7)").
+      force("G0", "(n1\ cons (pair n1 t0) g7)").
       weak_l("of _ _ _").
       apply("permute_lift").
       weak_l("permute _ _").
@@ -120,7 +120,7 @@ induction("gg\m\tm\ pi g\ permute gg (cons (pair n tn) g) =>
 
     % rec.
     intros("#1").
-      force("G1", "(n1\ cons (pair n1 h13) g9)").
+      force("G1", "(n1\ cons (pair n1 t2) g9)").
       weak_l("of _ _ _").
       apply("permute_lift").
       weak_l("permute _ _").
@@ -176,7 +176,7 @@ cases.
   cases("#4").
     apply("#1", axiom, axiom).
     apply("#2", axiom).
-    force("T0", "h23").
+    force("T0", "t14").
     intros("#2").
       cases("#1").
         apply("of_subst").
@@ -191,7 +191,7 @@ cases.
   contract_l("of _ _ _").
   cases("#3").
   apply("#1", axiom).
-  force("T1", "h37").
+  force("T1", "t21").
   apply("of_subst").
   apply("of_cut").
   prove.
@@ -200,4 +200,5 @@ cases.
 
 #theorem eval_determinacy "pi e\v1\v2\ eval e v1 => eval e v2 => v1 = v2".
 prove.
+
 
