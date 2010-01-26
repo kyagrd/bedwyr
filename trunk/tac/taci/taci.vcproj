@@ -299,30 +299,6 @@
 		<Filter
 			Name="Logics"
 			>
-			<File
-				RelativePath="..\logics_gen\bin\Logics.in"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCustomBuildTool"
-						Description="Generating logics interface..."
-						CommandLine="$(SolutionDir)bin\logics_gen --input &quot;$(SolutionDir)logics_gen\Logics.in&quot; --output &quot;$(SolutionDir)taci\Logics_gen&quot;&#x0D;&#x0A;"
-						Outputs="$(SolutionDir)taci\Logics_gen.mli;$(SolutionDir)taci\Logics_gen.ml"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCustomBuildTool"
-						Description="Generating logics interface..."
-						CommandLine="$(SolutionDir)bin\logics_gen --input &quot;$(SolutionDir)logics_gen\Logics.in&quot; --output &quot;$(SolutionDir)taci\Logics_gen&quot;&#x0D;&#x0A;"
-						Outputs="$(SolutionDir)taci\Logics_gen.mli;$(SolutionDir)taci\Logics_gen.ml"
-					/>
-				</FileConfiguration>
-			</File>
 			<Filter
 				Name="Firstorder"
 				>
@@ -340,10 +316,6 @@
 				</File>
 				<File
 					RelativePath=".\Firstorder\firstorderabsyn.mli"
-					>
-				</File>
-				<File
-					RelativePath=".\Firstorder\firstorderlp.mli"
 					>
 				</File>
 				<File
