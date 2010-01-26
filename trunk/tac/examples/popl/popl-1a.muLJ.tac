@@ -504,7 +504,7 @@ cut("gcut a10").
       cut_lemma("lift_sub_ctxt_inclusion").
       abstract.
       intros("#5").
-        % TODO wtf?
+        % TODO we should do better.
         force("C'","c'4").
         force("A'","s'2").
         force("B'","t'3").
