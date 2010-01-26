@@ -42,6 +42,10 @@
     append h1 k m,
     append l h2 k)".
 
+#define "foldleft f a {l} r :=
+  (l = nil, r = a);
+  (sigma h\tl\ l = (cons h tl), foldleft f (f a h) tl r)".
+
 #define
   "delayeq {X} {Y} :=
     (X = nil, Y = nil);
