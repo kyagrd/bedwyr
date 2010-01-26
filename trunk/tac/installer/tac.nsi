@@ -89,11 +89,11 @@ Section "Tac (required)"
 
   ; Copy the examples.
   SetOutPath $INSTDIR
-  File /r /x .svn "..\examples"
+  File /r /x .svn /x *.py "..\examples"
 
-  ; Copy the README files; we have more than 1.
+  ; Copy the README.
   SetOutPath $INSTDIR
-  File "..\README*"
+  File "..\README"
 
   ; Add to user's $PATH
   Push $INSTDIR\bin
