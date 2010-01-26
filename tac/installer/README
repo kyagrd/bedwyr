@@ -8,15 +8,11 @@ Requirements:
   To create the Windows installer you must have NSIS installed.  It is available
   at http://nsis.sourceforge.net/.
 
-  Additionally, you must have perl installed.  One implementation of perl is
-  available at http://www.activestate.com/.  This is a really ridiculous
-  requirement, because we use only a single line of perl.  Sorry!
-
-  Also, we really need a new logo, but I'm no graphic designer.
+  Also, we really need a new logo, but I'm no graphic designer, and this is
+  more like a request than a requirement.
 
 Building the Installer:
-  First, verify that the required software is installed; in particular make
-  sure that perl is on your PATH.
+  First, verify that the required software is installed.
   
   Next, build the system using Microsoft Visual Studio 2008; for information
   on building the system see "/tac/INSTALL".
