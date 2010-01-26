@@ -50,7 +50,7 @@ notest:
 	  | grep -v -F "`echo $(TEST) | tr ' ' '\n'`"
 
 VERSION=0.9.2
-FILES=Makefile INSTALL README README.lifting
+FILES=Makefile INSTALL README CHANGELOG
 
 tarball:
 	rm -rf tac-$(VERSION)
