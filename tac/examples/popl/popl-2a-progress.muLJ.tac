@@ -28,6 +28,7 @@ prove.
 intros.
 then(induction("auto", "of _ _ _ _"),cases).
   bind_absurd.
+  weak_l("#1").
   weak_l("#2").
   weak_l("#3").
   cases("#5").
@@ -71,10 +72,10 @@ then(induction("auto", "of _ _ _ _"),cases).
 
   prove.
 
-  apply("#2", eq, axiom).
-  apply("#4", eq, axiom).
+  apply("#3", eq, axiom).
+  apply("#5", eq, axiom).
   cut_lemma("app_progresses").
-  intros("#6").
+  intros("#7").
     force("Oc", "nil").
     prove.
   prove.
@@ -90,3 +91,4 @@ then(induction("auto", "of _ _ _ _"),cases).
 
   prove.
 % Qed.
+
