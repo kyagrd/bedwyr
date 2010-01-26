@@ -1,6 +1,6 @@
 (****************************************************************************)
-(* An implemention of Higher-Order Pattern Unification                      *)
-(* Copyright (C) 2006 Nadathur, Linnell, Baelde, Ziegler                    *)
+(* An implementation of Higher-Order Pattern Unification                    *)
+(* Copyright (C) 2006-2010 Nadathur, Linnell, Baelde, Ziegler               *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -72,7 +72,8 @@ let print_full ~generic ~bound chan term =
       | Var v ->
           let name = Term.get_name term in
           if !debug then
-            Format.fprintf chan "%s[%d/%d/%s]" name v.ts v.lts (string_of_tag v.tag)
+            Format.fprintf chan "%s[%d/%d/%s]"
+              name v.ts v.lts (string_of_tag v.tag)
           else
             Format.fprintf chan "%s" name
       | NB i ->
@@ -110,7 +111,8 @@ let print_full ~generic ~bound chan term =
                     t
                     (pp ~bound high_pr) (List.hd ts)
                     (fun chan ->
-                      List.iter (Format.fprintf chan "@ %a" (pp ~bound high_pr)))
+                       List.iter
+                         (Format.fprintf chan "@ %a" (pp ~bound high_pr)))
                     (List.tl ts)
           end
       | Lam (i,t) ->
@@ -133,17 +135,27 @@ let print_full ~generic ~bound chan term =
   in
     Format.fprintf chan "@[%a@]" (pp ~bound high_pr) term
 
+let formatter,flush_formatter =
+  let buf = Buffer.create 20 in
+    Format.formatter_of_buffer buf,
+    (fun () ->
+       let s = Buffer.contents buf in
+         Buffer.clear buf ;
+         s)
+
 let term_to_string_full ~generic ~bound tm =
-  print_full ~generic ~bound Format.str_formatter tm ;
-  Format.flush_str_formatter ()
+  print_full ~generic ~bound formatter tm ;
+  flush_formatter ()
 
 (* Print a term; allows debugging.  See term_to_string_full. *)
 let term_to_string_full_debug ~generic ~bound dbg term =
   let debug' = !debug in
-  let () = debug := dbg in
-  let s = term_to_string_full ~generic ~bound term in
-  (debug := debug';
-  s)
+  let s =
+    debug := dbg ;
+    term_to_string_full ~generic ~bound term
+  in
+    debug := debug';
+    s
 
 let get_generic_names x =
   let nbs = Term.get_nablas x in
@@ -158,8 +170,8 @@ let print ?(bound=[]) chan term =
     s
 
 let term_to_string ?(bound=[]) tm =
-  print ~bound Format.str_formatter tm ;
-  Format.flush_str_formatter ()
+  print ~bound formatter tm ;
+  flush_formatter ()
 
 let pp_term out term = print out term
 
@@ -185,5 +197,5 @@ let pp_preabstracted ~generic ~bound chan term =
           print_full ~generic ~bound chan term
 
 let term_to_string_preabstracted ~generic ~bound term =
-  pp_preabstracted ~generic ~bound Format.str_formatter term ;
-  Format.flush_str_formatter ()
+  pp_preabstracted ~generic ~bound formatter term ;
+  flush_formatter ()
