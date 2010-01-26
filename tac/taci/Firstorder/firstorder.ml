@@ -99,8 +99,16 @@ struct
     Format.fprintf fmt "<focused>%b</focused>" (isFocused seq) ;
     Format.fprintf fmt "@]</sequent>@]"
 
+  let sequent_formatter,flush_sequent_formatter =
+    let buf = Buffer.create 20 in
+      Format.formatter_of_buffer buf,
+      (fun () ->
+         let s = Buffer.contents buf in
+           Buffer.clear buf ;
+           s)
+
   let xml_of_sequent seq =
-    ppxml_sequent Format.str_formatter seq ; Format.flush_str_formatter ()
+    ppxml_sequent sequent_formatter seq ; flush_sequent_formatter ()
 
   let string_of_sequent_rhs seq =
     let bottom    = String.concat "\n" (List.map string_of_formula seq.rhs) in

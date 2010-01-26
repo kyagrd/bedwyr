@@ -447,27 +447,41 @@ let string_of_fixpoint = function
     Inductive -> "inductive"
   | CoInductive -> "coinductive"
 
-let string_of_definition (Definition(name,arity,body,ind)) =
-  (Format.fprintf (Format.str_formatter) "%s %s :=@ %a" (string_of_fixpoint ind) name
-    (fun ch -> (string_of_formula ~generic:[] ~names:[] ch).abstf) body;
-  Format.flush_str_formatter ())
+let formula_formatter,flush_formula_formatter =
+  let buf = Buffer.create 20 in
+  let fmt = Format.formatter_of_buffer buf in
+    fmt,
+    (fun () ->
+       Format.pp_print_flush fmt () ;
+       let s = Buffer.contents buf in
+         Buffer.clear buf ;
+         s)
 
-let string_of_formula ~generic=
+let string_of_definition (Definition(name,arity,body,ind)) =
+  Format.fprintf
+    formula_formatter
+    "%s %s :=@ %a"
+    (string_of_fixpoint ind)
+    name
+    (fun ch -> (string_of_formula ~generic:[] ~names:[] ch).abstf) body ;
+  flush_formula_formatter ()
+
+let string_of_formula ~generic =
   { polf = (fun f ->
-      ((string_of_formula ~names:[] ~generic Format.str_formatter).polf f;
-      Format.flush_str_formatter ()));
+      ((string_of_formula ~names:[] ~generic formula_formatter).polf f;
+       flush_formula_formatter ()));
     predf = (fun f ->
-      ((string_of_formula ~names:[] ~generic Format.str_formatter).predf f;
-      Format.flush_str_formatter ()));
+      ((string_of_formula ~names:[] ~generic formula_formatter).predf f;
+       flush_formula_formatter ()));
     abstf = (fun f ->
-      ((string_of_formula ~names:[] ~generic Format.str_formatter).abstf f;
-      Format.flush_str_formatter ()));
+      ((string_of_formula ~names:[] ~generic formula_formatter).abstf f;
+       flush_formula_formatter ()));
     formf = (fun f ->
-      ((string_of_formula ~names:[] ~generic Format.str_formatter).formf f;
-      Format.flush_str_formatter ()))
+      ((string_of_formula ~names:[] ~generic formula_formatter).formf f;
+       flush_formula_formatter ()))
   }
 
-    
+
 (**********************************************************************
 *abstract:
 * Abstracts the given formula over the given name. Doesn't go through
