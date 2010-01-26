@@ -31,8 +31,8 @@ Building Tac on Linux:
   To do it just run:
       $ make tools
 
-Building Tac on Windows XP:
-  The easiest way is to build Tac on Windows XP is using Microsoft Visual
+Building Tac on Windows:
+  The easiest way is to build Tac on Windows is using Microsoft Visual
   Studio 2005 along with the included solution "/tac/tac.sln".
 
   For information about building the installer, see "/tac/installer/README".
