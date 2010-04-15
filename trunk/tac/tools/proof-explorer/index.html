@@ -39,8 +39,8 @@ $(function() {
   function render_formula(formula) {
     return (
       $(formula).text()
-        .replace(/; /g, ' &or; ')        // needs to be first
-        .replace(/, /g, ' &and; ')       // needs to be before quantifiers
+        .replace(/;/g, ' &or;')        // needs to be first
+        .replace(/,/g, ' &and;')       // needs to be before quantifiers
         .replace(/=>/g, '&sup;')
         .replace(/(pi|sigma|nabla) (?:\w+\\)+/g,
                  function(m) {
