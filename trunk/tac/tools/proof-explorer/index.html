@@ -1,0 +1,143 @@
+<html>
+<head>
+<title>Proof Explorer</title>
+<script src="jquery.js"></script>
+<script type="text/javascript">
+$(function() {
+  function render_rule(rule) {
+    var subrules = $(rule).children('sub').children('rule');
+    return (
+      '<table>' +
+         '<tr><td>' +
+           $.map(subrules, render_rule).join('</td><td>') +
+         '</td>' +
+         '<td><sub>' + $(rule).children('name').text() + '</sub></td>' +
+         '</tr>' +
+         '<tr><td colspan="' + subrules.size() + '" class="expandable">' +
+            render_sequent($(rule).children('sequent')) +
+         '</td></tr>' +
+      '</table>'
+    );
+  }
+
+  function render_sequent(sequent) {
+    return (
+      render_lhs(sequent.children('lhs')) +
+      ' &rarr; ' +
+      render_rhs(sequent.children('rhs'))
+    );
+  }
+
+  function render_lhs(lhs) {
+    return $.map(lhs.children('formula'), render_formula).join(', ');
+  }
+
+  function render_rhs(rhs) {
+    return render_formula(rhs.children('formula'));
+  }
+
+  function render_formula(formula) {
+    return (
+      $(formula).text()
+        .replace(/; /g, ' &or; ')        // needs to be first
+        .replace(/, /g, ' &and; ')       // needs to be before quantifiers
+        .replace(/=>/g, '&sup;')
+        .replace(/(pi|sigma|nabla) (?:\w+\\)+/g,
+                 function(m) {
+                   var r =
+                     m.replace('sigma ', '&exist;')
+                      .replace('pi ', '&forall;')
+                      .replace('nabla ', '&nabla;')
+                      .split('\\');
+                    r.pop();
+                    return (r.join(', ') + '.');
+                 })
+        .replace(/(\w+)\\/g, '&lambda;$1.')
+        .replace(/([A-Za-z_]+)([0-9]+)/g, '$1<sub>$2</sub>')
+    );
+  }
+
+  function zoom(f) {
+    $('td').css('font-size', '60%');
+    $(f)
+      .parents('table:first')
+        .parents('table:first')
+          .find('td').css('font-size', '80%').end()
+        .end()
+        .find('td').css('font-size', '100%').end()
+      .end()
+  }
+
+  $('.expandable').live('click', function() {
+    zoom(this);
+    $(this).removeClass('expandable').addClass('expanded');
+    $(this).parent().prev().fadeIn('slow');
+  });
+
+  $('.expanded').live('click', function() {
+    $(this).removeClass('expanded').addClass('expandable');
+    $(this).parent().prev().fadeOut('slow', function() {
+      zoom(this);
+    });
+  });
+
+  function load_proof(filename) {
+    $.get(filename, function(xml) {
+      $('#proof').html($(render_rule($(xml).children('rule'))))
+      $('.expandable').parent().prev().hide();
+    });
+  }
+
+  var proof_files = ['even_or_even_s.xml', 'reverse_inverse.xml'];
+
+  $.each(proof_files, function(index, file) {
+    $('<a href="#">' + file + '</a>')
+      .appendTo($('#selector ul'))
+      .click(function() {
+        $('#proof').hide().html($('<p>Loading...</p>')).fadeIn('fast');
+        load_proof(file);
+        return false;
+      })
+      .wrap('<li></li>');
+  });
+});
+</script>
+<style type="text/css">
+a {
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+td {
+  text-align: center;
+  vertical-align: bottom;
+  white-space: nowrap;
+  padding: 0px 10px;
+}
+
+td.expanded {
+  border-top: 1px solid black;
+  cursor: pointer;
+}
+
+td.expandable {
+  border-top: 1px dotted grey;
+  cursor: pointer;
+}
+
+#selector ul {
+  margin: 5px 0px;
+  list-style-type: circle;
+}
+</style>
+</head>
+<body>
+<center>
+  <div id="proof"></div>
+</center>
+<div id="selector">Select proof: <ul></ul></div>
+</body>
+</html>
