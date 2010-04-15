@@ -1,0 +1,33 @@
+This is an experimental proof viewer based on HTML, Javascript, and
+JQuery. It reads Tac proofs as xml files and renders them into proof
+trees which can be dynamically expanded and explored.
+
+
+Notes
+=====
+
+  These files must be hosted on a webserver. Offline viewing does not
+  work due to the way JQuery uses HTTP requests to retrive the xml
+  files.
+
+
+TODO
+====
+
+  - Handle generic and global contexts
+  - Handle freezing and focus annotations
+  - Fix compatibility issues
+
+
+Compatibility
+=============
+
+  Windows XP / Chrome 5.0.342.9 beta
+    No issues
+
+  Windows XP / Firefox 3.6.3
+    Spacing issues
+    Improper display issues
+
+  Windows XP / IE 8.0.6001.18702
+    Some HTML entities do not display (eg, &forall;)

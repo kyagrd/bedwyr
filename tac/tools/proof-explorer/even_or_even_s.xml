@@ -1,0 +1,241 @@
+<rule><name>pi_r</name>
+<sequent><level>0</level>
+<lhs></lhs><rhs>
+  <formula><generic></generic> (pi x\ (nat x =&gt; (even x; even (s x))))</formula>
+  </rhs><focused>false</focused></sequent><formula><generic></generic> (pi x\ (nat x =&gt; (even x; even (s x))))</formula><bound>(x1\x2\ x2)</bound><sub><rule><name>imp_r</name>
+<sequent><level>1</level>
+                                          <lhs></lhs><rhs>
+                                            <formula><generic></generic> (nat x =&gt; (even x; even (s x)))</formula>
+                                            </rhs><focused>false</focused></sequent><formula><generic></generic> (nat x =&gt; (even x; even (s x)))</formula><bound></bound><sub><rule><name>induction</name>
+
+<sequent><level>1</level>
+<lhs><formula><generic></generic> nat x</formula></lhs><rhs>
+  <formula><generic></generic> (even x; even (s x))</formula>
+  </rhs><focused>false</focused></sequent><formula><generic></generic> nat x</formula><bound></bound><sub><rule><name>or_l</name>
+<sequent><level>2</level>
+                                          <lhs>
+                                            <formula><generic></generic> ((x0 = o); (sigma y\ ((x0 = (s y)), (even y; even (s y)))))</formula>
+                                            </lhs><rhs>
+                                            <formula><generic></generic> (even x0; even (s x0))</formula>
+                                            </rhs><focused>false</focused></sequent><formula><generic></generic> ((x0 = o); (sigma y\ ((x0 = (s y)), (even y; even (s y)))))</formula><bound></bound><sub><rule><name>eq_l</name>
+
+<sequent><level>2</level>
+<lhs><formula><generic></generic> (x0 = o)</formula></lhs><rhs>
+  <formula><generic></generic> (even x0; even (s x0))</formula>
+  </rhs><focused>false</focused></sequent><formula><generic></generic> (x0 = o)</formula><bound></bound><sub><rule><name>left</name>
+<sequent><level>2</level>
+                                          <lhs></lhs><rhs>
+                                            <formula><generic></generic>#(even o; even (s o))</formula>
+                                            </rhs><focused>true</focused></sequent><formula><generic></generic>#(even o; even (s o))</formula><bound></bound><sub><rule><name>mu_r</name>
+
+<sequent><level>2</level>
+<lhs></lhs><rhs><formula><generic></generic>#even o</formula>
+  </rhs><focused>true</focused></sequent><formula><generic></generic>#even o</formula><bound></bound><sub><rule><name>left</name>
+<sequent><level>2</level>
+                                         <lhs></lhs><rhs>
+                                           <formula><generic></generic>#((o = o); (sigma y\ ((o = (s (s y))), even y)))</formula>
+                                           </rhs><focused>true</focused></sequent><formula><generic></generic>#((o = o); (sigma y\ ((o = (s (s y))), even y)))</formula><bound></bound><sub><rule><name>eq_r</name>
+
+<sequent><level>2</level>
+<lhs></lhs><rhs><formula><generic></generic>#(o = o)</formula>
+  </rhs><focused>true</focused></sequent><formula><generic></generic>#(o = o)</formula><bound></bound><sub></sub>
+</rule>
+</sub>
+</rule>
+</sub>
+</rule>
+</sub>
+</rule>
+</sub>
+</rule>
+<rule><name>sigma_l</name>
+<sequent><level>2</level>
+                                         <lhs>
+                                           <formula><generic></generic> (sigma y\ ((x0 = (s y)), (even y; even (s y))))</formula>
+                                           </lhs><rhs>
+                                           <formula><generic></generic> (even x0; even (s x0))</formula>
+                                           </rhs><focused>false</focused></sequent><formula><generic></generic> (sigma y\ ((x0 = (s y)), (even y; even (s y))))</formula><bound>x</bound><sub><rule><name>and_l</name>
+
+<sequent><level>3</level>
+<lhs>
+  <formula><generic></generic> ((x0 = (s y)), (even y; even (s y)))</formula>
+  </lhs><rhs><formula><generic></generic> (even x0; even (s x0))</formula>
+  </rhs><focused>false</focused></sequent><formula><generic></generic> ((x0 = (s y)), (even y; even (s y)))</formula><bound></bound><sub><rule><name>eq_l</name>
+<sequent><level>3</level>
+                                          <lhs>
+                                            <formula><generic></generic> (x0 = (s y))</formula>
+                                            <formula><generic></generic> (even y; even (s y))</formula>
+                                            </lhs><rhs>
+                                            <formula><generic></generic> (even x0; even (s x0))</formula>
+                                            </rhs><focused>false</focused></sequent><formula><generic></generic> (x0 = (s y))</formula><bound></bound><sub><rule><name>or_l</name>
+
+<sequent><level>3</level>
+<lhs><formula><generic></generic> (even y0; even (s y0))</formula></lhs><rhs>
+  <formula><generic></generic> (even (s y0); even (s (s y0)))</formula>
+  </rhs><focused>false</focused></sequent><formula><generic></generic> (even y0; even (s y0))</formula><bound></bound><sub><rule><name>right</name>
+<sequent><level>3</level>
+                                          <lhs>
+                                            <formula><generic></generic> even y0*</formula>
+                                            </lhs><rhs>
+                                            <formula><generic></generic>#(even (s y0); even (s (s y0)))</formula>
+                                            </rhs><focused>true</focused></sequent><formula><generic></generic>#(even (s y0); even (s (s y0)))</formula><bound></bound><sub><rule><name>mu_r</name>
+
+<sequent><level>3</level>
+<lhs><formula><generic></generic> even y0*</formula></lhs><rhs>
+  <formula><generic></generic>#even (s (s y0))</formula>
+  </rhs><focused>true</focused></sequent><formula><generic></generic>#even (s (s y0))</formula><bound></bound><sub><rule><name>right</name>
+<sequent><level>3</level>
+                                         <lhs>
+                                           <formula><generic></generic> even y0*</formula>
+                                           </lhs><rhs>
+                                           <formula><generic></generic>#(((s (s y0)) = o); (sigma y1\ (((s (s y0)) = (s (s y1))), even y1)))</formula>
+                                           </rhs><focused>true</focused></sequent><formula><generic></generic>#(((s (s y0)) = o); (sigma y1\ (((s (s y0)) = (s (s y1))), even y1)))</formula><bound></bound><sub><rule><name>sigma_r</name>
+
+<sequent><level>3</level>
+<lhs><formula><generic></generic> even y0*</formula></lhs><rhs>
+  <formula><generic></generic>#(sigma y1\ (((s (s y0)) = (s (s y1))), even y1))</formula>
+  </rhs><focused>true</focused></sequent><formula><generic></generic>#(sigma y1\ (((s (s y0)) = (s (s y1))), even y1))</formula><bound>y</bound><sub><rule><name>and_r</name>
+<sequent><level>3</level>
+                                         <lhs>
+                                           <formula><generic></generic> even y0*</formula>
+                                           </lhs><rhs>
+                                           <formula><generic></generic>#(((s (s y0)) = (s (s y0))), even y0)</formula>
+                                           </rhs><focused>true</focused></sequent><formula><generic></generic>#(((s (s y0)) = (s (s y0))), even y0)</formula><bound></bound><sub><rule><name>eq_r</name>
+
+<sequent><level>3</level>
+<lhs><formula><generic></generic> even y0*</formula></lhs><rhs>
+  <formula><generic></generic>#((s (s y0)) = (s (s y0)))</formula>
+  </rhs><focused>true</focused></sequent><formula><generic></generic>#((s (s y0)) = (s (s y0)))</formula><bound></bound><sub></sub>
+</rule>
+<rule><name>init_mu</name>
+<sequent><level>3</level>
+                                         <lhs>
+                                           <formula><generic></generic> even y0*</formula>
+                                           </lhs><rhs>
+                                           <formula><generic></generic>#even y0</formula>
+                                           </rhs><focused>true</focused></sequent><formula><generic></generic>#even y0</formula><bound></bound><sub></sub>
+</rule>
+</sub>
+</rule>
+</sub>
+</rule>
+</sub>
+</rule>
+</sub>
+</rule>
+</sub>
+</rule>
+<rule><name>mu_l</name>
+
+<sequent><level>3</level>
+<lhs><formula><generic></generic> even (s y0)</formula></lhs><rhs>
+  <formula><generic></generic> (even (s y0); even (s (s y0)))</formula>
+  </rhs><focused>false</focused></sequent><formula><generic></generic> even (s y0)</formula><bound></bound><sub><rule><name>or_l</name>
+<sequent><level>3</level>
+                                          <lhs>
+                                            <formula><generic></generic> (((s y0) = o); (sigma y1\ (((s y0) = (s (s y1))), even y1)))</formula>
+                                            </lhs><rhs>
+                                            <formula><generic></generic> (even (s y0); even (s (s y0)))</formula>
+                                            </rhs><focused>false</focused></sequent><formula><generic></generic> (((s y0) = o); (sigma y1\ (((s y0) = (s (s y1))), even y1)))</formula><bound></bound><sub><rule><name>eq_l</name>
+
+<sequent><level>3</level>
+<lhs><formula><generic></generic> ((s y0) = o)</formula></lhs><rhs>
+  <formula><generic></generic> (even (s y0); even (s (s y0)))</formula>
+  </rhs><focused>false</focused></sequent><formula><generic></generic> ((s y0) = o)</formula><bound></bound><sub></sub>
+</rule>
+<rule><name>sigma_l</name>
+<sequent><level>3</level>
+                                          <lhs>
+                                            <formula><generic></generic> (sigma y1\ (((s y0) = (s (s y1))), even y1))</formula>
+                                            </lhs><rhs>
+                                            <formula><generic></generic> (even (s y0); even (s (s y0)))</formula>
+                                            </rhs><focused>false</focused></sequent><formula><generic></generic> (sigma y1\ (((s y0) = (s (s y1))), even y1))</formula><bound>y0</bound><sub><rule><name>and_l</name>
+
+<sequent><level>4</level>
+<lhs><formula><generic></generic> (((s y0) = (s (s y1))), even y1)</formula>
+  </lhs><rhs>
+  <formula><generic></generic> (even (s y0); even (s (s y0)))</formula>
+  </rhs><focused>false</focused></sequent><formula><generic></generic> (((s y0) = (s (s y1))), even y1)</formula><bound></bound><sub><rule><name>eq_l</name>
+<sequent><level>4</level>
+                                          <lhs>
+                                            <formula><generic></generic> ((s y0) = (s (s y1)))</formula>
+                                            <formula><generic></generic> even y1</formula>
+                                            </lhs><rhs>
+                                            <formula><generic></generic> (even (s y0); even (s (s y0)))</formula>
+                                            </rhs><focused>false</focused></sequent><formula><generic></generic> ((s y0) = (s (s y1)))</formula><bound></bound><sub><rule><name>left</name>
+
+<sequent><level>4</level>
+<lhs><formula><generic></generic> even y2*</formula></lhs><rhs>
+  <formula><generic></generic>#(even (s (s y2)); even (s (s (s y2))))</formula>
+  </rhs><focused>true</focused></sequent><formula><generic></generic>#(even (s (s y2)); even (s (s (s y2))))</formula><bound></bound><sub><rule><name>mu_r</name>
+<sequent><level>4</level>
+                                         <lhs>
+                                           <formula><generic></generic> even y2*</formula>
+                                           </lhs><rhs>
+                                           <formula><generic></generic>#even (s (s y2))</formula>
+                                           </rhs><focused>true</focused></sequent><formula><generic></generic>#even (s (s y2))</formula><bound></bound><sub><rule><name>right</name>
+
+<sequent><level>4</level>
+<lhs><formula><generic></generic> even y2*</formula></lhs><rhs>
+  <formula><generic></generic>#(((s (s y2)) = o); (sigma y3\ (((s (s y2)) = (s (s y3))), even y3)))</formula>
+  </rhs><focused>true</focused></sequent><formula><generic></generic>#(((s (s y2)) = o); (sigma y3\ (((s (s y2)) = (s (s y3))), even y3)))</formula><bound></bound><sub><rule><name>sigma_r</name>
+<sequent><level>4</level>
+                                         <lhs>
+                                           <formula><generic></generic> even y2*</formula>
+                                           </lhs><rhs>
+                                           <formula><generic></generic>#(sigma y3\ (((s (s y2)) = (s (s y3))), even y3))</formula>
+                                           </rhs><focused>true</focused></sequent><formula><generic></generic>#(sigma y3\ (((s (s y2)) = (s (s y3))), even y3))</formula><bound>y1</bound><sub><rule><name>and_r</name>
+
+<sequent><level>4</level>
+<lhs><formula><generic></generic> even y2*</formula></lhs><rhs>
+  <formula><generic></generic>#(((s (s y2)) = (s (s y2))), even y2)</formula>
+  </rhs><focused>true</focused></sequent><formula><generic></generic>#(((s (s y2)) = (s (s y2))), even y2)</formula><bound></bound><sub><rule><name>eq_r</name>
+<sequent><level>4</level>
+                                         <lhs>
+                                           <formula><generic></generic> even y2*</formula>
+                                           </lhs><rhs>
+                                           <formula><generic></generic>#((s (s y2)) = (s (s y2)))</formula>
+                                           </rhs><focused>true</focused></sequent><formula><generic></generic>#((s (s y2)) = (s (s y2)))</formula><bound></bound><sub></sub>
+</rule>
+<rule><name>init_mu</name>
+
+<sequent><level>4</level>
+<lhs><formula><generic></generic> even y2*</formula></lhs><rhs>
+  <formula><generic></generic>#even y2</formula></rhs><focused>true</focused></sequent><formula><generic></generic>#even y2</formula><bound></bound><sub></sub>
+</rule>
+</sub>
+</rule>
+</sub>
+</rule>
+</sub>
+</rule>
+</sub>
+</rule>
+</sub>
+</rule>
+</sub>
+</rule>
+</sub>
+</rule>
+</sub>
+</rule>
+</sub>
+</rule>
+</sub>
+</rule>
+</sub>
+</rule>
+</sub>
+</rule>
+</sub>
+</rule>
+</sub>
+</rule>
+</sub>
+</rule>
+</sub>
+</rule>
+</sub>
+</rule>
+</sub>
+</rule>
