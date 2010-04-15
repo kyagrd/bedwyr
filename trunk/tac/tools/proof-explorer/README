@@ -23,6 +23,7 @@ Compatibility
 =============
 
   Windows XP & Ubuntu / Chrome 5.0.342.9 beta
+  iPhone / Safari
     No issues
 
   Windows XP / Firefox 3.6.3
@@ -30,4 +31,8 @@ Compatibility
     Improper display issues
 
   Windows XP / IE 8.0.6001.18702
+  Windows XP / Safari 4.0.5
     Some HTML entities do not display (eg, &forall;)
+
+  Windows XP / Opera 10.51
+    Sometimes clicks register incorrectly
