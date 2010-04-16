@@ -15,7 +15,6 @@ TODO
 ====
 
   - Handle generic and global contexts
-  - Handle freezing and focus annotations
   - Compress async phases
   - Fix compatibility issues
 
