@@ -6,38 +6,54 @@
 $(function() {
   function render_rule(rule) {
     var subrules = $(rule).children('sub').children('rule');
+    var active = $(rule).children('formula');
+    var name = $(rule).children('name').text();
+    var conc = $(rule).children('sequent');
+
+    var upper = $('<tr></tr>');
+    subrules.each(function(index, sr) {
+      render_rule(sr).appendTo(upper).wrap('<td />');
+    });
+    $('<sub></sub>').text(name).appendTo(upper).wrap('<td />');
+
+    var lower = $('<tr></tr>');
+    lower.append($('<td></td>')
+                   .attr('colspan', subrules.size())
+                   .addClass('expandable')
+                   .append(render_sequent(conc, active)));
+
+    return $('<table></table>').append(upper).append(lower);
+  }
+
+  function render_sequent(sequent, active) {
     return (
-      '<table>' +
-         '<tr><td>' +
-           $.map(subrules, render_rule).join('</td><td>') +
-         '</td>' +
-         '<td><sub>' + $(rule).children('name').text() + '</sub></td>' +
-         '</tr>' +
-         '<tr><td colspan="' + subrules.size() + '" class="expandable">' +
-            render_sequent($(rule).children('sequent')) +
-         '</td></tr>' +
-      '</table>'
+      $('<span class="sequent"></span>')
+        .append(render_lhs(sequent.children('lhs'), active))
+        .append(' &rarr; ')
+        .append(render_rhs(sequent.children('rhs'), active))
     );
   }
 
-  function render_sequent(sequent) {
+  function render_lhs(lhs, active) {
+    var result = $('<span class="lhs"></span>');
+    lhs.children('formula').each(function(index, form) {
+      if (index > 0) {
+        result.append(', ');
+      }
+      result.append(render_formula(form, active));
+    });
+    return result;
+  }
+
+  function render_rhs(rhs, active) {
     return (
-      render_lhs(sequent.children('lhs')) +
-      ' &rarr; ' +
-      render_rhs(sequent.children('rhs'))
+      $('<span class="rhs"></span>')
+        .append(render_formula(rhs.children('formula'), active))
     );
   }
 
-  function render_lhs(lhs) {
-    return $.map(lhs.children('formula'), render_formula).join(', ');
-  }
-
-  function render_rhs(rhs) {
-    return render_formula(rhs.children('formula'));
-  }
-
-  function render_formula(formula) {
-    return (
+  function render_formula(formula, active) {
+    var text =
       $(formula).text()
         .replace(/;/g, ' &or;')        // needs to be first
         .replace(/,/g, ' &and;')       // needs to be before quantifiers
@@ -53,8 +69,13 @@ $(function() {
                     return (r.join(', ') + '.');
                  })
         .replace(/(\w+)\\/g, '&lambda;$1.')
-        .replace(/([A-Za-z_]+)([0-9]+)/g, '$1<sub>$2</sub>')
-    );
+        .replace(/([A-Za-z_]+)([0-9]+)/g, '$1<sub>$2</sub>');
+
+    return (
+      $('<span class="formula"></span>')
+        .toggleClass('active', $(formula).text() === $(active).text())
+        .append(text)
+     );
   }
 
   function zoom(f) {
@@ -130,6 +151,10 @@ td.expanded {
 td.expandable {
   border-top: 1px dotted grey;
   cursor: pointer;
+}
+
+.active {
+  color: blue;
 }
 
 #selector ul {
