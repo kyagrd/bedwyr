@@ -7,139 +7,134 @@ $(function() {
 
   /* Destructive proof outlining */
 
-  function phase_switch(rule) {
-    var name = $(rule).children('name').text();
-    var focused =
-      $(rule).children('sequent').children('focused').text() === 'true';
+  function phase_switch($rule) {
+    var name = $rule.find('> name').text();
+    var focused = $rule.find('> sequent > focused').text() === 'true';
 
     return (focused || name === 'induction' || name === 'coinduction');
   }
 
-  function reattach_nonasync(rule, base) {
-    if (phase_switch(rule)) {
-      base.append(rule);
+  function reattach_nonasync($rule, $base) {
+    if (phase_switch($rule)) {
+      $base.append($rule);
     } else {
-      rule.children('sub').children('rule').each(function() {
-        reattach_nonasync($(this), base);
+      $rule.find('> sub > rule').each(function() {
+        reattach_nonasync($(this), $base);
       });
     }
   }
 
-  function outline(rule) {
-    if (!phase_switch(rule)) {
-      $(rule).children('name').text('async');
-      var sub = $(rule).children('sub');
-      sub.children('rule').detach().each(function() {
-        reattach_nonasync($(this), sub);
+  function outline($rule) {
+    if (!phase_switch($rule)) {
+      $rule.find('> name').text('async');
+      var $sub = $rule.find('> sub');
+      $sub.find('> rule').detach().each(function() {
+        reattach_nonasync($(this), $sub);
       });
     }
-    $(rule).children('sub').children('rule').each(function() {
-      outline(this);
+    $rule.find('> sub > rule').each(function() {
+      outline($(this));
     });
   }
 
 
   /* XML processing and conversion to HTML */
 
-  function render_rule(rule) {
-    var subrules = $(rule).children('sub').children('rule');
-    var active = $(rule).children('formula');
-    var name = $(rule).children('name').text();
-    var conc = $(rule).children('sequent');
+  function render_rule($rule) {
+    var $subrules = $rule.find('> sub > rule');
+    var $active = $rule.find('> formula');
+    var name = $rule.find('> name').text();
+    var $sequent = $rule.find('> sequent');
 
-    var upper = $('<tr></tr>');
-    subrules.each(function(index, sr) {
-      render_rule(sr).appendTo(upper).wrap('<td />');
+    var $upper = $('<tr></tr>');
+    $subrules.each(function() {
+      render_rule($(this)).appendTo($upper).wrap('<td />');
     });
-    if (subrules.size() === 0) {
-      upper.append('<td></td>');
+    if ($subrules.size() === 0) {
+      $upper.append('<td></td>');
     }
-    $('<sub></sub>').text(name).appendTo(upper).wrap('<td class="name"/>');
+    $('<sub></sub>').text(name).appendTo($upper).wrap('<td />');
 
-    var lower = $('<tr></tr>');
-    lower.append($('<td></td>')
-                   .attr('colspan', Math.max(subrules.size(), 1))
-                   .addClass('expandable')
-                   .append(render_sequent(conc, active)));
+    var $lower = $('<tr></tr>');
+    $('<td></td>')
+      .append(render_sequent($sequent, $active))
+      .addClass('expandable')
+      .attr('colspan', Math.max($subrules.size(), 1))
+      .appendTo($lower);
 
-    return $('<table></table>').append(upper).append(lower);
+    return $('<table></table>').append($upper).append($lower);
   }
 
-  function render_sequent(sequent, active) {
+  function render_sequent($sequent, $active) {
+    var $lhs = $sequent.find('> lhs');
+    var $rhs = $sequent.find('> rhs');
+
     return (
-      $('<span class="sequent"></span>')
-        .append(render_lhs(sequent.children('lhs'), active))
+      $('<span></span>')
+        .addClass('sequent')
+        .append(render_side($lhs, $active))
         .append(' &rarr; ')
-        .append(render_rhs(sequent.children('rhs'), active))
+        .append(render_side($rhs, $active))
     );
   }
 
-  function render_lhs(lhs, active) {
-    var result = $('<span class="lhs"></span>');
-    lhs.children('formula').each(function(index, form) {
+  function render_side($side, $active) {
+    var $result = $('<span></span>');
+    $side.find('> formula').each(function(index) {
       if (index > 0) {
-        result.append(', ');
+        $result.append(', ');
       }
-      result.append(render_formula(form, active));
+      $result.append(render_formula($(this), $active));
     });
-    return result;
+    return $result;
   }
 
-  function render_rhs(rhs, active) {
-    return (
-      $('<span class="rhs"></span>')
-        .append(render_formula(rhs.children('formula'), active))
-    );
-  }
+  function render_formula($formula, $active) {
+    var generic = $formula.find('> generic').text();
+    var is_active = $formula.text() === $active.text();
 
-  function render_formula(formula, active) {
-    var generic = $(formula).children('generic').text();
-    var is_active = ($(formula).text() === $(active).text());
-
-    $(formula).children('generic').remove().text();
-    var text = $(formula).text();
+    var text = $formula.remove('> generic').text();
     var is_focused = /#/.test(text);
     var is_frozen = /\*/.test(text);
 
-    var formula =
-      $('<span class="formula"></span>')
-        .toggleClass('active', is_active)
-        .toggleClass('focused', is_focused)
-        .toggleClass('frozen', is_frozen)
-        .append(render_text(text));
-
+    $formula = $('<span></span>');
     if (generic !== '') {
-      formula.prepend(
-        render_var(generic).replace(/,/g, ', ') + ' &rsaquo; ');
+      $formula
+        .append(render_vars(generic).replace(/,/g, ', '))
+        .append(' &rsaquo; ');
     }
+    $formula
+      .toggleClass('active', is_active)
+      .toggleClass('focused', is_focused)
+      .toggleClass('frozen', is_frozen)
+      .append(render_text(text));
 
-    return formula;
+    return $formula;
   }
 
   function render_text(text) {
-    return (
-      render_var(text
-        .replace(/;/g, ' &or;')        // needs to be first
-        .replace(/,/g, ' &and;')       // needs to be before quantifiers
-        .replace(/=>/g, '&sup;')
-        .replace(/(pi|sigma|nabla) (?:\w+\\)+/g,
+    text = text
+      .replace(/;/g, ' &or;')        // needs to be first
+      .replace(/,/g, ' &and;')       // needs to be before quantifiers
+      .replace(/=>/g, '&sup;')
+      .replace(/(pi|sigma|nabla) [^ ]+/g,
                  function(m) {
-                   var r =
+                   return (
                      m.replace('sigma ', '&exist;')
                       .replace('pi ', '&forall;')
                       .replace('nabla ', '&nabla;')
-                      .split('\\');
-                    r.pop();
-                    return (r.join(', ') + '.');
+                      .replace(/\\$/, '.')
+                      .replace(/\\/g, ', ')
+                    );
                  })
-        .replace(/(\w+)\\/g, '&lambda;$1.')
-        .replace(/#/g, '')
-        .replace(/\*/g, '')
-      )
-    );
+      .replace(/(\w+)\\/g, '&lambda;$1.')
+      .replace(/#/g, '')
+      .replace(/\*/g, '');
+
+    return render_vars(text);
   }
 
-  function render_var(v) {
+  function render_vars(v) {
      return (
        v.replace(/([A-Za-z_]+)([0-9]+)/g, '$1<sub>$2</sub>')
         .replace(/gamma/g, '&gamma;')
@@ -150,9 +145,9 @@ $(function() {
 
   /* User interaction */
 
-  function zoom(f) {
+  function zoom($here) {
     $('td').css('font-size', '60%');
-    $(f)
+    $here
       .parents('table:first')
         .parents('table:first')
           .find('td').css('font-size', '80%').end()
@@ -162,7 +157,7 @@ $(function() {
   }
 
   $('.expandable').live('click', function() {
-    zoom(this);
+    zoom($(this));
     $(this).removeClass('expandable').addClass('expanded');
     $(this).parent().prev().fadeIn('slow');
   });
@@ -170,7 +165,7 @@ $(function() {
   $('.expanded').live('click', function() {
     $(this).removeClass('expanded').addClass('expandable');
     $(this).parent().prev().fadeOut('slow', function() {
-      zoom(this);
+      zoom($(this));
     });
   });
 
@@ -180,11 +175,11 @@ $(function() {
   function load_proof(filename, do_outline) {
     $('#proof').hide().html($('<p>Loading...</p>')).fadeIn('fast');
     $.get(filename, function(xml) {
-      var root = $(xml).children('rule');
+      var $root = $(xml).children('rule');
       if (do_outline) {
-        outline(root);
+        outline($root);
       }
-      $('#proof').html(render_rule(root));
+      $('#proof').html(render_rule($root));
       $('.expandable').parent().prev().hide();
     });
   }
@@ -193,6 +188,8 @@ $(function() {
     ['even_or_even_s.xml',
      'reverse_inverse.xml',
      'copy.xml'];
+
+  load_proof(proof_files[0]);
 
   $.each(proof_files, function(index, file) {
     $('<li></li>')
