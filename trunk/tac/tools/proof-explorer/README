@@ -14,23 +14,17 @@ Notes
 TODO
 ====
 
-  - Handle generic and global contexts
+  - Handle generic contexts
   - Compress async phases
-  - Fix compatibility issues
 
 
 Compatibility
 =============
 
-  Windows XP & Ubuntu / Chrome 5.0.342.9 beta
+  Windows XP & Linux / Chrome 5.0.342.9 beta
   Windows XP & Windows Vista / IE 8.0.6001.18702
   Windows XP / Safari 4.0.5
-  iPhone / Safari
-    No issues
-
-  Windows XP / Firefox 3.6.3
-    Spacing issues
-    Improper display issues
-
   Windows XP / Opera 10.51
-    Sometimes clicks register incorrectly
+  iPhone / Safari
+  Linux / Firefox 3.0.18
+  Linux / Firefox 3.6.3
