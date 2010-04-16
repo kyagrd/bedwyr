@@ -4,6 +4,43 @@
 <script src="jquery.js"></script>
 <script type="text/javascript">
 $(function() {
+
+  /* Destructive proof outlining */
+
+  function phase_switch(rule) {
+    var name = $(rule).children('name').text();
+    var focused =
+      $(rule).children('sequent').children('focused').text() === 'true';
+
+    return (focused || name === 'induction' || name === 'coinduction');
+  }
+
+  function reattach_nonasync(rule, base) {
+    if (phase_switch(rule)) {
+      base.append(rule);
+    } else {
+      rule.children('sub').children('rule').each(function() {
+        reattach_nonasync($(this), base);
+      });
+    }
+  }
+
+  function outline(rule) {
+    if (!phase_switch(rule)) {
+      $(rule).children('name').text('async');
+      var sub = $(rule).children('sub');
+      sub.children('rule').detach().each(function() {
+        reattach_nonasync($(this), sub);
+      });
+    }
+    $(rule).children('sub').children('rule').each(function() {
+      outline(this);
+    });
+  }
+
+
+  /* XML processing and conversion to HTML */
+
   function render_rule(rule) {
     var subrules = $(rule).children('sub').children('rule');
     var active = $(rule).children('formula');
@@ -21,7 +58,7 @@ $(function() {
 
     var lower = $('<tr></tr>');
     lower.append($('<td></td>')
-                   .attr('colspan', subrules.size())
+                   .attr('colspan', Math.max(subrules.size(), 1))
                    .addClass('expandable')
                    .append(render_sequent(conc, active)));
 
@@ -110,6 +147,9 @@ $(function() {
      );
   }
 
+
+  /* User interaction */
+
   function zoom(f) {
     $('td').css('font-size', '60%');
     $(f)
@@ -134,9 +174,17 @@ $(function() {
     });
   });
 
-  function load_proof(filename) {
+
+  /* Proof loading */
+
+  function load_proof(filename, do_outline) {
+    $('#proof').hide().html($('<p>Loading...</p>')).fadeIn('fast');
     $.get(filename, function(xml) {
-      $('#proof').html(render_rule($(xml).children('rule')))
+      var root = $(xml).children('rule');
+      if (do_outline) {
+        outline(root);
+      }
+      $('#proof').html(render_rule(root));
       $('.expandable').parent().prev().hide();
     });
   }
@@ -146,17 +194,25 @@ $(function() {
      'reverse_inverse.xml',
      'copy.xml'];
 
-  load_proof(proof_files[0]);
+  load_proof(proof_files[0], true);
 
   $.each(proof_files, function(index, file) {
-    $('<a href="#">' + file.replace(/.xml$/, '') + '</a>')
-      .appendTo($('#selector ul'))
-      .click(function() {
-        $('#proof').hide().html($('<p>Loading...</p>')).fadeIn('fast');
-        load_proof(file);
-        return false;
-      })
-      .wrap('<li></li>');
+    $('<li></li>')
+      .append(
+        $('<a href="#">' + file.replace(/.xml$/, '') + '</a>')
+          .click(function() {
+            load_proof(file, false);
+            return false;
+          }))
+      .append(' (')
+      .append(
+        $('<a href="#">outline</a>')
+          .click(function() {
+            load_proof(file, true);
+            return false;
+          }))
+      .append(')')
+      .appendTo($('#selector ul'));
   });
 });
 </script>
