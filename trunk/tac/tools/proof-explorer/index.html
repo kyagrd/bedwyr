@@ -173,14 +173,19 @@ $(function() {
   /* Proof loading */
 
   function load_proof(filename, do_outline) {
-    $('#proof').hide().html($('<p>Loading...</p>')).fadeIn('fast');
+    $('#proof').hide().text('Downloading...').fadeIn('fast');
     $.get(filename, function(xml) {
-      var $root = $(xml).children('rule');
-      if (do_outline) {
-        outline($root);
-      }
-      $('#proof').html(render_rule($root));
-      $('.expandable').parent().prev().hide();
+      $('#proof').text('Processing...');
+      // timeout allows screen to be re-drawn first
+      setTimeout(function() {
+        var $root = $(xml).children('rule');
+        if (do_outline) {
+          outline($root);
+        }
+        var $html = render_rule($root);
+        $('#proof').html($html);
+        $('.expandable').parent().prev().hide();
+      });
     });
   }
 
@@ -188,8 +193,6 @@ $(function() {
     ['even_or_even_s.xml',
      'reverse_inverse.xml',
      'copy.xml'];
-
-  load_proof(proof_files[0]);
 
   $.each(proof_files, function(index, file) {
     $('<li></li>')
