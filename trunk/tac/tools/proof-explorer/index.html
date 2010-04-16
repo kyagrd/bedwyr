@@ -14,7 +14,10 @@ $(function() {
     subrules.each(function(index, sr) {
       render_rule(sr).appendTo(upper).wrap('<td />');
     });
-    $('<sub></sub>').text(name).appendTo(upper).wrap('<td />');
+    if (subrules.size() === 0) {
+      upper.append('<td></td>');
+    }
+    $('<sub></sub>').text(name).appendTo(upper).wrap('<td class="name"/>');
 
     var lower = $('<tr></tr>');
     lower.append($('<td></td>')
@@ -53,27 +56,35 @@ $(function() {
   }
 
   function render_formula(formula, active) {
-    var text =
-      $(formula).text()
-        .replace(/;/g, ' &or;')        // needs to be first
-        .replace(/,/g, ' &and;')       // needs to be before quantifiers
-        .replace(/=>/g, '&sup;')
-        .replace(/(pi|sigma|nabla) (?:\w+\\)+/g,
-                 function(m) {
-                   var r =
-                     m.replace('sigma ', '&exist;')
-                      .replace('pi ', '&forall;')
-                      .replace('nabla ', '&nabla;')
-                      .split('\\');
-                    r.pop();
-                    return (r.join(', ') + '.');
-                 })
-        .replace(/(\w+)\\/g, '&lambda;$1.')
-        .replace(/([A-Za-z_]+)([0-9]+)/g, '$1<sub>$2</sub>');
+    var text = $(formula).text();
+    var is_active = (text === $(active).text());
+    var is_focused = /#/.test(text);
+    var is_frozen = /\*/.test(text);
+
+    text = text
+      .replace(/;/g, ' &or;')        // needs to be first
+      .replace(/,/g, ' &and;')       // needs to be before quantifiers
+      .replace(/=>/g, '&sup;')
+      .replace(/(pi|sigma|nabla) (?:\w+\\)+/g,
+               function(m) {
+                 var r =
+                   m.replace('sigma ', '&exist;')
+                    .replace('pi ', '&forall;')
+                    .replace('nabla ', '&nabla;')
+                    .split('\\');
+                  r.pop();
+                  return (r.join(', ') + '.');
+               })
+      .replace(/(\w+)\\/g, '&lambda;$1.')
+      .replace(/([A-Za-z_]+)([0-9]+)/g, '$1<sub>$2</sub>')
+      .replace(/#/g, '')
+      .replace(/\*/g, '');
 
     return (
       $('<span class="formula"></span>')
-        .toggleClass('active', $(formula).text() === $(active).text())
+        .toggleClass('active', is_active)
+        .toggleClass('focused', is_focused)
+        .toggleClass('frozen', is_frozen)
         .append(text)
      );
   }
@@ -112,7 +123,7 @@ $(function() {
   var proof_files = ['even_or_even_s.xml', 'reverse_inverse.xml'];
 
   $.each(proof_files, function(index, file) {
-    $('<a href="#">' + file + '</a>')
+    $('<a href="#">' + file.replace(/.xml$/, '') + '</a>')
       .appendTo($('#selector ul'))
       .click(function() {
         $('#proof').hide().html($('<p>Loading...</p>')).fadeIn('fast');
@@ -157,9 +168,21 @@ td.expandable {
   color: blue;
 }
 
-#selector ul {
+.focused {
+  color: green;
+}
+
+.frozen {
+  color: navy;
+}
+
+ul {
   margin: 5px 0px;
   list-style-type: circle;
+}
+
+#selector, #legend {
+  margin: 1.5em 0;
 }
 </style>
 </head>
@@ -168,5 +191,12 @@ td.expandable {
   <div id="proof"></div>
 </center>
 <div id="selector">Select proof: <ul></ul></div>
+<div id="legend">Legend:
+<ul>
+  <li class="active">Active</li>
+  <li class="focused">Focused</li>
+  <li class="frozen">Frozen</li>
+</ul>
+</div>
 </body>
 </html>
