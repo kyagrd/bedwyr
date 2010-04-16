@@ -56,37 +56,52 @@ $(function() {
   }
 
   function render_formula(formula, active) {
+    var generic = $(formula).children('generic').text();
+    var is_active = ($(formula).text() === $(active).text());
+
+    $(formula).children('generic').remove().text();
     var text = $(formula).text();
-    var is_active = (text === $(active).text());
     var is_focused = /#/.test(text);
     var is_frozen = /\*/.test(text);
 
-    text = text
-      .replace(/;/g, ' &or;')        // needs to be first
-      .replace(/,/g, ' &and;')       // needs to be before quantifiers
-      .replace(/=>/g, '&sup;')
-      .replace(/(pi|sigma|nabla) (?:\w+\\)+/g,
-               function(m) {
-                 var r =
-                   m.replace('sigma ', '&exist;')
-                    .replace('pi ', '&forall;')
-                    .replace('nabla ', '&nabla;')
-                    .split('\\');
-                  r.pop();
-                  return (r.join(', ') + '.');
-               })
-      .replace(/(\w+)\\/g, '&lambda;$1.')
-      .replace(/([A-Za-z_]+)([0-9]+)/g, '$1<sub>$2</sub>')
-      .replace(/#/g, '')
-      .replace(/\*/g, '');
-
-    return (
+    var formula =
       $('<span class="formula"></span>')
         .toggleClass('active', is_active)
         .toggleClass('focused', is_focused)
         .toggleClass('frozen', is_frozen)
-        .append(text)
-     );
+        .append(render_text(text));
+
+    if (generic !== '') {
+      formula.prepend(
+        render_text(generic).replace(/ /g, ', ') + ' &rsaquo; ');
+    }
+
+    return formula;
+  }
+
+  function render_text(text) {
+    return (
+      text
+        .replace(/;/g, ' &or;')        // needs to be first
+        .replace(/,/g, ' &and;')       // needs to be before quantifiers
+        .replace(/=>/g, '&sup;')
+        .replace(/(pi|sigma|nabla) (?:\w+\\)+/g,
+                 function(m) {
+                   var r =
+                     m.replace('sigma ', '&exist;')
+                      .replace('pi ', '&forall;')
+                      .replace('nabla ', '&nabla;')
+                      .split('\\');
+                    r.pop();
+                    return (r.join(', ') + '.');
+                 })
+        .replace(/(\w+)\\/g, '&lambda;$1.')
+        .replace(/([A-Za-z_]+)([0-9]+)/g, '$1<sub>$2</sub>')
+        .replace(/gamma/g, '&gamma;')
+        .replace(/Gamma/g, '&Gamma;')
+        .replace(/#/g, '')
+        .replace(/\*/g, '')
+    );
   }
 
   function zoom(f) {
@@ -115,12 +130,15 @@ $(function() {
 
   function load_proof(filename) {
     $.get(filename, function(xml) {
-      $('#proof').html($(render_rule($(xml).children('rule'))))
+      $('#proof').html(render_rule($(xml).children('rule')))
       $('.expandable').parent().prev().hide();
     });
   }
 
-  var proof_files = ['even_or_even_s.xml', 'reverse_inverse.xml'];
+  var proof_files =
+    ['even_or_even_s.xml',
+     'reverse_inverse.xml',
+     'copy.xml'];
 
   $.each(proof_files, function(index, file) {
     $('<a href="#">' + file.replace(/.xml$/, '') + '</a>')
