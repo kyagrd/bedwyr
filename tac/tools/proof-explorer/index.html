@@ -73,7 +73,7 @@ $(function() {
 
     if (generic !== '') {
       formula.prepend(
-        render_text(generic).replace(/ /g, ', ') + ' &rsaquo; ');
+        render_var(generic).replace(/,/g, ', ') + ' &rsaquo; ');
     }
 
     return formula;
@@ -81,7 +81,7 @@ $(function() {
 
   function render_text(text) {
     return (
-      text
+      render_var(text
         .replace(/;/g, ' &or;')        // needs to be first
         .replace(/,/g, ' &and;')       // needs to be before quantifiers
         .replace(/=>/g, '&sup;')
@@ -96,12 +96,18 @@ $(function() {
                     return (r.join(', ') + '.');
                  })
         .replace(/(\w+)\\/g, '&lambda;$1.')
-        .replace(/([A-Za-z_]+)([0-9]+)/g, '$1<sub>$2</sub>')
-        .replace(/gamma/g, '&gamma;')
-        .replace(/Gamma/g, '&Gamma;')
         .replace(/#/g, '')
         .replace(/\*/g, '')
+      )
     );
+  }
+
+  function render_var(v) {
+     return (
+       v.replace(/([A-Za-z_]+)([0-9]+)/g, '$1<sub>$2</sub>')
+        .replace(/gamma/g, '&gamma;')
+        .replace(/Gamma/g, '&Gamma;')
+     );
   }
 
   function zoom(f) {
@@ -139,6 +145,8 @@ $(function() {
     ['even_or_even_s.xml',
      'reverse_inverse.xml',
      'copy.xml'];
+
+  load_proof(proof_files[0]);
 
   $.each(proof_files, function(index, file) {
     $('<a href="#">' + file.replace(/.xml$/, '') + '</a>')
