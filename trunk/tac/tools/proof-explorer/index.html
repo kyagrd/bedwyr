@@ -194,8 +194,6 @@ $(function() {
      'reverse_inverse.xml',
      'copy.xml'];
 
-  load_proof(proof_files[0], true);
-
   $.each(proof_files, function(index, file) {
     $('<li></li>')
       .append(
@@ -214,6 +212,27 @@ $(function() {
       .append(')')
       .appendTo($('#selector ul'));
   });
+
+  $('<a href="#">Expand all</a>')
+    .click(function() {
+      $('.expandable')
+        .removeClass('expandable').addClass('expanded')
+        .parent().prev().show();
+      return false;
+    })
+    .appendTo($('#operations ul'))
+    .wrap('<li />');
+
+  $('<a href="#">Collapse all</a>')
+    .click(function() {
+      $('.expanded')
+        .removeClass('expanded').addClass('expandable')
+        .parent().prev().hide();
+      zoom($('table:first tr:last td'));
+      return false;
+    })
+    .appendTo($('#operations ul'))
+    .wrap('<li />');
 });
 </script>
 <style type="text/css">
@@ -263,7 +282,7 @@ ul {
   list-style-type: circle;
 }
 
-#selector, #legend {
+#selector, #legend, #operations {
   margin: 1.5em 0;
 }
 </style>
@@ -273,6 +292,7 @@ ul {
   <div id="proof"></div>
 </center>
 <div id="selector">Select proof: <ul></ul></div>
+<div id="operations">Operations: <ul></ul></div>
 <div id="legend">Legend:
 <ul>
   <li class="active">Active</li>
