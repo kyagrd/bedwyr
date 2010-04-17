@@ -1,5 +1,5 @@
 
-AC_INIT([bedwyr],[1.1])
+AC_INIT([bedwyr],[1.2])
 AC_PREREQ(2.57)
 AC_CONFIG_SRCDIR([src/main.ml])
 AC_PROG_INSTALL

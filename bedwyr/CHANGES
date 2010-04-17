@@ -1,0 +1,19 @@
+1.2 (2010-04-17)
+===============
+Fix:
+ * priority of conjunction and disjunction in the syntax
+ * detect potential hole in unification when some left unifications
+   make the level-based representation of raising inadequate
+New:
+ * underscore (_) is allowed for dummy logic variables
+ * several new examples
+ * pretty printing (indentation and better name generation)
+ * slight extension of unification (simple case beyond llambda)
+
+1.1 (2007-02-15)
+================
+New examples, some fixes.
+
+1.0 (2006-11-01)
+================
+Initial stable release.
