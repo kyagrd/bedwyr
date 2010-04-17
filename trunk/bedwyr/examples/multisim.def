@@ -21,7 +21,7 @@ lt0 odd    half.
 lt0 half   half_s.
 lt0 half_s is_z.
 lt0 is_z   loop.
-inductive lt X Y := lt0 X Y ; lt0 X Z, lt Z Y.
+lt X Y := lt0 X Y ; lt0 X Z, lt Z Y.
 
 % Union of sorted lists, removes redundancies.
 % union : state list -> state list -> state list -> o.
