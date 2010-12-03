@@ -33,19 +33,22 @@ Building Tac on Linux:
 
 Building Tac on Windows:
   The easiest way is to build Tac on Windows is using Microsoft Visual
-  Studio 2005 along with the included solution "/tac/tac.sln".
+  Studio 2008 along with the included solution "/tac/tac.sln".
 
   For information about building the installer, see "/tac/installer/README".
   
   Dependencies:
     Microsoft Visual Studio 2008    http://www.microsoft.com/express
     O'Caml                          http://caml.inria.fr
-    Ocamake                         http://tech.motion-twin.com
+    Ocamake                         /util/ocamake.ml
     Xml-Light                       http://tech.motion-twin.com
 
   Compiling:
-    First you must compile Ocamake and put it on your path.  The easiest
-    way to do this is to compile it as follows:
+    First you must compile Ocamake and put it on your path.  Ocamake is
+    originally from http://tech.motion-twin.com, but instead use the version
+    found at /util/ocamake.ml; this version has been slightly patched to work
+    with the all of Tac's Visual Studio project files.  The easiest
+    way to do compile it is to compile it as follows:
 
       ocamlc unix.cma str.cma ocamake.ml -o ocamake.exe
 
