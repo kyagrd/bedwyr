@@ -1,7 +1,6 @@
 #open "popl.def".
 
 % "Import" part 1a.
-
 #lemma sub_refl "pi l\t\ type l t => sub l t t".
 prove.
 % Qed.
