@@ -135,17 +135,21 @@ let print_full ~generic ~bound chan term =
   in
     Format.fprintf chan "@[%a@]" (pp ~bound high_pr) term
 
-let formatter,flush_formatter =
+let formatter,do_formatter =
   let buf = Buffer.create 20 in
-    Format.formatter_of_buffer buf,
-    (fun () ->
+  let chan = Format.formatter_of_buffer buf in
+    chan,
+    (fun f ->
+       assert (Buffer.length buf = 0) ;
+       f () ;
+       Format.pp_print_flush chan () ;
+       assert (Buffer.length buf > 0) ;
        let s = Buffer.contents buf in
          Buffer.clear buf ;
          s)
 
 let term_to_string_full ~generic ~bound tm =
-  print_full ~generic ~bound formatter tm ;
-  flush_formatter ()
+  do_formatter (fun () -> print_full ~generic ~bound formatter tm)
 
 (* Print a term; allows debugging.  See term_to_string_full. *)
 let term_to_string_full_debug ~generic ~bound dbg term =
@@ -170,8 +174,7 @@ let print ?(bound=[]) chan term =
     s
 
 let term_to_string ?(bound=[]) tm =
-  print ~bound formatter tm ;
-  flush_formatter ()
+  do_formatter (fun () -> print ~bound formatter tm)
 
 let pp_term out term = print out term
 
@@ -197,5 +200,4 @@ let pp_preabstracted ~generic ~bound chan term =
           print_full ~generic ~bound chan term
 
 let term_to_string_preabstracted ~generic ~bound term =
-  pp_preabstracted ~generic ~bound formatter term ;
-  flush_formatter ()
+  do_formatter (fun () -> pp_preabstracted ~generic ~bound formatter term)
