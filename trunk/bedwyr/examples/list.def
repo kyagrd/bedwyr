@@ -10,6 +10,9 @@ list (cons X nil).
 list (cons X (cons Y nil)).
 list (cons X (cons Y (cons Z nil))).
 
+member X (cons X _).
+member X (cons _ L) := member X L.
+
 append nil K K.
 append (cons X L) K (cons X M) := append L K M.
 
@@ -18,9 +21,12 @@ append (cons X L) K (cons X M) := append L K M.
 % Coverage implicitly proves termination
 coverage := pi L\ pi K\ list L => sigma M\ append L K M.
 
-determinancy := pi L\ pi K\ pi M\ pi Mp\
+determinacy := pi L\ pi K\ pi M\ pi Mp\
     list L => append L K M => append L K Mp => M = Mp.
 
-test := (coverage ; print "Coverage failure"),
-        (determinancy ; print "Determinancy failure"),
-        print "Done".
+#assert coverage.
+#assert determinacy.
+#assert (member 3 (cons 1 (cons 3 nil))).
+#assert_not (sigma X\ member X nil).
+#assert_not (sigma X\ pi a\ member X (cons a nil)).
+#assert (pi a\ sigma X\ member X (cons a nil)).

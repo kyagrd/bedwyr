@@ -7,7 +7,7 @@ src/Makefile: src/Makefile.in configure
 configure: configure.ac
 	autoconf
 
-XPL = internal/scoping.def internal/checks.def \
+XPL = list.def internal/scoping.def internal/checks.def \
       miniml.def internal/typecheck.def \
       3bits.def lambda.def progs.def \
       graph-alt.def minmax.def multisim.def \
