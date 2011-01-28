@@ -24,7 +24,7 @@ let welcome_msg =
   "Bedwyr welcomes you.
 
 This software is under GNU Public License.
-Copyright (c) 2005-2006 Slimmer project.
+Copyright (c) 2005-2011 Slimmer project.
 
 For a little help, type #help.
 \n"
@@ -83,7 +83,7 @@ let position lexbuf =
       Format.sprintf ": file %s, line %d, character %d" file line char
 
 let do_cleanup f x clean =
-  try let y = f x in clean () ; y with e -> clean () ; raise e
+  try f x ; clean () with e -> clean () ; raise e
 
 let rec process ?(interactive=false) parse lexbuf =
   try while true do try
@@ -140,7 +140,8 @@ let rec process ?(interactive=false) parse lexbuf =
     | Failure s ->
         Format.printf "Error: %s\n" s
     | e ->
-        Format.printf "Unknown error: %s\n%!" (Printexc.to_string e)
+        Format.printf "Unknown error: %s\n%!" (Printexc.to_string e) ;
+        raise e
   done with
   | Failure "eof" -> ()
 
