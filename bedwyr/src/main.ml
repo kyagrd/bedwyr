@@ -58,6 +58,7 @@ let interactive = ref true
 let test        = ref false
 let session     = ref []
 let queries     = ref []
+let inclfiles   = ref []
 
 let _ =
   Arg.parse [
@@ -161,6 +162,7 @@ and input_queries ?(interactive=false) lexbuf =
 
 and load_session () =
   System.reset_defs () ;
+  inclfiles := [] ;
   List.iter input_from_file !session
 
 and command lexbuf = function
@@ -170,8 +172,16 @@ and command lexbuf = function
   (* Session management *)
   | "include",[f] ->
       let f = Term.get_name f in
-        input_from_file f
-  | "reset",[] -> session := [] ; load_session ()
+      let not_included fname = 
+          if (List.mem fname !inclfiles) then
+             false
+          else (
+             inclfiles := fname :: !inclfiles ;
+             true
+          )
+       in
+        if not_included f then input_from_file f else () 
+  | "reset",[] -> inclfiles := [] ; session := [] ; load_session ()
   | "reload",[] -> load_session ()
   | "session",l ->
       session := List.map Term.get_name l ;
