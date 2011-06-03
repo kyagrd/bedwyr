@@ -21,4 +21,22 @@ let print head table =
          | Unset     -> ()
          | Working _ -> assert false)
 
+(* Print table to a file. Proved entries become arguments of
+   a predicate called 'proved', and disproved entries 'disproved'
+*)
+
+let fprint fout head table =
+  let fmt = (Format.formatter_of_out_channel fout) in 
+  Format.fprintf fmt 
+    "%% Table for %a contains :@\n"
+    Pprint.pp_term head ;
+   Index.iter !table 
+    (fun t tag ->
+       let t = Term.app t [head] in
+       match !tag with
+         | Proved    -> Format.fprintf fmt "proved %a@ .\n" Pprint.pp_term t
+         | Disproved -> Format.fprintf fmt "disproved %a@ .\n" Pprint.pp_term t
+         | Unset     -> ()
+         | Working _ -> assert false)
+
 let reset x = x := Index.empty

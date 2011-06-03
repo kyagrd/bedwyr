@@ -179,11 +179,11 @@ coinductive bisim P Q :=
 					pi w\ bisim (M w) (N w)) &
 	(pi X\ pi M\ onep P (up X) M => sigma N\ onep Q (up X) N &
 					nabla w\ bisim (M w) (N w)) &
-	(pi A\ pi Q1\ one Q A Q1 => sigma P1\ one P A P1 & bisim Q1 P1) &
+	(pi A\ pi Q1\ one Q A Q1 => sigma P1\ one P A P1 & bisim P1 Q1) &
 	(pi X\ pi N\ onep Q (dn X) N => sigma M\ onep P (dn X) M & 
-					pi w\ bisim (N w) (M w)) &
+					pi w\ bisim (M w) (N w)) &
 	(pi X\ pi N\ onep Q (up X) N => sigma M\ onep P (up X) M &
-					nabla w\ bisim (N w) (M w)).
+					nabla w\ bisim (M w) (N w)).
 
 #assert (bisim (in a x\ in a y\ z) (in a x\ nu w\ in a y\ z)).
 #assert (pi P\ bisim (in a x\ nu y\ match x y P)

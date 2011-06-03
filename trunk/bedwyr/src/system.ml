@@ -144,6 +144,18 @@ let show_table head =
   with
     | Not_found -> raise (Undefined head)
 
+let save_table head file = 
+   let fout = open_out_gen [Open_wronly;Open_creat;Open_excl] 0o600 file in
+   try
+     let _,_,table = Hashtbl.find defs (Term.get_var head) in 
+       begin match table with
+        | Some table -> Table.fprint fout head table
+        | None ->
+            failwith ("No table defined for " ^ (Pprint.term_to_string head))
+       end ; close_out fout        
+  with
+    | Not_found -> close_out fout ; raise (Undefined head)
+
 (* Common utils *)
 
 let rec make_list f = function
