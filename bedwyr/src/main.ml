@@ -48,6 +48,7 @@ session.
 #reload.                             Reload the current session.
 #reset.                              Clears the current session.
 #show_table [pred].                  Displays the predicate's table.
+#save_table [pred] [file].           Save the predicate's table in a file. 
 Or type in a formula to ask for its verification.
 For more information (including commands relevant in definition mode),
 see the user guide.
@@ -230,6 +231,12 @@ and command lexbuf = function
         | None -> 
             Format.printf "Table not found.\n"
       end
+
+   (* save the content of a table to a file. An exception is thrown if *)
+   (* file already exists. *)
+   | "save_table",[p;f] -> 
+      let f = Term.get_name f in
+          System.save_table p f  
 
   (* Testing commands *)
   | "assert",[query] ->
