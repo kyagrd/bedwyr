@@ -12,3 +12,7 @@ val print : Term.term -> t -> unit
 val fprint : out_channel -> Term.term -> t -> unit
 
 val reset : t -> unit
+
+val iter_fun : t -> (Term.term -> tag -> unit) -> unit
+
+val nabla_abstract : Term.term -> Term.term

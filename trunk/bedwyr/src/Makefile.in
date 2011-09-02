@@ -43,11 +43,11 @@ depend: $(CORE_SRC) $(BEDWYR_SRC) $(TEST_ML)
 %.ml: %.mly Makefile
 	$(OCAMLYACC) $<
 	echo $<
-	echo "val to_term : (Lexing.lexbuf -> token) -> string -> Term.term" \
+	echo "val to_term : ?incl:bool -> (Lexing.lexbuf -> token) -> string -> Term.term" \
 	  >> $(<:.mly=.mli)
 %.mli: %.mly Makefile
 	$(OCAMLYACC) $<
-	echo "val to_term : (Lexing.lexbuf -> token) -> string -> Term.term" \
+	echo "val to_term : ?incl:bool -> (Lexing.lexbuf -> token) -> string -> Term.term" \
 	  >> $(<:.mly=.mli)
 %.ml: %.mll
 	$(OCAMLLEX) $<

@@ -36,6 +36,7 @@ type rawterm =
   | Ptr of ptr
 
 val eq : term -> term -> bool
+val eqvt : term -> term -> bool
 val observe : term -> rawterm
 val deref : term -> term
 
@@ -55,6 +56,7 @@ type unsubst
 val get_subst   : state -> subst
 val apply_subst : subst -> unsubst
 val undo_subst  : unsubst -> unit
+val eq_subst    : subst -> subst -> bool
 
 (** Creating terms. *)
 
@@ -93,6 +95,7 @@ val is_free : string -> bool
 exception NonNormalTerm
 
 val abstract : term -> term -> term
+val abstract_flex : term -> term -> term
 
 val get_nablas : term -> int list
 
@@ -101,12 +104,16 @@ val logic_vars : term list -> term list
 val eigen_vars : term list -> term list
 
 val get_var : term -> var
+val get_var_ts : var -> int
+val get_var_lts : var -> int
 
 (** Return an eigenvar copier.
   * When passive is passed to the copier,
   * it only propagates what's been copied when active,
   * but doesn't copy newly encountered variables. *)
 val copy_eigen : unit -> (?passive:bool -> term -> term)
+val simple_copy : term -> term
+val shared_copy : term -> term
 
 module Notations :
   sig
