@@ -29,10 +29,26 @@ struct
   let exists  = Term.atom "sigma"
   let nabla   = Term.atom "nabla"
 
+  let not     = Term.atom "_not"
+  let ite     = Term.atom "_if"
+  let abspred = Term.atom "_abstract"
+  let distinct = Term.atom "_distinct"
+  let assert_rigid   = Term.atom "_rigid"
+  let abort_search = Term.atom "_abort"
+  let cutpred = Term.atom "_cut"
+  let check_eqvt = Term.atom "_eqvt" 
+
   let print   = Term.atom "print"
+  let println = Term.atom "println"
+  let fprint  = Term.atom "fprint"
+  let fprintln = Term.atom "fprintln"
+  let fopen_out = Term.atom "fopen_out"
+  let fclose_out = Term.atom "fclose_out"
   let parse   = Term.atom "parse"
+  let simp_parse = Term.atom "simp_parse" 
   let on      = Term.atom "on"
   let off     = Term.atom "off"
+
 
   let var_eq      = Term.get_var eq
   let var_andc    = Term.get_var andc
@@ -43,12 +59,27 @@ struct
   let var_forall  = Term.get_var forall
   let var_exists  = Term.get_var exists
   let var_nabla   = Term.get_var nabla
+  let var_not     = Term.get_var not
+  let var_ite     = Term.get_var ite
+  let var_abspred = Term.get_var abspred
+  let var_distinct = Term.get_var distinct
+  let var_assert_rigid = Term.get_var assert_rigid
+  let var_abort_search = Term.get_var abort_search
+  let var_cutpred = Term.get_var cutpred
+  let var_check_eqvt = Term.get_var check_eqvt
 
   let var_print   = Term.get_var print
+  let var_println  = Term.get_var println
+  let var_fprint  = Term.get_var fprint
+  let var_fprintln = Term.get_var fprintln
+  let var_fopen_out = Term.get_var fopen_out
+  let var_fclose_out = Term.get_var fclose_out
   let var_parse   = Term.get_var parse
+  let var_simp_parse = Term.get_var simp_parse
   let var_on      = Term.get_var on
   let var_off     = Term.get_var off
 
+  
   let _ =
     Pprint.set_infix [ ("=>", Pprint.Right) ;
                        ("->", Pprint.Right);
@@ -73,11 +104,49 @@ type input =
 let debug = ref false
 let time  = ref false
 
+(* [AT:] list of open files *)
+
+let user_files : (string, out_channel) Hashtbl.t =
+  Hashtbl.create 50
+
+let reset_user_files () = Hashtbl.clear user_files
+
+let close_all_files () =
+  Hashtbl.iter 
+    (fun n c -> 
+       try close_out c with | Sys_error e -> () )
+    user_files ;
+  reset_user_files ()
+
+let close_user_file name = 
+  try 
+    let f = Hashtbl.find user_files name in
+      close_out f ; 
+      Hashtbl.remove user_files name 
+  with
+  | Sys_error e -> Hashtbl.remove user_files name
+  | _ -> ()
+
+let get_user_file name = 
+  Hashtbl.find user_files name 
+
+let open_user_file name =
+  try
+    Hashtbl.find user_files name
+  with
+  | Not_found -> 
+    (
+      let fout = open_out_gen [Open_wronly;Open_creat;Open_excl] 0o600 name in
+          ignore (Hashtbl.add user_files name fout) ;
+          fout
+    )
+     
 (** Definitions *)
 
 exception Inconsistent_definition of Term.term
 exception Undefined of Term.term
 exception Arity_mismatch of Term.term*int
+
 
 (* type definition = Term.var * int * Term.term *)
 let defs : (Term.var,(defkind*Term.term*Table.t option)) Hashtbl.t =
@@ -134,6 +203,10 @@ let get_def ?check_arity head_tm =
   with
     | Not_found -> raise (Undefined head_tm)
 
+let remove_def head_tm =
+  let head = Term.get_var head_tm in 
+  Hashtbl.remove defs head 
+
 let show_table head =
   try
     let _,_,table = Hashtbl.find defs (Term.get_var head) in
@@ -145,16 +218,19 @@ let show_table head =
     | Not_found -> raise (Undefined head)
 
 let save_table head file = 
-   let fout = open_out_gen [Open_wronly;Open_creat;Open_excl] 0o600 file in
    try
-     let _,_,table = Hashtbl.find defs (Term.get_var head) in 
-       begin match table with
-        | Some table -> Table.fprint fout head table
-        | None ->
-            failwith ("No table defined for " ^ (Pprint.term_to_string head))
-       end ; close_out fout        
+     let fout = open_out_gen [Open_wronly;Open_creat;Open_excl] 0o600 file in
+     try 
+       let _,_,table = Hashtbl.find defs (Term.get_var head) in 
+         begin match table with
+          | Some table -> Table.fprint fout head table
+          | None ->
+             failwith ("No table defined for " ^ (Pprint.term_to_string head))
+         end ; close_out fout        
+     with | Not_found -> close_out fout ; raise (Undefined head)
   with
-    | Not_found -> close_out fout ; raise (Undefined head)
+    | Sys_error e -> 
+       Printf.printf "Couldn't open file %s for writing! Make sure that the file doesn't already exist.\n" file  
 
 (* Common utils *)
 

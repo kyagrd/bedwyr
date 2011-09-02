@@ -74,6 +74,25 @@ let rec eq t1 t2 =
             true e ee
     | _ -> false
 
+let eq_ptr s t = 
+    match s,t with
+    | (V x),(V y) when x==y -> true
+    | (T u),(T v) -> eq u v 
+    | _ -> false 
+   
+
+(* [AT,11 Mar 2011]Check if two substitutions are equal *)
+let eq_subst sub1 sub2 =
+  let rec aux s1 s2 =
+    match s1 with 
+    | [] -> true
+    | ((v,c)::rest) ->
+      let (_,d) = (List.find (fun (x,y) -> v==x)) s2 in 
+      if (eq_ptr c d) then (aux rest s2) else false
+  in
+    try (aux sub1 sub2 && aux sub2 sub1) with
+    Not_found -> false 
+
 let rec observe = function
   | Ptr {contents=T d} -> observe d
   | Ptr {contents=V v} -> Var v
@@ -186,6 +205,32 @@ let abstract target t =
           | Lam (m,s) -> Lam (m, aux (n+m) s)
           | Ptr {contents=T t} -> Ptr {contents=T (aux n t)}
           | Ptr {contents=V v} -> t
+          | Var _ -> assert false
+          | Susp _ -> raise NonNormalTerm
+        in
+          lambda 1 (aux 1 t)
+    | _ -> assert false
+
+(** [abstract_flex var t] similar to abstract var t, but 
+  * will abstract flexible subterms headed by var. *)
+
+let abstract_flex target t =
+  match observe target with
+    | Var target ->
+        (* Recursively raise dB indices and abstract over [target]. *)
+        let rec aux n t = match t with
+          | NB i -> t
+          | DB i -> if i>=n then DB (i+1) else t
+          | App (h,ts) ->
+              begin match observe h with 
+              | Var v ->
+                  if v==target then DB n 
+                  else App ((aux n h), (List.map (aux n) ts))
+              | _ -> App ((aux n h), (List.map (aux n) ts))
+              end
+          | Lam (m,s) -> Lam (m, aux (n+m) s)
+          | Ptr {contents=T t} -> Ptr {contents=T (aux n t)}
+          | Ptr {contents=V v} -> if v==target then DB n else t
           | Var _ -> assert false
           | Susp _ -> raise NonNormalTerm
         in
@@ -388,6 +433,76 @@ let copy_eigen () =
   in
     cp tm
 
+(* copying a term: No sharing is maintained, except possibly on
+   pointers to variables. *)
+let rec simple_copy tm =
+  match tm with 
+  | NB i | DB i as x -> x
+  | Var v -> tm
+  | App (a,l) -> App (simple_copy a, List.map simple_copy l)
+  | Lam (n,b) -> Lam (n, simple_copy b)
+  | Ptr {contents=T t} -> simple_copy t
+  | Ptr {contents=V t} -> tm
+  | Susp _ -> assert false
+
+(* copying a term maintaining shared structures *)
+
+let shared_copy tm =
+   let tbl = Hashtbl.create 100 in 
+   let rec cp t = 
+     match t with 
+     | NB i | DB i as x -> x
+     | Var v -> t
+     | App (a,l) -> App (cp a, List.map cp l)
+     | Lam (n,b) -> Lam (n, cp b)
+     | Ptr {contents=V s} -> t
+     | Ptr x -> 
+         begin try Hashtbl.find tbl x  with
+          | Not_found ->
+            begin match !x with 
+            | T s -> 
+              let v = Ptr {contents=T (cp s)} in 
+              Hashtbl.add tbl x v ;
+              v
+            | _ -> assert false
+            end
+         end
+     | Susp _ -> assert false
+in 
+   cp tm
+
+(* [AT,21/08/2011] *)
+(* Equivariant checking *)
+
+let eqvt t1 t2 =
+  let bindings = ref [] in 
+  let rec aux s1 s2 = 
+    match s1,s2 with
+    | DB i1, DB i2 -> i1=i2
+    | NB i1, NB i2 -> 
+      let bd = try Some (List.find (fun (x,y) -> x=i1) !bindings)
+               with Not_found -> None
+      in
+        begin match bd with
+        | Some (x,y) -> (y = i2) 
+        | None -> (bindings := (i1,i2)::!bindings ; true)
+        end
+    | Ptr {contents=V v1}, Ptr {contents=V v2} -> v1==v2
+    | _, Ptr {contents=T t2} -> aux s1 t2
+    | Ptr {contents=T t1}, _ -> aux t1 s2
+    (* Propagation *)
+    | App (h1,l1), App (h2,l2) ->
+        List.length l1 = List.length l2 &&
+        List.fold_left2
+          (fun test t1 t2 -> test && aux t1 t2)
+          true (h1::l1) (h2::l2)
+    | Lam (n,t1), Lam (m,t2) -> n = m && aux t1 t2
+    | Var _, _ | _, Var _ -> assert false
+    | Susp _, _ -> raise NonNormalTerm
+    | _ -> false
+  in 
+    aux t1 t2 
+
 (** {1 Convenience} *)
 
 let string text = get_var_by_name ~tag:Constant ~lts:0 ~ts:0 text
@@ -426,3 +541,6 @@ end
 let fresh_name name =
   let v = fresh ~name:name Constant ~lts:0 ~ts:0 in
   get_name v
+
+let get_var_ts v = v.ts
+let get_var_lts v = v.lts

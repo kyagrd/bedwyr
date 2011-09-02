@@ -56,6 +56,11 @@ let dummy_var = Term.get_var (Term.fresh ~ts:(-1) ~lts:(-1) Term.Constant)
 
 exception Found of int
 
+(* Option to turn on/off equivariant tabling *)
+let eqvt_tbl = ref true 
+let set_eqvt b = eqvt_tbl := b
+let get_eqvt () = !eqvt_tbl 
+
 let get_constraints bindings =
   let n = List.length bindings in
   (* Sorting might be a useless precautions since we always parse the index
@@ -194,6 +199,53 @@ let superficial_match patterns terms =
   in
     List.for_all sub (List.map2 (fun a b -> a,b) patterns terms)
 
+(* [rename] Renaming nabla variables in a term according to the order of
+ *   traversal in the tree representation of the (normal form of the) term.
+ *   This is a cheap way to force equivariant matching in tables. 
+ * Added by Tiu, 03 March 2011. *)
+ 
+let rec rename term bindings n =
+  let term = Norm.hnorm term in
+  match Term.observe term with
+  | Term.DB i -> term, bindings, n
+  | Term.NB i -> 
+     let bd = try Some (List.find (fun (x,y) -> x=i) bindings) 
+              with Not_found -> None
+     in (
+       match bd with 
+       | Some (x,y) -> Term.nabla y, bindings, n
+       | None -> Term.nabla (n+1), (i,n+1)::bindings, n+1
+     )
+  | Term.Var v -> term, bindings, n
+  | Term.Lam (i,t) -> 
+     let newt,bds,n' = rename t bindings n in
+       (Term.lambda i newt),bds,n'
+  | Term.App (h,terms) ->
+       let newterms,bds,n'= 
+           List.fold_left 
+              (fun (ts,bd,idx) t -> 
+                let t',bd',idx' = rename t bd idx 
+                in (t'::ts,bd',idx')
+              )
+              ([],bindings,n)
+              (h::terms)
+           in
+        let (newh::newterms) = List.rev newterms in 
+        (Term.app newh newterms),bds,n'
+   | _ -> raise Cannot_table
+
+let nb_rename terms =
+    let newterms,_,_ = 
+           List.fold_left 
+              (fun (ts,bd,idx) t -> 
+                let t',bd',idx' = rename t bd idx 
+                in (t'::ts,bd',idx')
+              )
+              ([],[],0)
+              terms
+    in List.rev newterms
+
+
 (* == UPDATE =============================================================== *)
 
 (* TODO Some of these are tailrec, some waste this effort..
@@ -292,7 +344,11 @@ let update ~allow_eigenvar index terms data =
         else
           update_index bindings terms (node::index') index
   in
-    update_index [] (List.map Norm.hnorm terms) [] index
+   (* update_index [] (List.map (Term.shared_copy) (nb_rename terms)) [] index *)
+   if !eqvt_tbl then 
+      update_index [] (nb_rename terms) [] index
+   else 
+      update_index [] (List.map Norm.hnorm terms) [] index
 
 let add ?(allow_eigenvar=true) index terms data =
   update ~allow_eigenvar index terms (Some data)
@@ -301,6 +357,8 @@ let add ?(allow_eigenvar=true) index terms data =
 
 (* Filter a term through a pattern, raise Not_found on mismatch,
  * return the list of bindings and the reversed list of catches. *)
+
+
 let rec filter bindings catches pattern term =
   match pattern, Term.observe (Norm.hnorm term) with
     | DB i, Term.DB j
@@ -349,7 +407,8 @@ let rec find bindings index terms =
           find bindings index terms
 
 let find index terms =
-  try Some (find [] index (List.map Norm.hnorm terms)) with _ -> None
+  let ts = if !eqvt_tbl then (nb_rename terms) else (List.map Norm.hnorm terms) in 
+  try Some (find [] index ts) with _ -> None
 
 (* == FOLD ================================================================== *)
 

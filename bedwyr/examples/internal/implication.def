@@ -1,0 +1,9 @@
+p a.
+p b.
+
+member X (cons X L).
+member X (cons Y L) := member X L.
+
+% Try this query:
+% pi x\ p x => member x L.
+

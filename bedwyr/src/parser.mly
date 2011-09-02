@@ -171,10 +171,11 @@ iexp:
   * It doesn't have position information, and abstractions make some names
   * disappear, but this could be changed later.
   * [term_of_file] will recurse through #includes and inline them. *)
-let to_term lexer file =
+let to_term ?incl:(incl=true) lexer file =
   let lam  = Term.atom "lam"  in
   let app  = Term.atom "app"  in
   let atom = Term.atom "atom" in
+  let inclfiles = ref [] in 
   let binder x =
     List.exists
       (Term.eq x)
@@ -235,22 +236,45 @@ let to_term lexer file =
                                               body ])::l)
                 | System.Query a -> aux ((Term.app query [a])::l)
                 | System.Command ("include",[file]) ->
-                    let file = Term.get_name file in
-                    let cwd = Sys.getcwd () in
-                      Sys.chdir (Filename.dirname file) ;
-                      let l = list_of_file file l in
-                        Sys.chdir cwd ;
-                        aux (list_of_file file l)
+                  let file = Term.get_name file in
+                  let not_included fname = 
+                 	if ((List.mem fname !inclfiles) || (not incl)) then false
+          	      	else (
+              	           	inclfiles := fname :: !inclfiles ;
+             		 	true
+                           )
+      	  	  in
+		      if not_included file then aux (list_of_file file l) 
+                      (*  begin *)
+                      (*  	    let cwd = Sys.getcwd () in *)
+                      (*  	    Sys.chdir (Filename.dirname file) ; *)
+                      (*  	    let l = list_of_file file l in *)
+                      (*        Sys.chdir cwd ; *)
+		      (*  	    aux l *)
+                      (*  end *)
+		      else aux l
+
                 | System.Command ("assert",a) ->
                     aux ((Term.app command ((Term.atom "assert")::
                                               (List.map objectify a)))::l)
+                (* [AT]: change parsing to type command to allow polymorphic types; *)
+                (*       Free variables (eigen or logic) are abstracted. *)
+                | System.Command ("type",[a;b]) ->          
+                    let b = Term.app (Term.atom "ty") [Norm.deep_norm b] in 
+                    let vs = (Term.logic_vars [b]) @ (Term.eigen_vars [b]) in 
+                    let ty = List.fold_left 
+                             (fun x v -> 
+                                   Term.app (Term.atom "all") [(Term.abstract v x)])
+                             b vs in
+                    
+                        aux ((Term.app command ((Term.atom "type")::[a;ty]))::l) 
                 | System.Command (c,a) ->
-                    aux ((Term.app command ((Term.atom c)::a))::l)
+                      aux ((Term.app command ((Term.atom c)::a))::l)
               end
     in
     let cwd = Sys.getcwd () in
       Sys.chdir (Filename.dirname file) ;
-      let l = aux [] in
+      let l = aux list in
         Sys.chdir cwd ;
         l
   in
@@ -259,4 +283,5 @@ let to_term lexer file =
     | [] -> t
     | hd::tl -> term_of_list (cons hd t) tl
   in
+    inclfiles := [] ; 
     term_of_list (Term.atom "nil") (list_of_file file [])

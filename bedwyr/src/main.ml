@@ -32,7 +32,7 @@ For a little help, type #help.
 let usage_msg =
   "Bedwyr prover.
 This software is under GNU Public License.
-Copyright (c) 2005-2006 Slimmer project.
+Copyright (c) 2005-2011 Slimmer project.
 
 Usage: bedwyr [filename | option]*
 "
@@ -49,6 +49,7 @@ session.
 #reset.                              Clears the current session.
 #show_table [pred].                  Displays the predicate's table.
 #save_table [pred] [file].           Save the predicate's table in a file. 
+#equivariant [flag].                 Turn equivariant tabling on/off (flag=on/off). 
 Or type in a formula to ask for its verification.
 For more information (including commands relevant in definition mode),
 see the user guide.
@@ -134,6 +135,8 @@ let rec process ?(interactive=false) parse lexbuf =
         Format.printf "User interruption.\n%!"
     | Prover.Level_inconsistency ->
         Format.printf "This formula cannot be handled by the left prover!\n%!"
+    | Prover.Abort_search ->
+       Format.printf "Proof search aborted!\n"
     | Unify.NotLLambda t ->
         Format.printf "Not LLambda unification encountered: %a\n%!"
           Pprint.pp_term t
@@ -156,10 +159,10 @@ and input_from_file file =
           Lexing.pos_fname = file } ;
     input_defs lexbuf ;
     Sys.chdir cwd
-
 and input_defs lexbuf = process Parser.input_def lexbuf
 and input_queries ?(interactive=false) lexbuf =
   process ~interactive Parser.input_query lexbuf
+
 
 and load_session () =
   System.reset_defs () ;
@@ -167,7 +170,7 @@ and load_session () =
   List.iter input_from_file !session
 
 and command lexbuf = function
-  | "exit",[] -> exit 0
+  | "exit",[] -> System.close_all_files (); exit 0
   | "help",[] -> Format.printf "%s" help_msg
 
   (* Session management *)
@@ -182,6 +185,8 @@ and command lexbuf = function
           )
        in
         if not_included f then input_from_file f else () 
+        
+
   | "reset",[] -> inclfiles := [] ; session := [] ; load_session ()
   | "reload",[] -> load_session ()
   | "session",l ->
@@ -212,6 +217,18 @@ and command lexbuf = function
         end
 
   (* Tabling-related commands *)
+  | "equivariant",[d] ->
+      let b = 
+        begin match Term.observe d with
+          | Term.Var v when v==System.Logic.var_on -> true
+          | Term.Var v when v==System.Logic.var_truth -> true
+          | Term.Var v when v==System.Logic.var_off -> false
+          | Term.Var v when v==System.Logic.var_falsity -> false
+          | _ -> raise Invalid_command
+        end
+      in
+        Index.set_eqvt b 
+
   | "show_table",[p] ->
       System.show_table p
   | "clear_tables",[] ->
@@ -241,21 +258,21 @@ and command lexbuf = function
   (* Testing commands *)
   | "assert",[query] ->
       if !test then begin
-        Format.printf "@[<hv 2>Checking that@ %a@,...@]@\n%!"
+        Format.eprintf "@[<hv 2>Checking that@ %a@,...@]@\n%!"
           Pprint.pp_term query ;
         Prover.prove ~level:Prover.One ~local:0 ~timestamp:0 query
           ~success:(fun _ _ -> ()) ~failure:(fun () -> raise Assertion_failed)
       end
   | "assert_not",[query] ->
       if !test then begin
-        Format.printf "@[<hv 2>Checking that@ %a@ is false...@]@\n%!"
+        Format.eprintf "@[<hv 2>Checking that@ %a@ is false...@]@\n%!"
           Pprint.pp_term query ;
         Prover.prove ~level:Prover.One ~local:0 ~timestamp:0 query
           ~success:(fun _ _ -> raise Assertion_failed) ~failure:ignore
       end
   | "assert_raise",[query] ->
       if !test then begin
-        Format.printf "@[<hv 2>Checking that@ %a@ causes an error...@]@\n%!"
+        Format.eprintf "@[<hv 2>Checking that@ %a@ causes an error...@]@\n%!"
           Pprint.pp_term query ;
         if
           try
