@@ -27,14 +27,14 @@ node (graph N A) X := member X N.
 arrow (graph N A) X Y := member (arrow X Y) A.
 
 path G X Y := arrow G X Y.
-path G X Y := arrow G X Z, path G Z Y.
+path G X Y := arrow G X Z /\ path G Z Y.
 
 % Undirected predicates
 
-edge G X Y := arrow G X Y ; arrow G Y X.
+edge G X Y := arrow G X Y \/ arrow G Y X.
 
 inductive edgepath G X X := node G X.
-inductive edgepath G X Y := edge G X Z, edgepath G Z Y.
+inductive edgepath G X Y := edge G X Z /\ edgepath G Z Y.
 % If we make it coinductive then infinite paths starting from node X
 % (typically going back and forth along the same edge) provide an edgepath
 % from X to any other node.
@@ -44,17 +44,17 @@ inductive edgepath G X Y := edge G X Z, edgepath G Z Y.
 connected G := pi X\ pi Y\ node G X => node G Y => edgepath G X Y.
 
 disconnected G := sigma X\ sigma Y\
-                    node G X, node G Y, (edgepath G X Y => false).
+                    node G X /\ node G Y /\ (edgepath G X Y => false).
 
 removearrow (graph N A) X (graph N Ap) := remove A X Ap.
 
 % A tree is a connected graph that becomes disconnected
 % if you remove any edge.
 
-tree G := connected G, pi A\ pi Gp\ removearrow G A Gp => disconnected Gp.
+tree G := connected G /\ pi A\ pi Gp\ removearrow G A Gp => disconnected Gp.
 
-nottree G := disconnected G ;
-             sigma A\ sigma Gp\ removearrow G A Gp, connected Gp.
+nottree G := disconnected G \/
+             sigma A\ sigma Gp\ removearrow G A Gp /\ connected Gp.
 
 % Queries to try
 
@@ -76,8 +76,8 @@ graph 2  (graph (c 1 (c 2 (c 3 (c 4 (c 5 (c 6 nil))))))
                 (c (arrow 1 2) (c (arrow 2 3) (c (arrow 2 4)
                    (c (arrow 3 5) (c (arrow 4 5) (c (arrow 5 6) nil))))))).
 
-#assert_not (graph 1 G, disconnected G).
+#assert_not (graph 1 G /\ disconnected G).
 
-#assert (graph 1 G, tree G).
+#assert (graph 1 G /\ tree G).
 
-#assert (graph 2 G, nottree G).
+#assert (graph 2 G /\ nottree G).

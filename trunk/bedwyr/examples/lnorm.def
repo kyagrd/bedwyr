@@ -24,11 +24,11 @@
 %% in N, and then, using the magic of logic variables (in prover 1),
 %% synthesizes the reduced lambda-term containing those paths.
 
-%% Some of the code that we write uses hypothetical implications which is 
+%% Some of the code that we write uses hypothetical implications which is
 %% not directly available in Bedwyr.  Hence, we call an interpreter for
 %% hypothetical implications via the seq predicate in seq.def.  In this way,
 %% we can execute lambda-Prolog-style programs within Bedwyr.  The predicate
-%% lnorm below stores a "module" of lambda Prolog (a named collection of 
+%% lnorm below stores a "module" of lambda Prolog (a named collection of
 %% clauses).
 
 #include "seq.def".
@@ -95,4 +95,4 @@ example 5 (beta (abs w\ app w w) (w\ app w w)).
 example 6 (abs x\ app (abs v\ app v x) (abs u\ app (abs w\ app u w) (abs r\ r))).
 example 7 (abs (w\ beta (abs (x\ beta (abs (u\ u)) (u\ app x u))) (x\ app x w))).
 
-#assert (pi N\ pi C\ (example C N => sigma M\ sigma P\ (pr (lred N M), reduce N P, M = P))).
+#assert (pi N\ pi C\ (example C N => sigma M\ sigma P\ (pr (lred N M) /\ reduce N P /\ M = P))).

@@ -1,8 +1,8 @@
 #include "pi.def".
 
 %% Allow agent-style definitions as a controled recursion
-one  P A PP := agent P Body, one  Body A PP.
-onep P A PP := agent P Body, onep Body A PP.
+one  P A PP := agent P Body /\ one  Body A PP.
+onep P A PP := agent P Body /\ onep Body A PP.
 
 agent (zero C)    (in C s\ in C n\ out n nil z).
 agent (succ P C)  (in C s\ in C n\ out s P z).
@@ -10,7 +10,7 @@ agent (add P Q R) (nu s\ nu n\ out P s (out P n
                     (in R ss\ in R nn\
                       (plus (in s k\ nu kk\ (par (out ss kk z) (add k Q kk)))
                             (in n nil\ out Q ss (out Q nn z)))))).
- 
+
 agent (nat (s N) C) (in C s\ in C zz\ nu n\ par (out s n z) (nat N n)).
 agent (nat zz    C) (zero C).
 

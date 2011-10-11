@@ -1,5 +1,5 @@
 % A very simple object logic: a fragment of intuitionistic logic with
-% universal quantifier and implication. The implication formulas are 
+% universal quantifier and implication. The implication formulas are
 % restricted to the ones with only atomic formulas on the left of
 % implication.
 
@@ -12,10 +12,10 @@ pv L (p X Y) := memb (p X Y) L.
 pv L (impl A B) := pv (cons A L) B.
 pv L (forall B) := nabla x\ pv L (B x).
 
-#assert 
-  (pi r\ pi s\ pi t\ 
+#assert
+  (pi r\ pi s\ pi t\
      pv nil (forall x\ impl (p x r) (forall y\ impl (p y s) (p x t))) => r = t).
 
 #assert_not
-  (pi r\ pi s\ pi t\ 
+  (pi r\ pi s\ pi t\
      pv nil (forall x\ impl (p x r) (forall y\ impl (p y s) (p x t))) => r = s).

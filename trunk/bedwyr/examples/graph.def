@@ -24,21 +24,21 @@ arrow 4 5.
 arrow 5 6.
 
 path X Y := arrow X Y.
-path X Y := arrow X Z, path Z Y.
+path X Y := arrow X Z /\ path Z Y.
 
 % Undirected predicates
 
-edge X Y := arrow X Y ; arrow Y X.
+edge X Y := arrow X Y \/ arrow Y X.
 
 inductive edgepath X Y := edge X Y.
-inductive edgepath X Y := edge X Z, edgepath Z Y.
+inductive edgepath X Y := edge X Z /\ edgepath Z Y.
 
 % Queries to try
 
-allpaths := path X Y, print (X to Y), false.
+allpaths := path X Y /\ print (X to Y) /\ false.
 
-alledgepaths := edgepath X Y, print (X to Y), false.
+alledgepaths := edgepath X Y /\ print (X to Y) /\ false.
 
 connected := pi X\ pi Y\ node X => node Y => edgepath X Y.
 
-disconnected := sigma X\ sigma Y\ node X, node Y, (edgepath X Y => false).
+disconnected := sigma X\ sigma Y\ node X /\ node Y /\ (edgepath X Y => false).

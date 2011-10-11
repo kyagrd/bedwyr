@@ -21,7 +21,7 @@ lt0 odd    half.
 lt0 half   half_s.
 lt0 half_s is_z.
 lt0 is_z   loop.
-lt X Y := lt0 X Y ; lt0 X Z, lt Z Y.
+lt X Y := lt0 X Y \/ lt0 X Z /\ lt Z Y.
 
 % Union of sorted lists, removes redundancies.
 % union : state list -> state list -> state list -> o.
@@ -29,8 +29,8 @@ lt X Y := lt0 X Y ; lt0 X Z, lt Z Y.
 union X nil X.
 union nil X X.
 union (cons X L) (cons X L') L'' := union L (cons X L') L''.
-union (cons X L) (cons Y L') (cons X L'') := lt X Y, union L (cons Y L') L''.
-union (cons X L) (cons Y L') (cons Y L'') := lt Y X, union (cons X L) L' L''.
+union (cons X L) (cons Y L') (cons X L'') := lt X Y /\ union L (cons Y L') L''.
+union (cons X L) (cons Y L') (cons Y L'') := lt Y X /\ union (cons X L) L' L''.
 
 % We shall use the following types.
 %
@@ -77,27 +77,27 @@ steps loop   z (cons loop nil).
 % Non-deterministic version of steps.
 % step : state -> label -> state -> o.
 
-step P A P' := steps P A All, mem P' All.
+step P A P' := steps P A All /\ mem P' All.
 
 % Extension of acceptance and transitions to sets of states.
 
 multi_steps nil A nil.
 multi_steps (cons Q S) A L'' :=
-  steps Q A L, multi_steps S A L', union L L' L''.
+  steps Q A L /\ multi_steps S A L' /\ union L L' L''.
 
 subset nil nil.
 subset L (cons A L') := subset L L'.
 subset (cons A L) (cons A L') := subset L L'.
 
-multi_step X A Y := multi_steps X A X', subset Y X'.
+multi_step X A Y := multi_steps X A X' /\ subset Y X'.
 
-multi_accepts Q := mem S Q, accepts S.
+multi_accepts Q := mem S Q /\ accepts S.
 
 % The definition of multisim is with a subset of Q' (the maximal multi_steps
 % result) but it is sound to take all of them.
 
 coinductive multisim P Q :=
-  (pi A\ pi P'\ step P A P' => sigma Q'\ multi_steps Q A Q', multisim P' Q'),
+  (pi A\ pi P'\ step P A P' => sigma Q'\ multi_steps Q A Q' /\ multisim P' Q') /\
   (accepts P => multi_accepts Q).
 
 % Some extra checks that would work but pollute the table.

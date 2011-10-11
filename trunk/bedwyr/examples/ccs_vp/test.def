@@ -1,14 +1,14 @@
 #include "ccs_vp.def".
 #include "weak.def".
 
-% several simple examples to show how value-passing CCS processes 
+% several simple examples to show how value-passing CCS processes
 % can be defined in Bedwyr.
 
-% Notice that if a CCS expression contains the ite construct, then checking 
+% Notice that if a CCS expression contains the ite construct, then checking
 % bisimulation with itself causes an error in Bedwyr: a logic variable can
 % move to the "left" (from prover 1 to prover 0), and implications can occur
-% on the "left" (in prover 0). 
-% Best to avoid mismatch (and other forms of negation) in the specification 
+% on the "left" (in prover 0).
+% Best to avoid mismatch (and other forms of negation) in the specification
 % of operational semantics.
 
 % Emit a tau action and repeat.
@@ -40,7 +40,7 @@ pdef (s1 X) (sum (out delete X (proc s0)) (in insert y\ (proc (s2 X y)))).
 pdef (s2 X Y) (out delete Y (proc (s1 X))).
 pdef stack (proc s0).
 
-% Queue of size 2 
+% Queue of size 2
 pdef q0 (in insert x\ (proc (q1 x))).
 pdef (q1 X) (sum (out delete X (proc q0)) (in insert y\ (proc (q2 X y)))).
 pdef (q2 X Y) (out delete X (proc (s1 Y))).

@@ -9,10 +9,10 @@
 #type or   (bool -> bool -> bool -> o).
 #type and  (bool -> bool -> bool -> o).
 
-bool X := X=ff ; X=tt.
-xor X Y Z := (X=Y, Z=ff) ; (X=ff, Y=Z) ; (X=Z, Y=ff).
-or  X Y Z := (Z=tt,(X=tt;Y=tt)) ; (Z=ff,X=ff,Y=ff).
-and X Y Z := (X=tt,Y=tt,Z=tt) ; (Z=ff,(X=ff;Y=ff)).
+bool X := X=ff \/ X=tt.
+xor X Y Z := (X=Y /\ Z=ff) \/ (X=ff /\ Y=Z) \/ (X=Z /\ Y=ff).
+or  X Y Z := (Z=tt /\ (X=tt \/ Y=tt)) \/ (Z=ff /\ X=ff /\ Y=ff).
+and X Y Z := (X=tt /\ Y=tt /\ Z=tt) \/ (Z=ff /\ (X=ff \/ Y=ff)).
 
 % Addition on 3bit integers
 
@@ -21,15 +21,15 @@ and X Y Z := (X=tt,Y=tt,Z=tt) ; (Z=ff,(X=ff;Y=ff)).
 #type 3add       (bool -> bool -> bool -> bool ->
                   bool -> bool -> bool -> bool -> bool -> o).
 
-simple_add A B R C := xor A B R, and A B C.
+simple_add A B R C := xor A B R /\ and A B C.
 
 full_add A B Cin R Cout :=
-  xor A B X, xor X Cin R,
-  and X Cin C1, and A B C2, or C1 C2 Cout.
+  xor A B X /\ xor X Cin R /\
+  and X Cin C1 /\ and A B C2 /\ or C1 C2 Cout.
 
 3add X2 X1 X0 Y2 Y1 Y0 Z2 Z1 Z0 :=
-  simple_add X0 Y0 Z0 C1,
-  full_add X1 Y1 C1 Z1 C2,
+  simple_add X0 Y0 Z0 C1 /\
+  full_add X1 Y1 C1 Z1 C2 /\
   full_add X2 Y2 C2 Z2 C3.
 
 % Addition modulo 8. No other way to do this for now..
@@ -118,21 +118,21 @@ add 7 7 6.
 % Conversion from 3bit to integer
 
 convert Z Y X N :=
-  ((X=tt, A=1) ; (X=ff, A=0)),
-  ((Y=tt, B=2) ; (Y=ff, B=0)),
-  ((Z=tt, C=4) ; (Z=ff, C=0)),
-  add A B R, add R C N.
+  ((X=tt /\ A=1) \/ (X=ff /\ A=0)) /\
+  ((Y=tt /\ B=2) \/ (Y=ff /\ B=0)) /\
+  ((Z=tt /\ C=4) \/ (Z=ff /\ C=0)) /\
+  add A B R /\ add R C N.
 
 % Check that 3add is the same as add, up to convert
 
 valid X Y Z A B C :=
-  3add X Y Z A B C P Q R,
-  convert X Y Z XYZ,
-  convert A B C ABC,
-  convert P Q R PQR,
+  3add X Y Z A B C P Q R /\
+  convert X Y Z XYZ /\
+  convert A B C ABC /\
+  convert P Q R PQR /\
   add XYZ ABC PQR.
 
 #assert
   (pi x\ pi y\ pi z\
    pi a\ pi b\ pi c\
-     (bool x, bool y, bool z, bool a, bool b, bool c) => valid x y z a b c).
+     (bool x /\ bool y /\ bool z /\ bool a /\ bool b /\ bool c) => valid x y z a b c).

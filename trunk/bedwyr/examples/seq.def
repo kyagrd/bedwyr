@@ -1,19 +1,19 @@
 %% A simple interpreter for the minimal logic of hereditary Harrop
 %% formulas.
 
-%% To use this intrepreter, you need to 
+%% To use this intrepreter, you need to
 %%   #include "seq.def".
 %% Then you need to pick a name of a binary predicate to use to store
 %% clauses: first argument is the head and the second is the body.
 %% Then, for every predicate, say, q, of the object-logic, insert the
 %% declaration
 %%     atom (q X Y Z).   <- the arity may vary, of course.
-%% Finally, call the goal  
+%% Finally, call the goal
 %%     prv Prog Goal.
-%% in order to attempt the proof of the Goal from the logic program 
+%% in order to attempt the proof of the Goal from the logic program
 %% encoded in Prog.
 
-% Object logic is freely generated from 
+% Object logic is freely generated from
 %   tt, and, <- , -> , forall, exists
 
 % Notice that the interpreter does not use lists: conjunctions can be
@@ -22,24 +22,24 @@
 prv Prog B := seq Prog tt B.
 
 % ?- seq Prog List Goal.
-% Attempts to prove the Goal from the assumptions in List and 
-% the logic programming clauses described by Prog. 
+% Attempts to prove the Goal from the assumptions in List and
+% the logic programming clauses described by Prog.
 
 % Do right rules first.
 
 seq Prog L tt.
-seq Prog L (and B C)  := seq Prog L B, seq Prog L C.
+seq Prog L (and B C)  := seq Prog L B /\ seq Prog L C.
 seq Prog L (G <- D)   := seq Prog (and D L) G.
 seq Prog L (D -> G)   := seq Prog (and D L) G.
 seq Prog L (forall B) := nabla x\ seq Prog L (B x).
 seq Prog L (exists B) := sigma x\ seq Prog L (B x).
 
 % Pick a formula on which to backchain.
-seq Prog L A := atom A, (bc Prog L L A; (Prog A Body, seq Prog L Body)).
+seq Prog L A := atom A /\ (bc Prog L L A \/ (Prog A Body /\ seq Prog L Body)).
 
 % Backchaining is done in a focused fashion.
 bc Prog L A A := atom A.
-bc Prog L (and X Y)  A := bc Prog L X A ; bc Prog L Y A.
-bc Prog L (D <- G)   A := bc Prog L D A, seq Prog L G.
-bc Prog L (G -> D)   A := bc Prog L D A, seq Prog L G.
+bc Prog L (and X Y)  A := bc Prog L X A \/ bc Prog L Y A.
+bc Prog L (D <- G)   A := bc Prog L D A /\ seq Prog L G.
+bc Prog L (G -> D)   A := bc Prog L D A /\ seq Prog L G.
 bc Prog L (forall D) A := sigma t\ bc Prog L (D t) A.

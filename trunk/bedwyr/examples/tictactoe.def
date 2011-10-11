@@ -35,18 +35,18 @@ nomoves L := somemove L => false.
 
 % tie Board
 % True if the Board is a tie.
-tie L := nomoves L, nowinner L.
+tie L := nomoves L /\ nowinner L.
 
 % xwins Board
 % True if x has a winning strategy for Board, assuming o plays first.
 xwins L := winner x L.
-xwins L := pi K\ move L o K => (nowinner K, sigma M\ move K x M, xwins M).
+xwins L := pi K\ move L o K => (nowinner K /\ sigma M\ move K x M /\ xwins M).
 
 % owins Board
 % True if o has a winning strategy for Board, assuming o plays first.
 inductive owins L := winner o L.
-inductive owins L := nowinner L, sigma K\ move L o K,
-    (winner o K ; somemove K, pi M\ move K x M => owins M).
+inductive owins L := nowinner L /\ sigma K\ move L o K /\
+    (winner o K \/ somemove K /\ pi M\ move K x M => owins M).
 
 % These definitions are not stratified, but might be nice.
 % Note: they would require that move L o K checks that x has not won,
@@ -57,33 +57,33 @@ inductive owins L := nowinner L, sigma K\ move L o K,
 % notxwins Board
 % True if x does not have a winning strategy for Board, assuming o plays first.
 % It would be nice to use (pi L\ xwins L => false), but xwins is level 1.
-coinductive notxwins L := tie L ; winner o L.
-coinductive notxwins L := nowinner L, sigma K\ move L o K,
-                (tie K ; winner o K ; pi M\ move K x M => notxwins M).
+coinductive notxwins L := tie L \/ winner o L.
+coinductive notxwins L := nowinner L /\ sigma K\ move L o K /\
+                (tie K \/ winner o K \/ pi M\ move K x M => notxwins M).
 
 % play Board
 % This predicate lets you play tic-tac-toe against the computer.
 % Given a board, the computer attempts to make a move in a winning
 % strategy. If this is not possible, it attempts to make a move in a
 % non-losing strategy. If this is not possible, it just makes some move.
-play L' := convert L L', nowinner L, sigma K\
-    ((move L o K, play_to_win L K, print "Playing to win...") ;
-     (move L o K, play_to_tie L K, print "Playing to tie...") ;
-     (move L o K, print "Playing to lose...")),
-    convert K K', print K'.
+play L' := convert L L' /\ nowinner L /\ sigma K\
+    ((move L o K /\ play_to_win L K /\ print "Playing to win...") \/
+     (move L o K /\ play_to_tie L K /\ print "Playing to tie...") \/
+     (move L o K /\ print "Playing to lose...")) /\
+    convert K K' /\ print K'.
 
-play_to_win L K := winner o K ; somemove K, pi M\ move K x M => owins M.
+play_to_win L K := winner o K \/ somemove K /\ pi M\ move K x M => owins M.
 
-play_to_tie L K := tie K ; pi M\ move K x M => notxwins M.
+play_to_tie L K := tie K \/ pi M\ move K x M => notxwins M.
 
-#assert (convert Board (board (row x x x) (row b b b) (row b b b)),
-         xwins Board).
-        
-#assert (convert Board (board (row x x b) (row b b b) (row b b b)),
+#assert (convert Board (board (row x x x) (row b b b) (row b b b)) /\
          xwins Board).
 
-#assert (convert Board (board (row x b o) (row b b b) (row b b b)),
+#assert (convert Board (board (row x x b) (row b b b) (row b b b)) /\
+         xwins Board).
+
+#assert (convert Board (board (row x b o) (row b b b) (row b b b)) /\
          notxwins Board).
 
-#assert (convert Board (board (row b b b) (row b b b) (row b b b)),
+#assert (convert Board (board (row b b b) (row b b b) (row b b b)) /\
          notxwins Board).
