@@ -1,9 +1,12 @@
+all: src/bedwyr
 
-all: src/Makefile
+.PHONY: src/bedwyr
+src/bedwyr: src/Makefile
 	make -C src bedwyr
 
 src/Makefile: src/Makefile.in configure
 	./configure
+
 configure: configure.ac
 	autoconf
 
@@ -12,22 +15,21 @@ XPL = list.def internal/scoping.def internal/checks.def \
       3bits.def lambda.def progs.def \
       graph-alt.def minmax.def multisim.def \
       tictactoe.def \
-	  pi/pi_trace.def pi/corr-assert.def pi/pi_modal.def \
-	  pi/pi_mini.def pi/pi_nat.def pi/pi_church.def
+      pi/pi_trace.def pi/corr-assert.def pi/pi_modal.def \
+      pi/pi_mini.def pi/pi_nat.def pi/pi_church.def
 
 .PHONY: tests
 test: src/Makefile
 	@echo Testing the core LLambda library
 	make -C src test
 	@echo Testing bedwyr on examples
-	make -C src bedwyr
-	@time $(MAKE) examples_tests
+	@bash -c 'time $(MAKE) examples_tests'
 
 .PHONY: examples_tests
-examples_tests:
-	for i in $(XPL) ; do \
+examples_tests: src/bedwyr
+	@for i in $(XPL) ; do \
 	  echo "==== Running tests in $$i ====" ; \
-	  if src/bedwyr -t -I examples/$$i ; then echo "All done." ; else break ; fi ; \
+	  if src/bedwyr -t -I examples/$$i ; then echo "All done." ; else echo "Error." ; break ; fi ; \
 	done
 
 .PHONY: doc
@@ -38,7 +40,8 @@ clean:
 	make -C src clean
 	make -C doc clean
 
-VERSION=1.2
+export VERSION=1.2
+export BUILD=$(shell (svn info 2>&- || git svn info 2>&-) | grep Revision | sed -e "s/Revision: //")
 D=bedwyr-$(VERSION)
 dist: configure doc
 	find . -name '*~' -exec rm \{\} \;
