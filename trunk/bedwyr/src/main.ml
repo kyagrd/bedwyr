@@ -21,7 +21,7 @@ exception Invalid_command
 exception Assertion_failed
 
 let welcome_msg =
-  "Bedwyr welcomes you.
+  "Bedwyr " ^ Config.version ^ " (build " ^ Config.build ^ ") welcomes you.
 
 This software is under GNU Public License.
 Copyright (c) 2005-2011 Slimmer project.
@@ -48,8 +48,8 @@ session.
 #reload.                             Reload the current session.
 #reset.                              Clears the current session.
 #show_table [pred].                  Displays the predicate's table.
-#save_table [pred] [file].           Save the predicate's table in a file. 
-#equivariant [flag].                 Turn equivariant tabling on/off (flag=on/off). 
+#save_table [pred] [file].           Save the predicate's table in a file.
+#equivariant [flag].                 Turn equivariant tabling on/off (flag=on/off).
 Or type in a formula to ask for its verification.
 For more information (including commands relevant in definition mode),
 see the user guide.
@@ -176,7 +176,7 @@ and command lexbuf = function
   (* Session management *)
   | "include",[f] ->
       let f = Term.get_name f in
-      let not_included fname = 
+      let not_included fname =
           if (List.mem fname !inclfiles) then
              false
           else (
@@ -184,8 +184,8 @@ and command lexbuf = function
              true
           )
        in
-        if not_included f then input_from_file f else () 
-        
+        if not_included f then input_from_file f else ()
+
 
   | "reset",[] -> inclfiles := [] ; session := [] ; load_session ()
   | "reload",[] -> load_session ()
@@ -218,7 +218,7 @@ and command lexbuf = function
 
   (* Tabling-related commands *)
   | "equivariant",[d] ->
-      let b = 
+      let b =
         begin match Term.observe d with
           | Term.Var v when v==System.Logic.var_on -> true
           | Term.Var v when v==System.Logic.var_truth -> true
@@ -227,7 +227,7 @@ and command lexbuf = function
           | _ -> raise Invalid_command
         end
       in
-        Index.set_eqvt b 
+        Index.set_eqvt b
 
   | "show_table",[p] ->
       System.show_table p
@@ -245,15 +245,15 @@ and command lexbuf = function
       with
         | Some t ->
             Table.reset t
-        | None -> 
+        | None ->
             Format.printf "Table not found.\n"
       end
 
    (* save the content of a table to a file. An exception is thrown if *)
    (* file already exists. *)
-   | "save_table",[p;f] -> 
+   | "save_table",[p;f] ->
       let f = Term.get_name f in
-          System.save_table p f  
+          System.save_table p f
 
   (* Testing commands *)
   | "assert",[query] ->

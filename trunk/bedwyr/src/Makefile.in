@@ -17,7 +17,7 @@ OCAMLLEX = @OCAMLLEX@
 CORE_ML    = ndcore/term.ml ndcore/norm.ml ndcore/pprint.ml ndcore/unify.ml \
              ndcore/index.ml
 TEST_ML    = ndcore/tests/oUnit.ml ndcore/tests/test.ml
-BEDWYR_ML  = table.ml system.ml parser.ml lexer.ml prover.ml main.ml
+BEDWYR_ML  = table.ml system.ml parser.ml lexer.ml prover.ml config.ml main.ml
 
 CORE_SRC   = $(CORE_ML)   $(wildcard $(CORE_ML:.ml=.mli))
 BEDWYR_SRC = $(BEDWYR_ML) $(wildcard $(BEDWYR_ML:.ml=.mli))
@@ -51,6 +51,10 @@ depend: $(CORE_SRC) $(BEDWYR_SRC) $(TEST_ML)
 	  >> $(<:.mly=.mli)
 %.ml: %.mll
 	$(OCAMLLEX) $<
+%.ml: %.ml.in
+	@sed -e 's|{VERSION}|$(VERSION)|'\
+	  -e 's|{BUILD}|$(BUILD)|'\
+	  $^ > $@
 
 # TARGETS FOR CORE LLAMBDA MODULES
 
@@ -59,7 +63,7 @@ test: ndcore/test
 ndcore/test: $(TEST)
 	$(OCAMLL) unix.$(cma) $(TEST) -o ndcore/test
 doc:
-	$(OCAMLDOC) -stars -d ../doc -html $(BEDWYR_SRC)
+	$(OCAMLDOC) -stars -d ../doc -html $(CORE_SRC) $(BEDWYR_SRC)
 
 # MISC
 
