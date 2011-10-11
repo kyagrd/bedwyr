@@ -2,27 +2,27 @@
 %% Some experiments encoding ats into Bedwyr.
 
 % Display all the one-step transitions of the ats
-display One := One P A Q, print (One P A Q), false.
+display One := One P A Q /\ print (One P A Q) /\ false.
 
 % Determine if transition system is determinate or not.
 determinate One :=  pi P\ pi A\ pi Q\ pi R\ One P A Q =>  One P A R => Q = R.
 
 coinductive sim One P Q :=
-   pi P1\ pi A\ One P A P1 => sigma Q1\ One Q A Q1 & sim One P1 Q1.
+   pi P1\ pi A\ One P A P1 => sigma Q1\ One Q A Q1 /\ sim One P1 Q1.
 
 coinductive bisim One P Q :=
-   (pi P1\ pi A\ One P A P1 => sigma Q1\ One Q A Q1 & bisim One P1 Q1) &
-   (pi Q1\ pi A\ One Q A Q1 => sigma P1\ One P A P1 & bisim One P1 Q1).
+   (pi P1\ pi A\ One P A P1 => sigma Q1\ One Q A Q1 /\ bisim One P1 Q1) /\
+   (pi Q1\ pi A\ One Q A Q1 => sigma P1\ One P A P1 /\ bisim One P1 Q1).
 
 %% ATS 0:  a.b
 
 one0 p a q.
 one0 q b r.
 
-#assert (sim one0 p p, sim one0 q q, sim one0 r r).
-#assert_not (sim one0 p q; sim one0 q p;
-             sim one0 p r; sim one0 r p;
-             sim one0 q r; sim one0 r q).
+#assert (sim one0 p p /\ sim one0 q q /\ sim one0 r r).
+#assert_not (sim one0 p q \/ sim one0 q p \/
+             sim one0 p r \/ sim one0 r p \/
+             sim one0 q r \/ sim one0 r q).
 
 %% ATS 1: a.b + a.c vs a.(b+c)
 one1 p a q.
@@ -42,8 +42,8 @@ one2 p a t.
 one2 q a p.
 one2 s a s.
 
-#assert (sim one2 s s, sim one2 q s, sim one2 p s, sim one2 s p).
-#assert_not (sim one2 s t, bisim one2 p s).
+#assert (sim one2 s s /\ sim one2 q s /\ sim one2 p s /\ sim one2 s p).
+#assert_not (sim one2 s t /\ bisim one2 p s).
 
 %% ATS 3:  (a.b + a.c) vs a.(b + c)
 one3 p a q.
@@ -54,8 +54,8 @@ one3 v a w.
 one3 w b x.
 one3 w c y.
 
-#assert (sim one3 p v, sim one3 s w).
-#assert_not (sim one3 v p; sim one3 w s).
+#assert (sim one3 p v /\ sim one3 s w).
+#assert_not (sim one3 v p \/ sim one3 w s).
 
 %% ATS 4: (a.b.c + a.b.d) vs a.(b.c + b.d)
 one4  0 a  1.
@@ -70,8 +70,8 @@ one4  8 b 10.
 one4  9 c 11.
 one4 10 d 12.
 
-#assert (sim one4 12 6, sim one4 10 5).
-#assert_not (sim one4 10 3; sim one4 7 0).
+#assert (sim one4 12 6 /\ sim one4 10 5).
+#assert_not (sim one4 10 3 \/ sim one4 7 0).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -82,27 +82,27 @@ one4 10 d 12.
 % Membership in a list.
 % This predicate always succeeds with a boolean value.
 member X nil        ff.
-member X (cons Y L) Bool := (X = Y => false) & member X L Bool.
+member X (cons Y L) Bool := (X = Y => false) /\ member X L Bool.
 member X (cons X L) tt.
 
 % Co-induction with History checking.  Simply check that goal appears
 % before.  If so, succeed.  Here, pr is for pairing.
 
 cyclic R History P Q :=
-   member (pr P Q) History Bool &
-   (Bool = tt;  % A cycle observed so succeed - coinduction
-    (Bool = ff & (R (cyclic R (cons (pr P Q) History)) P Q))).
+   member (pr P Q) History Bool /\
+   (Bool = tt \/ % A cycle observed so succeed - coinduction
+    (Bool = ff /\ (R (cyclic R (cons (pr P Q) History)) P Q))).
 
 cycsim One P Q :=
    cyclic
-     (S\ P\ Q\ (pi P1\ pi A\ One P A P1 => sigma Q1\ One Q A Q1 & S P1 Q1))
+     (S\ P\ Q\ (pi P1\ pi A\ One P A P1 => sigma Q1\ One Q A Q1 /\ S P1 Q1))
      nil P Q.
 
 cycbisim One P Q :=
    cyclic
      (S\ P\ Q\
-        ((pi P1\ pi A\ One P A P1 => sigma Q1\ One Q A Q1 & S P1 Q1) &
-         (pi Q1\ pi A\ One Q A Q1 => sigma P1\ One P A P1 & S P1 Q1)))
+        ((pi P1\ pi A\ One P A P1 => sigma Q1\ One Q A Q1 /\ S P1 Q1) /\
+         (pi Q1\ pi A\ One Q A Q1 => sigma P1\ One P A P1 /\ S P1 Q1)))
      nil P Q.
 
 one5 p a p.

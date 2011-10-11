@@ -1,11 +1,11 @@
 #include "seq.def".
 
-% Simple union of two binary relations.  These can be used to 
+% Simple union of two binary relations.  These can be used to
 % join together two logic programming specifications.
 
-orelse P Q X Y := P X Y ; Q X Y.
+orelse P Q X Y := P X Y \/ Q X Y.
 
-% If you want to form the union of these two "logic programs", 
+% If you want to form the union of these two "logic programs",
 % use either
 %    (orelse exprog infer)
 % or the lambda-expression

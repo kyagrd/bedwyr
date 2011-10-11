@@ -6,7 +6,7 @@
 % cleaned up. Type inference of the match construct is not yet written.
 %
 % vi: foldmethod=marker
-% 
+%
 % *** Base Types ***
 % int   : bty
 % bool  : bty
@@ -26,7 +26,7 @@
 % let   : tm -> (tm -> tm) -> tm
 % cons  : tm -> tm -> tm
 % match : (pt*tm) list -> tm
-% 
+%
 % *** Patterns ***
 % ptcons  : pt -> pt -> pt
 % ptcst   : nm -> pt
@@ -45,16 +45,16 @@ concat (cons X T) L (cons X O) := concat T L O.
 % [remove X LX L] iff [LX] is [L] where [X] has been inserted somewhere;
 % note that [LX=L] is impossible here.
 remove X (cons X L) L.
-remove X (cons Y L) (cons Y L') := (Y=X => false), remove X L L'.
+remove X (cons Y L) (cons Y L') := (Y=X => false) /\ remove X L L'.
 
 % remove_all removes several (or none) occurences of an item in a list
 remove_all X (cons X L) L' := remove_all X L L'.
-remove_all X (cons Y L) (cons Y L') := (Y=X => false), remove_all X L L'.
+remove_all X (cons Y L) (cons Y L') := (Y=X => false) /\ remove_all X L L'.
 remove_all X nil nil.
 
 % [minus A B S] iff S = A\B
 minus L nil L.
-minus L (cons X M) L' := remove_all X L L'', minus L'' M L'.
+minus L (cons X M) L' := remove_all X L L'' /\ minus L'' M L'.
 
 % {{{
 % ----- Weak call-by-value reduction
@@ -62,16 +62,16 @@ minus L (cons X M) L' := remove_all X L L'', minus L'' M L'.
 eval G (cst C) (cst C).
 eval G (var X) M := mem (assoc X M) G.
 eval G (abs F) (abs F).
-eval G (app M N) V := eval G M (abs F), eval G (F N) V.
-eval G (let D B) V := eval G D VD,
+eval G (app M N) V := eval G M (abs F) /\ eval G (F N) V.
+eval G (let D B) V := eval G D VD /\
                       nabla x\ eval (cons (assoc x VD) G) (B (var x)) V.
-eval G (cons M N) (cons VM VN) := eval G M VM, eval G N VN.
-eval G (match X CL) V := mem (assoc C B) CL, extract C X B B', eval G B' V.
+eval G (cons M N) (cons VM VN) := eval G M VM /\ eval G N VN.
+eval G (match X CL) V := mem (assoc C B) CL /\ extract C X B B' /\ eval G B' V.
 
 % [extract P M B] filters the term M through the pattern P and applies
 % the extracted sub-terms to the body B, yielding B'.
 extract hole M B (app B M).
-extract (ptcons P Q) (cons M N) B B'' := extract P M B B', extract Q N B' B''.
+extract (ptcons P Q) (cons M N) B B'' := extract P M B B' /\ extract Q N B' B''.
 extract (ptcst C) (cst C) B B.
 
 % ----- Testing the evaluation
@@ -98,13 +98,13 @@ typeof G (var X) T := mem (assoc X T) G.
 typeof G (abs F) (arrow T1 T2) :=
   % TODO apply x or var x ???
   nabla x\ typeof (cons (assoc x T1) G) (F (var x)) T2.
-typeof G (app M N) T := typeof G M (arrow T1 T), typeof G N T1.
-typeof G (let D B) T := typeof G D TD,
-                        print (type D TD),
+typeof G (app M N) T := typeof G M (arrow T1 T) /\ typeof G N T1.
+typeof G (let D B) T := typeof G D TD /\
+                        print (type D TD) /\
                         nabla x\ typeof (cons (assoc x TD) G) (B x) T.
-typeof G (cons M N) (times TM TN) := typeof G M TM, typeof G N TN.
+typeof G (cons M N) (times TM TN) := typeof G M TM /\ typeof G N TN.
 typeof G (match X CL) T :=
-  typeof G X TX,
+  typeof G X TX /\
   pi pat\ pi body\ mem (assoc pat body) CL =>
     extract_typeof (cons (assoc pat TX) nil) G body T.
 % The last clause can make the spec loop...
@@ -113,8 +113,8 @@ typeof G (match X CL) T :=
 % so it loops there too, sometimes.
 % (V=abs F) limits the damage a bit...
 typeof G V (tyabs T) :=
-  false,
-  V = abs F,
+  false /\
+  V = abs F /\
   nabla x\ typeof G V (T x).
 
 extract_typeof (cons (assoc hole TH) L) G (abs B) T :=
@@ -122,7 +122,7 @@ extract_typeof (cons (assoc hole TH) L) G (abs B) T :=
   % [var x] causes a not-llambda more often, possibly
   nabla x\ extract_typeof L (cons (assoc x TH) G) (B (var x)) T.
 extract_typeof (cons (assoc (ptcst X) TX) L) G B T :=
-  cst_typeof X TX, extract_typeof L G B T.
+  cst_typeof X TX /\ extract_typeof L G B T.
 extract_typeof (cons (assoc (ptcons P Q) (times TP TQ)) L) G B T :=
   extract_typeof (cons (assoc P TP) (cons (assoc Q TQ) L)) G B T.
 extract_typeof nil G B T := typeof G B T.
@@ -133,7 +133,7 @@ extract_typeof nil G B T := typeof G B T.
                         nil (abs x\x) bool).
 #assert (typeof nil
                 (match (cons (cst true) (cst false))
-                  (cons (assoc (ptcons (ptcst true) hole) (abs x\ x)) 
+                  (cons (assoc (ptcons (ptcst true) hole) (abs x\ x))
                    nil))
                 bool).
 
@@ -167,55 +167,55 @@ subst BV (tyvar Y) X V (tyvar Y) := X=Y => false.
 
 subst BV (tycst C) X V (tycst C).
 subst BV (times A B) X V (times A' B') :=
-  subst BV A X V A',
+  subst BV A X V A' /\
   subst BV B X V B'.
 subst BV (arrow A B) X V (arrow A' B') :=
-  subst BV A X V A',
+  subst BV A X V A' /\
   subst BV B X V B'.
 subst BV nil X V nil.
 subst BV (cons H L) X V (cons H' L') :=
-  subst BV H X V H',
+  subst BV H X V H' /\
   subst BV L X V L'.
 subst BV (assoc N B) X V (assoc N B') :=
   subst BV B X V B'.
 subst BV (H+L) X V (H'+L') :=
-  subst BV H X V H',
+  subst BV H X V H' /\
   subst BV L X V L'.
 subst BV (A=B) X V (A'=B') :=
-  subst BV A X V A',
+  subst BV A X V A' /\
   subst BV B X V B'.
 subst BV (instantiate (A=B)) X V (instantiate (A'=B')) :=
-  subst BV A X V A',
+  subst BV A X V A' /\
   subst BV B X V B'.
 subst BV (type G M T) X V (type G' M T') :=
-  subst BV G X V G',
+  subst BV G X V G' /\
   subst BV T X V T'.
 subst BV (generalize G T Y) X V (generalize G' T' Y) :=
-  subst BV G X V G',
+  subst BV G X V G' /\
   subst BV T X V T'.
 subst BV (result T) X V (result T') :=
   subst BV T X V T'.
 
 occurs X (tyvar X).
-occurs X (arrow M N) := occurs X M; occurs X N.
-occurs X (times M N) := occurs X M; occurs X N.
+occurs X (arrow M N) := occurs X M \/ occurs X N.
+occurs X (times M N) := occurs X M \/ occurs X N.
 occurs X (tyabs M) := nabla x\ occurs X (M x).
 
 % List of free type variables in a (list of) types.
 freetyvars (tyvar T) (cons T nil).
 freetyvars (tycst C) nil.
-freetyvars (arrow A B) L := freetyvars A LA, freetyvars B LB, concat LA LB L.
-freetyvars (times A B) L := freetyvars A LA, freetyvars B LB, concat LA LB L.
+freetyvars (arrow A B) L := freetyvars A LA /\ freetyvars B LB /\ concat LA LB L.
+freetyvars (times A B) L := freetyvars A LA /\ freetyvars B LB /\ concat LA LB L.
 freetyvars (tyabs F) L :=
   nabla x\ sigma LX\
-    freetyvars (F (tyvar x)) LX, minus LX (cons x nil) L.
+    freetyvars (F (tyvar x)) LX /\ minus LX (cons x nil) L.
 
 #assert (freetyvars
  (tyabs x\ tyabs y\ arrow (tyvar z) (arrow x (tyvar t)))
  (cons z (cons t nil))).
 
 freetyvars nil nil.
-freetyvars (cons A B) L := freetyvars A LA, freetyvars B LB, concat LA LB L.
+freetyvars (cons A B) L := freetyvars A LA /\ freetyvars B LB /\ concat LA LB L.
 freetyvars (assoc X T) L := freetyvars T L.
 
 % Return the mgu for a list of constraints, which are either:
@@ -231,10 +231,10 @@ infer (result X) (result X).
 % >>>>>>>>> Treat type unifications
 % This never generates new (generic) variables.
 % TODO occur-check (btw, is it needed in the absence of recursion ?)
-infer ((tyvar V = T)+L) S := subst nil L V T L', infer L' S.
+infer ((tyvar V = T)+L) S := subst nil L V T L' /\ infer L' S.
 infer ((T = tyvar V)+L) S :=
-  (pi t\ T = tyvar t => false), % only for avoiding multiple successes
-  subst nil L V T L', infer L' S.
+  (pi t\ T = tyvar t => false) /\ % only for avoiding multiple successes
+  subst nil L V T L' /\ infer L' S.
 infer ((tycst C = tycst C)+L) S := infer L S.
 infer ((times L1 L2 = times R1 R2)+L) S := infer ((L1=R1)+((L2=R2)+L)) S.
 infer ((arrow L1 L2 = arrow R1 R2)+L) S := infer ((L1=R1)+((L2=R2)+L)) S.
@@ -244,13 +244,13 @@ infer ((arrow L1 L2 = arrow R1 R2)+L) S := infer ((L1=R1)+((L2=R2)+L)) S.
 infer ((instantiate (tyabs A = B))+L) (abs S) :=
   nabla x\ infer ((instantiate (A (tyvar x) = B))+L) (S x).
 infer ((instantiate (A=B))+L) S :=
-  (pi x\ tyabs x = A => false), infer ((A=B)+L) S.
+  (pi x\ tyabs x = A => false) /\ infer ((A=B)+L) S.
 
 % >>>>>>>>> Treat typing judgements
 
-infer ((type G (cst C) T)+L) S := cst_typeof C TC, infer ((T = tycst TC)+L) S.
+infer ((type G (cst C) T)+L) S := cst_typeof C TC /\ infer ((T = tycst TC)+L) S.
 infer ((type G (var V) T)+L) S :=
-  mem (assoc V TV) G, infer ((instantiate (TV=T))+L) S.
+  mem (assoc V TV) G /\ infer ((instantiate (TV=T))+L) S.
 infer ((type G (app M N) T)+L) (abs S) :=
   nabla t\ infer ((type G N (tyvar t))+
                  ((type G M (arrow (tyvar t) T))+L))
@@ -276,18 +276,18 @@ infer ((type G (let D B) T)+L) (abs t\ abs tgen\ S t tgen) :=
 % >>>>>>>>> Type generalization
 
 infer ((generalize G T X)+L) S :=
-  freetyvars T FVT,
-  freetyvars G FVG,
-  minus FVT FVG GV,
-  abstract_over GV T TG,
-  subst nil L X TG L',
+  freetyvars T FVT /\
+  freetyvars G FVG /\
+  minus FVT FVG GV /\
+  abstract_over GV T TG /\
+  subst nil L X TG L' /\
   infer L' S.
 
 abstract_over nil T T.
 abstract_over (cons X VARS) T TG :=
-  abstract_over VARS T T',
-  (((occurs X T' => false), TG=T');
-   (occurs X T', (nabla x\ subst nil T' X x (T'' x)), TG = tyabs T'')).
+  abstract_over VARS T T' /\
+  (((occurs X T' => false) /\ TG=T') \/
+   (occurs X T' /\ (nabla x\ subst nil T' X x (T'' x)) /\ TG = tyabs T'')).
 
 #assert (occurs x (arrow (tyvar x) (tycst bool))).
 #assert (occurs y (arrow (tyvar x) (tycst bool)) => false).
@@ -302,15 +302,15 @@ abstract_over (cons X VARS) T TG :=
 gc (result X) X.
 gc (abs I) O :=
   nabla x\
-    gc (I x) (I' x),
-    ((occurs x (I' x), O = abs I') ;
-     ((occurs x (I' x) => false), O = I' x)).
+    gc (I x) (I' x) /\
+    ((occurs x (I' x) /\ O = abs I') \/
+     ((occurs x (I' x) => false) /\ O = I' x)).
 
 itest N T S :=
-  test_term N T, infer (abs x\ (type nil T x) + result x) S',
-  gc S' S,
+  test_term N T /\ infer (abs x\ (type nil T x) + result x) S' /\
+  gc S' S /\
   % Now evaluate the term, infer its type again and check consistency.
-  eval nil T T', infer (abs x\ (type nil T' x) + result x) S'',
+  eval nil T T' /\ infer (abs x\ (type nil T' x) + result x) S'' /\
   gc S'' S.
 
 test_term 0 (cons (cst true) (cst false)).

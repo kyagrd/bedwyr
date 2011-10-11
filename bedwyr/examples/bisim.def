@@ -11,10 +11,10 @@ next q1 a q1.
 next q1 b q2.
 next q2 a q1.
 
-coinductive bisim P Q := 
-  (pi P1\ pi A\ next P A P1 => 
-                   sigma Q1\ next Q A Q1 & bisim P1 Q1) &
-  (pi Q1\ pi A\ next Q A Q1 => 
-                   sigma P1\ next P A P1 & bisim P1 Q1).
+coinductive bisim P Q :=
+  (pi P1\ pi A\ next P A P1 =>
+                   sigma Q1\ next Q A Q1 /\ bisim P1 Q1) /\
+  (pi Q1\ pi A\ next Q A Q1 =>
+                   sigma P1\ next P A P1 /\ bisim P1 Q1).
 
 #assert (bisim p0 q0).

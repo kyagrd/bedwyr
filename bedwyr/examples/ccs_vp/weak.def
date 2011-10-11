@@ -3,34 +3,34 @@
 % Early & Late Weak Transition
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-wtrans P tau Q := P = Q; sigma R\ trans P tau R, wtrans R tau Q.				% =>:->*
-wtrans P (i C V) Q := sigma R\ sigma T\ wtrans P tau R, trans R (i C V) T, wtrans T tau Q.	% =>-C?V->=>
-wtrans P (o C V) Q := sigma R\ sigma T\ wtrans P tau R, trans R (o C V) T, wtrans T tau Q.	% =>-C!V->=>
+wtrans P tau Q := P = Q \/ sigma R\ trans P tau R /\ wtrans R tau Q.				% =>:->*
+wtrans P (i C V) Q := sigma R\ sigma T\ wtrans P tau R /\ trans R (i C V) T /\ wtrans T tau Q.	% =>-C?V->=>
+wtrans P (o C V) Q := sigma R\ sigma T\ wtrans P tau R /\ trans R (o C V) T /\ wtrans T tau Q.	% =>-C!V->=>
 
-lwtrans P tau Q := P = Q; sigma R\ ltrans P tau R, lwtrans R tau Q.				% =>:->*
-lwtrans P (i C) Q := sigma R\ lwtrans P tau R, ltrans R (i C) Q.				% =>-C?->
-lwtrans P (o C V) Q := sigma R\ sigma T\ lwtrans P tau R, ltrans R (o C V) T, lwtrans T tau Q.	% =>-C!V->=>
+lwtrans P tau Q := P = Q \/ sigma R\ ltrans P tau R /\ lwtrans R tau Q.				% =>:->*
+lwtrans P (i C) Q := sigma R\ lwtrans P tau R /\ ltrans R (i C) Q.				% =>-C?->
+lwtrans P (o C V) Q := sigma R\ sigma T\ lwtrans P tau R /\ ltrans R (o C V) T /\ lwtrans T tau Q.	% =>-C!V->=>
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Early & Late Weak Bisimulation
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-coinductive wbisim P Q := 
-	    (pi R\ pi A\ trans P A R => sigma S\ wtrans Q A S, wbisim R S),
-	    (pi S\ pi A\ trans Q A S => sigma R\ wtrans P A R, wbisim R S).
+coinductive wbisim P Q :=
+	    (pi R\ pi A\ trans P A R => sigma S\ wtrans Q A S /\ wbisim R S) /\
+	    (pi S\ pi A\ trans Q A S => sigma R\ wtrans P A R /\ wbisim R S).
 
-coinductive lwbisim P Q := 
-	    (pi R\ pi C\ pi V\ ltrans P (o C V) R => sigma S\ lwtrans Q (o C V) S, lwbisim R S),
-	    (pi R\ ltrans P tau R => sigma S\ lwtrans Q tau S, lwbisim R S),
-	    (pi R\ pi C\ ltrans P (i C) R => sigma S\ ltrans Q (i C) S, pi V\ sigma T\ lwtrans (S V) tau T, lwbisim (R V) T),
-	    (pi S\ pi C\ pi V\ ltrans Q (o C V) S => sigma R\ lwtrans P (o C V) R, lwbisim R S),
-	    (pi S\ ltrans Q tau S => sigma R\ lwtrans P tau R, lwbisim R S),
-	    (pi S\ pi C\ ltrans Q (i C) S => sigma R\ ltrans P (i C) R, pi V\ sigma T\ lwtrans (R V) tau T, lwbisim T (S V)).
+coinductive lwbisim P Q :=
+	    (pi R\ pi C\ pi V\ ltrans P (o C V) R => sigma S\ lwtrans Q (o C V) S /\ lwbisim R S) /\
+	    (pi R\ ltrans P tau R => sigma S\ lwtrans Q tau S /\ lwbisim R S) /\
+	    (pi R\ pi C\ ltrans P (i C) R => sigma S\ ltrans Q (i C) S /\ pi V\ sigma T\ lwtrans (S V) tau T /\ lwbisim (R V) T) /\
+	    (pi S\ pi C\ pi V\ ltrans Q (o C V) S => sigma R\ lwtrans P (o C V) R /\ lwbisim R S) /\
+	    (pi S\ ltrans Q tau S => sigma R\ lwtrans P tau R /\ lwbisim R S) /\
+	    (pi S\ pi C\ ltrans Q (i C) S => sigma R\ ltrans P (i C) R /\ pi V\ sigma T\ lwtrans (R V) tau T /\ lwbisim T (S V)).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Useful Predicates
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-wbc I J := pdef I P, pdef J Q, wbisim P Q.
+wbc I J := pdef I P /\ pdef J Q /\ wbisim P Q.
 
-lwbc I J := pdef I P, pdef J Q, lwbisim P Q.
+lwbc I J := pdef I P /\ pdef J Q /\ lwbisim P Q.

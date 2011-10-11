@@ -1,10 +1,10 @@
 % Checking correspondence assertions for pi-processes
-% 
+%
 % We extends the language of finite pi calculus with assertions of the
-% form "begin L P" and "end L P", where L is a message. 
+% form "begin L P" and "end L P", where L is a message.
 % The process (begin L P) (likewise, (end L P)) makes a transition
 % labelled with (begin L) and then behaves like P.
-% 
+%
 % Correspondence assertion is a statement about the traces of a process:
 %   A trace s is a correspondence if and only if every (end L) has
 %   a corresponding (begin L) earlier in the trace. A process P is
@@ -31,7 +31,7 @@ onep (in X M) (dn X) M.
 % free output
 one (out X Y P) (up X Y) P.
 
-% tau 
+% tau
 one  (taup P) tau P.
 
 % assertions
@@ -53,44 +53,44 @@ onep (par P Q) A (x\par P (N x)) := onep Q A N.
 one  (nu x\P x) A (nu x\Q x)      := nabla x\ one  (P x) A (Q x).
 onep (nu x\P x) A (y\ nu x\Q x y) := nabla x\ onep (P x) A (y\ Q x y).
 
-% open 
+% open
 onep (nu x\M x) (up X) N := nabla y\ one (M y) (up X y) (N y).
 onep (nu x\M x) bgn N := nabla y\ one (M y) (bgn y) (N y).
 onep (nu x\M x) nd N := nabla y\ one (M y) (nd y) (N y).
 
 % close
 one (par P Q) tau (nu y\ par (M y) (N y)) :=
-  sigma X\ onep P (dn X) M & onep Q (up X) N.
+  sigma X\ onep P (dn X) M /\ onep Q (up X) N.
 one (par P Q) tau (nu y\ par (M y) (N y)) :=
-  sigma X\ onep P (up X) M & onep Q (dn X) N.
+  sigma X\ onep P (up X) M /\ onep Q (dn X) N.
 
 % comm
 one (par P Q) tau (par R T) :=
-  sigma X\ sigma Y\ sigma M\ onep P (dn X) M & one Q (up X Y) T & R = (M Y).
+  sigma X\ sigma Y\ sigma M\ onep P (dn X) M /\ one Q (up X Y) T /\ R = (M Y).
 one (par P Q) tau (par R T) :=
-  sigma X\ sigma Y\ sigma M\ onep Q (dn X) M & one P (up X Y) R & T = (M Y).
+  sigma X\ sigma Y\ sigma M\ onep Q (dn X) M /\ one P (up X Y) R /\ T = (M Y).
 
 
 % traces
 
 trace P stop.
 trace P (begin L T) :=
-  one P (bgn L) Q, trace Q T.
+  one P (bgn L) Q /\ trace Q T.
 trace P (end L T) :=
-  one P (nd L) Q, trace Q T.
+  one P (nd L) Q /\ trace Q T.
 trace P T :=
-  one P tau Q, trace Q T.
+  one P tau Q /\ trace Q T.
 trace P T :=
-  one P (up X Y) Q, trace Q T.
+  one P (up X Y) Q /\ trace Q T.
 trace P T :=
-  onep P (dn X) Q, sigma y\ trace (Q y) T.
-trace P (nu x\ T x) := 
-  onep P (up X) Q, nabla x\ trace (Q x) (T x).
-trace P (nu x\ begin x (T x)) := 
-  onep P bgn Q, 
+  onep P (dn X) Q /\ sigma y\ trace (Q y) T.
+trace P (nu x\ T x) :=
+  onep P (up X) Q /\ nabla x\ trace (Q x) (T x).
+trace P (nu x\ begin x (T x)) :=
+  onep P bgn Q /\
   nabla x\ trace (Q x) (T x).
-trace P (nu x\ end x (T x)) := 
-  onep P nd Q, 
+trace P (nu x\ end x (T x)) :=
+  onep P nd Q /\
   nabla x\ trace (Q x) (T x).
 
 
@@ -101,32 +101,32 @@ remove X (cons Y L) R := remove X L R.
 % "begin" assertions. Use tabling to speed up proof search.
 inductive iscorr L stop.
 inductive iscorr L (begin M T) := iscorr (cons M L) T.
-inductive iscorr L (end M T) := remove M L L1, iscorr L1 T.
+inductive iscorr L (end M T) := remove M L L1 /\ iscorr L1 T.
 inductive iscorr L (nu x\(T x)) := nabla x\ iscorr L (T x).
 
 
-safe P := 
-   pi T\ (trace P T, print ("Checking trace:" T))  =>  iscorr nil T.
- 
+safe P :=
+   pi T\ (trace P T /\ print ("Checking trace:" T))  =>  iscorr nil T.
+
 
 sender (c\ (nu m\ nu ack\ out c m (out c ack (in ack y\ end m z)))).
 rcver  (c\ in c m\ in c ack\ begin m (out ack m z)).
 
 % Example 0: unsafe.
 example 0 (nu x\ par (begin x z) (end x z)).
-#assert_not (example 0 P, safe P).
+#assert_not (example 0 P /\ safe P).
 
 % Example 1: safe. Channel c is restricted.
-example 1 (nu c\ par (P c) (Q c)) := sender P, rcver Q.
-#assert (example 1 P, safe P).
+example 1 (nu c\ par (P c) (Q c)) := sender P /\ rcver Q.
+#assert (example 1 P /\ safe P).
 
-% Example 2: unsafe. 
-example 2 (par P Q) := sender M, rcver N, P = M c, Q = N c.
-#assert_not (example 2 P, safe P).
+% Example 2: unsafe.
+example 2 (par P Q) := sender M /\ rcver N /\ P = M c /\ Q = N c.
+#assert_not (example 2 P /\ safe P).
 
 % Example 3: safe
 example 3 (nu c\ par (S c) (par (R c) (R c))) :=
-  sender S, rcver R.
-#assert (example 3 P, safe P).
+  sender S /\ rcver R.
+#assert (example 3 P /\ safe P).
 
 % TODO: implement more complicated examples from [Gordon & Jeffrey].

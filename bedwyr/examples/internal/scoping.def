@@ -9,7 +9,7 @@
 #assert_raise (pi y\ pi x\ sigma z\ x = y => z = x).
 
 % A similar case.
-#assert_raise (pi x\ pi y\ sigma a\ pi t\ (x=t, y=t) => a=t).
+#assert_raise (pi x\ pi y\ sigma a\ pi t\ (x=t /\ y=t) => a=t).
 
 % Here the right unification will eventually be (A x = x) which is no problem.
 #assert (pi y\ sigma a\ pi x\ x = y => a = x).

@@ -33,17 +33,16 @@ let blank = ' ' | '\t' | '\r'
 let instring = [^'"'] *
 
 rule token = parse
-| '%' [^'\n'] * '\n' { incrline lexbuf; token lexbuf }
-| blank              { token lexbuf }
-| '\n'               { incrline lexbuf; token lexbuf }
+| '%' [^'\n'] * '\n'? { incrline lexbuf; token lexbuf }
+| blank               { token lexbuf }
+| '\n'                { incrline lexbuf; token lexbuf }
 
 | "." { DOT }
 | "#" { SHARP }
 | "=" { EQ }
 | ":=" { DEF }
-| "," { AND }
-| "&" { AND }
-| ";" { OR }
+| "/\\" { AND }
+| "\\/" { OR }
 | "=>" { IMP }
 | "->" { RARROW }
 | "<-" { LARROW }

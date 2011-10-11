@@ -10,7 +10,7 @@ int gen_script(int base, int num)
 
   for(i = 0; i <= num; i++) {
     printf("\npdef ");
-    if (i == 0) 
+    if (i == 0)
       printf("%s0 (in insert x\\ (proc (%s1 x))) := true.", base_name[base], base_name[base]);
     else {
       printf("(%s%d", base_name[base], i);
@@ -61,4 +61,4 @@ int main(int argc, const char *argv[])
 
 
 
-  
+

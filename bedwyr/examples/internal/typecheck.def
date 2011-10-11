@@ -15,27 +15,27 @@
 % For now, type information are mandatory.
 % Other analysis could include polymorphic types, mode checking, etc.
 
-__typecheck File := parse File X, __check (bind true o (bind false o nil)) X.
+__typecheck File := parse File X /\ __check (bind true o (bind false o nil)) X.
 
 __check Env nil.
 __check Env (cons (command "kind" K) L)   := __check Env L.
 __check Env (cons (command "type" X T) L) := __check (bind X T Env) L.
 __check Env (cons (command "assert" X) L) :=
-  print (checking assertion),
-  __typed Env X o,
+  print (checking assertion) /\
+  __typed Env X o /\
   __check Env L.
 __check Env (cons (clause Head Body) L) :=
-  print (checking clause for Head),
-  __lookup Env Head T,
-  __typed Env Body T,
+  print (checking clause for Head) /\
+  __lookup Env Head T /\
+  __typed Env Body T /\
   __check Env L.
 
 __lookup (bind X T L) X T.
 __lookup (bind Y Z L) X T := __lookup L X T.
 
-__typed Env (X ,  Y) o := __typed Env X o, __typed Env Y o.
-__typed Env (X ;  Y) o := __typed Env X o, __typed Env Y o.
-__typed Env (X => Y) o := __typed Env X o, __typed Env Y o.
+__typed Env (X /\ Y) o := __typed Env X o /\ __typed Env Y o.
+__typed Env (X \/ Y) o := __typed Env X o /\ __typed Env Y o.
+__typed Env (X => Y) o := __typed Env X o /\ __typed Env Y o.
 
 __typed Env (pi    X) o :=
   pi x\ __typed (bind x T Env) (X x) o.
@@ -44,13 +44,15 @@ __typed Env (nabla X) o :=
 __typed Env (sigma X) o :=
   pi x\ __typed (bind x T Env) (X x) o.
 
-__typed Env (A = B) o := __typed Env A T, __typed Env B T.
+__typed Env (A = B) o := __typed Env A T /\ __typed Env B T.
 
 __typed Env (lam X) (I->O) :=
   pi x\ __typed (bind x I Env) (X x) O.
-__typed Env (app X Y) O := (atom print) = X ;
-                           (__typed Env X (I->O), __typed Env Y I).
+__typed Env (app X Y) O := (atom print) = X \/
+                           (__typed Env X (I->O) /\ __typed Env Y I).
 __typed Env (atom X) T := __lookup Env X T.
 
 test := __typecheck "examples/internal/3bits.def".
-#assert (__typecheck "3bits.def").
+
+% TODO debug (fails for now)
+%#assert (__typecheck "3bits.def").

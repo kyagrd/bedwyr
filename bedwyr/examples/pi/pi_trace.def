@@ -5,17 +5,17 @@
 
 % kind trace  type.
 % type end    trace.
-% type tr     a -> trace -> trace.  
-% type trp    (n -> a) -> (n -> trace) -> trace.  
+% type tr     a -> trace -> trace.
+% type trp    (n -> a) -> (n -> trace) -> trace.
 
 trace P end.
-trace P (tr  Act Trace) := one P Act P', trace P' Trace.
-trace P (trp Act Trace) := onep P Act P', nabla x\ trace (P' x) (Trace x).
+trace P (tr  Act Trace) := one P Act P' /\ trace P' Trace.
+trace P (trp Act Trace) := onep P Act P' /\ nabla x\ trace (P' x) (Trace x).
 
-trace_eq P Q := (pi T\ trace P T => trace Q T),
+trace_eq P Q := (pi T\ trace P T => trace Q T) /\
                 (pi T\ trace Q T => trace P T).
 
-separating_trace P Q T := trace P T, (trace Q T => false).
+separating_trace P Q T := trace P T /\ (trace Q T => false).
 
 % ?= example 5 P, example 6 Q, separating_trace P Q T.
 % Solution found:
@@ -26,4 +26,4 @@ separating_trace P Q T := trace P T, (trace Q T => false).
 % No more solutions.
 % ?=
 
-#assert (example 5 P, example 6 Q, separating_trace P Q T).
+#assert (example 5 P /\ example 6 Q /\ separating_trace P Q T).
