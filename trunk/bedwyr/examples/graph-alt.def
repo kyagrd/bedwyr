@@ -41,9 +41,9 @@ inductive edgepath G X Y := edge G X Z /\ edgepath G Z Y.
 
 % Notions of connectedness
 
-connected G := pi X\ pi Y\ node G X => node G Y => edgepath G X Y.
+connected G := forall X Y, node G X => node G Y => edgepath G X Y.
 
-disconnected G := sigma X\ sigma Y\
+disconnected G := exists X Y,
                     node G X /\ node G Y /\ (edgepath G X Y => false).
 
 removearrow (graph N A) X (graph N Ap) := remove A X Ap.
@@ -51,10 +51,10 @@ removearrow (graph N A) X (graph N Ap) := remove A X Ap.
 % A tree is a connected graph that becomes disconnected
 % if you remove any edge.
 
-tree G := connected G /\ pi A\ pi Gp\ removearrow G A Gp => disconnected Gp.
+tree G := connected G /\ forall A Gp, removearrow G A Gp => disconnected Gp.
 
 nottree G := disconnected G \/
-             sigma A\ sigma Gp\ removearrow G A Gp /\ connected Gp.
+             exists A Gp, removearrow G A Gp /\ connected Gp.
 
 % Queries to try
 

@@ -97,15 +97,15 @@ multi_accepts Q := mem S Q /\ accepts S.
 % result) but it is sound to take all of them.
 
 coinductive multisim P Q :=
-  (pi A\ pi P'\ step P A P' => sigma Q'\ multi_steps Q A Q' /\ multisim P' Q') /\
+  (forall A P', step P A P' => exists Q', multi_steps Q A Q' /\ multisim P' Q') /\
   (accepts P => multi_accepts Q).
 
 % Some extra checks that would work but pollute the table.
-#assert (pi x\ multi_steps (cons even (cons odd nil)) z x =>
+#assert (forall x, multi_steps (cons even (cons odd nil)) z x =>
                x = (cons accept nil)).
-#assert (pi x\ multi_steps (cons even (cons odd nil)) s x =>
+#assert (forall x, multi_steps (cons even (cons odd nil)) s x =>
                x = (cons even (cons odd nil))).
-#assert (pi x\ multisim accept (cons accept x)).
+#assert (forall x, multisim accept (cons accept x)).
 #assert (multisim nat (cons nat nil)).
 
 #clear_table multisim.

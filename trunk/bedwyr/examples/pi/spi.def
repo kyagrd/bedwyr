@@ -65,33 +65,33 @@ red (let (pr M N) P) R := R = (P M N).
 red (case (en M K) K P) R := R = (P M).
 
 appAbs (abs M) (con X Q) R := R = (par (M X) Q).
-appAbs (abs M) (new A) (nu R) := nabla x\ appAbs (abs M) (A x) (R x).
+appAbs (abs M) (new A) (nu R) := nabla x, appAbs (abs M) (A x) (R x).
 
 appCon (con X Q) (abs M) R := R = (par Q (M X)).
-appCon (new A) (abs M) (nu R) := nabla x\ appCon (A x) (abs M) (R x).
+appCon (new A) (abs M) (nu R) := nabla x, appCon (A x) (abs M) (R x).
 
-one (par P Q) tau R := sigma x\ oneAbs P x F /\ oneCon Q x C /\ appAbs F C R.
-one (par P Q) tau R := sigma x\ oneCon P x C /\ oneAbs Q x F /\ appCon C F R.
-one (nu P) tau (nu R) := nabla x\ one (P x) tau (R x).
+one (par P Q) tau R := exists x, oneAbs P x F /\ oneCon Q x C /\ appAbs F C R.
+one (par P Q) tau R := exists x, oneCon P x C /\ oneAbs Q x F /\ appCon C F R.
+one (nu P) tau (nu R) := nabla x, one (P x) tau (R x).
 one P tau R := red P Q /\ one Q tau R.
 
 oneAbs (in X A) (act X) (abs A).
 oneAbs P X (abs M) := red P Q /\ oneAbs Q X (abs M).
 oneAbs (par P Q) X (abs x\(par (R x) Q)) := oneAbs P X (abs R).
 oneAbs (par P Q) X (abs x\(par P (R x))) := oneAbs Q X (abs R).
-oneAbs (nu P) A (abs x\(nu (R x))) := nabla y\ oneAbs (P y) A (abs x\(R x y)).
+oneAbs (nu P) A (abs x\(nu (R x))) := nabla y, oneAbs (P y) A (abs x\(R x y)).
 
 mergeRight (con X P) Q (con X (par P Q)).
-mergeRight (new C) Q (new R) := nabla x\ mergeRight (C x) Q (R x).
+mergeRight (new C) Q (new R) := nabla x, mergeRight (C x) Q (R x).
 
 mergeLeft (con X P) Q (con X (par Q P)).
-mergeLeft (new C) Q (new R) := nabla x\ mergeLeft (C x) Q (R x).
+mergeLeft (new C) Q (new R) := nabla x, mergeLeft (C x) Q (R x).
 
 oneCon (out X M P) (act X) (con M P).
 oneCon P X C := red P Q /\ oneCon Q X C.
 oneCon (par P Q) X R := oneCon P X C /\ mergeRight C Q R.
 oneCon (par P Q) X R := oneCon Q X C /\ mergeLeft C P R.
-oneCon (nu P) X (new R) := nabla y\ oneCon (P y) X (R y).
+oneCon (nu P) X (new R) := nabla y, oneCon (P y) X (R y).
 
 %% End of operational semantics ==============================================
 
@@ -168,14 +168,14 @@ reveals E P M Trace :=
    print P /\
    oneCon P (act A) (new x\ con (R x) (Q x)) /\
    print "Now checking: " /\ print (new x\ con (R x) (Q x)) /\
-   (nabla x\ reveals (cons (R x) E) (Q x) M (T x)) /\
+   (nabla x, reveals (cons (R x) E) (Q x) M (T x)) /\
    Trace = (nu x\ out A (R x) (T x)).
 reveals E P M Trace :=
    print "Calling oneAbs with process:" /\
    print P /\
    oneAbs P (act A) (abs Q) /\
    print "Now checking: " /\ print Q /\
-   sigma y\
+   exists y,
      reveals E (Q y) M Trace1 /\
      entails E y /\ %% IMPORTANT: we allow only messages that can be generated from the current knowledge
      print "y is instantiated to: " /\ print y /\
@@ -195,7 +195,7 @@ initial (cons c nil).
 
 % This process never reveals m.
 example 1 (nu k\ out c (en m k) 0).
-test1 := initial E /\ example 1 P /\ pi T\ reveals E P m T => false.
+test1 := initial E /\ example 1 P /\ forall T, reveals E P m T => false.
 
 % This process outputs an encrypted message, along with the encryption key.
 % Of course the secret message m is revealed.
@@ -217,7 +217,7 @@ test4 T := initial E /\ example 4 P /\ reveals E P m T.
 % is matched to m. Since the attacker does not know m yet (at the point
 % of input), the secret m is not revealed.
 example 5 (nu k\ out c (en m k) (in c (x\ match x m (out c k 0)))).
-test5 := initial E /\ example 5 P /\ pi T\reveals E P m T => false.
+test5 := initial E /\ example 5 P /\ forall T,reveals E P m T => false.
 
 % This process outputs an encrypted message and then output the key
 % but encrypted with c. Since the attacker knows c, it can decipher k

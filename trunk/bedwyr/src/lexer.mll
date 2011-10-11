@@ -33,32 +33,40 @@ let blank = ' ' | '\t' | '\r'
 let instring = [^'"'] *
 
 rule token = parse
-| '%' [^'\n'] * '\n'? { incrline lexbuf; token lexbuf }
-| blank               { token lexbuf }
-| '\n'                { incrline lexbuf; token lexbuf }
+  | '%' [^'\n'] * '\n'? { incrline lexbuf; token lexbuf }
+  | blank               { token lexbuf }
+  | '\n'                { incrline lexbuf; token lexbuf }
 
-| "." { DOT }
-| "#" { SHARP }
-| "=" { EQ }
-| ":=" { DEF }
-| "/\\" { AND }
-| "\\/" { OR }
-| "=>" { IMP }
-| "->" { RARROW }
-| "<-" { LARROW }
-| "+" { PLUS }
-| "-" { MINUS }
-| "*" { TIMES }
-| "\\" { BSLASH }
-| "(" { LPAREN }
-| ")" { RPAREN }
+  | "#"         { SHARP }
+  | ":="        { DEF }
+  | "."         { DOT }
 
-| "inductive"   { IND   }
-| "coinductive" { COIND }
+  | "="         { EQ }
+  | "/\\"       { AND }
+  | "\\/"       { OR }
+  | "=>"        { IMP }
 
-| name as n { ID n }
-| '"' (instring as n) '"'
-    { String.iter (function '\n' -> incrline lexbuf | _ -> ()) n ;
-      STRING n }
+  | "forall" as n
+  | "exists" as n
+  | "nabla" as n { BINDER n }
+  | ","         { COMMA }
 
-| eof    { failwith "eof" }
+  | "->"        { RARROW }
+  | "<-"        { LARROW }
+  | "+"         { PLUS }
+  | "-"         { MINUS }
+  | "*"         { TIMES }
+
+  | "\\"        { BSLASH }
+  | "("         { LPAREN }
+  | ")"         { RPAREN }
+
+  | "inductive"   { IND   }
+  | "coinductive" { COIND }
+
+  | name as n { ID n }
+  | '"' (instring as n) '"'
+      { String.iter (function '\n' -> incrline lexbuf | _ -> ()) n ;
+        STRING n }
+
+  | eof         { failwith "eof" }

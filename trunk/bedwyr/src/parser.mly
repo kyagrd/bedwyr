@@ -38,7 +38,7 @@
      * allocated before the parsing of that clause. *)
     let () =
       let v = Term.logic_vars (body::params) in
-        List.iter (fun v -> Term.free (Term.get_name v)) v
+      List.iter (fun v -> Term.free (Term.get_name v)) v
     in
 
     (* Create the prolog (new equalities added to the body) and the new set
@@ -82,17 +82,18 @@
           | Term.Lam (n,b) -> n,b
           | _ -> assert false
     in
-      System.Def (kind, head, arity, body)
+    System.Def (kind, head, arity, body)
 
 %}
 
-%token BSLASH LPAREN RPAREN DOT SHARP
-%token EQ AND IMP RARROW LARROW OR PLUS MINUS TIMES
+%token BSLASH COMMA LPAREN RPAREN DOT SHARP
+%token EQ AND OR IMP RARROW LARROW PLUS MINUS TIMES
 %token DEF IND COIND
-%token <string> ID
+%token <string> ID BINDER
 %token <string> STRING
 
 %nonassoc BSLASH
+%nonassoc COMMA
 %right IMP
 %left OR
 %left AND
@@ -110,60 +111,81 @@
 %%
 
 input_def:
-| defkind sexp DEF exp DOT { let h,t = $2 in mkdef $1 h t $4 }
-| defkind sexp DOT         { let h,t = $2 in mkdef $1 h t (Term.atom "true") }
-| DEF exp DOT              { System.Query $2 }
-| SHARP sexp DOT           { let h,t = $2 in System.Command (to_string h,t) }
+  | defkind sexp DEF exp DOT { let h,t = $2 in mkdef $1 h t $4 }
+  | defkind sexp DOT         { let h,t = $2 in mkdef $1 h t (Term.atom "true") }
+  | DEF exp DOT              { System.Query $2 }
+  | SHARP sexp DOT           { let h,t = $2 in System.Command (to_string h,t) }
 
 defkind:
-|       { System.Normal      }
-| IND   { System.Inductive   }
-| COIND { System.CoInductive }
+  |       { System.Normal      }
+  | IND   { System.Inductive   }
+  | COIND { System.CoInductive }
 
 input_query:
-| exp DOT          { System.Query $1 }
-| SHARP sexp DOT   { let (h,t) = $2 in System.Command (to_string h,t) }
+  | exp DOT          { System.Query $1 }
+  | SHARP sexp DOT   { let (h,t) = $2 in System.Command (to_string h,t) }
 
 exp:
-| exp EQ   exp { eq   $1 $3 }
-| exp AND  exp { andc $1 $3 }
-| exp OR   exp { orc  $1 $3 }
-| exp IMP  exp { imp  $1 $3 }
-| iexp         { $1 }
-| sexp         { let (t,l) = $1 in Term.app t l }
+  | exp EQ   exp { eq   $1 $3 }
+  | exp AND  exp { andc $1 $3 }
+  | exp OR   exp { orc  $1 $3 }
+  | exp IMP  exp { imp  $1 $3 }
+  | iexp         { $1 }
+  | sexp         { let (t,l) = $1 in Term.app t l }
+  | BINDER id_list COMMA exp    { let binder = Term.atom $1 in
+                                  List.fold_left
+                                    (fun t -> fun (was_free,id) ->
+                                       let a = Term.atom id in
+                                       let x = Term.abstract a t in
+                                       if was_free then Term.free id ;
+                                       Term.app
+                                         binder
+                                         [x]
+                                    )
+                                    $4
+                                    $2
+                                }
 
+id_list:
+  | ID          { [Term.is_free $1, $1] }
+  | ID id_list  { (Term.is_free $1, $1)::$2 }
+
+/* simple expression (predicate and arguments) */
 sexp:
-| lexp { match $1 with
-          | [] -> assert false
-          | t::l -> t,l }
+  | lexp { match $1 with
+             | [] -> assert false
+             | t::l -> t,l }
+
+/* list of expressions */
 lexp:
-| aexp          { [$1] }
-| binding exp   { let was_free,name = $1 in
+  | aexp        { [$1] }
+  | aexp lexp   { $1::$2 }
+  | binding exp { let was_free,name = $1 in
                   let a = Term.atom name in
                   let x = Term.abstract a $2 in
-                    if was_free then Term.free name ;
-                    [x] }
-| aexp lexp     { $1::$2 }
+                  if was_free then Term.free name ;
+                  [x] }
 
 binding:
-| ID BSLASH { (Term.is_free $1, $1) }
+  | ID BSLASH { (Term.is_free $1, $1) }
 
+/* atomic expression*/
 aexp:
-| LPAREN exp RPAREN { $2 }
-| ID                { if $1="_" then
-                        Term.fresh ~name:"_" Term.Logic ~ts:0 ~lts:0
-                      else
-                        Term.atom $1 }
-| STRING            { Term.string $1 }
+  | LPAREN exp RPAREN   { $2 }
+  | ID                  { if $1="_" then
+                            Term.fresh ~name:"_" Term.Logic ~ts:0 ~lts:0
+                          else
+                            Term.atom $1 }
+  | STRING              { Term.string $1 }
 
 /* There is redundency here, but ocamlyacc seems to have problems
    with left associativity if we abstract it. */
 iexp:
-| exp LARROW exp { Term.app (Term.atom "<-") [$1; $3] }
-| exp RARROW exp { Term.app (Term.atom "->") [$1; $3] }
-| exp PLUS   exp { Term.app (Term.atom "+")  [$1; $3] }
-| exp MINUS  exp { Term.app (Term.atom "-")  [$1; $3] }
-| exp TIMES  exp { Term.app (Term.atom "*")  [$1; $3] }
+  | exp LARROW exp { Term.app (Term.atom "<-") [$1; $3] }
+  | exp RARROW exp { Term.app (Term.atom "->") [$1; $3] }
+  | exp PLUS   exp { Term.app (Term.atom "+")  [$1; $3] }
+  | exp MINUS  exp { Term.app (Term.atom "-")  [$1; $3] }
+  | exp TIMES  exp { Term.app (Term.atom "*")  [$1; $3] }
 
 %%
 
@@ -175,7 +197,7 @@ let to_term ?incl:(incl=true) lexer file =
   let lam  = Term.atom "lam"  in
   let app  = Term.atom "app"  in
   let atom = Term.atom "atom" in
-  let inclfiles = ref [] in 
+  let inclfiles = ref [] in
   let binder x =
     List.exists
       (Term.eq x)
@@ -211,8 +233,8 @@ let to_term ?incl:(incl=true) lexer file =
           else
             if tl=[] then Term.app app [ objectify x; objectify h ] else
               let y,l = split [] (h::tl) in
-                Term.app app [ objectify (Term.app x l);
-                               objectify y ]
+              Term.app app [ objectify (Term.app x l);
+                             objectify y ]
       | _ -> Term.app atom [term]
   in
   let clause  = Term.atom "clause"  in
@@ -226,62 +248,62 @@ let to_term ?incl:(incl=true) lexer file =
           Some (input_def lexer lexbuf)
         with Failure "eof" -> None
       in
-        match input with
-          | None -> l
-          | Some i ->
-              begin match i with
-                | System.Def (_,head,arity,body) ->
-                    let body = objectify (Term.lambda arity body) in
-                      aux ((Term.app clause [ head;
-                                              body ])::l)
-                | System.Query a -> aux ((Term.app query [a])::l)
-                | System.Command ("include",[file]) ->
+      match input with
+        | None -> l
+        | Some i ->
+            begin match i with
+              | System.Def (_,head,arity,body) ->
+                  let body = objectify (Term.lambda arity body) in
+                  aux ((Term.app clause [ head;
+                                          body ])::l)
+              | System.Query a -> aux ((Term.app query [a])::l)
+              | System.Command ("include",[file]) ->
                   let file = Term.get_name file in
-                  let not_included fname = 
-                 	if ((List.mem fname !inclfiles) || (not incl)) then false
-          	      	else (
-              	           	inclfiles := fname :: !inclfiles ;
-             		 	true
-                           )
-      	  	  in
-		      if not_included file then aux (list_of_file file l) 
-                      (*  begin *)
-                      (*  	    let cwd = Sys.getcwd () in *)
-                      (*  	    Sys.chdir (Filename.dirname file) ; *)
-                      (*  	    let l = list_of_file file l in *)
-                      (*        Sys.chdir cwd ; *)
-		      (*  	    aux l *)
-                      (*  end *)
-		      else aux l
+                  let not_included fname =
+                        if ((List.mem fname !inclfiles) || (not incl)) then false
+                        else (
+                                inclfiles := fname :: !inclfiles ;
+                                true
+                        )
+                  in
+                  if not_included file then aux (list_of_file file l)
+                  (*  begin *)
+                  (*  	    let cwd = Sys.getcwd () in *)
+                  (*  	    Sys.chdir (Filename.dirname file) ; *)
+                  (*  	    let l = list_of_file file l in *)
+                  (*        Sys.chdir cwd ; *)
+                  (*  	    aux l *)
+                  (*  end *)
+                  else aux l
 
-                | System.Command ("assert",a) ->
-                    aux ((Term.app command ((Term.atom "assert")::
-                                              (List.map objectify a)))::l)
-                (* [AT]: change parsing to type command to allow polymorphic types; *)
-                (*       Free variables (eigen or logic) are abstracted. *)
-                | System.Command ("type",[a;b]) ->          
-                    let b = Term.app (Term.atom "ty") [Norm.deep_norm b] in 
-                    let vs = (Term.logic_vars [b]) @ (Term.eigen_vars [b]) in 
-                    let ty = List.fold_left 
-                             (fun x v -> 
-                                   Term.app (Term.atom "all") [(Term.abstract v x)])
+              | System.Command ("assert",a) ->
+                  aux ((Term.app command ((Term.atom "assert")::
+                                            (List.map objectify a)))::l)
+              (* [AT]: change parsing to type command to allow polymorphic types; *)
+              (*       Free variables (eigen or logic) are abstracted. *)
+              | System.Command ("type",[a;b]) ->
+                  let b = Term.app (Term.atom "ty") [Norm.deep_norm b] in
+                  let vs = (Term.logic_vars [b]) @ (Term.eigen_vars [b]) in
+                  let ty = List.fold_left
+                             (fun x v ->
+                               Term.app (Term.atom "all") [(Term.abstract v x)])
                              b vs in
-                    
-                        aux ((Term.app command ((Term.atom "type")::[a;ty]))::l) 
-                | System.Command (c,a) ->
-                      aux ((Term.app command ((Term.atom c)::a))::l)
-              end
+
+                  aux ((Term.app command ((Term.atom "type")::[a;ty]))::l)
+              | System.Command (c,a) ->
+                  aux ((Term.app command ((Term.atom c)::a))::l)
+            end
     in
     let cwd = Sys.getcwd () in
-      Sys.chdir (Filename.dirname file) ;
-      let l = aux list in
-        Sys.chdir cwd ;
-        l
+    Sys.chdir (Filename.dirname file) ;
+    let l = aux list in
+    Sys.chdir cwd ;
+    l
   in
   let cons = Term.binop "cons" in
   let rec term_of_list t = function
     | [] -> t
     | hd::tl -> term_of_list (cons hd t) tl
   in
-    inclfiles := [] ; 
-    term_of_list (Term.atom "nil") (list_of_file file [])
+  inclfiles := [] ;
+  term_of_list (Term.atom "nil") (list_of_file file [])

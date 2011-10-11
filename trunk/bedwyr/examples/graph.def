@@ -39,6 +39,6 @@ allpaths := path X Y /\ print (X to Y) /\ false.
 
 alledgepaths := edgepath X Y /\ print (X to Y) /\ false.
 
-connected := pi X\ pi Y\ node X => node Y => edgepath X Y.
+connected := forall X Y, node X => node Y => edgepath X Y.
 
-disconnected := sigma X\ sigma Y\ node X /\ node Y /\ (edgepath X Y => false).
+disconnected := exists X Y, node X /\ node Y /\ (edgepath X Y => false).

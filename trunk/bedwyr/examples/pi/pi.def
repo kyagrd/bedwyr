@@ -53,21 +53,21 @@ picheck (name y) tt.
 picheck (action tau) tt.
 picheck (action (up X Y))     (and (name X) (name Y)).
 picheck (action (dn X Y))     (and (name X) (name Y)).
-picheck (proc (in X P))       (and (forall x\ (name x) -> (proc (P x))) (name X)).
+picheck (proc (in X P))       (and (_forall x\ (name x) -> (proc (P x))) (name X)).
 picheck (proc (out X Y P))    (and (and (name X) (name Y)) (proc P)).
 picheck (proc (taup P))       (proc P).
 picheck (proc (match  X Y P)) (and (and (name X) (name Y)) (proc P)).
 picheck (proc (plus P Q))     (and (proc P) (proc Q)).
 picheck (proc (par  P Q))     (and (proc P) (proc Q)).
-picheck (proc (nu P))         (forall x\ (name x) -> (proc (P x))).
+picheck (proc (nu P))         (_forall x\ (name x) -> (proc (P x))).
 picheck (proc (bang P))       (proc P).
 picheck (proc z)              tt.
 
 % Check that all examples (listed below) actually type check.
-typecheck := pi N\ pi P\ example N P => prv picheck (proc P).
+typecheck := forall N P, example N P => prv picheck (proc P).
 
 % Tell us which clause does not type check (if any).
-whichwrong N := sigma P\ example N P /\ (prv picheck (proc P) => false).
+whichwrong N := exists P, example N P /\ (prv picheck (proc P) => false).
 
 % }}}
 % {{{
@@ -131,23 +131,23 @@ onep (par P Q) A (x\par (M x) Q) := onep P A M.
 onep (par P Q) A (x\par P (N x)) := onep Q A N.
 
 % restriction
-one  (nu x\P x) A (nu x\Q x)      := nabla x\ one  (P x) A (Q x).
-onep (nu x\P x) A (y\ nu x\Q x y) := nabla x\ onep (P x) A (y\ Q x y).
+one  (nu x\P x) A (nu x\Q x)      := nabla x, one  (P x) A (Q x).
+onep (nu x\P x) A (y\ nu x\Q x y) := nabla x, onep (P x) A (y\ Q x y).
 
 % open
-onep (nu x\M x) (up X) N := nabla y\ one (M y) (up X y) (N y).
+onep (nu x\M x) (up X) N := nabla y, one (M y) (up X y) (N y).
 
 % close
 one (par P Q) tau (nu y\ par (M y) (N y)) :=
-  sigma X\ onep P (dn X) M /\ onep Q (up X) N.
+  exists X, onep P (dn X) M /\ onep Q (up X) N.
 one (par P Q) tau (nu y\ par (M y) (N y)) :=
-  sigma X\ onep P (up X) M /\ onep Q (dn X) N.
+  exists X, onep P (up X) M /\ onep Q (dn X) N.
 
 % comm
 one (par P Q) tau (par R T) :=
-  sigma X\ sigma Y\ sigma M\ onep P (dn X) M /\ one Q (up X Y) T /\ R = (M Y).
+  exists X Y M, onep P (dn X) M /\ one Q (up X Y) T /\ R = (M Y).
 one (par P Q) tau (par R T) :=
-  sigma X\ sigma Y\ sigma M\ onep Q (dn X) M /\ one P (up X Y) R /\ T = (M Y).
+  exists X Y M, onep Q (dn X) M /\ one P (up X Y) R /\ T = (M Y).
 
 % Rep-act
 one  (bang P) A (par P1 (bang P)) := one P A P1.
@@ -155,11 +155,11 @@ onep (bang P) X (y\ par (M y) (bang P)) := onep P X M.
 
 % Rep-com
 one (bang P) tau (par (par R T) (bang P)) :=
-  sigma X\ sigma Y\ sigma M\ onep P (dn X) M /\ one P (up X Y) R /\ T = (M Y).
+  exists X Y M, onep P (dn X) M /\ one P (up X Y) R /\ T = (M Y).
 
 % Rep-close
 one (bang P) tau (par (nu y\ par (M y) (N y)) (bang P)) :=
-  sigma X\ onep P (up X) M /\ onep P (dn X) N.
+  exists X, onep P (up X) M /\ onep P (dn X) N.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -167,26 +167,26 @@ one (bang P) tau (par (nu y\ par (M y) (N y)) (bang P)) :=
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 coinductive sim P Q :=
-	(pi A\ pi P1\ one P A P1 => sigma Q1\ one Q A Q1 /\ sim P1 Q1) /\
-	(pi X\ pi M\ onep P (dn X) M => sigma N\ onep Q (dn X) N /\
-					pi w\ sim (M w) (N w)) /\
-	(pi X\ pi M\ onep P (up X) M => sigma N\ onep Q (up X) N /\
-					nabla w\ sim (M w) (N w)).
+	(forall A P1, one P A P1 => exists Q1, one Q A Q1 /\ sim P1 Q1) /\
+	(forall X M, onep P (dn X) M => exists N, onep Q (dn X) N /\
+					forall w, sim (M w) (N w)) /\
+	(forall X M, onep P (up X) M => exists N, onep Q (up X) N /\
+					nabla w, sim (M w) (N w)).
 
 coinductive bisim P Q :=
-	(pi A\ pi P1\ one P A P1 => sigma Q1\ one Q A Q1 /\ bisim P1 Q1) /\
-	(pi X\ pi M\ onep P (dn X) M => sigma N\ onep Q (dn X) N /\
-					pi w\ bisim (M w) (N w)) /\
-	(pi X\ pi M\ onep P (up X) M => sigma N\ onep Q (up X) N /\
-					nabla w\ bisim (M w) (N w)) /\
-	(pi A\ pi Q1\ one Q A Q1 => sigma P1\ one P A P1 /\ bisim P1 Q1) /\
-	(pi X\ pi N\ onep Q (dn X) N => sigma M\ onep P (dn X) M /\
-					pi w\ bisim (M w) (N w)) /\
-	(pi X\ pi N\ onep Q (up X) N => sigma M\ onep P (up X) M /\
-					nabla w\ bisim (M w) (N w)).
+	(forall A P1, one P A P1 => exists Q1, one Q A Q1 /\ bisim P1 Q1) /\
+	(forall X M, onep P (dn X) M => exists N, onep Q (dn X) N /\
+					forall w, bisim (M w) (N w)) /\
+	(forall X M, onep P (up X) M => exists N, onep Q (up X) N /\
+					nabla w, bisim (M w) (N w)) /\
+	(forall A Q1, one Q A Q1 => exists P1, one P A P1 /\ bisim P1 Q1) /\
+	(forall X N, onep Q (dn X) N => exists M, onep P (dn X) M /\
+					forall w, bisim (M w) (N w)) /\
+	(forall X N, onep Q (up X) N => exists M, onep P (up X) M /\
+					nabla w, bisim (M w) (N w)).
 
 #assert (bisim (in a x\ in a y\ z) (in a x\ nu w\ in a y\ z)).
-#assert (pi P\ bisim (in a x\ nu y\ match x y P)
+#assert (forall P, bisim (in a x\ nu y\ match x y P)
                      (in a x\ z)).
 #assert_not (P = out a a z /\
              bisim (nu x\ out a x (in c y\ match x y P))
@@ -202,35 +202,35 @@ weak_one Q (up X Y) P := taus Q QQ /\ one QQ A PP /\ taus PP P.
 weak_one Q tau QQ     := taus Q QQ.
 
 weak_onep Q (up X) P :=
-  taus Q QQ /\ onep QQ (up X) PP /\ nabla x\ taus (PP x) (P x).
+  taus Q QQ /\ onep QQ (up X) PP /\ nabla x, taus (PP x) (P x).
 weak_onep Q (dn X) P :=
-  taus Q QQ /\ onep QQ (dn X) PP /\ nabla x\ taus (PP x) (P x). % pi -> not llam
+  taus Q QQ /\ onep QQ (dn X) PP /\ nabla x, taus (PP x) (P x). % forall -> not llam
 
 coinductive weak_sim P Q :=
-  pi A\ pi X\ pi M\
-    (one  P A M      => sigma N\ weak_one  Q A N /\
+  forall A X M,
+    (one  P A M      => exists N, weak_one  Q A N /\
                                  weak_sim M N) /\
-    (onep P (dn X) M => sigma N\ weak_onep Q (dn X) N /\
-                          pi w\ weak_sim (M w) (N w)) /\
-    (onep P (up X) M => sigma N\ weak_onep Q (up X) N /\
-                          nabla w\ weak_sim (M w) (N w)).
+    (onep P (dn X) M => exists N, weak_onep Q (dn X) N /\
+                          forall w, weak_sim (M w) (N w)) /\
+    (onep P (up X) M => exists N, weak_onep Q (up X) N /\
+                          nabla w, weak_sim (M w) (N w)).
 
 coinductive weak_bisim P Q :=
-	(pi A\ pi P1\ one P A P1 =>
-           sigma Q1\ weak_one Q A Q1 /\ weak_bisim P1 Q1) /\
+	(forall A P1, one P A P1 =>
+           exists Q1, weak_one Q A Q1 /\ weak_bisim P1 Q1) /\
 
-	(pi X\ pi M\ onep P (dn X) M => sigma N\ weak_onep Q (dn X) N /\
-					pi w\ weak_bisim (M w) (N w)) /\
+	(forall X M, onep P (dn X) M => exists N, weak_onep Q (dn X) N /\
+					forall w, weak_bisim (M w) (N w)) /\
 
-	(pi X\ pi M\ onep P (up X) M => sigma N\ weak_onep Q (up X) N /\
-					nabla w\ weak_bisim (M w) (N w)) /\
+	(forall X M, onep P (up X) M => exists N, weak_onep Q (up X) N /\
+					nabla w, weak_bisim (M w) (N w)) /\
 
-	(pi A\ pi Q1\ one Q A Q1 =>
-           sigma P1\ weak_one P A P1 /\ weak_bisim P1 Q1) /\
+	(forall A Q1, one Q A Q1 =>
+           exists P1, weak_one P A P1 /\ weak_bisim P1 Q1) /\
 
-	(pi X\ pi N\ onep Q (dn X) N => sigma M\ weak_onep P (dn X) M /\
-					pi w\ weak_bisim (M w) (N w)) /\
+	(forall X N, onep Q (dn X) N => exists M, weak_onep P (dn X) M /\
+					forall w, weak_bisim (M w) (N w)) /\
 
-	(pi X\ pi N\ onep Q (up X) N => sigma M\ weak_onep P (up X) M /\
-					nabla w\ weak_bisim (M w) (N w)).
+	(forall X N, onep Q (up X) N => exists M, weak_onep P (up X) M /\
+					nabla w, weak_bisim (M w) (N w)).
 % }}}

@@ -23,17 +23,17 @@ syn match   statement "#[a-z_]*"
 
 syn keyword boolean  true false
 syn keyword keyword  inductive coinductive
-syn keyword special  pi sigma nabla
+syn keyword special  forall exists nabla
 syn match   special  "\\"
+syn match   special  ","
 syn match   special  ":="
 syn match   special  "\."
-syn match   special  "&"
-syn match   special  ","
-syn match   special  ";"
+syn match   special  "/\\"
+syn match   special  "\\/"
 syn match   special  "+"
 syn match   special  "-" 
 syn match   special  "*"
-syn match   special  "/"
 syn match   special  "->"
+syn match   special  "<-"
 syn match   special  "=>"
 syn region  string   start=+"+ skip=+\\\\\|\\"+ end=+"+

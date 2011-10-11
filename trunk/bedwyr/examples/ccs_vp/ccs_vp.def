@@ -53,12 +53,12 @@ ltrans (par P Q) A (par R Q) := ltrans P A R.
 ltrans (par P Q) A (par P R) := ltrans Q A R.
 
 % Communication
-trans (par P Q) tau (par R S) := sigma C\ sigma V\ trans P (i C V) R /\ trans Q (o C V) S.
-trans (par P Q) tau (par R S) := sigma C\ sigma V\ trans P (o C V) R /\ trans Q (i C V) S.	
+trans (par P Q) tau (par R S) := exists C V, trans P (i C V) R /\ trans Q (o C V) S.
+trans (par P Q) tau (par R S) := exists C V, trans P (o C V) R /\ trans Q (i C V) S.	
 
-ltrans (par P Q) tau (par R S) := sigma T\ sigma C\ sigma V\
+ltrans (par P Q) tau (par R S) := exists T C V,
                                     ltrans P (i C) T /\ ltrans Q (o C V) S /\ (R = (T V)).
-ltrans (par P Q) tau (par R S) := sigma T\ sigma C\ sigma V\
+ltrans (par P Q) tau (par R S) := exists T C V,
                                     ltrans P (o C V) R /\ ltrans Q (i C) T /\ (S = (T V)).	
 
 % Match(if..then..)
@@ -87,40 +87,40 @@ ltrans (proc I) A Q := pdef I P /\ ltrans P A Q.
 
 %% In the other paper, they specify the negation of bisimulation
 
-% Early, \forall\exists- simulation
+% Early, \_forall\_exists- simulation
 coinductive sim P Q :=
-	    (pi R\ pi A\ trans P A R => sigma S\ trans Q A S /\ sim R S).
+	    (forall R A, trans P A R => exists S, trans Q A S /\ sim R S).
 coinductive aesim P Q :=
-	    (pi R\ pi C\ pi V\ ltrans P (o C V) R => sigma S\ ltrans Q (o C V) S /\ aesim R S) /\
-	    (pi R\ ltrans P tau R => sigma S\ ltrans Q tau S /\ aesim R S) /\
-	    (pi R\ pi C\ ltrans P (i C) R => pi V\sigma S\ ltrans Q (i C) S /\ aesim (R V) (S V)).
+	    (forall R C V, ltrans P (o C V) R => exists S, ltrans Q (o C V) S /\ aesim R S) /\
+	    (forall R, ltrans P tau R => exists S, ltrans Q tau S /\ aesim R S) /\
+	    (forall R C, ltrans P (i C) R => forall V,exists S, ltrans Q (i C) S /\ aesim (R V) (S V)).
 
 % Late simulation
 coinductive lsim P Q :=
-	    (pi R\ pi C\ pi V\ ltrans P (o C V) R => sigma S\ ltrans Q (o C V) S /\ lsim R S) /\
-	    (pi R\ ltrans P tau R => sigma S\ ltrans Q tau S /\ lsim R S) /\
-	    (pi R\ pi C\ ltrans P (i C) R => sigma S\ ltrans Q (i C) S /\ pi V\ lsim (R V) (S V)).
+	    (forall R C V, ltrans P (o C V) R => exists S, ltrans Q (o C V) S /\ lsim R S) /\
+	    (forall R, ltrans P tau R => exists S, ltrans Q tau S /\ lsim R S) /\
+	    (forall R C, ltrans P (i C) R => exists S, ltrans Q (i C) S /\ forall V, lsim (R V) (S V)).
 
-% Early, \forall\exists- bisimulation
+% Early, \_forall\_exists- bisimulation
 coinductive bisim P Q :=
-	    (pi R\ pi A\ trans P A R => sigma S\ trans Q A S /\ bisim R S) /\
-	    (pi S\ pi A\ trans Q A S => sigma R\ trans P A R /\ bisim R S).
+	    (forall R A, trans P A R => exists S, trans Q A S /\ bisim R S) /\
+	    (forall S A, trans Q A S => exists R, trans P A R /\ bisim R S).
 coinductive aebisim P Q :=
-	    (pi R\ pi C\ pi V\ ltrans P (o C V) R => sigma S\ ltrans Q (o C V) S /\ aebisim R S) /\
-	    (pi R\ ltrans P tau R => sigma S\ ltrans Q tau S /\ aebisim R S) /\
-	    (pi R\ pi C\ ltrans P (i C) R => pi V\ sigma S\ ltrans Q (i C) S /\ aebisim (R V) (S V)) /\
-	    (pi S\ pi C\ pi V\ ltrans Q (o C V) S => sigma R\ ltrans P (o C V) R /\ aebisim R S) /\
-	    (pi S\ ltrans Q tau S => sigma R\ ltrans P tau R /\ aebisim R S) /\
-	    (pi S\ pi C\ ltrans Q (i C) S => pi V\ sigma R\ ltrans P (i C) R /\ aebisim (R V) (S V)).
+	    (forall R C V, ltrans P (o C V) R => exists S, ltrans Q (o C V) S /\ aebisim R S) /\
+	    (forall R, ltrans P tau R => exists S, ltrans Q tau S /\ aebisim R S) /\
+	    (forall R C, ltrans P (i C) R => forall V, exists S, ltrans Q (i C) S /\ aebisim (R V) (S V)) /\
+	    (forall S C V, ltrans Q (o C V) S => exists R, ltrans P (o C V) R /\ aebisim R S) /\
+	    (forall S, ltrans Q tau S => exists R, ltrans P tau R /\ aebisim R S) /\
+	    (forall S C, ltrans Q (i C) S => forall V, exists R, ltrans P (i C) R /\ aebisim (R V) (S V)).
 
 % Late bisimulation
 coinductive lbisim P Q :=
-	    (pi R\ pi C\ pi V\ ltrans P (o C V) R => sigma S\ ltrans Q (o C V) S /\ lbisim R S) /\
-	    (pi R\ ltrans P tau R => sigma S\ ltrans Q tau S /\ lbisim R S) /\
-	    (pi R\ pi C\ ltrans P (i C) R => sigma S\ ltrans Q (i C) S /\ pi V\ lbisim (R V) (S V)) /\
-	    (pi S\ pi C\ pi V\ ltrans Q (o C V) S => sigma R\ ltrans P (o C V) R /\ lbisim R S) /\
-	    (pi S\ ltrans Q tau S => sigma R\ ltrans P tau R /\ lbisim R S) /\
-	    (pi S\ pi C\ ltrans Q (i C) S => sigma R\ ltrans P (i C) R /\ pi V\ lbisim (R V) (S V)).
+	    (forall R C V, ltrans P (o C V) R => exists S, ltrans Q (o C V) S /\ lbisim R S) /\
+	    (forall R, ltrans P tau R => exists S, ltrans Q tau S /\ lbisim R S) /\
+	    (forall R C, ltrans P (i C) R => exists S, ltrans Q (i C) S /\ forall V, lbisim (R V) (S V)) /\
+	    (forall S C V, ltrans Q (o C V) S => exists R, ltrans P (o C V) R /\ lbisim R S) /\
+	    (forall S, ltrans Q tau S => exists R, ltrans P tau R /\ lbisim R S) /\
+	    (forall S C, ltrans Q (i C) S => exists R, ltrans P (i C) R /\ forall V, lbisim (R V) (S V)).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Some useful predicates for testing

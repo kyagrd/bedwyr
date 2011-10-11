@@ -42,7 +42,7 @@ atom (insert_beta A B).
 
 % Reduce marked beta-redexes using Bedwyr beta-reduction.
 lnorm (lred (abs R) (abs S))
-      (forall x\ forall y\ lred x y -> lred (R x) (S y)).
+      (_forall x\ _forall y\ lred x y -> lred (R x) (S y)).
 lnorm (lred (app M N) (app P Q))
       (and (lred M P) (lred N Q)).
 lnorm (lred (beta N R) P)
@@ -50,13 +50,13 @@ lnorm (lred (beta N R) P)
 
 % Compute paths through a lambda-term.
 lnorm (path (abs R) (bnd P))
-      (forall x\ forall p\ path x p -> path (R x) (P p)).
+      (_forall x\ _forall p\ path x p -> path (R x) (P p)).
 lnorm (path (app M N) (left  P))
       (path M P).
 lnorm (path (app N M) (right P))
       (path M P).
 lnorm (path (beta N R) P)
-      (forall x\ (forall Q\ path x Q <- path N Q) -> path (R x) P).
+      (_forall x\ (_forall Q\ path x Q <- path N Q) -> path (R x) P).
 lnorm (path a ap) tt.   % Add a few constants
 lnorm (path b bp) tt.
 lnorm (path f fp) tt.
@@ -65,7 +65,7 @@ lnorm (path g gp) tt.
 % This predicate is the same as above, except that it does not contain
 % the case for marked beta-redexes.
 lnorm (path' (abs R) (bnd P))
-      (forall x\ forall p\ path' x p -> path' (R x) (P p)).
+      (_forall x\ _forall p\ path' x p -> path' (R x) (P p)).
 lnorm (path' (app M N) (left  P))
       (path' M P).
 lnorm (path' (app N M) (right P))
@@ -78,14 +78,14 @@ lnorm (path' g gp) tt.
 % This predicate can be used to insert marked beta-redexes into a term.
 lnorm (insert_beta (app (abs R) N) (beta N' R'))
       (and (insert_beta N N')
-           (forall x\ insert_beta x x -> insert_beta (R x) (R' x))).
+           (_forall x\ insert_beta x x -> insert_beta (R x) (R' x))).
 lnorm (insert_beta (app M N) (app P Q))
       (and (insert_beta M P) (insert_beta N Q)).
 lnorm (insert_beta (abs R) (abs R'))
-      (forall x\ insert_beta x x -> insert_beta (R x) (R' x)).
+      (_forall x\ insert_beta x x -> insert_beta (R x) (R' x)).
 
 % M is a reduction of N if all paths in N are paths in M.
-reduce N M := pi p\ pr (path N p) => pr (path' M p).
+reduce N M := forall p, pr (path N p) => pr (path' M p).
 
 example 1 (app (app (abs x\ abs y\ app x y) (abs w\ app w w)) (abs x\ x)).
 example 2 (app (beta (abs w\ app w w) (x\ abs y\ app x y)) (abs x\ x)).
@@ -95,4 +95,4 @@ example 5 (beta (abs w\ app w w) (w\ app w w)).
 example 6 (abs x\ app (abs v\ app v x) (abs u\ app (abs w\ app u w) (abs r\ r))).
 example 7 (abs (w\ beta (abs (x\ beta (abs (u\ u)) (u\ app x u))) (x\ app x w))).
 
-#assert (pi N\ pi C\ (example C N => sigma M\ sigma P\ (pr (lred N M) /\ reduce N P /\ M = P))).
+#assert (forall N C, (example C N => exists M P, (pr (lred N M) /\ reduce N P /\ M = P))).
