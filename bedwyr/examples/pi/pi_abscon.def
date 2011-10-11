@@ -51,9 +51,9 @@
 % At the meta level we want to prove the following theorems:
 %
 % (1) canonical forms:
-%     pi A\ pi B\ (nabla x\ canonical (A x)) /\ restrict (new A) B ==> canonical B.
+%     forall A B, (nabla x, canonical (A x)) /\ restrict (new A) B ==> canonical B.
 % (2) type preservation:
-%     pi P\ pi X\ pi A\ process P /\ one P X A ==> canonical A.
+%     forall P X A, process P /\ one P X A ==> canonical A.
 %
 
 
@@ -63,18 +63,18 @@ process (in X A) := absAgent A.
 process (out X A) := conAgent A.
 process (plus P Q) := process P /\ process Q.
 process (par P Q) := process P /\ process Q.
-process (nu P) := nabla x\process (P x).
+process (nu P) := nabla x,process (P x).
 process (taup P) := process P.
 process (match X Y P) := process P.
 
 % abstractions
 absAgent (ag P) := process P.
-absAgent (new P) := nabla x\ absAgent (P x).
-absAgent (abs P) := nabla x\ absAgent (P x).
+absAgent (new P) := nabla x, absAgent (P x).
+absAgent (abs P) := nabla x, absAgent (P x).
 
 % concretions
 conAgent (ag P) := process P.
-conAgent (new P) := nabla x\ conAgent (P x).
+conAgent (new P) := nabla x, conAgent (P x).
 conAgent (con M P) := conAgent P.
 
 agent A := absAgent A \/ conAgent A.
@@ -88,11 +88,11 @@ agent A := absAgent A \/ conAgent A.
 %
 
 canonAbs (ag P).
-canonAbs (abs P) := nabla x\ canonAbs (P x).
+canonAbs (abs P) := nabla x, canonAbs (P x).
 
 canonCon (ag P).
 canonCon (con X P) := canonCon P.
-canonCon (new x\ con x (P x)) := nabla x\ canonCon (P x).
+canonCon (new x\ con x (P x)) := nabla x, canonCon (P x).
 
 canonical A := agent A /\ (canonAbs A \/ canonCon A).
 
@@ -101,23 +101,23 @@ canonical A := agent A /\ (canonAbs A \/ canonCon A).
 
 % merge a (parameterized) process with an agent.
 merge M (ag P) A := A = (ag (M P)).
-merge M (abs A) (abs B) := nabla x\ merge M (A x) (B x).
+merge M (abs A) (abs B) := nabla x, merge M (A x) (B x).
 merge M (con X A) (con X B) := merge M A B.
-merge M (new A) (new B) := nabla x\ merge M (A x) (B x).
+merge M (new A) (new B) := nabla x, merge M (A x) (B x).
 
-% Assuming that (nabla x\ canonical (P x)) holds, running
+% Assuming that (nabla x, canonical (P x)) holds, running
 % "restrict (new P) A" gives us a canonical agent A.
 restrict (new x\ ag (P x)) (ag (nu P)).
 restrict (new x\ con x (P x)) (new x\ con x (P x)).
 restrict (new x\ con M (P x)) (con M R) := restrict (new P) R.
 restrict (new x\ new y\ (P x y)) (new R) :=
-  nabla y\ restrict (new x\ P x y) (R y).
+  nabla y, restrict (new x\ P x y) (R y).
 restrict (new x\ abs (M x)) (abs R) :=
-  nabla y\ restrict (new x\ M x y) (R y).
+  nabla y, restrict (new x\ M x y) (R y).
 
 % Apply a canonical abstraction to a canonical concretion.
 apply (ag P) (ag Q) M R := R = (M P Q).
-apply A (new B) M (nu R) := nabla x\ apply A (B x) M (R x).
+apply A (new B) M (nu R) := nabla x, apply A (B x) M (R x).
 apply (abs A) (con X B) M R := apply (A X) B M R.
 
 
@@ -140,19 +140,19 @@ one (plus P Q) X R := one P X R.
 one (plus P Q) X R := one Q X R.
 
 % par
-one (par P Q) X R := sigma A\ one P X A /\ merge (x\ par x Q) A R.
-one (par P Q) X R := sigma A\ one Q X A /\ merge (x\ par P x) A R.
+one (par P Q) X R := exists A, one P X A /\ merge (x\ par x Q) A R.
+one (par P Q) X R := exists A, one Q X A /\ merge (x\ par P x) A R.
 
 % restriction
 one (nu P) Y R :=
-  sigma T\ (nabla x\ one (P x) Y (T x)) /\ restrict (new T) R.
+  exists T, (nabla x, one (P x) Y (T x)) /\ restrict (new T) R.
 
 % communication
 one (par P Q) tau (ag R) :=
-  sigma X\ sigma M\ sigma N\
+  exists X M N,
      one P (dn X) M /\ one Q (up X) N /\ apply M N (x\y\par x y) R.
 one (par P Q) tau (ag R) :=
-  sigma X\ sigma M\ sigma N\
+  exists X M N,
      one P (up X) M /\ one Q (dn X) N /\ apply N M (x\y\par y x) R.
 
 
@@ -162,14 +162,14 @@ one (par P Q) tau (ag R) :=
 % canonical forms.
 
 coinductive bisimAgent (ag P) (ag Q) := bisim P Q.
-coinductive bisimAgent (abs M) (abs N) := pi x\ bisimAgent (M x) (N x).
+coinductive bisimAgent (abs M) (abs N) := forall x, bisimAgent (M x) (N x).
 coinductive bisimAgent (con X A) (con X B) := bisimAgent A B.
 coinductive bisimAgent (new x\ con x (M x)) (new x\ con x (N x)) :=
-                nabla x\ bisimAgent (M x) (N x).
+                nabla x, bisimAgent (M x) (N x).
 
 coinductive bisim P Q :=
- (pi A\ pi X\ one P X A => sigma B\ one Q X B /\ bisimAgent A B) /\
- (pi B\ pi X\ one Q X B => sigma A\ one P X A /\ bisimAgent A B).
+ (forall A X, one P X A => exists B, one Q X B /\ bisimAgent A B) /\
+ (forall B X, one Q X B => exists A, one P X A /\ bisimAgent A B).
 
 
 % == Examples ========================================================

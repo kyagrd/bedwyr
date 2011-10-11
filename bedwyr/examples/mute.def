@@ -27,7 +27,7 @@ onep P A PP := def P Body /\ onep Body A PP.
 trace P end.
 trace P (tr  Act      Trace) := one P Act P' /\ trace P' Trace.
 trace P (trp (up X)   Trace) := onep P (up X) P' /\
-                                nabla x\ trace (P' x) (Trace x).
+                                nabla x, trace (P' x) (Trace x).
 trace P (trp (dn X Y) Trace) := onep P (dn X) P' /\ trace (P' Y) Trace.
 
 % These are the models of the [i]nnocent and [g]uilty nodes.
@@ -91,7 +91,7 @@ separating_trace P Q T := trace P T /\ peng T /\ (trace Q T => false).
 %   src/bedwyr examples/mute.def -e "separate i g." | examples/mute.pl
 
 separate P Q :=
-  sigma T\
+  exists T,
     trace P T /\ print (left T) /\ trace Q T /\ print (right T) /\ false.
 
 % A. Type check ===============================================================
@@ -102,5 +102,5 @@ picheck (name fail) tt.
 picheck (name null) tt.
 
 % Type-check defined processes.
-tc := pi N\ pi P\ def N P => print ("Checking" N) /\ prv picheck (proc P).
+tc := forall N P, def N P => print ("Checking" N) /\ prv picheck (proc P).
 #assert tc.

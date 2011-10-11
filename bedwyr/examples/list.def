@@ -19,14 +19,14 @@ append (cons X L) K (cons X M) := append L K M.
 % In the following checks, we assume the mode: append +L +K -M.
 
 % Coverage implicitly proves termination
-coverage := pi L\ pi K\ list L => sigma M\ append L K M.
+coverage := forall L K, list L => exists M, append L K M.
 
-determinacy := pi L\ pi K\ pi M\ pi Mp\
+determinacy := forall L K M Mp,
     list L => append L K M => append L K Mp => M = Mp.
 
 #assert coverage.
 #assert determinacy.
 #assert (member 3 (cons 1 (cons 3 nil))).
-#assert_not (sigma X\ member X nil).
-#assert_not (sigma X\ pi a\ member X (cons a nil)).
-#assert (pi a\ sigma X\ member X (cons a nil)).
+#assert_not (exists X, member X nil).
+#assert_not (exists X, forall a, member X (cons a nil)).
+#assert (forall a, exists X, member X (cons a nil)).

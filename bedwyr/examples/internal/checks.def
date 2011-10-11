@@ -3,9 +3,9 @@
 #assert_raise (X=1 => X=1).
 
 inductive p X Y := X=Y => false.
-#assert (pi x\ nabla y\ p x y).
-#assert_not (nabla y\ pi x\ p x y).
+#assert (forall x, nabla y, p x y).
+#assert_not (nabla y, forall x, p x y).
 
-#assert_raise (pi x\ pi y\ sigma z\ x=y => z=x).
-#assert_raise (pi x\ pi a\ pi y\ sigma z\ f x a = f y a => z=x).
-#assert_raise (pi x\ sigma y\ pi z\ x = f z => y = g z).
+#assert_raise (forall x y, exists z, x=y => z=x).
+#assert_raise (forall x a y, exists z, f x a = f y a => z=x).
+#assert_raise (forall x, exists y, forall z, x = f z => y = g z).

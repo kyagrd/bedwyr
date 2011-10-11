@@ -58,5 +58,5 @@ inductive path X Y := arrow X Z /\ path Z Y.
 initial (state 1 1 0 0 0).
 bad (state 5 5 A0 A1 T) := boolean A0 /\ boolean A1 /\ boolean T.
 
-test := initial I /\ (pi B\ bad B /\ path I B => print (error) /\ false) /\
+test := initial I /\ (forall B, bad B /\ path I B => print (error) /\ false) /\
         print (peterson is right).

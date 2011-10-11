@@ -44,16 +44,16 @@ sat P (land A B) := sat P A /\ sat P B.
 sat P (lor A B) := sat P A \/ sat P B.
 sat P (boxMatch X Y A) := (X = Y) => sat P A.
 sat P (diaMatch X Y A) := (X = Y) /\ sat P A.
-sat P (boxAct X A) := pi P1\ one P X P1 => sat P1 A.
-sat P (diaAct X A) := sigma P1\ one P X P1 /\ sat P1 A.
-sat P (boxOut X A) := pi Q\ onep P (up X) Q => nabla y\ sat (Q y) (A y).
-sat P (diaOut X A) := sigma Q\ onep P (up X) Q /\ nabla y\ sat (Q y) (A y).
-sat P (boxIn X A) := pi Q\ onep P (dn X) Q => pi y\ sat (Q y) (A y).
-sat P (diaIn X A) := sigma Q\ onep P (dn X) Q /\ sigma y\ sat (Q y) (A y).
-sat P (boxInL X A) := pi Q\ onep P (dn X) Q => sigma y\ sat (Q y) (A y).
-sat P (diaInL X A) := sigma Q\ onep P (dn X) Q /\ pi y\ sat (Q y) (A y).
-sat P (boxInE X A) := sigma y\ pi Q\ onep P (dn X) Q => sat (Q y) (A y).
-sat P (diaInE X A) := pi y\ sigma Q\ onep P (dn X) Q /\ sat (Q y) (A y).
+sat P (boxAct X A) := forall P1, one P X P1 => sat P1 A.
+sat P (diaAct X A) := exists P1, one P X P1 /\ sat P1 A.
+sat P (boxOut X A) := forall Q, onep P (up X) Q => nabla y, sat (Q y) (A y).
+sat P (diaOut X A) := exists Q, onep P (up X) Q /\ nabla y, sat (Q y) (A y).
+sat P (boxIn X A) := forall Q, onep P (dn X) Q => forall y, sat (Q y) (A y).
+sat P (diaIn X A) := exists Q, onep P (dn X) Q /\ exists y, sat (Q y) (A y).
+sat P (boxInL X A) := forall Q, onep P (dn X) Q => exists y, sat (Q y) (A y).
+sat P (diaInL X A) := exists Q, onep P (dn X) Q /\ forall y, sat (Q y) (A y).
+sat P (boxInE X A) := exists y, forall Q, onep P (dn X) Q => sat (Q y) (A y).
+sat P (diaInE X A) := forall y, exists Q, onep P (dn X) Q /\ sat (Q y) (A y).
 
 
 % A complete encoding: using explicit list of names.
@@ -65,31 +65,31 @@ lsat L P (land A B) := lsat L P A /\ lsat L P B.
 lsat L P (lor A B) := lsat L P A \/ lsat L P B.
 lsat L P (boxMatch X Y A) := (X = Y) => lsat L P A.
 lsat L P (diaMatch X Y A) := (X = Y) /\ lsat L P A.
-lsat L P (boxAct X A) := pi P1\ one P X P1 => lsat L P1 A.
-lsat L P (diaAct X A) := sigma P1\ one P X P1 /\ lsat L P1 A.
+lsat L P (boxAct X A) := forall P1, one P X P1 => lsat L P1 A.
+lsat L P (diaAct X A) := exists P1, one P X P1 /\ lsat L P1 A.
 lsat L P (boxOut X A) :=
-  pi Q\ onep P (up X) Q => nabla y\ lsat (cons y L) (Q y) (A y).
+  forall Q, onep P (up X) Q => nabla y, lsat (cons y L) (Q y) (A y).
 lsat L P (diaOut X A) :=
-  sigma Q\ onep P (up X) Q /\ nabla y\ lsat (cons y L) (Q y) (A y).
+  exists Q, onep P (up X) Q /\ nabla y, lsat (cons y L) (Q y) (A y).
 lsat L P (boxIn X A) :=
-  pi Q\ onep P (dn X) Q =>
-    nabla w\ pi y\ (member y (cons w L) => lsat (cons w L) (Q y) (A y)).
+  forall Q, onep P (dn X) Q =>
+    nabla w, forall y, (member y (cons w L) => lsat (cons w L) (Q y) (A y)).
 lsat L P (diaIn X A) :=
-  sigma Q\ onep P (dn X) Q /\
-    nabla w\ sigma y\ (member y (cons w L) /\ lsat (cons w L) (Q y) (A y)).
+  exists Q, onep P (dn X) Q /\
+    nabla w, exists y, (member y (cons w L) /\ lsat (cons w L) (Q y) (A y)).
 lsat L P (boxInL X A) :=
-  pi Q\ onep P (dn X) Q =>
-    nabla w\ sigma y\ (member y (cons w L) /\ lsat (cons w L) (Q y) (A y)).
+  forall Q, onep P (dn X) Q =>
+    nabla w, exists y, (member y (cons w L) /\ lsat (cons w L) (Q y) (A y)).
 lsat L P (diaInL X A) :=
-  sigma Q\ onep P (dn X) Q /\
-    nabla w\ pi y\ (member y (cons w L) => lsat (cons w L) (Q y) (A y)).
+  exists Q, onep P (dn X) Q /\
+    nabla w, forall y, (member y (cons w L) => lsat (cons w L) (Q y) (A y)).
 lsat L P (boxInE X A) :=
-  nabla w\ sigma y\
+  nabla w, exists y,
     (member y (cons w L) /\
-       pi Q\ onep P (dn X) Q => lsat (cons w L) (Q y) (A y)).
+       forall Q, onep P (dn X) Q => lsat (cons w L) (Q y) (A y)).
 lsat L P (diaInE X A) :=
-  nabla w\ pi y\ member y (cons w L) =>
-    sigma Q\ onep P (dn X) Q /\ lsat (cons w L) (Q y) (A y).
+  nabla w, forall y, member y (cons w L) =>
+    exists Q, onep P (dn X) Q /\ lsat (cons w L) (Q y) (A y).
 
 
 % Type checking processes and assertions ======================================
@@ -108,21 +108,21 @@ formcheck (form (diaMatch X Y A)) (and (name X) (and (name Y) (form A))).
 formcheck (form (boxAct X A)) (and (name X) (form A)).
 formcheck (form (diaAct X A)) (and (name X) (form A)).
 formcheck (form (boxOut X A))
-          (and (name X) (forall u\ (name u) -> (form (A u)))).
+          (and (name X) (_forall u\ (name u) -> (form (A u)))).
 formcheck (form (diaOut X A))
-          (and (name X) (forall u\ (name u) -> (form (A u)))).
+          (and (name X) (_forall u\ (name u) -> (form (A u)))).
 formcheck (form (boxIn  X A))
-          (and (name X) (forall u\ (name u) -> (form (A u)))).
+          (and (name X) (_forall u\ (name u) -> (form (A u)))).
 formcheck (form (diaIn  X A))
-          (and (forall u\ (name u) -> (form (A u))) (name X)).
+          (and (_forall u\ (name u) -> (form (A u))) (name X)).
 formcheck (form (boxInL X A))
-          (and (name X) (forall u\ (name u) -> (form (A u)))).
+          (and (name X) (_forall u\ (name u) -> (form (A u)))).
 formcheck (form (diaInL X A))
-          (and (name X) (forall u\ (name u) -> (form (A u)))).
+          (and (name X) (_forall u\ (name u) -> (form (A u)))).
 formcheck (form (boxInE X A))
-          (and (name X) (forall u\ (name u) -> (form (A u)))).
+          (and (name X) (_forall u\ (name u) -> (form (A u)))).
 formcheck (form (diaInE X A))
-          (and (name X) (forall u\ (name u) -> (form (A u)))).
+          (and (name X) (_forall u\ (name u) -> (form (A u)))).
 
 
 % Some examples ===============================================================
@@ -147,9 +147,9 @@ process 4 (in x u\ nu y\ ((plus (taup (taup z))
                            (plus (taup z)
                                  (taup (match u y (taup z))))))).
 
-typecheck_proc := pi P\ pi N\ process N P => prv picheck (proc P).
-typecheck_form := pi A\ pi N\ assert N A => prv formcheck (form A).
-wrong_form N := sigma P\ assert N P /\ (prv formcheck (form P) => false).
+typecheck_proc := forall P N, process N P => prv picheck (proc P).
+typecheck_form := forall A N, assert N A => prv formcheck (form A).
+wrong_form N := exists P, assert N P /\ (prv formcheck (form P) => false).
 
 #assert typecheck_proc.
 #assert typecheck_form.

@@ -148,7 +148,7 @@ printsum A B S := print (A + B = S).
 
 % Test that our fourbit adder is sound and complete relative to addition on
 % the integers 0 through 15
-test := pi a\ pi b\ pi sum\
+test := forall a b sum,
     (domain a /\ domain b) =>
     ((decadd a b sum => decfourbit a b sum /\ printsum a b sum) /\
      (decfourbit a b sum => decadd a b sum /\ printsum a b sum)).

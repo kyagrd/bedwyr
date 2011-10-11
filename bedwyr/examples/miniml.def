@@ -64,7 +64,7 @@ eval G (var X) M := mem (assoc X M) G.
 eval G (abs F) (abs F).
 eval G (app M N) V := eval G M (abs F) /\ eval G (F N) V.
 eval G (let D B) V := eval G D VD /\
-                      nabla x\ eval (cons (assoc x VD) G) (B (var x)) V.
+                      nabla x, eval (cons (assoc x VD) G) (B (var x)) V.
 eval G (cons M N) (cons VM VN) := eval G M VM /\ eval G N VN.
 eval G (match X CL) V := mem (assoc C B) CL /\ extract C X B B' /\ eval G B' V.
 
@@ -83,8 +83,8 @@ test 2 (let FST
          (fst\ let (app fst (cons (cst true) (cst false)))
                 (x\ app fst (cons x (cst false))))) := test 0 FST.
 
-#assert (pi x\ test 1 x => pi y\ eval nil x y => y = cst true).
-#assert (pi x\ test 2 x => pi y\ eval nil x y => y = cst true).
+#assert (forall x, test 1 x => forall y, eval nil x y => y = cst true).
+#assert (forall x, test 2 x => forall y, eval nil x y => y = cst true).
 
 % ----- Type-checking
 
@@ -97,15 +97,15 @@ typeof G (cst C) T := cst_typeof C T.
 typeof G (var X) T := mem (assoc X T) G.
 typeof G (abs F) (arrow T1 T2) :=
   % TODO apply x or var x ???
-  nabla x\ typeof (cons (assoc x T1) G) (F (var x)) T2.
+  nabla x, typeof (cons (assoc x T1) G) (F (var x)) T2.
 typeof G (app M N) T := typeof G M (arrow T1 T) /\ typeof G N T1.
 typeof G (let D B) T := typeof G D TD /\
                         print (type D TD) /\
-                        nabla x\ typeof (cons (assoc x TD) G) (B x) T.
+                        nabla x, typeof (cons (assoc x TD) G) (B x) T.
 typeof G (cons M N) (times TM TN) := typeof G M TM /\ typeof G N TN.
 typeof G (match X CL) T :=
   typeof G X TX /\
-  pi pat\ pi body\ mem (assoc pat body) CL =>
+  forall pat body, mem (assoc pat body) CL =>
     extract_typeof (cons (assoc pat TX) nil) G body T.
 % The last clause can make the spec loop...
 % it is not suitable for inference, any failed attempt will loop.
@@ -115,12 +115,12 @@ typeof G (match X CL) T :=
 typeof G V (tyabs T) :=
   false /\
   V = abs F /\
-  nabla x\ typeof G V (T x).
+  nabla x, typeof G V (T x).
 
 extract_typeof (cons (assoc hole TH) L) G (abs B) T :=
   % TODO should we apply [x] or [var x] ?
   % [var x] causes a not-llambda more often, possibly
-  nabla x\ extract_typeof L (cons (assoc x TH) G) (B (var x)) T.
+  nabla x, extract_typeof L (cons (assoc x TH) G) (B (var x)) T.
 extract_typeof (cons (assoc (ptcst X) TX) L) G B T :=
   cst_typeof X TX /\ extract_typeof L G B T.
 extract_typeof (cons (assoc (ptcons P Q) (times TP TQ)) L) G B T :=
@@ -137,17 +137,17 @@ extract_typeof nil G B T := typeof G B T.
                    nil))
                 bool).
 
-#assert (pi x\ test 0 x => typeof nil x (arrow (times int bool) int)).
-#assert (pi x\ test 1 x => typeof nil x bool).
+#assert (forall x, test 0 x => typeof nil x (arrow (times int bool) int)).
+#assert (forall x, test 1 x => typeof nil x bool).
 
 % This is derivable if you enable the last (looping) clause to typeof...
-% #assert (pi x\ test 0 x =>
+% #assert (forall x, test 0 x =>
 %          typeof nil x (tyabs x\ tyabs y\ arrow (times x y) x)).
 
 % }}}
 
 % This one requires the polymorphic let
-% #assert (pi x\ test 2 x => typeof nil x bool).
+% #assert (forall x, test 2 x => typeof nil x bool).
 
 % ----- Type inference
 % Now we have to handle unification by ourselves,
@@ -156,11 +156,11 @@ extract_typeof nil G B T := typeof G B T.
 % [subst T X V T'] expresses "T'=T[V/X]"
 % It should work on types, type environments, type equations...
 
-% It would be nice to say (nabla x\ subst (F (var x)) X V (F' (var x)))
+% It would be nice to say (nabla x, subst (F (var x)) X V (F' (var x)))
 % but it's not Llambda... hence the list of bound variables.
 subst BV A X V A := mem A BV.
 subst BV (tyabs F) X V (tyabs F') :=
-  nabla x\ subst (cons x BV) (F x) X V (F' x).
+  nabla x, subst (cons x BV) (F x) X V (F' x).
 
 subst BV (tyvar X) X V V.
 subst BV (tyvar Y) X V (tyvar Y) := X=Y => false.
@@ -199,7 +199,7 @@ subst BV (result T) X V (result T') :=
 occurs X (tyvar X).
 occurs X (arrow M N) := occurs X M \/ occurs X N.
 occurs X (times M N) := occurs X M \/ occurs X N.
-occurs X (tyabs M) := nabla x\ occurs X (M x).
+occurs X (tyabs M) := nabla x, occurs X (M x).
 
 % List of free type variables in a (list of) types.
 freetyvars (tyvar T) (cons T nil).
@@ -207,7 +207,7 @@ freetyvars (tycst C) nil.
 freetyvars (arrow A B) L := freetyvars A LA /\ freetyvars B LB /\ concat LA LB L.
 freetyvars (times A B) L := freetyvars A LA /\ freetyvars B LB /\ concat LA LB L.
 freetyvars (tyabs F) L :=
-  nabla x\ sigma LX\
+  nabla x, exists LX,
     freetyvars (F (tyvar x)) LX /\ minus LX (cons x nil) L.
 
 #assert (freetyvars
@@ -224,7 +224,7 @@ freetyvars (assoc X T) L := freetyvars T L.
 %  * typing judgements:                            (type G M T)
 %  * generalization statements:                    (generalize G T X)
 
-infer (abs L) (abs S) := nabla x\ infer (L (tyvar x)) (S x).
+infer (abs L) (abs S) := nabla x, infer (L (tyvar x)) (S x).
 % infer nil nil.
 infer (result X) (result X).
 
@@ -233,7 +233,7 @@ infer (result X) (result X).
 % TODO occur-check (btw, is it needed in the absence of recursion ?)
 infer ((tyvar V = T)+L) S := subst nil L V T L' /\ infer L' S.
 infer ((T = tyvar V)+L) S :=
-  (pi t\ T = tyvar t => false) /\ % only for avoiding multiple successes
+  (forall t, T = tyvar t => false) /\ % only for avoiding multiple successes
   subst nil L V T L' /\ infer L' S.
 infer ((tycst C = tycst C)+L) S := infer L S.
 infer ((times L1 L2 = times R1 R2)+L) S := infer ((L1=R1)+((L2=R2)+L)) S.
@@ -242,9 +242,9 @@ infer ((arrow L1 L2 = arrow R1 R2)+L) S := infer ((L1=R1)+((L2=R2)+L)) S.
 % Before actually unifying types, type schemata should be instantiated
 % with new existential variables.
 infer ((instantiate (tyabs A = B))+L) (abs S) :=
-  nabla x\ infer ((instantiate (A (tyvar x) = B))+L) (S x).
+  nabla x, infer ((instantiate (A (tyvar x) = B))+L) (S x).
 infer ((instantiate (A=B))+L) S :=
-  (pi x\ tyabs x = A => false) /\ infer ((A=B)+L) S.
+  (forall x, tyabs x = A => false) /\ infer ((A=B)+L) S.
 
 % >>>>>>>>> Treat typing judgements
 
@@ -252,22 +252,22 @@ infer ((type G (cst C) T)+L) S := cst_typeof C TC /\ infer ((T = tycst TC)+L) S.
 infer ((type G (var V) T)+L) S :=
   mem (assoc V TV) G /\ infer ((instantiate (TV=T))+L) S.
 infer ((type G (app M N) T)+L) (abs S) :=
-  nabla t\ infer ((type G N (tyvar t))+
+  nabla t, infer ((type G N (tyvar t))+
                  ((type G M (arrow (tyvar t) T))+L))
                  (S t).
 infer ((type G (abs M) T)+L) (abs t1\ abs t2\ S t1 t2) :=
-  nabla t1\ nabla t2\ nabla x\
+  nabla t1 t2 x,
     infer ((T = arrow (tyvar t1) (tyvar t2))+
           ((type (cons (assoc x (tyvar t1)) G) (M (var x)) (tyvar t2))+L))
           (S t1 t2).
 infer ((type G (cons A B) T)+L) (abs t1\ abs t2\ S t1 t2) :=
-  nabla t1\ nabla t2\
+  nabla t1 t2,
     infer ((T = times (tyvar t1) (tyvar t2))+
           ((type G A (tyvar t1))+
           ((type G B (tyvar t2))+L)))
           (S t1 t2).
 infer ((type G (let D B) T)+L) (abs t\ abs tgen\ S t tgen) :=
-  nabla t\ nabla tgen\ nabla x\
+  nabla t tgen x,
     infer ((type G D (tyvar t))+
           ((generalize G (tyvar t) tgen)+
           ((type (cons (assoc x (tyvar tgen)) G) (B (var x)) T)+L)))
@@ -287,7 +287,7 @@ abstract_over nil T T.
 abstract_over (cons X VARS) T TG :=
   abstract_over VARS T T' /\
   (((occurs X T' => false) /\ TG=T') \/
-   (occurs X T' /\ (nabla x\ subst nil T' X x (T'' x)) /\ TG = tyabs T'')).
+   (occurs X T' /\ (nabla x, subst nil T' X x (T'' x)) /\ TG = tyabs T'')).
 
 #assert (occurs x (arrow (tyvar x) (tycst bool))).
 #assert (occurs y (arrow (tyvar x) (tycst bool)) => false).
@@ -301,7 +301,7 @@ abstract_over (cons X VARS) T TG :=
 % Remove useless (existential) abstractions over the result.
 gc (result X) X.
 gc (abs I) O :=
-  nabla x\
+  nabla x,
     gc (I x) (I' x) /\
     ((occurs x (I' x) /\ O = abs I') \/
      ((occurs x (I' x) => false) /\ O = I' x)).

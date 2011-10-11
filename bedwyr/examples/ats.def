@@ -5,14 +5,14 @@
 display One := One P A Q /\ print (One P A Q) /\ false.
 
 % Determine if transition system is determinate or not.
-determinate One :=  pi P\ pi A\ pi Q\ pi R\ One P A Q =>  One P A R => Q = R.
+determinate One :=  forall P A Q R, One P A Q =>  One P A R => Q = R.
 
 coinductive sim One P Q :=
-   pi P1\ pi A\ One P A P1 => sigma Q1\ One Q A Q1 /\ sim One P1 Q1.
+   forall P1 A, One P A P1 => exists Q1, One Q A Q1 /\ sim One P1 Q1.
 
 coinductive bisim One P Q :=
-   (pi P1\ pi A\ One P A P1 => sigma Q1\ One Q A Q1 /\ bisim One P1 Q1) /\
-   (pi Q1\ pi A\ One Q A Q1 => sigma P1\ One P A P1 /\ bisim One P1 Q1).
+   (forall P1 A, One P A P1 => exists Q1, One Q A Q1 /\ bisim One P1 Q1) /\
+   (forall Q1 A, One Q A Q1 => exists P1, One P A P1 /\ bisim One P1 Q1).
 
 %% ATS 0:  a.b
 
@@ -95,14 +95,14 @@ cyclic R History P Q :=
 
 cycsim One P Q :=
    cyclic
-     (S\ P\ Q\ (pi P1\ pi A\ One P A P1 => sigma Q1\ One Q A Q1 /\ S P1 Q1))
+     (S\ P\ Q\ (forall P1 A, One P A P1 => exists Q1, One Q A Q1 /\ S P1 Q1))
      nil P Q.
 
 cycbisim One P Q :=
    cyclic
      (S\ P\ Q\
-        ((pi P1\ pi A\ One P A P1 => sigma Q1\ One Q A Q1 /\ S P1 Q1) /\
-         (pi Q1\ pi A\ One Q A Q1 => sigma P1\ One P A P1 /\ S P1 Q1)))
+        ((forall P1 A, One P A P1 => exists Q1, One Q A Q1 /\ S P1 Q1) /\
+         (forall Q1 A, One Q A Q1 => exists P1, One P A P1 /\ S P1 Q1)))
      nil P Q.
 
 one5 p a p.
