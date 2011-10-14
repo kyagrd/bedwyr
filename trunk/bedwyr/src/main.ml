@@ -96,15 +96,21 @@ let rec process ?(interactive=false) parse lexbuf =
         fun () -> Term.restore_state s ; Term.restore_namespace ns
     in
     if interactive then Format.printf "?= %!" ;
-    begin match parse Lexer.token lexbuf with
-      | System.Def (k,h,a,b) -> System.add_clause k h a b
-      | System.Query a       -> do_cleanup Prover.toplevel_prove a reset
-      | System.Command (c,a) ->
-          if not (List.mem c ["include";"reset";"reload";"session"]) then
-            do_cleanup (command lexbuf) (c,a) reset
-          else
-            command lexbuf (c,a)
-    end ;
+    (* TODO do something with kinds and types *)
+    List.iter
+      (function
+        | System.Kind _ -> ()
+        | System.Type _ -> ()
+        | System.Typing (k,h)   -> System.create_def k h
+        | System.Def (h,a,b)    -> System.add_clause h a b
+        | System.Query a        -> do_cleanup Prover.toplevel_prove a reset
+        | System.Command (c,a)  ->
+            if not (List.mem c ["include";"reset";"reload";"session"]) then
+              do_cleanup (command lexbuf) (c,a) reset
+            else
+              command lexbuf (c,a)
+      )
+      (parse Lexer.token lexbuf);
     if interactive then flush stdout
   with
     | Failure "eof" as e -> raise e

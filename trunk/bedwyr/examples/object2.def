@@ -5,12 +5,18 @@
 
 % Example taken from the CADE2007 system description for Bedwyr.
 
-memb A (cons A L).
-memb A (cons B L) := memb A L.
+Define
+  memb
+by
+  memb A (cons A L);
+  memb A (cons B L) := memb A L.
 
-pv L (p X Y) := memb (p X Y) L.
-pv L (impl A B) := pv (cons A L) B.
-pv L (_forall B) := nabla x, pv L (B x).
+Define
+  pv
+by
+  pv L (p X Y) := memb (p X Y) L;
+  pv L (impl A B) := pv (cons A L) B;
+  pv L (_forall B) := nabla x, pv L (B x).
 
 #assert
   (forall r s t,

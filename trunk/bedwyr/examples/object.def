@@ -5,22 +5,32 @@
 
 % Interpreter for an object-level logic
 
-pv t.
-pv (and G G') := pv G /\ pv G'.
-pv (_forall G) := nabla x, pv (G x).
-pv (_exists G) := exists x, pv (G x).
-pv A := atom A /\ exists D, prog D /\ bc D A.
+Define
+  pv,
+  bd
+by
+  pv t;
+  pv (and G G') := pv G /\ pv G';
+  pv (_forall G) := nabla x, pv (G x);
+  pv (_exists G) := exists x, pv (G x);
+  pv A := atom A /\ exists D, prog D /\ bc D A;
 
-bc A A := atom A.
-bc (imp G D) A := bc D A /\ pv G.
-bc (_forall D) A := exists t, bc (D t) A.
+  bc A A := atom A;
+  bc (imp G D) A := bc D A /\ pv G;
+  bc (_forall D) A := exists t, bc (D t) A.
 
 % Additional definition clauses
 
-atom (q X Y Z).
-prog (_forall x\ _forall y\ q x x y).
-prog (_forall x\ _forall y\ q x y x).
-prog (_forall x\ _forall y\ q y x x).
+Define
+  atom
+by
+  atom (q X Y Z).
+Define
+  prog
+by
+  prog (_forall x\ _forall y\ q x x y);
+  prog (_forall x\ _forall y\ q x y x);
+  prog (_forall x\ _forall y\ q y x x).
 
 % Tests
 

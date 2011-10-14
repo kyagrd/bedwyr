@@ -25,7 +25,7 @@
 
   let to_string t = Term.get_name t
 
-  let mkdef kind head params body =
+  let mkdef head params body =
     (* Replace the params by fresh variables and
      * put the constraints on the parameters in the body:
      * d (s X) X := body --> d Y X := (Y = s X), body
@@ -82,14 +82,16 @@
           | Term.Lam (n,b) -> n,b
           | _ -> assert false
     in
-    System.Def (kind, head, arity, body)
+    System.Def (head, arity, body)
 
 %}
 
-%token BSLASH COMMA LPAREN RPAREN DOT SHARP
-%token EQ AND OR IMP RARROW LARROW PLUS MINUS TIMES
-%token DEF IND COIND
-%token <string> ID BINDER
+%token SHARP KIND TYPE DEFINE BY IND COIND
+%token DEF DOT COMMA SMCLMN COLUMN
+%token EQ AND OR IMP
+%token <string> BINDER ID
+%token RARROW LARROW PLUS MINUS TIMES
+%token BSLASH LPAREN RPAREN
 %token <string> STRING
 
 %nonassoc BSLASH
@@ -105,33 +107,68 @@
 %left TIMES
 
 %start input_def input_query
-%type <System.input> input_def
-%type <System.input> input_query
+%type <System.input list> input_def
+%type <System.input list> input_query
 
 %%
 
 input_def:
-  | defkind sexp DEF exp DOT { let h,t = $2 in mkdef $1 h t $4 }
-  | defkind sexp DOT         { let h,t = $2 in mkdef $1 h t (Term.atom "true") }
-  | DEF exp DOT              { System.Query $2 }
-  | SHARP sexp DOT           { let h,t = $2 in System.Command (to_string h,t) }
+  | KIND types_list simple_kind DOT     { [System.Kind ($2, $3)] }
+  | TYPE constants_list simple_type DOT { [System.Type ($2, $3)] }
+  | DEFINE typing_list BY def_list DOT  { $2@$4 }
+  | SHARP sexp DOT                      { let h,t = $2 in
+                                          [System.Command (to_string h, t)] }
+/* TODO raise an exception if a type isn't new */
+types_list:
+  | ID                  { [Type.atom $1] }
+  | ID COMMA types_list { (Type.atom $1)::$3 }
+
+simple_kind:
+  | ID			            { Type.Ki $1 }
+  | LPAREN simple_kind RPAREN       { $2 }
+  | simple_kind RARROW simple_kind  { Type.KRArrow ($1, $3) }
+
+/* TODO raise an exception if a constant isn't new */
+constants_list:
+  | ID                      { [Term.atom $1] }
+  | ID COMMA constants_list { (Term.atom $1)::$3 }
+
+simple_type:
+  | ID			            { Type.Ty $1 }
+  | LPAREN simple_type RPAREN       { $2 }
+  | simple_type RARROW simple_type  { Type.TRArrow ($1, $3) }
+
+typing_list:
+  | typing_item                     { [$1] }
+  | typing_item COMMA typing_list   { ($1)::$3 }
+
+typing_item:
+  | defkind ID COLUMN simple_type   { System.Typing ($1, Term.atom $2) }
+  | defkind ID                      { System.Typing ($1, Term.atom $2) }
 
 defkind:
-  |       { System.Normal      }
-  | IND   { System.Inductive   }
-  | COIND { System.CoInductive }
+  |         { System.Normal      }
+  | IND     { System.Inductive   }
+  | COIND   { System.CoInductive }
+
+def_list:
+  | def_item                    { [$1] }
+  | def_item SMCLMN def_list    { ($1)::$3}
+
+def_item:
+  | sexp DEF exp    { let h,t = $1 in mkdef h t $3 }
+  | sexp            { let h,t = $1 in mkdef h t (Term.atom "true") }
+  | DEF exp         { System.Query $2 }
 
 input_query:
-  | exp DOT          { System.Query $1 }
-  | SHARP sexp DOT   { let (h,t) = $2 in System.Command (to_string h,t) }
+  | exp DOT         { [System.Query $1] }
+  | SHARP sexp DOT  { let (h,t) = $2 in [System.Command (to_string h,t)] }
 
 exp:
   | exp EQ   exp { eq   $1 $3 }
   | exp AND  exp { andc $1 $3 }
   | exp OR   exp { orc  $1 $3 }
   | exp IMP  exp { imp  $1 $3 }
-  | iexp         { $1 }
-  | sexp         { let (t,l) = $1 in Term.app t l }
   | BINDER id_list COMMA exp    { let binder = Term.atom $1 in
                                   List.fold_left
                                     (fun t -> fun (was_free,id) ->
@@ -145,6 +182,8 @@ exp:
                                     $4
                                     $2
                                 }
+  | sexp         { let (t,l) = $1 in Term.app t l }
+  | iexp         { $1 }
 
 id_list:
   | ID          { [Term.is_free $1, $1] }
@@ -251,48 +290,54 @@ let to_term ?incl:(incl=true) lexer file =
       match input with
         | None -> l
         | Some i ->
-            begin match i with
-              | System.Def (_,head,arity,body) ->
-                  let body = objectify (Term.lambda arity body) in
-                  aux ((Term.app clause [ head;
-                                          body ])::l)
-              | System.Query a -> aux ((Term.app query [a])::l)
-              | System.Command ("include",[file]) ->
-                  let file = Term.get_name file in
-                  let not_included fname =
-                        if ((List.mem fname !inclfiles) || (not incl)) then false
-                        else (
-                                inclfiles := fname :: !inclfiles ;
-                                true
-                        )
-                  in
-                  if not_included file then aux (list_of_file file l)
-                  (*  begin *)
-                  (*  	    let cwd = Sys.getcwd () in *)
-                  (*  	    Sys.chdir (Filename.dirname file) ; *)
-                  (*  	    let l = list_of_file file l in *)
-                  (*        Sys.chdir cwd ; *)
-                  (*  	    aux l *)
-                  (*  end *)
-                  else aux l
+            List.fold_left
+              (fun l -> function
+                | System.Kind _ -> l
+                | System.Type _ -> l
+                | System.Typing (kind,head) -> l
+                | System.Def (head,arity,body) ->
+                    let body = objectify (Term.lambda arity body) in
+                    aux ((Term.app clause [ head;
+                                            body ])::l)
+                | System.Query a -> aux ((Term.app query [a])::l)
+                | System.Command ("include",[file]) ->
+                    let file = Term.get_name file in
+                    let not_included fname =
+                          if ((List.mem fname !inclfiles) || (not incl)) then false
+                          else (
+                                  inclfiles := fname :: !inclfiles ;
+                                  true
+                          )
+                    in
+                    if not_included file then aux (list_of_file file l)
+                    (*  begin *)
+                    (*  	    let cwd = Sys.getcwd () in *)
+                    (*  	    Sys.chdir (Filename.dirname file) ; *)
+                    (*  	    let l = list_of_file file l in *)
+                    (*        Sys.chdir cwd ; *)
+                    (*  	    aux l *)
+                    (*  end *)
+                    else aux l
 
-              | System.Command ("assert",a) ->
-                  aux ((Term.app command ((Term.atom "assert")::
-                                            (List.map objectify a)))::l)
-              (* [AT]: change parsing to type command to allow polymorphic types; *)
-              (*       Free variables (eigen or logic) are abstracted. *)
-              | System.Command ("type",[a;b]) ->
-                  let b = Term.app (Term.atom "ty") [Norm.deep_norm b] in
-                  let vs = (Term.logic_vars [b]) @ (Term.eigen_vars [b]) in
-                  let ty = List.fold_left
-                             (fun x v ->
-                               Term.app (Term.atom "all") [(Term.abstract v x)])
-                             b vs in
+                | System.Command ("assert",a) ->
+                    aux ((Term.app command ((Term.atom "assert")::
+                                              (List.map objectify a)))::l)
+                (* [AT]: change parsing to type command to allow polymorphic types; *)
+                (*       Free variables (eigen or logic) are abstracted. *)
+                | System.Command ("type",[a;b]) ->
+                    let b = Term.app (Term.atom "ty") [Norm.deep_norm b] in
+                    let vs = (Term.logic_vars [b]) @ (Term.eigen_vars [b]) in
+                    let ty = List.fold_left
+                               (fun x v ->
+                                 Term.app (Term.atom "all") [(Term.abstract v x)])
+                               b vs in
 
-                  aux ((Term.app command ((Term.atom "type")::[a;ty]))::l)
-              | System.Command (c,a) ->
-                  aux ((Term.app command ((Term.atom c)::a))::l)
-            end
+                    aux ((Term.app command ((Term.atom "type")::[a;ty]))::l)
+                | System.Command (c,a) ->
+                    aux ((Term.app command ((Term.atom c)::a))::l)
+              )
+              l
+              i
     in
     let cwd = Sys.getcwd () in
     Sys.chdir (Filename.dirname file) ;

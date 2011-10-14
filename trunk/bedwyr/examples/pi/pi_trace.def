@@ -8,14 +8,23 @@
 % type tr     a -> trace -> trace.
 % type trp    (n -> a) -> (n -> trace) -> trace.
 
-trace P end.
-trace P (tr  Act Trace) := one P Act P' /\ trace P' Trace.
-trace P (trp Act Trace) := onep P Act P' /\ nabla x, trace (P' x) (Trace x).
+Define
+  trace
+by
+  trace P end;
+  trace P (tr  Act Trace) := one P Act P' /\ trace P' Trace;
+  trace P (trp Act Trace) := onep P Act P' /\ nabla x, trace (P' x) (Trace x).
 
-trace_eq P Q := (forall T, trace P T => trace Q T) /\
+Define
+  trace_eq
+by
+  trace_eq P Q := (forall T, trace P T => trace Q T) /\
                 (forall T, trace Q T => trace P T).
 
-separating_trace P Q T := trace P T /\ (trace Q T => false).
+Define
+  separating_trace
+by
+  separating_trace P Q T := trace P T /\ (trace Q T => false).
 
 % ?= example 5 P, example 6 Q, separating_trace P Q T.
 % Solution found:

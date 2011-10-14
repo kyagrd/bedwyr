@@ -1,23 +1,5 @@
 #include "pi.def".
 
-%% Allow agent-style definitions as a controled recursion
-one  P A PP := agent P Body /\ one  Body A PP.
-onep P A PP := agent P Body /\ onep Body A PP.
-
-% Church natural numbers as encoded in the MWB examples
-agent (zero S Z) (nu i\ out Z i z).
-agent (un   S Z) (nu i\ out S i (nu i\ out Z i z)).
-agent (deux S Z) (nu i\ out S i (nu i\ out S i (nu i\ out Z i z))).
-
-agent (succ S Z Y W) (nu i\ out Y i (copy S Z Y W)).
-agent (copy S Z Y W) (plus (in S i\ succ S Z Y W)
-                              (in Z i\ nu i\ out W i z)).
-agent (add S1 Z1 S2 Z2 Y W)
-      (plus (in S1 i\ nu i\ out Y i (add S1 Z1 S2 Z2 Y W))
-            (in Z1 i\ copy S2 Z2 Y W)).
-
-agent (church S Z zz)     (nu i\ out Z i z).
-agent (church S Z (ss N)) (nu i\ out S i (church S Z N)).
 
 #assert
   (weak_bisim

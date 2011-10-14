@@ -58,26 +58,38 @@
 
 
 % processes
-process z.
-process (in X A) := absAgent A.
-process (out X A) := conAgent A.
-process (plus P Q) := process P /\ process Q.
-process (par P Q) := process P /\ process Q.
-process (nu P) := nabla x,process (P x).
-process (taup P) := process P.
-process (match X Y P) := process P.
+Define
+  process
+by
+  process z;
+  process (in X A) := absAgent A;
+  process (out X A) := conAgent A;
+  process (plus P Q) := process P /\ process Q;
+  process (par P Q) := process P /\ process Q;
+  process (nu P) := nabla x,process (P x);
+  process (taup P) := process P;
+  process (match X Y P) := process P.
 
 % abstractions
-absAgent (ag P) := process P.
-absAgent (new P) := nabla x, absAgent (P x).
-absAgent (abs P) := nabla x, absAgent (P x).
+Define
+  absAgent
+by
+  absAgent (ag P) := process P;
+  absAgent (new P) := nabla x, absAgent (P x);
+  absAgent (abs P) := nabla x, absAgent (P x).
 
 % concretions
-conAgent (ag P) := process P.
-conAgent (new P) := nabla x, conAgent (P x).
-conAgent (con M P) := conAgent P.
+Define
+  conAgent
+by
+  conAgent (ag P) := process P;
+  conAgent (new P) := nabla x, conAgent (P x);
+  conAgent (con M P) := conAgent P.
 
-agent A := absAgent A \/ conAgent A.
+Define
+  agent
+by
+  agent A := absAgent A \/ conAgent A.
 
 % Canonical agents:
 % Call an agent canonical if and only the following hold:
@@ -87,38 +99,56 @@ agent A := absAgent A \/ conAgent A.
 %      (new x\ con x (P x))
 %
 
-canonAbs (ag P).
-canonAbs (abs P) := nabla x, canonAbs (P x).
+Define
+  canonAbs
+by
+  canonAbs (ag P);
+  canonAbs (abs P) := nabla x, canonAbs (P x).
 
-canonCon (ag P).
-canonCon (con X P) := canonCon P.
-canonCon (new x\ con x (P x)) := nabla x, canonCon (P x).
+Define
+  canonCon
+by
+  canonCon (ag P);
+  canonCon (con X P) := canonCon P;
+  canonCon (new x\ con x (P x)) := nabla x, canonCon (P x).
 
-canonical A := agent A /\ (canonAbs A \/ canonCon A).
+Define
+  canonical
+by
+  canonical A := agent A /\ (canonAbs A \/ canonCon A).
 
 
 % == Some auxiliary predicates ==========================================
 
 % merge a (parameterized) process with an agent.
-merge M (ag P) A := A = (ag (M P)).
-merge M (abs A) (abs B) := nabla x, merge M (A x) (B x).
-merge M (con X A) (con X B) := merge M A B.
-merge M (new A) (new B) := nabla x, merge M (A x) (B x).
+Define
+  merge
+by
+  merge M (ag P) A := A = (ag (M P));
+  merge M (abs A) (abs B) := nabla x, merge M (A x) (B x);
+  merge M (con X A) (con X B) := merge M A B;
+  merge M (new A) (new B) := nabla x, merge M (A x) (B x).
 
 % Assuming that (nabla x, canonical (P x)) holds, running
 % "restrict (new P) A" gives us a canonical agent A.
-restrict (new x\ ag (P x)) (ag (nu P)).
-restrict (new x\ con x (P x)) (new x\ con x (P x)).
-restrict (new x\ con M (P x)) (con M R) := restrict (new P) R.
-restrict (new x\ new y\ (P x y)) (new R) :=
-  nabla y, restrict (new x\ P x y) (R y).
-restrict (new x\ abs (M x)) (abs R) :=
-  nabla y, restrict (new x\ M x y) (R y).
+Define
+  restrict
+by
+  restrict (new x\ ag (P x)) (ag (nu P));
+  restrict (new x\ con x (P x)) (new x\ con x (P x));
+  restrict (new x\ con M (P x)) (con M R) := restrict (new P) R;
+  restrict (new x\ new y\ (P x y)) (new R) :=
+    nabla y, restrict (new x\ P x y) (R y);
+  restrict (new x\ abs (M x)) (abs R) :=
+    nabla y, restrict (new x\ M x y) (R y).
 
 % Apply a canonical abstraction to a canonical concretion.
-apply (ag P) (ag Q) M R := R = (M P Q).
-apply A (new B) M (nu R) := nabla x, apply A (B x) M (R x).
-apply (abs A) (con X B) M R := apply (A X) B M R.
+Define
+  apply
+by
+  apply (ag P) (ag Q) M R := R = (M P Q);
+  apply A (new B) M (nu R) := nabla x, apply A (B x) M (R x);
+  apply (abs A) (con X B) M R := apply (A X) B M R.
 
 
 % == Operational Semantics ==========================================
@@ -128,32 +158,29 @@ apply (abs A) (con X B) M R := apply (A X) B M R.
 %  dn : name -> action (input action)
 %  tau : action
 
-one (in X A) (dn X) A.
-one (out X A) (up X) A.
-
-one (taup P) tau (ag P).
-
-one (match X X P) Y A := one P Y A.
-
-% plus
-one (plus P Q) X R := one P X R.
-one (plus P Q) X R := one Q X R.
-
-% par
-one (par P Q) X R := exists A, one P X A /\ merge (x\ par x Q) A R.
-one (par P Q) X R := exists A, one Q X A /\ merge (x\ par P x) A R.
-
-% restriction
-one (nu P) Y R :=
-  exists T, (nabla x, one (P x) Y (T x)) /\ restrict (new T) R.
-
-% communication
-one (par P Q) tau (ag R) :=
-  exists X M N,
-     one P (dn X) M /\ one Q (up X) N /\ apply M N (x\y\par x y) R.
-one (par P Q) tau (ag R) :=
-  exists X M N,
-     one P (up X) M /\ one Q (dn X) N /\ apply N M (x\y\par y x) R.
+Define
+  one
+by
+  one (in X A) (dn X) A;
+  one (out X A) (up X) A;
+  one (taup P) tau (ag P);
+  one (match X X P) Y A := one P Y A;
+  % plus
+  one (plus P Q) X R := one P X R;
+  one (plus P Q) X R := one Q X R;
+  % par
+  one (par P Q) X R := exists A, one P X A /\ merge (x\ par x Q) A R;
+  one (par P Q) X R := exists A, one Q X A /\ merge (x\ par P x) A R;
+  % restriction
+  one (nu P) Y R :=
+    exists T, (nabla x, one (P x) Y (T x)) /\ restrict (new T) R;
+  % communication
+  one (par P Q) tau (ag R) :=
+    exists X M N,
+      one P (dn X) M /\ one Q (up X) N /\ apply M N (x\y\par x y) R;
+  one (par P Q) tau (ag R) :=
+    exists X M N,
+      one P (up X) M /\ one Q (dn X) N /\ apply N M (x\y\par y x) R.
 
 
 % == Strong Bisimulation ===============================================
@@ -161,44 +188,65 @@ one (par P Q) tau (ag R) :=
 % We can assume without loss of generality that the agents are in
 % canonical forms.
 
-coinductive bisimAgent (ag P) (ag Q) := bisim P Q.
-coinductive bisimAgent (abs M) (abs N) := forall x, bisimAgent (M x) (N x).
-coinductive bisimAgent (con X A) (con X B) := bisimAgent A B.
-coinductive bisimAgent (new x\ con x (M x)) (new x\ con x (N x)) :=
+Define
+  coinductive bisimAgent
+by
+  bisimAgent (ag P) (ag Q) := bisim P Q;
+  bisimAgent (abs M) (abs N) := forall x, bisimAgent (M x) (N x);
+  bisimAgent (con X A) (con X B) := bisimAgent A B;
+  bisimAgent (new x\ con x (M x)) (new x\ con x (N x)) :=
                 nabla x, bisimAgent (M x) (N x).
 
-coinductive bisim P Q :=
- (forall A X, one P X A => exists B, one Q X B /\ bisimAgent A B) /\
- (forall B X, one Q X B => exists A, one P X A /\ bisimAgent A B).
+Define
+  coinductive bisim
+by
+  bisim P Q :=
+    (forall A X, one P X A => exists B, one Q X B /\ bisimAgent A B) /\
+    (forall B X, one Q X B => exists A, one P X A /\ bisimAgent A B).
 
 
 % == Examples ========================================================
 
-proc 1 (x\ in x (abs y1\ abs y2\ ag (match y1 y2 (out c (ag z))))).
-proc 2 (x\ nu w\ out x (con w (con w (ag z)))).
-proc 3 (x\ nu a\ nu b\ out x (con a (con b (ag z)))).
+Define
+  proc
+by
+  proc 1 (x\ in x (abs y1\ abs y2\ ag (match y1 y2 (out c (ag z)))));
+  proc 2 (x\ nu w\ out x (con w (con w (ag z))));
+  proc 3 (x\ nu a\ nu b\ out x (con a (con b (ag z)))).
 
 % nu x.( x(y1,y2).[y1=y2]~c.0 | (nu w. ~x<w,w>.0) | (nu a.nu b. ~x<a,b>.0))
-example 1 (nu x\ par (P x) (par (Q x) (R x))) :=
-  proc 1 P /\ proc 2 Q /\ proc 3 R.
-% tau.~c.0 + tau.0
-example 2 (plus (taup (out c (ag z))) (taup z)).
+Define
+  example
+by
+  example 1 (nu x\ par (P x) (par (Q x) (R x))) :=
+    proc 1 P /\ proc 2 Q /\ proc 3 R;
+  % tau.~c.0 + tau.0
+  example 2 (plus (taup (out c (ag z))) (taup z)).
 
-test1 := example 1 P /\ example 2 Q /\ process P /\ process Q /\ bisim P Q.
+Define
+  test1
+by
+  test1 := example 1 P /\ example 2 Q /\ process P /\ process Q /\ bisim P Q.
 
 
-pair 1 R T :=
-  P1 = (y\ out c (con y (ag z))) /\
-  P = (x\ in x (abs y\ ag (P1 y))) /\
-  Q1 = (k\ out c (con k (ag z))) /\
-  Q2 = (w\ out c (con w (ag z))) /\
-  Q = (x\ nu k\ plus (out x (con k (ag (Q1 k)))) (in y (abs w\ ag (Q2 w)))) /\
-  R = (nu x\ par (P x) (Q x)) /\
-  T1 = in y (abs w\ ag (nu x\ par (P x) (nu k\ Q2 w))) /\
-  T2 = taup (nu x\ nu k\ par (P1 k) (Q1 k)) /\
-  T = plus T1 T2.
+Define
+  pair
+by
+  pair 1 R T :=
+    P1 = (y\ out c (con y (ag z))) /\
+    P = (x\ in x (abs y\ ag (P1 y))) /\
+    Q1 = (k\ out c (con k (ag z))) /\
+    Q2 = (w\ out c (con w (ag z))) /\
+    Q = (x\ nu k\ plus (out x (con k (ag (Q1 k)))) (in y (abs w\ ag (Q2 w)))) /\
+    R = (nu x\ par (P x) (Q x)) /\
+    T1 = in y (abs w\ ag (nu x\ par (P x) (nu k\ Q2 w))) /\
+    T2 = taup (nu x\ nu k\ par (P1 k) (Q1 k)) /\
+    T = plus T1 T2.
 
-test2 := pair 1 R T /\ process R /\ process T /\ bisim R T.
+Define
+  test2
+by
+  test2 := pair 1 R T /\ process R /\ process T /\ bisim R T.
 
 
 % TODO: more examples..

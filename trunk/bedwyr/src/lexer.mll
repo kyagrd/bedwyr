@@ -38,8 +38,18 @@ rule token = parse
   | '\n'                { incrline lexbuf; token lexbuf }
 
   | "#"         { SHARP }
+
+  | "Kind"      { KIND }
+  | "Type"      { TYPE }
+
+  | "Define"    { DEFINE }
+  | "by"        { BY }
+
   | ":="        { DEF }
   | "."         { DOT }
+  | ","         { COMMA }
+  | ";"         { SMCLMN }
+  | ":"         { COLUMN }
 
   | "="         { EQ }
   | "/\\"       { AND }
@@ -49,7 +59,6 @@ rule token = parse
   | "forall" as n
   | "exists" as n
   | "nabla" as n { BINDER n }
-  | ","         { COMMA }
 
   | "->"        { RARROW }
   | "<-"        { LARROW }

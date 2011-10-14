@@ -11,17 +11,23 @@
 
 % Typing environment ==========================================================
 
-type (bind A T E) A T.
-type (bind A B E) X T := type E X T.
+Define
+  type
+by
+  type (bind A T E) A T;
+  type (bind A B E) X T := type E X T.
 
 % Adding a (A = X => false) guard to the second clause would avoid
 % unnecessary searches, but would make the definition invalid in Level 0.
 
 % Simply typed lambda-calculus ================================================
 
-wt E (var A) T            := type E A T.
-wt E (app X Y) T          := wt E X (arrow H T) /\ wt E Y H.
-wt E (abs F) (arrow Tx T) := nabla x, wt (bind x Tx E) (F (var x)) T.
+Define
+  wt
+by
+  wt E (var A) T            := type E A T;
+  wt E (app X Y) T          := wt E X (arrow H T) /\ wt E Y H;
+  wt E (abs F) (arrow Tx T) := nabla x, wt (bind x Tx E) (F (var x)) T.
 
 % Play with a few examples ====================================================
 
@@ -44,7 +50,10 @@ wt E (abs F) (arrow Tx T) := nabla x, wt (bind x Tx E) (F (var x)) T.
 #assert_not (forall x y, type (bind x t1 (bind y t2 nil)) y t1 => false).
 #assert     (nabla x y,  type (bind x t1 (bind y t2 nil)) y t1 => false).
 
-test :=
+Define
+  test
+by
+  test :=
   print "Running simply typed lambda calculus tests..." /\
   print (running test 1) /\ (forall T, test_type 1 T => T = t) /\
   print (running test 2) /\ (forall T, test_type 2 T => T = tt) /\
@@ -69,7 +78,10 @@ test :=
 % The advantage of using nabla is that it will interact well
 % with the nabla used in wt, and make the induction proof easy.
 
-eval (app M N) (app MM NN) := eval M MM /\ eval N NN.
-eval (abs F) (abs FF)      := nabla x, eval (F x) (FF x).
-eval (app M X) N           := eval M (abs F) /\ eval (F X) N.
-eval M M.
+Define
+  eval
+by
+  eval (app M N) (app MM NN) := eval M MM /\ eval N NN;
+  eval (abs F) (abs FF)      := nabla x, eval (F x) (FF x);
+  eval (app M X) N           := eval M (abs F) /\ eval (F X) N;
+  eval M M.
