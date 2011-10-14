@@ -60,6 +60,7 @@ AC_SUBST(cmo)
 AC_SUBST(cmi)
 
 AC_CONFIG_FILES([src/Makefile],[chmod a-w src/Makefile])
+AC_CONFIG_FILES([Makefile],[chmod a-w Makefile])
 AC_OUTPUT
 
 echo "All done! You may now run \"make\"."
