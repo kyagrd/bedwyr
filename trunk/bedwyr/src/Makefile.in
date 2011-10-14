@@ -11,6 +11,7 @@ OCAMLDEP = @OCAMLDEP@ -I ndcore -I ndcore/tests
 OCAMLDOC = ocamldoc
 OCAMLYACC = @OCAMLYACC@ -v
 OCAMLLEX = @OCAMLLEX@
+VERSION = @PACKAGE_VERSION@
 
 # SOURCE FILES
 
@@ -53,7 +54,7 @@ depend: $(CORE_SRC) $(BEDWYR_SRC) $(TEST_ML)
 	$(OCAMLLEX) $<
 %.ml: %.ml.in
 	@sed -e 's|{VERSION}|$(VERSION)|'\
-	  -e 's|{BUILD}|$(BUILD)|'\
+	  -e 's|{BUILD}|$(shell (svn info 2>&- || git svn info 2>&-) | grep Revision | sed -e "s/Revision: //")|'\
 	  $^ > $@
 
 # TARGETS FOR CORE LLAMBDA MODULES
@@ -78,6 +79,7 @@ clean:
 	rm -f parser.ml parser.mli lexer.ml parser.output
 	rm -f *.cm[ixo] *.o
 	rm -f ndcore/*.cm[ixo] ndcore/*.o
+	rm -f ndcore/tests/*.cm[ixo] ndcore/tests/*.o
 superclean: clean
 	find . -name '*~' -exec rm \{\} \;
 	rm -f depend

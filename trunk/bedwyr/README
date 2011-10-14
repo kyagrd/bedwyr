@@ -1,6 +1,6 @@
 
 ========================================
-# Bedwyr 1.1 the not-so-sound-logician #
+# Bedwyr 1.2 the not-so-sound-logician #
 ========================================
 
 This is Bedwyr, a theorem prover for the Level-0/1 fragment of the Linc logic.
@@ -17,7 +17,8 @@ For background on the system, see "Mixing Finite Success and Finite Failure
 in an Automated Prover" (Alwen Tiu and Gopalan Nadathur and Dale Miller):
 http://www.lix.polytechnique.fr/Labo/Dale.Miller/papers/eshol05sub.pdf
 
-Building the system:
+Building and running the system:
+# autoconf
 # ./configure
 # make
 # src/bedwyr

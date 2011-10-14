@@ -1,10 +1,13 @@
 all: src/bedwyr
 
 .PHONY: src/bedwyr
-src/bedwyr: src/Makefile
+src/bedwyr: src/Makefile Makefile
 	make -C src bedwyr
 
 src/Makefile: src/Makefile.in configure
+	./configure
+
+Makefile: Makefile.in configure
 	./configure
 
 configure: configure.ac
@@ -40,8 +43,7 @@ clean:
 	make -C src clean
 	make -C doc clean
 
-export VERSION=1.2
-export BUILD=$(shell (svn info 2>&- || git svn info 2>&-) | grep Revision | sed -e "s/Revision: //")
+VERSION=@PACKAGE_VERSION@
 D=bedwyr-$(VERSION)
 dist: configure doc
 	find . -name '*~' -exec rm \{\} \;

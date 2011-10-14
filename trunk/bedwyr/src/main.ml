@@ -21,7 +21,7 @@ exception Invalid_command
 exception Assertion_failed
 
 let welcome_msg =
-  "Bedwyr " ^ Config.version ^ " (build " ^ Config.build ^ ") welcomes you.
+  "Bedwyr " ^ Config.version ^ " (revision " ^ Config.build ^ ") welcomes you.
 
 This software is under GNU Public License.
 Copyright (c) 2005-2011 Slimmer project.
