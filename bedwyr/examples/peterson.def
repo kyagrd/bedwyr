@@ -24,39 +24,63 @@
 %       }
 %    }
 
-boolean 0.
-boolean 1.
+Define
+  boolean
+by
+  boolean 0;
+  boolean 1.
 
-section 1.
-section 2.
-section 3.
-section 4.
-section 5.
+Define
+  section
+by
+  section 1;
+  section 2;
+  section 3;
+  section 4;
+  section 5.
 
-node (state P0 P1 A0 A1 T) := section P0 /\ section P1 /\
+Define
+  node
+by
+  node (state P0 P1 A0 A1 T) := section P0 /\ section P1 /\
     boolean A0 /\ boolean A1 /\ boolean T.
 
-arrow (state  1 P1 A0 A1 T) (state  2 P1  1 A1 T).
-arrow (state  2 P1 A0 A1 T) (state  3 P1 A0 A1 1).
-arrow (state  3 P1 A0  0 T) (state  5 P1 A0  0 T).
-arrow (state  3 P1 A0  1 T) (state  4 P1 A0  1 T).
-arrow (state  4 P1 A0 A1 0) (state  5 P1 A0 A1 0).
-arrow (state  4 P1 A0 A1 1) (state  3 P1 A0 A1 1).
-arrow (state  5 P1 A0 A1 T) (state  1 P1  0 A1 T).
+Define
+  arrow
+by
+  arrow (state  1 P1 A0 A1 T) (state  2 P1  1 A1 T);
+  arrow (state  2 P1 A0 A1 T) (state  3 P1 A0 A1 1);
+  arrow (state  3 P1 A0  0 T) (state  5 P1 A0  0 T);
+  arrow (state  3 P1 A0  1 T) (state  4 P1 A0  1 T);
+  arrow (state  4 P1 A0 A1 0) (state  5 P1 A0 A1 0);
+  arrow (state  4 P1 A0 A1 1) (state  3 P1 A0 A1 1);
+  arrow (state  5 P1 A0 A1 T) (state  1 P1  0 A1 T);
 
-arrow (state P0  1 A0 A1 T) (state P0  2 A0  1 T).
-arrow (state P0  2 A0 A1 T) (state P0  3 A0 A1 0).
-arrow (state P0  3 0  A1 T) (state P0  5  0 A1 T).
-arrow (state P0  3 1  A1 T) (state P0  4  1 A1 T).
-arrow (state P0  4 A0 A1 1) (state P0  5 A0 A1 1).
-arrow (state P0  4 A0 A1 0) (state P0  3 A0 A1 0).
-arrow (state P0  5 A0 A1 T) (state P0  1 A0  0 T).
+  arrow (state P0  1 A0 A1 T) (state P0  2 A0  1 T);
+  arrow (state P0  2 A0 A1 T) (state P0  3 A0 A1 0);
+  arrow (state P0  3 0  A1 T) (state P0  5  0 A1 T);
+  arrow (state P0  3 1  A1 T) (state P0  4  1 A1 T);
+  arrow (state P0  4 A0 A1 1) (state P0  5 A0 A1 1);
+  arrow (state P0  4 A0 A1 0) (state P0  3 A0 A1 0);
+  arrow (state P0  5 A0 A1 T) (state P0  1 A0  0 T).
 
-inductive path X X.
-inductive path X Y := arrow X Z /\ path Z Y.
+Define
+  inductive path
+by
+  path X X;
+  path X Y := arrow X Z /\ path Z Y.
 
-initial (state 1 1 0 0 0).
-bad (state 5 5 A0 A1 T) := boolean A0 /\ boolean A1 /\ boolean T.
+Define
+  initial
+by
+  initial (state 1 1 0 0 0).
+Define
+  bad
+by
+  bad (state 5 5 A0 A1 T) := boolean A0 /\ boolean A1 /\ boolean T.
 
-test := initial I /\ (forall B, bad B /\ path I B => print (error) /\ false) /\
+Define
+  test
+by
+  test := initial I /\ (forall B, bad B /\ path I B => print (error) /\ false) /\
         print (peterson is right).

@@ -20,24 +20,36 @@
 #include "pi/pi.def".
 
 % Allow agent-style definitions as a controled recursion
-one  P A PP := def P Body /\ one  Body A PP.
-onep P A PP := def P Body /\ onep Body A PP.
+Define
+  one
+by
+  one  P A PP := def P Body /\ one  Body A PP.
+Define
+  onep
+by
+  onep P A PP := def P Body /\ onep Body A PP.
 
 % Traces of actions
-trace P end.
-trace P (tr  Act      Trace) := one P Act P' /\ trace P' Trace.
-trace P (trp (up X)   Trace) := onep P (up X) P' /\
-                                nabla x, trace (P' x) (Trace x).
-trace P (trp (dn X Y) Trace) := onep P (dn X) P' /\ trace (P' Y) Trace.
+Define
+  trace
+by
+  trace P end;
+  trace P (tr  Act      Trace) := one P Act P' /\ trace P' Trace;
+  trace P (trp (up X)   Trace) := onep P (up X) P' /\
+                                nabla x, trace (P' x) (Trace x);
+  trace P (trp (dn X Y) Trace) := onep P (dn X) P' /\ trace (P' Y) Trace.
 
 % These are the models of the [i]nnocent and [g]uilty nodes.
 
-def i (nu a\ nu loop\
+Define
+  def
+by
+  def i (nu a\ nu loop\
         (par (out cho a z)
         (par (out loop null z)
              (bang (in loop x\ in chi y\ par (match y a (out fail null z))
-                                             (out loop null z)))))).
-def g (nu a\ nu loop\
+                                             (out loop null z))))));
+  def g (nu a\ nu loop\
         (par (out cho a z)
         (par (out loop null z)
              (bang (in loop x\ in chi y\ out loop null z))))).
@@ -46,7 +58,10 @@ def g (nu a\ nu loop\
 % The goal is to find T such that (trace i T) but not (trace g T).
 % Here is a first attempt at finding it.
 
-separating_trace P Q T := trace P T /\ peng T /\ (trace Q T => false).
+Define
+  separating_trace
+by
+  separating_trace P Q T := trace P T /\ peng T /\ (trace Q T => false).
 
 % This approach is natural, except for the special "non-logical" operator "peng"
 % that is used. This operator changes Bedwyr's notion of logic
@@ -90,17 +105,26 @@ separating_trace P Q T := trace P T /\ peng T /\ (trace Q T => false).
 % Run the following:
 %   src/bedwyr examples/mute.def -e "separate i g." | examples/mute.pl
 
-separate P Q :=
+Define
+  separate
+by
+  separate P Q :=
   exists T,
     trace P T /\ print (left T) /\ trace Q T /\ print (right T) /\ false.
 
 % A. Type check ===============================================================
 % Add a few valid names.
-picheck (name cho) tt.
-picheck (name chi) tt.
-picheck (name fail) tt.
-picheck (name null) tt.
+Define
+  picheck
+by
+  picheck (name cho) tt;
+  picheck (name chi) tt;
+  picheck (name fail) tt;
+  picheck (name null) tt.
 
 % Type-check defined processes.
-tc := forall N P, def N P => print ("Checking" N) /\ prv picheck (proc P).
+Define
+  tc
+by
+  tc := forall N P, def N P => print ("Checking" N) /\ prv picheck (proc P).
 #assert tc.

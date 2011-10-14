@@ -3,7 +3,10 @@
 % Simple union of two binary relations.  These can be used to
 % join together two logic programming specifications.
 
-orelse P Q X Y := P X Y \/ Q X Y.
+Define
+  orelse
+by
+  orelse P Q X Y := P X Y \/ Q X Y.
 
 % If you want to form the union of these two "logic programs",
 % use either
@@ -16,39 +19,47 @@ orelse P Q X Y := P X Y \/ Q X Y.
 
 %% Examples:
 
-% Appending of two lists
-atom (append X Y Z).
-exprog (append nil L L) tt.
-exprog (append (cons X L) K (cons X M)) (append L K M).
-
-atom a.
-atom b.
+Define
+  atom
+by
+  atom (append X Y Z);
+  atom a;
+  atom b;
+  atom (p X Y);
+  atom (typeof X T);
+  atom (copy S T);
+  atom (subst R S T);
+  atom (eval E V).
 #assert (prv (x\y\ false) ((and a b) -> (and tt a))).
-
-atom (p X Y).
 #assert
   (forall t u w,
      prv (x\y\ false) (_forall x\ _forall y\ (p x t) -> (p y u) -> (p x w)) =>
      w = t).
 
+Define
+  exprog
+by
+% Appending of two lists
+  exprog (append nil L L) tt;
+  exprog (append (cons X L) K (cons X M)) (append L K M).
+
+
+
+Define
+  prog
+by
 % Specification of simply typing inference for untyped lambda-calculus.
-atom (typeof X T).
-prog (typeof (lam x\ B x) (Tin -> Tout))
-     (_forall x\ typeof x Tin -> typeof (B x) Tout).
-prog (typeof (app A B) Tout) (and (typeof A (Tin -> Tout)) (typeof B Tin)).
-
+  prog (typeof (lam x\ B x) (Tin -> Tout))
+     (_forall x\ typeof x Tin -> typeof (B x) Tout);
+  prog (typeof (app A B) Tout) (and (typeof A (Tin -> Tout)) (typeof B Tin));
 % Implementation of substitution into the untyped lambda-calculus.
-atom (copy S T).
-atom (subst R S T).
-prog (copy (app M N) (app M' N')) (and (copy M M') (copy N N')).
-prog (copy (lam M) (lam M))
-     (_forall x\ _forall x'\ copy x x' -> copy (M x) (M' x')).
-prog (subst R S T) (_forall x\ copy x S -> copy (R x) T).
-
+  prog (copy (app M N) (app M' N')) (and (copy M M') (copy N N'));
+  prog (copy (lam M) (lam M))
+     (_forall x\ _forall x'\ copy x x' -> copy (M x) (M' x'));
+  prog (subst R S T) (_forall x\ copy x S -> copy (R x) T);
 % Call-by-value evaluation
-atom (eval E V).
-prog (eval (lam x\ M x) (lam x\ M x)) tt.
-prog (eval (app M N) V)
+  prog (eval (lam x\ M x) (lam x\ M x)) tt;
+  prog (eval (app M N) V)
      (and (and (eval M (lam M')) (subst M' N M'')) (eval M'' V)).
 
 #assert (prv prog (typeof (lam x\ lam y\ x) T)).

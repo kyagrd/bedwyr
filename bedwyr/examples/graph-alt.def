@@ -12,67 +12,104 @@
 
 % List utilities
 
-member X (c X L).
-member X (c Y L) := member X L.
+Define
+  member
+by
+  member X (c X L);
+  member X (c Y L) := member X L.
 
-remove (c X L) X L.
-remove (c Y L) X (c Y Lp) := remove L X Lp.
+Define
+  remove
+by
+  remove (c X L) X L;
+  remove (c Y L) X (c Y Lp) := remove L X Lp.
 
 % Nodes of the graph
 
-node (graph N A) X := member X N.
+Define
+  node
+by
+  node (graph N A) X := member X N.
 
 % Directed predicates
 
-arrow (graph N A) X Y := member (arrow X Y) A.
+Define
+  arrow
+by
+  arrow (graph N A) X Y := member (arrow X Y) A.
 
-path G X Y := arrow G X Y.
-path G X Y := arrow G X Z /\ path G Z Y.
+Define
+  path
+by
+  path G X Y := arrow G X Y;
+  path G X Y := arrow G X Z /\ path G Z Y.
 
 % Undirected predicates
 
-edge G X Y := arrow G X Y \/ arrow G Y X.
+Define
+  edge
+by
+  edge G X Y := arrow G X Y \/ arrow G Y X.
 
-inductive edgepath G X X := node G X.
-inductive edgepath G X Y := edge G X Z /\ edgepath G Z Y.
+Define
+  inductive edgepath
+by
+  edgepath G X X := node G X;
+  edgepath G X Y := edge G X Z /\ edgepath G Z Y.
 % If we make it coinductive then infinite paths starting from node X
 % (typically going back and forth along the same edge) provide an edgepath
 % from X to any other node.
 
 % Notions of connectedness
 
-connected G := forall X Y, node G X => node G Y => edgepath G X Y.
+Define
+  connected
+by
+  connected G := forall X Y, node G X => node G Y => edgepath G X Y.
 
-disconnected G := exists X Y,
+Define
+  disconnected
+by
+  disconnected G := exists X Y,
                     node G X /\ node G Y /\ (edgepath G X Y => false).
 
-removearrow (graph N A) X (graph N Ap) := remove A X Ap.
+Define
+  removearrow
+by
+  removearrow (graph N A) X (graph N Ap) := remove A X Ap.
 
 % A tree is a connected graph that becomes disconnected
 % if you remove any edge.
 
-tree G := connected G /\ forall A Gp, removearrow G A Gp => disconnected Gp.
+Define
+  tree
+by
+  tree G := connected G /\ forall A Gp, removearrow G A Gp => disconnected Gp.
 
-nottree G := disconnected G \/
+Define
+  nottree
+by
+  nottree G := disconnected G \/
              exists A Gp, removearrow G A Gp /\ connected Gp.
 
 % Queries to try
-
-%       3
-%      / \
-% 1 - 2   5 - 6
-%      \
-%       4
-graph 1  (graph (c 1 (c 2 (c 3 (c 4 (c 5 (c 6 nil))))))
+Define
+  graph
+by
+  %       3
+  %      / \
+  % 1 - 2   5 - 6
+  %      \
+  %       4
+  graph 1  (graph (c 1 (c 2 (c 3 (c 4 (c 5 (c 6 nil))))))
                 (c (arrow 1 2) (c (arrow 2 3) (c (arrow 2 4)
-                   (c (arrow 3 5) (c (arrow 5 6) nil)))))).
-
-%       3
-%      / \
-% 1 - 2   5 - 6
-%      \ /
-%       4
-graph 2  (graph (c 1 (c 2 (c 3 (c 4 (c 5 (c 6 nil))))))
+                   (c (arrow 3 5) (c (arrow 5 6) nil))))));
+  %       3
+  %      / \
+  % 1 - 2   5 - 6
+  %      \ /
+  %       4
+  graph 2  (graph (c 1 (c 2 (c 3 (c 4 (c 5 (c 6 nil))))))
                 (c (arrow 1 2) (c (arrow 2 3) (c (arrow 2 4)
                    (c (arrow 3 5) (c (arrow 4 5) (c (arrow 5 6) nil))))))).
 

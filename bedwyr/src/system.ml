@@ -95,7 +95,10 @@ end
 type defkind = Normal | Inductive | CoInductive
 
 type input =
-  | Def     of defkind * Term.term * int * Term.term
+  | Kind    of Type.simple_type ref list * Type.simple_kind
+  | Type    of Term.term list * Type.simple_type
+  | Typing  of defkind * Term.term
+  | Def     of Term.term * int * Term.term
   | Query   of Term.term
   | Command of string * Term.term list
 
@@ -144,17 +147,19 @@ let open_user_file name =
 (** Definitions *)
 
 exception Inconsistent_definition of Term.term
+exception Multiple_definition of Term.term
+exception Missing_definition of Term.term
 exception Undefined of Term.term
 exception Arity_mismatch of Term.term*int
 
 
 (* type definition = Term.var * int * Term.term *)
-let defs : (Term.var,(defkind*Term.term*Table.t option)) Hashtbl.t =
+let defs : (Term.var,(defkind*Term.term option*Table.t option)) Hashtbl.t =
   Hashtbl.create 100
 
 let reset_defs () = Hashtbl.clear defs
 
-let add_clause kind head_tm arity body =
+let create_def kind head_tm =
   (* Cleanup all tables.
    * Cleaning only this definition's table is _not_ enough, since other
    * definitions may rely on it.
@@ -166,40 +171,54 @@ let add_clause kind head_tm arity body =
          | _ -> ())
     defs ;
   let head = Term.get_var head_tm in
+  let t =
+    try
+      let _ = Hashtbl.find defs head in
+      raise (Multiple_definition head_tm)
+    with
+      | Not_found ->
+          (if kind=Normal then None else Some (Table.create ()))
+  in
+  Hashtbl.add defs head (kind, None, t)
+
+let add_clause head_tm arity body =
+  let head = Term.get_var head_tm in
   let k,b,t =
     try
       let k,b,t = Hashtbl.find defs head in
-        match Term.observe b with
-          | Term.Lam (a,b) ->
-              if a=arity && k=kind then
-                k, Term.lambda a
-                     (Term.app Logic.orc [b;body]), t
-              else
-                raise (Inconsistent_definition head_tm)
-          | _ when arity=0 && k=kind ->
-              k, Term.app Logic.orc [b;body], t
-          | _ -> raise (Inconsistent_definition head_tm)
+      match b with
+        | None -> k, Term.lambda arity body, t
+        | Some b ->
+            begin match Term.observe b with
+              (* TODO simplify (too much Term.lambda and Logic.orc here) *)
+              | Term.Lam (a,b) when arity=a ->
+                  k, Term.lambda a
+                            (Term.app Logic.orc [b;body]), t
+              | _ when arity=0 ->
+                  k, Term.app Logic.orc [b;body], t
+              | _ -> raise (Inconsistent_definition head_tm)
+            end
     with
-      | Not_found ->
-          kind, (Term.lambda arity body),
-          (if kind=Normal then None else Some (Table.create ()))
+      | Not_found -> raise (Missing_definition head_tm)
   in
   let b = Norm.hnorm b in
-    Hashtbl.replace defs head (k,b,t) ;
-    if !debug then
-      Format.printf "%a := %a\n" Pprint.pp_term head_tm Pprint.pp_term b
+  Hashtbl.replace defs head (k, Some b, t) ;
+  if !debug then
+    Format.printf "%a := %a\n" Pprint.pp_term head_tm Pprint.pp_term b
 
 let get_def ?check_arity head_tm =
   let head = Term.get_var head_tm in
   try
     let k,b,t = Hashtbl.find defs head in
-      match check_arity with
-        | None | Some 0 -> k,b,t
-        | Some a ->
+      match check_arity,b with
+        | None, Some b | Some 0, Some b -> k,b,t
+        | Some a, Some b ->
             begin match Term.observe b with
               | Term.Lam (n,_) when n=a -> k,b,t
               | _ -> raise (Arity_mismatch (head_tm,a))
             end
+              (* XXX perhaps distinguish Undefined and Undeclared? *)
+        | _ -> raise (Undefined head_tm)
   with
     | Not_found -> raise (Undefined head_tm)
 

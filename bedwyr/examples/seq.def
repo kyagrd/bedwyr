@@ -19,7 +19,10 @@
 % Notice that the interpreter does not use lists: conjunctions can be
 % used instead.  The empty list is true (tt).
 
-prv Prog B := seq Prog tt B.
+Define
+  prv
+by
+  prv Prog B := seq Prog tt B.
 
 % ?- seq Prog List Goal.
 % Attempts to prove the Goal from the assumptions in List and
@@ -27,19 +30,24 @@ prv Prog B := seq Prog tt B.
 
 % Do right rules first.
 
-seq Prog L tt.
-seq Prog L (and B C)  := seq Prog L B /\ seq Prog L C.
-seq Prog L (G <- D)   := seq Prog (and D L) G.
-seq Prog L (D -> G)   := seq Prog (and D L) G.
-seq Prog L (_forall B) := nabla x, seq Prog L (B x).
-seq Prog L (_exists B) := exists x, seq Prog L (B x).
-
+Define
+  seq
+by
+  seq Prog L tt;
+  seq Prog L (and B C)  := seq Prog L B /\ seq Prog L C;
+  seq Prog L (G <- D)   := seq Prog (and D L) G;
+  seq Prog L (D -> G)   := seq Prog (and D L) G;
+  seq Prog L (_forall B) := nabla x, seq Prog L (B x);
+  seq Prog L (_exists B) := exists x, seq Prog L (B x);
 % Pick a formula on which to backchain.
-seq Prog L A := atom A /\ (bc Prog L L A \/ (Prog A Body /\ seq Prog L Body)).
+  seq Prog L A := atom A /\ (bc Prog L L A \/ (Prog A Body /\ seq Prog L Body)).
 
 % Backchaining is done in a focused fashion.
-bc Prog L A A := atom A.
-bc Prog L (and X Y)  A := bc Prog L X A \/ bc Prog L Y A.
-bc Prog L (D <- G)   A := bc Prog L D A /\ seq Prog L G.
-bc Prog L (G -> D)   A := bc Prog L D A /\ seq Prog L G.
-bc Prog L (_forall D) A := exists t, bc Prog L (D t) A.
+Define
+  bc
+by
+  bc Prog L A A := atom A;
+  bc Prog L (and X Y)  A := bc Prog L X A \/ bc Prog L Y A;
+  bc Prog L (D <- G)   A := bc Prog L D A /\ seq Prog L G;
+  bc Prog L (G -> D)   A := bc Prog L D A /\ seq Prog L G;
+  bc Prog L (_forall D) A := exists t, bc Prog L (D t) A.

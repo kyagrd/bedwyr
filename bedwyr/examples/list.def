@@ -5,24 +5,39 @@
 % since coverage and determinancy checks would be useful to lambda prolog
 % programmers, for example.
 
-list nil.
-list (cons X nil).
-list (cons X (cons Y nil)).
-list (cons X (cons Y (cons Z nil))).
+Define
+  list
+by
+  list nil;
+  list (cons X nil);
+  list (cons X (cons Y nil));
+  list (cons X (cons Y (cons Z nil))).
 
-member X (cons X _).
-member X (cons _ L) := member X L.
+Define
+  member
+by
+  member X (cons X _);
+  member X (cons _ L) := member X L.
 
-append nil K K.
-append (cons X L) K (cons X M) := append L K M.
+Define
+  append
+by
+  append nil K K;
+  append (cons X L) K (cons X M) := append L K M.
 
 % In the following checks, we assume the mode: append +L +K -M.
 
 % Coverage implicitly proves termination
-coverage := forall L K, list L => exists M, append L K M.
+Define
+  coverage
+by
+  coverage := forall L K, list L => exists M, append L K M.
 
-determinacy := forall L K M Mp,
-    list L => append L K M => append L K Mp => M = Mp.
+Define
+  determinacy
+by
+  determinacy := forall L K M Mp,
+      list L => append L K M => append L K Mp => M = Mp.
 
 #assert coverage.
 #assert determinacy.

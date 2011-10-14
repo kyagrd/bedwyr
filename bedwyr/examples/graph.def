@@ -2,12 +2,15 @@
 
 % Nodes for the graph
 
-node 1.
-node 2.
-node 3.
-node 4.
-node 5.
-node 6.
+Define
+  node
+by
+  node 1;
+  node 2;
+  node 3;
+  node 4;
+  node 5;
+  node 6.
 
 % Directed predicates
 
@@ -16,29 +19,53 @@ node 6.
 % 1 - 2   5 - 6
 %      \ /
 %       4
-arrow 1 2.
-arrow 2 3.
-arrow 2 4.
-arrow 3 5.
-arrow 4 5.
-arrow 5 6.
+Define
+  arrow
+by
+  arrow 1 2;
+  arrow 2 3;
+  arrow 2 4;
+  arrow 3 5;
+  arrow 4 5;
+  arrow 5 6.
 
-path X Y := arrow X Y.
-path X Y := arrow X Z /\ path Z Y.
+Define
+  path
+by
+  path X Y := arrow X Y;
+  path X Y := arrow X Z /\ path Z Y.
 
 % Undirected predicates
 
-edge X Y := arrow X Y \/ arrow Y X.
+Define
+  edge
+by
+  edge X Y := arrow X Y \/ arrow Y X.
 
-inductive edgepath X Y := edge X Y.
-inductive edgepath X Y := edge X Z /\ edgepath Z Y.
+Define
+  inductive edgepath
+by
+  edgepath X Y := edge X Y;
+  edgepath X Y := edge X Z /\ edgepath Z Y.
 
 % Queries to try
 
-allpaths := path X Y /\ print (X to Y) /\ false.
+Define
+  allpaths
+by
+  allpaths := path X Y /\ print (X to Y) /\ false.
 
-alledgepaths := edgepath X Y /\ print (X to Y) /\ false.
+Define
+  alledgepaths
+by
+  alledgepaths := edgepath X Y /\ print (X to Y) /\ false.
 
-connected := forall X Y, node X => node Y => edgepath X Y.
+Define
+  connected
+by
+  connected := forall X Y, node X => node Y => edgepath X Y.
 
-disconnected := exists X Y, node X /\ node Y /\ (edgepath X Y => false).
+Define
+  disconnected
+by
+  disconnected := exists X Y, node X /\ node Y /\ (edgepath X Y => false).

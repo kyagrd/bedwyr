@@ -2,7 +2,10 @@
 #assert_not false.
 #assert_raise (X=1 => X=1).
 
-inductive p X Y := X=Y => false.
+Define
+  inductive p
+by
+  p X Y := X=Y => false.
 #assert (forall x, nabla y, p x y).
 #assert_not (nabla y, forall x, p x y).
 
