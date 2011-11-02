@@ -23,13 +23,14 @@ open Format
 exception Found of int
 
 type assoc = Left | Right | Both | Nonassoc
-  
+
 let debug = ref false
 
 let string_of_tag = function
   | Eigen -> "e"
   | Constant -> "c"
   | Logic -> "l"
+  | String -> "s"
 
 (* List of infix operators sorted by priority. *)
 let infix : (string * assoc) list ref = ref []
@@ -65,7 +66,7 @@ let print_full ~generic ~bound chan term =
     with
       Failure _ -> s
   in
-  
+
   let high_pr = 1 + get_max_priority () in
   let rec pp ~bound pr chan term =
     match observe term with

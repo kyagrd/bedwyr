@@ -106,6 +106,7 @@ type input =
 
 let debug = ref false
 let time  = ref false
+let typed = ref true
 
 (* [AT:] list of open files *)
 
@@ -144,25 +145,173 @@ let open_user_file name =
           fout
     )
 
+
+(** Kind and type declaration *)
+
+exception Forbidden_kind of Type.simple_kind * string
+exception Multiple_type_declaration of string * string
+(*exception Missing_type_declaration of string
+ * TODO add in const_define_type and create_def*)
+(*exception Forbidden_type of Type.simple_type * string
+ * TODO add in const_define_type and create_def*)
+exception Multiple_const_declaration of string * string
+exception Missing_declaration of Term.term * (Term.term * Term.term) option
+
+
+let type_kinds : (Term.var,Type.simple_kind) Hashtbl.t =
+  Hashtbl.create 100
+
+let type_define_kind name kind =
+  let stype_var = Term.get_var (Term.atom name) in
+  if Hashtbl.mem type_kinds stype_var
+  then raise (Multiple_type_declaration (name,""))
+  else if name = "prop"
+  then raise (Multiple_type_declaration (name," (built-in type)"))
+  else begin
+    assert (name <> "");
+    Hashtbl.add type_kinds stype_var kind
+  end
+
+let const_types : (Term.var,Type.simple_type) Hashtbl.t =
+  Hashtbl.create 100
+
+let const_define_type name ty =
+  (*let built_in const =
+    false
+  in*)
+  let const_var = Term.get_var (Term.atom name) in
+  if Hashtbl.mem const_types const_var
+  then raise (Multiple_const_declaration (name,""))
+  (*else if build_in_const name
+  then raise (Multiple_const_declaration (name,", built-in const"))*)
+  else begin
+    assert (name <> "");
+    Hashtbl.add const_types const_var ty
+  end
+
+
 (** Definitions *)
 
+exception Multiple_pred_declaration of Term.term
+exception Missing_pred_declaration of Term.term
 exception Inconsistent_definition of Term.term
-exception Multiple_definition of Term.term
-exception Missing_definition of Term.term
-exception Undefined of Term.term
+exception Term_typing_error of Type.simple_type * Type.simple_type * Type.simple_type Type.Unifier.t * Term.term * Type.simple_type list
+exception Clause_typing_error of Type.simple_type * Type.simple_type * Type.simple_type Type.Unifier.t * Term.term * Type.simple_type list * Term.term
 exception Arity_mismatch of Term.term*int
+exception Missing_definition of Term.term
 
 
-(* type definition = Term.var * int * Term.term *)
-let defs : (Term.var,(defkind*Term.term option*Table.t option*Type.simple_type option)) Hashtbl.t =
+let defs : (Term.var,(defkind*Term.term option*Table.t option*Type.simple_type)) Hashtbl.t =
   Hashtbl.create 100
+
+let type_of_var v =
+  try
+    let _,_,_,ty = Hashtbl.find defs v in Some ty
+  with
+    | Not_found ->
+        begin try
+          Some (Hashtbl.find const_types v)
+        with
+          | Not_found -> None
+        end
+
+let type_of_term t = match Term.observe t with
+  | Term.Var v ->
+        type_of_var v
+  (* XXX this case is not used,
+   * and would need some unification to make sense *)
+  | _ -> Some (Type.fresh_type())
+
+let rec type_check_term term expected_type unifier db_types =
+  try
+    match Term.observe term with
+      | Term.Var v ->
+          begin match v with
+            (* connectives *)
+            | v when v = Logic.var_eq ->
+                let ty = Type.fresh_type() in
+                let ty = Type.TRArrow ([ty;ty],Type.TProp) in
+                Type.unify_constraint unifier expected_type ty
+            | v when v = Logic.var_andc || v = Logic.var_orc || v = Logic.var_imp ->
+                let ty = Type.TRArrow ([Type.TProp;Type.TProp],Type.TProp) in
+                Type.unify_constraint unifier expected_type ty
+            | v when v = Logic.var_truth || v = Logic.var_falsity ->
+                Type.unify_constraint unifier expected_type Type.TProp
+            | v when v = Logic.var_forall || v = Logic.var_exists || v = Logic.var_nabla ->
+                let ty = Type.fresh_type() in
+                let ty = Type.TRArrow ([ty],Type.TProp) in
+                let ty = Type.TRArrow ([ty],Type.TProp) in
+                Type.unify_constraint unifier expected_type ty
+            (* ? *)
+            (*| v when v = Logic.var_not
+            | v when v = Logic.var_ite
+            | v when v = Logic.var_abspred
+            | v when v = Logic.var_distinct
+            | v when v = Logic.var_assert_rigid
+            | v when v = Logic.var_abort_search
+            | v when v = Logic.var_cutpred
+            | v when v = Logic.var_check_eqvt ->
+                raise (Type.Typing_error (Type.TProp,Type.TProp,unifier))*)
+            (* misc *)
+            | {Term.tag=Term.String} ->
+                unifier
+            | v when v = Logic.var_print ->
+                let ty = Type.fresh_type() in
+                let ty = Type.TRArrow ([ty],Type.TProp) in
+                Type.unify_constraint unifier expected_type ty
+            (*| v when v = Logic.var_println
+            | v when v = Logic.var_fprint
+            | v when v = Logic.var_fprintln
+            | v when v = Logic.var_fopen_out
+            | v when v = Logic.var_fclose_out
+            | v when v = Logic.var_parse
+            | v when v = Logic.var_simp_parse
+            | v when v = Logic.var_on
+            | v when v = Logic.var_off ->
+                raise (Type.Typing_error (Type.TProp,Type.TProp,unifier))*)
+            | _ ->
+                begin match type_of_term term with
+                  | None ->
+                      raise (Missing_declaration (term,None))
+                  | Some ty ->
+                      Type.unify_constraint unifier expected_type ty
+                end
+          end
+      | Term.DB i ->
+          let ty = List.nth db_types (i-1) in
+          Type.unify_constraint unifier expected_type ty
+      (*| Term.NB i, Ty (_) -> true*)
+      | Term.Lam (a,term) ->
+          let tys,ty = Type.build_abstraction_types a in
+          let unifier = Type.unify_constraint unifier expected_type (Type.TRArrow (tys,ty)) in
+          let db_types = List.rev_append tys db_types in
+          type_check_term term ty unifier db_types
+      | Term.App (h,l) ->
+          let arity = List.length l in
+          let tys,ty = Type.build_abstraction_types arity in
+          let unifier = Type.unify_constraint unifier expected_type ty in
+          let unifier = type_check_term h (Type.TRArrow (tys,ty)) unifier db_types in
+          List.fold_left2
+            (fun u t ty -> type_check_term t ty u db_types)
+            unifier
+            l
+            tys
+      (*| Term.Susp _, Ty (_) -> true*)
+      | _ ->
+          failwith "Type checking aborted, unsupported term."
+  with
+    | Type.Type_unification_error (ty1,ty2,unifier) ->
+        raise (Term_typing_error (ty1,ty2,unifier,term,db_types))
+
+let type_check_clause arity body stype unifier =
+  type_check_term (Term.lambda arity body) stype unifier []
 
 let reset_defs () = Hashtbl.clear defs
 
 let create_def kind head_tm stype =
   let head = Term.get_var head_tm in
   if Hashtbl.mem defs head then
-    raise (Multiple_definition head_tm);
+    raise (Multiple_pred_declaration head_tm);
   (* Cleanup all tables.
    * Cleaning only this definition's table is _not_ enough, since other
    * definitions may rely on it.
@@ -174,32 +323,43 @@ let create_def kind head_tm stype =
          | _ -> ())
     defs ;
   let t = (if kind=Normal then None else Some (Table.create ())) in
+  let stype = match stype with Some stype -> stype | None -> Type.fresh_type () in
   Hashtbl.add defs head (kind, None, t, stype)
 
 let add_clause head_tm arity body =
   let head = Term.get_var head_tm in
   let k,b,t,st =
     try
-      let k,b,t,st = Hashtbl.find defs head in
-      match b with
-        | None -> k, Term.lambda arity body, t, st
-        | Some b ->
-            begin match Term.observe b with
-              (* TODO simplify (too much Term.lambda and Logic.orc here) *)
-              | Term.Lam (a,b) when arity=a ->
-                  k, Term.lambda a
-                            (Term.app Logic.orc [b;body]), t, st
-              | _ when arity=0 ->
-                  k, Term.app Logic.orc [b;body], t, st
-              | _ -> raise (Inconsistent_definition head_tm)
-            end
+      Hashtbl.find defs head
     with
-      | Not_found -> raise (Missing_definition head_tm)
+      | Not_found -> raise (Missing_pred_declaration head_tm)
+  in
+  let () =
+    try
+      if !typed then
+        Type.global_unifier := type_check_clause arity body st !Type.global_unifier
+    with
+      | Term_typing_error (ty1,ty2,unifier,term,db_types) ->
+          raise (Clause_typing_error (ty1,ty2,unifier,term,db_types,head_tm))
+      | Missing_declaration (term,None) ->
+          raise (Missing_declaration (term,Some (head_tm,body)))
+  in
+  let b =
+    match b with
+      | None -> Term.lambda arity body
+      | Some b ->
+          begin match Term.observe b with
+            | Term.Lam (a,b) when arity=a ->
+                Term.lambda a (Term.app Logic.orc [b;body])
+            | _ when arity=0 ->
+                Term.app Logic.orc [b;body]
+            | _ -> raise (Inconsistent_definition head_tm)
+          end
   in
   let b = Norm.hnorm b in
   Hashtbl.replace defs head (k, Some b, t, st) ;
   if !debug then
-    Format.printf "%a := %a\n" Pprint.pp_term head_tm Pprint.pp_term b
+    Format.printf "%a := %a\n" Pprint.pp_term head_tm Pprint.pp_term body
 
 let get_def ?check_arity head_tm =
   let head = Term.get_var head_tm in
@@ -212,10 +372,9 @@ let get_def ?check_arity head_tm =
               | Term.Lam (n,_) when n=a -> k,b,t,st
               | _ -> raise (Arity_mismatch (head_tm,a))
             end
-              (* XXX perhaps distinguish Undefined and Undeclared? *)
-        | _ -> raise (Undefined head_tm)
+        | _ -> raise (Missing_definition head_tm)
   with
-    | Not_found -> raise (Undefined head_tm)
+    | Not_found -> raise (Missing_pred_declaration head_tm)
 
 let remove_def head_tm =
   let head = Term.get_var head_tm in
@@ -229,7 +388,7 @@ let show_table head =
         | None ->
             failwith ("No table defined for " ^ (Pprint.term_to_string head))
   with
-    | Not_found -> raise (Undefined head)
+    | Not_found -> raise (Missing_pred_declaration head)
 
 let save_table head file =
    try
@@ -241,7 +400,7 @@ let save_table head file =
           | None ->
              failwith ("No table defined for " ^ (Pprint.term_to_string head))
          end ; close_out fout
-     with | Not_found -> close_out fout ; raise (Undefined head)
+     with | Not_found -> close_out fout ; raise (Missing_pred_declaration head)
   with
     | Sys_error e ->
        Printf.printf "Couldn't open file %s for writing! Make sure that the file doesn't already exist.\n" file

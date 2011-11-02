@@ -41,8 +41,9 @@ let help_msg =
   "Useful commands in query mode:
 #help.                               Display this message.
 #exit.                               Exit.
-#debug [flag].                       Turn debugging on/off (flag=on/off).
-#time [flag].                        Turn timing on/off (flag=on/off).
+#debug [flag].                       Turn debugging on/off (flag=on/off, default off).
+#time [flag].                        Turn timing on/off (flag=on/off, default off).
+#typed [flag].                       Turn type-checking on/off (flag=on/off, default on).
 #session \"file_1\" ... \"file_N\".      Load these files as the current \
 session.
 #reload.                             Reload the current session.
@@ -83,13 +84,13 @@ let position lexbuf =
     if file = "" then
       "" (* lexbuf information is rarely accurate at the toplevel *)
     else
-      Format.sprintf ": file %s, line %d, character %d" file line char
+      Format.sprintf "file %s, line %d, character %d" file line char
 
 let do_cleanup f x clean =
   try f x ; clean () with e -> clean () ; raise e
 
 let rec process ?(interactive=false) parse lexbuf =
-  try while true do try
+  try while true do
     let reset =
       let s = Term.save_state () in
       let ns = Term.save_namespace () in
@@ -98,75 +99,139 @@ let rec process ?(interactive=false) parse lexbuf =
     if interactive then Format.printf "?= %!" ;
     (* TODO do something with kinds and types *)
     List.iter
-      (function
-        | System.Kind (l, k) ->
-            begin match k with
-              | Type.KRArrow _ -> failwith "No type operators yet, sorry!"
-              | Type.Ki k when k<>"type" ->
-                  failwith (Printf.sprintf "No custom kind \"%s\", sorry!" k)
-              | _ ->
-                  List.iter
-                    (fun s -> Type.type_define_kind s k)
-                    l
-            end
-        | System.Type (l, t) ->
-            List.iter
-              (fun s -> Type.const_define_type s t)
-              l
-        | System.Typing (k,h,t) -> System.create_def k h t
-        | System.Def (h,a,b)    -> System.add_clause h a b
-        | System.Query a        -> do_cleanup Prover.toplevel_prove a reset
-        | System.Command (c,a)  ->
-            if not (List.mem c ["include";"reset";"reload";"session"]) then
-              do_cleanup (command lexbuf) (c,a) reset
-            else
-              command lexbuf (c,a)
+      (function input ->
+         try match input with
+           | System.Kind (l, k) ->
+               begin match k with
+                 | Type.KRArrow _ ->
+                     raise (System.Forbidden_kind (k," (no type operators yet)"))
+                 | Type.Ki n when n<>"type" ->
+                     raise (System.Forbidden_kind (k," (no custom kinds yet)"))
+                 | _ ->
+                     List.iter
+                       (fun s -> System.type_define_kind s k)
+                       l
+               end
+           | System.Type (l, t) ->
+               List.iter
+                 (fun s -> System.const_define_type s t)
+                 l
+           | System.Typing (k,h,t) -> System.create_def k h t
+           | System.Def (h,a,b)    -> System.add_clause h a b
+           | System.Query a        -> do_cleanup Prover.toplevel_prove a reset
+           | System.Command (c,a)  ->
+               if not (List.mem c ["include";"reset";"reload";"session"]) then
+                 do_cleanup (command lexbuf) (c,a) reset
+               else
+                 command lexbuf (c,a)
+         with
+           | Failure "eof" as e -> raise e
+           | Failure "lexing: empty token" ->
+               Format.printf "Lexing error: %s.\n%!" (position lexbuf) ;
+               if interactive then Lexing.flush_input lexbuf else exit 1
+           | Assertion_failed ->
+               Format.printf "Assertion failed: %s.\n%!" (position lexbuf) ;
+               if interactive then Lexing.flush_input lexbuf else exit 1
+           | System.Forbidden_kind (k,s) ->
+               Format.printf
+                 "Kind %a forbidden%s.\n%!"
+                 Type.pp_kind k
+                 s ;
+               if interactive then Lexing.flush_input lexbuf else exit 1
+           | System.Multiple_type_declaration (k,s) ->
+               Format.printf
+                 "Type %s was already declared%s.\n%!" k s
+           (*| System.Missing_type_declaration t ->
+               Format.printf
+                 "Type %s was not declared.\n%!" t ;
+               if interactive then Lexing.flush_input lexbuf else exit 1*)
+           (*| System.Forbidden_type t s ->
+               Format.printf
+                 "Type %a forbidden%s.\n%!"
+                 Type.pp_type t
+                 s ;
+               if interactive then Lexing.flush_input lexbuf else exit 1*)
+           | System.Multiple_const_declaration (c,s) ->
+               Format.printf
+                 "Constant %s was already declared (%s%s).\n%!"
+                 c s
+                 (position lexbuf) ;
+               if interactive then Lexing.flush_input lexbuf else exit 1
+           | System.Missing_declaration (term,Some (head_tm,body)) ->
+               Format.printf
+                 "Clause ignored in the definition of %a (%s): constant or predicate %a not declared.\n%!"
+                 Pprint.pp_term head_tm
+                 (position lexbuf)
+                 Pprint.pp_term term ;
+               if interactive then Lexing.flush_input lexbuf
+           | System.Multiple_pred_declaration t ->
+               Format.printf
+                 "Predicate %a was already declared (%s).\n%!"
+                 Pprint.pp_term t
+                 (position lexbuf) ;
+               if interactive then Lexing.flush_input lexbuf else exit 1
+           | System.Missing_pred_declaration t ->
+               Format.printf
+                 "Predicate %a was not declared (%s).\n%!"
+                 Pprint.pp_term t
+                 (position lexbuf) ;
+               if interactive then Lexing.flush_input lexbuf else exit 1
+           | System.Inconsistent_definition s ->
+               Format.printf "Inconsistent extension of definition %a (%s).\n%!"
+                 Pprint.pp_term s
+                 (position lexbuf) ;
+               if interactive then Lexing.flush_input lexbuf else exit 1
+           | System.Clause_typing_error (ty1,ty2,unifier,term,db_types,head_tm) ->
+               Format.printf
+                 "Clause ignored in the definition of %a (%s), term %a has type %a but is used as %a.\n%!"
+                 Pprint.pp_term head_tm
+                 (position lexbuf)
+                 Pprint.pp_term term
+                 (Type.pp_type_deep unifier) ty2
+                 (Type.pp_type_deep unifier) ty1;
+               if !System.debug then
+                 Format.printf
+                   "Unification failed with the binding types %a\nand the unifier %a.\n%!"
+                   Type.pp_ltypes db_types
+                   Type.pp_unifier unifier;
+               if interactive then Lexing.flush_input lexbuf
+           | System.Arity_mismatch (s,a) ->
+               Format.printf "Definition %a doesn't have arity %d !\n%!"
+                 Pprint.pp_term s a ;
+               if interactive then Lexing.flush_input lexbuf else exit 1
+           | System.Missing_definition t ->
+               Format.printf "No definition found for %a.\n%!" Pprint.pp_term t ;
+               if interactive then Lexing.flush_input lexbuf else exit 1
+           | e when not interactive ->
+               Format.printf "Error in %s, line %d: %s\n"
+                 lexbuf.Lexing.lex_curr_p.Lexing.pos_fname
+                 lexbuf.Lexing.lex_curr_p.Lexing.pos_lnum
+                 (Printexc.to_string e) ;
+               exit 1
+           | System.Interrupt ->
+               Format.printf "User interruption.\n%!"
+           | Prover.Level_inconsistency ->
+               Format.printf "This formula cannot be handled by the left prover!\n%!"
+           | Prover.Abort_search ->
+              Format.printf "Proof search aborted!\n"
+           | Unify.NotLLambda t ->
+               Format.printf "Not LLambda unification encountered: %a\n%!"
+                 Pprint.pp_term t
+           | Invalid_command ->
+               Format.printf "Invalid command, or wrong arity!\n%!"
+           | Failure s ->
+               Format.printf "Error: %s\n" s
+           | e ->
+               Format.printf "Unknown error: %s\n%!" (Printexc.to_string e) ;
+               raise e
       )
       (parse Lexer.token lexbuf);
     if interactive then flush stdout
-  with
-    | Failure "eof" as e -> raise e
-    | Parsing.Parse_error ->
-        Format.printf "Syntax error%s.\n%!" (position lexbuf) ;
-        if not interactive then exit 1;
-    | Failure "lexing: empty token" ->
-        Format.printf "Lexing error%s.\n%!" (position lexbuf) ;
-        if interactive then Lexing.flush_input lexbuf else exit 1
-    | Assertion_failed ->
-        Format.printf "Assertion failed%s.\n%!" (position lexbuf) ;
-        if interactive then Lexing.flush_input lexbuf else exit 1
-    | e when not interactive ->
-        Format.printf "Error in %s, line %d: %s\n"
-          lexbuf.Lexing.lex_curr_p.Lexing.pos_fname
-          lexbuf.Lexing.lex_curr_p.Lexing.pos_lnum
-          (Printexc.to_string e) ;
-        exit 1
-    | System.Undefined s ->
-        Format.printf "No definition found for %a !\n%!" Pprint.pp_term s
-    | System.Inconsistent_definition s ->
-        Format.printf "Inconsistent extension of definition %a !\n"
-          Pprint.pp_term s
-    | System.Arity_mismatch (s,a) ->
-        Format.printf "Definition %a doesn't have arity %d !\n%!"
-          Pprint.pp_term s a
-    | System.Interrupt ->
-        Format.printf "User interruption.\n%!"
-    | Prover.Level_inconsistency ->
-        Format.printf "This formula cannot be handled by the left prover!\n%!"
-    | Prover.Abort_search ->
-       Format.printf "Proof search aborted!\n"
-    | Unify.NotLLambda t ->
-        Format.printf "Not LLambda unification encountered: %a\n%!"
-          Pprint.pp_term t
-    | Invalid_command ->
-        Format.printf "Invalid command, or wrong arity!\n%!"
-    | Failure s ->
-        Format.printf "Error: %s\n" s
-    | e ->
-        Format.printf "Unknown error: %s\n%!" (Printexc.to_string e) ;
-        raise e
   done with
-  | Failure "eof" -> ()
+    | Parsing.Parse_error ->
+        Format.printf "Syntax error: %s.\n%!" (position lexbuf) ;
+        if not interactive then exit 1
+    | Failure "eof" -> ()
 
 and input_from_file file =
   let cwd = Sys.getcwd () in
@@ -226,6 +291,17 @@ and command lexbuf = function
   (* Turn timing on/off. *)
   | "time",[d] ->
       System.time :=
+        begin match Term.observe d with
+          | Term.Var v when v==System.Logic.var_on -> true
+          | Term.Var v when v==System.Logic.var_truth -> true
+          | Term.Var v when v==System.Logic.var_off -> false
+          | Term.Var v when v==System.Logic.var_falsity -> false
+          | _ -> raise Invalid_command
+        end
+
+  (* Turn type-checking on/off. *)
+  | "typed",[d] ->
+      System.typed :=
         begin match Term.observe d with
           | Term.Var v when v==System.Logic.var_on -> true
           | Term.Var v when v==System.Logic.var_truth -> true

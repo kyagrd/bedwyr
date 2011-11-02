@@ -28,7 +28,7 @@
   let mkdef head params body =
     (* Replace the params by fresh variables and
      * put the constraints on the parameters in the body:
-     * d (s X) X := body --> d Y X := (Y = s X), body
+     * d (s X) X := body --> d Y X := (Y = s X) /\ body
      * As an input we get: [head] (d) [params] ([s X;X]) and [body]. *)
 
     (* Free the registered names that are bound in the definition clause.
@@ -60,7 +60,10 @@
     in
     (* Add prolog to the body *)
     let body = if prolog = [] then body else
-      Term.app System.Logic.andc (prolog@[body])
+      List.fold_left
+        (fun acc term -> Term.app System.Logic.andc ([term;acc]))
+        body
+        prolog
     in
     (* Quantify existentially over the initial free variables. *)
     let body =
@@ -69,7 +72,7 @@
            if List.exists (Term.eq v) new_params then body else
              Term.app System.Logic.exists [Term.abstract v body])
         body
-        (Term.logic_vars (body::params))
+        (Term.logic_vars ([body]))
     in
     (* Finally, abstract over parameters *)
     let arity,body =
@@ -118,7 +121,6 @@ input_def:
   | DEFINE typing_list BY def_list DOT  { $2@$4 }
   | SHARP sexp DOT                      { let h,t = $2 in
                                           [System.Command (to_string h, t)] }
-/* TODO raise an exception if a type isn't new */
 types_list:
   | ID                  { [$1] }
   | ID COMMA types_list { ($1)::$3 }
@@ -128,28 +130,22 @@ simple_kind:
   | LPAREN simple_kind RPAREN       { $2 }
   | simple_kind RARROW simple_kind  { Type.KRArrow ($1, $3) }
 
-/* TODO raise an exception if a constant isn't new */
 constants_list:
   | ID                      { [$1] }
   | ID COMMA constants_list { ($1)::$3 }
 
 simple_type:
-  | ID			            { Type.type_atom $1 }
+  | ID			            { Type.atom $1 }
   | LPAREN simple_type RPAREN       { $2 }
-  | simple_type RARROW simple_type  { Type.TRArrow ($1, $3) }
+  | simple_type RARROW simple_type  { Type.arrow $1 $3 }
 
 typing_list:
   | typing_item                     { [$1] }
   | typing_item COMMA typing_list   { ($1)::$3 }
 
 typing_item:
-  | defkind ID COLUMN pred_type { System.Typing ($1, Term.atom $2, Some $4) }
-  | defkind ID                  { System.Typing ($1, Term.atom $2, None) }
-
-pred_type:
-  | ID			            { Type.prop_atom $1 }
-  | LPAREN pred_type RPAREN         { $2 }
-  | simple_type RARROW pred_type    { Type.TRArrow ($1, $3) }
+  | defkind ID COLUMN simple_type   { System.Typing ($1, Term.atom $2, Some $4) }
+  | defkind ID                      { System.Typing ($1, Term.atom $2, None) }
 
 defkind:
   |         { System.Normal      }
@@ -194,13 +190,11 @@ id_list:
   | ID          { [Term.is_free $1, $1] }
   | ID id_list  { (Term.is_free $1, $1)::$2 }
 
-/* simple expression (predicate and arguments) */
 sexp:
   | lexp { match $1 with
              | [] -> assert false
              | t::l -> t,l }
 
-/* list of expressions */
 lexp:
   | aexp        { [$1] }
   | aexp lexp   { $1::$2 }
@@ -213,7 +207,6 @@ lexp:
 binding:
   | ID BSLASH { (Term.is_free $1, $1) }
 
-/* atomic expression*/
 aexp:
   | LPAREN exp RPAREN   { $2 }
   | ID                  { if $1="_" then
