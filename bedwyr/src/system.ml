@@ -95,9 +95,9 @@ end
 type defkind = Normal | Inductive | CoInductive
 
 type input =
-  | Kind    of Type.simple_type ref list * Type.simple_kind
-  | Type    of Term.term list * Type.simple_type
-  | Typing  of defkind * Term.term
+  | Kind    of string list * Type.simple_kind
+  | Type    of string list * Type.simple_type
+  | Typing  of defkind * Term.term * Type.simple_type option
   | Def     of Term.term * int * Term.term
   | Query   of Term.term
   | Command of string * Term.term list
@@ -154,12 +154,15 @@ exception Arity_mismatch of Term.term*int
 
 
 (* type definition = Term.var * int * Term.term *)
-let defs : (Term.var,(defkind*Term.term option*Table.t option)) Hashtbl.t =
+let defs : (Term.var,(defkind*Term.term option*Table.t option*Type.simple_type option)) Hashtbl.t =
   Hashtbl.create 100
 
 let reset_defs () = Hashtbl.clear defs
 
-let create_def kind head_tm =
+let create_def kind head_tm stype =
+  let head = Term.get_var head_tm in
+  if Hashtbl.mem defs head then
+    raise (Multiple_definition head_tm);
   (* Cleanup all tables.
    * Cleaning only this definition's table is _not_ enough, since other
    * definitions may rely on it.
@@ -167,54 +170,46 @@ let create_def kind head_tm =
   Hashtbl.iter
     (fun k v ->
        match v with
-         | _,_,Some t -> Table.reset t
+         | _,_,Some t,_ -> Table.reset t
          | _ -> ())
     defs ;
-  let head = Term.get_var head_tm in
-  let t =
-    try
-      let _ = Hashtbl.find defs head in
-      raise (Multiple_definition head_tm)
-    with
-      | Not_found ->
-          (if kind=Normal then None else Some (Table.create ()))
-  in
-  Hashtbl.add defs head (kind, None, t)
+  let t = (if kind=Normal then None else Some (Table.create ())) in
+  Hashtbl.add defs head (kind, None, t, stype)
 
 let add_clause head_tm arity body =
   let head = Term.get_var head_tm in
-  let k,b,t =
+  let k,b,t,st =
     try
-      let k,b,t = Hashtbl.find defs head in
+      let k,b,t,st = Hashtbl.find defs head in
       match b with
-        | None -> k, Term.lambda arity body, t
+        | None -> k, Term.lambda arity body, t, st
         | Some b ->
             begin match Term.observe b with
               (* TODO simplify (too much Term.lambda and Logic.orc here) *)
               | Term.Lam (a,b) when arity=a ->
                   k, Term.lambda a
-                            (Term.app Logic.orc [b;body]), t
+                            (Term.app Logic.orc [b;body]), t, st
               | _ when arity=0 ->
-                  k, Term.app Logic.orc [b;body], t
+                  k, Term.app Logic.orc [b;body], t, st
               | _ -> raise (Inconsistent_definition head_tm)
             end
     with
       | Not_found -> raise (Missing_definition head_tm)
   in
   let b = Norm.hnorm b in
-  Hashtbl.replace defs head (k, Some b, t) ;
+  Hashtbl.replace defs head (k, Some b, t, st) ;
   if !debug then
     Format.printf "%a := %a\n" Pprint.pp_term head_tm Pprint.pp_term b
 
 let get_def ?check_arity head_tm =
   let head = Term.get_var head_tm in
   try
-    let k,b,t = Hashtbl.find defs head in
+    let k,b,t,st = Hashtbl.find defs head in
       match check_arity,b with
-        | None, Some b | Some 0, Some b -> k,b,t
+        | None, Some b | Some 0, Some b -> k,b,t,st
         | Some a, Some b ->
             begin match Term.observe b with
-              | Term.Lam (n,_) when n=a -> k,b,t
+              | Term.Lam (n,_) when n=a -> k,b,t,st
               | _ -> raise (Arity_mismatch (head_tm,a))
             end
               (* XXX perhaps distinguish Undefined and Undeclared? *)
@@ -228,7 +223,7 @@ let remove_def head_tm =
 
 let show_table head =
   try
-    let _,_,table = Hashtbl.find defs (Term.get_var head) in
+    let _,_,table,_ = Hashtbl.find defs (Term.get_var head) in
       match table with
         | Some table -> Table.print head table
         | None ->
@@ -240,7 +235,7 @@ let save_table head file =
    try
      let fout = open_out_gen [Open_wronly;Open_creat;Open_excl] 0o600 file in
      try
-       let _,_,table = Hashtbl.find defs (Term.get_var head) in
+       let _,_,table,_ = Hashtbl.find defs (Term.get_var head) in
          begin match table with
           | Some table -> Table.fprint fout head table
           | None ->

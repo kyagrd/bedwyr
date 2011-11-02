@@ -99,9 +99,21 @@ let rec process ?(interactive=false) parse lexbuf =
     (* TODO do something with kinds and types *)
     List.iter
       (function
-        | System.Kind _ -> ()
-        | System.Type _ -> ()
-        | System.Typing (k,h)   -> System.create_def k h
+        | System.Kind (l, k) ->
+            begin match k with
+              | Type.KRArrow _ -> failwith "No type operators yet, sorry!"
+              | Type.Ki k when k<>"type" ->
+                  failwith (Printf.sprintf "No custom kind \"%s\", sorry!" k)
+              | _ ->
+                  List.iter
+                    (fun s -> Type.type_define_kind s k)
+                    l
+            end
+        | System.Type (l, t) ->
+            List.iter
+              (fun s -> Type.const_define_type s t)
+              l
+        | System.Typing (k,h,t) -> System.create_def k h t
         | System.Def (h,a,b)    -> System.add_clause h a b
         | System.Query a        -> do_cleanup Prover.toplevel_prove a reset
         | System.Command (c,a)  ->
@@ -240,13 +252,13 @@ and command lexbuf = function
   | "clear_tables",[] ->
       Hashtbl.iter
         (fun k v -> match v with
-           | (_,_,Some t) -> Table.reset t
+           | (_,_,Some t,_) -> Table.reset t
            | _ -> ())
         System.defs
   | "clear_table",[p] ->
       begin match
         try
-          let _,_,x = Hashtbl.find System.defs (Term.get_var p) in x
+          let _,_,x,_ = Hashtbl.find System.defs (Term.get_var p) in x
         with _ -> None
       with
         | Some t ->
@@ -255,9 +267,9 @@ and command lexbuf = function
             Format.printf "Table not found.\n"
       end
 
-   (* save the content of a table to a file. An exception is thrown if *)
-   (* file already exists. *)
-   | "save_table",[p;f] ->
+  (* save the content of a table to a file. An exception is thrown if *)
+  (* file already exists. *)
+  | "save_table",[p;f] ->
       let f = Term.get_name f in
           System.save_table p f
 

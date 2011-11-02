@@ -120,8 +120,8 @@ input_def:
                                           [System.Command (to_string h, t)] }
 /* TODO raise an exception if a type isn't new */
 types_list:
-  | ID                  { [Type.atom $1] }
-  | ID COMMA types_list { (Type.atom $1)::$3 }
+  | ID                  { [$1] }
+  | ID COMMA types_list { ($1)::$3 }
 
 simple_kind:
   | ID			            { Type.Ki $1 }
@@ -130,11 +130,11 @@ simple_kind:
 
 /* TODO raise an exception if a constant isn't new */
 constants_list:
-  | ID                      { [Term.atom $1] }
-  | ID COMMA constants_list { (Term.atom $1)::$3 }
+  | ID                      { [$1] }
+  | ID COMMA constants_list { ($1)::$3 }
 
 simple_type:
-  | ID			            { Type.Ty $1 }
+  | ID			            { Type.type_atom $1 }
   | LPAREN simple_type RPAREN       { $2 }
   | simple_type RARROW simple_type  { Type.TRArrow ($1, $3) }
 
@@ -143,8 +143,13 @@ typing_list:
   | typing_item COMMA typing_list   { ($1)::$3 }
 
 typing_item:
-  | defkind ID COLUMN simple_type   { System.Typing ($1, Term.atom $2) }
-  | defkind ID                      { System.Typing ($1, Term.atom $2) }
+  | defkind ID COLUMN pred_type { System.Typing ($1, Term.atom $2, Some $4) }
+  | defkind ID                  { System.Typing ($1, Term.atom $2, None) }
+
+pred_type:
+  | ID			            { Type.prop_atom $1 }
+  | LPAREN pred_type RPAREN         { $2 }
+  | simple_type RARROW pred_type    { Type.TRArrow ($1, $3) }
 
 defkind:
   |         { System.Normal      }
@@ -294,7 +299,7 @@ let to_term ?incl:(incl=true) lexer file =
               (fun l -> function
                 | System.Kind _ -> l
                 | System.Type _ -> l
-                | System.Typing (kind,head) -> l
+                | System.Typing (kind,head,stype) -> l
                 | System.Def (head,arity,body) ->
                     let body = objectify (Term.lambda arity body) in
                     aux ((Term.app clause [ head;
