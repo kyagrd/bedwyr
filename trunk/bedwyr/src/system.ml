@@ -81,12 +81,12 @@ struct
 
 
   let _ =
-    Pprint.set_infix [ ("=>", Pprint.Right) ;
-                       ("->", Pprint.Right);
+    Pprint.set_infix [ ("=",  Pprint.Nonassoc) ;
+                       ("/\\",  Pprint.Both) ;
+                       ("\\/",  Pprint.Both) ;
+                       ("=>", Pprint.Right) ;
+                       ("->", Pprint.Right) ;
                        ("<-", Pprint.Left) ;
-                       (",",  Pprint.Both) ;
-                       (";",  Pprint.Both) ;
-                       ("=",  Pprint.Nonassoc) ;
                        ("+",  Pprint.Both) ;
                        ("-",  Pprint.Left) ;
                        ("*",  Pprint.Both) ]
