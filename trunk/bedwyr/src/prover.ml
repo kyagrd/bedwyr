@@ -20,7 +20,7 @@
 exception Invalid_definition
 exception Level_inconsistency
 
-(* added by AT: this exception is raised when a variable is detected in 
+(* added by AT: this exception is raised when a variable is detected in
  * a goal that is supposed to be ground *)
 exception Variable_leakage
 
@@ -80,52 +80,52 @@ let mark_not_disprovable_until d =
       else disprovable := false)
       disprovable_stack
   with Found -> ()
-  
+
 type 'a answer = Known of 'a | Unknown | OffTopic
 
 let do_open_file g =
   match g with
   | [n] ->
-     let name = Term.get_name n in 
+     let name = Term.get_name n in
      (
-       try  
+       try
          ignore (open_user_file name) ; true
-       with 
+       with
        | Sys_error e -> Printf.printf "fopen_out: failed opening file %s\n %s \n" name e ; false
      )
-  | _ -> false 
+  | _ -> false
 
 let do_close_file g =
   match g with
   | [n] ->
-     let name = Term.get_name n in 
+     let name = Term.get_name n in
      (
-       try  
+       try
          close_user_file name ; true
-       with 
+       with
        | Sys_error e ->  Printf.printf "fopen_out: failed closing file %s\n %s \n" name e ; false
      )
-  | _ -> false 
-  
-let do_fprint newline goals = 
-  let print_fun fmt t = 
+  | _ -> false
+
+let do_fprint newline goals =
+  let print_fun fmt t =
       if newline then fprintf fmt "%a\n%!" Pprint.pp_term t
       else  fprintf fmt "%a%!" Pprint.pp_term t
   in
     begin match goals with
-    | (h::l) -> 
+    | (h::l) ->
       (
-        try 
+        try
           let f = get_user_file (Term.get_name h) in
-          let fmt = Format.formatter_of_out_channel f in 
+          let fmt = Format.formatter_of_out_channel f in
           List.iter (print_fun fmt) l ;
           true
-        with 
+        with
         | Not_found -> false
         | e -> raise e
        )
      | _ -> false
-     end 
+     end
 
 
 (* Attemps to prove that the goal [(nabla x_1..x_local . g)(S)] by
@@ -148,23 +148,23 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
 
   (* Function to prove _distinct predicate *)
   let prove_distinct goals =
-      let sol = ref [] in 
-      let match_list l1 l2 = List.for_all2 (fun x y -> Term.eq x y) l1 l2 in 
+      let sol = ref [] in
+      let match_list l1 l2 = List.for_all2 (fun x y -> Term.eq x y) l1 l2 in
       let a = match goals with [a] -> a | _ -> invalid_goal () in
-      let a = Norm.deep_norm a in 
+      let a = Norm.deep_norm a in
       let vars = if level = Zero then Term.eigen_vars [a] else Term.logic_vars [a] in
           prove ~level ~timestamp ~failure ~local a
                 ~success:(fun ts k ->
-                              let tm_list = List.map (fun v -> Term.shared_copy v) vars in 
-                              let p = try Some (List.find (fun vs -> match_list tm_list vs) !sol )  
+                              let tm_list = List.map (fun v -> Term.shared_copy v) vars in
+                              let p = try Some (List.find (fun vs -> match_list tm_list vs) !sol )
                                       with Not_found -> None
                               in
-                                begin match p with 
+                                begin match p with
                                 | Some _ -> k ()
-                                | None   -> 
-                                    sol := tm_list :: !sol ; 
-                                    success ts k 
-                                end                               
+                                | None   ->
+                                    sol := tm_list :: !sol ;
+                                    success ts k
+                                end
                          )
   in
 
@@ -172,60 +172,60 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
   let prove_abstract goals =
       let a,b,c = match goals with [a;b;c] -> a,b,c | _ -> invalid_goal () in
       let a = Norm.deep_norm a in
-      let b = Norm.deep_norm b in  
-      let c = Norm.deep_norm c in 
-      let vars = 
-        if level = Zero then Term.eigen_vars [a] else Term.logic_vars [a] 
+      let b = Norm.deep_norm b in
+      let c = Norm.deep_norm c in
+      let vars =
+        if level = Zero then Term.eigen_vars [a] else Term.logic_vars [a]
       in
-      let d = 
+      let d =
           List.fold_left (fun t v -> Term.app b [Term.abstract_flex v t]) a vars
       in
-      let g = Term.app (Logic.eq) [c;d] in 
+      let g = Term.app (Logic.eq) [c;d] in
          prove ~level ~success ~failure ~timestamp ~local g
   in
-    
-  (* Function to prove _not predicate *)     
-  let prove_not goals = 
+
+  (* Function to prove _not predicate *)
+  let prove_not goals =
       let a = match goals with [a] -> a | _ -> invalid_goal () in
       let a = Norm.deep_norm a in
       let state = Term.save_state() in
       prove ~level ~timestamp ~local a
-      ~success:(fun ts k -> 
+      ~success:(fun ts k ->
                   Term.restore_state state ;
                   failure ())
-      ~failure:(fun () -> 
-                  Term.restore_state state ; 
+      ~failure:(fun () ->
+                  Term.restore_state state ;
                   success timestamp failure )
   in
 
   (* Function to prove _if predicate *)
-  let prove_ite goals = 
+  let prove_ite goals =
      let (a,b,c) = match goals with [a;b;c] -> a,b,c | _ -> invalid_goal () in
      let a = Norm.deep_norm a in
      let b = Norm.deep_norm b in
      let c = Norm.deep_norm c in
-     let succeeded = ref false in 
-     let state = Term.save_state () in 
+     let succeeded = ref false in
+     let state = Term.save_state () in
      prove ~level ~timestamp ~local a
-     ~success:(fun ts k ->                 
+     ~success:(fun ts k ->
                 (*  Term.restore_state state ; *)
                 (*  prove ~success ~failure ~level ~timestamp ~local (Term.app (Logic.andc) [a;b]) *)
-                succeeded := true ; 
-                prove ~success ~level ~timestamp:ts ~local b 
+                succeeded := true ;
+                prove ~success ~level ~timestamp:ts ~local b
                       ~failure:k
                 (* (fun () -> Term.restore_state state ; failure()) *)
               )
      ~failure:(fun () ->
-               Term.restore_state state ; 
-               if !succeeded then failure () else 
+               Term.restore_state state ;
+               if !succeeded then failure () else
                 prove ~success ~failure ~level ~timestamp ~local c
               )
   in
 
   let prove_atom d args =
-    if !debug then 
-     printf "Proving %a...\n" Pprint.pp_term g ; 
-    let kind,body,table = System.get_def ~check_arity:(List.length args) d in
+    if !debug then
+     printf "Proving %a...\n" Pprint.pp_term g ;
+    let kind,body,table,stype = System.get_def ~check_arity:(List.length args) d in
     let status =
       match table with
         | None -> OffTopic
@@ -240,9 +240,9 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
         | OffTopic ->
             prove ~level ~timestamp ~local ~success ~failure
               (Term.app body args)
-        | Known Table.Proved -> 
-            if !debug then 
-               printf "Goal %a proved using table\n" Pprint.pp_term g; 
+        | Known Table.Proved ->
+            if !debug then
+               printf "Goal %a proved using table\n" Pprint.pp_term g;
             success timestamp failure
         | Known Table.Disproved ->  Printf.printf "Known disproved \n" ; failure ()
         | Known (Table.Working disprovable) ->
@@ -363,8 +363,8 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
               alt goals
 
         (* Proving a negation-as-failure *)
-        | Var v when v == Logic.var_not -> 
-            prove_not goals 
+        | Var v when v == Logic.var_not ->
+            prove_not goals
 
         (* Proving if-then-else *)
         | Var v when v == Logic.var_ite ->
@@ -372,24 +372,24 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
 
         (* Proving abstract-predicate *)
         | Var v when v == Logic.var_abspred ->
-            prove_abstract goals 
+            prove_abstract goals
 
         (* Checking rigidity assumption *)
         | Var v when v == Logic.var_assert_rigid ->
            let a = match goals with [a] -> a | _ -> invalid_goal () in
-           let a = Norm.deep_norm a in 
+           let a = Norm.deep_norm a in
            let vars = if level = Zero then Term.eigen_vars [a] else Term.logic_vars [a] in
             begin match vars with
             | [] -> success timestamp failure
             | _ -> raise Variable_leakage
-            end 
+            end
 
-        (* proving cut predicate *) 
-        | Var v when v == Logic.var_cutpred -> 
+        (* proving cut predicate *)
+        | Var v when v == Logic.var_cutpred ->
            let a = match goals with [a] -> a | _ -> invalid_goal () in
-           let a = Norm.deep_norm a in 
-           let state = Term.save_state () in 
-             prove ~level ~local ~timestamp ~failure a 
+           let a = Norm.deep_norm a in
+           let state = Term.save_state () in
+             prove ~level ~local ~timestamp ~failure a
                    ~success:(fun ts k -> success ts (fun () -> Term.restore_state state ; failure ()) )
 
         (* Proving distinct-predicate *)
@@ -457,24 +457,24 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
               ev_substs := (ts,get_subst state)::!ev_substs ;
               k ()
             in
-            let make_copies evs g = 
+            let make_copies evs g =
                 List.map (fun (ts,sigma) ->
                           let unsig = apply_subst sigma in
-                          let newg = Term.shared_copy g in 
-                            undo_subst unsig ; 
-                            (ts, newg) 
-                         )  evs 
-            in   
-            let rec prove_conj ts failure = function 
+                          let newg = Term.shared_copy g in
+                            undo_subst unsig ;
+                            (ts, newg)
+                         )  evs
+            in
+            let rec prove_conj ts failure = function
               | [] -> success ts failure
               | (ts,g)::gs ->
-                 prove ~level ~local ~timestamp:ts ~failure 
+                 prove ~level ~local ~timestamp:ts ~failure
                        ~success:(fun ts' k -> prove_conj ts k gs)
                        g
-            in 
+            in
                prove ~level:Zero ~local ~timestamp a
                      ~success:store_subst
-                     ~failure:(fun () -> 
+                     ~failure:(fun () ->
                           prove_conj timestamp failure (make_copies !ev_substs b))
 
         (* Level 1: Universal quantification *)
@@ -536,25 +536,25 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
             List.iter (fun t -> printf "%a\n%!" Pprint.pp_term t) goals ;
             success timestamp failure
 
-        | Var v when v == Logic.var_fprint -> 
+        | Var v when v == Logic.var_fprint ->
             if do_fprint false goals then success timestamp failure
             else failure ()
 
-        | Var v when v == Logic.var_fprintln -> 
+        | Var v when v == Logic.var_fprintln ->
             if do_fprint true goals then success timestamp failure
             else failure ()
 
         (* Opening file for output *)
-        | Var v when v == Logic.var_fopen_out -> 
+        | Var v when v == Logic.var_fopen_out ->
             assert_level_one level ;
             if (do_open_file goals) then success timestamp failure
-            else failure () 
+            else failure ()
 
-        | Var v when v == Logic.var_fclose_out -> 
-            assert_level_one level ; 
+        | Var v when v == Logic.var_fclose_out ->
+            assert_level_one level ;
             if (do_close_file goals) then success timestamp failure
-            else failure () 
-                 
+            else failure ()
+
         (* Get an AST *)
         | Var v when v == Logic.var_parse ->
             begin match goals with
@@ -662,4 +662,3 @@ let toplevel_prove g =
                   time () ;
                   if !found then printf "No more solutions.\n"
                   else printf "No.\n")
-
