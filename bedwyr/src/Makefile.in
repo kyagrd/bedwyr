@@ -75,8 +75,9 @@ run: bedwyr
 
 clean:
 	rm -f bedwyr
+	rm -f Makefile
 	rm -f ndcore/test
-	rm -f parser.ml parser.mli lexer.ml parser.output
+	rm -f config.ml parser.ml parser.mli lexer.ml parser.output
 	rm -f *.cm[ixo] *.o
 	rm -f ndcore/*.cm[ixo] ndcore/*.o
 	rm -f ndcore/tests/*.cm[ixo] ndcore/tests/*.o
