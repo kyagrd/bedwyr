@@ -11,29 +11,36 @@ endif
 
 syn case match
 
-syn match   bedwyrParenErr ")"
-syn region  bedwyrEncl transparent matchgroup=keyword start="(" matchgroup=keyword end=")" contains=ALLBUT,bedwyrParenErr
-hi def link bedwyrParenErr error
+syn match       bedwyrParenErr ")"
+syn region      bedwyrEncl transparent matchgroup=keyword start="(" matchgroup=keyword end=")" contains=ALLBUT,bedwyrParenErr
+hi def link     bedwyrParenErr error
 
-syn match   normal   "\<\(\w\|[-+*/\\^<>=`'~?@#$&!_]\)*\>"
-syn match   keyword  "\<\(\u\|_\)\(\w\|[-+*/\\^<>=`'~?@#$&!]\)*\>"
+syn match       normal          "\<\(\w\|[-+*/\\^<>=`'~?@#$&!_]\)*\>"
+syn match       identifier      "\<\(\u\|_\)\(\w\|[-+*/\\^<>=`'~?@#$&!]\)*\>"
 
-syn region  comment  start="%" end="$"
-syn match   statement "#[a-z_]*"
+syn region      comment         start="%" end="$"
+syn match       preproc         "#[a-z_]*"
 
-syn keyword boolean  true false
-syn keyword keyword  inductive coinductive
-syn keyword special  forall exists nabla
-syn match   special  "\\"
-syn match   special  ","
-syn match   special  ":="
-syn match   special  "\."
-syn match   special  "/\\"
-syn match   special  "\\/"
-syn match   special  "+"
-syn match   special  "-" 
-syn match   special  "*"
-syn match   special  "->"
-syn match   special  "<-"
-syn match   special  "=>"
-syn region  string   start=+"+ skip=+\\\\\|\\"+ end=+"+
+syn keyword     boolean         true false
+syn keyword     keyword         Define by
+syn keyword     keyword         Kind Type
+syn keyword     keyword         inductive coinductive
+syn keyword     function        forall exists nabla
+syn match       special         "\\"
+
+syn match       delimiter       ":="
+syn match       delimiter       ","
+syn match       delimiter       ";"
+syn match       delimiter       "\."
+
+syn match       operator        "/\\"
+syn match       operator        "\\/"
+syn match       operator        "="
+syn match       operator        "=>"
+
+syn match       constant        "+"
+syn match       constant        "-" 
+syn match       constant        "*"
+syn match       constant        "->"
+syn match       constant        "<-"
+syn region      string          start=+"+ skip=+\\\\\|\\"+ end=+"+

@@ -41,8 +41,8 @@
 (defvar bedwyr-font-lock-keywords
   (list
    (cons (make-regex "false" "true") font-lock-constant-face)
-   (cons (make-regex "pi" "sigma" "nabla") font-lock-keyword-face)
-   (cons (make-regex "inductive" "coinductive") font-lock-keyword-face)
+   (cons (make-regex "forall" "exists" "nabla") font-lock-keyword-face)
+   (cons (make-regex "Kind" "Type" "Define" "by" "inductive" "coinductive") font-lock-keyword-face)
    (cons (make-regex "print") font-lock-keyword-face)
    (cons "\\#show_table" font-lock-keyword-face)
    (cons "\\<[A-Z][A-Za-z0-9'/]*" font-lock-variable-name-face))
