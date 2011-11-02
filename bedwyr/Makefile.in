@@ -21,7 +21,7 @@ XPL = list.def internal/scoping.def internal/checks.def \
       pi/pi_trace.def pi/corr-assert.def pi/pi_modal.def \
       pi/pi_mini.def pi/pi_nat.def pi/pi_church.def
 
-.PHONY: tests
+.PHONY: test
 test: src/Makefile
 	@echo Testing the core LLambda library
 	make -C src test

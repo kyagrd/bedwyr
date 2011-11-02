@@ -9,6 +9,7 @@ Kind    list,
         board   type.
 
 Type    nil     list.
+Type    b,o,x   cell.
 Type    c       cell -> list -> list.
 Type    row     cell -> cell -> cell -> row.
 Type    board   row -> row -> row -> board.
@@ -36,7 +37,7 @@ by
 % nowinner Board
 % True if nobody has won on the Board yet
 Define
-  nowinner : cell -> prop
+  nowinner : list -> prop
 by
   nowinner B := forall X, winner X B => X = b.
 
@@ -108,15 +109,6 @@ by
 % strategy. If this is not possible, it attempts to make a move in a
 % non-losing strategy. If this is not possible, it just makes some move.
 Define
-  play : list -> prop
-by
-  play L' := convert L L' /\ nowinner L /\ exists K,
-      ((move L o K /\ play_to_win L K /\ print "Playing to win...") \/
-       (move L o K /\ play_to_tie L K /\ print "Playing to tie...") \/
-       (move L o K /\ print "Playing to lose...")) /\
-      convert K K' /\ print K'.
-
-Define
   play_to_win : list -> list -> prop
 by  
   play_to_win L K := winner o K \/ somemove K /\ forall M, move K x M => owins M.
@@ -125,6 +117,15 @@ Define
   play_to_tie : list -> list -> prop
 by  
   play_to_tie L K := tie K \/ forall M, move K x M => notxwins M.
+
+Define
+  play : board -> prop
+by
+  play L' := convert L L' /\ nowinner L /\ exists K,
+      ((move L o K /\ play_to_win L K /\ print "Playing to win...") \/
+       (move L o K /\ play_to_tie L K /\ print "Playing to tie...") \/
+       (move L o K /\ print "Playing to lose...")) /\
+      convert K K' /\ print K'.
 
 #assert (convert Board (board (row x x x) (row b b b) (row b b b)) /\
          xwins Board).

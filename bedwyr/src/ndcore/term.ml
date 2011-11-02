@@ -19,7 +19,7 @@
 
 (** Representation of higher-order terms. *)
 
-type tag = Eigen | Constant | Logic
+type tag = Eigen | Constant | Logic | String
 
 (** Physical equality is used to distinguish variables. *)
 type var = {
@@ -74,24 +74,24 @@ let rec eq t1 t2 =
             true e ee
     | _ -> false
 
-let eq_ptr s t = 
+let eq_ptr s t =
     match s,t with
     | (V x),(V y) when x==y -> true
-    | (T u),(T v) -> eq u v 
-    | _ -> false 
-   
+    | (T u),(T v) -> eq u v
+    | _ -> false
+
 
 (* [AT,11 Mar 2011]Check if two substitutions are equal *)
 let eq_subst sub1 sub2 =
   let rec aux s1 s2 =
-    match s1 with 
+    match s1 with
     | [] -> true
     | ((v,c)::rest) ->
-      let (_,d) = (List.find (fun (x,y) -> v==x)) s2 in 
+      let (_,d) = (List.find (fun (x,y) -> v==x)) s2 in
       if (eq_ptr c d) then (aux rest s2) else false
   in
     try (aux sub1 sub2 && aux sub2 sub1) with
-    Not_found -> false 
+    Not_found -> false
 
 let rec observe = function
   | Ptr {contents=T d} -> observe d
@@ -211,7 +211,7 @@ let abstract target t =
           lambda 1 (aux 1 t)
     | _ -> assert false
 
-(** [abstract_flex var t] similar to abstract var t, but 
+(** [abstract_flex var t] similar to abstract var t, but
   * will abstract flexible subterms headed by var. *)
 
 let abstract_flex target t =
@@ -222,9 +222,9 @@ let abstract_flex target t =
           | NB i -> t
           | DB i -> if i>=n then DB (i+1) else t
           | App (h,ts) ->
-              begin match observe h with 
+              begin match observe h with
               | Var v ->
-                  if v==target then DB n 
+                  if v==target then DB n
                   else App ((aux n h), (List.map (aux n) ts))
               | _ -> App ((aux n h), (List.map (aux n) ts))
               end
@@ -334,6 +334,7 @@ let get_hint v =
           | Logic -> "H"
           | Eigen -> "h"
           | Constant -> "c"
+          | String -> "s"
         end
 
 (** Find an unique name for [v] (based on a naming hint if there is one)
@@ -436,7 +437,7 @@ let copy_eigen () =
 (* copying a term: No sharing is maintained, except possibly on
    pointers to variables. *)
 let rec simple_copy tm =
-  match tm with 
+  match tm with
   | NB i | DB i as x -> x
   | Var v -> tm
   | App (a,l) -> App (simple_copy a, List.map simple_copy l)
@@ -448,43 +449,43 @@ let rec simple_copy tm =
 (* copying a term maintaining shared structures *)
 
 let shared_copy tm =
-   let tbl = Hashtbl.create 100 in 
-   let rec cp t = 
-     match t with 
+   let tbl = Hashtbl.create 100 in
+   let rec cp t =
+     match t with
      | NB i | DB i as x -> x
      | Var v -> t
      | App (a,l) -> App (cp a, List.map cp l)
      | Lam (n,b) -> Lam (n, cp b)
      | Ptr {contents=V s} -> t
-     | Ptr x -> 
+     | Ptr x ->
          begin try Hashtbl.find tbl x  with
           | Not_found ->
-            begin match !x with 
-            | T s -> 
-              let v = Ptr {contents=T (cp s)} in 
+            begin match !x with
+            | T s ->
+              let v = Ptr {contents=T (cp s)} in
               Hashtbl.add tbl x v ;
               v
             | _ -> assert false
             end
          end
      | Susp _ -> assert false
-in 
+in
    cp tm
 
 (* [AT,21/08/2011] *)
 (* Equivariant checking *)
 
 let eqvt t1 t2 =
-  let bindings = ref [] in 
-  let rec aux s1 s2 = 
+  let bindings = ref [] in
+  let rec aux s1 s2 =
     match s1,s2 with
     | DB i1, DB i2 -> i1=i2
-    | NB i1, NB i2 -> 
+    | NB i1, NB i2 ->
       let bd = try Some (List.find (fun (x,y) -> x=i1) !bindings)
                with Not_found -> None
       in
         begin match bd with
-        | Some (x,y) -> (y = i2) 
+        | Some (x,y) -> (y = i2)
         | None -> (bindings := (i1,i2)::!bindings ; true)
         end
     | Ptr {contents=V v1}, Ptr {contents=V v2} -> v1==v2
@@ -500,12 +501,12 @@ let eqvt t1 t2 =
     | Var _, _ | _, Var _ -> assert false
     | Susp _, _ -> raise NonNormalTerm
     | _ -> false
-  in 
-    aux t1 t2 
+  in
+    aux t1 t2
 
 (** {1 Convenience} *)
 
-let string text = get_var_by_name ~tag:Constant ~lts:0 ~ts:0 text
+let string text = get_var_by_name ~tag:String ~lts:0 ~ts:0 text
 
 let binop s a b = App ((atom s),[a;b])
 

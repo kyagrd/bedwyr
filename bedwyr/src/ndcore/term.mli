@@ -19,7 +19,7 @@
 
 (** Representation of higher-order terms. *)
 
-type tag = Eigen | Constant | Logic
+type tag = Eigen | Constant | Logic | String
 type var = private { id : int ; tag : tag; ts : int; lts : int; }
 
 type term
