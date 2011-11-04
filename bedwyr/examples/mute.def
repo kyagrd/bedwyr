@@ -61,7 +61,7 @@ by
 Define
   separating_trace
 by
-  separating_trace P Q T := trace P T /\ peng T /\ (trace Q T => false).
+  separating_trace P Q T := trace P T /\ peng T /\ (trace Q T -> false).
 
 % This approach is natural, except for the special "non-logical" operator "peng"
 % that is used. This operator changes Bedwyr's notion of logic
@@ -78,7 +78,7 @@ by
 % not available in the main trunk of the Bedwyr system.
 % Without the "peng" operator, this predicate causes a runtime error because
 % the logic variables left in T after the clause (trace P T) are used on the
-% left of the implication (trace Q T => false). This is not allowed in Bedwyr
+% left of the implication (trace Q T -> false). This is not allowed in Bedwyr
 % as it requires more complex proof-search strategies.
 
 % In a version of Bedwyr hacked to provide "peng",
@@ -126,5 +126,5 @@ by
 Define
   tc
 by
-  tc := forall N P, def N P => print ("Checking" N) /\ prv picheck (proc P).
+  tc := forall N P, def N P -> print ("Checking" N) /\ prv picheck (proc P).
 #assert tc.

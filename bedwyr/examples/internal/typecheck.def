@@ -47,7 +47,7 @@ Define
 by
   __typed Env (X /\ Y) o := __typed Env X o /\ __typed Env Y o;
   __typed Env (X \/ Y) o := __typed Env X o /\ __typed Env Y o;
-  __typed Env (X => Y) o := __typed Env X o /\ __typed Env Y o;
+  __typed Env (X -> Y) o := __typed Env X o /\ __typed Env Y o;
 %__typed Env (forall    X) o :=
 %  forall x, __typed (bind x T Env) (X x) o.
   __typed Env (forall x, X x) o :=
@@ -63,10 +63,10 @@ by
 
   __typed Env (A = B) o := __typed Env A T /\ __typed Env B T;
 
-  __typed Env (lam X) (I->O) :=
+  __typed Env (lam X) (I implies O) :=
     forall x, __typed (bind x I Env) (X x) O;
   __typed Env (app X Y) O := (atom print) = X \/
-                           (__typed Env X (I->O) /\ __typed Env Y I);
+                           (__typed Env X (I implies O) /\ __typed Env Y I);
   __typed Env (atom X) T := __lookup Env X T.
 
 Define

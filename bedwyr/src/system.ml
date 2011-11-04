@@ -22,7 +22,7 @@ struct
   let eq      = Term.atom "="
   let andc    = Term.atom "/\\"
   let orc     = Term.atom "\\/"
-  let imp     = Term.atom "=>"
+  let imp     = Term.atom "->"
   let truth   = Term.atom "true"
   let falsity = Term.atom "false"
   let forall  = Term.atom "forall"
@@ -84,9 +84,7 @@ struct
     Pprint.set_infix [ ("=",  Pprint.Nonassoc) ;
                        ("/\\",  Pprint.Both) ;
                        ("\\/",  Pprint.Both) ;
-                       ("=>", Pprint.Right) ;
                        ("->", Pprint.Right) ;
-                       ("<-", Pprint.Left) ;
                        ("+",  Pprint.Both) ;
                        ("-",  Pprint.Left) ;
                        ("*",  Pprint.Both) ]

@@ -18,13 +18,13 @@ by
 Define
   trace_eq
 by
-  trace_eq P Q := (forall T, trace P T => trace Q T) /\
-                (forall T, trace Q T => trace P T).
+  trace_eq P Q := (forall T, trace P T -> trace Q T) /\
+                (forall T, trace Q T -> trace P T).
 
 Define
   separating_trace
 by
-  separating_trace P Q T := trace P T /\ (trace Q T => false).
+  separating_trace P Q T := trace P T /\ (trace Q T -> false).
 
 % ?= example 5 P, example 6 Q, separating_trace P Q T.
 % Solution found:

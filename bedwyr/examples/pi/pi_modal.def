@@ -45,17 +45,17 @@ by
   sat P top;
   sat P (land A B) := sat P A /\ sat P B;
   sat P (lor A B) := sat P A \/ sat P B;
-  sat P (boxMatch X Y A) := (X = Y) => sat P A;
+  sat P (boxMatch X Y A) := (X = Y) -> sat P A;
   sat P (diaMatch X Y A) := (X = Y) /\ sat P A;
-  sat P (boxAct X A) := forall P1, one P X P1 => sat P1 A;
+  sat P (boxAct X A) := forall P1, one P X P1 -> sat P1 A;
   sat P (diaAct X A) := exists P1, one P X P1 /\ sat P1 A;
-  sat P (boxOut X A) := forall Q, onep P (up X) Q => nabla y, sat (Q y) (A y);
+  sat P (boxOut X A) := forall Q, onep P (up X) Q -> nabla y, sat (Q y) (A y);
   sat P (diaOut X A) := exists Q, onep P (up X) Q /\ nabla y, sat (Q y) (A y);
-  sat P (boxIn X A) := forall Q, onep P (dn X) Q => forall y, sat (Q y) (A y);
+  sat P (boxIn X A) := forall Q, onep P (dn X) Q -> forall y, sat (Q y) (A y);
   sat P (diaIn X A) := exists Q, onep P (dn X) Q /\ exists y, sat (Q y) (A y);
-  sat P (boxInL X A) := forall Q, onep P (dn X) Q => exists y, sat (Q y) (A y);
+  sat P (boxInL X A) := forall Q, onep P (dn X) Q -> exists y, sat (Q y) (A y);
   sat P (diaInL X A) := exists Q, onep P (dn X) Q /\ forall y, sat (Q y) (A y);
-  sat P (boxInE X A) := exists y, forall Q, onep P (dn X) Q => sat (Q y) (A y);
+  sat P (boxInE X A) := exists y, forall Q, onep P (dn X) Q -> sat (Q y) (A y);
   sat P (diaInE X A) := forall y, exists Q, onep P (dn X) Q /\ sat (Q y) (A y).
 
 
@@ -72,32 +72,32 @@ by
   lsat L P top;
   lsat L P (land A B) := lsat L P A /\ lsat L P B;
   lsat L P (lor A B) := lsat L P A \/ lsat L P B;
-  lsat L P (boxMatch X Y A) := (X = Y) => lsat L P A;
+  lsat L P (boxMatch X Y A) := (X = Y) -> lsat L P A;
   lsat L P (diaMatch X Y A) := (X = Y) /\ lsat L P A;
-  lsat L P (boxAct X A) := forall P1, one P X P1 => lsat L P1 A;
+  lsat L P (boxAct X A) := forall P1, one P X P1 -> lsat L P1 A;
   lsat L P (diaAct X A) := exists P1, one P X P1 /\ lsat L P1 A;
   lsat L P (boxOut X A) :=
-    forall Q, onep P (up X) Q => nabla y, lsat (cons y L) (Q y) (A y);
+    forall Q, onep P (up X) Q -> nabla y, lsat (cons y L) (Q y) (A y);
   lsat L P (diaOut X A) :=
     exists Q, onep P (up X) Q /\ nabla y, lsat (cons y L) (Q y) (A y);
   lsat L P (boxIn X A) :=
-    forall Q, onep P (dn X) Q =>
-      nabla w, forall y, (member y (cons w L) => lsat (cons w L) (Q y) (A y));
+    forall Q, onep P (dn X) Q ->
+      nabla w, forall y, (member y (cons w L) -> lsat (cons w L) (Q y) (A y));
   lsat L P (diaIn X A) :=
     exists Q, onep P (dn X) Q /\
       nabla w, exists y, (member y (cons w L) /\ lsat (cons w L) (Q y) (A y));
   lsat L P (boxInL X A) :=
-    forall Q, onep P (dn X) Q =>
+    forall Q, onep P (dn X) Q ->
       nabla w, exists y, (member y (cons w L) /\ lsat (cons w L) (Q y) (A y));
   lsat L P (diaInL X A) :=
     exists Q, onep P (dn X) Q /\
-      nabla w, forall y, (member y (cons w L) => lsat (cons w L) (Q y) (A y));
+      nabla w, forall y, (member y (cons w L) -> lsat (cons w L) (Q y) (A y));
   lsat L P (boxInE X A) :=
     nabla w, exists y,
       (member y (cons w L) /\
-         forall Q, onep P (dn X) Q => lsat (cons w L) (Q y) (A y));
+         forall Q, onep P (dn X) Q -> lsat (cons w L) (Q y) (A y));
   lsat L P (diaInE X A) :=
-    nabla w, forall y, member y (cons w L) =>
+    nabla w, forall y, member y (cons w L) ->
       exists Q, onep P (dn X) Q /\ lsat (cons w L) (Q y) (A y).
 
 
@@ -123,21 +123,21 @@ by
 %%%  formcheck (form (boxAct X A)) (and (name X) (form A));
 %%%  formcheck (form (diaAct X A)) (and (name X) (form A));
 %%%  formcheck (form (boxOut X A))
-%%%          (and (name X) (_forall u\ (name u) -> (form (A u))));
+%%%          (and (name X) (_forall u\ (name u) implies (form (A u))));
 %%%  formcheck (form (diaOut X A))
-%%%          (and (name X) (_forall u\ (name u) -> (form (A u))));
+%%%          (and (name X) (_forall u\ (name u) implies (form (A u))));
 %%%  formcheck (form (boxIn  X A))
-%%%          (and (name X) (_forall u\ (name u) -> (form (A u))));
+%%%          (and (name X) (_forall u\ (name u) implies (form (A u))));
 %%%  formcheck (form (diaIn  X A))
-%%%          (and (_forall u\ (name u) -> (form (A u))) (name X));
+%%%          (and (_forall u\ (name u) implies (form (A u))) (name X));
 %%%  formcheck (form (boxInL X A))
-%%%          (and (name X) (_forall u\ (name u) -> (form (A u))));
+%%%          (and (name X) (_forall u\ (name u) implies (form (A u))));
 %%%  formcheck (form (diaInL X A))
-%%%          (and (name X) (_forall u\ (name u) -> (form (A u))));
+%%%          (and (name X) (_forall u\ (name u) implies (form (A u))));
 %%%  formcheck (form (boxInE X A))
-%%%          (and (name X) (_forall u\ (name u) -> (form (A u))));
+%%%          (and (name X) (_forall u\ (name u) implies (form (A u))));
 %%%  formcheck (form (diaInE X A))
-%%%          (and (name X) (_forall u\ (name u) -> (form (A u)))).
+%%%          (and (name X) (_forall u\ (name u) implies (form (A u)))).
 %%%
 %%%
 % Some examples ===============================================================
@@ -171,12 +171,12 @@ by
 %%%  typecheck_proc,
 %%%  typecheck_form
 %%%by
-%%%  typecheck_form := forall A N, assert N A => prv formcheck (form A);
-%%%  typecheck_proc := forall P N, process N P => prv picheck (proc P).
+%%%  typecheck_form := forall A N, assert N A -> prv formcheck (form A);
+%%%  typecheck_proc := forall P N, process N P -> prv picheck (proc P).
 %%%Define
 %%%  wrong_form
 %%%by
-%%%  wrong_form N := exists P, assert N P /\ (prv formcheck (form P) => false).
+%%%  wrong_form N := exists P, assert N P /\ (prv formcheck (form P) -> false).
 %%%
 %%%#assert typecheck_proc.
 %%%#assert typecheck_form.

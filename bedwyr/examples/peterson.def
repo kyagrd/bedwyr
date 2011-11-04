@@ -82,5 +82,5 @@ by
 Define
   test
 by
-  test := initial I /\ (forall B, bad B /\ path I B => print (error) /\ false) /\
+  test := initial I /\ (forall B, bad B /\ path I B -> print (error) /\ false) /\
         print (peterson is right).

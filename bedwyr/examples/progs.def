@@ -30,10 +30,10 @@ by
   atom (copy S T);
   atom (subst R S T);
   atom (eval E V).
-#assert (prv (x\y\ false) ((and a b) -> (and tt a))).
+#assert (prv (x\y\ false) ((and a b) implies (and tt a))).
 #assert
   (forall t u w,
-     prv (x\y\ false) (_forall x\ _forall y\ (p x t) -> (p y u) -> (p x w)) =>
+     prv (x\y\ false) (_forall x\ _forall y\ (p x t) implies (p y u) implies (p x w)) ->
      w = t).
 
 Define
@@ -49,14 +49,14 @@ Define
   prog
 by
 % Specification of simply typing inference for untyped lambda-calculus.
-  prog (typeof (lam x\ B x) (Tin -> Tout))
-     (_forall x\ typeof x Tin -> typeof (B x) Tout);
-  prog (typeof (app A B) Tout) (and (typeof A (Tin -> Tout)) (typeof B Tin));
+  prog (typeof (lam x\ B x) (Tin implies Tout))
+     (_forall x\ typeof x Tin implies typeof (B x) Tout);
+  prog (typeof (app A B) Tout) (and (typeof A (Tin implies Tout)) (typeof B Tin));
 % Implementation of substitution into the untyped lambda-calculus.
   prog (copy (app M N) (app M' N')) (and (copy M M') (copy N N'));
   prog (copy (lam M) (lam M))
-     (_forall x\ _forall x'\ copy x x' -> copy (M x) (M' x'));
-  prog (subst R S T) (_forall x\ copy x S -> copy (R x) T);
+     (_forall x\ _forall x'\ copy x x' implies copy (M x) (M' x'));
+  prog (subst R S T) (_forall x\ copy x S implies copy (R x) T);
 % Call-by-value evaluation
   prog (eval (lam x\ M x) (lam x\ M x)) tt;
   prog (eval (app M N) V)
@@ -67,10 +67,10 @@ by
 #assert (prv prog (typeof (app (lam x\ lam y\ x) (lam x\ x)) T)).
 
 #assert_not   (forall T, prv prog (typeof (lam x\ app x x) T)).
-#assert       (forall T, prv prog (typeof (lam x\ app x x) T) => false).
-#assert_raise ((forall T, prv prog (typeof (lam x\ app x x) T) => false) => true).
+#assert       (forall T, prv prog (typeof (lam x\ app x x) T) -> false).
+#assert_raise ((forall T, prv prog (typeof (lam x\ app x x) T) -> false) => true).
 
-#assert (forall T S, prv prog (typeof (lam x\ x) (T -> S)) => T = S).
+#assert (forall T S, prv prog (typeof (lam x\ x) (T implies S)) -> T = S).
 
 % The following has four proofs.
 #assert (exists R, prv prog (subst R (lam x\x) (app (lam x\x) (lam y\y)))).

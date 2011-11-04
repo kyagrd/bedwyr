@@ -17,7 +17,7 @@ by
   type (bind A T E) A T;
   type (bind A B E) X T := type E X T.
 
-% Adding a (A = X => false) guard to the second clause would avoid
+% Adding a (A = X -> false) guard to the second clause would avoid
 % unnecessary searches, but would make the definition invalid in Level 0.
 
 % Simply typed lambda-calculus ================================================
@@ -31,34 +31,34 @@ by
 
 % Play with a few examples ====================================================
 
-#assert (forall T, wt (bind a t nil) (var a) T => T=t).
+#assert (forall T, wt (bind a t nil) (var a) T -> T=t).
 
 #assert (wt (bind a t (bind b (arrow t tt) nil))
             (app (var b) (var a)) T).
 #assert (forall T, wt (bind a t (bind b (arrow t tt) nil))
-                  (app (var b) (var a)) T => T=tt).
+                  (app (var b) (var a)) T -> T=tt).
 
 #assert (forall T Ta Tb,
            wt (bind a Ta (bind b Tb nil))
               (app (abs x\ (app (var a) (var b))) (var a))
               T
-           => exists A B, Ta = arrow A B).
+           -> exists A B, Ta = arrow A B).
 
 #assert_not (exists T, wt nil (abs x\ app x x) T).
-#assert ((exists T, wt nil (abs x\ app x x) T) => false).
+#assert ((exists T, wt nil (abs x\ app x x) T) -> false).
 
-#assert_not (forall x y, type (bind x t1 (bind y t2 nil)) y t1 => false).
-#assert     (nabla x y,  type (bind x t1 (bind y t2 nil)) y t1 => false).
+#assert_not (forall x y, type (bind x t1 (bind y t2 nil)) y t1 -> false).
+#assert     (nabla x y,  type (bind x t1 (bind y t2 nil)) y t1 -> false).
 
 Define
   test
 by
   test :=
   print "Running simply typed lambda calculus tests..." /\
-  print (running test 1) /\ (forall T, test_type 1 T => T = t) /\
-  print (running test 2) /\ (forall T, test_type 2 T => T = tt) /\
+  print (running test 1) /\ (forall T, test_type 1 T -> T = t) /\
+  print (running test 2) /\ (forall T, test_type 2 T -> T = tt) /\
   print (running test 3) /\
-    (forall T, test_type 3 T => exists A B, T = arrow A B) /\
+    (forall T, test_type 3 T -> exists A B, T = arrow A B) /\
   print (running test 4) /\ _test 4 /\
   print (running test 5) /\ _test 0 /\
   print "testing complete".
@@ -74,7 +74,7 @@ by
 % In the eval predicate, it could be more natural to use forall instead of nabla,
 % since it allows to substitue anything: from (eval (abs F) (abs F')) we
 % get (eval (F M) (F' M)). But what we really want is
-% eval M M' => eval (abs F) (abs F') => eval (F M) (F M').
+% eval M M' -> eval (abs F) (abs F') => eval (F M) (F M').
 % The advantage of using nabla is that it will interact well
 % with the nabla used in wt, and make the induction proof easy.
 

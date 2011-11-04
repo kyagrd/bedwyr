@@ -18,9 +18,9 @@ Define
   coinductive bisim
 by
   bisim P Q :=
-    (forall P1 A, next P A P1 =>
+    (forall P1 A, next P A P1 ->
                      exists Q1, next Q A Q1 /\ bisim P1 Q1) /\
-    (forall Q1 A, next Q A Q1 =>
+    (forall Q1 A, next Q A Q1 ->
                      exists P1, next P A P1 /\ bisim P1 Q1).
 
 #assert (bisim p0 q0).

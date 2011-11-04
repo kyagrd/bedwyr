@@ -11,20 +11,20 @@ by
 Define
   determinate
 by
-  determinate One :=  forall P A Q R, One P A Q =>  One P A R => Q = R.
+  determinate One :=  forall P A Q R, One P A Q ->  One P A R => Q = R.
 
 Define
   coinductive sim
 by
   sim One P Q :=
-   forall P1 A, One P A P1 => exists Q1, One Q A Q1 /\ sim One P1 Q1.
+   forall P1 A, One P A P1 -> exists Q1, One Q A Q1 /\ sim One P1 Q1.
 
 Define
   coinductive bisim
 by
   bisim One P Q :=
-    (forall P1 A, One P A P1 => exists Q1, One Q A Q1 /\ bisim One P1 Q1) /\
-    (forall Q1 A, One Q A Q1 => exists P1, One P A P1 /\ bisim One P1 Q1).
+    (forall P1 A, One P A P1 -> exists Q1, One Q A Q1 /\ bisim One P1 Q1) /\
+    (forall Q1 A, One Q A Q1 -> exists P1, One P A P1 /\ bisim One P1 Q1).
 
 %% ATS 0:  a.b
 
@@ -112,7 +112,7 @@ Define
   member
 by
   member X nil        ff;
-  member X (cons Y L) Bool := (X = Y => false) /\ member X L Bool;
+  member X (cons Y L) Bool := (X = Y -> false) /\ member X L Bool;
   member X (cons X L) tt.
 
 % Co-induction with History checking.  Simply check that goal appears
@@ -131,7 +131,7 @@ Define
 by
   cycsim One P Q :=
    cyclic
-     (S\ P\ Q\ (forall P1 A, One P A P1 => exists Q1, One Q A Q1 /\ S P1 Q1))
+     (S\ P\ Q\ (forall P1 A, One P A P1 -> exists Q1, One Q A Q1 /\ S P1 Q1))
      nil P Q.
 
 Define
@@ -140,8 +140,8 @@ by
   cycbisim One P Q :=
    cyclic
      (S\ P\ Q\
-        ((forall P1 A, One P A P1 => exists Q1, One Q A Q1 /\ S P1 Q1) /\
-         (forall Q1 A, One Q A Q1 => exists P1, One P A P1 /\ S P1 Q1)))
+        ((forall P1 A, One P A P1 -> exists Q1, One Q A Q1 /\ S P1 Q1) /\
+         (forall Q1 A, One Q A Q1 -> exists P1, One P A P1 /\ S P1 Q1)))
      nil P Q.
 
 Define

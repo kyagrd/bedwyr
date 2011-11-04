@@ -112,7 +112,7 @@ Define
   safe
 by
   safe P :=
-   forall T, (trace P T /\ print ("Checking trace:" T))  =>  iscorr nil T.
+   forall T, (trace P T /\ print ("Checking trace:" T))  ->  iscorr nil T.
 
 
 Define

@@ -91,20 +91,19 @@
 
 %token SHARP KIND TYPE DEFINE BY IND COIND
 %token DEF DOT COMMA SMCLMN COLUMN
-%token EQ AND OR IMP
+%token EQ AND OR RARROW IMP
 %token <string> BINDER ID
-%token RARROW LARROW PLUS MINUS TIMES
+%token PLUS MINUS TIMES
 %token BSLASH LPAREN RPAREN
 %token <string> STRING
 
 %nonassoc BSLASH
 %nonassoc COMMA
+%right RARROW
 %right IMP
 %left OR
 %left AND
 %nonassoc EQ
-%right RARROW
-%left LARROW
 %left PLUS
 %left MINUS
 %left TIMES
@@ -166,10 +165,10 @@ input_query:
   | SHARP sexp DOT  { let (h,t) = $2 in [System.Command (to_string h,t)] }
 
 exp:
-  | exp EQ   exp { eq   $1 $3 }
-  | exp AND  exp { andc $1 $3 }
-  | exp OR   exp { orc  $1 $3 }
-  | exp IMP  exp { imp  $1 $3 }
+  | exp EQ   exp    { eq   $1 $3 }
+  | exp AND  exp    { andc $1 $3 }
+  | exp OR   exp    { orc  $1 $3 }
+  | exp RARROW exp  { imp  $1 $3 }
   | BINDER id_list COMMA exp    { let binder = Term.atom $1 in
                                   List.fold_left
                                     (fun t -> fun (was_free,id) ->
@@ -218,8 +217,6 @@ aexp:
 /* There is redundency here, but ocamlyacc seems to have problems
    with left associativity if we abstract it. */
 iexp:
-  | exp LARROW exp { Term.app (Term.atom "<-") [$1; $3] }
-  | exp RARROW exp { Term.app (Term.atom "->") [$1; $3] }
   | exp PLUS   exp { Term.app (Term.atom "+")  [$1; $3] }
   | exp MINUS  exp { Term.app (Term.atom "-")  [$1; $3] }
   | exp TIMES  exp { Term.app (Term.atom "*")  [$1; $3] }
