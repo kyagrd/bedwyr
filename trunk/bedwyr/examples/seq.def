@@ -14,7 +14,7 @@
 %% encoded in Prog.
 
 % Object logic is freely generated from
-%   tt, and, <- , -> , _forall, _exists
+%   tt, and, implied , implies , _forall, _exists
 
 % Notice that the interpreter does not use lists: conjunctions can be
 % used instead.  The empty list is true (tt).
@@ -28,26 +28,25 @@ by
 % Attempts to prove the Goal from the assumptions in List and
 % the logic programming clauses described by Prog.
 
-% Do right rules first.
-
-Define
-  seq
-by
-  seq Prog L tt;
-  seq Prog L (and B C)  := seq Prog L B /\ seq Prog L C;
-  seq Prog L (G <- D)   := seq Prog (and D L) G;
-  seq Prog L (D -> G)   := seq Prog (and D L) G;
-  seq Prog L (_forall B) := nabla x, seq Prog L (B x);
-  seq Prog L (_exists B) := exists x, seq Prog L (B x);
-% Pick a formula on which to backchain.
-  seq Prog L A := atom A /\ (bc Prog L L A \/ (Prog A Body /\ seq Prog L Body)).
-
 % Backchaining is done in a focused fashion.
 Define
   bc
 by
   bc Prog L A A := atom A;
   bc Prog L (and X Y)  A := bc Prog L X A \/ bc Prog L Y A;
-  bc Prog L (D <- G)   A := bc Prog L D A /\ seq Prog L G;
-  bc Prog L (G -> D)   A := bc Prog L D A /\ seq Prog L G;
+  bc Prog L (D implied G)   A := bc Prog L D A /\ seq Prog L G;
+  bc Prog L (G implies D)   A := bc Prog L D A /\ seq Prog L G;
   bc Prog L (_forall D) A := exists t, bc Prog L (D t) A.
+
+% Do right rules first.
+Define
+  seq
+by
+  seq Prog L tt;
+  seq Prog L (and B C)  := seq Prog L B /\ seq Prog L C;
+  seq Prog L (G implied D)   := seq Prog (and D L) G;
+  seq Prog L (D implies G)   := seq Prog (and D L) G;
+  seq Prog L (_forall B) := nabla x, seq Prog L (B x);
+  seq Prog L (_exists B) := exists x, seq Prog L (B x);
+% Pick a formula on which to backchain.
+  seq Prog L A := atom A /\ (bc Prog L L A \/ (Prog A Body /\ seq Prog L Body)).

@@ -5,6 +5,12 @@
 % since coverage and determinancy checks would be useful to lambda prolog
 % programmers, for example.
 
+Kind    list,
+        elt     type.
+
+Type    nil     list.
+Type    cons    elt -> list -> list.
+
 Define
   list
 by
@@ -31,13 +37,13 @@ by
 Define
   coverage
 by
-  coverage := forall L K, list L => exists M, append L K M.
+  coverage := forall L K, list L -> exists M, append L K M.
 
 Define
   determinacy
 by
   determinacy := forall L K M Mp,
-      list L => append L K M => append L K Mp => M = Mp.
+      list L -> append L K M => append L K Mp => M = Mp.
 
 #assert coverage.
 #assert determinacy.

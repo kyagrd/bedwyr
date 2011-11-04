@@ -8,7 +8,7 @@ Kind    list,
         row,
         board   type.
 
-Type    nil     list.
+Type    nil'    list.
 Type    b,o,x   cell.
 Type    c       cell -> list -> list.
 Type    row     cell -> cell -> cell -> row.
@@ -17,7 +17,7 @@ Type    board   row -> row -> row -> board.
 Define
   convert : list -> board -> prop
 by
-  convert (c A (c B (c C (c D (c E (c F (c G (c H (c I nil)))))))))
+  convert (c A (c B (c C (c D (c E (c F (c G (c H (c I nil')))))))))
           (board (row A B C) (row D E F) (row G H I)).
 
 % winner Player Board
@@ -25,21 +25,21 @@ by
 Define
   winner : cell -> list -> prop
 by
-  winner W (c W (c W (c W (c A (c B (c C (c D (c E (c F nil)))))))));
-  winner W (c A (c B (c C (c W (c W (c W (c D (c E (c F nil)))))))));
-  winner W (c A (c B (c C (c D (c E (c F (c W (c W (c W nil)))))))));
-  winner W (c W (c A (c B (c W (c C (c D (c W (c E (c F nil)))))))));
-  winner W (c A (c W (c B (c C (c W (c D (c E (c W (c F nil)))))))));
-  winner W (c A (c B (c W (c C (c D (c W (c E (c F (c W nil)))))))));
-  winner W (c W (c A (c B (c C (c W (c D (c E (c F (c W nil)))))))));
-  winner W (c A (c B (c W (c C (c W (c D (c W (c E (c F nil))))))))).
+  winner W (c W (c W (c W (c A (c B (c C (c D (c E (c F nil')))))))));
+  winner W (c A (c B (c C (c W (c W (c W (c D (c E (c F nil')))))))));
+  winner W (c A (c B (c C (c D (c E (c F (c W (c W (c W nil')))))))));
+  winner W (c W (c A (c B (c W (c C (c D (c W (c E (c F nil')))))))));
+  winner W (c A (c W (c B (c C (c W (c D (c E (c W (c F nil')))))))));
+  winner W (c A (c B (c W (c C (c D (c W (c E (c F (c W nil')))))))));
+  winner W (c W (c A (c B (c C (c W (c D (c E (c F (c W nil')))))))));
+  winner W (c A (c B (c W (c C (c W (c D (c W (c E (c F nil'))))))))).
 
 % nowinner Board
 % True if nobody has won on the Board yet
 Define
   nowinner : list -> prop
 by
-  nowinner B := forall X, winner X B => X = b.
+  nowinner B := forall X, winner X B -> X = b.
 
 % move Board Player Board'
 % True if Board' is the same as Board except for one move by Player.
@@ -61,7 +61,7 @@ by
 Define
   nomoves : list -> prop
 by
-  nomoves L := somemove L => false.
+  nomoves L := somemove L -> false.
 
 % tie Board
 % True if the Board is a tie.
@@ -76,7 +76,7 @@ Define
   xwins : list -> prop
 by
   xwins L := winner x L;
-  xwins L := forall K, move L o K => (nowinner K /\ exists M, move K x M /\ xwins M).
+  xwins L := forall K, move L o K -> (nowinner K /\ exists M, move K x M /\ xwins M).
 
 % owins Board
 % True if o has a winning strategy for Board, assuming o plays first.
@@ -85,23 +85,23 @@ Define
 by
   owins L := winner o L;
   owins L := nowinner L /\ exists K, move L o K /\
-               (winner o K \/ somemove K /\ forall M, move K x M => owins M).
+               (winner o K \/ somemove K /\ forall M, move K x M -> owins M).
 
 % These definitions are not stratified, but might be nice.
 % Note: they would require that move L o K checks that x has not won,
 %       and vice-versa.
-% xwins L := forall K, move L o K  => owins K => false.
-% owins L := forall K, move L x K  => xwins K => false.
+% xwins L := forall K, move L o K  -> owins K => false.
+% owins L := forall K, move L x K  -> xwins K => false.
 
 % notxwins Board
 % True if x does not have a winning strategy for Board, assuming o plays first.
-% It would be nice to use (forall L, xwins L => false), but xwins is level 1.
+% It would be nice to use (forall L, xwins L -> false), but xwins is level 1.
 Define
   coinductive notxwins : list -> prop
 by
   notxwins L := tie L \/ winner o L;
   notxwins L := nowinner L /\ exists K, move L o K /\
-                  (tie K \/ winner o K \/ forall M, move K x M => notxwins M).
+                  (tie K \/ winner o K \/ forall M, move K x M -> notxwins M).
 
 % play Board
 % This predicate lets you play tic-tac-toe against the computer.
@@ -111,12 +111,12 @@ by
 Define
   play_to_win : list -> list -> prop
 by  
-  play_to_win L K := winner o K \/ somemove K /\ forall M, move K x M => owins M.
+  play_to_win L K := winner o K \/ somemove K /\ forall M, move K x M -> owins M.
 
 Define
   play_to_tie : list -> list -> prop
 by  
-  play_to_tie L K := tie K \/ forall M, move K x M => notxwins M.
+  play_to_tie L K := tie K \/ forall M, move K x M -> notxwins M.
 
 Define
   play : board -> prop

@@ -51,9 +51,9 @@
 % At the meta level we want to prove the following theorems:
 %
 % (1) canonical forms:
-%     forall A B, (nabla x, canonical (A x)) /\ restrict (new A) B ==> canonical B.
+%     forall A B, (nabla x, canonical (A x)) /\ restrict (new A) B =-> canonical B.
 % (2) type preservation:
-%     forall P X A, process P /\ one P X A ==> canonical A.
+%     forall P X A, process P /\ one P X A =-> canonical A.
 %
 
 
@@ -201,8 +201,8 @@ Define
   coinductive bisim
 by
   bisim P Q :=
-    (forall A X, one P X A => exists B, one Q X B /\ bisimAgent A B) /\
-    (forall B X, one Q X B => exists A, one P X A /\ bisimAgent A B).
+    (forall A X, one P X A -> exists B, one Q X B /\ bisimAgent A B) /\
+    (forall B X, one Q X B -> exists A, one P X A /\ bisimAgent A B).
 
 
 % == Examples ========================================================

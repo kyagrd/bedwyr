@@ -36,4 +36,4 @@ by
 
 #assert
    (forall x y z,
-      pv (_forall u\ _forall v\ q (pair u x) (pair v y) (pair v z)) => y = z).
+      pv (_forall u\ _forall v\ q (pair u x) (pair v y) (pair v z)) -> y = z).

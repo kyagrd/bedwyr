@@ -22,25 +22,26 @@ syn region      comment         start="%" end="$"
 syn match       preproc         "#[a-z_]*"
 
 syn keyword     boolean         true false
-syn keyword     keyword         Define by
 syn keyword     keyword         Kind Type
+syn keyword     keyword         Define by
 syn keyword     keyword         inductive coinductive
 syn keyword     function        forall exists nabla
 syn match       special         "\\"
 
+syn match       delimiter       ":"
 syn match       delimiter       ":="
 syn match       delimiter       ","
 syn match       delimiter       ";"
 syn match       delimiter       "\."
 
+syn match       constant        "+"
+syn match       constant        "-"
+syn match       constant        "*"
+
+syn match       operator        "="
 syn match       operator        "/\\"
 syn match       operator        "\\/"
-syn match       operator        "="
-syn match       operator        "=>"
+syn match       operator        "->"
 
-syn match       constant        "+"
-syn match       constant        "-" 
-syn match       constant        "*"
-syn match       constant        "->"
-syn match       constant        "<-"
+syn match       error           "=>"
 syn region      string          start=+"+ skip=+\\\\\|\\"+ end=+"+

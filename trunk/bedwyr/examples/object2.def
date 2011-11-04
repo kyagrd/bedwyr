@@ -20,8 +20,8 @@ by
 
 #assert
   (forall r s t,
-     pv nil (_forall x\ impl (p x r) (_forall y\ impl (p y s) (p x t))) => r = t).
+     pv nil (_forall x\ impl (p x r) (_forall y\ impl (p y s) (p x t))) -> r = t).
 
 #assert_not
   (forall r s t,
-     pv nil (_forall x\ impl (p x r) (_forall y\ impl (p y s) (p x t))) => r = s).
+     pv nil (_forall x\ impl (p x r) (_forall y\ impl (p y s) (p x t))) -> r = s).

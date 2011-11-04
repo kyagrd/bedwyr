@@ -15,13 +15,13 @@ by
 
 % Now decide the maximum of a given predicate.  In the first-order
 % setting we could write just:
-%    maxa N := a N, forall x, a x => leq x N.
+%    maxa N := a N, forall x, a x -> leq x N.
 % but it seems that Bedwyr allows for predicates to be arguments.
 
 Define
   max
 by
-  max A N := A N /\ forall x, A x => leq x N.
+  max A N := A N /\ forall x, A x -> leq x N.
 
 #assert (max a X /\ X = (s (s (s (s (s z)))))).
 
@@ -33,7 +33,7 @@ by
 Define
   minmax
 by
-  minmax B N := max (B I) N /\ forall j m, max (B j) m => (j = I \/ leq N M).
+  minmax B N := max (B I) N /\ forall j m, max (B j) m -> (j = I \/ leq N M).
 
 Define
   b

@@ -34,6 +34,23 @@
 
 % ----- Basic list manipulations
 
+Kind    list,
+        elt     type.
+
+Type    nil     list.
+Type    cons    elt -> list -> list.
+Type    cst,
+        var,
+%        assoc,
+%        abs,
+%        app,
+%        let,
+%        db,
+%        match,
+%        clause,
+        ptcst
+                _.
+
 % Membership
 Define
   mem
@@ -54,14 +71,14 @@ Define
   remove
 by
   remove X (cons X L) L;
-  remove X (cons Y L) (cons Y L') := (Y=X => false) /\ remove X L L'.
+  remove X (cons Y L) (cons Y L') := (Y=X -> false) /\ remove X L L'.
 
 % remove_all removes several (or none) occurences of an item in a list
 Define
   remove_all
 by
   remove_all X (cons X L) L' := remove_all X L L';
-  remove_all X (cons Y L) (cons Y L') := (Y=X => false) /\ remove_all X L L';
+  remove_all X (cons Y L) (cons Y L') := (Y=X -> false) /\ remove_all X L L';
   remove_all X nil nil.
 
 % [minus A B S] iff S = A\B
@@ -107,8 +124,8 @@ by
          (fst\ let (app fst (cons (cst true) (cst false)))
                 (x\ app fst (cons x (cst false))))) := test 0 FST.
 
-#assert (forall x, test 1 x => forall y, eval nil x y => y = cst true).
-#assert (forall x, test 2 x => forall y, eval nil x y => y = cst true).
+#assert (forall x, test 1 x -> forall y, eval nil x y => y = cst true).
+#assert (forall x, test 2 x -> forall y, eval nil x y => y = cst true).
 
 % ----- Type-checking
 
@@ -135,7 +152,7 @@ by
   typeof G (cons M N) (times TM TN) := typeof G M TM /\ typeof G N TN;
   typeof G (match X CL) T :=
     typeof G X TX /\
-    forall pat body, mem (assoc pat body) CL =>
+    forall pat body, mem (assoc pat body) CL ->
       extract_typeof (cons (assoc pat TX) nil) G body T;
 % The last clause can make the spec loop...
 % it is not suitable for inference, any failed attempt will loop.
@@ -170,17 +187,17 @@ by
                    nil))
                 bool).
 
-#assert (forall x, test 0 x => typeof nil x (arrow (times int bool) int)).
-#assert (forall x, test 1 x => typeof nil x bool).
+#assert (forall x, test 0 x -> typeof nil x (arrow (times int bool) int)).
+#assert (forall x, test 1 x -> typeof nil x bool).
 
 % This is derivable if you enable the last (looping) clause to typeof...
-% #assert (forall x, test 0 x =>
+% #assert (forall x, test 0 x ->
 %          typeof nil x (tyabs x\ tyabs y\ arrow (times x y) x)).
 
 % }}}
 
 % This one requires the polymorphic let
-% #assert (forall x, test 2 x => typeof nil x bool).
+% #assert (forall x, test 2 x -> typeof nil x bool).
 
 % ----- Type inference
 % Now we have to handle unification by ourselves,
@@ -198,7 +215,7 @@ by
   subst BV (tyabs F) X V (tyabs F') :=
     nabla x, subst (cons x BV) (F x) X V (F' x);
   subst BV (tyvar X) X V V;
-  subst BV (tyvar Y) X V (tyvar Y) := X=Y => false;
+  subst BV (tyvar Y) X V (tyvar Y) := X=Y -> false;
   subst BV (tycst C) X V (tycst C);
   subst BV (times A B) X V (times A' B') :=
   subst BV A X V A' /\
@@ -274,7 +291,7 @@ by
   % TODO occur-check (btw, is it needed in the absence of recursion ?)
   infer ((tyvar V = T)+L) S := subst nil L V T L' /\ infer L' S;
   infer ((T = tyvar V)+L) S :=
-    (forall t, T = tyvar t => false) /\ % only for avoiding multiple successes
+    (forall t, T = tyvar t -> false) /\ % only for avoiding multiple successes
     subst nil L V T L' /\ infer L' S;
   infer ((tycst C = tycst C)+L) S := infer L S;
   infer ((times L1 L2 = times R1 R2)+L) S := infer ((L1=R1)+((L2=R2)+L)) S;
@@ -284,7 +301,7 @@ by
   infer ((instantiate (tyabs A = B))+L) (abs S) :=
     nabla x, infer ((instantiate (A (tyvar x) = B))+L) (S x);
   infer ((instantiate (A=B))+L) S :=
-    (forall x, tyabs x = A => false) /\ infer ((A=B)+L) S;
+    (forall x, tyabs x = A -> false) /\ infer ((A=B)+L) S;
   % >>>>>>>>> Treat typing judgements
   infer ((type G (cst C) T)+L) S := cst_typeof C TC /\ infer ((T = tycst TC)+L) S;
   infer ((type G (var V) T)+L) S :=
@@ -325,11 +342,11 @@ by
   abstract_over nil T T;
   abstract_over (cons X VARS) T TG :=
   abstract_over VARS T T' /\
-  (((occurs X T' => false) /\ TG=T') \/
+  (((occurs X T' -> false) /\ TG=T') \/
    (occurs X T' /\ (nabla x, subst nil T' X x (T'' x)) /\ TG = tyabs T'')).
 
 #assert (occurs x (arrow (tyvar x) (tycst bool))).
-#assert (occurs y (arrow (tyvar x) (tycst bool)) => false).
+#assert (occurs y (arrow (tyvar x) (tycst bool)) -> false).
 #assert (abstract_over (cons x (cons y nil))
                        (arrow (tyvar x) (arrow (tyvar y) (tyvar x)))
                        (tyabs x\ tyabs y\ arrow x (arrow y x))).
@@ -346,7 +363,7 @@ by
   nabla x,
     gc (I x) (I' x) /\
     ((occurs x (I' x) /\ O = abs I') \/
-     ((occurs x (I' x) => false) /\ O = I' x)).
+     ((occurs x (I' x) -> false) /\ O = I' x)).
 
 Define
   itest

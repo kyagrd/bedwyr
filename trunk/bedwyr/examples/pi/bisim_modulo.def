@@ -72,22 +72,22 @@ Define
   coinductive weak_bisim
 by
   weak_bisim P Q :=
-	(forall A P1, one P A P1 =>
+	(forall A P1, one P A P1 ->
            exists Q1, weak_one Q A Q1 /\ weak_bisim P1 Q1) /\
 
-	(forall X M, onep P (dn X) M => exists N, weak_onep Q (dn X) N /\
+	(forall X M, onep P (dn X) M -> exists N, weak_onep Q (dn X) N /\
 					forall w, weak_bisim (M w) (N w)) /\
 
-	(forall X M, onep P (up X) M => exists N, weak_onep Q (up X) N /\
+	(forall X M, onep P (up X) M -> exists N, weak_onep Q (up X) N /\
 					nabla w, weak_bisim (M w) (N w)) /\
 
-	(forall A Q1, one Q A Q1 =>
+	(forall A Q1, one Q A Q1 ->
            exists P1, weak_one P A P1 /\ weak_bisim P1 Q1) /\
 
-	(forall X N, onep Q (dn X) N => exists M, weak_onep P (dn X) M /\
+	(forall X N, onep Q (dn X) N -> exists M, weak_onep P (dn X) M /\
 					forall w, weak_bisim (M w) (N w)) /\
 
-	(forall X N, onep Q (up X) N => exists M, weak_onep P (up X) M /\
+	(forall X N, onep Q (up X) N -> exists M, weak_onep P (up X) M /\
 					nabla w, weak_bisim (M w) (N w)).
 
 
@@ -120,7 +120,7 @@ by
 Define
   eq
 by
-  eq struct P P := forall Q, congr P Q => false;
+  eq struct P P := forall Q, congr P Q -> false;
   eq struct P R := congr P Q /\ eq struct Q R.
 
 % modulo weak bisimulation for certain process pairs:
@@ -159,15 +159,15 @@ Define
   coinductive bisim
 by
   bisim E P Q :=
-	(forall A P1, one P A P1 => exists Q1, one Q A Q1 /\ bisim_mod E P1 Q1) /\
-	(forall X M, onep P (dn X) M => exists N, onep Q (dn X) N /\
+	(forall A P1, one P A P1 -> exists Q1, one Q A Q1 /\ bisim_mod E P1 Q1) /\
+	(forall X M, onep P (dn X) M -> exists N, onep Q (dn X) N /\
 					forall w, bisim_mod E (M w) (N w)) /\
-	(forall X M, onep P (up X) M => exists N, onep Q (up X) N /\
+	(forall X M, onep P (up X) M -> exists N, onep Q (up X) N /\
 					nabla w, bisim_mod E (M w) (N w)) /\
-	(forall A Q1, one Q A Q1 => exists P1, one P A P1 /\ bisim_mod E Q1 P1) /\
-	(forall X N, onep Q (dn X) N => exists M, onep P (dn X) M /\
+	(forall A Q1, one Q A Q1 -> exists P1, one P A P1 /\ bisim_mod E Q1 P1) /\
+	(forall X N, onep Q (dn X) N -> exists M, onep P (dn X) M /\
 					forall w, bisim_mod E (N w) (M w)) /\
-	(forall X N, onep Q (up X) N => exists M, onep P (up X) M /\
+	(forall X N, onep Q (up X) N -> exists M, onep P (up X) M /\
 					nabla w, bisim_mod E (N w) (M w)).
 
 % some simple examples

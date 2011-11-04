@@ -59,13 +59,13 @@
 %%%  picheck (action tau) tt;
 %%%  picheck (action (up X Y))     (and (name X) (name Y));
 %%%  picheck (action (dn X Y))     (and (name X) (name Y));
-%%%  picheck (proc (in X P))       (and (_forall x\ (name x) -> (proc (P x))) (name X));
+%%%  picheck (proc (in X P))       (and (_forall x\ (name x) implies (proc (P x))) (name X));
 %%%  picheck (proc (out X Y P))    (and (and (name X) (name Y)) (proc P));
 %%%  picheck (proc (taup P))       (proc P);
 %%%  picheck (proc (match  X Y P)) (and (and (name X) (name Y)) (proc P));
 %%%  picheck (proc (plus P Q))     (and (proc P) (proc Q));
 %%%  picheck (proc (par  P Q))     (and (proc P) (proc Q));
-%%%  picheck (proc (nu P))         (_forall x\ (name x) -> (proc (P x)));
+%%%  picheck (proc (nu P))         (_forall x\ (name x) implies (proc (P x)));
 %%%  picheck (proc (bang P))       (proc P);
 %%%  picheck (proc z)              tt.
 %%%
@@ -73,13 +73,13 @@
 %%%Define
 %%%  typecheck
 %%%by
-%%%  typecheck := forall N P, example N P => prv picheck (proc P).
+%%%  typecheck := forall N P, example N P -> prv picheck (proc P).
 %%%
 %%%% Tell us which clause does not type check (if any).
 %%%Define
 %%%  whichwrong
 %%%by
-%%%  whichwrong N := exists P, example N P /\ (prv picheck (proc P) => false).
+%%%  whichwrong N := exists P, example N P /\ (prv picheck (proc P) -> false).
 %%%
 %%%% }}}
 %%%% {{{
@@ -203,25 +203,25 @@ Define
   coinductive sim
 by
   sim P Q :=
-	(forall A P1, one P A P1 => exists Q1, one Q A Q1 /\ sim P1 Q1) /\
-	(forall X M, onep P (dn X) M => exists N, onep Q (dn X) N /\
+	(forall A P1, one P A P1 -> exists Q1, one Q A Q1 /\ sim P1 Q1) /\
+	(forall X M, onep P (dn X) M -> exists N, onep Q (dn X) N /\
 					forall w, sim (M w) (N w)) /\
-	(forall X M, onep P (up X) M => exists N, onep Q (up X) N /\
+	(forall X M, onep P (up X) M -> exists N, onep Q (up X) N /\
 					nabla w, sim (M w) (N w)).
 
 Define
   coinductive bisim
 by
   bisim P Q :=
-	(forall A P1, one P A P1 => exists Q1, one Q A Q1 /\ bisim P1 Q1) /\
-	(forall X M, onep P (dn X) M => exists N, onep Q (dn X) N /\
+	(forall A P1, one P A P1 -> exists Q1, one Q A Q1 /\ bisim P1 Q1) /\
+	(forall X M, onep P (dn X) M -> exists N, onep Q (dn X) N /\
 					forall w, bisim (M w) (N w)) /\
-	(forall X M, onep P (up X) M => exists N, onep Q (up X) N /\
+	(forall X M, onep P (up X) M -> exists N, onep Q (up X) N /\
 					nabla w, bisim (M w) (N w)) /\
-	(forall A Q1, one Q A Q1 => exists P1, one P A P1 /\ bisim P1 Q1) /\
-	(forall X N, onep Q (dn X) N => exists M, onep P (dn X) M /\
+	(forall A Q1, one Q A Q1 -> exists P1, one P A P1 /\ bisim P1 Q1) /\
+	(forall X N, onep Q (dn X) N -> exists M, onep P (dn X) M /\
 					forall w, bisim (M w) (N w)) /\
-	(forall X N, onep Q (up X) N => exists M, onep P (up X) M /\
+	(forall X N, onep Q (up X) N -> exists M, onep P (up X) M /\
 					nabla w, bisim (M w) (N w)).
 
 #assert (bisim (in a x\ in a y\ z) (in a x\ nu w\ in a y\ z)).
@@ -259,32 +259,32 @@ Define
 by
   weak_sim P Q :=
     forall A X M,
-      (one  P A M      => exists N, weak_one  Q A N /\
+      (one  P A M      -> exists N, weak_one  Q A N /\
                                    weak_sim M N) /\
-      (onep P (dn X) M => exists N, weak_onep Q (dn X) N /\
+      (onep P (dn X) M -> exists N, weak_onep Q (dn X) N /\
                             forall w, weak_sim (M w) (N w)) /\
-      (onep P (up X) M => exists N, weak_onep Q (up X) N /\
+      (onep P (up X) M -> exists N, weak_onep Q (up X) N /\
                             nabla w, weak_sim (M w) (N w)).
 
 Define
   coinductive weak_bisim
 by
   weak_bisim P Q :=
-	(forall A P1, one P A P1 =>
+	(forall A P1, one P A P1 ->
            exists Q1, weak_one Q A Q1 /\ weak_bisim P1 Q1) /\
 
-	(forall X M, onep P (dn X) M => exists N, weak_onep Q (dn X) N /\
+	(forall X M, onep P (dn X) M -> exists N, weak_onep Q (dn X) N /\
 					forall w, weak_bisim (M w) (N w)) /\
 
-	(forall X M, onep P (up X) M => exists N, weak_onep Q (up X) N /\
+	(forall X M, onep P (up X) M -> exists N, weak_onep Q (up X) N /\
 					nabla w, weak_bisim (M w) (N w)) /\
 
-	(forall A Q1, one Q A Q1 =>
+	(forall A Q1, one Q A Q1 ->
            exists P1, weak_one P A P1 /\ weak_bisim P1 Q1) /\
 
-	(forall X N, onep Q (dn X) N => exists M, weak_onep P (dn X) M /\
+	(forall X N, onep Q (dn X) N -> exists M, weak_onep P (dn X) M /\
 					forall w, weak_bisim (M w) (N w)) /\
 
-	(forall X N, onep Q (up X) N => exists M, weak_onep P (up X) M /\
+	(forall X N, onep Q (up X) N -> exists M, weak_onep P (up X) M /\
 					nabla w, weak_bisim (M w) (N w)).
 % }}}

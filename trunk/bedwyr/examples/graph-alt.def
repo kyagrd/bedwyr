@@ -65,13 +65,13 @@ by
 Define
   connected
 by
-  connected G := forall X Y, node G X => node G Y => edgepath G X Y.
+  connected G := forall X Y, node G X -> node G Y => edgepath G X Y.
 
 Define
   disconnected
 by
   disconnected G := exists X Y,
-                    node G X /\ node G Y /\ (edgepath G X Y => false).
+                    node G X /\ node G Y /\ (edgepath G X Y -> false).
 
 Define
   removearrow
@@ -84,7 +84,7 @@ by
 Define
   tree
 by
-  tree G := connected G /\ forall A Gp, removearrow G A Gp => disconnected Gp.
+  tree G := connected G /\ forall A Gp, removearrow G A Gp -> disconnected Gp.
 
 Define
   nottree

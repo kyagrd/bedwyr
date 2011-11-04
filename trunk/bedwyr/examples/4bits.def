@@ -188,6 +188,6 @@ Define
   test
 by
   test := forall a b sum,
-    (domain a /\ domain b) =>
-    ((decadd a b sum => decfourbit a b sum /\ printsum a b sum) /\
-     (decfourbit a b sum => decadd a b sum /\ printsum a b sum)).
+    (domain a /\ domain b) ->
+    ((decadd a b sum -> decfourbit a b sum /\ printsum a b sum) /\
+     (decfourbit a b sum -> decadd a b sum /\ printsum a b sum)).

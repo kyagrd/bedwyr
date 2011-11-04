@@ -63,9 +63,9 @@ by
 Define
   connected
 by
-  connected := forall X Y, node X => node Y => edgepath X Y.
+  connected := forall X Y, node X -> node Y => edgepath X Y.
 
 Define
   disconnected
 by
-  disconnected := exists X Y, node X /\ node Y /\ (edgepath X Y => false).
+  disconnected := exists X Y, node X /\ node Y /\ (edgepath X Y -> false).

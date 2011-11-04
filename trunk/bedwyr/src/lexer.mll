@@ -45,33 +45,33 @@ rule token = parse
   | "Define"    { DEFINE }
   | "by"        { BY }
 
-  | ":="        { DEF }
-  | "."         { DOT }
-  | ","         { COMMA }
-  | ";"         { SMCLMN }
-  | ":"         { COLUMN }
-
-  | "="         { EQ }
-  | "/\\"       { AND }
-  | "\\/"       { OR }
-  | "=>"        { IMP }
+  | "inductive"     { IND   }
+  | "coinductive"   { COIND }
 
   | "forall" as n
   | "exists" as n
   | "nabla" as n { BINDER n }
 
-  | "->"        { RARROW }
-  | "<-"        { LARROW }
-  | "+"         { PLUS }
-  | "-"         { MINUS }
-  | "*"         { TIMES }
-
   | "\\"        { BSLASH }
   | "("         { LPAREN }
   | ")"         { RPAREN }
 
-  | "inductive"   { IND   }
-  | "coinductive" { COIND }
+  | ":"         { COLUMN }
+  | ":="        { DEF }
+  | ","         { COMMA }
+  | ";"         { SMCLMN }
+  | "."         { DOT }
+
+  | "+"         { PLUS }
+  | "-"         { MINUS }
+  | "*"         { TIMES }
+
+  | "="         { EQ }
+  | "/\\"       { AND }
+  | "\\/"       { OR }
+  | "->"        { RARROW }
+
+  | "=>"        { IMP }
 
   | name as n { ID n }
   | '"' (instring as n) '"'
