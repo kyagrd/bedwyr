@@ -11,7 +11,7 @@ let pp_kind chan kind =
     | Ki name ->
         Format.fprintf chan "@[%s@]" name
   in
-  Format.fprintf chan "@[%a@]" aux kind 
+  Format.fprintf chan "@[%a@]" aux kind
 
 
 (* types *)
@@ -95,9 +95,16 @@ let pp_unifier chan unifier =
 (* terms *)
 exception Type_unification_error of simple_type * simple_type * simple_type Unifier.t
 
-let occurs i =
+let occurs unifier i =
   let rec aux = function
-    | TUndef j when i=j -> true
+    | TUndef j ->
+        if i=j then true
+        else begin try
+          let ty = Unifier.find j unifier in
+          aux ty
+        with
+          | Not_found -> false
+        end
     | TRArrow (tys,ty) -> List.exists aux tys || aux ty
     | _ -> false
   in
@@ -119,7 +126,7 @@ let rec unify_constraint unifier ty1 ty2 =
             unify_constraint unifier ty1 ty2
           with
             | Not_found ->
-                if occurs i ty2
+                if occurs unifier i ty2
                 then raise (Type_unification_error (ty1,ty2,unifier))
                 else Unifier.add i ty2 unifier
         end
@@ -130,7 +137,7 @@ let rec unify_constraint unifier ty1 ty2 =
             unify_constraint unifier ty1 ty2
           with
             | Not_found ->
-                if occurs i ty1
+                if occurs unifier i ty1
                 then raise (Type_unification_error (ty1,ty2,unifier))
                 else Unifier.add i ty1 unifier
         end
