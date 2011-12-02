@@ -90,13 +90,13 @@ struct
                        ("*",  Pprint.Both) ]
 end
 
-type defkind = Normal | Inductive | CoInductive
+type flavour = Normal | Inductive | CoInductive
 
 type input =
-  | Kind    of string list * Type.simple_kind
-  | Type    of string list * Type.simple_type
-  | Typing  of defkind * Term.term * Type.simple_type option
-  | Def     of Term.term * int * Term.term
+  | KKind   of string list * Type.simple_kind
+  | TType   of string list * Type.simple_type
+  | Def     of (flavour * (Term.term * Type.simple_type)) list *
+               (Term.term * int * Term.term) list
   | Query   of Term.term
   | Command of string * Term.term list
 
@@ -148,8 +148,7 @@ let open_user_file name =
 
 exception Forbidden_kind of Type.simple_kind * string
 exception Multiple_type_declaration of string * string
-(*exception Missing_type_declaration of string
- * TODO add in const_define_type and create_def*)
+exception Missing_type_declaration of string
 (*exception Forbidden_type of Type.simple_type * string
  * TODO add in const_define_type and create_def*)
 exception Multiple_const_declaration of string * string
@@ -159,24 +158,52 @@ exception Missing_declaration of Term.term * (Term.term * Term.term) option
 let type_kinds : (Term.var,Type.simple_kind) Hashtbl.t =
   Hashtbl.create 100
 
-let type_define_kind name kind =
-  let stype_var = Term.get_var (Term.atom name) in
-  if Hashtbl.mem type_kinds stype_var
-  then raise (Multiple_type_declaration (name,""))
-  else if name = "prop"
-  then raise (Multiple_type_declaration (name," (built-in type)"))
-  else begin
-    assert (name <> "");
-    Hashtbl.add type_kinds stype_var kind
-  end
+let type_define_kind name ki = match ki with
+  | Type.KRArrow _ ->
+      raise (Forbidden_kind (ki," (no type operators yet)"))
+  | Type.Ki n when n<>"type" ->
+      raise (Forbidden_kind (ki," (no custom kinds yet)"))
+  | _ ->
+      let ty_var = Term.get_var (Term.atom name) in
+      if Hashtbl.mem type_kinds ty_var
+      then raise (Multiple_type_declaration (name,""))
+      else begin
+        assert (name <> "");
+        Hashtbl.add type_kinds ty_var ki
+      end
+
+(* XXX move, regroup,
+ * somewhere exceptions are catched if possible *)
+let () = type_define_kind "prop" (Type.Ki "type")
 
 let const_types : (Term.var,Type.simple_type) Hashtbl.t =
   Hashtbl.create 100
 
+let kind_check =
+  let truc name =
+    let type_var = Term.get_var (Term.atom name) in
+    if not (Hashtbl.mem type_kinds type_var)
+    then raise (Missing_type_declaration name)
+  in
+  let rec aux = function
+    | Type.Ty name -> truc name
+    | Type.TProp -> failwith ("prop can only be a target type")
+    | Type.TRArrow (tys,ty) -> List.iter aux (ty::tys)
+    | Type.TVar _ -> ()
+  in
+  let rec aux_target = function
+    | Type.Ty name -> () (* TODO add `failwith ("the target type can only be prop")` for a predicate *)
+    | Type.TProp -> ()
+    | Type.TRArrow (tys,ty) -> List.iter aux tys ; aux_target ty
+    | Type.TVar _ -> ()
+  in
+  aux_target
+
 let const_define_type name ty =
-  (*let built_in const =
+  (*XXX let built_in const =
     false
   in*)
+  let () = kind_check ty in
   let const_var = Term.get_var (Term.atom name) in
   if Hashtbl.mem const_types const_var
   then raise (Multiple_const_declaration (name,""))
@@ -199,7 +226,7 @@ exception Arity_mismatch of Term.term*int
 exception Missing_definition of Term.term
 
 
-let defs : (Term.var,(defkind*Term.term option*Table.t option*Type.simple_type)) Hashtbl.t =
+let defs : (Term.var,(flavour*Term.term option*Table.t option*Type.simple_type)) Hashtbl.t =
   Hashtbl.create 100
 
 let type_of_var v =
@@ -218,7 +245,7 @@ let type_of_term t = match Term.observe t with
         type_of_var v
   (* XXX this case is not used,
    * and would need some unification to make sense *)
-  | _ -> Some (Type.fresh_type())
+  | _ -> Some (Type.fresh_tyvar())
 
 let rec type_check_term term expected_type unifier db_types =
   try
@@ -227,18 +254,18 @@ let rec type_check_term term expected_type unifier db_types =
           begin match v with
             (* connectives *)
             | v when v = Logic.var_eq ->
-                let ty = Type.fresh_type() in
-                let ty = Type.TRArrow ([ty;ty],Type.TProp) in
+                let ty = Type.fresh_tyvar() in
+                let ty = Type.TRArrow ([ty;ty],Type.Ty "prop") in
                 Type.unify_constraint unifier expected_type ty
             | v when v = Logic.var_andc || v = Logic.var_orc || v = Logic.var_imp ->
-                let ty = Type.TRArrow ([Type.TProp;Type.TProp],Type.TProp) in
+                let ty = Type.TRArrow ([Type.Ty "prop";Type.Ty "prop"],Type.Ty "prop") in
                 Type.unify_constraint unifier expected_type ty
             | v when v = Logic.var_truth || v = Logic.var_falsity ->
-                Type.unify_constraint unifier expected_type Type.TProp
+                Type.unify_constraint unifier expected_type (Type.Ty "prop")
             | v when v = Logic.var_forall || v = Logic.var_exists || v = Logic.var_nabla ->
-                let ty = Type.fresh_type() in
-                let ty = Type.TRArrow ([ty],Type.TProp) in
-                let ty = Type.TRArrow ([ty],Type.TProp) in
+                let ty = Type.fresh_tyvar() in
+                let ty = Type.TRArrow ([ty],Type.Ty "prop") in
+                let ty = Type.TRArrow ([ty],Type.Ty "prop") in
                 Type.unify_constraint unifier expected_type ty
             (* ? *)
             (*| v when v = Logic.var_not
@@ -249,13 +276,13 @@ let rec type_check_term term expected_type unifier db_types =
             | v when v = Logic.var_abort_search
             | v when v = Logic.var_cutpred
             | v when v = Logic.var_check_eqvt ->
-                raise (Type.Typing_error (Type.TProp,Type.TProp,unifier))*)
+                raise (Type.Typing_error (Type.Ty "prop",Type.Ty "prop",unifier))*)
             (* misc *)
             | {Term.tag=Term.String} ->
                 unifier
             | v when v = Logic.var_print ->
-                let ty = Type.fresh_type() in
-                let ty = Type.TRArrow ([ty],Type.TProp) in
+                let ty = Type.fresh_tyvar() in
+                let ty = Type.TRArrow ([ty],Type.Ty "prop") in
                 Type.unify_constraint unifier expected_type ty
             (*| v when v = Logic.var_println
             | v when v = Logic.var_fprint
@@ -266,7 +293,7 @@ let rec type_check_term term expected_type unifier db_types =
             | v when v = Logic.var_simp_parse
             | v when v = Logic.var_on
             | v when v = Logic.var_off ->
-                raise (Type.Typing_error (Type.TProp,Type.TProp,unifier))*)
+                raise (Type.Typing_error (Type.Ty "prop",Type.Ty "prop",unifier))*)
             | _ ->
                 begin match type_of_term term with
                   | None ->
@@ -306,7 +333,7 @@ let type_check_clause arity body stype unifier =
 
 let reset_defs () = Hashtbl.clear defs
 
-let create_def kind head_tm stype =
+let create_def (flavour,(head_tm,stype)) =
   let head = Term.get_var head_tm in
   if Hashtbl.mem defs head then
     raise (Multiple_pred_declaration head_tm);
@@ -320,13 +347,16 @@ let create_def kind head_tm stype =
          | _,_,Some t,_ -> Table.reset t
          | _ -> ())
     defs ;
-  let t = (if kind=Normal then None else Some (Table.create ())) in
-  let stype = match stype with Some stype -> stype | None -> Type.fresh_type () in
-  Hashtbl.add defs head (kind, None, t, stype)
+  let t = (if flavour=Normal then None else Some (Table.create ())) in
+  kind_check stype;
+  (* TODO allow empty declarations,
+   * but maybe output a warning at the end of the block
+   * before adding a "true" *)
+  Hashtbl.add defs head (flavour, None, t, stype)
 
-let add_clause head_tm arity body =
+let add_clause (head_tm,arity,body) =
   let head = Term.get_var head_tm in
-  let k,b,t,st =
+  let f,b,t,ty =
     try
       Hashtbl.find defs head
     with
@@ -335,7 +365,7 @@ let add_clause head_tm arity body =
   let () =
     try
       if !typed then
-        Type.global_unifier := type_check_clause arity body st !Type.global_unifier
+        Type.global_unifier := type_check_clause arity body ty !Type.global_unifier
     with
       | Term_typing_error (ty1,ty2,unifier,term,db_types) ->
           raise (Clause_typing_error (ty1,ty2,unifier,term,db_types,head_tm))
@@ -355,7 +385,7 @@ let add_clause head_tm arity body =
           end
   in
   let b = Norm.hnorm b in
-  Hashtbl.replace defs head (k, Some b, t, st) ;
+  Hashtbl.replace defs head (f, Some b, t, ty) ;
   if !debug then
     Format.printf "%a := %a\n" Pprint.pp_term head_tm Pprint.pp_term body
 

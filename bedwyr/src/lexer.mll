@@ -28,54 +28,152 @@
           pos_lnum = 1 + lexbuf.lex_curr_p.pos_lnum }
 }
 
-let name = ['A' - 'Z' 'a'-'z' '_' '/' '0'-'9' '\''] +
+let digit = ['0'-'9']
+let number = digit+
+
+let uchar = ['A'-'Z']
+let lchar = ['a'-'z']
+(* other initial characters *)
+let ichar = ['_' '\'']
+(* other body characters *)
+let bchar = ['/' ]
+let uname = uchar (digit|uchar|lchar|ichar|bchar)*
+let lname = lchar (digit|uchar|lchar|ichar|bchar)*
+let iname = ichar (digit|uchar|lchar|ichar|bchar)*
+
 let blank = ' ' | '\t' | '\r'
+
 let instring = [^'"'] *
 
 rule token = parse
-  | '%' [^'\n'] * '\n'? { incrline lexbuf; token lexbuf }
+  | "/*"                { comment 0 lexbuf }
+  | '%' [^'\n']* '\n'?  { incrline lexbuf; token lexbuf }
   | blank               { token lexbuf }
   | '\n'                { incrline lexbuf; token lexbuf }
 
-  | "#"         { SHARP }
+  | number as n         { NUM (int_of_string n) }
 
-  | "Kind"      { KIND }
-  | "Type"      { TYPE }
+  | '"' (instring as s) '"'
+      { String.iter (function '\n' -> incrline lexbuf | _ -> ()) s ;
+        QSTRING s }
 
-  | "Define"    { DEFINE }
-  | "by"        { BY }
+  (* lprolog meta-keywords *)
+  | "sig"               { SIG }
+  | "module"            { MODULE }
+  | "accum_sig"         { ACCUMSIG }
+  | "accumulate"        { ACCUM }
+  | "end"               { END }
+  | "kind"              { KIND }
+  | "type"              { TYPE }
+  | ","                 { COMMA }
+  | "->"                { RARROW }
+  | ":-"                { CLAUSEEQ }
+  | "."                 { DOT }
 
-  | "inductive"     { IND   }
-  | "coinductive"   { COIND }
+  (* lprolog term-keywords *)
+  | "=>"                { IMP }
+  | "\\"                { BSLASH }
+  | "("                 { LPAREN }
+  | ")"                 { RPAREN }
+  | "::"                { CONS }
+  (* "pi" is parsed as STRINGID,
+   * "sigma", "," and ";" are just missing *)
 
-  | "forall" as n
-  | "exists" as n
-  | "nabla" as n { BINDER n }
+  (* common meta-keywords (Abella/Bedwyr) *)
+  | "Kind"              { KKIND }
+  | "Type"              { TTYPE }
+  | "Define"            { DEFINE }
+  | "inductive"         { INDUCTIVE }
+  | "coinductive"       { COINDUCTIVE }
+  | ":"                 { COLON }
+  | "by"                { BY }
+  | ":="                { DEFEQ }
+  | ";"                 { SEMICOLON }
 
-  | "\\"        { BSLASH }
-  | "("         { LPAREN }
-  | ")"         { RPAREN }
+  (* common term-keywords (Abella/Bedwyr) *)
+  | "="                 { EQ }
+  | "/\\"               { AND }
+  | "\\/"               { OR }
+  | "forall"            { FORALL }
+  | "exists"            { EXISTS }
+  | "nabla"             { NABLA }
+  | "true"              { TRUE }
+  | "false"             { FALSE }
 
-  | ":"         { COLUMN }
-  | ":="        { DEF }
-  | ","         { COMMA }
-  | ";"         { SMCLMN }
-  | "."         { DOT }
+  (* Abella only meta-keywords *)
+  | "Close"             { CLOSE }
+  | "Theorem"           { THEOREM }
+  | "Query"             { QUERY }
+  | "Import"            { IMPORT }
+  | "Specification"     { SPECIFICATION }
+  | "Split"             { SSPLIT }
+  | "induction"         { IND }
+  | "coinduction"       { COIND }
+  | "intros"            { INTROS }
+  | "case"              { CASE }
+  | "search"            { SEARCH }
+  | "apply"             { APPLY }
+  | "backchain"         { BACKCHAIN }
+  | "unfold"            { UNFOLD }
+  | "assert"            { ASSERT }
+  | "split"             { SPLIT }
+  | "split*"            { SPLITSTAR }
+  | "left"              { LEFT }
+  | "right"             { RIGHT }
+  | "permute"           { PERMUTE }
+  | "inst"              { INST }
+  | "cut"               { CUT }
+  | "monotone"          { MONOTONE }
+  | "undo"              { UNDO }
+  | "skip"              { SKIP }
+  | "abort"             { ABORT }
+  | "clear"             { CLEAR }
+  | "abbrev"            { ABBREV }
+  | "unabbrev"          { UNABBREV }
+  | "to"                { TO }
+  | "with"              { WITH }
+  | "on"                { ON }
+  | "as"                { AS }
+  | "keep"              { KEEP }
+  | "Set"               { SET }
+  | "Show"              { SHOW }
+  | "Quit"              { QUIT }
+  | "{"                 { LBRACK }
+  | "}"                 { RBRACK }
+  | "|-"                { TURN }
+  | "*"                 { STAR }
+  | "@"                 { AT }
+  | "+"                 { PLUS }
+  | "_"                 { UNDERSCORE }
 
-  | "+"         { PLUS }
-  | "-"         { MINUS }
-  | "*"         { TIMES }
+  (* Bedwyr only meta-keywords *)
+  | "#"                 { HASH }
 
-  | "="         { EQ }
-  | "/\\"       { AND }
-  | "\\/"       { OR }
-  | "->"        { RARROW }
+  (* Uppercase-starting variable *)
+  | uname as n          { UPPER_ID n }
 
-  | "=>"        { IMP }
+  (* Other variable *)
+  | lname as n
+  | iname as n          { STRINGID n }
 
-  | name as n { ID n }
-  | '"' (instring as n) '"'
-      { String.iter (function '\n' -> incrline lexbuf | _ -> ()) n ;
-        STRING n }
+  (* misc *)
+  | '\x04'              (* ctrl-D *)
+  | eof                 { EOF }
 
-  | eof         { failwith "eof" }
+  | _                   { failwith ("Illegal character " ^
+                                    (Lexing.lexeme lexbuf) ^ " in input") }
+
+and comment level = parse
+  | [^ '*' '/' '\n']+   { comment level lexbuf }
+  | "/*"                { comment (level + 1) lexbuf }
+  | "*/"                { if level = 0 then
+                            token lexbuf
+                          else
+                            comment (level - 1) lexbuf }
+  | "*"
+  | "/"                 { comment level lexbuf }
+  | "\n"                { incrline lexbuf ;
+                          comment level lexbuf }
+  | eof                 { print_endline
+                            "Warning: comment not closed at end of file" ;
+                          token lexbuf }

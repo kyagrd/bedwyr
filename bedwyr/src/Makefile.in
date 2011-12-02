@@ -43,13 +43,9 @@ depend: $(CORE_SRC) $(BEDWYR_SRC) $(TEST_ML)
 	$(OCAMLC) $<
 %.ml: %.mly Makefile
 	$(OCAMLYACC) $<
-	echo $<
-	echo "val to_term : ?incl:bool -> (Lexing.lexbuf -> token) -> string -> Term.term" \
-	  >> $(<:.mly=.mli)
+	@echo $<
 %.mli: %.mly Makefile
 	$(OCAMLYACC) $<
-	echo "val to_term : ?incl:bool -> (Lexing.lexbuf -> token) -> string -> Term.term" \
-	  >> $(<:.mly=.mli)
 %.ml: %.mll
 	$(OCAMLLEX) $<
 %.ml: %.ml.in

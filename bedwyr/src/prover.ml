@@ -112,20 +112,20 @@ let do_fprint newline goals =
       if newline then fprintf fmt "%a\n%!" Pprint.pp_term t
       else  fprintf fmt "%a%!" Pprint.pp_term t
   in
-    begin match goals with
-    | (h::l) ->
-      (
-        try
-          let f = get_user_file (Term.get_name h) in
-          let fmt = Format.formatter_of_out_channel f in
-          List.iter (print_fun fmt) l ;
-          true
-        with
-        | Not_found -> false
-        | e -> raise e
-       )
-     | _ -> false
-     end
+  begin match goals with
+  | (h::l) ->
+    (
+      try
+        let f = get_user_file (Term.get_name h) in
+        let fmt = Format.formatter_of_out_channel f in
+        List.iter (print_fun fmt) l ;
+        true
+      with
+      | Not_found -> false
+      | e -> raise e
+     )
+   | _ -> false
+   end
 
 
 (* Attemps to prove that the goal [(nabla x_1..x_local . g)(S)] by
@@ -159,12 +159,12 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
                               let p = try Some (List.find (fun vs -> match_list tm_list vs) !sol )
                                       with Not_found -> None
                               in
-                                begin match p with
-                                | Some _ -> k ()
-                                | None   ->
-                                    sol := tm_list :: !sol ;
-                                    success ts k
-                                end
+                              begin match p with
+                              | Some _ -> k ()
+                              | None   ->
+                                  sol := tm_list :: !sol ;
+                                  success ts k
+                              end
                          )
   in
 
@@ -236,78 +236,80 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
             with
               | Index.Cannot_table -> OffTopic
     in
-      match status with
-        | OffTopic ->
-            prove ~level ~timestamp ~local ~success ~failure
-              (Term.app body args)
-        | Known Table.Proved ->
-            if !debug then
-               printf "Goal %a proved using table\n" Pprint.pp_term g;
+    match status with
+      | OffTopic ->
+          prove ~level ~timestamp ~local ~success ~failure
+            (Term.app body args)
+      | Known Table.Proved ->
+          if !debug then
+             printf "Goal %a proved using table\n" Pprint.pp_term g;
+          success timestamp failure
+      | Known Table.Disproved ->
+          Format.printf "Known disproved\n" ;
+          failure ()
+      | Known (Table.Working disprovable) ->
+          if kind = System.CoInductive then
             success timestamp failure
-        | Known Table.Disproved ->  Printf.printf "Known disproved \n" ; failure ()
-        | Known (Table.Working disprovable) ->
-            if kind = System.CoInductive then
-              success timestamp failure
-            else begin
-              mark_not_disprovable_until disprovable ;
-              failure ()
-            end
-        | Unknown
-        | Known Table.Unset ->
-            (* This handles the cases where nothing is in the table,
-             * or Unset has been left, in which case the [Table.add]
-             * will overwrite it. *)
-            let disprovable = ref true in
-            let status = ref (Table.Working disprovable) in
-            let s0 = Term.save_state () in
-            let table_update_success ts k =
-              status := Table.Proved ;
-              ignore (Stack.pop disprovable_stack) ;
-              disprovable := false ;
-              (* TODO check that optimization: since we know that
-               * there is at most one success, we ignore
-               * the continuation [k] and directly jump to the
-               * [failure] continuation. It _seems_ OK regarding the
-               * cleanup handlers, which are just jumps to
-               * previous states.
-               * It is actually quite useful in examples/graph-alt.def. *)
-              success ts
-                (fun () ->
-                   Term.restore_state s0 ; failure ())
-            in
-            let table_update_failure () =
-              begin match !status with
-                | Table.Proved ->
-                    (* This is just backtracking, we are seeing the tabling
-                     * entry corresponding to a previous goal.
-                     * Never happens if we skipped the success continuation. *)
-                    assert false
-                | Table.Working _ ->
-                    ignore (Stack.pop disprovable_stack) ;
-                    if !disprovable then begin
-                      status := Table.Disproved ;
-                      disprovable := false ;
-                    end else
-                      status := Table.Unset
-                | Table.Disproved | Table.Unset -> assert false
-              end ;
-              failure ()
-            in
-            let table = match table with Some t -> t | None -> assert false in
-              if try
-                Table.add ~allow_eigenvar:(level=One) table args status ;
-                true
-              with
-                | Index.Cannot_table -> false
-              then begin
-                Stack.push (status,disprovable) disprovable_stack ;
-                prove ~level ~local ~timestamp
-                  ~success:table_update_success
-                  ~failure:table_update_failure
-                  (Term.app body args)
-              end else
-                prove ~level ~local ~success ~failure ~timestamp
-                  (Term.app body args)
+          else begin
+            mark_not_disprovable_until disprovable ;
+            failure ()
+          end
+      | Unknown
+      | Known Table.Unset ->
+          (* This handles the cases where nothing is in the table,
+           * or Unset has been left, in which case the [Table.add]
+           * will overwrite it. *)
+          let disprovable = ref true in
+          let status = ref (Table.Working disprovable) in
+          let s0 = Term.save_state () in
+          let table_update_success ts k =
+            status := Table.Proved ;
+            ignore (Stack.pop disprovable_stack) ;
+            disprovable := false ;
+            (* TODO check that optimization: since we know that
+             * there is at most one success, we ignore
+             * the continuation [k] and directly jump to the
+             * [failure] continuation. It _seems_ OK regarding the
+             * cleanup handlers, which are just jumps to
+             * previous states.
+             * It is actually quite useful in examples/graph-alt.def. *)
+            success ts
+              (fun () ->
+                 Term.restore_state s0 ; failure ())
+          in
+          let table_update_failure () =
+            begin match !status with
+              | Table.Proved ->
+                  (* This is just backtracking, we are seeing the tabling
+                   * entry corresponding to a previous goal.
+                   * Never happens if we skipped the success continuation. *)
+                  assert false
+              | Table.Working _ ->
+                  ignore (Stack.pop disprovable_stack) ;
+                  if !disprovable then begin
+                    status := Table.Disproved ;
+                    disprovable := false ;
+                  end else
+                    status := Table.Unset
+              | Table.Disproved | Table.Unset -> assert false
+            end ;
+            failure ()
+          in
+          let table = match table with Some t -> t | None -> assert false in
+          if try
+            Table.add ~allow_eigenvar:(level=One) table args status ;
+            true
+          with
+            | Index.Cannot_table -> false
+          then begin
+            Stack.push (status,disprovable) disprovable_stack ;
+            prove ~level ~local ~timestamp
+              ~success:table_update_success
+              ~failure:table_update_failure
+              (Term.app body args)
+          end else
+            prove ~level ~local ~success ~failure ~timestamp
+              (Term.app body args)
   in
 
   match Term.observe g with
@@ -472,10 +474,10 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
                        ~success:(fun ts' k -> prove_conj ts k gs)
                        g
             in
-               prove ~level:Zero ~local ~timestamp a
-                     ~success:store_subst
-                     ~failure:(fun () ->
-                          prove_conj timestamp failure (make_copies !ev_substs b))
+            prove ~level:Zero ~local ~timestamp a
+                  ~success:store_subst
+                  ~failure:(fun () ->
+                       prove_conj timestamp failure (make_copies !ev_substs b))
 
         (* Level 1: Universal quantification *)
         | Var v when v == Logic.var_forall ->
@@ -555,6 +557,8 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
             if (do_close_file goals) then success timestamp failure
             else failure ()
 
+        (* TODO re-factorize (Parser.to_term overlaps Main.process,
+         * so should use System.* code)
         (* Get an AST *)
         | Var v when v == Logic.var_parse ->
             begin match goals with
@@ -567,10 +571,10 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
                           Term.restore_state state ; failure ()
                         in
                         let ast = Parser.to_term Lexer.token file in
-                          if unify level ast t then
-                            success timestamp failure
-                          else
-                            failure ()
+                        if unify level ast t then
+                          success timestamp failure
+                        else
+                          failure ()
                     | _ -> assert false
                   end
               | _ -> invalid_goal ()
@@ -595,7 +599,7 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
                     | _ -> assert false
                   end
               | _ -> invalid_goal ()
-            end
+            end*)
 
         (* Check for definitions *)
         | Var v -> prove_atom hd goals
@@ -648,17 +652,17 @@ let toplevel_prove g =
       vars ;
     printf "More [y] ? %!" ;
     let l = input_line stdin in
-      if l = "" || l.[0] = 'y' || l.[0] = 'Y' then begin
-        reset () ;
-        k ()
-      end else begin
-        Term.restore_state s0 ;
-        printf "Search stopped.\n"
-      end
+    if l = "" || l.[0] = 'y' || l.[0] = 'Y' then begin
+      reset () ;
+      k ()
+    end else begin
+      Term.restore_state s0 ;
+      printf "Search stopped.\n"
+    end
   in
-     prove ~level:One ~local:0 ~timestamp:0 g
-      ~success:show
-      ~failure:(fun () ->
-                  time () ;
-                  if !found then printf "No more solutions.\n"
-                  else printf "No.\n")
+   prove ~level:One ~local:0 ~timestamp:0 g
+    ~success:show
+    ~failure:(fun () ->
+                time () ;
+                if !found then printf "No more solutions.\n"
+                else printf "No.\n")
