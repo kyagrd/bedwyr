@@ -19,16 +19,6 @@
 
 module Logic =
 struct
-  let eq      = Term.atom "="
-  let andc    = Term.atom "/\\"
-  let orc     = Term.atom "\\/"
-  let imp     = Term.atom "->"
-  let truth   = Term.atom "true"
-  let falsity = Term.atom "false"
-  let forall  = Term.atom "forall"
-  let exists  = Term.atom "exists"
-  let nabla   = Term.atom "nabla"
-
   let not     = Term.atom "_not"
   let ite     = Term.atom "_if"
   let abspred = Term.atom "_abstract"
@@ -50,15 +40,6 @@ struct
   let off     = Term.atom "off"
 
 
-  let var_eq      = Term.get_var eq
-  let var_andc    = Term.get_var andc
-  let var_orc     = Term.get_var orc
-  let var_imp     = Term.get_var imp
-  let var_truth   = Term.get_var truth
-  let var_falsity = Term.get_var falsity
-  let var_forall  = Term.get_var forall
-  let var_exists  = Term.get_var exists
-  let var_nabla   = Term.get_var nabla
   let var_not     = Term.get_var not
   let var_ite     = Term.get_var ite
   let var_abspred = Term.get_var abspred
@@ -78,16 +59,6 @@ struct
   let var_simp_parse = Term.get_var simp_parse
   let var_on      = Term.get_var on
   let var_off     = Term.get_var off
-
-
-  let _ =
-    Pprint.set_infix [ ("=",  Pprint.Nonassoc) ;
-                       ("/\\",  Pprint.Both) ;
-                       ("\\/",  Pprint.Both) ;
-                       ("->", Pprint.Right) ;
-                       ("+",  Pprint.Both) ;
-                       ("-",  Pprint.Left) ;
-                       ("*",  Pprint.Both) ]
 end
 
 type flavour = Normal | Inductive | CoInductive
@@ -95,10 +66,27 @@ type flavour = Normal | Inductive | CoInductive
 type input =
   | KKind   of string list * Type.simple_kind
   | TType   of string list * Type.simple_type
-  | Def     of (flavour * (Term.term * Type.simple_type)) list *
+  | Def     of (flavour * Term.term * Type.simple_type) list *
                (Term.term * int * Term.term) list
   | Query   of Term.term
-  | Command of string * Term.term list
+  | Command of command
+and command = 
+  | Exit                
+  | Help                
+  | Include             of string list 
+  | Reset               
+  | Reload              
+  | Session             of string list 
+  | Debug               of string option
+  | Time                of string option
+  | Equivariant         of string option
+  | Show_table          of string
+  | Clear_tables        
+  | Clear_table         of string
+  | Save_table          of string * string
+  | Assert              of Term.term
+  | Assert_not          of Term.term
+  | Assert_raise        of Term.term
 
 (** A simple debug flag, which can be set dynamically from the logic program. *)
 
@@ -123,11 +111,11 @@ let close_all_files () =
 let close_user_file name =
   try
     let f = Hashtbl.find user_files name in
-      close_out f ;
-      Hashtbl.remove user_files name
+    close_out f ;
+    Hashtbl.remove user_files name
   with
-  | Sys_error e -> Hashtbl.remove user_files name
-  | _ -> ()
+    | Sys_error e -> Hashtbl.remove user_files name
+    | _ -> ()
 
 let get_user_file name =
   Hashtbl.find user_files name
@@ -151,7 +139,7 @@ exception Multiple_type_declaration of string * string
 exception Missing_type_declaration of string
 (*exception Forbidden_type of Type.simple_type * string
  * TODO add in const_define_type and create_def*)
-exception Multiple_const_declaration of string * string
+exception Multiple_const_declaration of string
 exception Missing_declaration of Term.term * (Term.term * Term.term) option
 
 
@@ -159,11 +147,7 @@ let type_kinds : (Term.var,Type.simple_kind) Hashtbl.t =
   Hashtbl.create 100
 
 let type_define_kind name ki = match ki with
-  | Type.KRArrow _ ->
-      raise (Forbidden_kind (ki," (no type operators yet)"))
-  | Type.Ki n when n<>"type" ->
-      raise (Forbidden_kind (ki," (no custom kinds yet)"))
-  | _ ->
+  | Type.KType ->
       let ty_var = Term.get_var (Term.atom name) in
       if Hashtbl.mem type_kinds ty_var
       then raise (Multiple_type_declaration (name,""))
@@ -171,10 +155,8 @@ let type_define_kind name ki = match ki with
         assert (name <> "");
         Hashtbl.add type_kinds ty_var ki
       end
-
-(* XXX move, regroup,
- * somewhere exceptions are catched if possible *)
-let () = type_define_kind "prop" (Type.Ki "type")
+  | Type.KRArrow _ ->
+      raise (Forbidden_kind (ki," (no type operators yet)"))
 
 let const_types : (Term.var,Type.simple_type) Hashtbl.t =
   Hashtbl.create 100
@@ -200,15 +182,10 @@ let kind_check =
   aux_target
 
 let const_define_type name ty =
-  (*XXX let built_in const =
-    false
-  in*)
   let () = kind_check ty in
   let const_var = Term.get_var (Term.atom name) in
   if Hashtbl.mem const_types const_var
-  then raise (Multiple_const_declaration (name,""))
-  (*else if build_in_const name
-  then raise (Multiple_const_declaration (name,", built-in const"))*)
+  then raise (Multiple_const_declaration (name))
   else begin
     assert (name <> "");
     Hashtbl.add const_types const_var ty
@@ -250,24 +227,25 @@ let type_of_term t = match Term.observe t with
 let rec type_check_term term expected_type unifier db_types =
   try
     match Term.observe term with
+      | Term.True | Term.False -> 
+          Type.unify_constraint unifier expected_type Type.TProp
+      | Term.Eq (t1,t2) ->
+          let ty = Type.fresh_tyvar() in
+          let unifier = type_check_term t1 ty unifier db_types in
+          let unifier = type_check_term t2 ty unifier db_types in
+          Type.unify_constraint unifier expected_type Type.TProp
+      | Term.And (t1,t2) | Term.Or (t1,t2) | Term.Arrow (t1,t2) ->
+          let unifier = type_check_term t1 Type.TProp unifier db_types in
+          let unifier = type_check_term t2 Type.TProp unifier db_types in
+          Type.unify_constraint unifier expected_type Type.TProp
+      | Term.Binder (_,t) ->
+          let ty = Type.fresh_tyvar() in
+          let ty = Type.TRArrow ([ty],Type.TProp) in
+          let unifier = type_check_term t ty unifier db_types in
+          Type.unify_constraint unifier expected_type Type.TProp
       | Term.Var v ->
           begin match v with
-            (* connectives *)
-            | v when v = Logic.var_eq ->
-                let ty = Type.fresh_tyvar() in
-                let ty = Type.TRArrow ([ty;ty],Type.Ty "prop") in
-                Type.unify_constraint unifier expected_type ty
-            | v when v = Logic.var_andc || v = Logic.var_orc || v = Logic.var_imp ->
-                let ty = Type.TRArrow ([Type.Ty "prop";Type.Ty "prop"],Type.Ty "prop") in
-                Type.unify_constraint unifier expected_type ty
-            | v when v = Logic.var_truth || v = Logic.var_falsity ->
-                Type.unify_constraint unifier expected_type (Type.Ty "prop")
-            | v when v = Logic.var_forall || v = Logic.var_exists || v = Logic.var_nabla ->
-                let ty = Type.fresh_tyvar() in
-                let ty = Type.TRArrow ([ty],Type.Ty "prop") in
-                let ty = Type.TRArrow ([ty],Type.Ty "prop") in
-                Type.unify_constraint unifier expected_type ty
-            (* ? *)
+            (* XXX ? *)
             (*| v when v = Logic.var_not
             | v when v = Logic.var_ite
             | v when v = Logic.var_abspred
@@ -276,13 +254,13 @@ let rec type_check_term term expected_type unifier db_types =
             | v when v = Logic.var_abort_search
             | v when v = Logic.var_cutpred
             | v when v = Logic.var_check_eqvt ->
-                raise (Type.Typing_error (Type.Ty "prop",Type.Ty "prop",unifier))*)
-            (* misc *)
+                raise (Type.Typing_error (Type.TProp,Type.TProp,unifier))*)
+            (* XXX misc *)
             | {Term.tag=Term.String} ->
                 unifier
             | v when v = Logic.var_print ->
                 let ty = Type.fresh_tyvar() in
-                let ty = Type.TRArrow ([ty],Type.Ty "prop") in
+                let ty = Type.TRArrow ([ty],Type.TProp) in
                 Type.unify_constraint unifier expected_type ty
             (*| v when v = Logic.var_println
             | v when v = Logic.var_fprint
@@ -293,7 +271,7 @@ let rec type_check_term term expected_type unifier db_types =
             | v when v = Logic.var_simp_parse
             | v when v = Logic.var_on
             | v when v = Logic.var_off ->
-                raise (Type.Typing_error (Type.Ty "prop",Type.Ty "prop",unifier))*)
+                raise (Type.Typing_error (Type.TProp,Type.TProp,unifier))*)
             | _ ->
                 begin match type_of_term term with
                   | None ->
@@ -333,7 +311,7 @@ let type_check_clause arity body stype unifier =
 
 let reset_defs () = Hashtbl.clear defs
 
-let create_def (flavour,(head_tm,stype)) =
+let create_def (flavour,head_tm,stype) =
   let head = Term.get_var head_tm in
   if Hashtbl.mem defs head then
     raise (Multiple_pred_declaration head_tm);
@@ -378,9 +356,9 @@ let add_clause (head_tm,arity,body) =
       | Some b ->
           begin match Term.observe b with
             | Term.Lam (a,b) when arity=a ->
-                Term.lambda a (Term.app Logic.orc [b;body])
+                Term.lambda a (Term.op_or b body)
             | _ when arity=0 ->
-                Term.app Logic.orc [b;body]
+                Term.op_or b body
             | _ -> raise (Inconsistent_definition head_tm)
           end
   in

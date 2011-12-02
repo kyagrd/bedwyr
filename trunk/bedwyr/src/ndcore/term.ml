@@ -29,17 +29,26 @@ type var = {
   lts : int
 }
 
+type binder = Forall | Exists | Nabla
+
 (** TODO ? phantom type for annotating term with what's inside
   * [ `Var ] term, etc... *)
 type term = rawterm
 and rawterm =
-  | Var  of var (* Only when "observing" the term *)
-  | DB   of int
-  | NB   of int (* Nabla variables *)
-  | Lam  of int * term
-  | App  of term * term list
-  | Susp of term * int * int * env
-  | Ptr  of ptr
+  | Var    of var (* Only when "observing" the term *)
+  | DB     of int
+  | NB     of int (* Nabla variables *)
+  | True
+  | False
+  | Eq     of term * term
+  | And    of term * term
+  | Or     of term * term
+  | Arrow  of term * term
+  | Binder of binder * term
+  | Lam    of int * term
+  | App    of term * term list
+  | Susp   of term * int * int * env
+  | Ptr    of ptr
 and ptr = in_ptr ref
 and in_ptr = V of var | T of term
 and env = envitem list
@@ -49,6 +58,7 @@ and envitem = Dum of int | Binding of term * int
 let rec eq t1 t2 =
   match t1,t2 with
     (* Compare leafs *)
+    | _,_ when t1=t2 -> true
     | DB i1, DB i2
     | NB i1, NB i2 -> i1=i2
     | Ptr {contents=V v1}, Ptr {contents=V v2} -> v1==v2
@@ -56,6 +66,13 @@ let rec eq t1 t2 =
     | _, Ptr {contents=T t2} -> eq t1 t2
     | Ptr {contents=T t1}, _ -> eq t1 t2
     (* Propagation *)
+    | Eq (t1,t1'), Eq (t2,t2')
+    | And (t1,t1'), And (t2,t2')
+    | Or (t1,t1'), Or (t2,t2')
+    | Arrow (t1,t1'), Arrow (t2,t2') ->
+        eq t1 t2 && eq t1' t2'
+    | Binder (b1,t1), Binder (b2,t2) ->
+        b1 = b2 && eq t1 t2
     | App (h1,l1), App (h2,l2) ->
         List.length l1 = List.length l2 &&
         List.fold_left2
@@ -120,7 +137,7 @@ let restore_state n =
   assert (n <= !bind_len) ;
   for i = 1 to !bind_len-n do
     let (v,contents) = Stack.pop bind_stack in
-      v := contents
+    v := contents
   done ;
   bind_len := n
 
@@ -133,27 +150,27 @@ let bind v t =
     | _ -> assert false (* [v] should represent a variable *)
   in
   let dt = deref t in
-    if match dt with Ptr r when r==dv -> false | _ -> true then begin
-      Stack.push (dv,!dv) bind_stack ;
-      dv := T dt ;
-      incr bind_len
-    end
+  if match dt with Ptr r when r==dv -> false | _ -> true then begin
+    Stack.push (dv,!dv) bind_stack ;
+    dv := T dt ;
+    incr bind_len
+  end
 
 exception Done
 
 let get_subst state =
   let subst = ref [] in
   let count = ref (!bind_len-state) in
-    assert (!count >= 0) ;
-    try
-      Stack.iter
-        (fun (v,old) ->
-           if !count = 0 then raise Done ;
-           subst := (v,!v)::!subst ;
-           decr count)
-        bind_stack ;
-      !subst
-    with Done -> !subst
+  assert (!count >= 0) ;
+  try
+    Stack.iter
+      (fun (v,old) ->
+         if !count = 0 then raise Done ;
+         subst := (v,!v)::!subst ;
+         decr count)
+      bind_stack ;
+    !subst
+  with Done -> !subst
 
 let apply_subst s = List.fold_left (fun sub (v,contents) ->
                                       let old = !v in
@@ -172,7 +189,7 @@ let lambda n t =
         | Lam (n',t') -> aux (n+n') t'
         | _ -> Lam (n,t)
     in
-      aux n t
+    aux n t
 
 exception NonNormalTerm
 
@@ -186,6 +203,13 @@ let abstract target t =
         let rec aux n t = match t with
           | NB i -> t
           | DB i -> if i>=n then DB (i+1) else t
+          | True
+          | False -> t
+          | Eq (t1,t2) -> Eq (aux n t1,aux n t2)
+          | And (t1,t2) -> And (aux n t1,aux n t2)
+          | Or (t1,t2) -> Or (aux n t1,aux n t2)
+          | Arrow (t1,t2) -> Arrow (aux n t1,aux n t2)
+          | Binder (b,t) -> Binder (b,aux n t)
           | App (h,ts) ->
               App ((aux n h), (List.map (aux n) ts))
           | Lam (m,s) -> Lam (m, aux (n+m) s)
@@ -194,12 +218,19 @@ let abstract target t =
           | Var _ -> assert false
           | Susp _ -> raise NonNormalTerm
         in
-          lambda 1 (aux 1 t)
+        lambda 1 (aux 1 t)
     | NB target ->
         (* Recursively raise dB indices and abstract over [target]. *)
         let rec aux n t = match t with
           | NB i -> if i=target then DB n else t
           | DB i -> if i>=n then DB (i+1) else t
+          | True
+          | False -> t
+          | Eq (t1,t2) -> Eq (aux n t1,aux n t2)
+          | And (t1,t2) -> And (aux n t1,aux n t2)
+          | Or (t1,t2) -> Or (aux n t1,aux n t2)
+          | Arrow (t1,t2) -> Arrow (aux n t1,aux n t2)
+          | Binder (b,t) -> Binder (b,aux n t)
           | App (h,ts) ->
               App ((aux n h), (List.map (aux n) ts))
           | Lam (m,s) -> Lam (m, aux (n+m) s)
@@ -208,7 +239,7 @@ let abstract target t =
           | Var _ -> assert false
           | Susp _ -> raise NonNormalTerm
         in
-          lambda 1 (aux 1 t)
+        lambda 1 (aux 1 t)
     | _ -> assert false
 
 (** [abstract_flex var t] similar to abstract var t, but
@@ -221,6 +252,13 @@ let abstract_flex target t =
         let rec aux n t = match t with
           | NB i -> t
           | DB i -> if i>=n then DB (i+1) else t
+          | True
+          | False -> t
+          | Eq (t1,t2) -> Eq (aux n t1,aux n t2)
+          | And (t1,t2) -> And (aux n t1,aux n t2)
+          | Or (t1,t2) -> Or (aux n t1,aux n t2)
+          | Arrow (t1,t2) -> Arrow (aux n t1,aux n t2)
+          | Binder (b,t) -> Binder (b,aux n t)
           | App (h,ts) ->
               begin match observe h with
               | Var v ->
@@ -234,7 +272,7 @@ let abstract_flex target t =
           | Var _ -> assert false
           | Susp _ -> raise NonNormalTerm
         in
-          lambda 1 (aux 1 t)
+        lambda 1 (aux 1 t)
     | _ -> assert false
 
 (** {1 Extract variables} *)
@@ -245,13 +283,18 @@ let get_vars test ts =
   let rec fv l t = match observe t with
     | Var v ->
         if test v && not (List.mem_assq v l) then ((v,t)::l) else l
+    | Eq (t1,t2)
+    | And (t1,t2)
+    | Or (t1,t2)
+    | Arrow (t1,t2) -> fv (fv l t1) t2
+    | Binder (b,t) -> fv l t
     | App (h,ts) -> List.fold_left fv (fv l h) ts
     | Lam (n,t') -> fv l t'
-    | NB _ | DB _ -> l
+    | DB _ | NB _ | True | False -> l
     | Susp _ -> assert false
     | Ptr _ -> assert false
   in
-    List.map snd (List.fold_left fv [] ts)
+  List.map snd (List.fold_left fv [] ts)
 
 (** Logic variables of [ts], assuming that they are normalized. *)
 let logic_vars = get_vars (fun v -> v.tag = Logic)
@@ -281,11 +324,11 @@ let fresh_id =
 (** Generate a fresh variable, attach a naming hint to it. *)
 let fresh ?name ~lts ~ts tag =
   let v = {id=fresh_id();tag=tag;ts=ts;lts=lts} in
-    begin match name with
-      | Some name -> Hint.add v name
-      | None -> ()
-    end ;
-    Ptr (ref (V v))
+  begin match name with
+    | Some name -> Hint.add v name
+    | None -> ()
+  end ;
+  Ptr (ref (V v))
 
 module NS = Map.Make(struct type t = string let compare = compare end)
 type namespace = term NS.t
@@ -307,8 +350,8 @@ let get_var_by_name ~tag ~ts ~lts name =
         assert (name <> "") ;
         let lts = 0 in
         let t = fresh tag ~ts ~lts ~name in
-          symbols := NS.add name t !symbols ;
-          t
+        symbols := NS.add name t !symbols ;
+        t
 
 (* Same as [get_var_by_name] but infers the tag from the name and sets both
  * levels to 0. *)
@@ -317,7 +360,11 @@ let atom name =
     | 'A'..'Z' -> Logic
     | _ -> Constant
   in
-    get_var_by_name ~ts:0 ~lts:0 ~tag name
+  if name = "_"
+  then fresh ~name:"_" Logic ~ts:0 ~lts:0
+  else get_var_by_name ~ts:0 ~lts:0 ~tag name
+
+let string text = get_var_by_name ~tag:String ~lts:0 ~ts:0 text
 
 let get_var x = match observe x with
   | Var v -> v
@@ -355,22 +402,22 @@ let get_name var =
       !symbols
       None
   in
-    match existing_name with
-      | Some n -> n
-      | None ->
-          let prefix = get_hint var in
-          let rec lookup suffix =
-            let name =
-              if suffix < 0 then prefix else prefix ^ string_of_int suffix
-            in
-              if NS.mem name !symbols then
-                lookup (suffix+1)
-              else begin
-                symbols := NS.add name var !symbols ;
-                name
-              end
+  match existing_name with
+    | Some n -> n
+    | None ->
+        let prefix = get_hint var in
+        let rec lookup suffix =
+          let name =
+            if suffix < 0 then prefix else prefix ^ string_of_int suffix
           in
-            lookup (-1)
+          if NS.mem name !symbols then
+            lookup (suffix+1)
+          else begin
+            symbols := NS.add name var !symbols ;
+            name
+          end
+        in
+        lookup (-1)
 
 let dummy = let n = -1 in Ptr(ref(V { id=n;ts=n;lts=n;tag=Constant }))
 
@@ -383,23 +430,23 @@ let get_dummy_name ?(start=(-1)) prefix =
     let name =
       if suffix < 0 then prefix else prefix ^ string_of_int suffix
     in
-      if NS.mem name !symbols then
-        lookup (suffix+1)
-      else begin
-        symbols := NS.add name dummy !symbols ;
-        name
-      end
+    if NS.mem name !symbols then
+      lookup (suffix+1)
+    else begin
+      symbols := NS.add name dummy !symbols ;
+      name
+    end
   in
-    lookup start
+  lookup start
 
 (** List of [n] new dummy names, most recent first. *)
 let get_dummy_names ?(start=(-1)) n prefix =
   let rec aux i =
     if i=0 then [] else
       let tl = aux (i-1) in
-        (get_dummy_name ~start prefix)::tl
+      (get_dummy_name ~start prefix)::tl
   in
-    List.rev (aux n)
+  List.rev (aux n)
 
 let is_free name =
   not (NS.mem name !symbols)
@@ -415,61 +462,68 @@ let free n =
 let copy_eigen () =
   let tbl = Hashtbl.create 100 in
   fun ?(passive=false) tm ->
-  let rec cp tm = match observe tm with
-    | Var v when v.tag = Eigen ->
-        begin try Hashtbl.find tbl v with
-          | Not_found ->
-              if passive then tm else
-                let v' = { v with id = fresh_id () } in
-                let x = Ptr (ref (V v')) in
-                  begin try Hint.add v' (Hint.find v) with _ -> () end ;
-                  Hashtbl.add tbl v x ;
-                  x
-        end
-    | Var v -> tm
-    | App (a,l) -> App (cp a, List.map cp l)
-    | Lam (n,b) -> Lam (n, cp b)
-    | NB i | DB i as x -> x
-    | Susp _ | Ptr _ -> assert false
-  in
+    let rec cp tm = match observe tm with
+      | Var v when v.tag = Eigen ->
+          begin try Hashtbl.find tbl v with
+            | Not_found ->
+                if passive then tm else
+                  let v' = { v with id = fresh_id () } in
+                  let x = Ptr (ref (V v')) in
+                    begin try Hint.add v' (Hint.find v) with _ -> () end ;
+                    Hashtbl.add tbl v x ;
+                    x
+          end
+      | Var v -> tm
+      | Eq (t1,t2) -> Eq (cp t1,cp t2)
+      | And (t1,t2) -> And (cp t1,cp t2)
+      | Or (t1,t2) -> Or (cp t1,cp t2)
+      | Arrow (t1,t2) -> Arrow (cp t1,cp t2)
+      | Binder (b,t) -> Binder (b,cp t)
+      | App (a,l) -> App (cp a, List.map cp l)
+      | Lam (n,b) -> Lam (n, cp b)
+      | DB _ | NB _ | True | False as x -> x
+      | Susp _ | Ptr _ -> assert false
+    in
     cp tm
 
 (* copying a term: No sharing is maintained, except possibly on
    pointers to variables. *)
 let rec simple_copy tm =
   match tm with
-  | NB i | DB i as x -> x
-  | Var v -> tm
-  | App (a,l) -> App (simple_copy a, List.map simple_copy l)
-  | Lam (n,b) -> Lam (n, simple_copy b)
-  | Ptr {contents=T t} -> simple_copy t
-  | Ptr {contents=V t} -> tm
-  | Susp _ -> assert false
+    | DB _ | NB _ | True | False | Var _ | Ptr {contents=V _} -> tm
+    | Eq (t1,t2) -> Eq (simple_copy t1,simple_copy t2)
+    | And (t1,t2) -> And (simple_copy t1,simple_copy t2)
+    | Or (t1,t2) -> Or (simple_copy t1,simple_copy t2)
+    | Arrow (t1,t2) -> Arrow (simple_copy t1,simple_copy t2)
+    | Binder (b,t) -> Binder (b,simple_copy t)
+    | App (a,l) -> App (simple_copy a, List.map simple_copy l)
+    | Lam (n,b) -> Lam (n, simple_copy b)
+    | Ptr {contents=T t} -> simple_copy t
+    | Susp _ -> assert false
 
 (* copying a term maintaining shared structures *)
 
 let shared_copy tm =
-   let tbl = Hashtbl.create 100 in
-   let rec cp t =
-     match t with
-     | NB i | DB i as x -> x
-     | Var v -> t
-     | App (a,l) -> App (cp a, List.map cp l)
-     | Lam (n,b) -> Lam (n, cp b)
-     | Ptr {contents=V s} -> t
-     | Ptr x ->
-         begin try Hashtbl.find tbl x  with
-          | Not_found ->
-            begin match !x with
-            | T s ->
-              let v = Ptr {contents=T (cp s)} in
-              Hashtbl.add tbl x v ;
-              v
-            | _ -> assert false
-            end
-         end
-     | Susp _ -> assert false
-in
+  let tbl = Hashtbl.create 100 in
+  let rec cp t =
+    match t with
+      | DB _ | NB _ | True | False | Var _ | Ptr {contents=V _} -> t
+      | Eq (t1,t2) -> Eq (cp t1,cp t2)
+      | And (t1,t2) -> And (cp t1,cp t2)
+      | Or (t1,t2) -> Or (cp t1,cp t2)
+      | Arrow (t1,t2) -> Arrow (cp t1,cp t2)
+      | Binder (b,t) -> Binder (b,cp t)
+      | App (a,l) -> App (cp a, List.map cp l)
+      | Lam (n,b) -> Lam (n, cp b)
+      | Ptr ({contents=T s} as x) ->
+          begin try Hashtbl.find tbl x  with
+            | Not_found ->
+                let v = Ptr {contents=T (cp s)} in
+                Hashtbl.add tbl x v ;
+                v
+          end
+      | Susp _ -> assert false
+  in
    cp tm
 
 (* [AT,21/08/2011] *)
@@ -479,34 +533,48 @@ let eqvt t1 t2 =
   let bindings = ref [] in
   let rec aux s1 s2 =
     match s1,s2 with
-    | DB i1, DB i2 -> i1=i2
-    | NB i1, NB i2 ->
-      let bd = try Some (List.find (fun (x,y) -> x=i1) !bindings)
-               with Not_found -> None
-      in
-        begin match bd with
-        | Some (x,y) -> (y = i2)
-        | None -> (bindings := (i1,i2)::!bindings ; true)
-        end
-    | Ptr {contents=V v1}, Ptr {contents=V v2} -> v1==v2
-    | _, Ptr {contents=T t2} -> aux s1 t2
-    | Ptr {contents=T t1}, _ -> aux t1 s2
-    (* Propagation *)
-    | App (h1,l1), App (h2,l2) ->
-        List.length l1 = List.length l2 &&
-        List.fold_left2
-          (fun test t1 t2 -> test && aux t1 t2)
-          true (h1::l1) (h2::l2)
-    | Lam (n,t1), Lam (m,t2) -> n = m && aux t1 t2
-    | Var _, _ | _, Var _ -> assert false
-    | Susp _, _ -> raise NonNormalTerm
-    | _ -> false
+      | _,_ when t1=t2 -> true
+      | DB i1, DB i2 -> i1=i2
+      | NB i1, NB i2 ->
+          let bd = try Some (List.find (fun (x,y) -> x=i1) !bindings)
+          with Not_found -> None
+          in
+          begin match bd with
+            | Some (x,y) -> (y = i2)
+            | None -> (bindings := (i1,i2)::!bindings ; true)
+          end
+      | Ptr {contents=V v1}, Ptr {contents=V v2} -> v1==v2
+      | _, Ptr {contents=T t2} -> aux s1 t2
+      | Ptr {contents=T t1}, _ -> aux t1 s2
+      (* Propagation *)
+      | Eq (t1,t1'), Eq (t2,t2')
+      | And (t1,t1'), And (t2,t2')
+      | Or (t1,t1'), Or (t2,t2')
+      | Arrow (t1,t1'), Arrow (t2,t2') ->
+          aux t1 t2 && aux t1' t2'
+      | Binder (b1,t1), Binder (b2,t2) ->
+          b1 = b2 && aux t1 t2
+      | App (h1,l1), App (h2,l2) ->
+          List.length l1 = List.length l2 &&
+          List.fold_left2
+            (fun test t1 t2 -> test && aux t1 t2)
+            true (h1::l1) (h2::l2)
+      | Lam (n,t1), Lam (m,t2) -> n = m && aux t1 t2
+      | Var _, _ | _, Var _ -> assert false
+      | Susp _, _ -> raise NonNormalTerm
+      | _ -> false
   in
-    aux t1 t2
+  aux t1 t2
 
 (** {1 Convenience} *)
 
-let string text = get_var_by_name ~tag:String ~lts:0 ~ts:0 text
+let op_true = True
+let op_false = False
+let op_eq a b = Eq (a,b)
+let op_and a b = And (a,b)
+let op_or a b = Or (a,b)
+let op_arrow a b = Arrow (a,b)
+let op_binder a b = Binder (a,b)
 
 let binop s a b = App ((atom s),[a;b])
 
@@ -522,14 +590,18 @@ let susp t ol nl e = Susp (t,ol,nl,e)
 
 let get_nablas x =
   let rec nb l t = match observe t with
-    | Var _ -> l
+    | Var _ | DB _ | True | False -> l
+    | NB i -> if List.mem i l then l else i::l
+    | Eq (t1,t2)
+    | And (t1,t2)
+    | Or (t1,t2)
+    | Arrow (t1,t2) -> nb (nb l t1) t2
+    | Binder (b,t) -> nb l t
     | App (h,ts) -> List.fold_left nb (nb l h) ts
     | Lam (n,t') -> nb l t'
-    | DB _ -> l
-    | NB i -> if List.mem i l then l else i::l
     | Susp _ | Ptr _ -> assert false
   in
-    nb [] x
+  nb [] x
 
 module Notations =
 struct

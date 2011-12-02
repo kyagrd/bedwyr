@@ -32,6 +32,11 @@ let string_of_tag = function
   | Logic -> "l"
   | String -> "s"
 
+let string_of_binder = function
+  | Forall -> "Forall"
+  | Exists -> "Exists"
+  | Nabla -> "Nabla"
+
 (* List of infix operators sorted by priority. *)
 let infix : (string * assoc) list ref = ref []
 let set_infix l = infix := l
@@ -83,6 +88,54 @@ let print_full ~generic ~bound chan term =
       | DB i ->
           Format.fprintf chan "%s"
             (get_nth bound (i-1) ("db(" ^ (string_of_int (i - 1)) ^ ")"))
+      | True -> Format.fprintf chan "true"
+      | False -> Format.fprintf chan "false"
+      | Eq (t1,t2) ->
+          let op_priority = 4 in
+          let print =
+            if op_priority >= pr then
+              Format.fprintf chan "@[%a@ =@ %a@]"
+            else
+              Format.fprintf chan "@[<1>(%a@ =@ %a)@]"
+          in
+          print (pp ~bound (op_priority+1)) t1 (pp ~bound (op_priority+1)) t2
+      | And (t1,t2) ->
+          let op_priority = 3 in
+          let print =
+            if op_priority >= pr then
+              Format.fprintf chan "@[%a@ /\\@ %a@]"
+            else
+              Format.fprintf chan "@[<1>(%a@ /\\@ %a)@]"
+          in
+          print (pp ~bound (op_priority)) t1 (pp ~bound (op_priority)) t2
+      | Or (t1,t2) ->
+          let op_priority = 2 in
+          let print =
+            if op_priority >= pr then
+              Format.fprintf chan "@[%a@ \\/@ %a@]"
+            else
+              Format.fprintf chan "@[<1>(%a@ \\/@ %a)@]"
+          in
+          print (pp ~bound (op_priority)) t1 (pp ~bound (op_priority)) t2
+      | Arrow (t1,t2) ->
+          let op_priority = 1 in
+          let print =
+            if op_priority >= pr then
+              Format.fprintf chan "@[%a@ ->@ %a@]"
+            else
+              Format.fprintf chan "@[<1>(%a@ ->@ %a)@]"
+          in
+          print (pp ~bound (op_priority)) t1 (pp ~bound (op_priority+1)) t2
+      | Binder (b,t) ->
+          let print =
+            if pr=0 then
+              Format.fprintf chan "@[<2>%s %a@]"
+             else
+              Format.fprintf chan "@[<3>(%s %a)@]"
+          in
+          print
+            (string_of_binder b)
+            (pp ~bound high_pr) t
       | App (t,ts) ->
           begin match (observe t, ts) with
             | Var {tag=Constant}, [a; b] when is_infix (get_name t) ->
@@ -92,7 +145,8 @@ let print_full ~generic ~bound chan term =
                 let pr_left, pr_right = match assoc with
                   | Left -> op_p, op_p+1
                   | Right -> op_p+1, op_p
-                  | _ -> op_p, op_p
+                  | Both -> op_p, op_p
+                  | Nonassoc -> op_p+1, op_p+1
                 in
                 let print =
                   if op_p >= pr then
@@ -100,7 +154,7 @@ let print_full ~generic ~bound chan term =
                   else
                     Format.fprintf chan "@[<1>(%a@ %s@ %a)@]"
                 in
-                  print (pp ~bound pr_left) a op (pp ~bound pr_right) b
+                print (pp ~bound pr_left) a op (pp ~bound pr_right) b
             | _ ->
                 let print =
                   if pr=0 then
@@ -108,13 +162,13 @@ let print_full ~generic ~bound chan term =
                    else
                     Format.fprintf chan "@[<3>(%a %a%a)@]"
                 in
-                  print (pp ~bound high_pr)
-                    t
-                    (pp ~bound high_pr) (List.hd ts)
-                    (fun chan ->
-                       List.iter
-                         (Format.fprintf chan "@ %a" (pp ~bound high_pr)))
-                    (List.tl ts)
+                print (pp ~bound high_pr)
+                  t
+                  (pp ~bound high_pr) (List.hd ts)
+                  (fun chan ->
+                     List.iter
+                       (Format.fprintf chan "@ %a" (pp ~bound high_pr)))
+                  (List.tl ts)
           end
       | Lam (i,t) ->
           assert (i<>0) ;
@@ -128,13 +182,13 @@ let print_full ~generic ~bound chan term =
             else
               Format.fprintf chan "@[<1>(%s\\@ %a)@]"
           in
-            print head (pp ~bound:(List.rev_append more bound) 0) t ;
-            List.iter Term.free more
+          print head (pp ~bound:(List.rev_append more bound) 0) t ;
+          List.iter Term.free more
       | Susp (t,_,_,l) ->
           Format.fprintf chan "<%d:%a>" (List.length l) (pp ~bound pr) t
       | Ptr  _ -> assert false (* observe *)
   in
-    Format.fprintf chan "@[%a@]" (pp ~bound high_pr) term
+  Format.fprintf chan "@[%a@]" (pp ~bound 0) term
 
 let formatter,do_formatter =
   let buf = Buffer.create 20 in
@@ -146,8 +200,8 @@ let formatter,do_formatter =
        Format.pp_print_flush chan () ;
        assert (Buffer.length buf > 0) ;
        let s = Buffer.contents buf in
-         Buffer.clear buf ;
-         s)
+       Buffer.clear buf ;
+       s)
 
 let term_to_string_full ~generic ~bound tm =
   do_formatter (fun () -> print_full ~generic ~bound formatter tm)
@@ -159,20 +213,20 @@ let term_to_string_full_debug ~generic ~bound dbg term =
     debug := dbg ;
     term_to_string_full ~generic ~bound term
   in
-    debug := debug';
-    s
+  debug := debug';
+  s
 
 let get_generic_names x =
   let nbs = Term.get_nablas x in
   let max_nb = List.fold_left max 0 nbs in
-    Term.get_dummy_names ~start:1 max_nb "n"
+  Term.get_dummy_names ~start:1 max_nb "n"
 
 let print ?(bound=[]) chan term =
   let term = Norm.deep_norm term in
   let generic = get_generic_names term in
   let s = print_full ~generic ~bound chan term in
-    List.iter Term.free generic ;
-    s
+  List.iter Term.free generic ;
+  s
 
 let term_to_string ?(bound=[]) tm =
   do_formatter (fun () -> print ~bound formatter tm)
@@ -192,13 +246,13 @@ let print_term ?(bound=[]) term =
 let pp_preabstracted ~generic ~bound chan term =
   (* let term = Norm.hnorm term in *)
   let len = List.length bound in
-    match observe term with
-      | Lam (n,term) ->
-          assert (len <= n) ;
-          print_full ~generic ~bound chan (lambda (n-len) term)
-      | _ ->
-          (* assert (bound = []); *)
-          print_full ~generic ~bound chan term
+  match observe term with
+    | Lam (n,term) ->
+        assert (len <= n) ;
+        print_full ~generic ~bound chan (lambda (n-len) term)
+    | _ ->
+        (* assert (bound = []); *)
+        print_full ~generic ~bound chan term
 
 let term_to_string_preabstracted ~generic ~bound term =
   do_formatter (fun () -> pp_preabstracted ~generic ~bound formatter term)

@@ -57,9 +57,7 @@ let dummy_var = Term.get_var (Term.fresh ~ts:(-1) ~lts:(-1) Term.Constant)
 exception Found of int
 
 (* Option to turn on/off equivariant tabling *)
-let eqvt_tbl = ref true 
-let set_eqvt b = eqvt_tbl := b
-let get_eqvt () = !eqvt_tbl 
+let eqvt_tbl = ref true
 
 let get_constraints bindings =
   let n = List.length bindings in
@@ -121,12 +119,19 @@ let find_leaf map bindings =
 
 (** Patterns allow eigenvariables and nabla variables as deBruijn indices. *)
 type pattern =
-  | DB    of int
-  | NB    of int
-  | Cst   of Term.term*Term.var
-  | Var   of int
-  | Lam   of int * pattern
-  | App   of int * pattern list (* Store the length of the list *)
+  | Var    of int
+  | Cst    of Term.term * Term.var
+  | DB     of int
+  | NB     of int
+  | True
+  | False
+  | Eq     of pattern * pattern
+  | And    of pattern * pattern
+  | Or     of pattern * pattern
+  | Arrow  of pattern * pattern
+  | Binder of Term.binder * pattern
+  | Lam    of int * pattern
+  | App    of int * pattern list (* Store the length of the list *)
   | Hole
 
 type 'a t        = 'a node list
@@ -147,33 +152,54 @@ let create_node ~allow_eigenvar bindings terms data =
       | (i,x)::l when i=expect -> aux ((i,x)::accu) (expect+1) l
       | l -> expect, List.rev_append accu ((expect,v)::l)
     in
-      aux [] 0 bindings
+    aux [] 0 bindings
   in
   let rec compile bindings term =
     let term = Norm.hnorm term in
     match Term.observe term with
-    | Term.DB i -> DB i, bindings
-    | Term.NB i -> NB i, bindings
-    | Term.Var ({Term.tag=Term.Constant} as v) ->
-        Cst (Term.deref term,v), bindings
-    | Term.Var ({Term.tag=Term.Eigen} as var) when allow_eigenvar ->
-        let i,bindings = add bindings var in
+      | Term.DB i -> DB i, bindings
+      | Term.NB i -> NB i, bindings
+      | Term.Var ({Term.tag=Term.Constant} as v) ->
+          Cst (Term.deref term,v), bindings
+      | Term.True -> True, bindings
+      | Term.False -> False, bindings
+      | Term.Var ({Term.tag=Term.Eigen} as var) when allow_eigenvar ->
+          let i,bindings = add bindings var in
           Var i, bindings
-    | Term.Lam (i,t) ->
-        let pat,bindings = compile bindings t in
+      | Term.Lam (i,t) ->
+          let pat,bindings = compile bindings t in
           Lam (i,pat),bindings
-    | Term.App (h,terms) ->
-        let terms = h::terms in
-        let patterns,bindings =
-          List.fold_left
-            (fun (pats,b) t ->
-               let (p,b) = compile b t in
+      | Term.Eq (t1,t2) ->
+          let pat1,bindings = compile bindings t1 in
+          let pat2,bindings = compile bindings t2 in
+          Eq (pat1,pat2),bindings
+      | Term.And (t1,t2) ->
+          let pat1,bindings = compile bindings t1 in
+          let pat2,bindings = compile bindings t2 in
+          And (pat1,pat2),bindings
+      | Term.Or (t1,t2) ->
+          let pat1,bindings = compile bindings t1 in
+          let pat2,bindings = compile bindings t2 in
+          Or (pat1,pat2),bindings
+      | Term.Arrow (t1,t2) ->
+          let pat1,bindings = compile bindings t1 in
+          let pat2,bindings = compile bindings t2 in
+          Arrow (pat1,pat2),bindings
+      | Term.Binder (b,t) ->
+          let pat,bindings = compile bindings t in
+          Binder (b,pat),bindings
+      | Term.App (h,terms) ->
+          let terms = h::terms in
+          let patterns,bindings =
+            List.fold_left
+              (fun (pats,b) t ->
+                 let (p,b) = compile b t in
                  (p::pats,b))
-            ([],bindings)
-            terms
-        in
+              ([],bindings)
+              terms
+          in
           App (List.length terms, List.rev patterns),bindings
-    | _ -> raise Cannot_table
+      | _ -> raise Cannot_table
   in
   let patterns,bindings =
     List.fold_left
@@ -183,7 +209,7 @@ let create_node ~allow_eigenvar bindings terms data =
       ([],bindings)
       terms
   in
-    patterns, Leaf (new_leaf bindings data)
+  patterns, Leaf (new_leaf bindings data)
 
 (* [superficial_match] expects a head-normalized term. *)
 let superficial_match patterns terms =
@@ -192,58 +218,85 @@ let superficial_match patterns terms =
     | NB i, Term.NB j
     | Lam (i,_), Term.Lam (j,_) -> i=j
     | Cst (_,v), Term.Var v' -> v==v'
+    | True, Term.True
+    | False, Term.False
+    | Eq _, Term.Eq _
+    | And _, Term.And _
+    | Or _, Term.Or _
+    | Arrow _, Term.Arrow _
     | Var _, Term.Var {Term.tag=Term.Eigen} -> true
+    | Binder (b1,_), Term.Binder (b2,_) -> b1=b2
     | App (i,_), Term.App (h,l) -> i = 1 + List.length l
     | Hole, _ -> true
     | _ -> false
   in
-    List.for_all sub (List.map2 (fun a b -> a,b) patterns terms)
+  List.for_all sub (List.map2 (fun a b -> a,b) patterns terms)
 
 (* [rename] Renaming nabla variables in a term according to the order of
  *   traversal in the tree representation of the (normal form of the) term.
- *   This is a cheap way to force equivariant matching in tables. 
+ *   This is a cheap way to force equivariant matching in tables.
  * Added by Tiu, 03 March 2011. *)
- 
+
 let rec rename term bindings n =
   let term = Norm.hnorm term in
   match Term.observe term with
-  | Term.DB i -> term, bindings, n
-  | Term.NB i -> 
-     let bd = try Some (List.find (fun (x,y) -> x=i) bindings) 
-              with Not_found -> None
-     in (
-       match bd with 
-       | Some (x,y) -> Term.nabla y, bindings, n
-       | None -> Term.nabla (n+1), (i,n+1)::bindings, n+1
-     )
-  | Term.Var v -> term, bindings, n
-  | Term.Lam (i,t) -> 
-     let newt,bds,n' = rename t bindings n in
-       (Term.lambda i newt),bds,n'
-  | Term.App (h,terms) ->
-       let newterms,bds,n'= 
-           List.fold_left 
-              (fun (ts,bd,idx) t -> 
-                let t',bd',idx' = rename t bd idx 
-                in (t'::ts,bd',idx')
-              )
-              ([],bindings,n)
-              (h::terms)
-           in
-        let (newh::newterms) = List.rev newterms in 
-        (Term.app newh newterms),bds,n'
-   | _ -> raise Cannot_table
+    | Term.Var _ | Term.DB _ | Term.True | Term.False ->
+        term, bindings, n
+    | Term.NB i ->
+        begin try 
+          let x,y = (List.find (fun (x,y) -> x=i) bindings) in
+          Term.nabla y, bindings, n
+        with
+          | Not_found -> Term.nabla (n+1), (i,n+1)::bindings, n+1
+        end
+    | Term.Lam (i,t) ->
+        let newt,bds,n' = rename t bindings n in
+        (Term.lambda i newt),bds,n'
+    | Term.Eq (t1,t2) ->
+        let t1,bindings,n = rename t1 bindings n in
+        let t2,bindings,n = rename t2 bindings n in
+        Term.op_eq t1 t2,bindings,n
+    | Term.And (t1,t2) ->
+        let t1,bindings,n = rename t1 bindings n in
+        let t2,bindings,n = rename t2 bindings n in
+        Term.op_and  t1 t2,bindings,n
+    | Term.Or (t1,t2) ->
+        let t1,bindings,n = rename t1 bindings n in
+        let t2,bindings,n = rename t2 bindings n in
+        Term.op_or t1 t2,bindings,n
+    | Term.Arrow (t1,t2) ->
+        let t1,bindings,n = rename t1 bindings n in
+        let t2,bindings,n = rename t2 bindings n in
+        Term.op_arrow t1 t2,bindings,n
+    | Term.Binder (b,t) ->
+        let t,bindings,n = rename t bindings n in
+        Term.op_binder b t,bindings,n
+    | Term.App (h,terms) ->
+        let newterms,bds,n'=
+          List.fold_left
+            (fun (ts,bd,idx) t ->
+               let t',bd',idx' = rename t bd idx
+               in (t'::ts,bd',idx')
+            )
+            ([],bindings,n)
+            (h::terms)
+        in
+        begin match List.rev newterms with
+          | newh::newterms -> (Term.app newh newterms),bds,n'
+          | _ -> assert false
+        end
+    | _ -> raise Cannot_table
 
 let nb_rename terms =
-    let newterms,_,_ = 
-           List.fold_left 
-              (fun (ts,bd,idx) t -> 
-                let t',bd',idx' = rename t bd idx 
-                in (t'::ts,bd',idx')
-              )
-              ([],[],0)
-              terms
-    in List.rev newterms
+  let newterms,_,_ =
+    List.fold_left
+      (fun (ts,bd,idx) t ->
+         let t',bd',idx' = rename t bd idx
+         in (t'::ts,bd',idx')
+      )
+      ([],[],0)
+      terms
+  in List.rev newterms
 
 
 (* == UPDATE =============================================================== *)
@@ -260,27 +313,65 @@ let update ~allow_eigenvar index terms data =
    * corresponding to the former index in reverse order. *)
   let rec update_pattern bindings catches former_alt pattern term =
     match pattern, Term.observe (Norm.hnorm term) with
-      | DB i, Term.DB j when i = j ->
-          (false, DB i, bindings, catches, former_alt)
+      | DB i, Term.DB j
       | NB i, Term.NB j when i = j ->
-          (false, NB i, bindings, catches, former_alt)
+          (false, pattern, bindings, catches, former_alt)
+      | True, Term.True | False, Term.False ->
+          (false, pattern, bindings, catches, former_alt)
       | Cst (t,c), Term.Var c' when c==c' ->
-          (false, Cst (t,c), bindings, catches, former_alt)
-      | Var i, Term.Var ({Term.tag=Term.Eigen} as var) when allow_eigenvar ->
-          (false, Var i, (i,var)::bindings, catches, former_alt)
+          (false, pattern, bindings, catches, former_alt)
+      | Var v, Term.Var ({Term.tag=Term.Eigen} as var) when allow_eigenvar ->
+          (false, pattern, (v,var)::bindings, catches, former_alt)
+      | Lam (i,pattern), Term.Lam (j,term) when i = j ->
+          let (changed,pattern,bindings,catches,former_alt) =
+            update_pattern bindings catches former_alt pattern term
+          in
+          (changed, Lam (i,pattern), bindings, catches, former_alt)
+      | Eq (pat1,pat2), Term.Eq (t1,t2) ->
+          let (changed1,pat1,bindings,catches,former_alt) =
+            update_pattern bindings catches former_alt pat1 t1
+          in
+          let (changed2,pat2,bindings,catches,former_alt) =
+            update_pattern bindings catches former_alt pat2 t2
+          in
+          (changed1 || changed2, Eq (pat1,pat2), bindings, catches, former_alt)
+      | And (pat1,pat2), Term.And (t1,t2) ->
+          let (changed1,pat1,bindings,catches,former_alt) =
+            update_pattern bindings catches former_alt pat1 t1
+          in
+          let (changed2,pat2,bindings,catches,former_alt) =
+            update_pattern bindings catches former_alt pat2 t2
+          in
+          (changed1 || changed2, And (pat1,pat2), bindings, catches, former_alt)
+      | Or (pat1,pat2), Term.Or (t1,t2) ->
+          let (changed1,pat1,bindings,catches,former_alt) =
+            update_pattern bindings catches former_alt pat1 t1
+          in
+          let (changed2,pat2,bindings,catches,former_alt) =
+            update_pattern bindings catches former_alt pat2 t2
+          in
+          (changed1 || changed2, Or (pat1,pat2), bindings, catches, former_alt)
+      | Arrow (pat1,pat2), Term.Arrow (t1,t2) ->
+          let (changed1,pat1,bindings,catches,former_alt) =
+            update_pattern bindings catches former_alt pat1 t1
+          in
+          let (changed2,pat2,bindings,catches,former_alt) =
+            update_pattern bindings catches former_alt pat2 t2
+          in
+          (changed1 || changed2, Arrow (pat1,pat2), bindings, catches, former_alt)
+      | Binder (b1,pat), Term.Binder (b2,t) when b1=b2 ->
+          let (changed,pat,bindings,catches,former_alt) =
+            update_pattern bindings catches former_alt pat t
+          in
+          (changed, Binder (b1,pat), bindings, catches, former_alt)
       | App (i,patterns), Term.App (h,terms) when i = 1 + List.length terms ->
           let terms = h::terms in
           let (changed,patterns,bindings,catches,former_alt) =
             update_patterns bindings catches former_alt patterns terms
           in
           let patterns = List.rev patterns in
-            assert (List.length patterns = i) ;
-            (changed, App (i,patterns), bindings, catches, former_alt)
-      | Lam (i,pattern), Term.Lam (j,term) when i = j ->
-          let (changed,pattern,bindings,catches,former_alt) =
-            update_pattern bindings catches former_alt pattern term
-          in
-            (changed, Lam (i,pattern), bindings, catches, former_alt)
+          assert (List.length patterns = i) ;
+          (changed, App (i,patterns), bindings, catches, former_alt)
       | Hole,_ ->
           (false, Hole, bindings, term::catches, Hole::former_alt)
       | _ ->
@@ -295,7 +386,7 @@ let update ~allow_eigenvar index terms data =
          let (changed',pattern,bindings,catches,former_alt) =
            update_pattern bindings catches former_alt pattern term
          in
-           changed'||changed,pattern::patterns,bindings,catches,former_alt)
+         changed'||changed,pattern::patterns,bindings,catches,former_alt)
       (false,[],bindings,catches,former_alt)
       patterns
       terms
@@ -307,27 +398,27 @@ let update ~allow_eigenvar index terms data =
     in
     let patterns = List.rev patterns in
     let former_alt = List.rev former_alt in
-      patterns,
-      if changed then
-        (* The new patterns have some new holes, we separate the new and the
-         * former terms by adding an intermediate index.
-         * We need to compile the caught terms into patterns. *)
-        match data with
-          | Some data ->
-              Refine [ create_node ~allow_eigenvar bindings catches data ;
-                       former_alt, children ]
-          | None -> raise Not_found
-      else
-        (* The terms were fully matched by the patterns,
-         * the new [patterns] is the same as the former one,
-         * the update gets propagated deeper without changing anything here. *)
-        match children with
-          | Refine index ->
-              Refine (update_index bindings
-                        (List.map Norm.hnorm (List.rev catches)) [] index)
-          | Leaf map ->
-              assert (catches = []) ;
-              Leaf (update_leaf map bindings data)
+    patterns,
+    (if changed then
+       (* The new patterns have some new holes, we separate the new and the
+        * former terms by adding an intermediate index.
+        * We need to compile the caught terms into patterns. *)
+       match data with
+         | Some data ->
+             Refine [ create_node ~allow_eigenvar bindings catches data ;
+                      former_alt, children ]
+         | None -> raise Not_found
+     else
+       (* The terms were fully matched by the patterns,
+        * the new [patterns] is the same as the former one,
+        * the update gets propagated deeper without changing anything here. *)
+       match children with
+         | Refine index ->
+             Refine (update_index bindings
+                       (List.map Norm.hnorm (List.rev catches)) [] index)
+         | Leaf map ->
+             assert (catches = []) ;
+             Leaf (update_leaf map bindings data))
 
   (* Update an index, i.e. an (unordered) list of alternative nodes. *)
   and update_index bindings terms index' = function
@@ -344,11 +435,11 @@ let update ~allow_eigenvar index terms data =
         else
           update_index bindings terms (node::index') index
   in
-   (* update_index [] (List.map (Term.shared_copy) (nb_rename terms)) [] index *)
-   if !eqvt_tbl then 
-      update_index [] (nb_rename terms) [] index
-   else 
-      update_index [] (List.map Norm.hnorm terms) [] index
+  (* update_index [] (List.map (Term.shared_copy) (nb_rename terms)) [] index *)
+  if !eqvt_tbl then
+    update_index [] (nb_rename terms) [] index
+  else
+    update_index [] (List.map Norm.hnorm terms) [] index
 
 let add ?(allow_eigenvar=true) index terms data =
   update ~allow_eigenvar index terms (Some data)
@@ -363,23 +454,28 @@ let rec filter bindings catches pattern term =
   match pattern, Term.observe (Norm.hnorm term) with
     | DB i, Term.DB j
     | NB i, Term.NB j when i=j -> bindings,catches
-    | Cst (_,i), Term.Var j ->
-        if i==j then bindings,catches else raise Not_found
-    | Var i, Term.Var var ->
-        if var.Term.tag = Term.Eigen then
-          (i,var)::bindings,catches
-        else
-          raise Not_found
-    | Lam (i,pattern), Term.Lam (j,term) ->
-        if i=j then
-          filter bindings catches pattern term
-        else
-          raise Not_found
-    | App (i,patterns), Term.App (h,l) ->
-        if i = 1 + List.length l then
-          filter_several bindings catches patterns (h::l)
-        else
-          raise Not_found
+    | True, Term.True | False, Term.False -> bindings,catches
+    | Cst (_,c), Term.Var c' when c==c' -> bindings,catches
+    | Var v, Term.Var ({Term.tag=Term.Eigen} as var) ->
+        (v,var)::bindings,catches
+    | Lam (i,pattern), Term.Lam (j,term) when i=j ->
+        filter bindings catches pattern term
+    | Eq (pat1,pat2), Term.Eq (t1,t2) ->
+        let bindings,catches = filter bindings catches pat1 t1 in
+        filter bindings catches pat2 t2
+    | And (pat1,pat2), Term.And (t1,t2) ->
+        let bindings,catches = filter bindings catches pat1 t1 in
+        filter bindings catches pat2 t2
+    | Or (pat1,pat2), Term.Or (t1,t2) ->
+        let bindings,catches = filter bindings catches pat1 t1 in
+        filter bindings catches pat2 t2
+    | Arrow (pat1,pat2), Term.Arrow (t1,t2) ->
+        let bindings,catches = filter bindings catches pat1 t1 in
+        filter bindings catches pat2 t2
+    | Binder (b1,pat), Term.Binder (b2,t) when b1=b2 ->
+        filter bindings catches pat t
+    | App (i,patterns), Term.App (h,l) when i = 1 + List.length l ->
+        filter_several bindings catches patterns (h::l)
     | Hole,_ -> bindings,term::catches
     | _ -> raise Not_found
 
@@ -407,7 +503,7 @@ let rec find bindings index terms =
           find bindings index terms
 
 let find index terms =
-  let ts = if !eqvt_tbl then (nb_rename terms) else (List.map Norm.hnorm terms) in 
+  let ts = if !eqvt_tbl then (nb_rename terms) else (List.map Norm.hnorm terms) in
   try Some (find [] index ts) with _ -> None
 
 (* == FOLD ================================================================== *)
@@ -426,16 +522,28 @@ module MZ : MZ_t =
 struct
 
   type item =
-    | ZNB of int | ZDB of int  | ZCst of (Term.term*Term.var) | ZVar of int
-    | ZLam of int | ZApp of int
+    | ZVar    of int
+    | ZCst    of Term.term * Term.var
+    | ZDB     of int
+    | ZNB     of int
+    | ZTrue
+    | ZFalse
+    | ZEq
+    | ZAnd
+    | ZOr
+    | ZArrow
+    | ZBinder of Term.binder
+    | ZLam    of int
+    | ZApp    of int
     | ZHole
 
   type t = item list list
 
   let arity = function
-    | ZDB _ | ZNB _ | ZCst _ | ZVar _ -> 0
-    | ZHole | ZLam _ -> 1
+    | ZVar _ | ZCst _ | ZDB _ | ZNB _ | ZTrue | ZFalse -> 0
+    | ZEq _ | ZAnd _ | ZOr _ | ZArrow _ -> 2
     | ZApp n -> n
+    | ZBinder _ | ZHole | ZLam _ -> 1
 
   let arity = function
     | [] -> assert false
@@ -450,20 +558,27 @@ struct
            | DB i  ->  (ZDB i)::row, subpats
            | NB i  ->  (ZNB i)::row, subpats
            | Cst (t,c) -> (ZCst (t,c))::row, subpats
+           | True -> ZTrue::row, subpats
+           | False -> ZFalse::row, subpats
            | Var i -> (ZVar i)::row, subpats
+           | Eq (p1,p2) -> ZEq::row, p2::p1::subpats
+           | And (p1,p2) -> ZAnd::row, p2::p1::subpats
+           | Or (p1,p2) -> ZOr::row, p2::p1::subpats
+           | Arrow (p1,p2) -> ZArrow::row, p2::p1::subpats
+           | Binder (b,p) -> (ZBinder b)::row, p::subpats
            | App (n,l) -> (ZApp n)::row, List.rev_append l subpats
            | Lam (n,p) -> (ZLam n)::row, p::subpats
            | Hole -> ZHole::row, Hole::subpats)
         ([],[])
         pats
     in
-      List.rev row,
-      List.rev subpats
+    List.rev row,
+    List.rev subpats
 
   let rec refine acc patterns =
     if List.for_all ((=) Hole) patterns then acc else
       let row,sub = compile_step patterns in
-        refine (row::acc) sub
+      refine (row::acc) sub
 
   let split_at_nth l n =
     let rec aux before l n =
@@ -471,14 +586,47 @@ struct
         match l with
           | h::l -> aux (h::before) l (n-1)
           | _ -> assert false
-    in aux [] l n
+    in
+    aux [] l n
 
   let zip table mz =
     let zip_step terms = function
+      | ZVar i -> table.(i), terms
+      | ZCst (t,_) -> t, terms
       | ZDB i  -> Term.db i, terms
       | ZNB i  -> Term.nabla i, terms
-      | ZCst (t,_) -> t, terms
-      | ZVar i -> table.(i), terms
+      | ZTrue -> Term.op_true, terms
+      | ZFalse -> Term.op_false, terms
+      | ZEq ->
+          begin match split_at_nth terms 2 with
+            | ([t1;t2]),terms ->
+                Term.op_eq t1 t2, terms
+            | _ -> assert false
+          end
+      | ZAnd ->
+          begin match split_at_nth terms 2 with
+            | ([t1;t2]),terms ->
+                Term.op_and t1 t2, terms
+            | _ -> assert false
+          end
+      | ZOr ->
+          begin match split_at_nth terms 2 with
+            | ([t1;t2]),terms ->
+                Term.op_or t1 t2, terms
+            | _ -> assert false
+          end
+      | ZArrow ->
+          begin match split_at_nth terms 2 with
+            | ([t1;t2]),terms ->
+                Term.op_arrow t1 t2, terms
+            | _ -> assert false
+          end
+      | ZBinder b ->
+          begin match split_at_nth terms 1 with
+            | ([t]),terms ->
+                Term.op_binder b t, terms
+            | _ -> assert false
+          end
       | ZApp n ->
           begin match split_at_nth terms n with
             | (h::tl),terms ->
@@ -501,14 +649,14 @@ struct
         List.fold_left
           (fun (out,terms) item ->
              let t,terms = zip_step terms item in
-               t::out,terms)
+             t::out,terms)
           ([],terms)
           row
       in
-        assert (terms = []) ;
-        List.rev out
+      assert (terms = []) ;
+      List.rev out
     in
-      List.fold_left zip [] mz
+    List.fold_left zip [] mz
 
 end
 
@@ -545,4 +693,4 @@ let iter index f =
     iter_children (MZ.refine mz patterns) children
   and iter_index mz = List.iter (iter_node mz) in
 
-    iter_index MZ.empty index
+  iter_index MZ.empty index

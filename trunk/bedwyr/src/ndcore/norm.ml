@@ -30,64 +30,72 @@ let rec add_dummies env n m =
     remaining lambda abstractions and arguments. (There can not be both
     abstractions and arguments left over). *)
 let make_env n args =
-  let rec aux n args e =
-    if n = 0 || args = []
-    then (e, n, args)
-    else aux (n-1) (List.tl args) (Term.Binding(List.hd args, 0)::e)
+  let rec aux n args e = match n,args with
+    | 0,_ | _,[] -> e,n,args
+    | _,hd::tl -> aux (n-1) tl (Term.Binding(hd, 0)::e)
   in aux n args []
         
 (** Head normalization function.*)
 let rec hnorm term =
   match Term.observe term with
-    | Term.Var _
-    | Term.DB _
-    | Term.NB _ -> term
-    | Term.Lam(n,t) -> Term.lambda n (hnorm t)
-    | Term.App(t,args) ->
+    | Term.Var _ | Term.DB _ | Term.NB _ | Term.True | Term.False
+    | Term.Eq _ | Term.And _ | Term.Or _ | Term.Arrow _ | Term.Binder _ -> term
+    | Term.Lam (n,t) -> Term.lambda n (hnorm t)
+    | Term.App (t,args) ->
         let t = hnorm t in
           begin match Term.observe t with
-            | Term.Lam(n,t) ->
+            | Term.Lam (n,t) ->
                 let e, n', args' = make_env n args in
                 let ol = List.length e in
-                  if n' > 0
-                  then hnorm (Term.susp (Term.lambda n' t) ol 0 e)
-                  else hnorm (Term.app (Term.susp t ol 0 e) args')
+                if n' > 0
+                then hnorm (Term.susp (Term.lambda n' t) ol 0 e)
+                else hnorm (Term.app (Term.susp t ol 0 e) args')
             | _ -> Term.app t args
           end
-    | Term.Susp(t,ol,nl,e) ->
+    | Term.Susp (t,ol,nl,e) ->
         let t = hnorm t in
-          begin match Term.observe t with
-            | Term.NB _ | Term.Var _ -> t
-            | Term.DB i ->
-                if i > ol then
-                  (* The index points to something outside the suspension *)
-                  Term.db (i-ol+nl)
-                else
-                  (* The index has to be substituted for [e]'s [i]th element *)
-                  begin match List.nth e (i-1) with
-                    | Term.Dum l -> Term.db (nl - l)
-                    | Term.Binding (t,l) -> hnorm (Term.susp t 0 (nl-l) [])
-                  end
-            | Term.Lam(n,t) ->
-                Term.lambda n (hnorm (Term.susp t (ol+n) (nl+n)
-                                       (add_dummies e n nl)))
-            | Term.App(t,args) ->
-                let wrap x = Term.susp x ol nl e in
-                  hnorm (Term.app (wrap t) (List.map wrap args))
-            | Term.Susp _ -> hnorm (Term.susp (hnorm t) ol nl e)
-            | Term.Ptr _ -> assert false
-          end
+        let susp x = Term.susp x ol nl e in
+        begin match Term.observe t with
+          | Term.Var _ | Term.NB _ | Term.True | Term.False -> t
+          | Term.DB i ->
+              if i > ol then
+                (* The index points to something outside the suspension *)
+                Term.db (i-ol+nl)
+              else
+                (* The index has to be substituted for [e]'s [i]th element *)
+                begin match List.nth e (i-1) with
+                  | Term.Dum l -> Term.db (nl - l)
+                  | Term.Binding (t,l) -> hnorm (Term.susp t 0 (nl-l) [])
+                end
+          | Term.Eq (t1,t2) -> Term.op_eq (susp t1) (susp t2)
+          | Term.And (t1,t2) -> Term.op_and (susp t1) (susp t2)
+          | Term.Or (t1,t2) -> Term.op_or (susp t1) (susp t2)
+          | Term.Arrow (t1,t2) -> Term.op_arrow (susp t1) (susp t2)
+          | Term.Binder (b,t) -> Term.op_binder (b) (susp t)
+          | Term.Lam (n,t) ->
+              Term.lambda n (hnorm (Term.susp t (ol+n) (nl+n)
+                                     (add_dummies e n nl)))
+          | Term.App (t,args) ->
+              hnorm (Term.app (susp t) (List.map susp args))
+          | Term.Susp _ -> hnorm (susp (hnorm t))
+          | Term.Ptr _ -> assert false
+        end
     | Term.Ptr _ -> assert false
 
 let rec deep_norm t =
   let t = hnorm t in
-    match Term.observe t with
-      | Term.NB _ | Term.Var _ | Term.DB _ -> t
-      | Term.Lam (n,t) -> Term.lambda n (deep_norm t)
-      | Term.App (a,b) ->
-            begin match Term.observe a with
-              | Term.Var _ | Term.DB _ | Term.NB _ ->
-                    Term.app a (List.map deep_norm b)
-              | _ -> deep_norm (Term.app (deep_norm a) (List.map deep_norm b))
-            end
-      | Term.Ptr _ | Term.Susp _ -> assert false
+  match Term.observe t with
+    | Term.Var _ | Term.DB _ | Term.NB _ | Term.True | Term.False -> t
+    | Term.Eq (t1,t2) -> Term.op_eq (deep_norm t1) (deep_norm t2)
+    | Term.And (t1,t2) -> Term.op_and (deep_norm t1) (deep_norm t2)
+    | Term.Or (t1,t2) -> Term.op_or (deep_norm t1) (deep_norm t2)
+    | Term.Arrow (t1,t2) -> Term.op_arrow (deep_norm t1) (deep_norm t2)
+    | Term.Binder (b,t) -> Term.op_binder (b) (deep_norm t)
+    | Term.Lam (n,t) -> Term.lambda n (deep_norm t)
+    | Term.App (a,b) ->
+        begin match Term.observe a with
+          | Term.Var _ | Term.DB _ | Term.NB _ | Term.True | Term.False ->
+              Term.app a (List.map deep_norm b)
+          | _ -> deep_norm (Term.app (deep_norm a) (List.map deep_norm b))
+        end
+    | Term.Ptr _ | Term.Susp _ -> assert false
