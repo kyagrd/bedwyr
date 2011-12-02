@@ -18,6 +18,7 @@
 (****************************************************************************)
 
 open Term
+open Type
 open Format
 
 exception Found of int
@@ -52,9 +53,65 @@ let priority x =
     | Found i -> i
 let get_max_priority () = List.length !infix
 
-(* Generic output function *)
+(** Utility to get a 'to_string' from a 'print' *)
+let formatter,do_formatter =
+  let buf = Buffer.create 20 in
+  let chan = Format.formatter_of_buffer buf in
+    chan,
+    (fun f ->
+       assert (Buffer.length buf = 0) ;
+       f () ;
+       Format.pp_print_flush chan () ;
+       assert (Buffer.length buf > 0) ;
+       let s = Buffer.contents buf in
+       Buffer.clear buf ;
+       s)
 
-let parenthesis x = "(" ^ x ^ ")"
+(** Print a kind. *)
+let pp_kind chan ki =
+  let rec aux chan = function
+    | Type.KType ->
+        Format.fprintf chan "@[*@]" 
+    | Type.KRArrow (ki1::kis,ki2) ->
+        Format.fprintf chan "@[(%a -> %a)@]" aux ki1 aux (Type.KRArrow (kis,ki2))
+    | Type.KRArrow ([],ki) ->
+        aux chan ki
+  in
+  Format.fprintf chan "@[%a@]" aux ki
+
+let kind_to_string ki =
+  do_formatter (fun () -> pp_kind formatter ki)
+
+(** Print a type. *)
+let pp_type unifier chan ty =
+  let ty = match unifier with
+    | None -> ty
+    | Some unifier -> Type.ty_norm unifier ty
+  in
+  let rec aux chan = function
+    | Type.Ty name ->
+        Format.fprintf chan "@[%s@]" name
+    | Type.TProp ->
+        Format.fprintf chan "@[{prop}@]"
+    | Type.TRArrow (ty1::tys,ty2) ->
+        Format.fprintf chan "@[(%a -> %a)@]" aux ty1 aux (Type.TRArrow (tys,ty2))
+    | Type.TRArrow ([],ty) ->
+        aux chan ty
+    | Type.TVar i ->
+        Format.fprintf chan "@[?%d@]" i
+  in
+  Format.fprintf chan "@[%a@]" aux ty
+
+let type_to_string unifier ty =
+  do_formatter (fun () -> pp_type unifier formatter ty)
+
+(* Print a unifier *)
+let pp_unifier chan unifier =
+  Format.fprintf chan "@[{";
+  Unifier.iter
+    (fun i ty -> Format.fprintf chan "@[ %d : %a ;@]" i (pp_type None) ty)
+    unifier;
+  Format.fprintf chan "}@]%!"
 
 (** Print a term. Ensures consistent namings, using naming hints when available.
   * Behaves consistently from one call to another unless Term.reset_namespace
@@ -189,19 +246,6 @@ let print_full ~generic ~bound chan term =
       | Ptr  _ -> assert false (* observe *)
   in
   Format.fprintf chan "@[%a@]" (pp ~bound 0) term
-
-let formatter,do_formatter =
-  let buf = Buffer.create 20 in
-  let chan = Format.formatter_of_buffer buf in
-    chan,
-    (fun f ->
-       assert (Buffer.length buf = 0) ;
-       f () ;
-       Format.pp_print_flush chan () ;
-       assert (Buffer.length buf > 0) ;
-       let s = Buffer.contents buf in
-       Buffer.clear buf ;
-       s)
 
 let term_to_string_full ~generic ~bound tm =
   do_formatter (fun () -> print_full ~generic ~bound formatter tm)

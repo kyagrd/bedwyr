@@ -18,9 +18,14 @@
  ****************************************************************************/
 
 %{
-  let to_string t = Term.get_name t
 
-  let mkdef head params body =
+  let pos i =
+    if i = 0 then
+      (Parsing.symbol_start_pos (), Parsing.symbol_end_pos ())
+    else
+      (Parsing.rhs_start_pos i, Parsing.rhs_end_pos i)
+
+  let mkdef head params body p =
     (* Replace the params by fresh variables and
      * put the constraints on the parameters in the body:
      * d (s X) X := body --> d Y X := (Y = s X) /\ body
@@ -80,7 +85,7 @@
           | Term.Lam (n,b) -> n,b
           | _ -> assert false
     in
-    (head, arity, body)
+    (head, p, arity, body)
 
   let mkabs (was_free,name,ty) term =
     let a = Term.atom name in
@@ -153,6 +158,7 @@ top_command:
   | KKIND lower_clist ki DOT            { System.KKind ($2,$3) }
   | TTYPE const_clist ty DOT            { System.TType ($2,$3) }
   | DEFINE decls BY defs DOT            { System.Def ($2,$4) }
+  | DEFINE decls DOT                    { System.Def ($2,[]) }
   | CLOSE                               { failwith "Abella command only" }
   | THEOREM                             { failwith "Abella command only" }
   | QED                                 { failwith "Abella command only" }
@@ -186,8 +192,8 @@ meta_command:
 /* kinds, types */
 
 lower_clist:
-  | lower_id                            { [$1] }
-  | lower_id COMMA lower_clist          { $1::$3 }
+  | lower_id                            { [$1,pos 1] }
+  | lower_id COMMA lower_clist          { ($1,pos 1)::$3 }
 
 ki:
   | TYPE                                { Type.KType }
@@ -195,8 +201,8 @@ ki:
   | LPAREN ki RPAREN                    { $2 }
 
 const_clist:
-  | const_id                            { [$1] }
-  | const_id COMMA const_clist          { $1::$3 }
+  | const_id                            { [$1,pos 1] }
+  | const_id COMMA const_clist          { ($1,pos 1)::$3 }
 
 ty:
   | PROP                                { Type.TProp }
@@ -211,7 +217,7 @@ decls:
   | decl COMMA decls                    { $1::$3 }
 
 decl:
-  | flavor alower_id                    { let name,ty = $2 in ($1, Term.atom name, ty) }
+  | flavor alower_id                    { let name,p,ty = $2 in ($1, Term.atom name, p, ty) }
 
 flavor:
   |                                     { System.Normal      }
@@ -223,8 +229,8 @@ defs:
   | def SEMICOLON defs                  { $1::$3 }
 
 def:
-  | term_list                           { let h,t = $1 in mkdef h t Term.op_true }
-  | term_list DEFEQ formula             { let h,t = $1 in mkdef h t $3 }
+  | term_list                           { let h,t = $1 in mkdef h t Term.op_true (pos 0) }
+  | term_list DEFEQ formula             { let h,t = $1 in mkdef h t $3 (pos 0) }
 
 term_list:
   | term_atom                           { $1,[] }
@@ -312,8 +318,8 @@ id:
   | INFIX_ID                            { $1 }
 
 alower_id:
-  | lower_id                            { ($1, Type.fresh_tyvar ()) }
-  | lower_id COLON ty                   { ($1, $3) }
+  | lower_id                            { ($1, pos 1, Type.fresh_tyvar ()) }
+  | lower_id COLON ty                   { ($1, pos 1, $3) }
 
 abound_id:
   | bound_id                            { ($1, Type.fresh_tyvar ()) }
