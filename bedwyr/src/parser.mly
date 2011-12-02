@@ -18,11 +18,6 @@
  ****************************************************************************/
 
 %{
-  let eq   a b = Term.app System.Logic.eq   [a;b]
-  let andc a b = Term.app System.Logic.andc [a;b]
-  let orc  a b = Term.app System.Logic.orc  [a;b]
-  let imp  a b = Term.app System.Logic.imp  [a;b]
-
   let to_string t = Term.get_name t
 
   let mkdef head params body =
@@ -54,14 +49,14 @@
                  p::new_params,prolog
              | _  ->
                  let v = Term.fresh ~ts:0 ~lts:0 Term.Logic in
-                   (v::new_params, (eq v p)::prolog))
+                   (v::new_params, (Term.op_eq v p)::prolog))
         ([],[])
         params
     in
     (* Add prolog to the body *)
     let body = if prolog = [] then body else
       List.fold_left
-        (fun acc term -> Term.app System.Logic.andc ([term;acc]))
+        (fun acc term -> Term.op_and term acc)
         body
         prolog
     in
@@ -70,7 +65,7 @@
       List.fold_left
         (fun body v ->
            if List.exists (Term.eq v) new_params then body else
-             Term.app System.Logic.exists [Term.abstract v body])
+             Term.op_binder Term.Exists (Term.abstract v body))
         body
         (Term.logic_vars ([body]))
     in
@@ -87,39 +82,51 @@
     in
     (head, arity, body)
 
+  let mkabs (was_free,name,ty) term =
+    let a = Term.atom name in
+    let x = Term.abstract a term in
+    if was_free then Term.free name ;
+    x
+
+  let mkquantif binder bindings term =
+    List.fold_left
+      (fun t b -> Term.op_binder binder (mkabs b t))
+      term
+      bindings
+
 %}
 
 %token SIG MODULE ACCUMSIG ACCUM END
 %token KIND TYPE COMMA RARROW CLAUSEEQ DOT
 %token IMP BSLASH LPAREN RPAREN CONS
 %token KKIND TTYPE DEFINE INDUCTIVE COINDUCTIVE COLON BY DEFEQ SEMICOLON
-%token EQ AND OR FORALL EXISTS NABLA TRUE FALSE
-%token CLOSE THEOREM QUERY IMPORT SPECIFICATION SSPLIT
-%token IND COIND INTROS CASE SEARCH APPLY BACKCHAIN UNFOLD ASSERT
+%token PROP EQ AND OR FORALL EXISTS NABLA TRUE FALSE
+%token CLOSE THEOREM QED QUERY IMPORT SPECIFICATION SSPLIT
+%token SET SHOW QUIT
+%token IND COIND INTROS CASE SEARCH APPLY BACKCHAIN UNFOLD
 %token SPLIT SPLITSTAR LEFT RIGHT PERMUTE
 %token INST CUT MONOTONE
 %token UNDO SKIP ABORT CLEAR ABBREV UNABBREV
 %token TO WITH ON AS KEEP
-%token SET SHOW QUIT
 %token LBRACK RBRACK TURN STAR AT PLUS HASH
-
+%token EXIT HELP INCLUDE RESET RELOAD SESSION DEBUG TIME
+%token EQUIVARIANT SHOW_TABLE CLEAR_TABLES CLEAR_TABLE SAVE_TABLE
+%token ASSERT ASSERT_NOT ASSERT_RAISE
 %token UNDERSCORE
 
 %token <int> NUM
-%token <string> UPPER_ID STRINGID QSTRING
+%token <string> UPPER_ID LOWER_ID INFIX_ID QSTRING
 %token EOF
 
 /* Lower */
 
 %nonassoc BSLASH
 %nonassoc COMMA
+
 %right RARROW
-%right IMP
 %left OR
 %left AND
 %nonassoc EQ
-%left PLUS
-%left TIMES
 
 /* Higher */
 
@@ -129,361 +136,200 @@
 
 %%
 
+/* commands */
+
 input_def:
-  | bedwyr_command                      { $1 }
-  | abella_command                      { $1 }
-bedwyr_command:
-  | KKIND id_list ki DOT                { System.KKind ($2,$3) }
-  | TTYPE id_list ty DOT                { System.TType ($2,$3) }
+  | top_command                         { $1 }
+  | meta_command                        { $1 }
+
+input_query:
+  | formula DOT                         { System.Query $1 }
+  | meta_command                        { $1 }
+
+top_command:
+  | KKIND lower_clist ki DOT            { System.KKind ($2,$3) }
+  | TTYPE const_clist ty DOT            { System.TType ($2,$3) }
   | DEFINE decls BY defs DOT            { System.Def ($2,$4) }
-  | HASH metaapp DOT                    { let h,t = $2 in
-                                          System.Command (to_string h, t) }
+  | CLOSE                               { failwith "Abella command only" }
+  | THEOREM                             { failwith "Abella command only" }
+  | QED                                 { failwith "Abella command only" }
+  | QUERY                               { failwith "Abella command only" }
+  | IMPORT                              { failwith "Abella command only" }
+  | SPECIFICATION                       { failwith "Abella command only" }
+  | SSPLIT                              { failwith "Abella command only" }
+
+meta_command:
+  | SET                                 { failwith "Abella command only" }
+  | SHOW                                { failwith "Abella command only" }
+  | QUIT                                { failwith "Abella command only" }
+  | HASH EXIT DOT                       { System.Command (System.Exit) }
+  | HASH HELP DOT                       { System.Command (System.Help) }
+  | HASH INCLUDE string_args DOT        { System.Command (System.Include $3) }
+  | HASH RESET DOT                      { System.Command (System.Reset) }
+  | HASH RELOAD DOT                     { System.Command (System.Reload) }
+  | HASH SESSION string_args DOT        { System.Command (System.Session $3) }
+  | HASH DEBUG opt_arg DOT              { System.Command (System.Debug $3) }
+  | HASH TIME opt_arg DOT               { System.Command (System.Time $3) }
+  | HASH EQUIVARIANT opt_arg DOT        { System.Command (System.Equivariant $3) }
+  | HASH SHOW_TABLE lower_id DOT        { System.Command (System.Show_table $3) }
+  | HASH CLEAR_TABLES DOT               { System.Command (System.Clear_tables) }
+  | HASH CLEAR_TABLE lower_id DOT       { System.Command (System.Clear_table $3) }
+  | HASH SAVE_TABLE lower_id QSTRING DOT{ System.Command (System.Save_table ($3,$4)) }
+  | HASH ASSERT formula DOT             { System.Command (System.Assert $3) }
+  | HASH ASSERT_NOT formula DOT         { System.Command (System.Assert_not $3) }
+  | HASH ASSERT_RAISE formula DOT       { System.Command (System.Assert_raise $3) }
   | EOF                                 { raise End_of_file }
 
-id_list:
-  | id                                  { [$1] }
-  | id COMMA id_list                    { $1::$3 }
+/* kinds, types */
+
+lower_clist:
+  | lower_id                            { [$1] }
+  | lower_id COMMA lower_clist          { $1::$3 }
 
 ki:
-  | id			                { Type.Ki $1 }
+  | TYPE                                { Type.KType }
   | ki RARROW ki                        { Type.ki_arrow $1 $3 }
   | LPAREN ki RPAREN                    { $2 }
 
+const_clist:
+  | const_id                            { [$1] }
+  | const_id COMMA const_clist          { $1::$3 }
+
 ty:
-  | id			                { Type.Ty $1 }
+  | PROP                                { Type.TProp }
+  | lower_id			        { Type.Ty $1 }
   | ty RARROW ty                        { Type.ty_arrow $1 $3 }
   | LPAREN ty RPAREN                    { $2 }
+
+/* definitions */
 
 decls:
   | decl                                { [$1] }
   | decl COMMA decls                    { $1::$3 }
 
 decl:
-  | flavor aid                          { ($1, $2) }
+  | flavor alower_id                    { let name,ty = $2 in ($1, Term.atom name, ty) }
 
 flavor:
   |                                     { System.Normal      }
   | INDUCTIVE                           { System.Inductive   }
   | COINDUCTIVE                         { System.CoInductive }
 
-aid:
-  | id                                  { (Term.atom $1, Type.fresh_tyvar ()) }
-  | id COLON ty                         { (Term.atom $1, $3) }
-
 defs:
   | def                                 { [$1] }
   | def SEMICOLON defs                  { $1::$3 }
 
 def:
-  | metaapp                             { let h,t = $1 in mkdef h t (Term.atom "true") }
-  | metaapp DEFEQ metaterm              { let h,t = $1 in mkdef h t $3 }
+  | term_list                           { let h,t = $1 in mkdef h t Term.op_true }
+  | term_list DEFEQ formula             { let h,t = $1 in mkdef h t $3 }
 
-metaapp:
-  | lexp                                { match $1 with
-                                            | [] -> assert false
-                                            | t::l -> t,l }
-  | ASSERT lexp                         { Term.atom "assert",$2 }
-                                        /* XXX virer ça, c'est dégueu
-                                         * (ne serait-ce que parce que
-                                         * ça autorise "assert" dans
-                                         * une vrai expression), par
-                                         * exemple en utilisant autre
-                                         * chose que metaapp pour les
-                                         * instructions */
+term_list:
+  | term_atom                           { $1,[] }
+  | term_abs                            { $1,[] }
+  | term_atom term_list                 { let t,l = $2 in $1,t::l }
 
-lexp:
-  | aexp                                { [$1] }
-  | aexp lexp                           { $1::$2 }
-  | binding metaterm                    { let was_free,name = $1 in
-                                          let a = Term.atom name in
-                                          let x = Term.abstract a $2 in
-                                          if was_free then Term.free name ;
-                                          [x] }
-
-aexp:
-  | LPAREN metaterm RPAREN              { $2 }
-  | UNDERSCORE                          { Term.fresh ~name:"_" Term.Logic ~ts:0 ~lts:0 }
-  | id                                  { Term.atom $1 }
+term_atom:
+  | LPAREN term RPAREN                  { $2 }
+  | bound_id                            { Term.atom $1 }
   | QSTRING                             { Term.string $1 }
 
-binding:
-  | id BSLASH                           { (Term.is_free $1, $1) }
+term_abs:
+  | abound_id BSLASH term               { let name,ty = $1 in
+                                          mkabs (Term.is_free name, name, ty) $3 }
 
-metaterm:
-  | metaterm EQ metaterm                { eq   $1 $3 }
-  | metaterm AND metaterm               { andc $1 $3 }
-  | metaterm OR metaterm                { orc  $1 $3 }
-  | metaterm RARROW metaterm            { imp  $1 $3 }
-    /* XXX add types */
-  | binder binding_list COMMA metaterm  { List.fold_left
-                                            (fun t -> fun (was_free,id,ty) ->
-                                               let a = Term.atom id in
-                                               let x = Term.abstract a t in
-                                               if was_free then Term.free id ;
-                                               Term.app
-                                                 $1
-                                                 [x]
-                                            )
-                                            $4
-                                            $2
-                                        }
-  | metaapp                             { let (t,l) = $1 in Term.app t l }
+term:
+  | term_list                           { let t,l = $1 in Term.app t l }
+  | bound_id INFIX_ID bound_id          { Term.app (Term.atom $2) [Term.atom $1; Term.atom $2] }
+
+formula:
+  | TRUE                                { Term.op_true }
+  | FALSE                               { Term.op_false }
+  | term EQ term                        { Term.op_eq $1 $3 }
+  | formula AND formula                 { Term.op_and $1 $3 }
+  | formula OR formula                  { Term.op_or $1 $3 }
+  | formula RARROW formula              { Term.op_arrow $1 $3 }
+  | binder pabound_list COMMA formula   { mkquantif $1 $2 $4 }
+  | LPAREN formula RPAREN               { $2 }
+  | term                                { $1 }
 
 binder:
-  | FORALL                              { System.Logic.forall }
-  | EXISTS                              { System.Logic.exists }
-  | NABLA                               { System.Logic.nabla }
+  | FORALL                              { Term.Forall }
+  | EXISTS                              { Term.Exists }
+  | NABLA                               { Term.Nabla }
 
-binding_list:
-  |                                     { [] }
-  | paid binding_list                   { let name,ty = $1 in
+pabound_list:
+  | pabound_id                          { let name,ty = $1 in
+                                          [Term.is_free name, name, ty] }
+  | pabound_id pabound_list             { let name,ty = $1 in
                                           (Term.is_free name, name, ty)::$2 }
 
-paid:
-  | id                                  { ($1, Type.fresh_tyvar ()) }
-  | LPAREN id COLON ty RPAREN           { ($2, $4) }
-  | UNDERSCORE                          { ("_", Type.fresh_tyvar ()) }
-  | LPAREN UNDERSCORE COLON ty RPAREN   { ("_", $4) }
+/* ids */
 
-abella_command:
-  | CLOSE                               { failwith "Abella command only" }
-  | THEOREM                             { failwith "Abella command only" }
-  | QUERY                               { failwith "Abella command only" }
-  | IMPORT                              { failwith "Abella command only" }
-  | SPECIFICATION                       { failwith "Abella command only" }
-  | SSPLIT                              { failwith "Abella command only" }
-  | IND                                 { failwith "Abella command only" }
-  | COIND                               { failwith "Abella command only" }
-  | INTROS                              { failwith "Abella command only" }
-  | CASE                                { failwith "Abella command only" }
-  | SEARCH                              { failwith "Abella command only" }
-  | APPLY                               { failwith "Abella command only" }
-  | BACKCHAIN                           { failwith "Abella command only" }
-  | UNFOLD                              { failwith "Abella command only" }
-  | ASSERT                              { failwith "Abella command only" }
-  | EXISTS                              { failwith "Abella command only" }
-  | SPLIT                               { failwith "Abella command only" }
-  | SPLITSTAR                           { failwith "Abella command only" }
-  | LEFT                                { failwith "Abella command only" }
-  | RIGHT                               { failwith "Abella command only" }
-  | PERMUTE                             { failwith "Abella command only" }
-  | INST                                { failwith "Abella command only" }
-  | CUT                                 { failwith "Abella command only" }
-  | MONOTONE                            { failwith "Abella command only" }
-  | UNDO                                { failwith "Abella command only" }
-  | SKIP                                { failwith "Abella command only" }
-  | ABORT                               { failwith "Abella command only" }
-  | CLEAR                               { failwith "Abella command only" }
-  | ABBREV                              { failwith "Abella command only" }
-  | UNABBREV                            { failwith "Abella command only" }
-  | SET                                 { failwith "Abella command only" }
-  | SHOW                                { failwith "Abella command only" }
-  | QUIT                                { failwith "Abella command only" }
-
-    /* XXX trouver comment prendre en compte les mots-clés
-     * sans générer masse de conflicts reduce/reduce */
-id:
+upper_id:
   | UPPER_ID                            { $1 }
-  | STRINGID                            { $1 }
-  | TRUE                                { "true" }
-  | FALSE                               { "false" }
-/*| SIG                                 { failwith "Abella reserved keyword" }
-  | MODULE                              { failwith "Abella reserved keyword" }
-  | ACCUMSIG                            { failwith "Abella reserved keyword" }
-  | ACCUM                               { failwith "Abella reserved keyword" }
-  | END                                 { failwith "Abella reserved keyword" }
-  | KIND                                { failwith "Abella reserved keyword" }*/
-  | TYPE                                { "type" }
-/*| CLAUSEEQ                            { failwith "Abella reserved keyword" }
-  | IMP                                 { failwith "Abella reserved keyword" }
-  | CONS                                { failwith "Abella reserved keyword" }
-  | KKIND                               { failwith "Reserved keyword" }
-  | TTYPE                               { failwith "Reserved keyword" }
-  | DEFINE                              { failwith "Reserved keyword" }
-  | INDUCTIVE                           { failwith "Reserved keyword" }
-  | COINDUCTIVE                         { failwith "Reserved keyword" }
-  | COLON                               { failwith "Reserved keyword" }
-  | BY                                  { failwith "Reserved keyword" }
-  | DEFEQ                               { failwith "Reserved keyword" }
-  | SEMICOLON                           { failwith "Reserved keyword" }
-  | EQ                                  { failwith "Reserved keyword" }
-  | AND                                 { failwith "Reserved keyword" }
-  | OR                                  { failwith "Reserved keyword" }
-  | FORALL                              { failwith "Reserved keyword" }
-  | EXISTS                              { failwith "Reserved keyword" }
-  | NABLA                               { failwith "Reserved keyword" }
-  | CLOSE                               { failwith "Abella reserved keyword" }
-  | THEOREM                             { failwith "Abella reserved keyword" }
-  | QUERY                               { failwith "Abella reserved keyword" }
-  | IMPORT                              { failwith "Abella reserved keyword" }
-  | SPECIFICATION                       { failwith "Abella reserved keyword" }
-  | SSPLIT                              { failwith "Abella reserved keyword" }
-  | IND                                 { failwith "Abella reserved keyword" }
-  | COIND                               { failwith "Abella reserved keyword" }
-  | INTROS                              { failwith "Abella reserved keyword" }
-  | CASE                                { failwith "Abella reserved keyword" }
-  | SEARCH                              { failwith "Abella reserved keyword" }
-  | APPLY                               { failwith "Abella reserved keyword" }
-  | BACKCHAIN                           { failwith "Abella reserved keyword" }
-  | UNFOLD                              { failwith "Abella reserved keyword" }
-  | ASSERT                              { failwith "Abella reserved keyword" }
-  | SPLIT                               { failwith "Abella reserved keyword" }
-  | SPLITSTAR                           { failwith "Abella reserved keyword" }
-  | LEFT                                { failwith "Abella reserved keyword" }
-  | RIGHT                               { failwith "Abella reserved keyword" }
-  | PERMUTE                             { failwith "Abella reserved keyword" }
-  | INST                                { failwith "Abella reserved keyword" }
-  | CUT                                 { failwith "Abella reserved keyword" }
-  | MONOTONE                            { failwith "Abella reserved keyword" }
-  | UNDO                                { failwith "Abella reserved keyword" }
-  | SKIP                                { failwith "Abella reserved keyword" }
-  | ABORT                               { failwith "Abella reserved keyword" }
-  | CLEAR                               { failwith "Abella reserved keyword" }
-  | ABBREV                              { failwith "Abella reserved keyword" }
-  | UNABBREV                            { failwith "Abella reserved keyword" }
-  | TO                                  { failwith "Abella reserved keyword" }
-  | WITH                                { failwith "Abella reserved keyword" }
-  | ON                                  { failwith "Abella reserved keyword" }
-  | AS                                  { failwith "Abella reserved keyword" }
-  | KEEP                                { failwith "Abella reserved keyword" }
-  | SET                                 { failwith "Abella reserved keyword" }
-  | SHOW                                { failwith "Abella reserved keyword" }
-  | QUIT                                { failwith "Abella reserved keyword" }
-  | LBRACK                              { failwith "Abella reserved keyword" }
-  | RBRACK                              { failwith "Abella reserved keyword" }
-  | TURN                                { failwith "Abella reserved keyword" }
-  | AT                                  { failwith "Abella reserved keyword" }*/
+  | UNDERSCORE                          { "_" }
 
-input_query:
-  | metaterm DOT                        { System.Query $1 }
-  | HASH metaapp DOT                    { let (h,t) = $2 in
-                                          System.Command (to_string h,t) }
-  | EOF                                 { raise End_of_file }
+lower_id:
+  | LOWER_ID                            { $1 }
+  | IND                                 { "induction" }
+  | COIND                               { "coinduction" }
+  | INTROS                              { "intros" }
+  | CASE                                { "case" }
+  | SEARCH                              { "search" }
+  | APPLY                               { "apply" }
+  | BACKCHAIN                           { "backchain" }
+  | UNFOLD                              { "unfold" }
+  | ASSERT                              { "assert" }
+  | SPLIT                               { "split" }
+  | SPLITSTAR                           { "split*" }
+  | LEFT                                { "left" }
+  | RIGHT                               { "right" }
+  | PERMUTE                             { "permute" }
+  | INST                                { "inst" }
+  | CUT                                 { "cut" }
+  | MONOTONE                            { "monotone" }
+  | UNDO                                { "undo" }
+  | SKIP                                { "skip" }
+  | ABORT                               { "abort" }
+  | CLEAR                               { "clear" }
+  | ABBREV                              { "abbrev" }
+  | UNABBREV                            { "unabbrev" }
+
+bound_id:
+  | upper_id                            { $1 }
+  | lower_id                            { $1 }
+
+const_id:
+  | lower_id                            { $1 }
+  | INFIX_ID                            { $1 }
+
+id:
+  | upper_id                            { $1 }
+  | lower_id                            { $1 }
+  | INFIX_ID                            { $1 }
+
+alower_id:
+  | lower_id                            { ($1, Type.fresh_tyvar ()) }
+  | lower_id COLON ty                   { ($1, $3) }
+
+abound_id:
+  | bound_id                            { ($1, Type.fresh_tyvar ()) }
+  | bound_id COLON ty                   { ($1, $3) }
+
+pabound_id:
+  | bound_id                            { ($1, Type.fresh_tyvar ()) }
+  | LPAREN bound_id COLON ty RPAREN     { ($2, $4) }
+
+/* misc (commands) */
+
+string_args:
+  |                                     { [] }
+  | QSTRING string_args                 { $1::$2 }
+
+opt_arg:
+  |                                     { None }
+  | id                                  { Some $1 }
+  | TRUE                                { Some "true" }
+  | FALSE                               { Some "false" }
 
 %%
-
-(** Parse a .def file and return the abstract syntax tree as a term.
-  * It doesn't have position information, and abstractions make some names
-  * disappear, but this could be changed later.
-  * [term_of_file] will recurse through #includes and inline them.
-  * XXX commented out until updated/removed *)
-(*let to_term ?incl:(incl=true) lexer file =
-  let lam  = Term.atom "lam"  in
-  let app  = Term.atom "app"  in
-  let atom = Term.atom "atom" in
-  let inclfiles = ref [] in
-  let binder x =
-    List.exists
-      (Term.eq x)
-      [System.Logic.forall;System.Logic.exists;System.Logic.nabla]
-  in
-  let logic x =
-    List.exists
-      (Term.eq x)
-      [System.Logic.eq;System.Logic.andc;System.Logic.orc;System.Logic.imp]
-  in
-  let rec split acc = function
-    | [] -> assert false
-    | [x] -> x,List.rev acc
-    | x::tl -> split (x::acc) tl
-  in
-  (* De-flatten conjunction, disjunctions and application,
-   * add explicit abstractions, applications and atom constructors. *)
-  let rec objectify term =
-    match Term.observe term with
-      | Term.Lam (0,x) -> objectify x
-      | Term.Lam (n,x) ->
-          Term.app lam [Term.lambda 1 (objectify (Term.lambda (n-1) x))]
-      | Term.App (x,h::tl) ->
-          if binder x then begin
-            assert (tl = []) ;
-            match Term.observe h with
-              | Term.Lam (1,h) -> Term.app x [Term.lambda 1 (objectify h)]
-              | _ -> assert false
-          end else if logic x then
-            if tl=[] then objectify h else
-              Term.app x [ objectify h ;
-                           objectify (Term.app x tl) ]
-          else
-            if tl=[] then Term.app app [ objectify x; objectify h ] else
-              let y,l = split [] (h::tl) in
-              Term.app app [ objectify (Term.app x l);
-                             objectify y ]
-      | _ -> Term.app atom [term]
-  in
-  let clause  = Term.atom "clause"  in
-  let query   = Term.atom "query"   in
-  let command = Term.atom "command" in
-  let rec list_of_file file list =
-    let lexbuf = Lexing.from_channel (open_in file) in
-    let rec aux l =
-      let input =
-        try
-          Some (input_def lexer lexbuf)
-        with Failure "eof" -> None
-      in
-      match input with
-        | None -> l
-        | Some i ->
-            List.fold_left
-              (fun l -> function
-                | System.Kind _ -> l
-                | System.Type _ -> l
-                | System.Typing (kind,head,stype) -> l
-                | System.Def (head,arity,body) ->
-                    let body = objectify (Term.lambda arity body) in
-                    aux ((Term.app clause [ head;
-                                            body ])::l)
-                | System.Query a -> aux ((Term.app query [a])::l)
-                | System.Command ("include",[file]) ->
-                    let file = Term.get_name file in
-                    let not_included fname =
-                          if ((List.mem fname !inclfiles) || (not incl)) then false
-                          else (
-                                  inclfiles := fname :: !inclfiles ;
-                                  true
-                          )
-                    in
-                    if not_included file then aux (list_of_file file l)
-                    (*  begin *)
-                    (*  	    let cwd = Sys.getcwd () in *)
-                    (*  	    Sys.chdir (Filename.dirname file) ; *)
-                    (*  	    let l = list_of_file file l in *)
-                    (*        Sys.chdir cwd ; *)
-                    (*  	    aux l *)
-                    (*  end *)
-                    else aux l
-
-                | System.Command ("assert",a) ->
-                    aux ((Term.app command ((Term.atom "assert")::
-                                              (List.map objectify a)))::l)
-                (* [AT]: change parsing to type command to allow polymorphic types; *)
-                (*       Free variables (eigen or logic) are abstracted. *)
-                | System.Command ("type",[a;b]) ->
-                    let b = Term.app (Term.atom "ty") [Norm.deep_norm b] in
-                    let vs = (Term.logic_vars [b]) @ (Term.eigen_vars [b]) in
-                    let ty = List.fold_left
-                               (fun x v ->
-                                 Term.app (Term.atom "all") [(Term.abstract v x)])
-                               b vs in
-
-                    aux ((Term.app command ((Term.atom "type")::[a;ty]))::l)
-                | System.Command (c,a) ->
-                    aux ((Term.app command ((Term.atom c)::a))::l)
-              )
-              l
-              i
-    in
-    let cwd = Sys.getcwd () in
-    Sys.chdir (Filename.dirname file) ;
-    let l = aux list in
-    Sys.chdir cwd ;
-    l
-  in
-  let cons = Term.binop "cons" in
-  let rec term_of_list t = function
-    | [] -> t
-    | hd::tl -> term_of_list (cons hd t) tl
-  in
-  inclfiles := [] ;
-  term_of_list (Term.atom "nil") (list_of_file file [])*)

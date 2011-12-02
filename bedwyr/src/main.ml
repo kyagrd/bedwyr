@@ -41,9 +41,8 @@ let help_msg =
   "Useful commands in query mode:
 #help.                               Display this message.
 #exit.                               Exit.
-#debug [flag].                       Turn debugging on/off (flag=on/off, default off).
-#time [flag].                        Turn timing on/off (flag=on/off, default off).
-#typed [flag].                       Turn type-checking on/off (flag=on/off, default on).
+#debug [flag].                       Turn debugging on/off (default off).
+#time [flag].                        Turn timing on/off (default off).
 #session \"file_1\" ... \"file_N\".      Load these files as the current \
 session.
 #reload.                             Reload the current session.
@@ -77,14 +76,25 @@ let _ =
     usage_msg
 
 let position lexbuf =
-  let curr = lexbuf.Lexing.lex_curr_p in
-  let file = curr.Lexing.pos_fname in
-  let line = curr.Lexing.pos_lnum in
-  let char = curr.Lexing.pos_cnum - curr.Lexing.pos_bol in
-    if file = "" then
-      "" (* lexbuf information is rarely accurate at the toplevel *)
+  let aux file (start,curr) =
+    let line1 = start.Lexing.pos_lnum in
+    let line2 = curr.Lexing.pos_lnum in
+    let char1 = start.Lexing.pos_cnum - start.Lexing.pos_bol + 1 in
+    let char2 = curr.Lexing.pos_cnum - curr.Lexing.pos_bol in
+    if line1 <> line2 then
+      Format.sprintf "file %s, line %d, character %d - line %d, character %d" file line1 char1 line2 char2
+    else if char1 <> char2  then
+      Format.sprintf "file %s, line %d, characters %d-%d" file line1 char1 char2
     else
-      Format.sprintf "file %s, line %d, character %d" file line char
+      Format.sprintf "file %s, line %d, character %d" file line1 char1
+  in
+  let start = lexbuf.Lexing.lex_start_p in
+  let curr = lexbuf.Lexing.lex_curr_p in
+  let file = start.Lexing.pos_fname in
+  if file = "" then
+    "" (* lexbuf information is rarely accurate at the toplevel *)
+  else
+    Format.sprintf " (%s)" (aux file (start,curr))
 
 let do_cleanup f x clean =
   try f x ; clean () with e -> clean () ; raise e
@@ -110,19 +120,21 @@ let rec process ?(interactive=false) parse lexbuf =
       | System.Def (decls,defs) ->
           List.iter System.create_def decls ;
           List.iter System.add_clause defs
-      | System.Query a        -> do_cleanup Prover.toplevel_prove a reset
-      | System.Command (c,a)  ->
-          if not (List.mem c ["include";"reset";"reload";"session"]) then
-            do_cleanup (command lexbuf) (c,a) reset
-          else
-            command lexbuf (c,a)
+      | System.Query a -> do_cleanup Prover.toplevel_prove a reset
+      | System.Command c -> command c reset
     with
       | End_of_file -> raise End_of_file
+      | Lexer.Illegal_string ->
+          Format.printf "Illegal string \"%s\" in input%s.\n%!"
+            (String.escaped (Lexing.lexeme lexbuf))
+            (position lexbuf) ;
+          if interactive then Lexing.flush_input lexbuf else exit 1
+      | Parsing.Parse_error -> raise Parsing.Parse_error
       | Failure "lexing: empty token" ->
-          Format.printf "Lexing error: %s.\n%!" (position lexbuf) ;
+          Format.printf "Lexing error%s.\n%!" (position lexbuf) ;
           if interactive then Lexing.flush_input lexbuf else exit 1
       | Assertion_failed ->
-          Format.printf "Assertion failed: %s.\n%!" (position lexbuf) ;
+          Format.printf "Assertion failed%s.\n%!" (position lexbuf) ;
           if interactive then Lexing.flush_input lexbuf else exit 1
       | System.Forbidden_kind (k,s) ->
           Format.printf
@@ -144,39 +156,39 @@ let rec process ?(interactive=false) parse lexbuf =
        (Type.pp_type None) ty
        s ;
        if interactive then Lexing.flush_input lexbuf else exit 1*)
-      | System.Multiple_const_declaration (c,s) ->
+      | System.Multiple_const_declaration name ->
           Format.printf
-            "Constant %s was already declared (%s%s).\n%!"
-            c s
+            "Constant %s was already declared%s.\n%!"
+            name
             (position lexbuf) ;
           if interactive then Lexing.flush_input lexbuf else exit 1
       | System.Missing_declaration (term,Some (head_tm,body)) ->
           Format.printf
-            "Clause ignored in the definition of %a (%s): constant or predicate %a not declared.\n%!"
+            "Clause ignored in the definition of %a%s: constant or predicate %a not declared.\n%!"
             Pprint.pp_term head_tm
             (position lexbuf)
             Pprint.pp_term term ;
           if interactive then Lexing.flush_input lexbuf
       | System.Multiple_pred_declaration t ->
           Format.printf
-            "Predicate %a was already declared (%s).\n%!"
+            "Predicate %a was already declared%s.\n%!"
             Pprint.pp_term t
             (position lexbuf) ;
           if interactive then Lexing.flush_input lexbuf else exit 1
       | System.Missing_pred_declaration t ->
           Format.printf
-            "Predicate %a was not declared (%s).\n%!"
+            "Predicate %a was not declared%s.\n%!"
             Pprint.pp_term t
             (position lexbuf) ;
           if interactive then Lexing.flush_input lexbuf else exit 1
       | System.Inconsistent_definition s ->
-          Format.printf "Inconsistent extension of definition %a (%s).\n%!"
+          Format.printf "Inconsistent extension of definition %a%s.\n%!"
             Pprint.pp_term s
             (position lexbuf) ;
           if interactive then Lexing.flush_input lexbuf else exit 1
       | System.Clause_typing_error (ty1,ty2,unifier,term,db_types,head_tm) ->
           Format.printf
-            "Clause ignored in the definition of %a (%s), term %a has type %a but is used as %a.\n%!"
+            "Clause ignored in the definition of %a%s, term %a has type %a but is used as %a.\n%!"
             Pprint.pp_term head_tm
             (position lexbuf)
             Pprint.pp_term term
@@ -221,7 +233,7 @@ let rec process ?(interactive=false) parse lexbuf =
     if interactive then flush stdout
   done with
     | Parsing.Parse_error ->
-        Format.printf "Syntax error: %s.\n%!" (position lexbuf) ;
+        Format.printf "Syntax error%s.\n%!" (position lexbuf) ;
         if not interactive then exit 1
     | End_of_file -> ()
 
@@ -244,136 +256,96 @@ and load_session () =
   inclfiles := [] ;
   List.iter input_from_file !session
 
-and command lexbuf = function
-  | "exit",[] -> System.close_all_files (); exit 0
-  | "help",[] -> Format.printf "%s" help_msg
+and toggle_flag flag value =
+  flag :=
+    begin match value with
+      | None | Some "on" | Some "true" -> true
+      | Some "off" | Some "false" -> false
+      | _ -> raise Invalid_command
+    end
 
-  (* Session management *)
-  | "include",[f] ->
-      let f = Term.get_name f in
-      let not_included fname =
-          if (List.mem fname !inclfiles) then
-             false
-          else (
-             inclfiles := fname :: !inclfiles ;
-             true
-          )
-       in
-        if not_included f then input_from_file f else ()
+and include_file fname =
+  if not (List.mem fname !inclfiles) then begin
+    input_from_file fname;
+    inclfiles := fname :: !inclfiles
+  end
 
+and command c reset =
+  let aux = function
+    | System.Exit -> System.close_all_files (); exit 0
+    | System.Help -> Format.printf "%s" help_msg
 
-  | "reset",[] -> inclfiles := [] ; session := [] ; load_session ()
-  | "reload",[] -> load_session ()
-  | "session",l ->
-      session := List.map Term.get_name l ;
-      load_session ()
+    (* Session management *)
+    | System.Include l -> List.iter include_file l
+    | System.Reset -> inclfiles := [] ; session := [] ; load_session ()
+    | System.Reload -> load_session ()
+    | System.Session l ->
+        session := l ;
+        load_session ()
 
-  (* Turn debugging on/off. *)
-  | "debug",[] -> System.debug := true
-  | "debug",[d] ->
-      System.debug :=
-        begin match Term.observe d with
-          | Term.Var v when v==System.Logic.var_on -> true
-          | Term.Var v when v==System.Logic.var_truth -> true
-          | Term.Var v when v==System.Logic.var_off -> false
-          | Term.Var v when v==System.Logic.var_falsity -> false
-          | _ -> raise Invalid_command
-        end
+    (* Turn debugging on/off. *)
+    | System.Debug value -> toggle_flag System.debug value
 
-  (* Turn timing on/off. *)
-  | "time",[d] ->
-      System.time :=
-        begin match Term.observe d with
-          | Term.Var v when v==System.Logic.var_on -> true
-          | Term.Var v when v==System.Logic.var_truth -> true
-          | Term.Var v when v==System.Logic.var_off -> false
-          | Term.Var v when v==System.Logic.var_falsity -> false
-          | _ -> raise Invalid_command
-        end
+    (* Turn timing on/off. *)
+    | System.Time value -> toggle_flag System.time value
 
-  (* Turn type-checking on/off. *)
-  | "typed",[d] ->
-      System.typed :=
-        begin match Term.observe d with
-          | Term.Var v when v==System.Logic.var_on -> true
-          | Term.Var v when v==System.Logic.var_truth -> true
-          | Term.Var v when v==System.Logic.var_off -> false
-          | Term.Var v when v==System.Logic.var_falsity -> false
-          | _ -> raise Invalid_command
-        end
-
-  (* Tabling-related commands *)
-  | "equivariant",[d] ->
-      let b =
-        begin match Term.observe d with
-          | Term.Var v when v==System.Logic.var_on -> true
-          | Term.Var v when v==System.Logic.var_truth -> true
-          | Term.Var v when v==System.Logic.var_off -> false
-          | Term.Var v when v==System.Logic.var_falsity -> false
-          | _ -> raise Invalid_command
-        end
-      in
-        Index.set_eqvt b
-
-  | "show_table",[p] ->
-      System.show_table p
-  | "clear_tables",[] ->
-      Hashtbl.iter
-        (fun k v -> match v with
-           | (_,_,Some t,_) -> Table.reset t
-           | _ -> ())
-        System.defs
-  | "clear_table",[p] ->
-      begin match
-        try
-          let _,_,x,_ = Hashtbl.find System.defs (Term.get_var p) in x
-        with _ -> None
-      with
-        | Some t ->
-            Table.reset t
-        | None ->
-            Format.printf "Table not found.\n"
-      end
-
-  (* save the content of a table to a file. An exception is thrown if *)
-  (* file already exists. *)
-  | "save_table",[p;f] ->
-      let f = Term.get_name f in
-          System.save_table p f
-
-  (* Testing commands *)
-  | "assert",[query] ->
-      if !test then begin
-        Format.eprintf "@[<hv 2>Checking that@ %a@,...@]@\n%!"
-          Pprint.pp_term query ;
-        Prover.prove ~level:Prover.One ~local:0 ~timestamp:0 query
-          ~success:(fun _ _ -> ()) ~failure:(fun () -> raise Assertion_failed)
-      end
-  | "assert_not",[query] ->
-      if !test then begin
-        Format.eprintf "@[<hv 2>Checking that@ %a@ is false...@]@\n%!"
-          Pprint.pp_term query ;
-        Prover.prove ~level:Prover.One ~local:0 ~timestamp:0 query
-          ~success:(fun _ _ -> raise Assertion_failed) ~failure:ignore
-      end
-  | "assert_raise",[query] ->
-      if !test then begin
-        Format.eprintf "@[<hv 2>Checking that@ %a@ causes an error...@]@\n%!"
-          Pprint.pp_term query ;
-        if
+    (* Tabling-related commands *)
+    | System.Equivariant value -> toggle_flag Index.eqvt_tbl value
+    | System.Show_table name -> System.show_table (Term.atom name)
+    | System.Clear_tables ->
+        Hashtbl.iter
+          (fun k v -> match v with
+             | (_,_,Some t,_) -> Table.reset t
+             | _ -> ())
+          System.defs
+    | System.Clear_table name ->
+        begin match
           try
-            Prover.prove ~level:Prover.One ~local:0 ~timestamp:0 query
-              ~success:(fun _ _ -> ()) ~failure:ignore ;
-            true
-          with _ -> false
-        then raise Assertion_failed
-      end
+            let _,_,x,_ = Hashtbl.find System.defs (Term.get_var (Term.atom name)) in x
+          with _ -> None
+        with
+          | Some t ->
+              Table.reset t
+          | None ->
+              Format.printf "Table not found.\n"
+        end
+    (* save the content of a table to a file. An exception is thrown if *)
+    (* file already exists. *)
+    | System.Save_table (name,file) -> System.save_table (Term.atom name) file
 
-  (* Experimental command, only taken into account in bedwyr programs
-   * performing static analysis on .def files. *)
-  | "type",_ -> ()
-
-  | _ -> raise Invalid_command
+    (* Testing commands *)
+    | System.Assert query ->
+        if !test then begin
+          Format.eprintf "@[<hv 2>Checking that@ %a@,...@]@\n%!"
+            Pprint.pp_term query ;
+          Prover.prove ~level:Prover.One ~local:0 ~timestamp:0 query
+            ~success:(fun _ _ -> ()) ~failure:(fun () -> raise Assertion_failed)
+        end
+    | System.Assert_not query ->
+        if !test then begin
+          Format.eprintf "@[<hv 2>Checking that@ %a@ is false...@]@\n%!"
+            Pprint.pp_term query ;
+          Prover.prove ~level:Prover.One ~local:0 ~timestamp:0 query
+            ~success:(fun _ _ -> raise Assertion_failed) ~failure:ignore
+        end
+    | System.Assert_raise query ->
+        if !test then begin
+          Format.eprintf "@[<hv 2>Checking that@ %a@ causes an error...@]@\n%!"
+            Pprint.pp_term query ;
+          if
+            try
+              Prover.prove ~level:Prover.One ~local:0 ~timestamp:0 query
+                ~success:(fun _ _ -> ()) ~failure:ignore ;
+              true
+            with _ -> false
+          then raise Assertion_failed
+        end
+  in
+  let reset = match c with
+    | System.Include _ | System.Reset | System.Reload | System.Session _ -> (fun () -> ())
+    | _ -> reset
+  in
+  do_cleanup aux c reset
 
 let _ =
   load_session () ;

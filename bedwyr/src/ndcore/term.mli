@@ -22,6 +22,7 @@
 type tag = Eigen | Constant | Logic | String
 type var = private { id : int ; tag : tag; ts : int; lts : int; }
 
+type binder = Forall | Exists | Nabla
 type term
 type ptr
 type envitem = Dum of int | Binding of term * int
@@ -30,6 +31,13 @@ type rawterm =
   | Var of var
   | DB of int
   | NB of int
+  | True
+  | False
+  | Eq of term * term
+  | And of term * term
+  | Or of term * term
+  | Arrow of term * term
+  | Binder of binder * term
   | Lam of int * term
   | App of term * term list
   | Susp of term * int * int * env
@@ -62,6 +70,13 @@ val eq_subst    : subst -> subst -> bool
 
 val lambda : int -> term -> term
 val string : string -> term
+val op_true : term
+val op_false : term
+val op_eq : term -> term -> term
+val op_and : term -> term -> term
+val op_or : term -> term -> term
+val op_arrow : term -> term -> term
+val op_binder : binder -> term -> term
 val binop : string -> term -> term -> term
 val db : int -> term
 val nabla : int -> term

@@ -21,6 +21,9 @@
   open Parser
   open Lexing
 
+  exception Illegal_string
+
+  (* XXX incrline = new_line in OCaml >= 3.11.0 *)
   let incrline lexbuf =
     lexbuf.lex_curr_p <- {
         lexbuf.lex_curr_p with
@@ -33,17 +36,30 @@ let number = digit+
 
 let uchar = ['A'-'Z']
 let lchar = ['a'-'z']
-(* other initial characters *)
-let ichar = ['_' '\'']
-(* other body characters *)
-let bchar = ['/' ]
-let uname = uchar (digit|uchar|lchar|ichar|bchar)*
-let lname = lchar (digit|uchar|lchar|ichar|bchar)*
-let iname = ichar (digit|uchar|lchar|ichar|bchar)*
+(* special symbols *)
+let prefix_special = ['`' '\'' '$']
+let infix_special  = ['+' '-' '*' '^' '<' '>' '=' '~']
+let tail_special   = ['/' '?' '!' '@' '#' '&' '_']
+
+let special_char = prefix_special | infix_special | tail_special
+let any_char = uchar | lchar | digit | special_char
+let safe_char = uchar | lchar | digit |  prefix_special | tail_special
+
+let upper_name = uchar | (uchar any_char* safe_char)
+let lower_name = (lchar|prefix_special) | ((lchar|prefix_special) any_char* safe_char)
+let infix_name = infix_special (special_char)*
+(* XXX alternate version: any character (including +-*^<>=~)
+ * is allowed at the end of any name (including upper_names and lower_names),
+ * so "x= y" is parsed as App ("x=",["y"])
+ * while "x =y" is parsed as Eq ("x","y")
+let upper_name = uchar any_char*
+let lower_name = (lchar|prefix_special) any_char*
+let infix_name = infix_special (special_char)*
+*)
 
 let blank = ' ' | '\t' | '\r'
 
-let instring = [^'"'] *
+let instring = [^'"']*
 
 rule token = parse
   | "/*"                { comment 0 lexbuf }
@@ -91,6 +107,7 @@ rule token = parse
   | ";"                 { SEMICOLON }
 
   (* common term-keywords (Abella/Bedwyr) *)
+  | "prop"              { PROP }
   | "="                 { EQ }
   | "/\\"               { AND }
   | "\\/"               { OR }
@@ -103,10 +120,16 @@ rule token = parse
   (* Abella only meta-keywords *)
   | "Close"             { CLOSE }
   | "Theorem"           { THEOREM }
+  | "Qed"               { QED }
   | "Query"             { QUERY }
   | "Import"            { IMPORT }
   | "Specification"     { SPECIFICATION }
   | "Split"             { SSPLIT }
+  | "Set"               { SET }
+  | "Show"              { SHOW }
+  | "Quit"              { QUIT }
+
+  (* Abella's tactics (minus "exists" and "assert") *)
   | "induction"         { IND }
   | "coinduction"       { COIND }
   | "intros"            { INTROS }
@@ -115,7 +138,6 @@ rule token = parse
   | "apply"             { APPLY }
   | "backchain"         { BACKCHAIN }
   | "unfold"            { UNFOLD }
-  | "assert"            { ASSERT }
   | "split"             { SPLIT }
   | "split*"            { SPLITSTAR }
   | "left"              { LEFT }
@@ -130,14 +152,13 @@ rule token = parse
   | "clear"             { CLEAR }
   | "abbrev"            { ABBREV }
   | "unabbrev"          { UNABBREV }
+
+  (* Abella only keywords *)
   | "to"                { TO }
   | "with"              { WITH }
   | "on"                { ON }
   | "as"                { AS }
   | "keep"              { KEEP }
-  | "Set"               { SET }
-  | "Show"              { SHOW }
-  | "Quit"              { QUIT }
   | "{"                 { LBRACK }
   | "}"                 { RBRACK }
   | "|-"                { TURN }
@@ -148,20 +169,38 @@ rule token = parse
 
   (* Bedwyr only meta-keywords *)
   | "#"                 { HASH }
+  | "quit"
+  | "exit"              { EXIT }
+  | "help"              { HELP }
+  | "include"           { INCLUDE }
+  | "reset"             { RESET }
+  | "reload"            { RELOAD }
+  | "session"           { SESSION }
+  | "debug"             { DEBUG }
+  | "time"              { TIME }
+  | "equivariant"       { EQUIVARIANT }
+  | "show_table"        { SHOW_TABLE }
+  | "clear_tables"      { CLEAR_TABLES }
+  | "clear_table"       { CLEAR_TABLE }
+  | "save_table"        { SAVE_TABLE }
+  | "assert"            { ASSERT }
+  | "assert_not"        { ASSERT_NOT }
+  | "assert_raise"      { ASSERT_RAISE }
 
-  (* Uppercase-starting variable *)
-  | uname as n          { UPPER_ID n }
+  (* bound variable, free variable in a query *)
+  | upper_name as n     { UPPER_ID n }
 
-  (* Other variable *)
-  | lname as n
-  | iname as n          { STRINGID n }
+  (* bound variable, type/prefix constant/predicate *)
+  | lower_name as n     { LOWER_ID n }
+
+  (* infix constant *)
+  | infix_name as n     { INFIX_ID n }
 
   (* misc *)
   | '\x04'              (* ctrl-D *)
   | eof                 { EOF }
 
-  | _                   { failwith ("Illegal character " ^
-                                    (Lexing.lexeme lexbuf) ^ " in input") }
+  | _                   { raise Illegal_string }
 
 and comment level = parse
   | [^ '*' '/' '\n']+   { comment level lexbuf }

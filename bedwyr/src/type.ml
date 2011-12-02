@@ -1,13 +1,13 @@
 (* kinds *)
 type simple_kind =
-  | Ki      of string
+  | KType
   | KRArrow of simple_kind' list * simple_kind'
 and simple_kind' = simple_kind
 
 let pp_kind chan kind =
   let rec aux chan = function
-    | Ki name ->
-        Format.fprintf chan "@[%s@]" name
+    | KType ->
+        Format.fprintf chan "@[*@]" 
     | KRArrow (ki1::kis,ki2) ->
         Format.fprintf chan "@[(%a -> %a)@]" aux ki1 aux (KRArrow (kis,ki2))
     | KRArrow ([],ki) ->
@@ -57,7 +57,7 @@ let pp_type unifier chan ty =
     | Ty name ->
         Format.fprintf chan "@[%s@]" name
     | TProp ->
-        Format.fprintf chan "@[prop@]"
+        Format.fprintf chan "@[{prop}@]"
     | TRArrow (ty1::tys,ty2) ->
         Format.fprintf chan "@[(%a -> %a)@]" aux ty1 aux (TRArrow (tys,ty2))
     | TRArrow ([],ty) ->
@@ -115,42 +115,42 @@ let occurs unifier i =
 
 (* TODO [unifier] needs to be GC-ed,
  * or at least we should avoid unnecessary chained references *)
-let rec unify_constraint unifier ty1 ty2 =
-  try match ty1,ty2 with
-    | _,_ when ty1 = ty2 -> unifier
+let unify_constraint unifier ty1' ty2' =
+  let rec aux u ty1 ty2 = match ty1,ty2 with
+    | _,_ when ty1 = ty2 -> u
     | TRArrow ([],ty1),_ ->
-        unify_constraint unifier ty1 ty2
+        aux u ty1 ty2
     | _,TRArrow ([],ty2) ->
-        unify_constraint unifier ty1 ty2
+        aux u ty1 ty2
     | TVar i,_ ->
         begin
           try
-            let ty1 = Unifier.find i unifier in
-            unify_constraint unifier ty1 ty2
+            let ty1 = Unifier.find i u in
+            aux u ty1 ty2
           with
             | Not_found ->
-                if occurs unifier i ty2
-                then raise (Type_unification_error (ty1,ty2,unifier))
-                else Unifier.add i ty2 unifier
+                if occurs u i ty2
+                then raise (Type_unification_error (ty1',ty2',u))
+                else Unifier.add i ty2 u
         end
     | _,TVar j ->
         begin
           try
-            let ty2 = Unifier.find j unifier in
-            unify_constraint unifier ty1 ty2
+            let ty2 = Unifier.find j u in
+            aux u ty1 ty2
           with
             | Not_found ->
-                if occurs unifier j ty1
-                then raise (Type_unification_error (ty1,ty2,unifier))
-                else Unifier.add j ty1 unifier
+                if occurs u j ty1
+                then raise (Type_unification_error (ty1',ty2',u))
+                else Unifier.add j ty1 u
         end
     | TRArrow (ty1::tys1,bty1),TRArrow (ty2::tys2,bty2) ->
-        let unifier = unify_constraint unifier ty1 ty2 in
-        unify_constraint unifier (TRArrow (tys1,bty1)) (TRArrow (tys2,bty2))
-    | _ -> raise (Type_unification_error (ty1,ty2,unifier))
-  with
-    | Type_unification_error (_,_,unifier) ->
-        raise (Type_unification_error (ty1,ty2,unifier))
+        let u = aux u ty1 ty2 in
+        aux u (TRArrow (tys1,bty1)) (TRArrow (tys2,bty2))
+    | _ ->
+        raise (Type_unification_error (ty1',ty2',u))
+  in
+  aux unifier ty1' ty2'
 
 let build_abstraction_types arity =
   let rec aux tys ty = function
