@@ -18,7 +18,8 @@ hi def link     bedwyrParenErr error
 syn match       normal          "\<\(\w\|[-+*/\\^<>=`'~?@#$&!_]\)*\>"
 syn match       identifier      "\<\(\u\|_\)\(\w\|[-+*/\\^<>=`'~?@#$&!]\)*\>"
 
-syn region      comment         start="%" end="$"
+syn match       comment         "%.*"
+syn region      comment         start="/\*" end="\*/"
 syn match       preproc         "#[a-z_]*"
 
 syn keyword     boolean         true false

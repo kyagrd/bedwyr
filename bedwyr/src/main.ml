@@ -75,26 +75,29 @@ let _ =
     (fun f -> session := f::!session)
     usage_msg
 
-let position lexbuf =
-  let aux file (start,curr) =
-    let line1 = start.Lexing.pos_lnum in
-    let line2 = curr.Lexing.pos_lnum in
-    let char1 = start.Lexing.pos_cnum - start.Lexing.pos_bol + 1 in
-    let char2 = curr.Lexing.pos_cnum - curr.Lexing.pos_bol in
-    if line1 <> line2 then
-      Format.sprintf "file %s, line %d, character %d - line %d, character %d" file line1 char1 line2 char2
-    else if char1 <> char2  then
-      Format.sprintf "file %s, line %d, characters %d-%d" file line1 char1 char2
-    else
-      Format.sprintf "file %s, line %d, character %d" file line1 char1
-  in
-  let start = lexbuf.Lexing.lex_start_p in
-  let curr = lexbuf.Lexing.lex_curr_p in
+let position (start,curr) =
   let file = start.Lexing.pos_fname in
-  if file = "" then
+  let line1 = start.Lexing.pos_lnum in
+  let line2 = curr.Lexing.pos_lnum in
+  let char1 = start.Lexing.pos_cnum - start.Lexing.pos_bol + 1 in
+  let char2 = curr.Lexing.pos_cnum - curr.Lexing.pos_bol in
+  if line1 < line2 then
+    Format.sprintf "file \"%s\", line %d, character %d - line %d, character %d" file line1 char1 line2 char2
+  else if char1 < char2  then
+    Format.sprintf "file \"%s\", line %d, characters %d-%d" file line2 char1 char2
+  else
+    Format.sprintf "file \"%s\", line %d, character %d" file line2 char2
+
+let position_range (start,curr) =
+  if curr.Lexing.pos_fname = "" then
     "" (* lexbuf information is rarely accurate at the toplevel *)
   else
-    Format.sprintf " (%s)" (aux file (start,curr))
+    Format.sprintf "In %s:\n" (position (start,curr))
+
+let position_lex lexbuf =
+  let start = lexbuf.Lexing.lex_start_p in
+  let curr = lexbuf.Lexing.lex_curr_p in
+  position_range (start,curr)
 
 let do_cleanup f x clean =
   try f x ; clean () with e -> clean () ; raise e
@@ -111,130 +114,135 @@ let rec process ?(interactive=false) parse lexbuf =
     begin try match (parse Lexer.token lexbuf) with
       | System.KKind (l, k) ->
           List.iter
-            (fun s -> System.type_define_kind s k)
+            (fun s -> System.declare_type s k)
             l
       | System.TType (l, t) ->
           List.iter
-            (fun s -> System.const_define_type s t)
+            (fun s -> System.declare_const s t)
             l
       | System.Def (decls,defs) ->
-          List.iter System.create_def decls ;
-          List.iter System.add_clause defs
-      | System.Query a -> do_cleanup Prover.toplevel_prove a reset
+          let new_predicates = List.map System.create_def decls in
+          List.iter (System.add_clause new_predicates) defs
+      | System.Query t -> (* XXX how does it play with free variables? *)
+          let f t =
+            Type.global_unifier := Type.type_check_term t Type.TProp !Type.global_unifier System.type_of_var;
+            Prover.toplevel_prove t
+          in
+          do_cleanup f t reset
       | System.Command c -> command c reset
     with
+      (* I/O *)
       | End_of_file -> raise End_of_file
       | Lexer.Illegal_string ->
-          Format.printf "Illegal string \"%s\" in input%s.\n%!"
-            (String.escaped (Lexing.lexeme lexbuf))
-            (position lexbuf) ;
+          Format.printf "%sIllegal string \"%s\" in input.\n%!"
+            (position_lex lexbuf)
+            (String.escaped (Lexing.lexeme lexbuf)) ;
           if interactive then Lexing.flush_input lexbuf else exit 1
-      | Parsing.Parse_error -> raise Parsing.Parse_error
-      | Failure "lexing: empty token" ->
-          Format.printf "Lexing error%s.\n%!" (position lexbuf) ;
+      | Parsing.Parse_error ->
+          Format.printf "%sSyntax error.\n%!"
+            (position_lex lexbuf) ;
+          if interactive then Lexing.flush_input lexbuf else exit 1
+
+      (* declarations *)
+      | System.Invalid_type_declaration (n,p,k,s) ->
+          Format.printf
+            "%sCannot declare type %s of kind %a: %s.\n%!"
+            (position_range p)
+            n
+            Pprint.pp_kind k
+            s ;
+          exit 1
+      | System.Invalid_const_declaration (n,p,t,s) ->
+          Format.printf
+            "%sCannot declare constant %s of type %a: %s.\n%!"
+            (position_range p)
+            n
+            (Pprint.pp_type None) t
+            s ;
+          exit 1
+      | System.Invalid_pred_declaration (n,p,t,s) ->
+          Format.printf
+            "%sCannot declare predicate %s of type %a: %s.\n%!"
+            (position_range p)
+            n
+            (Pprint.pp_type None) t
+            s ;
+          exit 1
+
+      (* definitions *)
+      | System.Missing_declaration (n) -> (* TODO add a position *)
+          Format.printf
+            "%sUndeclared constant or predicate %s.\n%!"
+            (position_lex lexbuf)
+            n ;
+          if interactive then Lexing.flush_input lexbuf else exit 1
+      | Type.Term_typing_error (ty1,ty2,unifier,term) -> (* TODO add a position and s/the expression %s/this expression/ *)
+          Format.printf
+            "%sTyping error: the expression %s has type %s but is used as %s.%!"
+            (position_lex lexbuf)
+            (Pprint.term_to_string term)
+            (Pprint.type_to_string (Some unifier) ty2)
+            (Pprint.type_to_string (Some unifier) ty1) ;
+          if interactive then Lexing.flush_input lexbuf else exit 1
+      | System.Inconsistent_definition (n,p,s) ->
+          Format.printf
+            "%sInconsistent extension of definition for %s: %s.\n%!"
+            (position_range p)
+            n
+            s ;
+          exit 1
+
+      (* queries *)
+      | System.Arity_mismatch (t,a) ->
+          Format.printf "Definition %a doesn't have arity %d !\n%!"
+            Pprint.pp_term t a ;
           if interactive then Lexing.flush_input lexbuf else exit 1
       | Assertion_failed ->
-          Format.printf "Assertion failed%s.\n%!" (position lexbuf) ;
+          Format.printf "Assertion failed.\n%!" ;
           if interactive then Lexing.flush_input lexbuf else exit 1
-      | System.Forbidden_kind (k,s) ->
-          Format.printf
-            "Kind %a forbidden%s.\n%!"
-            Type.pp_kind k
+
+      (* unhandled non-interactive errors *)
+      | Failure s when not interactive ->
+          Format.printf "%sError: %s\n"
+            (position_lex lexbuf)
             s ;
-          if interactive then Lexing.flush_input lexbuf else exit 1
-      | System.Multiple_type_declaration (k,s) ->
-          Format.printf
-            "Type %s was already declared%s.\n%!" k s
-      | System.Missing_type_declaration s ->
-          Format.printf
-            "Type invalid, type %s was not declared.\n%!"
-            s ;
-          if interactive then Lexing.flush_input lexbuf else exit 1
-      (*| System.Forbidden_type ty s ->
-       Format.printf
-       "Type %a forbidden%s.\n%!"
-       (Type.pp_type None) ty
-       s ;
-       if interactive then Lexing.flush_input lexbuf else exit 1*)
-      | System.Multiple_const_declaration name ->
-          Format.printf
-            "Constant %s was already declared%s.\n%!"
-            name
-            (position lexbuf) ;
-          if interactive then Lexing.flush_input lexbuf else exit 1
-      | System.Missing_declaration (term,Some (head_tm,body)) ->
-          Format.printf
-            "Clause ignored in the definition of %a%s: constant or predicate %a not declared.\n%!"
-            Pprint.pp_term head_tm
-            (position lexbuf)
-            Pprint.pp_term term ;
-          if interactive then Lexing.flush_input lexbuf
-      | System.Multiple_pred_declaration t ->
-          Format.printf
-            "Predicate %a was already declared%s.\n%!"
-            Pprint.pp_term t
-            (position lexbuf) ;
-          if interactive then Lexing.flush_input lexbuf else exit 1
-      | System.Missing_pred_declaration t ->
-          Format.printf
-            "Predicate %a was not declared%s.\n%!"
-            Pprint.pp_term t
-            (position lexbuf) ;
-          if interactive then Lexing.flush_input lexbuf else exit 1
-      | System.Inconsistent_definition s ->
-          Format.printf "Inconsistent extension of definition %a%s.\n%!"
-            Pprint.pp_term s
-            (position lexbuf) ;
-          if interactive then Lexing.flush_input lexbuf else exit 1
-      | System.Clause_typing_error (ty1,ty2,unifier,term,db_types,head_tm) ->
-          Format.printf
-            "Clause ignored in the definition of %a%s, term %a has type %a but is used as %a.\n%!"
-            Pprint.pp_term head_tm
-            (position lexbuf)
-            Pprint.pp_term term
-            (Type.pp_type (Some unifier)) ty2
-            (Type.pp_type (Some unifier)) ty1;
-          if !System.debug then
-            Format.printf
-              "Unification failed with the binding types %a\nand the unifier %a.\n%!"
-              Type.pp_ltypes db_types
-              Type.pp_unifier unifier;
-          if interactive then Lexing.flush_input lexbuf
-      | System.Arity_mismatch (s,a) ->
-          Format.printf "Definition %a doesn't have arity %d !\n%!"
-            Pprint.pp_term s a ;
-          if interactive then Lexing.flush_input lexbuf else exit 1
-      | System.Missing_definition t ->
-          Format.printf "No definition found for %a.\n%!" Pprint.pp_term t ;
-          if interactive then Lexing.flush_input lexbuf else exit 1
+          exit 1
       | e when not interactive ->
-          Format.printf "Error in %s, line %d: %s\n"
-            lexbuf.Lexing.lex_curr_p.Lexing.pos_fname
-            lexbuf.Lexing.lex_curr_p.Lexing.pos_lnum
+          Format.printf "%sUnknown error: %s\n"
+            (position_lex lexbuf)
             (Printexc.to_string e) ;
           exit 1
+
+      (* interactive errors *)
       | System.Interrupt ->
-          Format.printf "User interruption.\n%!"
+          Format.printf "User interruption.\n%!" ;
+          Lexing.flush_input lexbuf
       | Prover.Level_inconsistency ->
-          Format.printf "This formula cannot be handled by the left prover!\n%!"
+          Format.printf "This formula cannot be handled by the left prover!\n%!" ;
+          Lexing.flush_input lexbuf
       | Prover.Abort_search ->
-          Format.printf "Proof search aborted!\n"
+          Format.printf "Proof search aborted!\n" ;
+          Lexing.flush_input lexbuf
       | Unify.NotLLambda t ->
           Format.printf "Not LLambda unification encountered: %a\n%!"
-            Pprint.pp_term t
+            Pprint.pp_term t ;
+          Lexing.flush_input lexbuf
       | Invalid_command ->
-          Format.printf "Invalid command, or wrong arity!\n%!"
+          Format.printf "Invalid command, or wrong arguments.\n%!" ;
+          Lexing.flush_input lexbuf
       | Failure s ->
-          Format.printf "Error: %s\n" s
+          Format.printf "%sError: %s\n"
+            (position_lex lexbuf)
+            s ;
+          Lexing.flush_input lexbuf
       | e ->
-          Format.printf "Unknown error: %s\n%!" (Printexc.to_string e) ;
-          raise e
+          Format.printf "%sUnknown error: %s\n"
+            (position_lex lexbuf)
+            (Printexc.to_string e) ;
+          Lexing.flush_input lexbuf
     end ;
     if interactive then flush stdout
   done with
-    | Parsing.Parse_error ->
-        Format.printf "Syntax error%s.\n%!" (position lexbuf) ;
-        if not interactive then exit 1
     | End_of_file -> ()
 
 and input_from_file file =
@@ -318,6 +326,7 @@ and command c reset =
         if !test then begin
           Format.eprintf "@[<hv 2>Checking that@ %a@,...@]@\n%!"
             Pprint.pp_term query ;
+          Type.global_unifier := Type.type_check_term query Type.TProp !Type.global_unifier System.type_of_var;
           Prover.prove ~level:Prover.One ~local:0 ~timestamp:0 query
             ~success:(fun _ _ -> ()) ~failure:(fun () -> raise Assertion_failed)
         end
@@ -325,6 +334,7 @@ and command c reset =
         if !test then begin
           Format.eprintf "@[<hv 2>Checking that@ %a@ is false...@]@\n%!"
             Pprint.pp_term query ;
+          Type.global_unifier := Type.type_check_term query Type.TProp !Type.global_unifier System.type_of_var;
           Prover.prove ~level:Prover.One ~local:0 ~timestamp:0 query
             ~success:(fun _ _ -> raise Assertion_failed) ~failure:ignore
         end
@@ -334,6 +344,7 @@ and command c reset =
             Pprint.pp_term query ;
           if
             try
+              Type.global_unifier := Type.type_check_term query Type.TProp !Type.global_unifier System.type_of_var;
               Prover.prove ~level:Prover.One ~local:0 ~timestamp:0 query
                 ~success:(fun _ _ -> ()) ~failure:ignore ;
               true
