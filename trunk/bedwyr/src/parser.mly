@@ -120,6 +120,9 @@
 
 /* Lower */
 
+%nonassoc LPAREN
+%nonassoc RPAREN
+
 %nonassoc BSLASH
 %nonassoc COMMA
 
@@ -250,7 +253,7 @@ formula:
   | formula RARROW formula              { Term.op_arrow $1 $3 }
   | binder pabound_list COMMA formula   { mkquantif $1 $2 $4 }
   | LPAREN formula RPAREN               { $2 }
-  | term                                { $1 }
+  | term %prec LPAREN                   { $1 }
 
 binder:
   | FORALL                              { Term.Forall }
