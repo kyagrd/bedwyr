@@ -582,7 +582,10 @@ let op_eq a b = Eq (a,b)
 let op_and a b = And (a,b)
 let op_or a b = Or (a,b)
 let op_arrow a b = Arrow (a,b)
-let op_binder a n b = Binder (a,n,b)
+
+let binder b n t = match observe t with
+  | Binder (b,m,t) -> Binder (b,m+n,t)
+  | _ -> Binder (b,n,t)
 
 let binop s a b = App ((atom s),[a;b])
 

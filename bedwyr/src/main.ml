@@ -125,7 +125,7 @@ let rec process ?(interactive=false) parse lexbuf =
       | System.Query t ->
           do_cleanup
             (fun query' ->
-               let query = System.type_check_query query' in
+               let query = System.translate_term query' in
                Prover.toplevel_prove query)
             t
             reset
@@ -170,17 +170,18 @@ let rec process ?(interactive=false) parse lexbuf =
           exit 1
 
       (* definitions *)
-      | System.Missing_declaration (n) -> (* TODO add a position *)
+      | System.Missing_declaration (n,p) ->
           Format.printf
             "%sUndeclared constant or predicate %s.\n%!"
-            (position_lex lexbuf)
+            (match p with
+                 Some p -> position_range p
+               | None -> position_lex lexbuf)
             n ;
           if interactive then Lexing.flush_input lexbuf else exit 1
-      | Typing.Term_typing_error (ty1,ty2,unifier,term) -> (* TODO add a position and s/the expression %s/this expression/ *)
+      | Typing.Term_typing_error (p,ty1,ty2,unifier) ->
           Format.printf
-            "%sTyping error: the expression %s has type %s but is used as %s.%!"
-            (position_lex lexbuf)
-            (Pprint.term_to_string term)
+            "%sTyping error: this expression has type %s but is used as %s.%!"
+            (position_range p)
             (Pprint.type_to_string (Some unifier) ty2)
             (Pprint.type_to_string (Some unifier) ty1) ;
           if interactive then Lexing.flush_input lexbuf else exit 1
@@ -299,14 +300,14 @@ and command c reset =
 
     (* Tabling-related commands *)
     | System.Equivariant value -> toggle_flag Index.eqvt_tbl value
-    | System.Show_table name -> System.show_table (Term.atom name)
+    | System.Show_table (p,name) -> System.show_table (p,Term.atom name)
     | System.Clear_tables ->
         Hashtbl.iter
           (fun k v -> match v with
              | (_,_,Some t,_) -> Table.reset t
              | _ -> ())
           System.defs
-    | System.Clear_table name ->
+    | System.Clear_table (p,name) ->
         begin match
           try
             let _,_,x,_ = Hashtbl.find System.defs (Term.get_var (Term.atom name)) in x
@@ -319,12 +320,12 @@ and command c reset =
         end
     (* save the content of a table to a file. An exception is thrown if *)
     (* file already exists. *)
-    | System.Save_table (name,file) -> System.save_table (Term.atom name) file
+    | System.Save_table (p,name,file) -> System.save_table (p,Term.atom name) file
 
     (* Testing commands *)
     | System.Assert query' ->
         if !test then begin
-          let query = System.type_check_query query' in
+          let query = System.translate_term query' in
           Format.eprintf "@[<hv 2>Checking that@ %a@,...@]@\n%!"
             Pprint.pp_term query ;
           Prover.prove ~level:Prover.One ~local:0 ~timestamp:0 query
@@ -332,7 +333,7 @@ and command c reset =
         end
     | System.Assert_not query' ->
         if !test then begin
-          let query = System.type_check_query query' in
+          let query = System.translate_term query' in
           Format.eprintf "@[<hv 2>Checking that@ %a@ is false...@]@\n%!"
             Pprint.pp_term query ;
           Prover.prove ~level:Prover.One ~local:0 ~timestamp:0 query
@@ -340,7 +341,7 @@ and command c reset =
         end
     | System.Assert_raise query' ->
         if !test then begin
-          let query = System.type_check_query query' in
+          let query = System.translate_term query' in
           Format.eprintf "@[<hv 2>Checking that@ %a@ causes an error...@]@\n%!"
             Pprint.pp_term query ;
           if

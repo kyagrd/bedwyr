@@ -58,15 +58,7 @@ struct
 end
 
 type flavour = Normal | Inductive | CoInductive
-
-type input =
-  | KKind   of (Typing.pos * string) list * Type.simple_kind
-  | TType   of (Typing.pos * string) list * Type.simple_type
-  | Def     of (flavour * Typing.pos * string * Type.simple_type) list *
-               (Typing.pos * Typing.term' * Typing.term') list
-  | Query   of Typing.term'
-  | Command of command
-and command =
+type command =
   | Exit
   | Help
   | Include             of string list
@@ -76,13 +68,21 @@ and command =
   | Debug               of string option
   | Time                of string option
   | Equivariant         of string option
-  | Show_table          of string
+  | Show_table          of Typing.pos * string
   | Clear_tables
-  | Clear_table         of string
-  | Save_table          of string * string
+  | Clear_table         of Typing.pos * string
+  | Save_table          of Typing.pos * string * string
   | Assert              of Typing.term'
   | Assert_not          of Typing.term'
   | Assert_raise        of Typing.term'
+
+type input =
+  | KKind   of (Typing.pos * string) list * Type.simple_kind
+  | TType   of (Typing.pos * string) list * Type.simple_type
+  | Def     of (flavour * Typing.pos * string * Type.simple_type) list *
+               (Typing.pos * Typing.term' * Typing.term') list
+  | Query   of Typing.term'
+  | Command of command
 
 (** A simple debug flag, which can be set dynamically from the logic program. *)
 
@@ -136,13 +136,12 @@ let type_kinds : (Term.var,Type.simple_kind) Hashtbl.t =
   Hashtbl.create 100
 
 let declare_type (p,name) ki =
-  assert (name <> "");
-  match ki with
+  let ty_var = Term.get_var (Term.atom ~tag:Term.Constant name) in
+  if Hashtbl.mem type_kinds ty_var
+  then raise (Invalid_type_declaration (name,p,ki,"type already declared"))
+  else match ki with
     | Type.KType ->
-        let ty_var = Term.get_var (Term.atom ~tag:Term.Constant name) in
-        if Hashtbl.mem type_kinds ty_var
-        then raise (Invalid_type_declaration (name,p,ki,"type already declared"))
-        else Hashtbl.add type_kinds ty_var ki
+        Hashtbl.add type_kinds ty_var ki
     | Type.KRArrow _ ->
         raise (Invalid_type_declaration (name,p,ki,"no type operators yet"))
 
@@ -185,7 +184,6 @@ let defs : (Term.var,(flavour*Term.term option*Table.t option*Type.simple_type))
     Hashtbl.create 100
 
 let declare_const (p,name) ty =
-  assert (name <> "");
   let const_var = Term.get_var (Term.atom ~tag:Term.Constant name) in
   if Hashtbl.mem const_types const_var
   then raise (Invalid_const_declaration (name,p,ty,"constant already declared"))
@@ -196,8 +194,7 @@ let declare_const (p,name) ty =
   else raise (Invalid_const_declaration (name,p,ty,Format.sprintf "type is not of kind %s" (Pprint.kind_to_string Type.KType)))
 
 let create_def (flavour,p,name,ty) =
-  let head_tm = Term.atom ~tag:Term.Constant name in
-  let head_var = Term.get_var head_tm in
+  let head_var = Term.get_var (Term.atom ~tag:Term.Constant name) in
   if Hashtbl.mem defs head_var
   then raise (Invalid_pred_declaration (name,p,ty,"predicate already declared"))
   else if Hashtbl.mem const_types head_var
@@ -222,74 +219,131 @@ let create_def (flavour,p,name,ty) =
 
 (** typechecking, predicates definitions *)
 
-exception Missing_declaration of string
+exception Missing_declaration of string * Typing.pos option
 exception Inconsistent_definition of string * Typing.pos * string
 
 
-let type_of_var (v,term) = match v with
-  (* XXX ? *)
-  (*| v when v = Logic.var_not
-  | v when v = Logic.var_ite
-  | v when v = Logic.var_abspred
-  | v when v = Logic.var_distinct
-  | v when v = Logic.var_assert_rigid
-  | v when v = Logic.var_abort_search
-  | v when v = Logic.var_cutpred
-  | v when v = Logic.var_check_eqvt ->
-      raise (Typing_error (TProp,TProp,unifier))*)
-  | v when v = Logic.var_print ->
+let translate_term ?(expected_type=Type.TProp) pre_term =
+  let free_types : (Term.var,Type.simple_type) Hashtbl.t =
+    Hashtbl.create 10
+  in
+  let type_of_free (p,name) =
+    if Term.is_free name then begin
+      let t = Term.atom ~tag:Term.Logic name in
+      let v = Term.get_var t in
       let ty = Type.fresh_tyvar () in
-      Type.TRArrow ([ty],Type.TProp)
-  (*| v when v = Logic.var_println
-  | v when v = Logic.var_fprint
-  | v when v = Logic.var_fprintln
-  | v when v = Logic.var_fopen_out
-  | v when v = Logic.var_fclose_out
-  | v when v = Logic.var_parse
-  | v when v = Logic.var_simp_parse ->
-      raise (Typing_error (TProp,TProp,unifier))*)
-  | _ ->
+      Hashtbl.add free_types v ty ;
+      t,ty
+    end else begin
+      let t = Term.atom name in
+      let v = Term.get_var t in
+      try
+        let ty = Hashtbl.find free_types v in
+        t,ty
+      with Not_found ->
+        Term.free name ;
+        let t = Term.atom ~tag:Term.Logic name in
+        let v = Term.get_var t in
+        let ty = Type.fresh_tyvar () in
+        Hashtbl.add free_types v ty ;
+        t,ty
+    end
+  in
+  let type_of_id (p,name) =
+    let t = Term.atom ~tag:Term.Constant name in
+    let v = Term.get_var t in
+    let ty =
       try let _,_,_,ty = Hashtbl.find defs v in ty
       with Not_found ->
         try Hashtbl.find const_types v
-        with
-          | Not_found ->
-              let name = Term.get_name term in
-              raise (Missing_declaration (name))
-
-(* TODO try to include vars in type_of_var (eg create a fresh type for each),
- * and avoid this unnecessary existentially closure *)
-let type_check_term ?vars term ty =
-  let term = match vars with
-    | None -> term
-    | Some vars -> term
+        with Not_found ->
+          begin match v with
+            | v when v = Logic.var_print ->
+                let ty = Type.fresh_tyvar () in
+                Type.TRArrow ([ty],Type.TProp)
+            | _ ->
+                Term.free name ;
+                raise (Missing_declaration (name,Some p))
+          end
+    in
+    t,ty
   in
-  Typing.global_unifier := Typing.type_check_term term ty !Typing.global_unifier type_of_var
+  Typing.type_check_and_translate pre_term expected_type type_of_free type_of_id
 
-let type_check_clause arity body' ty =
-  let body = Typing.translate body' in
-  type_check_term (Term.lambda arity body) ty ;
-  body
-
-let type_check_query query' =
-  let query = Typing.translate query' in
-  type_check_term ~vars:(Term.logic_vars [query]) query Type.TProp ;
-  query
-
-let add_clause new_predicates (p,head_tm',body') =
-  (* TODO
-   * call Typing.mkdef,
-   * raise an esception if head_tm' is invalid,
-   * typecheck
+let mk_clause p head body =
+  (* Replace the params by fresh variables and
+   * put the constraints on the parameters in the body:
+   *     head          := body
+   *     d X X (f X Y) := g X Y Z
+   * --> d X U V       := (U = X) /\ ((V = (f X Y)) /\ (g X Y Z))
+   * --> d X U V       := forall Z Y, (U = X) /\ ((V = (f X Y)) /\ (g X Y Z))
+   * --> d == \\\ Exists\\ (4)=(5) /\ ((3)=(f (5) (1)) /\ (g (5) (1) (2)))
    *)
-  let ty = Type.TProp in
-  let arity = 42 in
+  let pred,params = match Term.observe head with
+    | Term.App (pred,params) -> pred,params
+    | _ -> raise (Inconsistent_definition ("an unknown predicate",p,"term structure incorrect"))
+  in
+  (* pred       pred
+   * params     [X;X;(f X Y)]
+   * Create the prolog (new equalities added to the body) and the new set
+   * of variables used as parameters.
+   * A parameter can be left untouched if it's a variable which didn't
+   * occur yet. *)
+  let new_params,prolog =
+    List.fold_left
+      (fun (new_params,prolog) p ->
+         match Term.observe p with
+           | Term.Var {Term.tag=Term.Logic}
+               when List.for_all (fun v -> v!=p) new_params ->
+               p::new_params,prolog
+           | _  ->
+               let v = Term.fresh ~ts:0 ~lts:0 Term.Logic in
+               (v::new_params,(Term.op_eq v p)::prolog))
+      ([],[])
+      params
+  in
+  (* new_params [V;U;X]
+   * prolog     [V=(f X Y);U=X]
+   * Add prolog to the body *)
+  let body = if prolog = [] then body else
+    List.fold_left
+      (fun acc term -> Term.op_and term acc)
+      body
+      prolog
+  in
+  (* body       U=X /\ (V=(f X Y) /\ (g X Y Z))
+   * Quantify existentially over the initial free variables. *)
+    let body =
+      List.fold_left
+        (fun body v ->
+           if List.exists (Term.eq v) new_params then body
+           else Term.binder Term.Exists 1 (Term.abstract v body))
+        body
+        (Term.logic_vars [body])
+    in
+  (* body       \\ U=X /\ (V=(f X (1)) /\ (g X (1) (2)))
+   * Finally, abstract over parameters *)
+  let arity,body =
+    if new_params = [] then 0,body else
+      let body =
+        List.fold_left (fun body v -> Term.abstract v body)
+          body
+          new_params
+      in match Term.observe body with
+        | Term.Lam (n,b) -> n,b
+        | _ -> assert false
+  in
+  (* pred       pred
+   * arity      3
+   * body       Exists\\ (4)=(5) /\ ((3)=(f (5) (1)) /\ (g (5) (1) (2))) *)
+  (pred, arity, body)
 
-  let head_tm = type_check_query head_tm' in
-  let body = type_check_clause arity body' ty in
-
-  let head_var = Term.get_var head_tm in
-  let name = Term.get_name head_tm in
+let add_clause new_predicates (p,pre_head,pre_body) =
+  let head,arity,body =
+    mk_clause p (translate_term pre_head) (translate_term pre_body)
+  in
+  let head_var = Term.get_var head in
+  let name = Term.get_name head in
   let f,b,t,ty =
     try Hashtbl.find defs head_var
     with Not_found -> raise (Inconsistent_definition (name,p,"predicate was not declared"))
@@ -310,7 +364,7 @@ let add_clause new_predicates (p,head_tm',body') =
     let b = Norm.hnorm b in
     Hashtbl.replace defs head_var (f,Some b,t,ty) ;
     if !debug then
-      Format.eprintf "%a := %a\n" Pprint.pp_term head_tm Pprint.pp_term body
+      Format.eprintf "%a := %a\n" Pprint.pp_term head Pprint.pp_term body
   end else raise (Inconsistent_definition (name,p,"predicate declared in another block"))
 
 
@@ -337,13 +391,13 @@ let get_def ?check_arity head_tm =
   with
     | Not_found ->
         let name = Term.get_name head_tm in
-        raise (Missing_declaration (name))
+        raise (Missing_declaration (name,None))
 
 let remove_def head_tm =
   let head_var = Term.get_var head_tm in
   Hashtbl.remove defs head_var
 
-let show_table head_tm =
+let show_table (p,head_tm) =
   try
     let _,_,table,_ = Hashtbl.find defs (Term.get_var head_tm) in
       match table with
@@ -353,9 +407,9 @@ let show_table head_tm =
   with
     | Not_found ->
         let name = Term.get_name head_tm in
-        raise (Missing_declaration (name))
+        raise (Missing_declaration (name,Some p))
 
-let save_table head_tm file =
+let save_table (p,head_tm) file =
   try
     let fout = open_out_gen [Open_wronly;Open_creat;Open_excl] 0o600 file in
     try
@@ -371,7 +425,7 @@ let save_table head_tm file =
           begin
             close_out fout ;
             let name = Term.get_name head_tm in
-            raise (Missing_declaration (name))
+            raise (Missing_declaration (name,Some p))
           end
   with
     | Sys_error e ->

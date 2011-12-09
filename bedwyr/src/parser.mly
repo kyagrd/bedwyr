@@ -106,10 +106,10 @@ meta_command:
   | HASH DEBUG opt_arg DOT              { System.Command (System.Debug $3) }
   | HASH TIME opt_arg DOT               { System.Command (System.Time $3) }
   | HASH EQUIVARIANT opt_arg DOT        { System.Command (System.Equivariant $3) }
-  | HASH SHOW_TABLE lower_id DOT        { System.Command (System.Show_table $3) }
+  | HASH SHOW_TABLE lower_id DOT        { System.Command (System.Show_table (pos 3,$3)) }
   | HASH CLEAR_TABLES DOT               { System.Command (System.Clear_tables) }
-  | HASH CLEAR_TABLE lower_id DOT       { System.Command (System.Clear_table $3) }
-  | HASH SAVE_TABLE lower_id QSTRING DOT{ System.Command (System.Save_table ($3,$4)) }
+  | HASH CLEAR_TABLE lower_id DOT       { System.Command (System.Clear_table (pos 3,$3)) }
+  | HASH SAVE_TABLE lower_id QSTRING DOT{ System.Command (System.Save_table (pos 3,$3,$4)) }
   | HASH ASSERT formula DOT             { System.Command (System.Assert $3) }
   | HASH ASSERT_NOT formula DOT         { System.Command (System.Assert_not $3) }
   | HASH ASSERT_RAISE formula DOT       { System.Command (System.Assert_raise $3) }
@@ -143,7 +143,7 @@ decls:
   | decl COMMA decls                    { $1::$3 }
 
 decl:
-  | flavor alower_id                    { let p,name,ty = $2 in ($1,p,name,ty) }
+  | flavor apred_id                     { let p,name,ty = $2 in ($1,p,name,ty) }
 
 flavor:
   |                                     { System.Normal      }
@@ -155,7 +155,7 @@ defs:
   | def SEMICOLON defs                  { $1::$3 }
 
 def:
-  | formula                             { pos 0,$1,Typing.True' (pos 0) }
+  | formula                             { pos 0,$1,Typing.True (pos 0) }
   | formula DEFEQ formula               { pos 0,$1,$3 }
 
 term_list:
@@ -165,9 +165,8 @@ term_list:
 
 term_atom:
   | LPAREN term RPAREN                  { $2 }
-  | upper_id                            { Typing.UpperID (pos 1,$1) }
-  | lower_id                            { Typing.LowerID (pos 1,$1) }
-  | QSTRING                             { Typing.QString' (pos 1,$1) }
+  | token_id                            { $1 }
+  | QSTRING                             { Typing.QString (pos 1,$1) }
 
 term_abs:
   | abound_id BSLASH term               { Typing.lambda' (pos 0) [$1] $3 }
@@ -175,20 +174,19 @@ term_abs:
 term:
   | term_list                           { let t,l = $1 in
                                           Typing.app' (pos 1) t l }
-    /* XXX */
-  | bound_id INFIX_ID bound_id          { Typing.app'
+  | token_id INFIX_ID token_id          { Typing.app'
                                             (pos 0)
-                                            (Typing.InfixID (pos 2,$2))
-                                            [Typing.InfixID (pos 1,$1); Typing.InfixID (pos 3,$3)] }
+                                            (Typing.PredConstID (pos 2,$2))
+                                            [$1; $3] }
 
 formula:
-  | TRUE                                { Typing.True' (pos 0) }
-  | FALSE                               { Typing.False' (pos 0) }
-  | term EQ term                        { Typing.Eq' (pos 0,$1,$3) }
-  | formula AND formula                 { Typing.And' (pos 0,$1,$3) }
-  | formula OR formula                  { Typing.Or' (pos 0,$1,$3) }
-  | formula RARROW formula              { Typing.Arrow' (pos 0,$1,$3) }
-  | binder pabound_list COMMA formula   { Typing.Binder' (pos 0,$1,$2,$4) }
+  | TRUE                                { Typing.True (pos 0) }
+  | FALSE                               { Typing.False (pos 0) }
+  | term EQ term                        { Typing.Eq (pos 0,$1,$3) }
+  | formula AND formula                 { Typing.And (pos 0,$1,$3) }
+  | formula OR formula                  { Typing.Or (pos 0,$1,$3) }
+  | formula RARROW formula              { Typing.Arrow (pos 0,$1,$3) }
+  | binder pabound_list COMMA formula   { Typing.Binder (pos 0,$1,$2,$4) }
   | LPAREN formula RPAREN               { Typing.change_pos (pos 1) $2 (pos 3) }
   | term %prec LPAREN                   { $1 }
 
@@ -203,6 +201,7 @@ pabound_list:
 
 /* ids */
 
+/* base id types */
 upper_id:
   | UPPER_ID                            { $1 }
   | UNDERSCORE                          { "_" }
@@ -233,30 +232,37 @@ lower_id:
   | ABBREV                              { "abbrev" }
   | UNABBREV                            { "unabbrev" }
 
-const_id:
-  | lower_id                            { $1 }
-  | INFIX_ID                            { $1 }
-
-id:
-  | upper_id                            { $1 }
-  | lower_id                            { $1 }
-  | INFIX_ID                            { $1 }
-
-alower_id:
-  | lower_id                            { pos 1,$1,Type.fresh_tyvar () }
-  | lower_id COLON ty                   { pos 1,$1,$3 }
-
+/* shortcuts for other id types */
 bound_id:
   | upper_id                            { $1 }
   | lower_id                            { $1 }
 
+const_id:
+  | lower_id                            { $1 }
+  | INFIX_ID                            { $1 }
+
+any_id:
+  | upper_id                            { $1 }
+  | lower_id                            { $1 }
+  | INFIX_ID                            { $1 }
+
+/* annotated id types */
+apred_id:
+  | lower_id                            { pos 1,$1,Type.fresh_tyvar () }
+  | lower_id COLON ty                   { pos 1,$1,$3 }
+
 abound_id:
-  | bound_id                            { ($1,Type.fresh_tyvar ()) }
-  | bound_id COLON ty                   { ($1,$3) }
+  | bound_id                            { pos 1,$1,Type.fresh_tyvar () }
+  | bound_id COLON ty                   { pos 1,$1,$3 }
 
 pabound_id:
-  | bound_id                            { ($1,Type.fresh_tyvar ()) }
-  | LPAREN bound_id COLON ty RPAREN     { ($2,$4) }
+  | bound_id                            { pos 1,$1,Type.fresh_tyvar () }
+  | LPAREN bound_id COLON ty RPAREN     { pos 2,$2,$4 }
+
+/* predicate or constant in a term */
+token_id:
+  | upper_id                            { Typing.FreeID (pos 1,$1) }
+  | lower_id                            { Typing.PredConstID (pos 1,$1) }
 
 /* misc (commands) */
 
@@ -266,7 +272,7 @@ string_args:
 
 opt_arg:
   |                                     { None }
-  | id                                  { Some $1 }
+  | any_id                              { Some $1 }
   | TRUE                                { Some "true" }
   | FALSE                               { Some "false" }
 
