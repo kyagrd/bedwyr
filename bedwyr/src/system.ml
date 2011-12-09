@@ -227,48 +227,43 @@ let translate_term ?(expected_type=Type.TProp) pre_term =
   let free_types : (Term.var,Type.simple_type) Hashtbl.t =
     Hashtbl.create 10
   in
-  let type_of_free (p,name) =
-    if Term.is_free name then begin
-      let t = Term.atom ~tag:Term.Logic name in
-      let v = Term.get_var t in
+  let typed_free_var (_,name) =
+    let was_free = Term.is_free name in
+    let t = Term.atom ~tag:Term.Logic name in
+    let v = Term.get_var t in
+    try
+      let ty = Hashtbl.find free_types v in
+      t,ty
+    with Not_found ->
+      let t,v =
+        if was_free then t,v else begin
+          Term.free name ;
+          let t = Term.atom ~tag:Term.Logic name in
+          let v = Term.get_var t in
+          t,v
+        end
+      in
       let ty = Type.fresh_tyvar () in
       Hashtbl.add free_types v ty ;
       t,ty
-    end else begin
-      let t = Term.atom name in
-      let v = Term.get_var t in
-      try
-        let ty = Hashtbl.find free_types v in
-        t,ty
-      with Not_found ->
-        Term.free name ;
-        let t = Term.atom ~tag:Term.Logic name in
-        let v = Term.get_var t in
-        let ty = Type.fresh_tyvar () in
-        Hashtbl.add free_types v ty ;
-        t,ty
-    end
   in
-  let type_of_id (p,name) =
+  let typed_declared_var (p,name) =
     let t = Term.atom ~tag:Term.Constant name in
     let v = Term.get_var t in
-    let ty =
-      try let _,_,_,ty = Hashtbl.find defs v in ty
+    try let _,_,_,ty = Hashtbl.find defs v in t,ty
+    with Not_found ->
+      try t,Hashtbl.find const_types v
       with Not_found ->
-        try Hashtbl.find const_types v
-        with Not_found ->
-          begin match v with
-            | v when v = Logic.var_print ->
-                let ty = Type.fresh_tyvar () in
-                Type.TRArrow ([ty],Type.TProp)
-            | _ ->
-                Term.free name ;
-                raise (Missing_declaration (name,Some p))
-          end
-    in
-    t,ty
+        begin match v with
+          | v when v = Logic.var_print ->
+              let ty = Type.fresh_tyvar () in
+              t,Type.TRArrow ([ty],Type.TProp)
+          | _ ->
+              Term.free name ;
+              raise (Missing_declaration (name,Some p))
+        end
   in
-  Typing.type_check_and_translate pre_term expected_type type_of_free type_of_id
+  Typing.type_check_and_translate pre_term expected_type typed_free_var typed_declared_var
 
 let mk_clause p head body =
   (* Replace the params by fresh variables and
