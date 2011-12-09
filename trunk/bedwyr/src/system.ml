@@ -223,10 +223,7 @@ exception Missing_declaration of string * Typing.pos option
 exception Inconsistent_definition of string * Typing.pos * string
 
 
-let translate_term ?(expected_type=Type.TProp) pre_term =
-  let free_types : (Term.var,Type.simple_type) Hashtbl.t =
-    Hashtbl.create 10
-  in
+let translate_term ?(expected_type=Type.TProp) pre_term free_types =
   let typed_free_var (_,name) =
     let was_free = Term.is_free name in
     let t = Term.atom ~tag:Term.Logic name in
@@ -264,6 +261,12 @@ let translate_term ?(expected_type=Type.TProp) pre_term =
         end
   in
   Typing.type_check_and_translate pre_term expected_type typed_free_var typed_declared_var
+
+let translate_query pre_term =
+  let free_types : (Term.var,Type.simple_type) Hashtbl.t =
+    Hashtbl.create 10
+  in
+  translate_term pre_term free_types
 
 let mk_clause p head body =
   (* Replace the params by fresh variables and
@@ -308,14 +311,18 @@ let mk_clause p head body =
   in
   (* body       U=X /\ (V=(f X Y) /\ (g X Y Z))
    * Quantify existentially over the initial free variables. *)
-    let body =
-      List.fold_left
-        (fun body v ->
-           if List.exists (Term.eq v) new_params then body
-           else Term.quantify Term.Exists v body)
-        body
-        (Term.logic_vars [body])
-    in
+  let body =
+    List.fold_left
+      (fun body v ->
+         if List.exists (Term.eq v) new_params then body
+         else Term.quantify Term.Exists v body)
+      body
+      (Term.logic_vars [body])
+  in
+  if !debug then
+    Format.eprintf "%a := %a\n%!"
+      Pprint.pp_term (Term.app pred (List.rev new_params))
+      Pprint.pp_term body ;
   (* body       \\ U=X /\ (V=(f X (1)) /\ (g X (1) (2)))
    * Finally, abstract over parameters *)
   let arity,body =
@@ -334,8 +341,13 @@ let mk_clause p head body =
   (pred, arity, body)
 
 let add_clause new_predicates (p,pre_head,pre_body) =
+  let free_types : (Term.var,Type.simple_type) Hashtbl.t =
+    Hashtbl.create 10
+  in
+  let head = translate_term pre_head free_types in
+  let body = translate_term pre_body free_types in
   let head,arity,body =
-    mk_clause p (translate_term pre_head) (translate_term pre_body)
+    mk_clause p head body
   in
   let head_var = Term.get_var head in
   let name = Term.get_name head in
@@ -358,8 +370,6 @@ let add_clause new_predicates (p,pre_head,pre_body) =
     in
     let b = Norm.hnorm b in
     Hashtbl.replace defs head_var (f,Some b,t,ty) ;
-    if !debug then
-      Format.eprintf "%a := %a\n" Pprint.pp_term head Pprint.pp_term body
   end else raise (Inconsistent_definition (name,p,"predicate declared in another block"))
 
 
