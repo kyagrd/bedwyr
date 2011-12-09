@@ -270,7 +270,7 @@ let rec rename term bindings n =
         Term.op_arrow t1 t2,bindings,n
     | Term.Binder (b,i,t) ->
         let t,bindings,n = rename t bindings n in
-        Term.op_binder b i t,bindings,n
+        Term.binder b i t,bindings,n
     | Term.App (h,terms) ->
         let newterms,bds,n'=
           List.fold_left
@@ -623,7 +623,7 @@ struct
       | ZBinder (b,n) ->
           begin match terms with
             | h::terms ->
-                Term.op_binder b n h, terms
+                Term.binder b n h, terms
             | _ -> assert false
           end
       | ZApp n ->

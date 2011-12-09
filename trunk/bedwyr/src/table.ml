@@ -40,7 +40,7 @@ let nabla_abstract t =
   let max = List.fold_left (fun a b -> if (a < b) then b else a) 0 l in
   let rec make_list = function 0 -> [] | n -> n::make_list (n-1) in
   let bindings = if !Index.eqvt_tbl then l else make_list max in
-  Term.op_binder
+  Term.binder
     Term.Nabla
     (List.length bindings)
     (List.fold_left (fun s i -> (Term.abstract (Term.nabla i) s)) t bindings)

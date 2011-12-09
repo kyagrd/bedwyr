@@ -76,7 +76,7 @@ val op_eq : term -> term -> term
 val op_and : term -> term -> term
 val op_or : term -> term -> term
 val op_arrow : term -> term -> term
-val op_binder : binder -> int -> term -> term
+val binder : binder -> int -> term -> term
 val binop : string -> term -> term -> term
 val qstring : string -> term
 val db : int -> term

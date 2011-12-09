@@ -72,7 +72,7 @@ let rec hnorm term =
           | Term.Or (t1,t2) -> Term.op_or (susp t1) (susp t2)
           | Term.Arrow (t1,t2) -> Term.op_arrow (susp t1) (susp t2)
           | Term.Binder (b,n,t) -> 
-              Term.op_binder b n (hnorm (Term.susp t (ol+n) (nl+n)
+              Term.binder b n (hnorm (Term.susp t (ol+n) (nl+n)
                                            (add_dummies e n nl)))
           | Term.Lam (n,t) ->
               Term.lambda n (hnorm (Term.susp t (ol+n) (nl+n)
@@ -91,7 +91,7 @@ let rec deep_norm t =
     | Term.And (t1,t2) -> Term.op_and (deep_norm t1) (deep_norm t2)
     | Term.Or (t1,t2) -> Term.op_or (deep_norm t1) (deep_norm t2)
     | Term.Arrow (t1,t2) -> Term.op_arrow (deep_norm t1) (deep_norm t2)
-    | Term.Binder (b,n,t) -> Term.op_binder b n (deep_norm t)
+    | Term.Binder (b,n,t) -> Term.binder b n (deep_norm t)
     | Term.Lam (n,t) -> Term.lambda n (deep_norm t)
     | Term.App (a,b) ->
         begin match Term.observe a with
