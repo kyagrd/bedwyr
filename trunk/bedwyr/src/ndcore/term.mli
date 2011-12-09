@@ -77,6 +77,8 @@ val op_and : term -> term -> term
 val op_or : term -> term -> term
 val op_arrow : term -> term -> term
 val op_binder : binder -> term -> term
+val mk_binder : binder -> term -> 'a list -> ('a -> term -> term) -> term
+val ex_close : term -> term list -> term
 val binop : string -> term -> term -> term
 val db : int -> term
 val nabla : int -> term
