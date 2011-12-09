@@ -125,7 +125,7 @@ let rec process ?(interactive=false) parse lexbuf =
       | System.Query t ->
           do_cleanup
             (fun query' ->
-               let query = System.translate_term query' in
+               let query = System.translate_query query' in
                Prover.toplevel_prove query)
             t
             reset
@@ -209,16 +209,7 @@ let rec process ?(interactive=false) parse lexbuf =
           if interactive then Lexing.flush_input lexbuf else exit 1
 
       (* unhandled non-interactive errors *)
-      | Failure s when not interactive ->
-          Format.printf "%sError: %s\n"
-            (position_lex lexbuf)
-            s ;
-          exit 1
-      | e when not interactive ->
-          Format.printf "%sUnknown error: %s\n"
-            (position_lex lexbuf)
-            (Printexc.to_string e) ;
-          exit 1
+      | e when not interactive -> raise e
 
       (* interactive errors *)
       | System.Interrupt ->
@@ -251,6 +242,16 @@ let rec process ?(interactive=false) parse lexbuf =
     if interactive then flush stdout
   done with
     | End_of_file -> ()
+    | Failure s ->
+        Format.printf "%sError: %s\n"
+          (position_lex lexbuf)
+          s ;
+        exit 1
+    | e ->
+        Format.printf "%sUnknown error: %s\n"
+          (position_lex lexbuf)
+          (Printexc.to_string e) ;
+        exit 1
 
 and input_from_file file =
   let cwd = Sys.getcwd () in
@@ -331,7 +332,7 @@ and command c reset =
     (* Testing commands *)
     | System.Assert query' ->
         if !test then begin
-          let query = System.translate_term query' in
+          let query = System.translate_query query' in
           Format.eprintf "@[<hv 2>Checking that@ %a@,...@]@\n%!"
             Pprint.pp_term query ;
           Prover.prove ~level:Prover.One ~local:0 ~timestamp:0 query
@@ -339,7 +340,7 @@ and command c reset =
         end
     | System.Assert_not query' ->
         if !test then begin
-          let query = System.translate_term query' in
+          let query = System.translate_query query' in
           Format.eprintf "@[<hv 2>Checking that@ %a@ is false...@]@\n%!"
             Pprint.pp_term query ;
           Prover.prove ~level:Prover.One ~local:0 ~timestamp:0 query
@@ -347,7 +348,7 @@ and command c reset =
         end
     | System.Assert_raise query' ->
         if !test then begin
-          let query = System.translate_term query' in
+          let query = System.translate_query query' in
           Format.eprintf "@[<hv 2>Checking that@ %a@ causes an error...@]@\n%!"
             Pprint.pp_term query ;
           if
