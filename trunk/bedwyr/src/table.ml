@@ -38,10 +38,12 @@ let nabla_abstract t =
   let t = Norm.deep_norm t in
   let l = Term.get_nablas t in
   let max = List.fold_left (fun a b -> if (a < b) then b else a) 0 l in
-  let rec make_list n =
-      if (n = 0) then [] else n::make_list (n-1) in
+  let rec make_list = function 0 -> [] | n -> n::make_list (n-1) in
   let bindings = if !Index.eqvt_tbl then l else make_list max in
-      List.fold_left (fun s i -> Term.app (Term.atom "nabla") [Term.abstract (Term.nabla i) s]) t bindings
+  Term.op_binder
+    Term.Nabla
+    (List.length bindings)
+    (List.fold_left (fun s i -> (Term.abstract (Term.nabla i) s)) t bindings)
 
 
 (* Printing a table to standard output. Nabla variables are abstracted and explicitly quantified. *)

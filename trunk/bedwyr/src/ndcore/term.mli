@@ -19,7 +19,7 @@
 
 (** Representation of higher-order terms. *)
 
-type tag = Eigen | Constant | Logic | String
+type tag = Eigen | Constant | Logic
 type var = private { id : int ; tag : tag; ts : int; lts : int; }
 
 type binder = Forall | Exists | Nabla
@@ -28,6 +28,7 @@ type ptr
 type envitem = Dum of int | Binding of term * int
 type env = envitem list
 type rawterm =
+  | QString of string
   | Var of var
   | DB of int
   | NB of int
@@ -37,7 +38,7 @@ type rawterm =
   | And of term * term
   | Or of term * term
   | Arrow of term * term
-  | Binder of binder * term
+  | Binder of binder * int * term
   | Lam of int * term
   | App of term * term list
   | Susp of term * int * int * env
@@ -69,17 +70,15 @@ val eq_subst    : subst -> subst -> bool
 (** Creating terms. *)
 
 val lambda : int -> term -> term
-val string : string -> term
 val op_true : term
 val op_false : term
 val op_eq : term -> term -> term
 val op_and : term -> term -> term
 val op_or : term -> term -> term
 val op_arrow : term -> term -> term
-val op_binder : binder -> term -> term
-val mk_binder : binder -> term -> 'a list -> ('a -> term -> term) -> term
-val ex_close : term -> term list -> term
+val op_binder : binder -> int -> term -> term
 val binop : string -> term -> term -> term
+val qstring : string -> term
 val db : int -> term
 val nabla : int -> term
 val app : term -> term list -> term
@@ -95,7 +94,7 @@ val restore_namespace : namespace -> unit
 val fresh : ?name:string -> lts:int -> ts:int -> tag -> term
 val fresh_name : string -> string
 val get_var_by_name : tag:tag -> ts:int -> lts:int -> string -> term
-val atom : string -> term
+val atom : ?tag:tag -> string -> term
 
 val get_name : term -> string
 val get_hint : term -> string

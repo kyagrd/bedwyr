@@ -124,8 +124,8 @@ let rec process ?(interactive=false) parse lexbuf =
           List.iter (System.add_clause new_predicates) defs
       | System.Query t ->
           do_cleanup
-            (fun query ->
-               System.type_check_query query ;
+            (fun query' ->
+               let query = System.type_check_query query' in
                Prover.toplevel_prove query)
             t
             reset
@@ -176,7 +176,7 @@ let rec process ?(interactive=false) parse lexbuf =
             (position_lex lexbuf)
             n ;
           if interactive then Lexing.flush_input lexbuf else exit 1
-      | Type.Term_typing_error (ty1,ty2,unifier,term) -> (* TODO add a position and s/the expression %s/this expression/ *)
+      | Typing.Term_typing_error (ty1,ty2,unifier,term) -> (* TODO add a position and s/the expression %s/this expression/ *)
           Format.printf
             "%sTyping error: the expression %s has type %s but is used as %s.%!"
             (position_lex lexbuf)
@@ -322,29 +322,29 @@ and command c reset =
     | System.Save_table (name,file) -> System.save_table (Term.atom name) file
 
     (* Testing commands *)
-    | System.Assert query ->
+    | System.Assert query' ->
         if !test then begin
+          let query = System.type_check_query query' in
           Format.eprintf "@[<hv 2>Checking that@ %a@,...@]@\n%!"
             Pprint.pp_term query ;
-          System.type_check_query query ;
           Prover.prove ~level:Prover.One ~local:0 ~timestamp:0 query
             ~success:(fun _ _ -> ()) ~failure:(fun () -> raise Assertion_failed)
         end
-    | System.Assert_not query ->
+    | System.Assert_not query' ->
         if !test then begin
+          let query = System.type_check_query query' in
           Format.eprintf "@[<hv 2>Checking that@ %a@ is false...@]@\n%!"
             Pprint.pp_term query ;
-          System.type_check_query query ;
           Prover.prove ~level:Prover.One ~local:0 ~timestamp:0 query
             ~success:(fun _ _ -> raise Assertion_failed) ~failure:ignore
         end
-    | System.Assert_raise query ->
+    | System.Assert_raise query' ->
         if !test then begin
+          let query = System.type_check_query query' in
           Format.eprintf "@[<hv 2>Checking that@ %a@ causes an error...@]@\n%!"
             Pprint.pp_term query ;
           if
             try
-              System.type_check_query query ;
               Prover.prove ~level:Prover.One ~local:0 ~timestamp:0 query
                 ~success:(fun _ _ -> ()) ~failure:ignore ;
               true
