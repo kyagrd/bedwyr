@@ -110,7 +110,6 @@ let rec process ?(interactive=false) parse lexbuf =
         fun () -> Term.restore_state s ; Term.restore_namespace ns
     in
     if interactive then Format.printf "?= %!" ;
-    (* TODO do something with kinds and types *)
     begin try match (parse Lexer.token lexbuf) with
       | System.KKind (l, k) ->
           List.iter
@@ -123,12 +122,13 @@ let rec process ?(interactive=false) parse lexbuf =
       | System.Def (decls,defs) ->
           let new_predicates = List.map System.create_def decls in
           List.iter (System.add_clause new_predicates) defs
-      | System.Query t -> (* XXX how does it play with free variables? *)
-          let f t =
-            Type.global_unifier := Type.type_check_term t Type.TProp !Type.global_unifier System.type_of_var;
-            Prover.toplevel_prove t
-          in
-          do_cleanup f t reset
+      | System.Query t ->
+          do_cleanup
+            (fun query ->
+               System.type_check_query query ;
+               Prover.toplevel_prove query)
+            t
+            reset
       | System.Command c -> command c reset
     with
       (* I/O *)
@@ -326,7 +326,7 @@ and command c reset =
         if !test then begin
           Format.eprintf "@[<hv 2>Checking that@ %a@,...@]@\n%!"
             Pprint.pp_term query ;
-          Type.global_unifier := Type.type_check_term query Type.TProp !Type.global_unifier System.type_of_var;
+          System.type_check_query query ;
           Prover.prove ~level:Prover.One ~local:0 ~timestamp:0 query
             ~success:(fun _ _ -> ()) ~failure:(fun () -> raise Assertion_failed)
         end
@@ -334,7 +334,7 @@ and command c reset =
         if !test then begin
           Format.eprintf "@[<hv 2>Checking that@ %a@ is false...@]@\n%!"
             Pprint.pp_term query ;
-          Type.global_unifier := Type.type_check_term query Type.TProp !Type.global_unifier System.type_of_var;
+          System.type_check_query query ;
           Prover.prove ~level:Prover.One ~local:0 ~timestamp:0 query
             ~success:(fun _ _ -> raise Assertion_failed) ~failure:ignore
         end
@@ -344,7 +344,7 @@ and command c reset =
             Pprint.pp_term query ;
           if
             try
-              Type.global_unifier := Type.type_check_term query Type.TProp !Type.global_unifier System.type_of_var;
+              System.type_check_query query ;
               Prover.prove ~level:Prover.One ~local:0 ~timestamp:0 query
                 ~success:(fun _ _ -> ()) ~failure:ignore ;
               true

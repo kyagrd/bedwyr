@@ -45,17 +45,17 @@
      * of variables used as parameters.
      * A parameter can be left untouched if it's a variable which didn't
      * occur yet. *)
-    let new_params,prolog =
+    let new_params,prolog,old_params =
       List.fold_left
-        (fun (new_params,prolog) p ->
+        (fun (new_params,prolog,old_params) p ->
            match Term.observe p with
              | Term.Var {Term.tag=Term.Logic}
                  when List.for_all (fun v -> v!=p) new_params ->
-                 p::new_params,prolog
+                 p::new_params,prolog,old_params
              | _  ->
                  let v = Term.fresh ~ts:0 ~lts:0 Term.Logic in
-                   (v::new_params, (Term.op_eq v p)::prolog))
-        ([],[])
+                 (v::new_params,(Term.op_eq v p)::prolog,p::old_params))
+        ([],[],[])
         params
     in
     (* Add prolog to the body *)
@@ -65,14 +65,15 @@
         body
         prolog
     in
-    (* Quantify existentially over the initial free variables. *)
+    (* Quantify existentially over the initial free variables,
+     * except for those that appeared only on the body
+     * (they are not allowed) *)
     let body =
-      List.fold_left
-        (fun body v ->
-           if List.exists (Term.eq v) new_params then body else
-             Term.op_binder Term.Exists (Term.abstract v body))
+      Term.ex_close
         body
-        (Term.logic_vars ([body]))
+        (List.filter
+           (fun v -> not (List.exists (Term.eq v) new_params))
+           (Term.logic_vars old_params))
     in
     (* Finally, abstract over parameters *)
     let arity,body =
@@ -92,12 +93,6 @@
     let x = Term.abstract a term in
     if was_free then Term.free name ;
     x
-
-  let mkquantif binder bindings term =
-    List.fold_left
-      (fun t b -> Term.op_binder binder (mkabs b t))
-      term
-      bindings
 
 %}
 
@@ -257,7 +252,7 @@ formula:
   | formula AND formula                 { Term.op_and $1 $3 }
   | formula OR formula                  { Term.op_or $1 $3 }
   | formula RARROW formula              { Term.op_arrow $1 $3 }
-  | binder pabound_list COMMA formula   { mkquantif $1 $2 $4 }
+  | binder pabound_list COMMA formula   { Term.mk_binder $1 $4 $2 mkabs }
   | LPAREN formula RPAREN               { $2 }
   | term %prec LPAREN                   { $1 }
 

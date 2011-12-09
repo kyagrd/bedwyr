@@ -575,6 +575,13 @@ let op_and a b = And (a,b)
 let op_or a b = Or (a,b)
 let op_arrow a b = Arrow (a,b)
 let op_binder a b = Binder (a,b)
+let mk_binder binder term vars abs =
+  List.fold_left
+    (fun t v -> Binder (binder,(abs v t)))
+    term
+    vars
+let ex_close term vars =
+  mk_binder Exists term vars abstract
 
 let binop s a b = App ((atom s),[a;b])
 

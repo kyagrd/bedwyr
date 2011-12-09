@@ -259,8 +259,20 @@ let type_of_var (v,term) = match v with
               let name = Term.get_name term in
               raise (Missing_declaration (name))
 
-let type_check_clause arity body ty unifier =
-  Type.type_check_term (Term.lambda arity body) ty unifier type_of_var
+(* TODO try to include vars in type_of_var (eg create a fresh type for each),
+ * and avoid this unnecessary existentially closure *)
+let type_check_term ?vars term ty =
+  let term = match vars with
+    | None -> term
+    | Some vars -> Term.ex_close term vars
+  in
+  Type.global_unifier := Type.type_check_term term ty !Type.global_unifier type_of_var
+
+let type_check_clause arity body ty =
+  type_check_term (Term.lambda arity body) ty
+
+let type_check_query query =
+  type_check_term ~vars:(Term.logic_vars [query]) query Type.TProp
 
 let add_clause new_predicates (head_tm,p,arity,body) =
   let name = Term.get_name head_tm in
@@ -270,7 +282,7 @@ let add_clause new_predicates (head_tm,p,arity,body) =
     with Not_found -> raise (Inconsistent_definition (name,p,"predicate was not declared"))
   in
   if List.mem head_var new_predicates then begin
-    Type.global_unifier := type_check_clause arity body ty !Type.global_unifier ;
+    type_check_clause arity body ty ;
     let b =
       match b with
         | None -> Term.lambda arity body
