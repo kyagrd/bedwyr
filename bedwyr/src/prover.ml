@@ -140,8 +140,7 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
 
   let g = Norm.hnorm g in
   let invalid_goal () =
-    printf "Goal %s:\n" (Pprint.term_to_string_full [] [] g) ;
-    failwith (sprintf "invalid goal")
+    failwith (sprintf "Invalid goal %s" (Pprint.term_to_string_full [] [] g))
   in
 
   (* Function to prove _distinct predicate *)
@@ -243,7 +242,8 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
              printf "Goal %a proved using table\n" Pprint.pp_term g;
           success timestamp failure
       | Known Table.Disproved ->
-          Format.printf "Known disproved\n" ;
+          if !debug then
+            Format.printf "Known disproved\n" ;
           failure ()
       | Known (Table.Working disprovable) ->
           if kind = System.CoInductive then
@@ -435,49 +435,51 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
                       prove_conj timestamp failure (make_copies !ev_substs b))
 
     (* Level 1: Universal quantification *)
-    | Binder (Forall,goal) ->
+    | Binder (Forall,n,goal) ->
         assert_level_one level ;
-        let goal = Norm.hnorm goal in
-        begin match observe goal with
-          | Lam (1,_) ->
-              let timestamp = timestamp + 1 in
-              let var = Term.fresh ~lts:local Eigen ~ts:timestamp in
-              let goal = app goal [var] in
-              prove ~local ~timestamp ~level ~success ~failure goal
-          | _ -> invalid_goal ()
-        end
+        let goal = Norm.hnorm (Term.lambda n goal) in
+        let vars =
+          let rec aux l = function
+            | n when n <= 0 -> l
+            | n -> aux ((Term.fresh ~lts:local Eigen ~ts:(timestamp + n))::l) (n-1)
+          in
+          aux [] n
+        in
+        let goal = app goal vars in
+        prove ~local ~timestamp:(timestamp + n) ~level ~success ~failure goal
 
     (* Local quantification *)
-    | Binder (Nabla,goal) ->
-        let goal = Norm.hnorm goal in
-        begin match observe goal with
-          | Lam (1,_) ->
-              let local = local + 1 in
-                prove ~local ~level ~timestamp ~success ~failure
-                  (app goal [Term.nabla local])
-          | _ -> invalid_goal ()
-        end
+    | Binder (Nabla,n,goal) ->
+        let goal = Norm.hnorm (Term.lambda n goal) in
+        let vars =
+          let rec aux l = function
+            | n when n <= 0 -> l
+            | n -> aux ((Term.nabla (local + n))::l) (n-1)
+          in
+          aux [] n
+        in
+        let goal = app goal vars in
+        prove ~local:(local + n) ~timestamp ~level ~success ~failure goal
 
     (* Existential quantification *)
-    | Binder (Exists,goal) ->
-        let goal = Norm.hnorm goal in
-        begin match observe goal with
-          | Lam (1,_) ->
-              let timestamp,tag =
-                match level with
-                  | Zero ->
-                      1+timestamp, Eigen
-                  | One ->
-                      timestamp, Logic
+    | Binder (Exists,n,goal) ->
+        let goal = Norm.hnorm (Term.lambda n goal) in
+        let timestamp,vars = match level with
+          | Zero ->
+              let rec aux l = function
+                | n when n <= 0 -> l
+                | n -> aux ((Term.fresh ~lts:local Eigen ~ts:(timestamp + n))::l) (n-1)
               in
-              let var =
-                Term.fresh ~ts:timestamp ~lts:local tag
+              timestamp + n,aux [] n
+          | One ->
+              let rec aux l = function
+                | n when n <= 0 -> l
+                | n -> aux ((Term.fresh ~lts:local Logic ~ts:timestamp)::l) (n-1)
               in
-              prove ~local ~level ~timestamp
-                ~success ~failure (app goal [var])
-          | _ ->
-              invalid_goal ()
-        end
+              timestamp,aux [] n
+        in
+        let goal = app goal vars in
+        prove ~local ~timestamp ~level ~success ~failure goal
 
     | App (hd,goals) ->
         let goals = List.map Norm.hnorm goals in

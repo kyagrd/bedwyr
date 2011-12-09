@@ -19,7 +19,7 @@
 
 (** Representation of higher-order terms. *)
 
-type tag = Eigen | Constant | Logic | String
+type tag = Eigen | Constant | Logic
 
 (** Physical equality is used to distinguish variables. *)
 type var = {
@@ -35,6 +35,7 @@ type binder = Forall | Exists | Nabla
   * [ `Var ] term, etc... *)
 type term = rawterm
 and rawterm =
+  | QString of string
   | Var    of var (* Only when "observing" the term *)
   | DB     of int
   | NB     of int (* Nabla variables *)
@@ -44,7 +45,7 @@ and rawterm =
   | And    of term * term
   | Or     of term * term
   | Arrow  of term * term
-  | Binder of binder * term
+  | Binder of binder * int * term
   | Lam    of int * term
   | App    of term * term list
   | Susp   of term * int * int * env
@@ -71,14 +72,15 @@ let rec eq t1 t2 =
     | Or (t1,t1'), Or (t2,t2')
     | Arrow (t1,t1'), Arrow (t2,t2') ->
         eq t1 t2 && eq t1' t2'
-    | Binder (b1,t1), Binder (b2,t2) ->
-        b1 = b2 && eq t1 t2
+    | Binder (b1,n1,t1), Binder (b2,n2,t2) ->
+        b1 = b2 && n1 = n2 && eq t1 t2
     | App (h1,l1), App (h2,l2) ->
         List.length l1 = List.length l2 &&
         List.fold_left2
           (fun test t1 t2 -> test && eq t1 t2)
           true (h1::l1) (h2::l2)
-    | Lam (n,t1), Lam (m,t2) -> n = m && eq t1 t2
+    | Lam (n1,t1), Lam (n2,t2) ->
+        n1 = n2 && eq t1 t2
     | Var _, _ | _, Var _ -> assert false
     | Susp (t,ol,nl,e), Susp (tt,oll,nll,ee) ->
         ol = oll && nl = nll && eq t tt &&
@@ -203,13 +205,14 @@ let abstract target t =
         let rec aux n t = match t with
           | NB i -> t
           | DB i -> if i>=n then DB (i+1) else t
+          | QString _
           | True
           | False -> t
           | Eq (t1,t2) -> Eq (aux n t1,aux n t2)
           | And (t1,t2) -> And (aux n t1,aux n t2)
           | Or (t1,t2) -> Or (aux n t1,aux n t2)
           | Arrow (t1,t2) -> Arrow (aux n t1,aux n t2)
-          | Binder (b,t) -> Binder (b,aux n t)
+          | Binder (b,m,t) -> Binder (b,m,aux (n+m) t)
           | App (h,ts) ->
               App ((aux n h), (List.map (aux n) ts))
           | Lam (m,s) -> Lam (m, aux (n+m) s)
@@ -224,13 +227,14 @@ let abstract target t =
         let rec aux n t = match t with
           | NB i -> if i=target then DB n else t
           | DB i -> if i>=n then DB (i+1) else t
+          | QString _
           | True
           | False -> t
           | Eq (t1,t2) -> Eq (aux n t1,aux n t2)
           | And (t1,t2) -> And (aux n t1,aux n t2)
           | Or (t1,t2) -> Or (aux n t1,aux n t2)
           | Arrow (t1,t2) -> Arrow (aux n t1,aux n t2)
-          | Binder (b,t) -> Binder (b,aux n t)
+          | Binder (b,m,t) -> Binder (b,m,aux (n+m) t)
           | App (h,ts) ->
               App ((aux n h), (List.map (aux n) ts))
           | Lam (m,s) -> Lam (m, aux (n+m) s)
@@ -252,13 +256,14 @@ let abstract_flex target t =
         let rec aux n t = match t with
           | NB i -> t
           | DB i -> if i>=n then DB (i+1) else t
+          | QString _
           | True
           | False -> t
           | Eq (t1,t2) -> Eq (aux n t1,aux n t2)
           | And (t1,t2) -> And (aux n t1,aux n t2)
           | Or (t1,t2) -> Or (aux n t1,aux n t2)
           | Arrow (t1,t2) -> Arrow (aux n t1,aux n t2)
-          | Binder (b,t) -> Binder (b,aux n t)
+          | Binder (b,m,t) -> Binder (b,m,aux (n+m) t)
           | App (h,ts) ->
               begin match observe h with
               | Var v ->
@@ -287,10 +292,10 @@ let get_vars test ts =
     | And (t1,t2)
     | Or (t1,t2)
     | Arrow (t1,t2) -> fv (fv l t1) t2
-    | Binder (b,t) -> fv l t
+    | Binder (b,_,t) -> fv l t
     | App (h,ts) -> List.fold_left fv (fv l h) ts
-    | Lam (n,t') -> fv l t'
-    | DB _ | NB _ | True | False -> l
+    | Lam (_,t') -> fv l t'
+    | QString _ | DB _ | NB _ | True | False -> l
     | Susp _ -> assert false
     | Ptr _ -> assert false
   in
@@ -355,16 +360,19 @@ let get_var_by_name ~tag ~ts ~lts name =
 
 (* Same as [get_var_by_name] but infers the tag from the name and sets both
  * levels to 0. *)
-let atom name =
-  let tag = match name.[0] with
-    | 'A'..'Z' -> Logic
-    | _ -> Constant
+let atom ?tag name =
+  let tag = match tag with
+    | Some tag -> tag
+    | None ->
+        Format.eprintf "WARNING: unspecified tag for \"%s\"!\n" name ;
+        begin match name.[0] with
+          | 'A'..'Z' -> Logic
+          | _ -> Constant
+        end
   in
   if name = "_"
   then fresh ~name:"_" Logic ~ts:0 ~lts:0
   else get_var_by_name ~ts:0 ~lts:0 ~tag name
-
-let string text = get_var_by_name ~tag:String ~lts:0 ~ts:0 text
 
 let get_var x = match observe x with
   | Var v -> v
@@ -381,7 +389,6 @@ let get_hint v =
           | Logic -> "H"
           | Eigen -> "h"
           | Constant -> "c"
-          | String -> "s"
         end
 
 (** Find an unique name for [v] (based on a naming hint if there is one)
@@ -478,10 +485,10 @@ let copy_eigen () =
       | And (t1,t2) -> And (cp t1,cp t2)
       | Or (t1,t2) -> Or (cp t1,cp t2)
       | Arrow (t1,t2) -> Arrow (cp t1,cp t2)
-      | Binder (b,t) -> Binder (b,cp t)
+      | Binder (b,l,t) -> Binder (b,l,cp t)
       | App (a,l) -> App (cp a, List.map cp l)
-      | Lam (n,b) -> Lam (n, cp b)
-      | DB _ | NB _ | True | False as x -> x
+      | Lam (l,b) -> Lam (l,cp b)
+      | QString _ | DB _ | NB _ | True | False as x -> x
       | Susp _ | Ptr _ -> assert false
     in
     cp tm
@@ -490,14 +497,14 @@ let copy_eigen () =
    pointers to variables. *)
 let rec simple_copy tm =
   match tm with
-    | DB _ | NB _ | True | False | Var _ | Ptr {contents=V _} -> tm
+    | QString _ | DB _ | NB _ | True | False | Var _ | Ptr {contents=V _} -> tm
     | Eq (t1,t2) -> Eq (simple_copy t1,simple_copy t2)
     | And (t1,t2) -> And (simple_copy t1,simple_copy t2)
     | Or (t1,t2) -> Or (simple_copy t1,simple_copy t2)
     | Arrow (t1,t2) -> Arrow (simple_copy t1,simple_copy t2)
-    | Binder (b,t) -> Binder (b,simple_copy t)
+    | Binder (b,n,t) -> Binder (b,n,simple_copy t)
     | App (a,l) -> App (simple_copy a, List.map simple_copy l)
-    | Lam (n,b) -> Lam (n, simple_copy b)
+    | Lam (n,b) -> Lam (n,simple_copy b)
     | Ptr {contents=T t} -> simple_copy t
     | Susp _ -> assert false
 
@@ -507,14 +514,14 @@ let shared_copy tm =
   let tbl = Hashtbl.create 100 in
   let rec cp t =
     match t with
-      | DB _ | NB _ | True | False | Var _ | Ptr {contents=V _} -> t
+      | QString _ | DB _ | NB _ | True | False | Var _ | Ptr {contents=V _} -> t
       | Eq (t1,t2) -> Eq (cp t1,cp t2)
       | And (t1,t2) -> And (cp t1,cp t2)
       | Or (t1,t2) -> Or (cp t1,cp t2)
       | Arrow (t1,t2) -> Arrow (cp t1,cp t2)
-      | Binder (b,t) -> Binder (b,cp t)
+      | Binder (b,n,t) -> Binder (b,n,cp t)
       | App (a,l) -> App (cp a, List.map cp l)
-      | Lam (n,b) -> Lam (n, cp b)
+      | Lam (n,b) -> Lam (n,cp b)
       | Ptr ({contents=T s} as x) ->
           begin try Hashtbl.find tbl x  with
             | Not_found ->
@@ -552,14 +559,15 @@ let eqvt t1 t2 =
       | Or (t1,t1'), Or (t2,t2')
       | Arrow (t1,t1'), Arrow (t2,t2') ->
           aux t1 t2 && aux t1' t2'
-      | Binder (b1,t1), Binder (b2,t2) ->
-          b1 = b2 && aux t1 t2
+      | Binder (b1,n1,t1), Binder (b2,n2,t2) ->
+          b1 = b2 && n1 = n2 && aux t1 t2
       | App (h1,l1), App (h2,l2) ->
           List.length l1 = List.length l2 &&
           List.fold_left2
             (fun test t1 t2 -> test && aux t1 t2)
             true (h1::l1) (h2::l2)
-      | Lam (n,t1), Lam (m,t2) -> n = m && aux t1 t2
+      | Lam (n1,t1), Lam (n2,t2) ->
+          n1 = n2 && aux t1 t2
       | Var _, _ | _, Var _ -> assert false
       | Susp _, _ -> raise NonNormalTerm
       | _ -> false
@@ -574,16 +582,11 @@ let op_eq a b = Eq (a,b)
 let op_and a b = And (a,b)
 let op_or a b = Or (a,b)
 let op_arrow a b = Arrow (a,b)
-let op_binder a b = Binder (a,b)
-let mk_binder binder term vars abs =
-  List.fold_left
-    (fun t v -> Binder (binder,(abs v t)))
-    term
-    vars
-let ex_close term vars =
-  mk_binder Exists term vars abstract
+let op_binder a n b = Binder (a,n,b)
 
 let binop s a b = App ((atom s),[a;b])
+
+let qstring s = QString s
 
 let db n = DB n
 
@@ -597,15 +600,15 @@ let susp t ol nl e = Susp (t,ol,nl,e)
 
 let get_nablas x =
   let rec nb l t = match observe t with
-    | Var _ | DB _ | True | False -> l
+    | QString _ | Var _ | DB _ | True | False -> l
     | NB i -> if List.mem i l then l else i::l
     | Eq (t1,t2)
     | And (t1,t2)
     | Or (t1,t2)
     | Arrow (t1,t2) -> nb (nb l t1) t2
-    | Binder (b,t) -> nb l t
-    | App (h,ts) -> List.fold_left nb (nb l h) ts
-    | Lam (n,t') -> nb l t'
+    | Binder (_,_,t) -> nb l t
+    | App (hd,tl) -> List.fold_left nb (nb l hd) tl
+    | Lam (_,t) -> nb l t
     | Susp _ | Ptr _ -> assert false
   in
   nb [] x

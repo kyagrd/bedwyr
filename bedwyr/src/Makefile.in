@@ -18,7 +18,8 @@ VERSION = @PACKAGE_VERSION@
 CORE_ML    = ndcore/term.ml ndcore/norm.ml ndcore/unify.ml \
              ndcore/index.ml
 TEST_ML    = ndcore/tests/oUnit.ml ndcore/tests/test.ml
-BEDWYR_ML  = type.ml pprint.ml table.ml system.ml parser.ml lexer.ml prover.ml config.ml main.ml
+BEDWYR_ML  = type.ml typing.ml pprint.ml table.ml system.ml parser.ml \
+	     lexer.ml prover.ml config.ml main.ml
 
 CORE_SRC   = $(CORE_ML)   $(wildcard $(CORE_ML:.ml=.mli))
 BEDWYR_SRC = $(BEDWYR_ML) $(wildcard $(BEDWYR_ML:.ml=.mli))

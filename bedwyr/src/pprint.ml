@@ -31,7 +31,6 @@ let string_of_tag = function
   | Eigen -> "e"
   | Constant -> "c"
   | Logic -> "l"
-  | String -> "s"
 
 let string_of_binder = function
   | Forall -> "Forall"
@@ -86,7 +85,7 @@ let kind_to_string ki =
 let pp_type unifier chan ty =
   let ty = match unifier with
     | None -> ty
-    | Some unifier -> Type.ty_norm unifier ty
+    | Some unifier -> Typing.ty_norm unifier ty
   in
   let rec aux chan = function
     | Type.Ty name ->
@@ -108,7 +107,7 @@ let type_to_string unifier ty =
 (* Print a unifier *)
 let pp_unifier chan unifier =
   Format.fprintf chan "@[{";
-  Unifier.iter
+  Typing.Unifier.iter
     (fun i ty -> Format.fprintf chan "@[ %d : %a ;@]" i (pp_type None) ty)
     unifier;
   Format.fprintf chan "}@]%!"
@@ -144,7 +143,8 @@ let print_full ~generic ~bound chan term =
             (get_nth generic (i-1) ("nabla(" ^ (string_of_int (i - 1)) ^ ")"))
       | DB i ->
           Format.fprintf chan "%s"
-            (get_nth bound (i-1) ("db(" ^ (string_of_int (i - 1)) ^ ")"))
+            (get_nth bound (i-1) ("db(" ^ (string_of_int i) ^ ")"))
+      | QString s -> Format.fprintf chan "\"%s\"" s
       | True -> Format.fprintf chan "true"
       | False -> Format.fprintf chan "false"
       | Eq (t1,t2) ->
@@ -183,16 +183,23 @@ let print_full ~generic ~bound chan term =
               Format.fprintf chan "@[<1>(%a@ ->@ %a)@]"
           in
           print (pp ~bound (op_priority)) t1 (pp ~bound (op_priority+1)) t2
-      | Binder (b,t) ->
+      | Binder (b,i,t) ->
+          assert (i>0) ;
+          (* Get [i] more dummy names for the new bound variables.
+           * Release them after the printing of this term. *)
+          let more = Term.get_dummy_names ~start:1 i "x" in
+          let head = String.concat "," more in
           let print =
             if pr=0 then
-              Format.fprintf chan "@[<2>%s %a@]"
+              Format.fprintf chan "@[<2>%s@ %s,@ %a@]"
              else
-              Format.fprintf chan "@[<3>(%s %a)@]"
+              Format.fprintf chan "@[<3>(%s@ %s,@ %a)@]"
           in
           print
             (string_of_binder b)
-            (pp ~bound high_pr) t
+            head
+            (pp ~bound:(List.rev_append more bound) 0) t ;
+          List.iter Term.free more
       | App (t,ts) ->
           begin match (observe t, ts) with
             | Var {tag=Constant}, [a; b] when is_infix (get_name t) ->
@@ -228,7 +235,7 @@ let print_full ~generic ~bound chan term =
                   (List.tl ts)
           end
       | Lam (i,t) ->
-          assert (i<>0) ;
+          assert (i>0) ;
           (* Get [i] more dummy names for the new bound variables.
            * Release them after the printing of this term. *)
           let more = Term.get_dummy_names ~start:1 i "x" in

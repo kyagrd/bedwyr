@@ -129,7 +129,7 @@ type pattern =
   | And    of pattern * pattern
   | Or     of pattern * pattern
   | Arrow  of pattern * pattern
-  | Binder of Term.binder * pattern
+  | Binder of Term.binder * int * pattern
   | Lam    of int * pattern
   | App    of int * pattern list (* Store the length of the list *)
   | Hole
@@ -185,9 +185,9 @@ let create_node ~allow_eigenvar bindings terms data =
           let pat1,bindings = compile bindings t1 in
           let pat2,bindings = compile bindings t2 in
           Arrow (pat1,pat2),bindings
-      | Term.Binder (b,t) ->
+      | Term.Binder (b,n,t) ->
           let pat,bindings = compile bindings t in
-          Binder (b,pat),bindings
+          Binder (b,n,pat),bindings
       | Term.App (h,terms) ->
           let terms = h::terms in
           let patterns,bindings =
@@ -225,7 +225,7 @@ let superficial_match patterns terms =
     | Or _, Term.Or _
     | Arrow _, Term.Arrow _
     | Var _, Term.Var {Term.tag=Term.Eigen} -> true
-    | Binder (b1,_), Term.Binder (b2,_) -> b1=b2
+    | Binder (b1,n1,_), Term.Binder (b2,n2,_) -> b1=b2 && n1=n2
     | App (i,_), Term.App (h,l) -> i = 1 + List.length l
     | Hole, _ -> true
     | _ -> false
@@ -250,8 +250,8 @@ let rec rename term bindings n =
           | Not_found -> Term.nabla (n+1), (i,n+1)::bindings, n+1
         end
     | Term.Lam (i,t) ->
-        let newt,bds,n' = rename t bindings n in
-        (Term.lambda i newt),bds,n'
+        let t,bindings,n = rename t bindings n in
+        (Term.lambda i t),bindings,n
     | Term.Eq (t1,t2) ->
         let t1,bindings,n = rename t1 bindings n in
         let t2,bindings,n = rename t2 bindings n in
@@ -268,9 +268,9 @@ let rec rename term bindings n =
         let t1,bindings,n = rename t1 bindings n in
         let t2,bindings,n = rename t2 bindings n in
         Term.op_arrow t1 t2,bindings,n
-    | Term.Binder (b,t) ->
+    | Term.Binder (b,i,t) ->
         let t,bindings,n = rename t bindings n in
-        Term.op_binder b t,bindings,n
+        Term.op_binder b i t,bindings,n
     | Term.App (h,terms) ->
         let newterms,bds,n'=
           List.fold_left
@@ -359,11 +359,11 @@ let update ~allow_eigenvar index terms data =
             update_pattern bindings catches former_alt pat2 t2
           in
           (changed1 || changed2, Arrow (pat1,pat2), bindings, catches, former_alt)
-      | Binder (b1,pat), Term.Binder (b2,t) when b1=b2 ->
+      | Binder (b1,n1,pat), Term.Binder (b2,n2,t) when b1=b2 && n1=n2 ->
           let (changed,pat,bindings,catches,former_alt) =
             update_pattern bindings catches former_alt pat t
           in
-          (changed, Binder (b1,pat), bindings, catches, former_alt)
+          (changed, Binder (b1,n1,pat), bindings, catches, former_alt)
       | App (i,patterns), Term.App (h,terms) when i = 1 + List.length terms ->
           let terms = h::terms in
           let (changed,patterns,bindings,catches,former_alt) =
@@ -472,7 +472,7 @@ let rec filter bindings catches pattern term =
     | Arrow (pat1,pat2), Term.Arrow (t1,t2) ->
         let bindings,catches = filter bindings catches pat1 t1 in
         filter bindings catches pat2 t2
-    | Binder (b1,pat), Term.Binder (b2,t) when b1=b2 ->
+    | Binder (b1,n1,pat), Term.Binder (b2,n2,t) when b1=b2 && n1=n2->
         filter bindings catches pat t
     | App (i,patterns), Term.App (h,l) when i = 1 + List.length l ->
         filter_several bindings catches patterns (h::l)
@@ -532,7 +532,7 @@ struct
     | ZAnd
     | ZOr
     | ZArrow
-    | ZBinder of Term.binder
+    | ZBinder of Term.binder * int
     | ZLam    of int
     | ZApp    of int
     | ZHole
@@ -565,7 +565,7 @@ struct
            | And (p1,p2) -> ZAnd::row, p2::p1::subpats
            | Or (p1,p2) -> ZOr::row, p2::p1::subpats
            | Arrow (p1,p2) -> ZArrow::row, p2::p1::subpats
-           | Binder (b,p) -> (ZBinder b)::row, p::subpats
+           | Binder (b,n,p) -> (ZBinder (b,n))::row, p::subpats
            | App (n,l) -> (ZApp n)::row, List.rev_append l subpats
            | Lam (n,p) -> (ZLam n)::row, p::subpats
            | Hole -> ZHole::row, Hole::subpats)
@@ -581,11 +581,10 @@ struct
       refine (row::acc) sub
 
   let split_at_nth l n =
-    let rec aux before l n =
-      if n = 0 then List.rev before, l else
-        match l with
-          | h::l -> aux (h::before) l (n-1)
-          | _ -> assert false
+    let rec aux before l n = match l,n with
+      | _,0 -> List.rev before,l
+      | h::l,_ -> aux (h::before) l (n-1)
+      | _ -> assert false
     in
     aux [] l n
 
@@ -598,33 +597,33 @@ struct
       | ZTrue -> Term.op_true, terms
       | ZFalse -> Term.op_false, terms
       | ZEq ->
-          begin match split_at_nth terms 2 with
-            | ([t1;t2]),terms ->
+          begin match terms with
+            | t1::t2::terms ->
                 Term.op_eq t1 t2, terms
             | _ -> assert false
           end
       | ZAnd ->
-          begin match split_at_nth terms 2 with
-            | ([t1;t2]),terms ->
+          begin match terms with
+            | t1::t2::terms ->
                 Term.op_and t1 t2, terms
             | _ -> assert false
           end
       | ZOr ->
-          begin match split_at_nth terms 2 with
-            | ([t1;t2]),terms ->
+          begin match terms with
+            | t1::t2::terms ->
                 Term.op_or t1 t2, terms
             | _ -> assert false
           end
       | ZArrow ->
-          begin match split_at_nth terms 2 with
-            | ([t1;t2]),terms ->
+          begin match terms with
+            | t1::t2::terms ->
                 Term.op_arrow t1 t2, terms
             | _ -> assert false
           end
-      | ZBinder b ->
-          begin match split_at_nth terms 1 with
-            | ([t]),terms ->
-                Term.op_binder b t, terms
+      | ZBinder (b,n) ->
+          begin match terms with
+            | h::terms ->
+                Term.op_binder b n h, terms
             | _ -> assert false
           end
       | ZApp n ->
@@ -685,7 +684,7 @@ let iter index f =
                    t
                    l
                in
-                 f (Term.abstract head t) v)
+               f (Term.abstract head t) v)
           map
     | Refine i -> iter_index mz i
 

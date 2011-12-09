@@ -25,10 +25,10 @@ val set_infix : (string * assoc) list -> unit
 val pp_kind : Format.formatter -> Type.simple_kind -> unit
 val kind_to_string : Type.simple_kind ->string 
 
-val pp_type : Type.simple_type Type.Unifier.t option -> Format.formatter -> Type.simple_type -> unit
-val type_to_string : Type.simple_type Type.Unifier.t option -> Type.simple_type ->string 
+val pp_type : Type.simple_type Typing.Unifier.t option -> Format.formatter -> Type.simple_type -> unit
+val type_to_string : Type.simple_type Typing.Unifier.t option -> Type.simple_type ->string 
 
-val pp_unifier : Format.formatter -> Type.simple_type Type.Unifier.t -> unit
+val pp_unifier : Format.formatter -> Type.simple_type Typing.Unifier.t -> unit
 
 val term_to_string_full :
   generic:string list -> bound:string list -> Term.term -> string

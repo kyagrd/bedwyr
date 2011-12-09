@@ -25,75 +25,6 @@
     else
       (Parsing.rhs_start_pos i, Parsing.rhs_end_pos i)
 
-  let mkdef head params body p =
-    (* Replace the params by fresh variables and
-     * put the constraints on the parameters in the body:
-     * d (s X) X := body --> d Y X := (Y = s X) /\ body
-     * As an input we get: [head] (d) [params] ([s X;X]) and [body]. *)
-
-    (* Free the registered names that are bound in the definition clause.
-     * If one doesn't do that, a logic variable [X] could be left
-     * in the namespace, and persist from one query to another.
-     * There shouldn't be any risk to actually free something that was
-     * allocated before the parsing of that clause. *)
-    let () =
-      let v = Term.logic_vars (body::params) in
-      List.iter (fun v -> Term.free (Term.get_name v)) v
-    in
-
-    (* Create the prolog (new equalities added to the body) and the new set
-     * of variables used as parameters.
-     * A parameter can be left untouched if it's a variable which didn't
-     * occur yet. *)
-    let new_params,prolog,old_params =
-      List.fold_left
-        (fun (new_params,prolog,old_params) p ->
-           match Term.observe p with
-             | Term.Var {Term.tag=Term.Logic}
-                 when List.for_all (fun v -> v!=p) new_params ->
-                 p::new_params,prolog,old_params
-             | _  ->
-                 let v = Term.fresh ~ts:0 ~lts:0 Term.Logic in
-                 (v::new_params,(Term.op_eq v p)::prolog,p::old_params))
-        ([],[],[])
-        params
-    in
-    (* Add prolog to the body *)
-    let body = if prolog = [] then body else
-      List.fold_left
-        (fun acc term -> Term.op_and term acc)
-        body
-        prolog
-    in
-    (* Quantify existentially over the initial free variables,
-     * except for those that appeared only on the body
-     * (they are not allowed) *)
-    let body =
-      Term.ex_close
-        body
-        (List.filter
-           (fun v -> not (List.exists (Term.eq v) new_params))
-           (Term.logic_vars old_params))
-    in
-    (* Finally, abstract over parameters *)
-    let arity,body =
-      if new_params = [] then 0,body else
-        let body =
-          List.fold_left (fun body v -> Term.abstract v body)
-            body
-            new_params
-        in match Term.observe body with
-          | Term.Lam (n,b) -> n,b
-          | _ -> assert false
-    in
-    (head, p, arity, body)
-
-  let mkabs (was_free,name,ty) term =
-    let a = Term.atom name in
-    let x = Term.abstract a term in
-    if was_free then Term.free name ;
-    x
-
 %}
 
 %token SIG MODULE ACCUMSIG ACCUM END
@@ -150,7 +81,7 @@ input_query:
   | meta_command                        { $1 }
 
 top_command:
-  | KKIND lower_clist ki DOT            { System.KKind ($2,$3) }
+  | KKIND type_clist ki DOT             { System.KKind ($2,$3) }
   | TTYPE const_clist ty DOT            { System.TType ($2,$3) }
   | DEFINE decls BY defs DOT            { System.Def ($2,$4) }
   | DEFINE decls DOT                    { System.Def ($2,[]) }
@@ -186,9 +117,9 @@ meta_command:
 
 /* kinds, types */
 
-lower_clist:
-  | lower_id                            { [$1,pos 1] }
-  | lower_id COMMA lower_clist          { ($1,pos 1)::$3 }
+type_clist:
+  | lower_id                            { [pos 1,$1] }
+  | lower_id COMMA type_clist           { (pos 1,$1)::$3 }
 
 ki:
   | TYPE                                { Type.KType }
@@ -196,8 +127,8 @@ ki:
   | LPAREN ki RPAREN                    { $2 }
 
 const_clist:
-  | const_id                            { [$1,pos 1] }
-  | const_id COMMA const_clist          { ($1,pos 1)::$3 }
+  | const_id                            { [pos 1,$1] }
+  | const_id COMMA const_clist          { (pos 1,$1)::$3 }
 
 ty:
   | PROP                                { Type.TProp }
@@ -212,7 +143,7 @@ decls:
   | decl COMMA decls                    { $1::$3 }
 
 decl:
-  | flavor alower_id                    { let name,p,ty = $2 in ($1, Term.atom name, p, ty) }
+  | flavor alower_id                    { let p,name,ty = $2 in ($1,p,name,ty) }
 
 flavor:
   |                                     { System.Normal      }
@@ -224,8 +155,8 @@ defs:
   | def SEMICOLON defs                  { $1::$3 }
 
 def:
-  | term_list                           { let h,t = $1 in mkdef h t Term.op_true (pos 0) }
-  | term_list DEFEQ formula             { let h,t = $1 in mkdef h t $3 (pos 0) }
+  | formula                             { pos 0,$1,Typing.True' (pos 0) }
+  | formula DEFEQ formula               { pos 0,$1,$3 }
 
 term_list:
   | term_atom                           { $1,[] }
@@ -234,26 +165,31 @@ term_list:
 
 term_atom:
   | LPAREN term RPAREN                  { $2 }
-  | bound_id                            { Term.atom $1 }
-  | QSTRING                             { Term.string $1 }
+  | upper_id                            { Typing.UpperID (pos 1,$1) }
+  | lower_id                            { Typing.LowerID (pos 1,$1) }
+  | QSTRING                             { Typing.QString' (pos 1,$1) }
 
 term_abs:
-  | abound_id BSLASH term               { let name,ty = $1 in
-                                          mkabs (Term.is_free name, name, ty) $3 }
+  | abound_id BSLASH term               { Typing.lambda' (pos 0) [$1] $3 }
 
 term:
-  | term_list                           { let t,l = $1 in Term.app t l }
-  | bound_id INFIX_ID bound_id          { Term.app (Term.atom $2) [Term.atom $1; Term.atom $2] }
+  | term_list                           { let t,l = $1 in
+                                          Typing.app' (pos 1) t l }
+    /* XXX */
+  | bound_id INFIX_ID bound_id          { Typing.app'
+                                            (pos 0)
+                                            (Typing.InfixID (pos 2,$2))
+                                            [Typing.InfixID (pos 1,$1); Typing.InfixID (pos 3,$3)] }
 
 formula:
-  | TRUE                                { Term.op_true }
-  | FALSE                               { Term.op_false }
-  | term EQ term                        { Term.op_eq $1 $3 }
-  | formula AND formula                 { Term.op_and $1 $3 }
-  | formula OR formula                  { Term.op_or $1 $3 }
-  | formula RARROW formula              { Term.op_arrow $1 $3 }
-  | binder pabound_list COMMA formula   { Term.mk_binder $1 $4 $2 mkabs }
-  | LPAREN formula RPAREN               { $2 }
+  | TRUE                                { Typing.True' (pos 0) }
+  | FALSE                               { Typing.False' (pos 0) }
+  | term EQ term                        { Typing.Eq' (pos 0,$1,$3) }
+  | formula AND formula                 { Typing.And' (pos 0,$1,$3) }
+  | formula OR formula                  { Typing.Or' (pos 0,$1,$3) }
+  | formula RARROW formula              { Typing.Arrow' (pos 0,$1,$3) }
+  | binder pabound_list COMMA formula   { Typing.Binder' (pos 0,$1,$2,$4) }
+  | LPAREN formula RPAREN               { Typing.change_pos (pos 1) $2 (pos 3) }
   | term %prec LPAREN                   { $1 }
 
 binder:
@@ -262,10 +198,8 @@ binder:
   | NABLA                               { Term.Nabla }
 
 pabound_list:
-  | pabound_id                          { let name,ty = $1 in
-                                          [Term.is_free name, name, ty] }
-  | pabound_id pabound_list             { let name,ty = $1 in
-                                          (Term.is_free name, name, ty)::$2 }
+  | pabound_id                          { [$1] }
+  | pabound_id pabound_list             { $1::$2 }
 
 /* ids */
 
@@ -299,10 +233,6 @@ lower_id:
   | ABBREV                              { "abbrev" }
   | UNABBREV                            { "unabbrev" }
 
-bound_id:
-  | upper_id                            { $1 }
-  | lower_id                            { $1 }
-
 const_id:
   | lower_id                            { $1 }
   | INFIX_ID                            { $1 }
@@ -313,16 +243,20 @@ id:
   | INFIX_ID                            { $1 }
 
 alower_id:
-  | lower_id                            { ($1, pos 1, Type.fresh_tyvar ()) }
-  | lower_id COLON ty                   { ($1, pos 1, $3) }
+  | lower_id                            { pos 1,$1,Type.fresh_tyvar () }
+  | lower_id COLON ty                   { pos 1,$1,$3 }
+
+bound_id:
+  | upper_id                            { $1 }
+  | lower_id                            { $1 }
 
 abound_id:
-  | bound_id                            { ($1, Type.fresh_tyvar ()) }
-  | bound_id COLON ty                   { ($1, $3) }
+  | bound_id                            { ($1,Type.fresh_tyvar ()) }
+  | bound_id COLON ty                   { ($1,$3) }
 
 pabound_id:
-  | bound_id                            { ($1, Type.fresh_tyvar ()) }
-  | LPAREN bound_id COLON ty RPAREN     { ($2, $4) }
+  | bound_id                            { ($1,Type.fresh_tyvar ()) }
+  | LPAREN bound_id COLON ty RPAREN     { ($2,$4) }
 
 /* misc (commands) */
 

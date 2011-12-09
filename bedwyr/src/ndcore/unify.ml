@@ -53,11 +53,11 @@ let variable tag =
 let fresh = fresh instantiatable
 
 (* Transforming a term to represent substitutions under abstractions *)
-let rec lift t n = match Term.observe t with
-  | Term.True | Term.False
-  | Term.Eq _ | Term.And _ | Term.Or _ | Term.Arrow _ | Term.Binder _ ->
+let rec lift t n = match observe t with
+  | True | False
+  | Eq _ | And _ | Or _ | Arrow _ | Binder _ ->
       fat t
-  | Var _ -> t
+  | QString _ | Var _ -> t
   | DB i -> db (i+n)
   | _ -> susp t 0 n []
 
@@ -72,8 +72,8 @@ let rec unique_var v = function
   | [] -> true
   | t::rargs  ->
       begin match observe t with
-        | Term.True | Term.False
-        | Term.Eq _ | Term.And _ | Term.Or _ | Term.Arrow _ | Term.Binder _ ->
+        | True | False
+        | Eq _ | And _ | Or _ | Arrow _ | Binder _ ->
             fat t
         | Var v' when v=v' -> false
         | _ -> unique_var v rargs
@@ -84,8 +84,8 @@ let rec unique_bv n l = match l with
   | [] -> true
   | t::rargs ->
       begin match observe t with
-        | Term.True | Term.False
-        | Term.Eq _ | Term.And _ | Term.Or _ | Term.Arrow _ | Term.Binder _ ->
+        | True | False
+        | Eq _ | And _ | Or _ | Arrow _ | Binder _ ->
             fat t
         | DB j when n = j -> false
         | _ -> unique_bv n rargs
@@ -95,8 +95,8 @@ let rec unique_nb n l = match l with
   | [] -> true
   | t::tl ->
       begin match observe t with
-        | Term.True | Term.False
-        | Term.Eq _ | Term.And _ | Term.Or _ | Term.Arrow _ | Term.Binder _ ->
+        | True | False
+        | Eq _ | And _ | Or _ | Arrow _ | Binder _ ->
             fat t
         | NB j when j=n -> false
         | _ -> unique_nb n tl
@@ -109,10 +109,12 @@ let rec check_flex_args l fts flts =
   match l with
     | [] -> ()
     | t::q ->
-        begin match Term.observe t with
-          | Term.True | Term.False
-          | Term.Eq _ | Term.And _ | Term.Or _ | Term.Arrow _ | Term.Binder _ ->
+        begin match observe t with
+          | True | False
+          | Eq _ | And _ | Or _ | Arrow _ | Binder _ ->
               fat t
+          | QString _ ->
+              check_flex_args q fts flts
           | Var v when constant v.tag && v.ts>fts && unique_var v q ->
               check_flex_args q fts flts
           | DB i when unique_bv i q -> check_flex_args q fts flts
@@ -130,9 +132,10 @@ let rec check_flex_args l fts flts =
 let can_bind v t =
   let rec aux n t =
     match observe t with
-      | Term.True | Term.False
-      | Term.Eq _ | Term.And _ | Term.Or _ | Term.Arrow _ | Term.Binder _ ->
+      | True | False
+      | Eq _ | And _ | Or _ | Arrow _ | Binder _ ->
           fat t
+      | QString _ -> true
       | Var v' ->
           (isLeft || (v' <> v && v'.ts <= v.ts)) && v'.lts <= v.lts
       | DB i -> i <= n
@@ -151,22 +154,22 @@ let can_bind v t =
 let rec bvindex i l n = match l with
   | [] -> 0
   | t::q ->
-      begin match Term.observe t with
-        | Term.True | Term.False
-        | Term.Eq _ | Term.And _ | Term.Or _ | Term.Arrow _ | Term.Binder _ ->
+      begin match observe t with
+        | True | False
+        | Eq _ | And _ | Or _ | Arrow _ | Binder _ ->
             fat t
-        | Term.DB j when i=j -> n
+        | DB j when i=j -> n
         | _ -> bvindex i q (n-1)
       end
 
 let rec nbindex i l n = match l with
   | [] -> 0
   | t::q ->
-      begin match Term.observe t with
-        | Term.True | Term.False
-        | Term.Eq _ | Term.And _ | Term.Or _ | Term.Arrow _ | Term.Binder _ ->
+      begin match observe t with
+        | True | False
+        | Eq _ | And _ | Or _ | Arrow _ | Binder _ ->
             fat t
-        | Term.NB j when i=j -> n
+        | NB j when i=j -> n
         | _ -> nbindex i q (n-1)
       end
 
@@ -177,9 +180,9 @@ let rec nbindex i l n = match l with
 let rec cindex c l n = match l with
   | [] -> 0
   | t::q ->
-      begin match Term.observe t with
-        | Term.True | Term.False
-        | Term.Eq _ | Term.And _ | Term.Or _ | Term.Arrow _ | Term.Binder _ ->
+      begin match observe t with
+        | True | False
+        | Eq _ | And _ | Or _ | Arrow _ | Binder _ ->
             fat t
         | Var c' when c = c' -> n
         | _ -> cindex c q (n-1)
@@ -235,7 +238,7 @@ let rec cindex c l n = match l with
   * requirements. If [a2] does not satisfy these requirements, an
   * exception will be raised. *)
 let raise_and_invert v1 v2 a1 a2 lev =
-  let stamps = function {Term.ts=ts;Term.lts=lts} -> ts,lts in
+  let stamps = function {ts=ts;lts=lts} -> ts,lts in
   let ts1,lts1 = stamps v1 in
   let ts2,lts2 = stamps v2 in
   let l1 = List.length a1 in
@@ -253,21 +256,21 @@ let raise_and_invert v1 v2 a1 a2 lev =
   let rec raise_var l n = match l with
     | [] -> false,[],[]
     | t::tl ->
-        begin match Term.observe t with
-          | Term.True | Term.False
-          | Term.Eq _ | Term.And _ | Term.Or _ | Term.Arrow _ | Term.Binder _ ->
+        begin match observe t with
+          | True | False
+          | Eq _ | And _ | Or _ | Arrow _ | Binder _ ->
               fat t
-          | Term.DB _ -> raise_var tl (n-1)
-          | Term.NB j ->
+          | DB _ -> raise_var tl (n-1)
+          | NB j ->
               let raised,inds,consts = raise_var tl (n-1) in
                 if j <= lts2 then
-                  (true,(Term.db (n+lev))::inds,t::consts)
+                  (true,(db (n+lev))::inds,t::consts)
                 else
                   raised,inds,consts
-          | Term.Var {ts=cts;tag=tag} when constant tag ->
+          | Var {ts=cts;tag=tag} when constant tag ->
               let raised,inds,consts = raise_var tl (n-1) in
                 if cts <= ts2 then
-                  (true,(Term.db (n+lev))::inds,t::consts)
+                  (true,(db (n+lev))::inds,t::consts)
                 else
                   (raised,inds,consts)
           | _ -> assert false
@@ -285,9 +288,9 @@ let raise_and_invert v1 v2 a1 a2 lev =
   let rec prune l n = match l,n with
     | [],0 -> false,[],[]
     | t::q,n ->
-        begin match Term.observe t with
-          | Term.True | Term.False
-          | Term.Eq _ | Term.And _ | Term.Or _ | Term.Arrow _ | Term.Binder _ ->
+        begin match observe t with
+          | True | False
+          | Eq _ | And _ | Or _ | Arrow _ | Binder _ ->
               fat t
           | DB i ->
               let pruned,inds1,inds2 = prune q (n-1) in
@@ -297,10 +300,10 @@ let raise_and_invert v1 v2 a1 a2 lev =
                       (true,inds1,inds2)
                     else
                       (pruned,
-                       (Term.db (j+lev))::inds1,
-                       (Term.db n)::inds2)
+                       (db (j+lev))::inds1,
+                       (db n)::inds2)
                 else
-                  (pruned,t::inds1,(Term.db n)::inds2)
+                  (pruned,t::inds1,(db n)::inds2)
           | Var v when constant v.tag ->
               let pruned,inds1,inds2 = prune q (n-1) in
               let j = cindex v a1 l1 in
@@ -308,8 +311,8 @@ let raise_and_invert v1 v2 a1 a2 lev =
                   (true,inds1,inds2)
                 else
                   (pruned,
-                   (Term.db (j+lev))::inds1,
-                   (Term.db n)::inds2)
+                   (db (j+lev))::inds1,
+                   (db n)::inds2)
           | NB i ->
               let pruned,inds1,inds2 = prune q (n-1) in
               let j = nbindex i a1 l1 in
@@ -317,8 +320,8 @@ let raise_and_invert v1 v2 a1 a2 lev =
                   (true,inds1,inds2)
                 else
                   (pruned,
-                   (Term.db (j+lev))::inds1,
-                   (Term.db n)::inds2)
+                   (db (j+lev))::inds1,
+                   (db n)::inds2)
           | _ -> assert false
         end
     | _ -> assert false
@@ -336,11 +339,11 @@ let raise_and_invert v1 v2 a1 a2 lev =
   let rec prune_and_raise l n = match l,n with
     | [],0 -> false,[],[]
     | a::q,n ->
-        begin match Term.observe a with
-          | Term.True | Term.False
-          | Term.Eq _ | Term.And _ | Term.Or _ | Term.Arrow _ | Term.Binder _ ->
+        begin match observe a with
+          | True | False
+          | Eq _ | And _ | Or _ | Arrow _ | Binder _ ->
               fat a
-          | Term.DB i ->
+          | DB i ->
               let pruned,inds1,inds2 = prune_and_raise q (n-1) in
                 if i > lev then
                   let j = bvindex (i-lev) a1 l1 in
@@ -348,34 +351,34 @@ let raise_and_invert v1 v2 a1 a2 lev =
                       (true,inds1,inds2)
                     else
                       (pruned,
-                       (Term.db (j+lev))::inds1,
-                       (Term.db n)::inds2)
+                       (db (j+lev))::inds1,
+                       (db n)::inds2)
                 else
-                  (pruned,a::inds1,(Term.db n)::inds2)
-          | Term.NB i ->
+                  (pruned,a::inds1,(db n)::inds2)
+          | NB i ->
               let pruned,inds1,inds2 = prune_and_raise q (n-1) in
                 if i <= lts1 then
-                  pruned,a::inds1,(Term.db n)::inds2
+                  pruned,a::inds1,(db n)::inds2
                 else
                   let j = nbindex i a1 l1 in
                     if j = 0 then
                       (true,inds1,inds2)
                     else
                       (pruned,
-                       (Term.db (j+lev))::inds1,
-                       (Term.db n)::inds2)
-          | Term.Var v when constant v.tag ->
+                       (db (j+lev))::inds1,
+                       (db n)::inds2)
+          | Var v when constant v.tag ->
               let pruned,inds1,inds2 = prune_and_raise q (n-1) in
                 if v.ts <= ts1 then
-                  (pruned,a::inds1,(Term.db n)::inds2)
+                  (pruned,a::inds1,(db n)::inds2)
                 else
                   let i = cindex v a1 l1 in
                     if i=0 then
                       (true,inds1,inds2)
                     else
                       (pruned,
-                       (Term.db (i+lev))::inds1,
-                       (Term.db n)::inds2)
+                       (db (i+lev))::inds1,
+                       (db n)::inds2)
           | _ -> assert false
         end
     | _ -> assert false
@@ -404,29 +407,29 @@ let raise_and_invert v1 v2 a1 a2 lev =
 let rec prune_same_var l1 l2 j bl = match l1,l2 with
   | [],[] -> []
   | [],t::q ->
-      begin match Term.observe t with
-        | Term.True | Term.False
-        | Term.Eq _ | Term.And _ | Term.Or _ | Term.Arrow _ | Term.Binder _ ->
+      begin match observe t with
+        | True | False
+        | Eq _ | And _ | Or _ | Arrow _ | Binder _ ->
             fat t
-        | Term.DB i when i=j ->
-            (Term.db bl)::(prune_same_var [] q (j-1) (bl-1))
+        | DB i when i=j ->
+            (db bl)::(prune_same_var [] q (j-1) (bl-1))
         | _ -> prune_same_var [] q (j-1) (bl-1)
       end
   | t1::a1,t2::a2 ->
-      begin match Term.observe t1,Term.observe t2 with
-        | Term.True,_ | Term.False,_
-        | Term.Eq _,_ | Term.And _,_ | Term.Or _,_ | Term.Arrow _,_ | Term.Binder _,_ ->
+      begin match observe t1,observe t2 with
+        | True,_ | False,_
+        | Eq _,_ | And _,_ | Or _,_ | Arrow _,_ | Binder _,_ ->
             fat t1
-        | _,Term.True | _,Term.False
-        | _,Term.Eq _ | _,Term.And _ | _,Term.Or _ | _,Term.Arrow _ | _,Term.Binder _ ->
+        | _,True | _,False
+        | _,Eq _ | _,And _ | _,Or _ | _,Arrow _ | _,Binder _ ->
             fat t2
-        | Term.Var {tag=tag1},Term.Var {tag=tag2}
-          when constant tag1 && Term.eq t1 t2 ->
-            (Term.db bl)::(prune_same_var a1 a2 j (bl-1))
-        | Term.NB i, Term.NB j when i=j ->
-            (Term.db bl)::(prune_same_var a1 a2 j (bl-1))
-        | Term.DB i1,Term.DB i2 when i1+j = i2 ->
-            (Term.db bl)::(prune_same_var a1 a2 j (bl-1))
+        | Var {tag=tag1},Var {tag=tag2}
+          when constant tag1 && eq t1 t2 ->
+            (db bl)::(prune_same_var a1 a2 j (bl-1))
+        | NB i, NB j when i=j ->
+            (db bl)::(prune_same_var a1 a2 j (bl-1))
+        | DB i1,DB i2 when i1+j = i2 ->
+            (db bl)::(prune_same_var a1 a2 j (bl-1))
         | _ -> prune_same_var a1 a2 j (bl-1)
       end
   | _ -> assert false
@@ -454,11 +457,11 @@ let rec prune_same_var l1 l2 j bl = match l1,l2 with
 let makesubst h1 t2 a1 =
   let n = List.length a1 in
   (* Check that h1 is a variable, get its timestamps *)
-  let v1,ts1,lts1 = match Term.observe h1 with
-    | Term.True | Term.False
-    | Term.Eq _ | Term.And _ | Term.Or _ | Term.Arrow _ | Term.Binder _ ->
+  let v1,ts1,lts1 = match observe h1 with
+    | True | False
+    | Eq _ | And _ | Or _ | Arrow _ | Binder _ ->
         fat h1
-    | Term.Var v -> assert (v.tag=instantiatable) ; v,v.ts,v.lts
+    | Var v -> assert (v.tag=instantiatable) ; v,v.ts,v.lts
     | _ -> assert false
   in
   let a1 = List.map Norm.hnorm a1 in
@@ -471,11 +474,11 @@ let makesubst h1 t2 a1 =
     * raised if unification fails or if LLambda conditions are found
     * to be violated. *)
   let rec nested_subst c lev =
-    match Term.observe c with
-      | Term.True | Term.False
-      | Term.Eq _ | Term.And _ | Term.Or _ | Term.Arrow _ | Term.Binder _ ->
+    match observe c with
+      | True | False
+      | Eq _ | And _ | Or _ | Arrow _ | Binder _ ->
           fat c
-      | Term.Var v when constant v.tag ->
+      | Var v when constant v.tag ->
           (* Can [h1] depend on [c] ?
            * If so, the substitution is [c] itself, and the llambda restriction
            * ensures that this is the only solution.
@@ -483,63 +486,64 @@ let makesubst h1 t2 a1 =
           if v.ts <= ts1 && v.lts <= lts1 then c else
             let j = cindex v a1 n in
               if j = 0 then raise OccursCheck ;
-              Term.db (j+lev)
-      | Term.NB i ->
+              db (j+lev)
+      | NB i ->
           if i <= lts1 then c else
             let j = nbindex i a1 n in
               if j = 0 then raise OccursCheck ;
-              Term.db (j+lev)
-      | Term.DB i ->
+              db (j+lev)
+      | DB i ->
           if i <= lev then c else
             let j = bvindex (i-lev) a1 n in
               if j = 0 then raise OccursCheck ;
-              Term.db (j+lev)
-      | Term.Var v2 when variable v2.tag ->
-          if Term.eq c h1 then raise OccursCheck ;
+              db (j+lev)
+      | Var v2 when variable v2.tag ->
+          if eq c h1 then raise OccursCheck ;
           let (changed,a1',a2') = raise_and_invert v1 v2 a1 [] lev in
             if changed || not (lts1 >= v2.lts && (isLeft || ts1 >= v2.ts)) then
               let h'= fresh ~lts:(min lts1 v2.lts) ~ts:(min ts1 v2.ts) in
-                Term.bind c (Term.app h' a2') ;
-                Term.app h' a1'
+                bind c (app h' a2') ;
+                app h' a1'
             else
-              Term.app c a1'
-      | Term.Lam (n,t) ->
-          Term.lambda n (nested_subst t (lev+n))
-      | Term.App (h2,a2) ->
-          begin match Term.observe h2 with
-            | Term.True | Term.False
-            | Term.Eq _ | Term.And _ | Term.Or _ | Term.Arrow _ | Term.Binder _ ->
+              app c a1'
+      | Lam (n,t) ->
+          lambda n (nested_subst t (lev+n))
+      | App (h2,a2) ->
+          begin match observe h2 with
+            | True | False
+            | Eq _ | And _ | Or _ | Arrow _ | Binder _ ->
                 fat h2
-            | Term.Var {tag=tag} when constant tag ->
-                Term.app
+            | Var {tag=tag} when constant tag ->
+                app
                   (nested_subst h2 lev)
                   (List.map (fun x -> nested_subst (Norm.hnorm x) lev) a2)
-            | Term.DB _ | Term.NB _ ->
-                Term.app
+            | DB _ | NB _ ->
+                app
                   (nested_subst h2 lev)
                   (List.map (fun x -> nested_subst (Norm.hnorm x) lev) a2)
-            | Term.Var v2 when variable v2.tag ->
-                if Term.eq h2 h1 then raise OccursCheck ;
+            | Var v2 when variable v2.tag ->
+                if eq h2 h1 then raise OccursCheck ;
                 let a2 = List.map Norm.hnorm a2 in
                 let ts2,lts2 = v2.ts,v2.lts in
                 check_flex_args a2 ts2 lts2 ;
                 let changed,a1',a2' = raise_and_invert v1 v2 a1 a2 lev in
                   if changed then
                     let h' = fresh ~lts:(min lts1 v2.lts) ~ts:(min ts1 ts2) in
-                      Term.bind h2
-                        (Term.lambda (List.length a2) (Term.app h' a2')) ;
-                      Term.app h' a1'
+                      bind h2
+                        (lambda (List.length a2) (app h' a2')) ;
+                      app h' a1'
                   else
                     if not (lts1 >= lts2 && (isLeft || ts1 >= ts2)) then
                       let h' = fresh ~lts:(min lts1 v2.lts) ~ts:ts1 in
-                        Term.bind h2 h' ;
-                        Term.app h' a1'
+                        bind h2 h' ;
+                        app h' a1'
                     else
-                      Term.app h2 a1'
+                      app h2 a1'
             | Var _ -> failwith "logic variable on the left"
-            | Ptr _ -> assert false
-            | Susp _ -> assert false
-            | App _ -> assert false
+            | QString _
+            | Ptr _
+            | Susp _
+            | App _
             | Lam _ -> assert false
           end
       | Var _ -> failwith "logic variable on the left"
@@ -561,30 +565,30 @@ let makesubst h1 t2 a1 =
     * The incoming term is assumed to be head normalized. *)
 
   let rec toplevel_subst t2 lev =
-    match Term.observe t2 with
-      | Term.True | Term.False
-      | Term.Eq _ | Term.And _ | Term.Or _ | Term.Arrow _ | Term.Binder _ ->
+    match observe t2 with
+      | True | False
+      | Eq _ | And _ | Or _ | Arrow _ | Binder _ ->
           fat t2
-      | Term.Lam (n,t2) -> toplevel_subst t2 (lev+n)
-      | Term.Var v2 when variable v2.tag ->
+      | Lam (n,t2) -> toplevel_subst t2 (lev+n)
+      | Var v2 when variable v2.tag ->
           if h1=t2 then
             if n=0 && lev=0 then h1 else raise TypesMismatch
           else begin
             if not (lts1 >= v2.lts && (isLeft || (ts1 >= v2.ts))) then
-              Term.bind t2
+              bind t2
                 (fresh ~lts:(min lts1 v2.lts) ~ts:(min ts1 v2.ts)) ;
-            Term.lambda (lev+n) t2
+            lambda (lev+n) t2
           end
       (* TODO the following seems harmless, and is sometimes useful..
-      | Term.Var v2 when not (constant v2.tag) && a1=[] ->
-          Term.lambda lev t2 (* [n] is 0 *)
+      | Var v2 when not (constant v2.tag) && a1=[] ->
+          lambda lev t2 (* [n] is 0 *)
       *)
-      | Term.App (h2,a2) ->
-          begin match Term.observe h2 with
-            | Term.True | Term.False
-            | Term.Eq _ | Term.And _ | Term.Or _ | Term.Arrow _ | Term.Binder _ ->
+      | App (h2,a2) ->
+          begin match observe h2 with
+            | True | False
+            | Eq _ | And _ | Or _ | Arrow _ | Binder _ ->
                 fat h2
-            | Term.Var {ts=ts2;lts=lts2} when Term.eq h1 h2 ->
+            | Var {ts=ts2;lts=lts2} when eq h1 h2 ->
                 (* [h1] being instantiatable, no need to check it for [h2] *)
                 let a2 = List.map Norm.hnorm a2 in
                 check_flex_args a2 ts2 lts2 ;
@@ -592,16 +596,17 @@ let makesubst h1 t2 a1 =
                   if bindlen = List.length a2 then
                     let h1' = fresh ~lts:lts1 ~ts:ts1 in
                     let args = prune_same_var a1 a2 lev bindlen in
-                      Term.lambda bindlen (Term.app h1' args)
+                      lambda bindlen (app h1' args)
                   else
                     raise TypesMismatch
-            | Term.App _ | Term.Lam _
-            | Term.Var _ | Term.DB _ | Term.NB _ ->
-                Term.lambda (n+lev) (nested_subst t2 lev)
-            | Term.Susp _ | Term.Ptr _ -> assert false
+            | App _ | Lam _
+            | Var _ | DB _ | NB _ ->
+                lambda (n+lev) (nested_subst t2 lev)
+            | QString _
+            | Susp _ | Ptr _ -> assert false
           end
-      | Term.Ptr _ -> assert false
-      | _ -> Term.lambda (n+lev) (nested_subst t2 lev)
+      | Ptr _ -> assert false
+      | _ -> lambda (n+lev) (nested_subst t2 lev)
   in
 
   try
@@ -631,15 +636,15 @@ let rec unify_list l1 l2 =
  * Fail if [t2] is a variable or an application.
  * If it is a lambda, binders need to be equalized and so this becomes
  * an application-term unification problem. *)
-and unify_const_term cst t2 = if Term.eq cst t2 then () else
-  match Term.observe t2 with
-    | Term.Lam (n,t2) ->
+and unify_const_term cst t2 = if eq cst t2 then () else
+  match observe t2 with
+    | Lam (n,t2) ->
         let a1 = lift_args [] n in
-          unify_app_term cst a1 (Term.app cst a1) t2
-    | Term.Var {tag=t} when not (variable t || constant t) ->
+          unify_app_term cst a1 (app cst a1) t2
+    | Var {tag=t} when not (variable t || constant t) ->
         failwith "logic variable on the left"
-    | Term.True | Term.False
-    | Term.Eq _ | Term.And _ | Term.Or _ | Term.Arrow _ | Term.Binder _ ->
+    | True | False
+    | Eq _ | And _ | Or _ | Arrow _ | Binder _ ->
         fat t2
     | _ -> raise (ConstClash (cst,t2))
 
@@ -647,102 +652,102 @@ and unify_const_term cst t2 = if Term.eq cst t2 then () else
  * Fail if [t2] is a variable, an application or a constant.
  * If it is a lambda, binders need to be
  * equalized and this becomes an application-term unification problem. *)
-and unify_bv_term n1 t1 t2 = match Term.observe t2 with
-  | Term.DB n2 ->
+and unify_bv_term n1 t1 t2 = match observe t2 with
+  | DB n2 ->
       if n1<>n2 then raise (ConstClash (t1,t2))
-  | Term.NB n2 ->
+  | NB n2 ->
       raise (ConstClash (t1,t2))
-  | Term.Lam (n,t2)  ->
+  | Lam (n,t2)  ->
       let t1' = lift t1 n in
       let a1 = lift_args [] n in
-        unify_app_term t1' a1 (Term.app t1' a1) t2
+        unify_app_term t1' a1 (app t1' a1) t2
   | Var {tag=t} when not (variable t || constant t) ->
       failwith "logic variable on the left"
-  | Term.True | Term.False
-  | Term.Eq _ | Term.And _ | Term.Or _ | Term.Arrow _ | Term.Binder _ ->
+  | True | False
+  | Eq _ | And _ | Or _ | Arrow _ | Binder _ ->
       fat t2
   | _ -> assert false
 
 (* Unifying the nabla variable [t1] with [t2]. *)
-and unify_nv_term n1 t1 t2 = match Term.observe t2 with
-  | Term.NB n2 ->
+and unify_nv_term n1 t1 t2 = match observe t2 with
+  | NB n2 ->
       if n1<>n2 then raise (ConstClash (t1,t2))
-  | Term.DB n2 ->
+  | DB n2 ->
       raise (ConstClash (t1,t2))
-  | Term.Lam (n,t2) ->
+  | Lam (n,t2) ->
       let a1 = lift_args [] n in
-        unify_app_term t1 a1 (Term.app t1 a1) t2
+        unify_app_term t1 a1 (app t1 a1) t2
   | Var {tag=t} when not (variable t || constant t) ->
       failwith "logic variable on the left"
-  | Term.True | Term.False
-  | Term.Eq _ | Term.And _ | Term.Or _ | Term.Arrow _ | Term.Binder _ ->
+  | True | False
+  | Eq _ | And _ | Or _ | Arrow _ | Binder _ ->
       fat t2
   | _ -> assert false
 
 (* [unify_app_term h1 a1 t1 t2] unify [App h1 a1 = t2].
  * [t1] should be the term decomposed as [App h1 a1].
  * [t2] should be dereferenced and head-normalized, different from a var. *)
-and unify_app_term h1 a1 t1 t2 = match Term.observe h1,Term.observe t2 with
-  | Term.Var {tag=tag}, _ when variable tag ->
-      Term.bind h1 (makesubst h1 t2 a1)
-  | Term.Var {tag=tag}, Term.App (h2,a2) when constant tag ->
-      begin match Term.observe h2 with
+and unify_app_term h1 a1 t1 t2 = match observe h1,observe t2 with
+  | Var {tag=tag}, _ when variable tag ->
+      bind h1 (makesubst h1 t2 a1)
+  | Var {tag=tag}, App (h2,a2) when constant tag ->
+      begin match observe h2 with
         | Var {tag=tag} when constant tag ->
-            if Term.eq h1 h2 then
+            if eq h1 h2 then
               unify_list a1 a2
             else
               raise (ConstClash (h1,h2))
         | DB _ | NB _ ->
             raise (ConstClash (h1,h2))
         | Var {tag=tag} when variable tag ->
-            Term.bind h2 (makesubst h2 t1 a2)
+            bind h2 (makesubst h2 t1 a2)
         | Var {tag=t} ->
             failwith "logic variable on the left"
         | _ -> assert false
       end
-  | Term.NB n1, Term.App (h2,a2) ->
-      begin match Term.observe h2 with
-        | Term.DB n2 -> raise (ConstClash (h1,h2))
-        | Term.NB n2 ->
+  | NB n1, App (h2,a2) ->
+      begin match observe h2 with
+        | DB n2 -> raise (ConstClash (h1,h2))
+        | NB n2 ->
             if n1=n2 then unify_list a1 a2 else raise (ConstClash (h1,h2))
-        | Term.Var v ->
+        | Var v ->
             if constant v.tag then
               raise (ConstClash (h1,h2))
             else if variable v.tag then
-              Term.bind h2 (makesubst h2 t1 a2)
+              bind h2 (makesubst h2 t1 a2)
             else
               failwith "logic variable on the left"
         | _ -> assert false
       end
-  | Term.DB n1, Term.App (h2,a2) ->
-      begin match Term.observe h2 with
-        | Term.NB n2 -> raise (ConstClash (h1,h2))
-        | Term.DB n2 ->
+  | DB n1, App (h2,a2) ->
+      begin match observe h2 with
+        | NB n2 -> raise (ConstClash (h1,h2))
+        | DB n2 ->
             if n1=n2 then unify_list a1 a2 else raise (ConstClash (h1,h2))
-        | Term.Var v ->
+        | Var v ->
             if constant v.tag then
               raise (ConstClash (h1,h2))
             else if variable v.tag then
-              Term.bind h2 (makesubst h2 t1 a2)
+              bind h2 (makesubst h2 t1 a2)
             else
               failwith "logic variable on the left"
         | _ -> assert false
       end
-  | _, Term.Lam (n,t2) ->
+  | _, Lam (n,t2) ->
       let h1' = lift h1 n in
       let a1' = lift_args a1 n in
-      let t1' = Term.app h1' a1' in
+      let t1' = app h1' a1' in
         unify_app_term h1' a1' t1' t2
-  | Term.Ptr  _, _ | _, Term.Ptr  _
-  | Term.Susp _, _ | _, Term.Susp _ -> assert false
-  | _, Term.Var {tag=t}
-  | Term.Var {tag=t}, _ when not (variable t || constant t) ->
+  | Ptr  _, _ | _, Ptr  _
+  | Susp _, _ | _, Susp _ -> assert false
+  | _, Var {tag=t}
+  | Var {tag=t}, _ when not (variable t || constant t) ->
       failwith "logic variable on the left"
-  | Term.True,_ | Term.False,_
-  | Term.Eq _,_ | Term.And _,_ | Term.Or _,_ | Term.Arrow _,_ | Term.Binder _,_ ->
+  | True,_ | False,_
+  | Eq _,_ | And _,_ | Or _,_ | Arrow _,_ | Binder _,_ ->
       fat t1
-  | _,Term.True | _,Term.False
-  | _,Term.Eq _ | _,Term.And _ | _,Term.Or _ | _,Term.Arrow _ | _,Term.Binder _ ->
+  | _,True | _,False
+  | _,Eq _ | _,And _ | _,Or _ | _,Arrow _ | _,Binder _ ->
       fat t2
   | _ -> raise (ConstClash (h1,t2))
 
@@ -758,28 +763,28 @@ and unify_app_term h1 a1 t1 t2 = match Term.observe h1,Term.observe t2 with
   * head normal form and that there are no iterated
   * lambdas or applications at the top level. Any necessary adjustment
   * of binders through the eta rule is done on the fly. *)
-and unify t1 t2 = match Term.observe t1,Term.observe t2 with
-  | Term.Var {tag=t},_ when variable t -> Term.bind t1 (makesubst t1 t2 [])
-  | _,Term.Var {tag=t} when variable t -> Term.bind t2 (makesubst t2 t1 [])
-  | Term.App (h1,a1),_                 -> unify_app_term h1 a1 t1 t2
-  | _,Term.App (h2,a2)                 -> unify_app_term h2 a2 t2 t1
-  | Term.True,_ | Term.False,_
-  | Term.Eq _,_ | Term.And _,_ | Term.Or _,_
-  | Term.Arrow _,_ | Term.Binder _,_   -> fat t1
-  | _,Term.True | _,Term.False
-  | _,Term.Eq _ | _,Term.And _ | _,Term.Or _
-  | _,Term.Arrow _ | _,Term.Binder _   -> fat t2
-  | Term.Var {tag=t},_ when constant t -> unify_const_term t1 t2
-  | _,Term.Var {tag=t} when constant t -> unify_const_term t2 t1
-  | Term.DB n,_                        -> unify_bv_term n t1 t2
-  | _,Term.DB n                        -> unify_bv_term n t2 t1
-  | Term.NB n,_                        -> unify_nv_term n t1 t2
-  | _,Term.NB n                        -> unify_nv_term n t2 t1
-  | Term.Lam (n1,t1),Term.Lam(n2,t2)   ->
+and unify t1 t2 = match observe t1,observe t2 with
+  | Var {tag=t},_ when variable t -> bind t1 (makesubst t1 t2 [])
+  | _,Var {tag=t} when variable t -> bind t2 (makesubst t2 t1 [])
+  | App (h1,a1),_                 -> unify_app_term h1 a1 t1 t2
+  | _,App (h2,a2)                 -> unify_app_term h2 a2 t2 t1
+  | True,_ | False,_
+  | Eq _,_ | And _,_ | Or _,_
+  | Arrow _,_ | Binder _,_   -> fat t1
+  | _,True | _,False
+  | _,Eq _ | _,And _ | _,Or _
+  | _,Arrow _ | _,Binder _   -> fat t2
+  | Var {tag=t},_ when constant t -> unify_const_term t1 t2
+  | _,Var {tag=t} when constant t -> unify_const_term t2 t1
+  | DB n,_                        -> unify_bv_term n t1 t2
+  | _,DB n                        -> unify_bv_term n t2 t1
+  | NB n,_                        -> unify_nv_term n t1 t2
+  | _,NB n                        -> unify_nv_term n t2 t1
+  | Lam (n1,t1),Lam(n2,t2)   ->
       if n1>n2 then
-        unify (Term.lambda (n1-n2) t1) t2
+        unify (lambda (n1-n2) t1) t2
       else
-        unify t1 (Term.lambda (n2-n1) t2)
+        unify t1 (lambda (n2-n1) t2)
   | _ -> failwith "logic variable on the left"
 
 let pattern_unify t1 t2 = unify (Norm.hnorm t1) (Norm.hnorm t2)
