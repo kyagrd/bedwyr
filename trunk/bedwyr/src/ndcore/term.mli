@@ -70,13 +70,13 @@ val eq_subst    : subst -> subst -> bool
 (** Creating terms. *)
 
 val lambda : int -> term -> term
+val binder : binder -> int -> term -> term
 val op_true : term
 val op_false : term
 val op_eq : term -> term -> term
 val op_and : term -> term -> term
 val op_or : term -> term -> term
 val op_arrow : term -> term -> term
-val binder : binder -> int -> term -> term
 val binop : string -> term -> term -> term
 val qstring : string -> term
 val db : int -> term
@@ -111,6 +111,7 @@ val is_free : string -> bool
 exception NonNormalTerm
 
 val abstract : term -> term -> term
+val quantify : binder -> term -> term -> term
 val abstract_flex : term -> term -> term
 
 val get_nablas : term -> int list
