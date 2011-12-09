@@ -168,6 +168,14 @@ let rec process ?(interactive=false) parse lexbuf =
             (Pprint.pp_type None) t
             s ;
           exit 1
+      | System.Invalid_free_declaration (n,p,t,s) ->
+          Format.printf
+            "%sCannot give bound variable %s the type %a: %s.\n%!"
+            (position_range p)
+            n
+            (Pprint.pp_type None) t
+            s ;
+          exit 1
 
       (* definitions *)
       | System.Missing_declaration (n,p) ->
