@@ -1,6 +1,6 @@
 open Type
 
-(** trucs chelous *)
+(** Pre-terms *)
 
 type pos = Lexing.position * Lexing.position
 type term' = rawterm'
@@ -58,32 +58,6 @@ let lambda' p vars t = match vars,t with
 let app' p a' b' = if b' = [] then a' else match a' with
   | App (_,a',c') -> App (p,a',c' @ b')
   | _ -> App (p,a',b')
-
-
-(** kind-checking *)
-(*let kind_check is_predicate (name,p) ty =
-  let rec aux is_target = function
-    | Type.Ty name' as ty' ->
-        assert (name' <> "");
-        let type_var = Term.get_var (Term.atom name') in
-        if not (Hashtbl.mem type_kinds type_var) then
-          if is_predicate
-          then raise (Invalid_pred_declaration (name,p,ty,Format.sprintf "type %s was not declared" (Pprint.type_to_string None ty')))
-          else raise (Invalid_const_declaration (name,p,ty,Format.sprintf "type %s was not declared" (Pprint.type_to_string None ty')))
-        else if is_predicate && is_target then
-          raise (Invalid_pred_declaration (name,p,ty,Format.sprintf "target type can only be %s" (Pprint.type_to_string None Type.TProp)))
-        else true
-    | Type.TProp ->
-        if is_predicate
-        then is_target || raise (Invalid_pred_declaration (name,p,ty,Format.sprintf "%s can only be a target type" (Pprint.type_to_string None Type.TProp)))
-        else raise (Invalid_const_declaration (name,p,ty,Format.sprintf "%s can only be a target type for a predicate" (Pprint.type_to_string None Type.TProp)))
-    | Type.TRArrow (tys,ty) -> List.for_all (aux false) tys && aux true ty
-    | Type.TVar _ ->
-        if is_predicate
-        then raise (Invalid_pred_declaration (name,p,ty,"no type variables yet"))
-        else raise (Invalid_const_declaration (name,p,ty,"no type variables yet"))
-  in
-  aux true ty*)
 
 
 (** unifier *)
@@ -175,7 +149,7 @@ let build_abstraction_types arity =
   in
   aux [] (fresh_tyvar ()) arity
 
-let type_check_and_translate pre_term expected_type typed_free_var typed_declared_var =
+let type_check_and_translate pre_term expected_type typed_free_var typed_declared_var bound_var_type =
   let find_db s bvars =
     let rec aux n = function
       | [] -> None
@@ -240,14 +214,15 @@ let type_check_and_translate pre_term expected_type typed_free_var typed_declare
       | Binder (p,b,l,t') ->
           let arity = List.length l in
           let bvars = List.rev_append l bvars in
+          let _ = List.map bound_var_type l in
           let u = unify_constraint u exty TProp in
           let t,u = aux t' TProp bvars u in
           Term.binder b arity t,u
       | Lam (p,l,t') ->
           let arity = List.length l in
-          let tys = List.map (fun (_,_,ty) -> ty) l in
-          let ty = fresh_tyvar () in
           let bvars = List.rev_append l bvars in
+          let tys = List.map bound_var_type l in
+          let ty = fresh_tyvar () in
           let u = unify_constraint u exty (TRArrow (tys,ty)) in
           let t,u = aux t' ty bvars u in
           Term.lambda arity t,u

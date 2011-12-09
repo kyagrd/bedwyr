@@ -150,32 +150,30 @@ let declare_type (p,name) ki =
 
 exception Invalid_const_declaration of string * Typing.pos * Type.simple_type * string
 exception Invalid_pred_declaration of string * Typing.pos * Type.simple_type * string
+exception Invalid_free_declaration of string * Typing.pos * Type.simple_type * string
+type type_status = WrongKind | TypeVariable | Undeclared of Type.simple_type | PropArgument | NotPropTarget | PropTarget
 
 
 (* XXX all kind are assumed to be "*", so no real check is done here *)
-let kind_check ~pred (name,p) ty =
-  let rec aux is_target = function
-    | Type.Ty name' as ty' ->
-        assert (name' <> "");
-        let type_var = Term.get_var (Term.atom ~tag:Term.Constant name') in
-        if not (Hashtbl.mem type_kinds type_var) then
-          if pred
-          then raise (Invalid_pred_declaration (name,p,ty,Format.sprintf "type %s was not declared" (Pprint.type_to_string None ty')))
-          else raise (Invalid_const_declaration (name,p,ty,Format.sprintf "type %s was not declared" (Pprint.type_to_string None ty')))
-        else if pred && is_target then
-          raise (Invalid_pred_declaration (name,p,ty,Format.sprintf "target type can only be %s" (Pprint.type_to_string None Type.TProp)))
-        else true
+let kind_check ty =
+  let rec aux ty tys = match ty with
+    | Type.Ty name ->
+        let type_var = Term.get_var (Term.atom ~tag:Term.Constant name) in
+        if not (Hashtbl.mem type_kinds type_var) then Undeclared ty
+        else begin match tys with
+          | [] -> NotPropTarget
+          | ty::tys -> aux ty tys
+        end
     | Type.TProp ->
-        if pred
-        then is_target || raise (Invalid_pred_declaration (name,p,ty,Format.sprintf "%s can only be a target type" (Pprint.type_to_string None Type.TProp)))
-        else raise (Invalid_const_declaration (name,p,ty,Format.sprintf "%s can only be a target type for a predicate" (Pprint.type_to_string None Type.TProp)))
-    | Type.TRArrow (tys,ty) -> List.for_all (aux false) tys && aux true ty
-    | Type.TVar _ ->
-        if pred
-        then raise (Invalid_pred_declaration (name,p,ty,"no type variables yet"))
-        else raise (Invalid_const_declaration (name,p,ty,"no type variables yet"))
+        begin match tys with
+          | [] -> PropTarget
+          | _ -> PropArgument
+        end
+    | Type.TRArrow ([],ty) -> aux ty tys
+    | Type.TRArrow (ty'::tys',ty) -> aux ty' ((Type.TRArrow (tys',ty))::tys)
+    | Type.TVar _ -> TypeVariable
   in
-  aux true ty
+  aux ty []
 
 let const_types : (Term.var,Type.simple_type) Hashtbl.t =
   Hashtbl.create 100
@@ -189,9 +187,19 @@ let declare_const (p,name) ty =
   then raise (Invalid_const_declaration (name,p,ty,"constant already declared"))
   else if Hashtbl.mem defs const_var
   then raise (Invalid_const_declaration (name,p,ty,"name conflict with a declared predicate"))
-  else if kind_check ~pred:false (name,p) ty
-  then Hashtbl.add const_types const_var ty
-  else raise (Invalid_const_declaration (name,p,ty,Format.sprintf "type is not of kind %s" (Pprint.kind_to_string Type.KType)))
+  else match kind_check ty with
+    | WrongKind ->
+        raise (Invalid_const_declaration (name,p,ty,Format.sprintf "type is not of kind %s" (Pprint.kind_to_string Type.KType)))
+    | TypeVariable -> 
+        raise (Invalid_const_declaration (name,p,ty,"no type variables yet"))
+    | Undeclared ty' -> 
+        raise (Invalid_const_declaration (name,p,ty,Format.sprintf "type %s was not declared" (Pprint.type_to_string None ty')))
+    | PropArgument ->
+        raise (Invalid_const_declaration (name,p,ty,Format.sprintf "%s can only be a target type for a predicate" (Pprint.type_to_string None Type.TProp)))
+    | NotPropTarget ->
+        Hashtbl.add const_types const_var ty
+    | PropTarget ->
+        raise (Invalid_const_declaration (name,p,ty,Format.sprintf "%s can only be a target type for a predicate" (Pprint.type_to_string None Type.TProp)))
 
 let create_def (flavour,p,name,ty) =
   let head_var = Term.get_var (Term.atom ~tag:Term.Constant name) in
@@ -199,22 +207,31 @@ let create_def (flavour,p,name,ty) =
   then raise (Invalid_pred_declaration (name,p,ty,"predicate already declared"))
   else if Hashtbl.mem const_types head_var
   then raise (Invalid_pred_declaration (name,p,ty,"name conflict with a declared constant"))
-  else if kind_check ~pred:true (name,p) ty
-  then begin
-    (* Cleanup all tables.
-     * Cleaning only this definition's table is _not_ enough, since other
-     * definitions may rely on it.
-     * TODO: make it optional to speedup huge definitions ? *)
-    Hashtbl.iter
-      (fun k v ->
-         match v with
-           | _,_,Some t,_ -> Table.reset t
-           | _ -> ())
-      defs ;
-    let t = (if flavour=Normal then None else Some (Table.create ())) in
-    Hashtbl.add defs head_var (flavour, None, t, ty) ;
-    head_var
-  end else raise (Invalid_pred_declaration (name,p,ty,Format.sprintf "type is not of kind %s" (Pprint.kind_to_string Type.KType)))
+  else match kind_check ty with
+    | WrongKind ->
+        raise (Invalid_pred_declaration (name,p,ty,Format.sprintf "type is not of kind %s" (Pprint.kind_to_string Type.KType)))
+    | TypeVariable -> 
+        raise (Invalid_pred_declaration (name,p,ty,"no type variables yet"))
+    | Undeclared ty' -> 
+        raise (Invalid_pred_declaration (name,p,ty,Format.sprintf "type %s was not declared" (Pprint.type_to_string None ty')))
+    | PropArgument ->
+        raise (Invalid_pred_declaration (name,p,ty,Format.sprintf "%s can only be a target type" (Pprint.type_to_string None Type.TProp)))
+    | NotPropTarget ->
+        raise (Invalid_pred_declaration (name,p,ty,Format.sprintf "target type can only be %s" (Pprint.type_to_string None Type.TProp)))
+    | PropTarget ->
+        (* Cleanup all tables.
+         * Cleaning only this definition's table is _not_ enough, since other
+         * definitions may rely on it.
+         * TODO: make it optional to speedup huge definitions ? *)
+        Hashtbl.iter
+          (fun k v ->
+             match v with
+               | _,_,Some t,_ -> Table.reset t
+               | _ -> ())
+          defs ;
+        let t = (if flavour=Normal then None else Some (Table.create ())) in
+        Hashtbl.add defs head_var (flavour, None, t, ty) ;
+        head_var
 
 
 (** typechecking, predicates definitions *)
@@ -260,7 +277,20 @@ let translate_term ?(expected_type=Type.TProp) pre_term free_types =
               raise (Missing_declaration (name,Some p))
         end
   in
-  Typing.type_check_and_translate pre_term expected_type typed_free_var typed_declared_var
+  let bound_var_type (p,name,ty) =
+    match kind_check ty with
+      | WrongKind ->
+          raise (Invalid_free_declaration (name,p,ty,Format.sprintf "type is not of kind %s" (Pprint.kind_to_string Type.KType)))
+      | TypeVariable -> ty
+      | Undeclared ty' -> 
+          raise (Invalid_free_declaration (name,p,ty,Format.sprintf "type %s was not declared" (Pprint.type_to_string None ty')))
+      | PropArgument ->
+          raise (Invalid_free_declaration (name,p,ty,Format.sprintf "%s can only be a target type for a predicate" (Pprint.type_to_string None Type.TProp)))
+      | NotPropTarget -> ty
+      | PropTarget ->
+          raise (Invalid_free_declaration (name,p,ty,Format.sprintf "%s can only be a target type for a predicate" (Pprint.type_to_string None Type.TProp)))
+  in
+  Typing.type_check_and_translate pre_term expected_type typed_free_var typed_declared_var bound_var_type
 
 let translate_query pre_term =
   let free_types : (Term.var,Type.simple_type) Hashtbl.t =
