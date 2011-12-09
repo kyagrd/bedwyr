@@ -111,6 +111,7 @@ let ty_norm unifier ty =
 (** type-checking *)
 exception Type_unification_error of simple_type * simple_type * simple_type Unifier.t
 exception Term_typing_error of pos * simple_type * simple_type * simple_type Unifier.t
+exception Var_typing_error of pos
 
 let occurs unifier i =
   let rec aux = function
@@ -174,7 +175,7 @@ let build_abstraction_types arity =
   in
   aux [] (fresh_tyvar ()) arity
 
-let type_check_and_translate pre_term expected_type type_of_free type_of_id =
+let type_check_and_translate pre_term expected_type typed_free_var typed_declared_var =
   let find_db s bvars =
     let rec aux n = function
       | [] -> None
@@ -188,12 +189,14 @@ let type_check_and_translate pre_term expected_type type_of_free type_of_id =
     try match pt with
       | QString (p,s) -> Term.qstring s,u
       | FreeID (p,s) ->
-          begin match find_db s bvars with
-            | Some (t,ty) ->
+          begin match find_db s bvars,exty with
+            | Some (t,ty),_ ->
                 let u = unify_constraint u exty ty in
                 t,u
-            | None ->
-                let t,ty = type_of_free (p,s) in
+            | None,TProp ->
+                raise (Var_typing_error p)
+            | None,_ ->
+                let t,ty = typed_free_var (p,s) in
                 let u = unify_constraint u exty ty in
                 t,u
           end
@@ -203,7 +206,7 @@ let type_check_and_translate pre_term expected_type type_of_free type_of_id =
                 let u = unify_constraint u exty ty in
                 t,u
             | None ->
-                let t,ty = type_of_id (p,s) in
+                let t,ty = typed_declared_var (p,s) in
                 let u = unify_constraint u exty ty in
                 t,u
           end

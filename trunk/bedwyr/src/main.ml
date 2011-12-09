@@ -185,6 +185,12 @@ let rec process ?(interactive=false) parse lexbuf =
             (Pprint.type_to_string (Some unifier) ty2)
             (Pprint.type_to_string (Some unifier) ty1) ;
           if interactive then Lexing.flush_input lexbuf else exit 1
+      | Typing.Var_typing_error p ->
+          Format.printf
+            "%sTyping error: this free variable cannot be of type %s.%!"
+            (position_range p)
+            (Pprint.type_to_string None Type.TProp) ;
+          if interactive then Lexing.flush_input lexbuf else exit 1
       | System.Inconsistent_definition (n,p,s) ->
           Format.printf
             "%sInconsistent extension of definition for %s: %s.\n%!"
