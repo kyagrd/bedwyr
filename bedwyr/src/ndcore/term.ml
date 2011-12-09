@@ -193,12 +193,23 @@ let lambda n t =
     in
     aux n t
 
+(* Add [n] times quantifier [b] *)
+let binder b n t =
+  assert (n>=0) ;
+  if n=0 then t else
+    let rec aux n t =
+      match deref t with
+        | Binder (b',n',t) when b=b' -> aux (n+n') t
+        | _ -> Binder (b,n,t)
+    in
+    aux n t
+
 exception NonNormalTerm
 
 (** [abstract var t] computes the abstraction of [t] over [var],
   * which may be either a variable or a nabla index.
   * This function is not destructive and hence breaks the sharing. *)
-let abstract target t =
+let pre_abstract target t =
   match observe target with
     | Var target ->
         (* Recursively raise dB indices and abstract over [target]. *)
@@ -221,7 +232,7 @@ let abstract target t =
           | Var _ -> assert false
           | Susp _ -> raise NonNormalTerm
         in
-        lambda 1 (aux 1 t)
+        aux 1 t
     | NB target ->
         (* Recursively raise dB indices and abstract over [target]. *)
         let rec aux n t = match t with
@@ -243,8 +254,14 @@ let abstract target t =
           | Var _ -> assert false
           | Susp _ -> raise NonNormalTerm
         in
-        lambda 1 (aux 1 t)
+        aux 1 t
     | _ -> assert false
+
+let abstract target t =
+  lambda 1 (pre_abstract target t)
+
+let quantify b target t =
+  binder b 1 (pre_abstract target t)
 
 (** [abstract_flex var t] similar to abstract var t, but
   * will abstract flexible subterms headed by var. *)
@@ -582,10 +599,6 @@ let op_eq a b = Eq (a,b)
 let op_and a b = And (a,b)
 let op_or a b = Or (a,b)
 let op_arrow a b = Arrow (a,b)
-
-let binder b n t = match observe t with
-  | Binder (b,m,t) -> Binder (b,m+n,t)
-  | _ -> Binder (b,n,t)
 
 let binop s a b = App ((atom s),[a;b])
 

@@ -312,7 +312,7 @@ let mk_clause p head body =
       List.fold_left
         (fun body v ->
            if List.exists (Term.eq v) new_params then body
-           else Term.binder Term.Exists 1 (Term.abstract v body))
+           else Term.quantify Term.Exists v body)
         body
         (Term.logic_vars [body])
     in
