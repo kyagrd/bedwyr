@@ -151,7 +151,7 @@ let declare_type (p,name) ki =
 exception Invalid_const_declaration of string * Typing.pos * Type.simple_type * string
 exception Invalid_pred_declaration of string * Typing.pos * Type.simple_type * string
 exception Invalid_free_declaration of string * Typing.pos * Type.simple_type * string
-type type_status = WrongKind | TypeVariable | Undeclared of Type.simple_type | PropArgument | NotPropTarget | PropTarget
+type type_status = WrongKind | TypeVariable | Undeclared of Type.simple_type | PropArgument | NotPropTarget | FlexType | PropTarget
 
 
 (* XXX all kind are assumed to be "*", so no real check is done here *)
@@ -173,7 +173,7 @@ let kind_check ty =
     | Type.TRArrow (ty'::tys',ty) -> aux ty' ((Type.TRArrow (tys',ty))::tys)
     | Type.TVar _ -> TypeVariable
   in
-  aux ty []
+  match ty with Type.TVar _ -> FlexType | _ -> aux ty []
 
 let const_types : (Term.var,Type.simple_type) Hashtbl.t =
   Hashtbl.create 100
@@ -196,7 +196,8 @@ let declare_const (p,name) ty =
         raise (Invalid_const_declaration (name,p,ty,Format.sprintf "type %s was not declared" (Pprint.type_to_string None ty')))
     | PropArgument ->
         raise (Invalid_const_declaration (name,p,ty,Format.sprintf "%s can only be a target type for a predicate" (Pprint.type_to_string None Type.TProp)))
-    | NotPropTarget ->
+    | NotPropTarget
+    | FlexType ->
         Hashtbl.add const_types const_var ty
     | PropTarget ->
         raise (Invalid_const_declaration (name,p,ty,Format.sprintf "%s can only be a target type for a predicate" (Pprint.type_to_string None Type.TProp)))
@@ -218,6 +219,7 @@ let create_def (flavour,p,name,ty) =
         raise (Invalid_pred_declaration (name,p,ty,Format.sprintf "%s can only be a target type" (Pprint.type_to_string None Type.TProp)))
     | NotPropTarget ->
         raise (Invalid_pred_declaration (name,p,ty,Format.sprintf "target type can only be %s" (Pprint.type_to_string None Type.TProp)))
+    | FlexType
     | PropTarget ->
         (* Cleanup all tables.
          * Cleaning only this definition's table is _not_ enough, since other
@@ -286,7 +288,8 @@ let translate_term ?(expected_type=Type.TProp) pre_term free_types =
           raise (Invalid_free_declaration (name,p,ty,Format.sprintf "type %s was not declared" (Pprint.type_to_string None ty')))
       | PropArgument ->
           raise (Invalid_free_declaration (name,p,ty,Format.sprintf "%s can only be a target type for a predicate" (Pprint.type_to_string None Type.TProp)))
-      | NotPropTarget -> ty
+      | NotPropTarget
+      | FlexType -> ty
       | PropTarget ->
           raise (Invalid_free_declaration (name,p,ty,Format.sprintf "%s can only be a target type for a predicate" (Pprint.type_to_string None Type.TProp)))
   in
@@ -308,6 +311,7 @@ let mk_clause p head body =
    * --> d == \\\ Exists\\ (4)=(5) /\ ((3)=(f (5) (1)) /\ (g (5) (1) (2)))
    *)
   let pred,params = match Term.observe head with
+    | Term.Var ({Term.tag=Term.Constant} as v) -> head,[]
     | Term.App (pred,params) -> pred,params
     | _ -> raise (Inconsistent_definition ("an unknown predicate",p,"term structure incorrect"))
   in
