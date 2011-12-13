@@ -8,6 +8,7 @@ and rawterm' =
   | QString of pos * string
   | FreeID of pos * string
   | PredConstID of pos * string
+  | InternID of pos * string
   | True   of pos
   | False  of pos
   | Eq     of pos * term' * term'
@@ -22,6 +23,7 @@ let get_pos = function
   | QString (p,_) -> p
   | FreeID (p,_) -> p
   | PredConstID (p,_) -> p
+  | InternID (p,_) -> p
   | True p -> p
   | False p -> p
   | Eq (p,_,_) -> p
@@ -36,6 +38,7 @@ let set_pos p = function
   | QString (_,s) -> QString (p,s)
   | FreeID (_,s) -> FreeID (p,s)
   | PredConstID (_,s) -> PredConstID (p,s)
+  | InternID (_,s) -> InternID (p,s)
   | True _ -> True p
   | False _ -> False p
   | Eq (_,t1,t2) -> Eq (p,t1,t2)
@@ -68,7 +71,7 @@ let global_unifier : simple_type Unifier.t ref = ref Unifier.empty
 let ty_norm unifier ty =
   let rec aux = function
     | Ty _
-    | TProp as ty -> ty
+    | TProp | TString as ty -> ty
     | TRArrow (tys,ty) ->
         TRArrow (List.map aux tys, aux ty)
     | TVar i as ty ->
@@ -90,7 +93,7 @@ exception Var_typing_error of pos
 let occurs unifier i =
   let rec aux = function
     | Ty _
-    | TProp -> false
+    | TProp | TString -> false
     | TRArrow (tys,ty) -> List.exists aux tys || aux ty
     | TVar j ->
         if i=j then true
@@ -119,7 +122,7 @@ let unify_constraint unifier ty1' ty2' =
         with
           | Not_found ->
               if occurs u i ty2
-              then raise (Type_unification_error (ty1',ty2',u))
+              then raise (Type_unification_error (ty1',ty2',unifier))
               else Unifier.add i ty2 u
         end
     | _,TVar j ->
@@ -129,14 +132,14 @@ let unify_constraint unifier ty1' ty2' =
         with
           | Not_found ->
               if occurs u j ty1
-              then raise (Type_unification_error (ty1',ty2',u))
+              then raise (Type_unification_error (ty1',ty2',unifier))
               else Unifier.add j ty1 u
         end
     | TRArrow (ty1::tys1,bty1),TRArrow (ty2::tys2,bty2) ->
         let u = aux u ty1 ty2 in
         aux u (TRArrow (tys1,bty1)) (TRArrow (tys2,bty2))
     | _ ->
-        raise (Type_unification_error (ty1',ty2',u))
+        raise (Type_unification_error (ty1',ty2',unifier))
   in
   aux unifier ty1' ty2'
 
@@ -149,7 +152,7 @@ let build_abstraction_types arity =
   in
   aux [] (fresh_tyvar ()) arity
 
-let type_check_and_translate pre_term expected_type typed_free_var typed_declared_var bound_var_type =
+let type_check_and_translate pre_term expected_type typed_free_var typed_declared_var typed_intern_var bound_var_type =
   let find_db s bvars =
     let rec aux n = function
       | [] -> None
@@ -161,7 +164,9 @@ let type_check_and_translate pre_term expected_type typed_free_var typed_declare
   let rec aux pt exty bvars u =
     let p = get_pos pt in
     try match pt with
-      | QString (p,s) -> Term.qstring s,u
+      | QString (p,s) ->
+          let u = unify_constraint u exty TString in
+          Term.qstring s,u
       | FreeID (p,s) ->
           begin match find_db s bvars,exty with
             | Some (t,ty),_ ->
@@ -184,6 +189,10 @@ let type_check_and_translate pre_term expected_type typed_free_var typed_declare
                 let u = unify_constraint u exty ty in
                 t,u
           end
+      | InternID (p,s) ->
+          let t,ty = typed_intern_var (p,s) in
+          let u = unify_constraint u exty ty in
+          t,u
       | True p ->
           let u = unify_constraint u exty TProp in
           Term.op_true,u

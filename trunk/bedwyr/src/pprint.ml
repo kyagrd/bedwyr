@@ -92,6 +92,8 @@ let pp_type unifier chan ty =
         Format.fprintf chan "@[%s@]" name
     | Type.TProp ->
         Format.fprintf chan "@[{prop}@]"
+    | Type.TString ->
+        Format.fprintf chan "@[{string}@]"
     | Type.TRArrow (ty1::tys,ty2) ->
         Format.fprintf chan "@[(%a -> %a)@]" aux ty1 aux (Type.TRArrow (tys,ty2))
     | Type.TRArrow ([],ty) ->
@@ -188,7 +190,7 @@ let print_full ~generic ~bound chan term =
           (* Get [i] more dummy names for the new bound variables.
            * Release them after the printing of this term. *)
           let more = Term.get_dummy_names ~start:1 i "x" in
-          let head = String.concat "," more in
+          let head = String.concat " " more in
           let print =
             if pr=0 then
               Format.fprintf chan "@[<2>%s@ %s,@ %a@]"
