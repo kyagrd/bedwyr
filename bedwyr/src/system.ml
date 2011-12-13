@@ -19,42 +19,40 @@
 
 module Logic =
 struct
-  let not     = Term.atom ~tag:Term.Constant "_not"
-  let ite     = Term.atom ~tag:Term.Constant "_if"
-  let abspred = Term.atom ~tag:Term.Constant "_abstract"
-  let distinct = Term.atom ~tag:Term.Constant "_distinct"
-  let assert_rigid   = Term.atom ~tag:Term.Constant "_rigid"
-  let abort_search = Term.atom ~tag:Term.Constant "_abort"
-  let cutpred = Term.atom ~tag:Term.Constant "_cut"
-  let check_eqvt = Term.atom ~tag:Term.Constant "_eqvt"
+  let not               = Term.atom ~tag:Term.Constant "_not"
+  let ite               = Term.atom ~tag:Term.Constant "_if"
+  let abspred           = Term.atom ~tag:Term.Constant "_abstract"
+  let distinct          = Term.atom ~tag:Term.Constant "_distinct"
+  let assert_rigid      = Term.atom ~tag:Term.Constant "_rigid"
+  let abort_search      = Term.atom ~tag:Term.Constant "_abort"
+  let cutpred           = Term.atom ~tag:Term.Constant "_cut"
+  let check_eqvt        = Term.atom ~tag:Term.Constant "_eqvt"
 
-  let print   = Term.atom ~tag:Term.Constant "print"
-  let println = Term.atom ~tag:Term.Constant "println"
-  let fprint  = Term.atom ~tag:Term.Constant "fprint"
-  let fprintln = Term.atom ~tag:Term.Constant "fprintln"
-  let fopen_out = Term.atom ~tag:Term.Constant "fopen_out"
-  let fclose_out = Term.atom ~tag:Term.Constant "fclose_out"
-  let parse   = Term.atom ~tag:Term.Constant "parse"
-  let simp_parse = Term.atom ~tag:Term.Constant "simp_parse"
+  let print             = Term.atom ~tag:Term.Constant "print"
+  let println           = Term.atom ~tag:Term.Constant "println"
+  (*let printty           = Term.atom ~tag:Term.Constant "printty"*)
+  let fprint            = Term.atom ~tag:Term.Constant "fprint"
+  let fprintln          = Term.atom ~tag:Term.Constant "fprintln"
+  let fopen_out         = Term.atom ~tag:Term.Constant "fopen_out"
+  let fclose_out        = Term.atom ~tag:Term.Constant "fclose_out"
 
 
-  let var_not     = Term.get_var not
-  let var_ite     = Term.get_var ite
-  let var_abspred = Term.get_var abspred
-  let var_distinct = Term.get_var distinct
-  let var_assert_rigid = Term.get_var assert_rigid
-  let var_abort_search = Term.get_var abort_search
-  let var_cutpred = Term.get_var cutpred
-  let var_check_eqvt = Term.get_var check_eqvt
+  let var_not           = Term.get_var not
+  let var_ite           = Term.get_var ite
+  let var_abspred       = Term.get_var abspred
+  let var_distinct      = Term.get_var distinct
+  let var_assert_rigid  = Term.get_var assert_rigid
+  let var_abort_search  = Term.get_var abort_search
+  let var_cutpred       = Term.get_var cutpred
+  let var_check_eqvt    = Term.get_var check_eqvt
 
-  let var_print   = Term.get_var print
-  let var_println  = Term.get_var println
-  let var_fprint  = Term.get_var fprint
-  let var_fprintln = Term.get_var fprintln
-  let var_fopen_out = Term.get_var fopen_out
-  let var_fclose_out = Term.get_var fclose_out
-  let var_parse   = Term.get_var parse
-  let var_simp_parse = Term.get_var simp_parse
+  let var_print         = Term.get_var print
+  let var_println       = Term.get_var println
+  (*let var_printty       = Term.get_var printty*)
+  let var_fprint        = Term.get_var fprint
+  let var_fprintln      = Term.get_var fprintln
+  let var_fopen_out     = Term.get_var fopen_out
+  let var_fclose_out    = Term.get_var fclose_out
 end
 
 type flavour = Normal | Inductive | CoInductive
@@ -151,6 +149,8 @@ let declare_type (p,name) ki =
 exception Invalid_const_declaration of string * Typing.pos * Type.simple_type * string
 exception Invalid_pred_declaration of string * Typing.pos * Type.simple_type * string
 exception Invalid_free_declaration of string * Typing.pos * Type.simple_type * string
+(* XXX this "type_status" is ugly,
+ * maybe use a bool * bool * ... * bool instead *)
 type type_status = WrongKind | TypeVariable | Undeclared of Type.simple_type | PropArgument | NotPropTarget | FlexType | PropTarget
 
 
@@ -168,6 +168,11 @@ let kind_check ty =
         begin match tys with
           | [] -> PropTarget
           | _ -> PropArgument
+        end
+    | Type.TString ->
+        begin match tys with
+          | [] -> NotPropTarget
+          | ty::tys -> aux ty tys
         end
     | Type.TRArrow ([],ty) -> aux ty tys
     | Type.TRArrow (ty'::tys',ty) -> aux ty' ((Type.TRArrow (tys',ty))::tys)
@@ -270,14 +275,59 @@ let translate_term ?(expected_type=Type.TProp) pre_term free_types =
     with Not_found ->
       try t,Hashtbl.find const_types v
       with Not_found ->
-        begin match v with
+        let ty = match v with
           | v when v = Logic.var_print ->
               let ty = Type.fresh_tyvar () in
-              t,Type.TRArrow ([ty],Type.TProp)
+              Type.TRArrow ([ty],Type.TProp)
+          | v when v = Logic.var_println ->
+              let ty = Type.fresh_tyvar () in
+              Type.TRArrow ([ty],Type.TProp)
+          (*| v when v = Logic.var_printty ->
+              let ty = Type.fresh_tyvar () in
+              Type.TRArrow ([ty],Type.TProp)*)
+          | v when v = Logic.var_fprint ->
+              let ty = Type.fresh_tyvar () in
+              Type.TRArrow ([Type.TString;ty],Type.TProp)
+          | v when v = Logic.var_fprintln ->
+              let ty = Type.fresh_tyvar () in
+              Type.TRArrow ([Type.TString;ty],Type.TProp)
+          | v when v = Logic.var_fopen_out ->
+              Type.TRArrow ([Type.TString],Type.TProp)
+          | v when v = Logic.var_fclose_out ->
+              Type.TRArrow ([Type.TString],Type.TProp)
           | _ ->
               Term.free name ;
               raise (Missing_declaration (name,Some p))
-        end
+        in t,ty
+  in
+  let typed_intern_var (p,name) =
+    let t = Term.atom ~tag:Term.Constant name in
+    let v = Term.get_var t in
+    let ty = match v with
+      | v when v = Logic.var_not ->
+          Type.TRArrow ([Type.TProp],Type.TProp)
+      | v when v = Logic.var_ite ->
+          Type.TRArrow ([Type.TProp;Type.TProp;Type.TProp],Type.TProp)
+      | v when v = Logic.var_abspred ->
+          let ty1 = Type.fresh_tyvar () in
+          let ty2 = Type.TRArrow ([Type.TRArrow ([Type.fresh_tyvar ()],ty1)],ty1) in
+          Type.TRArrow ([ty1;ty2;ty1],Type.TProp)
+      | v when v = Logic.var_distinct ->
+          Type.TRArrow ([Type.TProp],Type.TProp)
+      | v when v = Logic.var_assert_rigid ->
+          let ty = Type.fresh_tyvar () in
+          Type.TRArrow ([ty],Type.TProp)
+      | v when v = Logic.var_abort_search ->
+          Type.TProp
+      | v when v = Logic.var_cutpred ->
+          Type.TRArrow ([Type.TProp],Type.TProp)
+      | v when v = Logic.var_check_eqvt ->
+          let ty = Type.fresh_tyvar () in
+          Type.TRArrow ([ty;ty],Type.TProp)
+      | _ ->
+          Term.free name ;
+          raise (Missing_declaration (name,Some p))
+    in t,ty
   in
   let bound_var_type (p,name,ty) =
     match kind_check ty with
@@ -293,7 +343,7 @@ let translate_term ?(expected_type=Type.TProp) pre_term free_types =
       | PropTarget ->
           raise (Invalid_free_declaration (name,p,ty,Format.sprintf "%s can only be a target type for a predicate" (Pprint.type_to_string None Type.TProp)))
   in
-  Typing.type_check_and_translate pre_term expected_type typed_free_var typed_declared_var bound_var_type
+  Typing.type_check_and_translate pre_term expected_type typed_free_var typed_declared_var typed_intern_var bound_var_type
 
 let translate_query pre_term =
   let free_types : (Term.var,Type.simple_type) Hashtbl.t =
@@ -311,7 +361,7 @@ let mk_clause p head body =
    * --> d == \\\ Exists\\ (4)=(5) /\ ((3)=(f (5) (1)) /\ (g (5) (1) (2)))
    *)
   let pred,params = match Term.observe head with
-    | Term.Var ({Term.tag=Term.Constant} as v) -> head,[]
+    | Term.Var ({Term.tag=Term.Constant}) -> head,[]
     | Term.App (pred,params) -> pred,params
     | _ -> raise (Inconsistent_definition ("an unknown predicate",p,"term structure incorrect"))
   in
@@ -357,7 +407,7 @@ let mk_clause p head body =
     Format.eprintf "%a := %a\n%!"
       Pprint.pp_term (Term.app pred (List.rev new_params))
       Pprint.pp_term body ;
-  (* body       \\ U=X /\ (V=(f X (1)) /\ (g X (1) (2)))
+  (* body       Exists\\ U=X /\ (V=(f X (1)) /\ (g X (1) (2)))
    * Finally, abstract over parameters *)
   let arity,body =
     if new_params = [] then 0,body else

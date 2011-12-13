@@ -29,6 +29,10 @@
         lexbuf.lex_curr_p with
           pos_bol = lexbuf.lex_curr_p.pos_cnum ;
           pos_lnum = 1 + lexbuf.lex_curr_p.pos_lnum }
+
+  let strbuf = Buffer.create 128
+
+  let strstart = ref dummy_pos
 }
 
 let digit = ['0'-'9']
@@ -38,7 +42,7 @@ let uchar = ['A'-'Z']
 let lchar = ['a'-'z']
 (* special symbols *)
 let prefix_special = ['`' '\'' '$']
-let infix_special  = ['+' '-' '*' '^' '<' '>' '=' '~']
+let infix_special  = ['+' '-' '*' '^' '<' '>' '=' '~' '|']
 let tail_special   = ['/' '?' '!' '@' '#' '&' '_']
 
 let special_char = prefix_special | infix_special | tail_special
@@ -48,18 +52,12 @@ let safe_char = uchar | lchar | digit |  prefix_special | tail_special
 let upper_name = uchar | (uchar any_char* safe_char)
 let lower_name = (lchar|prefix_special) | ((lchar|prefix_special) any_char* safe_char)
 let infix_name = infix_special (special_char)*
-(* XXX alternate version: any character (including +-*^<>=~)
- * is allowed at the end of any name (including upper_names and lower_names),
- * so "x= y" is parsed as App ("x=",["y"])
- * while "x =y" is parsed as Eq ("x","y")
-let upper_name = uchar any_char*
-let lower_name = (lchar|prefix_special) any_char*
-let infix_name = infix_special (special_char)*
-*)
+let intern_name = '_' any_char* safe_char
 
 let blank = ' ' | '\t' | '\r'
 
-let instring = [^'"']*
+let in_comment = '/' | '*' | [^'/' '*' '\n']+
+let in_qstring = [^'"' '\n']+
 
 rule token = parse
   | "/*"                { comment 0 lexbuf }
@@ -69,9 +67,9 @@ rule token = parse
 
   | number as n         { NUM (int_of_string n) }
 
-  | '"' (instring as s) '"'
-      { String.iter (function '\n' -> incrline lexbuf | _ -> ()) s ;
-        QSTRING s }
+  | '"'                 { Buffer.clear strbuf ;
+                          strstart := lexbuf.lex_start_p ;
+                          qstring lexbuf }
 
   (* lprolog meta-keywords *)
   | "sig"               { SIG }
@@ -108,6 +106,7 @@ rule token = parse
 
   (* common term-keywords (Abella/Bedwyr) *)
   | "prop"              { PROP }
+  | "string"            { STRING }
   | "="                 { EQ }
   | "/\\"               { AND }
   | "\\/"               { OR }
@@ -196,6 +195,9 @@ rule token = parse
   (* infix constant *)
   | infix_name as n     { INFIX_ID n }
 
+  (* intern constant *)
+  | intern_name as n    { INTERN_ID n }
+
   (* misc *)
   | '\x04'              (* ctrl-D *)
   | eof                 { EOF }
@@ -203,16 +205,22 @@ rule token = parse
   | _                   { raise Illegal_string }
 
 and comment level = parse
-  | [^ '*' '/' '\n']+   { comment level lexbuf }
+  | in_comment          { comment level lexbuf }
   | "/*"                { comment (level + 1) lexbuf }
   | "*/"                { if level = 0 then
                             token lexbuf
                           else
                             comment (level - 1) lexbuf }
-  | "*"
-  | "/"                 { comment level lexbuf }
-  | "\n"                { incrline lexbuf ;
+  | '\n'                { incrline lexbuf ;
                           comment level lexbuf }
-  | eof                 { print_endline
-                            "Warning: comment not closed at end of file" ;
-                          token lexbuf }
+  | eof                 { failwith "comment not closed at end of file" }
+
+and qstring = parse
+  | in_qstring as s     { Buffer.add_string strbuf s ;
+                          qstring lexbuf }
+  | '"'                 { let pos = (!strstart,lexbuf.lex_curr_p) in
+                          QSTRING (pos,Buffer.contents strbuf) }
+  | '\n'                { Buffer.add_char strbuf '\n' ;
+                          incrline lexbuf ;
+                          qstring lexbuf }
+  | eof                 { failwith "string not closed at end of file" }

@@ -31,7 +31,7 @@
 %token KIND TYPE COMMA RARROW CLAUSEEQ DOT
 %token IMP BSLASH LPAREN RPAREN CONS
 %token KKIND TTYPE DEFINE INDUCTIVE COINDUCTIVE COLON BY DEFEQ SEMICOLON
-%token PROP EQ AND OR FORALL EXISTS NABLA TRUE FALSE
+%token PROP STRING EQ AND OR FORALL EXISTS NABLA TRUE FALSE
 %token CLOSE THEOREM QED QUERY IMPORT SPECIFICATION SSPLIT
 %token SET SHOW QUIT
 %token IND COIND INTROS CASE SEARCH APPLY BACKCHAIN UNFOLD
@@ -46,7 +46,8 @@
 %token UNDERSCORE
 
 %token <int> NUM
-%token <string> UPPER_ID LOWER_ID INFIX_ID QSTRING
+%token <string> UPPER_ID LOWER_ID INFIX_ID INTERN_ID
+%token <(Typing.pos * string)> QSTRING
 %token EOF
 
 /* Lower */
@@ -109,7 +110,8 @@ meta_command:
   | HASH SHOW_TABLE lower_id DOT        { System.Command (System.Show_table (pos 3,$3)) }
   | HASH CLEAR_TABLES DOT               { System.Command (System.Clear_tables) }
   | HASH CLEAR_TABLE lower_id DOT       { System.Command (System.Clear_table (pos 3,$3)) }
-  | HASH SAVE_TABLE lower_id QSTRING DOT{ System.Command (System.Save_table (pos 3,$3,$4)) }
+  | HASH SAVE_TABLE lower_id QSTRING DOT{ let _,s = $4 in
+                                          System.Command (System.Save_table (pos 3,$3,s)) }
   | HASH ASSERT formula DOT             { System.Command (System.Assert $3) }
   | HASH ASSERT_NOT formula DOT         { System.Command (System.Assert_not $3) }
   | HASH ASSERT_RAISE formula DOT       { System.Command (System.Assert_raise $3) }
@@ -132,6 +134,7 @@ const_clist:
 
 ty:
   | PROP                                { Type.TProp }
+  | STRING                              { Type.TString }
   | lower_id			        { Type.Ty $1 }
   | ty RARROW ty                        { Type.ty_arrow $1 $3 }
   | LPAREN ty RPAREN                    { $2 }
@@ -165,8 +168,10 @@ term_list:
 
 term_atom:
   | LPAREN term RPAREN                  { $2 }
+  | LPAREN formula RPAREN               { Typing.change_pos (pos 1) $2 (pos 3) }
   | token_id                            { $1 }
-  | QSTRING                             { Typing.QString (pos 1,$1) }
+  | QSTRING                             { let p,s = $1 in
+                                          Typing.QString (p,s) }
 
 term_abs:
   | abound_id BSLASH term               { Typing.lambda' (pos 0) [$1] $3 }
@@ -187,7 +192,6 @@ formula:
   | formula OR formula                  { Typing.Or (pos 0,$1,$3) }
   | formula RARROW formula              { Typing.Arrow (pos 0,$1,$3) }
   | binder pabound_list COMMA formula   { Typing.Binder (pos 0,$1,$2,$4) }
-  | LPAREN formula RPAREN               { Typing.change_pos (pos 1) $2 (pos 3) }
   | term %prec LPAREN                   { $1 }
 
 binder:
@@ -245,6 +249,7 @@ any_id:
   | upper_id                            { $1 }
   | lower_id                            { $1 }
   | INFIX_ID                            { $1 }
+  | INTERN_ID                           { $1 }
 
 /* annotated id types */
 apred_id:
@@ -263,16 +268,19 @@ pabound_id:
 token_id:
   | upper_id                            { Typing.FreeID (pos 1,$1) }
   | lower_id                            { Typing.PredConstID (pos 1,$1) }
+  | INTERN_ID                           { Typing.InternID (pos 1,$1) }
 
 /* misc (commands) */
 
 string_args:
   |                                     { [] }
-  | QSTRING string_args                 { $1::$2 }
+  | QSTRING string_args                 { let _,s = $1 in
+                                          s::$2 }
 
 opt_arg:
   |                                     { None }
   | any_id                              { Some $1 }
+  | ON                                  { Some "on" }
   | TRUE                                { Some "true" }
   | FALSE                               { Some "false" }
 

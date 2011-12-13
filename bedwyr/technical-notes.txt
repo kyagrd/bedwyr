@@ -1,4 +1,4 @@
-Some technical notes 
+Some technical notes
 ====================
 Alwen Tiu, 02 September 2011.
 
@@ -11,14 +11,14 @@ documentation structure for the project.
 
 I. Non-logical extensions
 
-I have added the following non-logical predicates: 
+I have added the following non-logical predicates:
 
-- _not : o -> o. 
+- _not : o -> o.
   This is the standard negation-as-failure as in prolog.
 
 - _if: o -> o -> o -> o.
-  If-Then-Else: 
-  (_if P Q R) is basically equivalent to (P /\ Q) \/ (not(P) /\ Q).
+  If-Then-Else:
+  (_if P Q R) is basically equivalent to (P /\ Q) \/ (not(P) /\ R).
   The slight difference is that the second disjunct will not be tried
   if P is successful.
 
@@ -26,12 +26,12 @@ I have added the following non-logical predicates:
   Calling (_distinct P) directs bedwyr to produce only distinct answer
   substitutions.
 
-- _abstract: a -> (b -> a) -> a -> o.
+- _abstract: a -> ((b -> a) -> a) -> a -> o.
   (_abstract T Abs T') abstracts the logic variables in T of type b,
   and apply the constructor Abs to each abstraction, and unify the
   result with T'.
 
-  Example query: 
+  Example query:
   ?= _abstract (pr X Y) abs T.
   Solution found:
   X = X
@@ -42,13 +42,13 @@ I have added the following non-logical predicates:
 
   WARNING: Because '_abstract' can abstract any logic variables, and
   because the underlying abstract machine of bedwyr is untyped, the
-  abstraction produced by 'abstract' may not always respect the type
-  of the constructor Abs. For example, consider the above example.  If
-  pr is of type alpha -> beta -> alpha, for some distinct types alpha
-  and beta, and abs is of type alpha -> alpha, then the above query
-  will still succeed despite the fact that abs is applied to terms of
-  both types. Hence type checking does not guarantee runtime type
-  soundness ('well typed programs don't go wrong').  A solution to
+  abstraction produced by '_abstract' may not always respect the type
+  of the constructor Lam. For example, consider the above example.  If
+  pr is of type alpha -> beta -> gamma, for some distinct types alpha
+  and beta, then the above query will still succeed despite the fact
+  that abs is applied to terms of types alpha -> gamma and beta -> gamma.
+  Hence type checking does not guarantee runtime type soundness
+  ('well typed programs don't go wrong'). A solution to
   this would be to make the bedwyr engine aware of the type
   constraints, so that it only abstracts variables of the correct
   types.
@@ -64,7 +64,7 @@ I have added the following non-logical predicates:
 - _eqvt : A -> A -> o. This predicate checks that its arguments are
   syntatically equivalent modulo renaming of nabla variables.
 
-  For example, 
+  For example,
 
   ?= nabla x\ nabla y\ _eqvt (f x y) (f y x).
   Yes.
@@ -78,12 +78,12 @@ I have added the following non-logical predicates:
   No.
 
 - _abort: this predicate aborts the proof search and returns to the toplevel query (if in
-  interactive mode). 
+  interactive mode).
 
-- Printing facilities: I have added predicates to print to files. 
-  * fopen_out: string -> o. 
-    Open a file for writing. 
-  * fprint: string -> A -> o. 
+- Printing facilities: I have added predicates to print to files.
+  * fopen_out: string -> o.
+    Open a file for writing.
+  * fprint: string -> A -> o.
     Print to a file specified in the first argument. Fails if the file was not opened yet.
   * fclose_out: string -> o.
 
@@ -107,18 +107,18 @@ I have added the following non-logical predicates:
 
 II. Tabling
 
-- Equivariant-tabling: 
+- Equivariant-tabling:
   I have modified the tabling mechanism to allow matching of a table
   entry modulo renaming of nabla variables. This mechanism is enabled
   by default, but can be turned on or off using the following command:
 
-  #equivariant [on/off]. 
+  #equivariant [on/off].
 
 
-- Outputing entries of a table: 
-  I have added a facility to output the entries of a table: 
+- Outputing entries of a table:
+  I have added a facility to output the entries of a table:
 
-  #save_table <predicate> <filename>: 
+  #save_table <predicate> <filename>:
   This will save the table for a predicate to a definition file. A
   proved entry will become the argument of a predicate called
   'proved'.  Similarly, an unproved entry will be the argument of an
@@ -162,44 +162,44 @@ III. Parsing of types
 
   I have modified the parsing of types to allow polymorphic types.
   Type declarations can now contain variables, e.g.,
-   
-  #type cons (X -> list X -> list X). 
 
-  is now allowed. The free variables in the types will be abstracted. 
+  #type cons (X -> list X -> list X).
+
+  is now allowed. The free variables in the types will be abstracted.
   I introduce two additional constructors to help with recursion
-  over type structures. 
-  Let's distinguish between a 'raw type' and a type. A raw type is 
-  any expression of the form (t1 -> t2 -> .. -> tn) parsed by bedwyr. 
-  A (object-level) type is formed from raw types using the constructor: 
+  over type structures.
+  Let's distinguish between a 'raw type' and a type. A raw type is
+  any expression of the form (t1 -> t2 -> .. -> tn) parsed by bedwyr.
+  A (object-level) type is formed from raw types using the constructor:
 
-  ty : raw_type -> type. 
+  ty : raw_type -> type.
   all : (raw_type -> type) -> type.
 
   So the above expression will be parsed into the following bedwyr term:
 
-  all x\ ty (x -> list x -> list x). 
+  all x\ ty (x -> list x -> list x).
 
 
-IV. Bugs fixed. 
+IV. Bugs fixed.
 
-- Implication left: 
+- Implication left:
   An implication goal A => B can be seen as a conjunction
 
-  /\ {B\theta | A\theta is provable} 
+  /\ {B\theta | A\theta is provable}
 
   So the correct behavior of A => B should be one in which we
   accumulate all substitutions \theta for which A\theta is provable,
   and prove the big conjunction of /\ {B\theta}_\theta.
-  
+
   For example, if A has two answer substitutions \theta and \sigma,
   then proving A => B is the same as proving (B\theta) /\ (B\sigma).
   In particular, if B contains logic variables, bindings to those
   logic variables that occur when proving (B\theta) should not be
   undone when moving to prove (B\sigma).
-  
+
   For example, let p be defined as follows:
 
-  p a. 
+  p a.
   p b.
 
   and assume the standard 'member' predicate for list membership.
@@ -222,4 +222,4 @@ IV. Bugs fixed.
 
 
 
-  
+
