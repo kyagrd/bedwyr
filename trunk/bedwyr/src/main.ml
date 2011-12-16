@@ -1,6 +1,6 @@
 (****************************************************************************)
 (* Bedwyr prover                                                            *)
-(* Copyright (C) 2005-2006 David Baelde, Alwen Tiu, Axelle Ziegler          *)
+(* Copyright (C) 2005-2011 Baelde, Tiu, Ziegler, Gacek, Heath               *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -24,7 +24,7 @@ let welcome_msg =
   "Bedwyr " ^ Config.version ^ " (revision " ^ Config.build ^ ") welcomes you.
 
 This software is under GNU Public License.
-Copyright (c) 2005-2011 Slimmer project.
+Copyright (C) 2005-2011 Slimmer project.
 
 For a little help, type #help.
 \n"
@@ -41,15 +41,15 @@ let help_msg =
   "Useful commands in query mode:
 #help.                               Display this message.
 #exit.                               Exit.
-#debug [flag].                       Turn debugging on/off (default off).
-#time [flag].                        Turn timing on/off (default off).
+#debug [flag].                       Turn debugging [on]/off (initially off).
+#time [flag].                        Turn timing [on]/off (initially off).
 #session \"file_1\" ... \"file_N\".      Load these files as the current \
 session.
 #reload.                             Reload the current session.
 #reset.                              Clears the current session.
 #show_table [pred].                  Displays the predicate's table.
 #save_table [pred] [file].           Save the predicate's table in a file.
-#equivariant [flag].                 Turn equivariant tabling on/off (flag=on/off).
+#equivariant [flag].                 Turn equivariant tabling [on]/off (initially on).
 Or type in a formula to ask for its verification.
 For more information (including commands relevant in definition mode),
 see the user guide.
@@ -81,6 +81,7 @@ let position (start,curr) =
   let line2 = curr.Lexing.pos_lnum in
   let char1 = start.Lexing.pos_cnum - start.Lexing.pos_bol + 1 in
   let char2 = curr.Lexing.pos_cnum - curr.Lexing.pos_bol in
+
   if line1 < line2 then
     Format.sprintf "file \"%s\", line %d, character %d - line %d, character %d" file line1 char1 line2 char2
   else if char1 < char2  then
@@ -134,7 +135,7 @@ let rec process ?(interactive=false) parse lexbuf =
       (* I/O *)
       | End_of_file -> raise End_of_file
       | Lexer.Illegal_string ->
-          Format.printf "%sIllegal string \"%s\" in input.\n%!"
+          Format.printf "%sIllegal string starting with \"%s\" in input.\n%!"
             (position_lex lexbuf)
             (String.escaped (Lexing.lexeme lexbuf)) ;
           if interactive then Lexing.flush_input lexbuf else exit 1
@@ -168,7 +169,7 @@ let rec process ?(interactive=false) parse lexbuf =
             (Pprint.pp_type None) t
             s ;
           exit 1
-      | System.Invalid_free_declaration (n,p,t,s) ->
+      | System.Invalid_bound_declaration (n,p,t,s) ->
           Format.printf
             "%sCannot give bound variable %s the type %a: %s.\n%!"
             (position_range p)
@@ -188,14 +189,14 @@ let rec process ?(interactive=false) parse lexbuf =
           if interactive then Lexing.flush_input lexbuf else exit 1
       | Typing.Term_typing_error (p,ty1,ty2,unifier) ->
           Format.printf
-            "%sTyping error: this expression has type %s but is used as %s.%!"
+            "%sTyping error: this expression has type %s but is used as %s.\n%!"
             (position_range p)
             (Pprint.type_to_string (Some unifier) ty2)
             (Pprint.type_to_string (Some unifier) ty1) ;
           if interactive then Lexing.flush_input lexbuf else exit 1
       | Typing.Var_typing_error p ->
           Format.printf
-            "%sTyping error: this free variable cannot be of type %s.%!"
+            "%sTyping error: this free variable cannot be of type %s.\n%!"
             (position_range p)
             (Pprint.type_to_string None Type.TProp) ;
           if interactive then Lexing.flush_input lexbuf else exit 1
@@ -270,7 +271,8 @@ and input_from_file file =
           Lexing.pos_fname = file } ;
     input_defs lexbuf ;
     Sys.chdir cwd
-and input_defs lexbuf = process Parser.input_def lexbuf
+and input_defs lexbuf =
+  process Parser.input_def lexbuf
 and input_queries ?(interactive=false) lexbuf =
   process ~interactive Parser.input_query lexbuf
 
@@ -315,27 +317,12 @@ and command c reset =
 
     (* Tabling-related commands *)
     | System.Equivariant value -> toggle_flag Index.eqvt_tbl value
-    | System.Show_table (p,name) -> System.show_table (p,Term.atom name)
-    | System.Clear_tables ->
-        Hashtbl.iter
-          (fun k v -> match v with
-             | (_,_,Some t,_) -> Table.reset t
-             | _ -> ())
-          System.defs
-    | System.Clear_table (p,name) ->
-        begin match
-          try
-            let _,_,x,_ = Hashtbl.find System.defs (Term.get_var (Term.atom name)) in x
-          with _ -> None
-        with
-          | Some t ->
-              Table.reset t
-          | None ->
-              Format.printf "Table not found.\n"
-        end
-    (* save the content of a table to a file. An exception is thrown if *)
-    (* file already exists. *)
-    | System.Save_table (p,name,file) -> System.save_table (p,Term.atom name) file
+    | System.Show_table (p,name) -> System.show_table (p,Term.atom ~tag:Term.Constant name)
+    | System.Clear_tables -> System.clear_tables ()
+    | System.Clear_table (p,name) -> System.clear_table (p,Term.atom ~tag:Term.Constant name)
+    (* save the content of a table to a file. An exception is thrown if
+     * file already exists. *)
+    | System.Save_table (p,name,file) -> System.save_table (p,Term.atom ~tag:Term.Constant name) file
 
     (* Testing commands *)
     | System.Assert query' ->

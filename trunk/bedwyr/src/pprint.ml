@@ -1,6 +1,6 @@
 (****************************************************************************)
 (* An implementation of Higher-Order Pattern Unification                    *)
-(* Copyright (C) 2006-2010 Nadathur, Linnell, Baelde, Ziegler               *)
+(* Copyright (C) 2006-2011 Nadathur, Linnell, Baelde, Ziegler, Gacek, Heath *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -23,8 +23,6 @@ open Format
 
 exception Found of int
 
-type assoc = Left | Right | Both | Nonassoc
-
 let debug = ref false
 
 let string_of_tag = function
@@ -36,6 +34,13 @@ let string_of_binder = function
   | Forall -> "Forall"
   | Exists -> "Exists"
   | Nabla -> "Nabla"
+
+(* [assoc], [infix], [set_infix], [is_infix], [get_assoc] and [priority]
+ * are commented out until we add real support for
+ * runtime-defined syntactic behaviours,
+ * ie [#infix pred.] or such.
+
+type assoc = Left | Right | Both | Nonassoc
 
 (* List of infix operators sorted by priority. *)
 let infix : (string * assoc) list ref = ref []
@@ -50,78 +55,79 @@ let priority x =
     0
   with
     | Found i -> i
-let get_max_priority () = List.length !infix
+let get_max_priority () = List.length !infix *)
+(* XXX This, and the inline hard-coded priorities of the logical connectives,
+ * has to change. We may not be able to link the pprint priority
+ * to the parser precedence, but still... *)
+let get_max_priority () = 4
 
-(** Utility to get a 'to_string' from a 'print' *)
+(* Utility to get a 'to_string' from a 'print' *)
 let formatter,do_formatter =
   let buf = Buffer.create 20 in
-  let chan = Format.formatter_of_buffer buf in
+  let chan = formatter_of_buffer buf in
     chan,
     (fun f ->
        assert (Buffer.length buf = 0) ;
        f () ;
-       Format.pp_print_flush chan () ;
+       pp_print_flush chan () ;
        assert (Buffer.length buf > 0) ;
        let s = Buffer.contents buf in
        Buffer.clear buf ;
        s)
 
-(** Print a kind. *)
 let pp_kind chan ki =
   let rec aux chan = function
-    | Type.KType ->
-        Format.fprintf chan "@[*@]" 
-    | Type.KRArrow (ki1::kis,ki2) ->
-        Format.fprintf chan "@[(%a -> %a)@]" aux ki1 aux (Type.KRArrow (kis,ki2))
-    | Type.KRArrow ([],ki) ->
+    | KType ->
+        fprintf chan "@[*@]"
+    | KRArrow (ki1::kis,ki2) ->
+        fprintf chan "@[(%a -> %a)@]" aux ki1 aux (KRArrow (kis,ki2))
+    | KRArrow ([],ki) ->
         aux chan ki
   in
-  Format.fprintf chan "@[%a@]" aux ki
+  fprintf chan "@[%a@]" aux ki
 
 let kind_to_string ki =
   do_formatter (fun () -> pp_kind formatter ki)
 
-(** Print a type. *)
 let pp_type unifier chan ty =
   let ty = match unifier with
     | None -> ty
     | Some unifier -> Typing.ty_norm unifier ty
   in
   let rec aux chan = function
-    | Type.Ty name ->
-        Format.fprintf chan "@[%s@]" name
-    | Type.TProp ->
-        Format.fprintf chan "@[{prop}@]"
-    | Type.TString ->
-        Format.fprintf chan "@[{string}@]"
-    | Type.TRArrow (ty1::tys,ty2) ->
-        Format.fprintf chan "@[(%a -> %a)@]" aux ty1 aux (Type.TRArrow (tys,ty2))
-    | Type.TRArrow ([],ty) ->
+    | Ty name ->
+        fprintf chan "@[%s@]" name
+    | TProp ->
+        fprintf chan "@[{prop}@]"
+    | TString ->
+        fprintf chan "@[{string}@]"
+    | TRArrow (ty1::tys,ty2) ->
+        fprintf chan "@[(%a -> %a)@]" aux ty1 aux (TRArrow (tys,ty2))
+    | TRArrow ([],ty) ->
         aux chan ty
-    | Type.TVar i ->
-        Format.fprintf chan "@[?%d@]" i
+    | TVar i ->
+        fprintf chan "@[?%d@]" i
   in
-  Format.fprintf chan "@[%a@]" aux ty
+  fprintf chan "@[%a@]" aux ty
 
 let type_to_string unifier ty =
   do_formatter (fun () -> pp_type unifier formatter ty)
 
-(* Print a unifier *)
 let pp_unifier chan unifier =
-  Format.fprintf chan "@[{";
-  Typing.Unifier.iter
-    (fun i ty -> Format.fprintf chan "@[ %d : %a ;@]" i (pp_type None) ty)
+  fprintf chan "@[{";
+  Typing.iter
+    (fun i ty -> fprintf chan "@[ %d : %a ;@]" i (pp_type None) ty)
     unifier;
-  Format.fprintf chan "}@]%!"
+  fprintf chan "}@]%!"
 
-(** Print a term. Ensures consistent namings, using naming hints when available.
-  * Behaves consistently from one call to another unless Term.reset_namespace
-  * is called between executions.
-  * Two lists of names must be passed for free "bound variables"
-  * and generic variables. These names are assumed not to conflict with any
-  * other name. The good way to ensure that is to use Term.get_dummy_name and
-  * [Term.free].
-  * The input term should be fully normalized. *)
+(* Print a term. Ensures consistent namings, using naming hints when available.
+ * Behaves consistently from one call to another unless Term.reset_namespace
+ * is called between executions.
+ * Two lists of names must be passed for free "bound variables"
+ * and generic variables. These names are assumed not to conflict with any
+ * other name. The good way to ensure that is to use Term.get_dummy_name and
+ * [Term.free].
+ * The input term should be fully normalized. *)
 let print_full ~generic ~bound chan term =
   let get_nth list n s =
     try
@@ -134,77 +140,77 @@ let print_full ~generic ~bound chan term =
   let rec pp ~bound pr chan term =
     match observe term with
       | Var v ->
-          let name = Term.get_name term in
+          let name = get_name term in
           if !debug then
-            Format.fprintf chan "%s[%d/%d/%s]"
+            fprintf chan "%s[%d/%d/%s]"
               name v.ts v.lts (string_of_tag v.tag)
           else
-            Format.fprintf chan "%s" name
+            fprintf chan "%s" name
       | NB i ->
-          Format.fprintf chan "%s"
+          fprintf chan "%s"
             (get_nth generic (i-1) ("nabla(" ^ (string_of_int (i - 1)) ^ ")"))
       | DB i ->
-          Format.fprintf chan "%s"
+          fprintf chan "%s"
             (get_nth bound (i-1) ("db(" ^ (string_of_int i) ^ ")"))
-      | QString s -> Format.fprintf chan "\"%s\"" s
-      | True -> Format.fprintf chan "true"
-      | False -> Format.fprintf chan "false"
+      | QString s -> fprintf chan "\"%s\"" s
+      | True -> fprintf chan "true"
+      | False -> fprintf chan "false"
       | Eq (t1,t2) ->
           let op_priority = 4 in
           let print =
             if op_priority >= pr then
-              Format.fprintf chan "@[%a@ =@ %a@]"
+              fprintf chan "@[%a@ =@ %a@]"
             else
-              Format.fprintf chan "@[<1>(%a@ =@ %a)@]"
+              fprintf chan "@[<1>(%a@ =@ %a)@]"
           in
           print (pp ~bound (op_priority+1)) t1 (pp ~bound (op_priority+1)) t2
       | And (t1,t2) ->
           let op_priority = 3 in
           let print =
             if op_priority >= pr then
-              Format.fprintf chan "@[%a@ /\\@ %a@]"
+              fprintf chan "@[%a@ /\\@ %a@]"
             else
-              Format.fprintf chan "@[<1>(%a@ /\\@ %a)@]"
+              fprintf chan "@[<1>(%a@ /\\@ %a)@]"
           in
           print (pp ~bound (op_priority)) t1 (pp ~bound (op_priority)) t2
       | Or (t1,t2) ->
           let op_priority = 2 in
           let print =
             if op_priority >= pr then
-              Format.fprintf chan "@[%a@ \\/@ %a@]"
+              fprintf chan "@[%a@ \\/@ %a@]"
             else
-              Format.fprintf chan "@[<1>(%a@ \\/@ %a)@]"
+              fprintf chan "@[<1>(%a@ \\/@ %a)@]"
           in
           print (pp ~bound (op_priority)) t1 (pp ~bound (op_priority)) t2
       | Arrow (t1,t2) ->
           let op_priority = 1 in
           let print =
             if op_priority >= pr then
-              Format.fprintf chan "@[%a@ ->@ %a@]"
+              fprintf chan "@[%a@ ->@ %a@]"
             else
-              Format.fprintf chan "@[<1>(%a@ ->@ %a)@]"
+              fprintf chan "@[<1>(%a@ ->@ %a)@]"
           in
           print (pp ~bound (op_priority)) t1 (pp ~bound (op_priority+1)) t2
       | Binder (b,i,t) ->
           assert (i>0) ;
           (* Get [i] more dummy names for the new bound variables.
            * Release them after the printing of this term. *)
-          let more = Term.get_dummy_names ~start:1 i "x" in
+          let more = get_dummy_names ~start:1 i "x" in
           let head = String.concat " " more in
           let print =
             if pr=0 then
-              Format.fprintf chan "@[<2>%s@ %s,@ %a@]"
+              fprintf chan "@[<2>%s@ %s,@ %a@]"
              else
-              Format.fprintf chan "@[<3>(%s@ %s,@ %a)@]"
+              fprintf chan "@[<3>(%s@ %s,@ %a)@]"
           in
           print
             (string_of_binder b)
             head
             (pp ~bound:(List.rev_append more bound) 0) t ;
-          List.iter Term.free more
+          List.iter free more
       | App (t,ts) ->
           begin match (observe t, ts) with
-            | Var {tag=Constant}, [a; b] when is_infix (get_name t) ->
+            (*| Var {tag=Constant}, [a; b] when is_infix (get_name t) ->
                 let op = get_name t in
                 let op_p = priority op in
                 let assoc = get_assoc op in
@@ -216,50 +222,51 @@ let print_full ~generic ~bound chan term =
                 in
                 let print =
                   if op_p >= pr then
-                    Format.fprintf chan "@[%a@ %s@ %a@]"
+                    fprintf chan "@[%a@ %s@ %a@]"
                   else
-                    Format.fprintf chan "@[<1>(%a@ %s@ %a)@]"
+                    fprintf chan "@[<1>(%a@ %s@ %a)@]"
                 in
-                print (pp ~bound pr_left) a op (pp ~bound pr_right) b
-            | _ ->
+                print (pp ~bound pr_left) a op (pp ~bound pr_right) b*)
+            | _,hd::tl ->
                 let print =
                   if pr=0 then
-                    Format.fprintf chan "@[<2>%a %a%a@]"
+                    fprintf chan "@[<2>%a %a%a@]"
                    else
-                    Format.fprintf chan "@[<3>(%a %a%a)@]"
+                    fprintf chan "@[<3>(%a %a%a)@]"
                 in
-                print (pp ~bound high_pr)
-                  t
-                  (pp ~bound high_pr) (List.hd ts)
+                print
+
+                  (pp ~bound high_pr) t
+                  (pp ~bound high_pr) hd
                   (fun chan ->
                      List.iter
-                       (Format.fprintf chan "@ %a" (pp ~bound high_pr)))
-                  (List.tl ts)
+                       (fprintf chan "@ %a" (pp ~bound high_pr)))
+                  tl
+            | _,[] -> pp ~bound pr chan t
           end
       | Lam (i,t) ->
           assert (i>0) ;
           (* Get [i] more dummy names for the new bound variables.
            * Release them after the printing of this term. *)
-          let more = Term.get_dummy_names ~start:1 i "x" in
+          let more = get_dummy_names ~start:1 i "x" in
           let head = String.concat "\\" more in
           let print =
             if pr=0 then
-              Format.fprintf chan "%s\\@ %a"
+              fprintf chan "%s\\@ %a"
             else
-              Format.fprintf chan "@[<1>(%s\\@ %a)@]"
+              fprintf chan "@[<1>(%s\\@ %a)@]"
           in
           print head (pp ~bound:(List.rev_append more bound) 0) t ;
-          List.iter Term.free more
+          List.iter free more
       | Susp (t,_,_,l) ->
-          Format.fprintf chan "<%d:%a>" (List.length l) (pp ~bound pr) t
+          fprintf chan "<%d:%a>" (List.length l) (pp ~bound pr) t
       | Ptr  _ -> assert false (* observe *)
   in
-  Format.fprintf chan "@[%a@]" (pp ~bound 0) term
+  fprintf chan "@[%a@]" (pp ~bound 0) term
 
 let term_to_string_full ~generic ~bound tm =
   do_formatter (fun () -> print_full ~generic ~bound formatter tm)
 
-(* Print a term; allows debugging.  See term_to_string_full. *)
 let term_to_string_full_debug ~generic ~bound dbg term =
   let debug' = !debug in
   let s =
@@ -270,15 +277,15 @@ let term_to_string_full_debug ~generic ~bound dbg term =
   s
 
 let get_generic_names x =
-  let nbs = Term.get_nablas x in
+  let nbs = get_nablas x in
   let max_nb = List.fold_left max 0 nbs in
-  Term.get_dummy_names ~start:1 max_nb "n"
+  get_dummy_names ~start:1 max_nb "n"
 
 let print ?(bound=[]) chan term =
   let term = Norm.deep_norm term in
   let generic = get_generic_names term in
   let s = print_full ~generic ~bound chan term in
-  List.iter Term.free generic ;
+  List.iter free generic ;
   s
 
 let term_to_string ?(bound=[]) tm =
@@ -286,16 +293,15 @@ let term_to_string ?(bound=[]) tm =
 
 let pp_term out term = print out term
 
-(** Output to stdout *)
 let print_term ?(bound=[]) term =
-  print ~bound Format.std_formatter term
+  print ~bound std_formatter term
 
-(** Utility for tools such as Taci which push down formula-level abstractions
-  * to term level abstractions. Dummy names should be created (and freed)
-  * during the printing of the formula, and passed as the bound names to this
-  * function, which won't display the lambda prefix.
-  * The input term should have at least [List.length bound] abstractions
-  * at toplevel. *)
+(* Utility for tools such as Taci which push down formula-level abstractions
+ * to term level abstractions. Dummy names should be created (and freed)
+ * during the printing of the formula, and passed as the bound names to this
+ * function, which won't display the lambda prefix.
+ * The input term should have at least [List.length bound] abstractions
+ * at toplevel. *)
 let pp_preabstracted ~generic ~bound chan term =
   (* let term = Norm.hnorm term in *)
   let len = List.length bound in

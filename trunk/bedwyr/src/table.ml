@@ -1,3 +1,22 @@
+(****************************************************************************)
+(* Bedwyr prover                                                            *)
+(* Copyright (C) 2006-2011 Andrew Gacek, David Baelde, Alwen Tiu            *)
+(*                                                                          *)
+(* This program is free software; you can redistribute it and/or modify     *)
+(* it under the terms of the GNU General Public License as published by     *)
+(* the Free Software Foundation; either version 2 of the License, or        *)
+(* (at your option) any later version.                                      *)
+(*                                                                          *)
+(* This program is distributed in the hope that it will be useful,          *)
+(* but WITHOUT ANY WARRANTY; without even the implied warranty of           *)
+(* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            *)
+(* GNU General Public License for more details.                             *)
+(*                                                                          *)
+(* You should have received a copy of the GNU General Public License        *)
+(* along with this code; if not, write to the Free Software Foundation,     *)
+(* Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA             *)
+(****************************************************************************)
+
 type tag = Proved | Working of bool ref | Disproved | Unset
 type t = tag ref Index.t ref
 
@@ -8,31 +27,6 @@ let add ~allow_eigenvar table args tag =
 
 let find table args = Index.find !table args
 
-(* Abstract nabla variables in a term. If equivariant tabling is used
-   then use only nabla variables appearing in the term. Otherwise,
-   add vacuous nabla's as neccessary. The maximum index of the nabla variables
-   in the term determine the number of nabla's needed to be added (in case
-   of non-equivariant tabling). For non-equivariant tabling, this use of maximum index will
-   cause us to miss vacuous nablas that appear inner most in a proved atomic goal.
-   For example, if a query like  (nabla x\ nabla y\ p x) succeeds, then
-   the table will only display (nabla x\ p x), because the vacuous y is
-   forgotten in the table.
-   This behavior is strictly speaking unsound. For example, if p is defined as
-
-   p X := sigma Y\ (X = Y -> false).
-
-   That is, p X is true if there exists a term distinct from X.
-   Assuming that the types are vacuous, then (nabla x\ p x)  is not provable
-   in Linc, but (nabla x\ nabla y\ p x) is.
-   Suppose the latter were proved by Bedwyr (currently it's impossible because we can't
-   yet handle logic variables on the left), then the table will instead display
-   (nabla x\ p x) as provable, which is wrong.
-
-   This unsoundness may never arise in the goals tabled by Bedwyr, because
-   to produce this behavior, it seems that we need unification of logic variables on
-   the left, which is not handled in Bedwyr anyway. But it'd be good if this can
-   be fixed, if we want to be faithful to the Linc logic.
-*)
 
 let nabla_abstract t =
   let t = Norm.deep_norm t in
@@ -45,8 +39,6 @@ let nabla_abstract t =
     (List.length bindings)
     (List.fold_left (fun s i -> (Term.abstract (Term.nabla i) s)) t bindings)
 
-
-(* Printing a table to standard output. Nabla variables are abstracted and explicitly quantified. *)
 let print head table =
   Format.printf
     "Table for %a contains (P=Proved, D=Disproved):@\n"
@@ -58,25 +50,35 @@ let print head table =
          | Proved    -> Format.printf " [P] %a@\n" Pprint.pp_term t
          | Disproved -> Format.printf " [D] %a@\n" Pprint.pp_term t
          | Unset     -> ()
-         | Working _ -> assert false)
+         | Working _ -> assert false) ;
+  Format.print_flush ()
+
+let fprint fout head table =
+  let fmt = (Format.formatter_of_out_channel fout) in
+  Format.fprintf fmt
+    "%% Table for %a contains :@\n@\nDefine@;<1 2>proved,@;<1 2>disproved"
+    Pprint.pp_term head ;
+  let first = ref true in
+  Index.iter !table
+    (fun t tag ->
+       let t = nabla_abstract (Term.app t [head]) in
+       if !first then begin
+         first := false ;
+         match !tag with
+           | Proved    -> Format.fprintf fmt "@;<1 0>by@;<1 2>proved %a" Pprint.pp_term t
+           | Disproved -> Format.fprintf fmt "@;<1 0>by@;<1 2>disproved %a" Pprint.pp_term t
+           | Unset     -> ()
+           | Working _ -> assert false
+       end else begin match !tag with
+         | Proved    -> Format.fprintf fmt " ;@;<1 2>proved %a" Pprint.pp_term t
+         | Disproved -> Format.fprintf fmt " ;@;<1 2>disproved %a" Pprint.pp_term t
+         | Unset     -> ()
+         | Working _ -> assert false
+       end) ;
+  Format.fprintf fmt "@;<0 0>.@\n%!"
+
+let reset x = x := Index.empty
 
 let iter_fun table f =
   Index.iter !table (fun t tag -> f t !tag)
 
-
-(* Printing a table to a file. Nabla variables are abstracted and explicitly quantified. *)
-let fprint fout head table =
-  let fmt = (Format.formatter_of_out_channel fout) in
-  Format.fprintf fmt
-    "%% Table for %a contains :@\n"
-    Pprint.pp_term head ;
-   Index.iter !table
-    (fun t tag ->
-       let t = nabla_abstract (Term.app t [head]) in
-       match !tag with
-         | Proved    -> Format.fprintf fmt "proved %a.\n" Pprint.pp_term t
-         | Disproved -> Format.fprintf fmt "disproved %a.\n" Pprint.pp_term t
-         | Unset     -> ()
-         | Working _ -> assert false)
-
-let reset x = x := Index.empty

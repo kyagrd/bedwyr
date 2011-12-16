@@ -1,6 +1,6 @@
 (****************************************************************************)
 (* An implementation of Higher-Order Pattern Unification                    *)
-(* Copyright (C) 2006-2009 Nadathur, Linnell, Baelde, Ziegler               *)
+(* Copyright (C) 2006-2011 Nadathur, Linnell, Baelde, Ziegler, Gacek, Heath *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -17,10 +17,10 @@
 (* Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA             *)
 (****************************************************************************)
 
-(** Term (beta-)normalization *)
+(** Term (beta-)normalization. *)
 
-(** Head normalization *)
+(** Head normalization. *)
 val hnorm : Term.term -> Term.term
 
-(** Full normalization *)
+(** Full normalization. *)
 val deep_norm : Term.term -> Term.term

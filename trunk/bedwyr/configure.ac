@@ -1,5 +1,5 @@
 
-AC_INIT([bedwyr],[1.2])
+AC_INIT([bedwyr],[1.3-alpha1],[https://gforge.inria.fr/tracker/?atid=1543&group_id=367])
 AC_PREREQ(2.57)
 AC_CONFIG_SRCDIR([src/main.ml])
 AC_PROG_INSTALL

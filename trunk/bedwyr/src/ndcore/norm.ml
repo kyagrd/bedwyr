@@ -1,6 +1,6 @@
 (****************************************************************************)
 (* An implementation of Higher-Order Pattern Unification                    *)
-(* Copyright (C) 2006-2009 Nadathur, Linnell, Baelde, Ziegler               *)
+(* Copyright (C) 2006-2011 Nadathur, Linnell, Baelde, Ziegler, Gacek, Heath *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -17,7 +17,7 @@
 (* Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA             *)
 (****************************************************************************)
 
-(* (Lazy Head) Normalization *)
+(* Term (beta-)normalization *)
 
 (* Raise the substitution *)
 let rec add_dummies env n m =
@@ -25,17 +25,17 @@ let rec add_dummies env n m =
     | 0 -> env
     | _ -> let n'= n-1 in ((Term.Dum (m+n'))::(add_dummies env n' m))
 
-(** Make an environment appropriate to [n] lambda abstractions applied to
-    the arguments in [args]. Return the environment together with any
-    remaining lambda abstractions and arguments. (There can not be both
-    abstractions and arguments left over). *)
+(* Make an environment appropriate to [n] lambda abstractions
+ * applied to the arguments in [args]. Return the environment
+ * together with any remaining lambda abstractions and arguments
+ * (there can not be both abstractions and arguments left over). *)
 let make_env n args =
   let rec aux n args e = match n,args with
     | 0,_ | _,[] -> e,n,args
     | _,hd::tl -> aux (n-1) tl (Term.Binding(hd, 0)::e)
   in aux n args []
-        
-(** Head normalization function.*)
+
+(* Head normalization function.*)
 let rec hnorm term =
   match Term.observe term with
     | Term.QString _ | Term.Var _ | Term.DB _ | Term.NB _ | Term.True | Term.False
@@ -71,7 +71,7 @@ let rec hnorm term =
           | Term.And (t1,t2) -> Term.op_and (susp t1) (susp t2)
           | Term.Or (t1,t2) -> Term.op_or (susp t1) (susp t2)
           | Term.Arrow (t1,t2) -> Term.op_arrow (susp t1) (susp t2)
-          | Term.Binder (b,n,t) -> 
+          | Term.Binder (b,n,t) ->
               Term.binder b n (hnorm (Term.susp t (ol+n) (nl+n)
                                            (add_dummies e n nl)))
           | Term.Lam (n,t) ->
@@ -83,6 +83,7 @@ let rec hnorm term =
         end
     | Term.Ptr _ -> assert false
 
+(* Full normalization function.*)
 let rec deep_norm t =
   let t = hnorm t in
   match Term.observe t with
