@@ -115,26 +115,20 @@ let unify_constraint unifier ty1' ty2' =
         aux u ty1 ty2
     | _,TRArrow ([],ty2) ->
         aux u ty1 ty2
+    | TVar i,_ when Unifier.mem i u ->
+        let ty1 = Unifier.find i u in
+        aux u ty1 ty2
+    | _,TVar j when Unifier.mem j u ->
+        let ty2 = Unifier.find j u in
+        aux u ty1 ty2
     | TVar i,_ ->
-        begin try
-          let ty1 = Unifier.find i u in
-          aux u ty1 ty2
-        with
-          | Not_found ->
-              if occurs u i ty2
-              then raise (Type_unification_error (ty1',ty2',unifier))
-              else Unifier.add i ty2 u
-        end
+        if occurs u i ty2
+        then raise (Type_unification_error (ty1',ty2',unifier))
+        else Unifier.add i ty2 u
     | _,TVar j ->
-        begin try
-          let ty2 = Unifier.find j u in
-          aux u ty1 ty2
-        with
-          | Not_found ->
-              if occurs u j ty1
-              then raise (Type_unification_error (ty1',ty2',unifier))
-              else Unifier.add j ty1 u
-        end
+        if occurs u j ty1
+        then raise (Type_unification_error (ty1',ty2',unifier))
+        else Unifier.add j ty1 u
     | TRArrow (ty1::tys1,bty1),TRArrow (ty2::tys2,bty2) ->
         let u = aux u ty1 ty2 in
         aux u (TRArrow (tys1,bty1)) (TRArrow (tys2,bty2))
