@@ -1,6 +1,6 @@
 /****************************************************************************
  * Bedwyr prover                                                            *
- * Copyright (C) 2006 David Baelde, Alwen Tiu, Axelle Ziegler               *
+ * Copyright (C) 2006-2011 Baelde, Tiu, Ziegler, Heath                      *
  *                                                                          *
  * This program is free software; you can redistribute it and/or modify     *
  * it under the terms of the GNU General Public License as published by     *
@@ -158,7 +158,7 @@ defs:
   | def SEMICOLON defs                  { $1::$3 }
 
 def:
-  | formula                             { pos 0,$1,Typing.True (pos 0) }
+  | formula                             { pos 0,$1,Typing.pre_true (pos 0) }
   | formula DEFEQ formula               { pos 0,$1,$3 }
 
 term_list:
@@ -171,27 +171,27 @@ term_atom:
   | LPAREN formula RPAREN               { Typing.change_pos (pos 1) $2 (pos 3) }
   | token_id                            { $1 }
   | QSTRING                             { let p,s = $1 in
-                                          Typing.QString (p,s) }
+                                          Typing.pre_qstring p s }
 
 term_abs:
-  | abound_id BSLASH term               { Typing.lambda' (pos 0) [$1] $3 }
+  | abound_id BSLASH term               { Typing.pre_lambda (pos 0) [$1] $3 }
 
 term:
   | term_list                           { let t,l = $1 in
-                                          Typing.app' (pos 1) t l }
-  | token_id INFIX_ID token_id          { Typing.app'
+                                          Typing.pre_app (pos 1) t l }
+  | token_id INFIX_ID token_id          { Typing.pre_app
                                             (pos 0)
-                                            (Typing.PredConstID (pos 2,$2))
+                                            (Typing.pre_predconstid (pos 2) $2)
                                             [$1; $3] }
 
 formula:
-  | TRUE                                { Typing.True (pos 0) }
-  | FALSE                               { Typing.False (pos 0) }
-  | term EQ term                        { Typing.Eq (pos 0,$1,$3) }
-  | formula AND formula                 { Typing.And (pos 0,$1,$3) }
-  | formula OR formula                  { Typing.Or (pos 0,$1,$3) }
-  | formula RARROW formula              { Typing.Arrow (pos 0,$1,$3) }
-  | binder pabound_list COMMA formula   { Typing.Binder (pos 0,$1,$2,$4) }
+  | TRUE                                { Typing.pre_true (pos 0) }
+  | FALSE                               { Typing.pre_false (pos 0) }
+  | term EQ term                        { Typing.pre_eq (pos 0) $1 $3 }
+  | formula AND formula                 { Typing.pre_and (pos 0) $1 $3 }
+  | formula OR formula                  { Typing.pre_or (pos 0) $1 $3 }
+  | formula RARROW formula              { Typing.pre_arrow (pos 0) $1 $3 }
+  | binder pabound_list COMMA formula   { Typing.pre_binder (pos 0) $1 $2 $4 }
   | term %prec LPAREN                   { $1 }
 
 binder:
@@ -266,9 +266,9 @@ pabound_id:
 
 /* predicate or constant in a term */
 token_id:
-  | upper_id                            { Typing.FreeID (pos 1,$1) }
-  | lower_id                            { Typing.PredConstID (pos 1,$1) }
-  | INTERN_ID                           { Typing.InternID (pos 1,$1) }
+  | upper_id                            { Typing.pre_freeid (pos 1) $1 }
+  | lower_id                            { Typing.pre_predconstid (pos 1) $1 }
+  | INTERN_ID                           { Typing.pre_internid (pos 1) $1 }
 
 /* misc (commands) */
 

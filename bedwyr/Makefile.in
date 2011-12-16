@@ -14,12 +14,32 @@ configure: configure.ac
 	autoconf
 
 XPL = list.def internal/scoping.def internal/checks.def \
-      miniml.def internal/typecheck.def \
-      3bits.def lambda.def progs.def \
+      miniml.def 3bits.def lambda.def progs.def \
       graph-alt.def minmax.def multisim.def \
       tictactoe.def \
       pi/pi_trace.def pi/corr-assert.def pi/pi_modal.def \
       pi/pi_mini.def pi/pi_nat.def pi/pi_church.def
+
+#	     doc/userguide.pdf doc/userguide.ps.gz doc/userguide.html 
+ARCH_FILES = COPYING CHANGES README TODO configure.ac install-sh Makefile.in \
+	     contrib/bedwyr.el contrib/bedwyr.vim \
+	     doc/*.tex doc/userguide.bib doc/Makefile \
+	     src/ndcore/term.ml src/ndcore/term.mli \
+	     src/ndcore/norm.ml src/ndcore/norm.mli \
+	     src/ndcore/unify.ml src/ndcore/unify.mli \
+	     src/ndcore/index.ml src/ndcore/index.mli \
+	     src/type.ml \
+	     src/typing.ml src/typing.mli \
+	     src/pprint.ml src/pprint.mli \
+	     src/ndcore/tests/oUnit.ml \
+	     src/ndcore/tests/test.ml \
+	     src/table.ml src/table.mli \
+	     src/system.ml src/system.mli \
+	     src/prover.ml src/prover.mli \
+	     src/config.ml.in src/parser.mly src/lexer.mll \
+	     src/main.ml src/main.mli \
+	     src/Makefile.in \
+	     $(shell find examples -type f '!' -path '*.svn*' -exec echo \{\} +)
 
 .PHONY: test
 test: src/Makefile
@@ -37,7 +57,13 @@ examples_tests: src/bedwyr
 
 .PHONY: doc
 doc:
+	make -C src doc
 	make -C doc
+
+superclean: clean
+	find . -name '*~' -exec rm \{\} \;
+	rm -f src/depend
+	rm -f src/ndcore/depend
 
 clean:
 	make -C src clean
@@ -45,31 +71,12 @@ clean:
 
 VERSION=@PACKAGE_VERSION@
 D=bedwyr-$(VERSION)
-dist: configure doc
-	find . -name '*~' -exec rm \{\} \;
-	rm -rf $(D)
-	mkdir $(D)
-	mkdir $(D)/doc
-	mkdir $(D)/examples
-	mkdir $(D)/examples/pi
-	mkdir $(D)/examples/internal
-	mkdir $(D)/examples/ccs_vp
-	mkdir $(D)/examples/ccs_vp/timing
-	mkdir $(D)/contrib
-	mkdir $(D)/src
-	mkdir $(D)/src/ndcore
-	mkdir $(D)/src/ndcore/tests
-	cp COPYING README TODO configure configure.ac install-sh Makefile $(D)
-	cp contrib/bedwyr.el contrib/bedwyr.vim $(D)/contrib
-	cp doc/*.tex doc/userguide.bib doc/Makefile $(D)/doc
-	cp doc/userguide.pdf doc/userguide.ps.gz doc/userguide.html $(D)/doc
-	for file in `find examples -type f '!' -path '*.svn*'` ; do \
-	  cp $$file $(D)/$$file ; \
-	done
-	cp src/*.ml* src/Makefile.in $(D)/src
-	rm -f $(D)/src/parser.ml $(D)/src/parser.mli $(D)/src/lexer.ml
-	cp src/ndcore/*.ml* $(D)/src/ndcore
-	cp src/ndcore/tests/*.ml* $(D)/src/ndcore/tests
-	tar cjf $(D).tar.bz2 $(D)
-	tar czf $(D).tar.gz $(D)
-	rm -rf $(D)
+
+#dist: Makefile doc $(D).tar.bz2 $(D).tar.gz
+dist: Makefile $(D).tar.bz2 $(D).tar.gz
+
+$(D).tar.bz2: $(ARCH_FILES)
+	@tar -cvjf $@ --xform 's|^|$(D)/|' $^
+
+$(D).tar.gz: $(ARCH_FILES)
+	@tar -cvzf $@ --xform 's|^|$(D)/|' $^

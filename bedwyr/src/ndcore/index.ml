@@ -1,6 +1,6 @@
 (****************************************************************************)
 (* Bedwyr prover                                                            *)
-(* Copyright (C) 2006-2009 David Baelde                                     *)
+(* Copyright (C) 2006-2011 David Baelde, Alwen Tiu                          *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -16,36 +16,6 @@
 (* along with this code; if not, write to the Free Software Foundation,     *)
 (* Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA             *)
 (****************************************************************************)
-
-(** In this file we implement an index structure used for tabling.
-  * An index represents a set of terms, in which eigenvariables may be allowed
-  * but not logic variable -- since this requires suspensions.
-  * The terms are abstracted over their eigenvars in the set.
-  * For efficiency, the index lookup first parses the "rigid" structure of a
-  * term in linear time, and extracts variables, and then takes care of the
-  * equalities among these variables.
-  * Currently the Nabla indices are handled as part of the rigid structure of
-  * terms, which means that weakening and swapping are not supported.
-  * Later, the set of nabla variables could be extracted and simplified to an
-  * essential representation just like eigenvariables. *)
-
-(** {1 Constraint management}
-  * In the tree, variables are identified by uniques numbers, which I'll call
-  * the VID (variable id). We could get rid of that and rely only on the order
-  * in which we meet the vars in the tree, but that would involve extra
-  * care when changing an algorithm (insertion/lookup or fold).
-  * So at the end of a branch we have a collection of variables with VIDs,
-  * and we want to store a constraint describing this collection, such that
-  * two formulas satisfying the same rigid structure and map are indeed
-  * logically equivalent.
-  * We first get rid of VIDs, which are not necessarily [0,1,2..n], and renumber
-  * variables using CIDs (constraint id) from 0 to n. In the constraint we
-  * store:
-  * - the maximum VID
-  * - an array mapping CID to VID
-  * - an array describing variable equalities: to each variable (denoted by its
-  *   CID) is associated the smallest (in term of CID) equal variable.
-  * - the array mapping CIDs to local timestamps. *)
 
 type constraints = { max_vid : int ;
                      vid     : int array ;
@@ -115,9 +85,9 @@ let update_leaf map bindings data =
 let find_leaf map bindings =
   ConstraintsMap.find (get_constraints bindings) map
 
-(** {1 Indexing} *)
+(* == Indexing ============================================================= *)
 
-(** Patterns allow eigenvariables and nabla variables as deBruijn indices. *)
+(* Patterns allow eigenvariables and nabla variables as deBruijn indices. *)
 type pattern =
   | Var    of int
   | Cst    of Term.term * Term.var
@@ -142,9 +112,9 @@ let empty = []
 
 exception Cannot_table
 
-(** [create_node bindings terms data] compiles the terms into patterns
-  * and associates them with a leaf containing the data.
-  * Terms are expected to be reversed. *)
+(* [create_node bindings terms data] compiles the terms into patterns
+ * and associates them with a leaf containing the data.
+ * Terms are expected to be reversed. *)
 let create_node ~allow_eigenvar bindings terms data =
   let bindings = List.sort (fun (i,_) (j,_) -> compare i j) bindings in
   let add bindings v =
@@ -243,7 +213,7 @@ let rec rename term bindings n =
     | Term.Var _ | Term.DB _ | Term.True | Term.False ->
         term, bindings, n
     | Term.NB i ->
-        begin try 
+        begin try
           let x,y = (List.find (fun (x,y) -> x=i) bindings) in
           Term.nabla y, bindings, n
         with
@@ -666,25 +636,25 @@ let iter index f =
           (fun c v ->
              let table = Array.make (c.max_vid+1) (Term.db 0) in
              let l = ref [] in
-               for i = 0 to Array.length c.eq - 1 do
-                 table.(c.vid.(i)) <-
-                   if c.eq.(i) = i then
-                     Term.fresh Term.Eigen ~ts:0 ~lts:0
-                   else
-                     table.(c.vid.(c.eq.(i))) ;
+             for i = 0 to Array.length c.eq - 1 do
+               table.(c.vid.(i)) <-
                  if c.eq.(i) = i then
-                   l := table.(c.vid.(i)) :: !l
-               done ;
-               let head = Term.fresh Term.Eigen ~ts:0 ~lts:0 in
-               let t = Term.app head (MZ.zip table mz) in
-               let l = List.rev !l in
-               let t =
-                 List.fold_left
-                   (fun t v -> Term.abstract v t)
-                   t
-                   l
-               in
-               f (Term.abstract head t) v)
+                   Term.fresh Term.Eigen ~ts:0 ~lts:0
+                 else
+                   table.(c.vid.(c.eq.(i))) ;
+               if c.eq.(i) = i then
+                 l := table.(c.vid.(i)) :: !l
+             done ;
+             let head = Term.fresh Term.Eigen ~ts:0 ~lts:0 in
+             let t = Term.app head (MZ.zip table mz) in
+             let l = List.rev !l in
+             let t =
+               List.fold_left
+                 (fun t v -> Term.abstract v t)
+                 t
+                 l
+             in
+             f (Term.abstract head t) v)
           map
     | Refine i -> iter_index mz i
 

@@ -8,18 +8,19 @@ cma = @cma@
 OCAMLC = @OCAMLC@ -c -I ndcore -I ndcore/tests
 OCAMLL = @OCAMLC@
 OCAMLDEP = @OCAMLDEP@ -I ndcore -I ndcore/tests
-OCAMLDOC = ocamldoc
+OCAMLDOC = ocamldoc -m A -I ndcore/
 OCAMLYACC = @OCAMLYACC@ -v
 OCAMLLEX = @OCAMLLEX@
 VERSION = @PACKAGE_VERSION@
 
 # SOURCE FILES
 
-CORE_ML    = ndcore/term.ml ndcore/norm.ml ndcore/unify.ml \
-             ndcore/index.ml
+CORE_ML    = ndcore/term.ml ndcore/norm.ml ndcore/unify.ml ndcore/index.ml \
+	     type.ml typing.ml pprint.ml
 TEST_ML    = ndcore/tests/oUnit.ml ndcore/tests/test.ml
-BEDWYR_ML  = type.ml typing.ml pprint.ml table.ml system.ml parser.ml \
-	     lexer.ml prover.ml config.ml main.ml
+BEDWYR_ML  = table.ml system.ml prover.ml \
+	     config.ml parser.ml lexer.ml \
+	     main.ml
 
 CORE_SRC   = $(CORE_ML)   $(wildcard $(CORE_ML:.ml=.mli))
 BEDWYR_SRC = $(BEDWYR_ML) $(wildcard $(BEDWYR_ML:.ml=.mli))
@@ -36,16 +37,13 @@ bedwyr: $(BEDWYR)
 depend: $(CORE_SRC) $(BEDWYR_SRC) $(TEST_ML)
 	$(OCAMLDEP) $(CORE_SRC) $(BEDWYR_SRC) $(TEST_ML) > depend
 
-%.cmx: %.ml
-	$(OCAMLC) $<
-%.cmo: %.ml
+%.$(cmo): %.ml
 	$(OCAMLC) $<
 %.cmi: %.mli
 	$(OCAMLC) $<
-%.ml: %.mly Makefile
+%.ml: %.mly
 	$(OCAMLYACC) $<
-	@echo $<
-%.mli: %.mly Makefile
+%.mli: %.mly
 	$(OCAMLYACC) $<
 %.ml: %.mll
 	$(OCAMLLEX) $<
@@ -68,7 +66,7 @@ doc:
 run: bedwyr
 	ledit ./bedwyr
 
-.PHONY: clean superclean
+.PHONY: clean
 
 clean:
 	rm -f bedwyr
@@ -78,7 +76,4 @@ clean:
 	rm -f *.cm[ixo] *.o
 	rm -f ndcore/*.cm[ixo] ndcore/*.o
 	rm -f ndcore/tests/*.cm[ixo] ndcore/tests/*.o
-superclean: clean
-	find . -name '*~' -exec rm \{\} \;
-	rm -f depend
-	rm -f ndcore/depend
+	make -C ../doc clean

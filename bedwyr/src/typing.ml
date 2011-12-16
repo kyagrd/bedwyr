@@ -1,23 +1,42 @@
+(****************************************************************************)
+(* Bedwyr prover                                                            *)
+(* Copyright (C) 2011 Quentin Heath                                         *)
+(*                                                                          *)
+(* This program is free software; you can redistribute it and/or modify     *)
+(* it under the terms of the GNU General Public License as published by     *)
+(* the Free Software Foundation; either version 2 of the License, or        *)
+(* (at your option) any later version.                                      *)
+(*                                                                          *)
+(* This program is distributed in the hope that it will be useful,          *)
+(* but WITHOUT ANY WARRANTY; without even the implied warranty of           *)
+(* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            *)
+(* GNU General Public License for more details.                             *)
+(*                                                                          *)
+(* You should have received a copy of the GNU General Public License        *)
+(* along with this code; if not, write to the Free Software Foundation,     *)
+(* Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA             *)
+(****************************************************************************)
+
 open Type
 
-(** Pre-terms *)
+(* Pre-terms *)
 
 type pos = Lexing.position * Lexing.position
-type term' = rawterm'
-and rawterm' =
+type preterm = rawpreterm
+and rawpreterm =
   | QString of pos * string
   | FreeID of pos * string
   | PredConstID of pos * string
   | InternID of pos * string
   | True   of pos
   | False  of pos
-  | Eq     of pos * term' * term'
-  | And    of pos * term' * term'
-  | Or     of pos * term' * term'
-  | Arrow  of pos * term' * term'
-  | Binder of pos * Term.binder * (pos * string * simple_type) list * term'
-  | Lam    of pos * (pos * string * simple_type) list * term'
-  | App    of pos * term' * term' list
+  | Eq     of pos * preterm * preterm
+  | And    of pos * preterm * preterm
+  | Or     of pos * preterm * preterm
+  | Arrow  of pos * preterm * preterm
+  | Binder of pos * Term.binder * (pos * string * simple_type) list * preterm
+  | Lam    of pos * (pos * string * simple_type) list * preterm
+  | App    of pos * preterm * preterm list
 
 let get_pos = function
   | QString (p,_) -> p
@@ -45,26 +64,46 @@ let set_pos p = function
   | And (_,t1,t2) -> And (p,t1,t2)
   | Or (_,t1,t2) -> Or (p,t1,t2)
   | Arrow (_,t1,t2) -> Arrow (p,t1,t2)
-  | Binder (_,b,n,t) -> Binder (p,b,n,t)
-  | Lam (_,n,t) -> Lam (p,n,t)
+  | Binder (_,b,l,t) -> Binder (p,b,l,t)
+  | Lam (_,l,t) -> Lam (p,l,t)
   | App (_,hd,tl) -> App (p,hd,tl)
 
-let change_pos (p1,_) t' (_,p2) = set_pos (p1,p2) t'
 
+(* Generate pre-terms *)
 
+let change_pos (p1,_) t (_,p2) = set_pos (p1,p2) t
 
-let lambda' p vars t = match vars,t with
+let pre_qstring p s = QString (p,s)
+let pre_freeid p s = FreeID (p,s)
+let pre_predconstid p s = PredConstID (p,s)
+let pre_internid p s = InternID (p,s)
+let pre_true p = True p
+let pre_false p = False p
+let pre_eq p t1 t2 = Eq (p,t1,t2)
+let pre_and p t1 t2 = And (p,t1,t2)
+let pre_or p t1 t2 = Or (p,t1,t2)
+let pre_arrow p t1 t2 = Arrow (p,t1,t2)
+
+let pre_binder p b vars t = match vars,t with
   | [],_ -> t
-  | vars,Lam (_,vars2,t2) -> Lam (p,vars@vars2,t2)
-  | vars,_ -> Lam (p,vars,t)
+  | _,Binder (_,b',vars',t) when b=b' -> Binder (p,b,vars@vars',t)
+  | _,_ -> Binder (p,b,vars,t)
 
-let app' p a' b' = if b' = [] then a' else match a' with
-  | App (_,a',c') -> App (p,a',c' @ b')
-  | _ -> App (p,a',b')
+let pre_lambda p vars t = match vars,t with
+  | [],_ -> t
+  | _,Lam (_,vars',t) -> Lam (p,vars@vars',t)
+  | _,_ -> Lam (p,vars,t)
+
+let pre_app p hd args = if args = [] then hd else match hd with
+  | App (_,hd,args') -> App (p,hd,args'@args)
+  | _ -> App (p,hd,args)
 
 
-(** unifier *)
+(* type unifier type *)
 module Unifier = Map.Make(struct type t = int let compare = compare end)
+type type_unifier = simple_type Unifier.t
+
+let iter = Unifier.iter
 
 let global_unifier : simple_type Unifier.t ref = ref Unifier.empty
 
@@ -85,7 +124,7 @@ let ty_norm unifier ty =
   aux ty
 
 
-(** type-checking *)
+(* type checking *)
 exception Type_unification_error of simple_type * simple_type * simple_type Unifier.t
 exception Term_typing_error of pos * simple_type * simple_type * simple_type Unifier.t
 exception Var_typing_error of pos
@@ -193,55 +232,55 @@ let type_check_and_translate pre_term expected_type typed_free_var typed_declare
       | False p ->
           let u = unify_constraint u exty TProp in
           Term.op_false,u
-      | Eq (p,t1',t2') ->
+      | Eq (p,pt1,pt2) ->
           let ty = fresh_tyvar () in
           let u = unify_constraint u exty TProp in
-          let t1,u = aux t1' ty bvars u in
-          let t2,u = aux t2' ty bvars u in
+          let t1,u = aux pt1 ty bvars u in
+          let t2,u = aux pt2 ty bvars u in
           Term.op_eq t1 t2,u
-      | And (p,t1',t2') ->
+      | And (p,pt1,pt2) ->
           let u = unify_constraint u exty TProp in
-          let t1,u = aux t1' TProp bvars u in
-          let t2,u = aux t2' TProp bvars u in
+          let t1,u = aux pt1 TProp bvars u in
+          let t2,u = aux pt2 TProp bvars u in
           Term.op_and t1 t2,u
-      | Or (p,t1',t2') ->
+      | Or (p,pt1,pt2) ->
           let u = unify_constraint u exty TProp in
-          let t1,u = aux t1' TProp bvars u in
-          let t2,u = aux t2' TProp bvars u in
+          let t1,u = aux pt1 TProp bvars u in
+          let t2,u = aux pt2 TProp bvars u in
           Term.op_or t1 t2,u
-      | Arrow (p,t1',t2') ->
+      | Arrow (p,pt1,pt2) ->
           let u = unify_constraint u exty TProp in
-          let t1,u = aux t1' TProp bvars u in
-          let t2,u = aux t2' TProp bvars u in
+          let t1,u = aux pt1 TProp bvars u in
+          let t2,u = aux pt2 TProp bvars u in
           Term.op_arrow t1 t2,u
-      | Binder (p,b,l,t') ->
-          let arity = List.length l in
-          let bvars = List.rev_append l bvars in
-          let _ = List.map bound_var_type l in
+      | Binder (p,b,vars,pt) ->
+          let arity = List.length vars in
+          let bvars = List.rev_append vars bvars in
+          let _ = List.map bound_var_type vars in
           let u = unify_constraint u exty TProp in
-          let t,u = aux t' TProp bvars u in
+          let t,u = aux pt TProp bvars u in
           Term.binder b arity t,u
-      | Lam (p,l,t') ->
-          let arity = List.length l in
-          let bvars = List.rev_append l bvars in
-          let tys = List.map bound_var_type l in
+      | Lam (p,vars,pt) ->
+          let arity = List.length vars in
+          let bvars = List.rev_append vars bvars in
+          let tys = List.map bound_var_type vars in
           let ty = fresh_tyvar () in
           let u = unify_constraint u exty (TRArrow (tys,ty)) in
-          let t,u = aux t' ty bvars u in
+          let t,u = aux pt ty bvars u in
           Term.lambda arity t,u
-      | App (p,hd',tl') ->
-          let arity = List.length tl' in
+      | App (p,phd,pargs) ->
+          let arity = List.length pargs in
           let tys,ty = build_abstraction_types arity in
           let u = unify_constraint u exty ty in
-          let hd,u = aux hd' (TRArrow (tys,ty)) bvars u in
-          let u,tl = List.fold_left2
-                       (fun (u,tl) t' ty ->
-                          let t,u = aux t' ty bvars u in u,t::tl)
-                       (u,[])
-                       tl'
-                       tys
+          let hd,u = aux phd (TRArrow (tys,ty)) bvars u in
+          let u,args = List.fold_left2
+                         (fun (u,args) pt ty ->
+                            let t,u = aux pt ty bvars u in u,t::args)
+                         (u,[])
+                         pargs
+                         tys
           in
-          Term.app hd (List.rev tl),u
+          Term.app hd (List.rev args),u
     with
       | Type_unification_error (ty1,ty2,unifier) ->
           raise (Term_typing_error (p,ty1,ty2,unifier))

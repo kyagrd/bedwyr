@@ -1,6 +1,6 @@
 (****************************************************************************)
 (* Bedwyr prover                                                            *)
-(* Copyright (C) 2006 David Baelde, Alwen Tiu, Axelle Ziegler               *)
+(* Copyright (C) 2005-2011 Baelde, Tiu, Ziegler, Heath                      *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -70,25 +70,22 @@ type command =
   | Clear_tables
   | Clear_table         of Typing.pos * string
   | Save_table          of Typing.pos * string * string
-  | Assert              of Typing.term'
-  | Assert_not          of Typing.term'
-  | Assert_raise        of Typing.term'
+  | Assert              of Typing.preterm
+  | Assert_not          of Typing.preterm
+  | Assert_raise        of Typing.preterm
 
 type input =
   | KKind   of (Typing.pos * string) list * Type.simple_kind
   | TType   of (Typing.pos * string) list * Type.simple_type
   | Def     of (flavour * Typing.pos * string * Type.simple_type) list *
-               (Typing.pos * Typing.term' * Typing.term') list
-  | Query   of Typing.term'
+               (Typing.pos * Typing.preterm * Typing.preterm) list
+  | Query   of Typing.preterm
   | Command of command
-
-(** A simple debug flag, which can be set dynamically from the logic program. *)
 
 let debug = ref false
 let time  = ref false
 
-(* [AT:] list of open files *)
-
+(* list of open files *)
 let user_files : (string, out_channel) Hashtbl.t =
   Hashtbl.create 50
 
@@ -125,7 +122,7 @@ let open_user_file name =
     )
 
 
-(** types declarations *)
+(* types declarations *)
 
 exception Invalid_type_declaration of string * Typing.pos * Type.simple_kind * string
 
@@ -144,11 +141,11 @@ let declare_type (p,name) ki =
         raise (Invalid_type_declaration (name,p,ki,"no type operators yet"))
 
 
-(** constants and predicates declarations *)
+(* constants and predicates declarations *)
 
 exception Invalid_const_declaration of string * Typing.pos * Type.simple_type * string
 exception Invalid_pred_declaration of string * Typing.pos * Type.simple_type * string
-exception Invalid_free_declaration of string * Typing.pos * Type.simple_type * string
+exception Invalid_bound_declaration of string * Typing.pos * Type.simple_type * string
 (* XXX this "type_status" is ugly,
  * maybe use a bool * bool * ... * bool instead *)
 type type_status = WrongKind | TypeVariable | Undeclared of Type.simple_type | PropArgument | NotPropTarget | FlexType | PropTarget
@@ -195,9 +192,9 @@ let declare_const (p,name) ty =
   else match kind_check ty with
     | WrongKind ->
         raise (Invalid_const_declaration (name,p,ty,Format.sprintf "type is not of kind %s" (Pprint.kind_to_string Type.KType)))
-    | TypeVariable -> 
+    | TypeVariable ->
         raise (Invalid_const_declaration (name,p,ty,"no type variables yet"))
-    | Undeclared ty' -> 
+    | Undeclared ty' ->
         raise (Invalid_const_declaration (name,p,ty,Format.sprintf "type %s was not declared" (Pprint.type_to_string None ty')))
     | PropArgument ->
         raise (Invalid_const_declaration (name,p,ty,Format.sprintf "%s can only be a target type for a predicate" (Pprint.type_to_string None Type.TProp)))
@@ -216,9 +213,9 @@ let create_def (flavour,p,name,ty) =
   else match kind_check ty with
     | WrongKind ->
         raise (Invalid_pred_declaration (name,p,ty,Format.sprintf "type is not of kind %s" (Pprint.kind_to_string Type.KType)))
-    | TypeVariable -> 
+    | TypeVariable ->
         raise (Invalid_pred_declaration (name,p,ty,"no type variables yet"))
-    | Undeclared ty' -> 
+    | Undeclared ty' ->
         raise (Invalid_pred_declaration (name,p,ty,Format.sprintf "type %s was not declared" (Pprint.type_to_string None ty')))
     | PropArgument ->
         raise (Invalid_pred_declaration (name,p,ty,Format.sprintf "%s can only be a target type" (Pprint.type_to_string None Type.TProp)))
@@ -241,7 +238,7 @@ let create_def (flavour,p,name,ty) =
         head_var
 
 
-(** typechecking, predicates definitions *)
+(* typechecking, predicates definitions *)
 
 exception Missing_declaration of string * Typing.pos option
 exception Inconsistent_definition of string * Typing.pos * string
@@ -332,16 +329,16 @@ let translate_term ?(expected_type=Type.TProp) pre_term free_types =
   let bound_var_type (p,name,ty) =
     match kind_check ty with
       | WrongKind ->
-          raise (Invalid_free_declaration (name,p,ty,Format.sprintf "type is not of kind %s" (Pprint.kind_to_string Type.KType)))
+          raise (Invalid_bound_declaration (name,p,ty,Format.sprintf "type is not of kind %s" (Pprint.kind_to_string Type.KType)))
       | TypeVariable -> ty
-      | Undeclared ty' -> 
-          raise (Invalid_free_declaration (name,p,ty,Format.sprintf "type %s was not declared" (Pprint.type_to_string None ty')))
+      | Undeclared ty' ->
+          raise (Invalid_bound_declaration (name,p,ty,Format.sprintf "type %s was not declared" (Pprint.type_to_string None ty')))
       | PropArgument ->
-          raise (Invalid_free_declaration (name,p,ty,Format.sprintf "%s can only be a target type for a predicate" (Pprint.type_to_string None Type.TProp)))
+          raise (Invalid_bound_declaration (name,p,ty,Format.sprintf "%s can only be a target type for a predicate" (Pprint.type_to_string None Type.TProp)))
       | NotPropTarget
       | FlexType -> ty
       | PropTarget ->
-          raise (Invalid_free_declaration (name,p,ty,Format.sprintf "%s can only be a target type for a predicate" (Pprint.type_to_string None Type.TProp)))
+          raise (Invalid_bound_declaration (name,p,ty,Format.sprintf "%s can only be a target type for a predicate" (Pprint.type_to_string None Type.TProp)))
   in
   Typing.type_check_and_translate pre_term expected_type typed_free_var typed_declared_var typed_intern_var bound_var_type
 
@@ -457,22 +454,34 @@ let add_clause new_predicates (p,pre_head,pre_body) =
   end else raise (Inconsistent_definition (name,p,"predicate declared in another block"))
 
 
-(** using definitions *)
+(* Using definitions *)
 
 exception Arity_mismatch of Term.term * int
 
 
 let reset_defs () = Hashtbl.clear defs
 
-let get_def ?check_arity head_tm =
+let get_def ~check_arity head_tm =
   let head_var = Term.get_var head_tm in
   try
     let k,b,t,st = Hashtbl.find defs head_var in
       match check_arity,b with
-        | None,None | Some 0,None -> k,Term.op_false,t,st
-        | Some a,None -> raise (Arity_mismatch (head_tm,a))
-        | None,Some b | Some 0,Some b -> k,b,t,st
-        | Some a,Some b ->
+        (* XXX in the case of an empty definition (b = None),
+         * we don't know the arity of the predicate,
+         * so the actual value of the body returned should be
+         * Lam (n,False) with an unknown n (actually, n may be known
+         * via typechecking, but not with discretionary types and type
+         * inference).
+         * Therefore, so long as we allow empty definitions,
+         * [check_arity] is made mandatory. *)
+        | a,None -> k,Term.lambda a Term.op_false,t,st
+        | 0,Some b->
+            begin match Term.observe b with
+              | Term.Lam (n,_) when n>0 ->
+                  raise (Arity_mismatch (head_tm,0))
+              | _ -> k,b,t,st
+            end
+        | a,Some b ->
             begin match Term.observe b with
               | Term.Lam (n,_) when n=a -> k,b,t,st
               | _ -> raise (Arity_mismatch (head_tm,a))
@@ -491,6 +500,25 @@ let show_table (p,head_tm) =
     let _,_,table,_ = Hashtbl.find defs (Term.get_var head_tm) in
       match table with
         | Some table -> Table.print head_tm table
+        | None ->
+            failwith (Format.sprintf "No table defined for %s." (Pprint.term_to_string head_tm))
+  with
+    | Not_found ->
+        let name = Term.get_name head_tm in
+        raise (Missing_declaration (name,Some p))
+
+let clear_tables () =
+  Hashtbl.iter
+    (fun _ v -> match v with
+       | _,_,Some t,_ -> Table.reset t
+       | _ -> ())
+    defs
+
+let clear_table (p,head_tm) =
+  try
+    let _,_,table,_ = Hashtbl.find defs (Term.get_var head_tm) in
+      match table with
+        | Some table -> Table.reset table
         | None ->
             failwith (Format.sprintf "No table defined for %s." (Pprint.term_to_string head_tm))
   with
@@ -520,12 +548,6 @@ let save_table (p,head_tm) file =
     | Sys_error e ->
        Printf.printf "Couldn't open file %s for writing! Make sure that the file doesn't already exist.\n" file
 
-
-(* Common utils *)
-
-let rec make_list f = function
-  | 0 -> []
-  | n -> (f n)::(make_list f (n-1))
 
 (* Handle user interruptions *)
 
