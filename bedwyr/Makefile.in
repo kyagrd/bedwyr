@@ -28,9 +28,9 @@ ARCH_FILES = COPYING CHANGES README TODO configure.ac install-sh Makefile.in \
 	     src/ndcore/norm.ml src/ndcore/norm.mli \
 	     src/ndcore/unify.ml src/ndcore/unify.mli \
 	     src/ndcore/index.ml src/ndcore/index.mli \
-	     src/type.ml \
-	     src/typing.ml src/typing.mli \
-	     src/pprint.ml src/pprint.mli \
+	     src/ndcore/type.ml \
+	     src/ndcore/typing.ml src/ndcore/typing.mli \
+	     src/ndcore/pprint.ml src/ndcore/pprint.mli \
 	     src/ndcore/tests/oUnit.ml \
 	     src/ndcore/tests/test.ml \
 	     src/table.ml src/table.mli \
