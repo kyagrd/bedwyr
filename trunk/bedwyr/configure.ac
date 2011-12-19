@@ -1,5 +1,5 @@
 
-AC_INIT([bedwyr],[1.3-alpha1],[https://gforge.inria.fr/tracker/?atid=1543&group_id=367])
+AC_INIT([bedwyr],[1.3-alpha2],[https://gforge.inria.fr/tracker/?atid=1543&group_id=367])
 AC_PREREQ(2.57)
 AC_CONFIG_SRCDIR([src/main.ml])
 AC_PROG_INSTALL
@@ -13,6 +13,11 @@ fi
 # OCaml stuff
 #
 ###############################################################################
+
+AC_PATH_PROG(TAR,tar,no)
+if test "$TAR" = no ; then
+	AC_MSG_ERROR(Cannot find tar.)
+fi
 
 AC_PATH_PROG(OCAMLDEP,ocamldep,no)
 if test "$OCAMLDEP" = no ; then
