@@ -95,7 +95,9 @@ exception Var_typing_error of pos
   * @param typed_intern_var a function returning a type and a term when given
   * the name of a pre-defined constant or predicate
   * @param bound_var_type a function returning the type of a bound variable
-  * @return a type-checked Term.term
+  * @param infer whether the result of the inference is to be kept in the
+  * global type unifier or not
+  * @return a type-checked Term.term and its type
   * @raise Var_typing_error if a free variable of type [prop] is found
   * @raise Term_typing_error if the pre-tem isn't well typed *)
 val type_check_and_translate :
@@ -104,4 +106,5 @@ val type_check_and_translate :
   (pos * string -> Term.term * Type.simple_type) ->
   (pos * string -> Term.term * Type.simple_type) ->
   (pos * string -> Term.term * Type.simple_type) ->
-  (pos * string * Type.simple_type -> Type.simple_type) -> Term.term
+  (pos * string * Type.simple_type -> Type.simple_type) -> bool ->
+  Term.term * Type.simple_type

@@ -67,6 +67,7 @@ type command =
   | Time                of string option
   | Equivariant         of string option
   | Env
+  | Type_of             of Typing.preterm
   | Show_table          of Typing.pos * string
   | Clear_tables
   | Clear_table         of Typing.pos * string
@@ -245,7 +246,7 @@ exception Missing_declaration of string * Typing.pos option
 exception Inconsistent_definition of string * Typing.pos * string
 
 
-let translate_term ?(expected_type=Type.TProp) pre_term free_types =
+let translate_term ?(infer=true) ?(expected_type=Type.TProp) pre_term free_types =
   let typed_free_var (_,name) =
     let was_free = Term.is_free name in
     let t = Term.atom ~tag:Term.Logic name in
@@ -341,13 +342,13 @@ let translate_term ?(expected_type=Type.TProp) pre_term free_types =
       | PropTarget ->
           raise (Invalid_bound_declaration (name,p,ty,Format.sprintf "%s can only be a target type for a predicate" (Pprint.type_to_string Type.TProp)))
   in
-  Typing.type_check_and_translate pre_term expected_type typed_free_var typed_declared_var typed_intern_var bound_var_type
+  Typing.type_check_and_translate pre_term expected_type typed_free_var typed_declared_var typed_intern_var bound_var_type infer
 
 let translate_query pre_term =
   let free_types : (Term.var,Type.simple_type) Hashtbl.t =
     Hashtbl.create 10
   in
-  translate_term pre_term free_types
+  let term,_ = translate_term pre_term free_types in term
 
 let mk_clause p head body =
   (* Replace the params by fresh variables and
@@ -426,8 +427,8 @@ let add_clause new_predicates (p,pre_head,pre_body) =
   let free_types : (Term.var,Type.simple_type) Hashtbl.t =
     Hashtbl.create 10
   in
-  let head = translate_term pre_head free_types in
-  let body = translate_term pre_body free_types in
+  let head,_ = translate_term pre_head free_types in
+  let body,_ = translate_term pre_body free_types in
   let head,arity,body =
     mk_clause p head body
   in
@@ -498,7 +499,7 @@ let remove_def head_tm =
 
 let print_env () =
   let print_types () =
-    Format.printf "@[<hov 2>*** Types ***" ;
+    Format.printf "@[<hov 3>*** Types ***" ;
     Hashtbl.iter
       (fun v k -> Format.printf "@\n@[%s : %a@]"
                     (Term.get_var_name v)
@@ -507,7 +508,7 @@ let print_env () =
     Format.printf "@]@\n"
   in
   let print_constants () =
-    Format.printf "@[<b 2>*** Constants ***" ;
+    Format.printf "@[<b 3>*** Constants ***" ;
     Hashtbl.iter
       (fun v t -> Format.printf "@\n@[%s : %a@]"
                     (Term.get_var_name v)
@@ -517,11 +518,11 @@ let print_env () =
   in
   let print_predicates () =
     let string_of_flavour = function
-      | Normal -> ""
-      | Inductive -> "inductive "
-      | CoInductive -> "coinductive "
+      | Normal -> "  "
+      | Inductive -> "I "
+      | CoInductive -> "C "
     in
-    Format.printf "@[<b 2>*** Predicates ***" ;
+    Format.printf "@[<b 1>*** Predicates ***" ;
     Hashtbl.iter
       (fun v (f,_,_,t) -> Format.printf "@\n@[%s%s : %a@]"
                             (string_of_flavour f)
@@ -533,6 +534,20 @@ let print_env () =
   print_types () ;
   print_constants ();
   print_predicates ()
+
+let check_type pre_term =
+  let free_types : (Term.var,Type.simple_type) Hashtbl.t =
+    Hashtbl.create 10
+  in
+  let ty = Type.fresh_tyvar () in
+  let _,ty = translate_term ~infer:false ~expected_type:ty pre_term free_types in
+  ty
+
+let print_type_of pre_term =
+  let ty = check_type pre_term in
+  Format.printf "%a@."
+    Pprint.pp_type ty
+  (*Pprint.pp_type Format.std_formatter ty*)
 
 let show_table (p,head_tm) =
   try

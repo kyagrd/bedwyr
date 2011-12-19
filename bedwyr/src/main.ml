@@ -129,8 +129,8 @@ let rec process ?(interactive=false) parse lexbuf =
           List.iter (System.add_clause new_predicates) defs
       | System.Query t ->
           do_cleanup
-            (fun query' ->
-               let query = System.translate_query query' in
+            (fun pre_query ->
+               let query = System.translate_query pre_query in
                Prover.toplevel_prove query)
             t
             reset
@@ -322,6 +322,7 @@ and command c reset =
     (* Tabling-related commands *)
     | System.Equivariant value -> toggle_flag Index.eqvt_tbl value
     | System.Env -> System.print_env ()
+    | System.Type_of pre_term -> System.print_type_of pre_term
     | System.Show_table (p,name) -> System.show_table (p,Term.atom ~tag:Term.Constant name)
     | System.Clear_tables -> System.clear_tables ()
     | System.Clear_table (p,name) -> System.clear_table (p,Term.atom ~tag:Term.Constant name)
@@ -330,25 +331,25 @@ and command c reset =
     | System.Save_table (p,name,file) -> System.save_table (p,Term.atom ~tag:Term.Constant name) file
 
     (* Testing commands *)
-    | System.Assert query' ->
+    | System.Assert pre_query ->
         if !test then begin
-          let query = System.translate_query query' in
+          let query = System.translate_query pre_query in
           Format.eprintf "@[<hv 2>Checking that@ %a@,...@]@."
             Pprint.pp_term query ;
           Prover.prove ~level:Prover.One ~local:0 ~timestamp:0 query
             ~success:(fun _ _ -> ()) ~failure:(fun () -> raise Assertion_failed)
         end
-    | System.Assert_not query' ->
+    | System.Assert_not pre_query ->
         if !test then begin
-          let query = System.translate_query query' in
+          let query = System.translate_query pre_query in
           Format.eprintf "@[<hv 2>Checking that@ %a@ is false...@]@."
             Pprint.pp_term query ;
           Prover.prove ~level:Prover.One ~local:0 ~timestamp:0 query
             ~success:(fun _ _ -> raise Assertion_failed) ~failure:ignore
         end
-    | System.Assert_raise query' ->
+    | System.Assert_raise pre_query ->
         if !test then begin
-          let query = System.translate_query query' in
+          let query = System.translate_query pre_query in
           Format.eprintf "@[<hv 2>Checking that@ %a@ causes an error...@]@."
             Pprint.pp_term query ;
           if

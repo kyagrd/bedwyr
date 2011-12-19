@@ -43,7 +43,7 @@ let lchar = ['a'-'z']
 (* special symbols *)
 let prefix_special = ['`' '\'' '$']
 let infix_special  = ['+' '-' '*' '^' '<' '>' '=' '~' '|']
-let tail_special   = ['/' '?' '!' '@' '#' '&' '_']
+let tail_special   = ['?' '!' '@' '#' '&' '_']
 
 let special_char = prefix_special | infix_special | tail_special
 let any_char = uchar | lchar | digit | special_char
@@ -180,6 +180,7 @@ rule token = parse
   | "time"              { TIME }
   | "equivariant"       { EQUIVARIANT }
   | "env"               { ENV }
+  | "typeof"            { TYPEOF }
   | "show_table"        { SHOW_TABLE }
   | "clear_tables"      { CLEAR_TABLES }
   | "clear_table"       { CLEAR_TABLE }
