@@ -21,16 +21,20 @@ exception Invalid_command
 exception Assertion_failed
 
 let welcome_msg =
-  "Bedwyr " ^ Config.version ^ " (revision " ^ Config.build ^ ") welcomes you.
+  Format.sprintf
+    "%s %s (revision %s) welcomes you.
 
 This software is under GNU Public License.
 Copyright (C) 2005-2011 Slimmer project.
 
 For a little help, type #help.
 \n"
+    Config.package_name
+    Config.package_version
+    Config.build
 
 let usage_msg =
-  "Bedwyr prover.
+  Config.package_name ^ " prover.
 This software is under GNU Public License.
 Copyright (c) 2005-2011 Slimmer project.
 

@@ -1,13 +1,8 @@
 
-AC_INIT([bedwyr],[1.3-alpha2],[https://gforge.inria.fr/tracker/?atid=1543&group_id=367])
+AC_INIT([Bedwyr],[1.3-alpha3],[https://gforge.inria.fr/tracker/?atid=1543&group_id=367],[bedwyr],[http://slimmer.gforge.inria.fr/bedwyr/])
 AC_PREREQ(2.57)
 AC_CONFIG_SRCDIR([src/main.ml])
 AC_PROG_INSTALL
-
-# This is ugly, I'd like to find a better solution.
-if test "x$prefix" = "xNONE" ; then
-  prefix=/usr/local
-fi
 
 #
 # OCaml stuff
@@ -17,6 +12,21 @@ fi
 AC_PATH_PROG(TAR,tar,no)
 if test "$TAR" = no ; then
 	AC_MSG_ERROR(Cannot find tar.)
+fi
+
+AC_PATH_PROG(FIND,find,no)
+if test "$FIND" = no ; then
+	AC_MSG_ERROR(Cannot find find.)
+fi
+
+AC_PATH_PROG(CPIO,cpio,no)
+if test "$CPIO" = no ; then
+	AC_MSG_ERROR(Cannot find cpio.)
+fi
+
+AC_PATH_PROG(CHMOD,chmod,no)
+if test "$CHMOD" = no ; then
+	AC_MSG_ERROR(Cannot find chmod.)
 fi
 
 AC_PATH_PROG(OCAMLDEP,ocamldep,no)

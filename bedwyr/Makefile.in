@@ -1,9 +1,73 @@
 # DEFINITIONS
 
+PACKAGE_TARNAME = @PACKAGE_TARNAME@
+PACKAGE_VERSION = @PACKAGE_VERSION@
+ARCH=$(PACKAGE_TARNAME)-$(PACKAGE_VERSION)
+
+TAR= @TAR@
+FIND= @FIND@
+CPIO= @CPIO@ -dumpv
+#CPIO= @CPIO@ -dump -R root:root
+CHMOD= @CHMOD@
+
+prefix        =@prefix@
+exec_prefix   =@exec_prefix@
+bindir        =@bindir@
+#sbindir       =@sbindir@
+#libexecdir    =@libexecdir@
+datarootdir   =@datarootdir@
+#datadir       =@datadir@
+#sysconfdir    =@sysconfdir@
+#sharedstatedir=@sharedstatedir@
+#localstatedir =@localstatedir@
+#includedir    =@includedir@
+#oldincludedir =@oldincludedir@
+docdir        =@docdir@
+#infodir       =@infodir@
+htmldir       =@htmldir@
+#dvidir        =@dvidir@
+pdfdir        =@pdfdir@
+psdir         =@psdir@
+libdir        =@libdir@
+#localedir     =@localedir@
+mandir        =@mandir@
+
+PREFIX        =$(DESTDIR)$(prefix)
+EXEC_PREFIX   =$(DESTDIR)$(exec_prefix)
+BINDIR        =$(DESTDIR)$(bindir)
+#SBINDIR       =$(DESTDIR)$(sbindir)
+#LIBEXECDIR    =$(DESTDIR)$(libexecdir)
+DATAROOTDIR   =$(DESTDIR)$(datarootdir)
+#DATADIR       =$(DESTDIR)$(datadir)
+#SYSCONFDIR    =$(DESTDIR)$(sysconfdir)
+#SHAREDSTATEDIR=$(DESTDIR)$(sharedstatedir)
+#LOCALSTATEDIR =$(DESTDIR)$(localstatedir)
+#INCLUDEDIR    =$(DESTDIR)$(includedir)
+#OLDINCLUDEDIR =$(DESTDIR)$(oldincludedir)
+DOCDIR        =$(DESTDIR)$(docdir)
+#INFODIR       =$(DESTDIR)$(infodir)
+HTMLDIR       =$(DESTDIR)$(htmldir)
+#DVIDIR        =$(DESTDIR)$(dvidir)
+PDFDIR        =$(DESTDIR)$(pdfdir)
+PSDIR         =$(DESTDIR)$(psdir)
+LIBDIR        =$(DESTDIR)$(libdir)
+#LOCALEDIR     =$(DESTDIR)$(localedir)
+MANDIR        =$(DESTDIR)$(mandir)
+
+DIR_MODE=755
+BIN_MODE=755
+DOC_MODE=644
+INSTALL=install -v
+#INSTALL=install -o root -g root
+INSTALL_DIR = $(INSTALL) -m $(DIR_MODE) -d
+INSTALL_BIN = $(INSTALL) -m $(BIN_MODE) -p
+INSTALL_DOC = $(INSTALL) -m $(DOC_MODE) -p
+
 cma = @cma@
-TAR = @TAR@
-VERSION=@PACKAGE_VERSION@
-D=bedwyr-$(VERSION)
+
+bedwyr = src/bedwyr
+ndcore = src/ndcore.$(cma)
+spec   = src/spec
 
 # SOURCE FILES
 
@@ -14,35 +78,44 @@ XPL = list.def internal/scoping.def internal/checks.def \
       pi/pi_trace.def pi/corr-assert.def pi/pi_modal.def \
       pi/pi_mini.def pi/pi_nat.def pi/pi_church.def
 
-DOC_FILES  =
-#DOC_FILES  = doc/userguide.pdf doc/userguide.ps.gz doc/userguide.html \
-	     doc/*.tex doc/userguide.bib doc/Makefile
-ARCH_FILES = COPYING CHANGES README TODO configure.ac install-sh Makefile.in \
-	     contrib/bedwyr.el contrib/bedwyr.vim \
-	     src/Makefile.in \
-	     $(DOC_FILES) \
-	     $(shell find examples -type f '!' -path '*.svn*' -exec echo \{\} +)
+DOC        = COPYING CHANGES README TODO
+CONSTRIB   = contrib/bedwyr.el contrib/bedwyr.vim
+EXAMPLES   = $(shell find examples -type f '!' -path '*.svn*' '!' -name \*.old)
+USERGUIDE  = doc/*.tex doc/userguide.bib doc/Makefile
+PS         = userguide.ps.gz
+PDF        = userguide.pdf
+HTML       = userguide.html
+ARCH_FILES = configure.ac Makefile.in src/Makefile.in \
+	     $(DOC) $(CONSTRIB) $(EXAMPLES) \
+	     $(USERGUIDE)
 
 # BUILDING
 
-all: src/bedwyr
+all: $(bedwyr)
 
-.PHONY: src/bedwyr
-src/bedwyr: src/Makefile
+.PHONY: $(bedwyr)
+$(bedwyr): src/Makefile
 	make -C src bedwyr
 
-.PHONY: src/ndcore.$(cma)
-src/ndcore.$(cma): src/Makefile
+.PHONY: $(ndcore)
+$(ndcore): src/Makefile
 	make -C src ndcore.$(cma)
 
 src/Makefile: src/Makefile.in configure
-	./configure
+	./configure --enable-doc
 
 Makefile: Makefile.in configure
-	./configure
+	./configure --enable-doc
 
 configure: configure.ac
 	autoconf
+
+.PHONY: doc
+doc:
+	make -C src doc
+	make -C doc
+
+# TESTING
 
 .PHONY: test
 test: src/Makefile
@@ -52,16 +125,73 @@ test: src/Makefile
 	@bash -c 'time $(MAKE) examples_tests'
 
 .PHONY: examples_tests
-examples_tests: src/bedwyr Makefile
+examples_tests: $(bedwyr) Makefile
 	@for i in $(XPL) ; do \
 	  echo "==== Running tests in $$i ====" ; \
-	  if src/bedwyr -t -I examples/$$i ; then echo "All done." ; else echo "Error." ; break ; fi ; \
+	  if $(bedwyr) -t -I examples/$$i ; then echo "All done." ; else echo "Error." ; break ; fi ; \
 	done
 
-.PHONY: doc
-doc:
-	make -C src doc
-	make -C doc
+# DOC
+
+doc/$(PS):
+	make -C doc $(PS)
+doc/$(PDF):
+	make -C doc $(PDF)
+doc/$(HTML):
+	make -C doc $(HTML)
+
+# INSTALL
+
+TARGETS=$(bedwyr) $(ndcore) \
+	$(DOC) $(CONSTRIB) $(EXAMPLES)
+#	$(DOC) $(CONSTRIB) $(EXAMPLES) \
+	doc/$(PS) doc/$(PDF) doc/$(HTML)
+
+install: $(TARGETS)
+	@$(INSTALL_DIR) $(BINDIR)
+	@$(INSTALL_DIR) $(LIBDIR)
+	@$(INSTALL_DIR) $(DOCDIR)
+	@$(INSTALL_DIR) $(DOCDIR)/contrib
+	@$(INSTALL_DIR) $(PSDIR)
+	@$(INSTALL_DIR) $(PDFDIR)
+	@$(INSTALL_DIR) $(HTMLDIR)
+	@$(INSTALL_DIR) $(HTMLDIR)/html
+	@$(INSTALL_DIR) $(MANDIR)
+	@$(INSTALL_DIR) $(MANDIR)/man1
+	@$(INSTALL_BIN) $(bedwyr) $(BINDIR)
+	@$(INSTALL_BIN) $(ndcore) $(LIBDIR)
+	@$(INSTALL_DOC) $(DOC) $(DOCDIR)
+	@$(INSTALL_DOC) $(CONSTRIB) $(DOCDIR)/contrib
+	@tr ' ' '\n' <<<"examples $(EXAMPLES)" | ${CPIO} $(DOCDIR) 2>&1
+	@${FIND} $(DOCDIR)/examples -type d -exec ${CHMOD} $(DIR_MODE) {} +
+	@${FIND} $(DOCDIR)/examples -type f -exec ${CHMOD} ${DOC_MODE} {} +
+#	@echo $(INSTALL_DOC) doc/$(PS) $(PSDIR)
+#	@echo $(INSTALL_DOC) doc/$(PDF) $(PDFDIR)
+#	@echo $(INSTALL_DOC) doc/$(HTML) $(HTMLDIR)
+	@make -C src doc
+	@$(INSTALL_DOC) $(wildcard doc/html/*.html) $(HTMLDIR)/html
+#	@$(INSTALL_DOC) $(MAN) $(MANDIR)/man1
+
+# ARCHIVE
+
+dist: src/Makefile bz2
+bz2: $(ARCH).tar.bz2
+gz: $(ARCH).tar.gz
+
+.PHONY: src/$(PACKAGE_TARNAME).tar
+src/bedwyr_src.tar:
+	make -C src $(PACKAGE_TARNAME).tar
+$(ARCH).tar: $(ARCH_FILES) src/$(PACKAGE_TARNAME).tar
+	$(TAR) -cf $@ --xform 's|^|$(ARCH)/|' $(ARCH_FILES)
+	$(TAR) -Af $@ src/$(PACKAGE_TARNAME).tar
+%.bz2: %
+	bzip2 -f $<
+	$(TAR) -tf $@
+%.gz: %
+	gzip -f $<
+	$(TAR) -tf $@
+
+# OTHER TARGETS
 
 superclean: clean
 	find . -name '*~' -exec rm \{\} \;
@@ -73,20 +203,3 @@ clean:
 	make -C src clean
 	rm -f src/Makefile
 	make -C doc clean
-
-dist: src/Makefile bz2
-bz2: $(D).tar.bz2
-gz: $(D).tar.gz
-
-.PHONY: src/bedwyr_src.tar
-src/bedwyr_src.tar:
-	make -C src bedwyr_src.tar
-$(D).tar: $(ARCH_FILES) src/bedwyr_src.tar
-	$(TAR) -cf $@ --xform 's|^|$(D)/|' $(ARCH_FILES)
-	$(TAR) -Af $@ src/bedwyr_src.tar
-%.bz2: %
-	bzip2 -f $<
-	$(TAR) -tf $@
-%.gz: %
-	gzip -f $<
-	$(TAR) -tf $@
