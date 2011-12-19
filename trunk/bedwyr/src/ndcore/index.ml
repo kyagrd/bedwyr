@@ -511,7 +511,7 @@ struct
 
   let arity = function
     | ZVar _ | ZCst _ | ZDB _ | ZNB _ | ZTrue | ZFalse -> 0
-    | ZEq _ | ZAnd _ | ZOr _ | ZArrow _ -> 2
+    | ZEq | ZAnd | ZOr | ZArrow -> 2
     | ZApp n -> n
     | ZBinder _ | ZHole | ZLam _ -> 1
 
