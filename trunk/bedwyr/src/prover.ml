@@ -101,7 +101,7 @@ let do_close_file g =
 
 let do_fprint newline goals =
   let print_fun fmt t =
-      if newline then fprintf fmt "%a\n%!" Pprint.pp_term t
+      if newline then fprintf fmt "%a@." Pprint.pp_term t
       else fprintf fmt "%a%!" Pprint.pp_term t
   in
   begin match goals with
@@ -523,7 +523,7 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
               success timestamp failure
 
           | Var v when v == Logic.var_println ->
-              List.iter (fun t -> printf "%a\n%!" Pprint.pp_term t) goals ;
+              List.iter (fun t -> printf "%a@." Pprint.pp_term t) goals ;
               success timestamp failure
 
           | Var v when v == Logic.var_fprint ->

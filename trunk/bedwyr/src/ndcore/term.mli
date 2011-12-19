@@ -37,6 +37,7 @@ type envitem = Dum of int | Binding of term * int
 type env = envitem list
 type rawterm =
   | QString of string
+  | Nat of int
   | Var of var
   | DB of int (** De Bruijn index of the variable (starting with 1) *)
   | NB of int (** local timestamp of the nabla variable *)
@@ -61,6 +62,7 @@ val observe : term -> rawterm
 val deref : term -> term
 
 val qstring : string -> term
+val nat : int -> term
 val db : int -> term
 val nabla : int -> term
 val op_true : term
@@ -141,6 +143,11 @@ val restore_namespace : namespace -> unit
   * If the [tag] is not provided, it is infered from the name. *)
 (* XXX do we still infer the tag or not? *)
 val atom : ?tag:tag -> string -> term
+
+(** @return the naming hint attached to the variable 
+  * @raise Not_found if no hint is found
+  * (should not happen for a variable defined by the parser) *)
+val get_var_name : var -> string
 
 (** Find an unique name for [v] (based on a naming hint if there is one)
   * and registers it in the symbols table. *)

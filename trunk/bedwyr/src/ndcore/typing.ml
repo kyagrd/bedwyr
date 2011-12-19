@@ -25,6 +25,7 @@ type pos = Lexing.position * Lexing.position
 type preterm = rawpreterm
 and rawpreterm =
   | QString of pos * string
+  | Nat    of pos * int
   | FreeID of pos * string
   | PredConstID of pos * string
   | InternID of pos * string
@@ -40,6 +41,7 @@ and rawpreterm =
 
 let get_pos = function
   | QString (p,_) -> p
+  | Nat (p,_) -> p
   | FreeID (p,_) -> p
   | PredConstID (p,_) -> p
   | InternID (p,_) -> p
@@ -55,6 +57,7 @@ let get_pos = function
 
 let set_pos p = function
   | QString (_,s) -> QString (p,s)
+  | Nat (_,s) -> Nat (p,s)
   | FreeID (_,s) -> FreeID (p,s)
   | PredConstID (_,s) -> PredConstID (p,s)
   | InternID (_,s) -> InternID (p,s)
@@ -74,6 +77,7 @@ let set_pos p = function
 let change_pos (p1,_) t (_,p2) = set_pos (p1,p2) t
 
 let pre_qstring p s = QString (p,s)
+let pre_nat p i = assert (i>=0) ; Nat (p,i)
 let pre_freeid p s = FreeID (p,s)
 let pre_predconstid p s = PredConstID (p,s)
 let pre_internid p s = InternID (p,s)
@@ -107,15 +111,19 @@ let iter = Unifier.iter
 
 let global_unifier : simple_type Unifier.t ref = ref Unifier.empty
 
-let ty_norm unifier ty =
+let ty_norm ?unifier ty =
+  let u = match unifier with
+    | None -> !global_unifier
+    | Some u -> u
+  in
   let rec aux = function
     | Ty _
-    | TProp | TString as ty -> ty
+    | TProp | TString | TNat as ty -> ty
     | TRArrow (tys,ty) ->
         TRArrow (List.map aux tys, aux ty)
     | TVar i as ty ->
         begin try
-          let ty = Unifier.find i unifier in
+          let ty = Unifier.find i u in
           aux ty
         with
           | Not_found -> ty
@@ -132,7 +140,7 @@ exception Var_typing_error of pos
 let occurs unifier i =
   let rec aux = function
     | Ty _
-    | TProp | TString -> false
+    | TProp | TString | TNat -> false
     | TRArrow (tys,ty) -> List.exists aux tys || aux ty
     | TVar j ->
         if i=j then true
@@ -200,6 +208,9 @@ let type_check_and_translate pre_term expected_type typed_free_var typed_declare
       | QString (p,s) ->
           let u = unify_constraint u exty TString in
           Term.qstring s,u
+      | Nat (p,i) ->
+          let u = unify_constraint u exty TNat in
+          Term.nat i,u
       | FreeID (p,s) ->
           begin match find_db s bvars,exty with
             | Some (t,ty),_ ->

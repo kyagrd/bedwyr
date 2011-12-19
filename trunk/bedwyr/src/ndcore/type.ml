@@ -36,6 +36,7 @@ type simple_type =
   | Ty      of string
   | TProp
   | TString
+  | TNat
   | TRArrow of simple_type' list * simple_type'
   | TVar    of int
 and simple_type' = simple_type

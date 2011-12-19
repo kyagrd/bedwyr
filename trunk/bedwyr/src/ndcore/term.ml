@@ -37,6 +37,7 @@ type binder = Forall | Exists | Nabla
 type term = rawterm
 and rawterm =
   | QString of string
+  | Nat    of int
   | Var    of var (* Only when "observing" the term *)
   | DB     of int
   | NB     of int (* Nabla variables *)
@@ -68,7 +69,7 @@ let rec deref = function
   | t -> t
 
 let qstring s = QString s
-(* XXX Var *)
+let nat i = assert (i>=0) ; Nat i
 let db n = DB n
 let nabla n = NB n
 let op_true = True
@@ -338,6 +339,11 @@ let atom ?tag name =
   then fresh ~name:"_" Logic ~ts:0 ~lts:0
   else get_var_by_name ~ts:0 ~lts:0 ~tag name
 
+(* @return the naming hint attached to the variable 
+ * @raise Not_found if no hint is found
+ * (should not happen for a variable defined by the parser) *)
+let get_var_name v = Hint.find v
+
 (* @return the naming hint attached to the variable,
  * or a default hint if there is none *)
 let get_hint v =
@@ -449,7 +455,7 @@ let copy_eigen () =
       | Binder (b,l,t) -> Binder (b,l,cp t)
       | App (a,l) -> App (cp a, List.map cp l)
       | Lam (l,b) -> Lam (l,cp b)
-      | QString _ | DB _ | NB _ | True | False as x -> x
+      | QString _ | Nat _ | DB _ | NB _ | True | False as x -> x
       | Susp _ | Ptr _ -> assert false
     in
     cp tm
@@ -458,7 +464,7 @@ let copy_eigen () =
    pointers to variables. *)
 let rec simple_copy tm =
   match tm with
-    | QString _ | DB _ | NB _ | True | False | Var _ | Ptr {contents=V _} -> tm
+    | QString _ | Nat _ | DB _ | NB _ | True | False | Var _ | Ptr {contents=V _} -> tm
     | Eq (t1,t2) -> Eq (simple_copy t1,simple_copy t2)
     | And (t1,t2) -> And (simple_copy t1,simple_copy t2)
     | Or (t1,t2) -> Or (simple_copy t1,simple_copy t2)
@@ -474,7 +480,7 @@ let shared_copy tm =
   let tbl = Hashtbl.create 100 in
   let rec cp t =
     match t with
-      | QString _ | DB _ | NB _ | True | False | Var _ | Ptr {contents=V _} -> t
+      | QString _ | Nat _ | DB _ | NB _ | True | False | Var _ | Ptr {contents=V _} -> t
       | Eq (t1,t2) -> Eq (cp t1,cp t2)
       | And (t1,t2) -> And (cp t1,cp t2)
       | Or (t1,t2) -> Or (cp t1,cp t2)
@@ -506,6 +512,7 @@ let pre_abstract target t =
           | NB i -> t
           | DB i -> if i>=n then DB (i+1) else t
           | QString _
+          | Nat _
           | True
           | False -> t
           | Eq (t1,t2) -> Eq (aux n t1,aux n t2)
@@ -528,6 +535,7 @@ let pre_abstract target t =
           | NB i -> if i=target then DB n else t
           | DB i -> if i>=n then DB (i+1) else t
           | QString _
+          | Nat _
           | True
           | False -> t
           | Eq (t1,t2) -> Eq (aux n t1,aux n t2)
@@ -564,6 +572,7 @@ let abstract_flex target t =
           | NB i -> t
           | DB i -> if i>=n then DB (i+1) else t
           | QString _
+          | Nat _
           | True
           | False -> t
           | Eq (t1,t2) -> Eq (aux n t1,aux n t2)
@@ -591,7 +600,7 @@ let abstract_flex target t =
  * the list of normalized terms [ts] and which satisfy [test v]. *)
 let get_vars test ts =
   let rec fv l t = match observe t with
-    | QString _ | DB _ | NB _ | True | False -> l
+    | QString _ | Nat _ | DB _ | NB _ | True | False -> l
     | Var v ->
         if test v && not (List.mem_assq v l) then ((v,t)::l) else l
     | Eq (t1,t2)
@@ -615,7 +624,7 @@ let eigen_vars = get_vars (fun v -> v.tag = Eigen)
  * the normalized term [x]. *)
 let get_nablas x =
   let rec nb l t = match observe t with
-    | QString _ | Var _ | DB _ | True | False -> l
+    | QString _ | Nat _ | Var _ | DB _ | True | False -> l
     | NB i -> if List.mem i l then l else i::l
     | Eq (t1,t2)
     | And (t1,t2)

@@ -107,6 +107,7 @@ rule token = parse
   (* common term-keywords (Abella/Bedwyr) *)
   | "prop"              { PROP }
   | "string"            { STRING }
+  | "nat"               { NAT }
   | "="                 { EQ }
   | "/\\"               { AND }
   | "\\/"               { OR }
@@ -178,6 +179,7 @@ rule token = parse
   | "debug"             { DEBUG }
   | "time"              { TIME }
   | "equivariant"       { EQUIVARIANT }
+  | "env"               { ENV }
   | "show_table"        { SHOW_TABLE }
   | "clear_tables"      { CLEAR_TABLES }
   | "clear_table"       { CLEAR_TABLE }

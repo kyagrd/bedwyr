@@ -31,7 +31,7 @@
 %token KIND TYPE COMMA RARROW CLAUSEEQ DOT
 %token IMP BSLASH LPAREN RPAREN CONS
 %token KKIND TTYPE DEFINE INDUCTIVE COINDUCTIVE COLON BY DEFEQ SEMICOLON
-%token PROP STRING EQ AND OR FORALL EXISTS NABLA TRUE FALSE
+%token PROP STRING NAT EQ AND OR FORALL EXISTS NABLA TRUE FALSE
 %token CLOSE THEOREM QED QUERY IMPORT SPECIFICATION SSPLIT
 %token SET SHOW QUIT
 %token IND COIND INTROS CASE SEARCH APPLY BACKCHAIN UNFOLD
@@ -41,7 +41,7 @@
 %token TO WITH ON AS KEEP
 %token LBRACK RBRACK TURN STAR AT PLUS HASH
 %token EXIT HELP INCLUDE RESET RELOAD SESSION DEBUG TIME
-%token EQUIVARIANT SHOW_TABLE CLEAR_TABLES CLEAR_TABLE SAVE_TABLE
+%token EQUIVARIANT ENV SHOW_TABLE CLEAR_TABLES CLEAR_TABLE SAVE_TABLE
 %token ASSERT ASSERT_NOT ASSERT_RAISE
 %token UNDERSCORE
 
@@ -107,6 +107,7 @@ meta_command:
   | HASH DEBUG opt_arg DOT              { System.Command (System.Debug $3) }
   | HASH TIME opt_arg DOT               { System.Command (System.Time $3) }
   | HASH EQUIVARIANT opt_arg DOT        { System.Command (System.Equivariant $3) }
+  | HASH ENV DOT                        { System.Command (System.Env) }
   | HASH SHOW_TABLE lower_id DOT        { System.Command (System.Show_table (pos 3,$3)) }
   | HASH CLEAR_TABLES DOT               { System.Command (System.Clear_tables) }
   | HASH CLEAR_TABLE lower_id DOT       { System.Command (System.Clear_table (pos 3,$3)) }
@@ -135,6 +136,7 @@ const_clist:
 ty:
   | PROP                                { Type.TProp }
   | STRING                              { Type.TString }
+  | NAT                                 { Type.TNat }
   | lower_id			        { Type.Ty $1 }
   | ty RARROW ty                        { Type.ty_arrow $1 $3 }
   | LPAREN ty RPAREN                    { $2 }
@@ -172,6 +174,7 @@ term_atom:
   | token_id                            { $1 }
   | QSTRING                             { let p,s = $1 in
                                           Typing.pre_qstring p s }
+  | NUM                                 { Typing.pre_nat (pos 1) $1 }
 
 term_abs:
   | abound_id BSLASH term               { Typing.pre_lambda (pos 0) [$1] $3 }

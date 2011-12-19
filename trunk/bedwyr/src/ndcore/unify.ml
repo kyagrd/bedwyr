@@ -55,7 +55,7 @@ let rec lift t n = match observe t with
   | True | False
   | Eq _ | And _ | Or _ | Arrow _ | Binder _ ->
       fat t
-  | QString _ | Var _ -> t
+  | QString _ | Nat _ | Var _ -> t
   | DB i -> db (i+n)
   | _ -> susp t 0 n []
 
@@ -111,8 +111,8 @@ let rec check_flex_args l fts flts =
           | True | False
           | Eq _ | And _ | Or _ | Arrow _ | Binder _ ->
               fat t
-          | QString _ ->
-              check_flex_args q fts flts
+          (*| QString _ | Nat _ ->
+              check_flex_args q fts flts*)
           | Var v when constant v.tag && v.ts>fts && unique_var v q ->
               check_flex_args q fts flts
           | DB i when unique_bv i q -> check_flex_args q fts flts
@@ -133,7 +133,7 @@ let can_bind v t =
       | True | False
       | Eq _ | And _ | Or _ | Arrow _ | Binder _ ->
           fat t
-      | QString _ -> true
+      | QString _ | Nat _ -> true
       | Var v' ->
           (isLeft || (v' <> v && v'.ts <= v.ts)) && v'.lts <= v.lts
       | DB i -> i <= n
@@ -261,16 +261,19 @@ let raise_and_invert v1 v2 a1 a2 lev =
           | DB _ -> raise_var tl (n-1)
           | NB j ->
               let raised,inds,consts = raise_var tl (n-1) in
-                if j <= lts2 then
-                  (true,(db (n+lev))::inds,t::consts)
-                else
-                  raised,inds,consts
+              if j <= lts2 then
+                (true,(db (n+lev))::inds,t::consts)
+              else
+                raised,inds,consts
+          | QString _ | Nat _ ->
+              let raised,inds,consts = raise_var tl (n-1) in
+              (true,(db (n+lev))::inds,t::consts)
           | Var {ts=cts;tag=tag} when constant tag ->
               let raised,inds,consts = raise_var tl (n-1) in
-                if cts <= ts2 then
-                  (true,(db (n+lev))::inds,t::consts)
-                else
-                  (raised,inds,consts)
+              if cts <= ts2 then
+                (true,(db (n+lev))::inds,t::consts)
+              else
+                (raised,inds,consts)
           | _ -> assert false
         end
   in
@@ -302,24 +305,27 @@ let raise_and_invert v1 v2 a1 a2 lev =
                        (db n)::inds2)
                 else
                   (pruned,t::inds1,(db n)::inds2)
+          | QString _ | Nat _ ->
+              let pruned,inds1,inds2 = prune q (n-1) in
+              (true,inds1,inds2)
           | Var v when constant v.tag ->
               let pruned,inds1,inds2 = prune q (n-1) in
               let j = cindex v a1 l1 in
-                if j = 0 then
-                  (true,inds1,inds2)
-                else
-                  (pruned,
-                   (db (j+lev))::inds1,
-                   (db n)::inds2)
+              if j = 0 then
+                (true,inds1,inds2)
+              else
+                (pruned,
+                 (db (j+lev))::inds1,
+                 (db n)::inds2)
           | NB i ->
               let pruned,inds1,inds2 = prune q (n-1) in
               let j = nbindex i a1 l1 in
-                if j = 0 then
-                  (true,inds1,inds2)
-                else
-                  (pruned,
-                   (db (j+lev))::inds1,
-                   (db n)::inds2)
+              if j = 0 then
+                (true,inds1,inds2)
+              else
+                (pruned,
+                 (db (j+lev))::inds1,
+                 (db n)::inds2)
           | _ -> assert false
         end
     | _ -> assert false
@@ -365,18 +371,21 @@ let raise_and_invert v1 v2 a1 a2 lev =
                       (pruned,
                        (db (j+lev))::inds1,
                        (db n)::inds2)
+          | QString _ | Nat _ ->
+              let pruned,inds1,inds2 = prune_and_raise q (n-1) in
+              (pruned,a::inds1,(db n)::inds2)
           | Var v when constant v.tag ->
               let pruned,inds1,inds2 = prune_and_raise q (n-1) in
-                if v.ts <= ts1 then
-                  (pruned,a::inds1,(db n)::inds2)
+              if v.ts <= ts1 then
+                (pruned,a::inds1,(db n)::inds2)
+              else
+                let i = cindex v a1 l1 in
+                if i=0 then
+                  (true,inds1,inds2)
                 else
-                  let i = cindex v a1 l1 in
-                    if i=0 then
-                      (true,inds1,inds2)
-                    else
-                      (pruned,
-                       (db (i+lev))::inds1,
-                       (db n)::inds2)
+                  (pruned,
+                   (db (i+lev))::inds1,
+                   (db n)::inds2)
           | _ -> assert false
         end
     | _ -> assert false
@@ -421,10 +430,12 @@ let rec prune_same_var l1 l2 j bl = match l1,l2 with
         | _,True | _,False
         | _,Eq _ | _,And _ | _,Or _ | _,Arrow _ | _,Binder _ ->
             fat t2
+        | QString s1,QString s2 when s1=s2 ->
+            (db bl)::(prune_same_var a1 a2 j (bl-1))
         | Var {tag=tag1},Var {tag=tag2}
           when constant tag1 && eq t1 t2 ->
             (db bl)::(prune_same_var a1 a2 j (bl-1))
-        | NB i, NB j when i=j ->
+        | Nat i,Nat j | NB i, NB j when i=j ->
             (db bl)::(prune_same_var a1 a2 j (bl-1))
         | DB i1,DB i2 when i1+j = i2 ->
             (db bl)::(prune_same_var a1 a2 j (bl-1))
@@ -476,6 +487,7 @@ let makesubst h1 t2 a1 =
       | True | False
       | Eq _ | And _ | Or _ | Arrow _ | Binder _ ->
           fat c
+      | QString _ | Nat _ -> c
       | Var v when constant v.tag ->
           (* Can [h1] depend on [c] ?
            * If so, the substitution is [c] itself, and the llambda restriction
@@ -515,6 +527,8 @@ let makesubst h1 t2 a1 =
                 app
                   (nested_subst h2 lev)
                   (List.map (fun x -> nested_subst (Norm.hnorm x) lev) a2)
+            | QString _
+            | Nat _
             | DB _ | NB _ ->
                 app
                   (nested_subst h2 lev)
@@ -538,7 +552,6 @@ let makesubst h1 t2 a1 =
                     else
                       app h2 a1'
             | Var _ -> failwith "logic variable on the left"
-            | QString _
             | Ptr _
             | Susp _
             | App _
@@ -586,21 +599,30 @@ let makesubst h1 t2 a1 =
             | True | False
             | Eq _ | And _ | Or _ | Arrow _ | Binder _ ->
                 fat h2
+            | QString _ | Nat _ ->
+                let a2 = List.map Norm.hnorm a2 in
+                check_flex_args a2 0 0 ;
+                let bindlen = n+lev in
+                if bindlen = List.length a2 then
+                  let h1' = fresh ~lts:lts1 ~ts:ts1 in
+                  let args = prune_same_var a1 a2 lev bindlen in
+                  lambda bindlen (app h1' args)
+                else
+                  raise TypesMismatch
             | Var {ts=ts2;lts=lts2} when eq h1 h2 ->
                 (* [h1] being instantiatable, no need to check it for [h2] *)
                 let a2 = List.map Norm.hnorm a2 in
                 check_flex_args a2 ts2 lts2 ;
                 let bindlen = n+lev in
-                  if bindlen = List.length a2 then
-                    let h1' = fresh ~lts:lts1 ~ts:ts1 in
-                    let args = prune_same_var a1 a2 lev bindlen in
-                      lambda bindlen (app h1' args)
-                  else
-                    raise TypesMismatch
+                if bindlen = List.length a2 then
+                  let h1' = fresh ~lts:lts1 ~ts:ts1 in
+                  let args = prune_same_var a1 a2 lev bindlen in
+                  lambda bindlen (app h1' args)
+                else
+                  raise TypesMismatch
             | App _ | Lam _
             | Var _ | DB _ | NB _ ->
                 lambda (n+lev) (nested_subst t2 lev)
-            | QString _
             | Susp _ | Ptr _ -> assert false
           end
       | Ptr _ -> assert false
@@ -688,8 +710,48 @@ and unify_nv_term n1 t1 t2 = match observe t2 with
 and unify_app_term h1 a1 t1 t2 = match observe h1,observe t2 with
   | Var {tag=tag}, _ when variable tag ->
       bind h1 (makesubst h1 t2 a1)
+  | QString s1, App (h2,a2) ->
+      begin match observe h2 with
+        | QString s2 ->
+            if s1=s2 then
+              unify_list a1 a2
+            else
+              raise (ConstClash (h1,h2))
+        | Nat _ ->
+            raise (ConstClash (h1,h2))
+        | Var {tag=tag} when constant tag ->
+            raise (ConstClash (h1,h2))
+        | DB _ | NB _ ->
+            raise (ConstClash (h1,h2))
+        | Var {tag=tag} when variable tag ->
+            bind h2 (makesubst h2 t1 a2)
+        | Var {tag=t} ->
+            failwith "logic variable on the left"
+        | _ -> assert false
+      end
+  | Nat i, App (h2,a2) ->
+      begin match observe h2 with
+        | QString _ ->
+            raise (ConstClash (h1,h2))
+        | Nat j ->
+            if i=j then
+              unify_list a1 a2
+            else
+              raise (ConstClash (h1,h2))
+        | Var {tag=tag} when constant tag ->
+            raise (ConstClash (h1,h2))
+        | DB _ | NB _ ->
+            raise (ConstClash (h1,h2))
+        | Var {tag=tag} when variable tag ->
+            bind h2 (makesubst h2 t1 a2)
+        | Var {tag=t} ->
+            failwith "logic variable on the left"
+        | _ -> assert false
+      end
   | Var {tag=tag}, App (h2,a2) when constant tag ->
       begin match observe h2 with
+        | QString _ | Nat _ ->
+            raise (ConstClash (h1,h2))
         | Var {tag=tag} when constant tag ->
             if eq h1 h2 then
               unify_list a1 a2
@@ -705,7 +767,7 @@ and unify_app_term h1 a1 t1 t2 = match observe h1,observe t2 with
       end
   | NB n1, App (h2,a2) ->
       begin match observe h2 with
-        | DB n2 -> raise (ConstClash (h1,h2))
+        | QString _ | Nat _ | DB _ -> raise (ConstClash (h1,h2))
         | NB n2 ->
             if n1=n2 then unify_list a1 a2 else raise (ConstClash (h1,h2))
         | Var v ->
@@ -719,7 +781,7 @@ and unify_app_term h1 a1 t1 t2 = match observe h1,observe t2 with
       end
   | DB n1, App (h2,a2) ->
       begin match observe h2 with
-        | NB n2 -> raise (ConstClash (h1,h2))
+        | QString _ | Nat _ | NB _ -> raise (ConstClash (h1,h2))
         | DB n2 ->
             if n1=n2 then unify_list a1 a2 else raise (ConstClash (h1,h2))
         | Var v ->
@@ -772,6 +834,8 @@ and unify t1 t2 = match observe t1,observe t2 with
   | _,True | _,False
   | _,Eq _ | _,And _ | _,Or _
   | _,Arrow _ | _,Binder _   -> fat t2
+  | QString _,_ | Nat _,_         -> unify_const_term t1 t2
+  | _,QString _ | _,Nat _         -> unify_const_term t2 t1
   | Var {tag=t},_ when constant t -> unify_const_term t1 t2
   | _,Var {tag=t} when constant t -> unify_const_term t2 t1
   | DB n,_                        -> unify_bv_term n t1 t2
@@ -783,7 +847,7 @@ and unify t1 t2 = match observe t1,observe t2 with
         unify (lambda (n1-n2) t1) t2
       else
         unify t1 (lambda (n2-n1) t2)
-  | _ -> failwith "logic variable on the left"
+  | _ -> failwith "ogic variable on the left"
 
 let pattern_unify t1 t2 = unify (Norm.hnorm t1) (Norm.hnorm t2)
 
