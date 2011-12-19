@@ -1,6 +1,3 @@
-
-all: bedwyr
-
 # DEFINITIONS
 
 cmo = @cmo@
@@ -8,34 +5,55 @@ cma = @cma@
 OCAMLC = @OCAMLC@ @OCAMLCFLAGS@ -c -I ndcore -I ndcore/tests
 OCAMLL = @OCAMLC@ @OCAMLLFLAGS@
 OCAMLDEP = @OCAMLDEP@ -I ndcore -I ndcore/tests
-OCAMLDOC = @OCAMLDOC@ -m A -I ndcore/
+OCAMLDOC = @OCAMLDOC@ -stars -m A -I ndcore/
 OCAMLYACC = @OCAMLYACC@ -v
 OCAMLLEX = @OCAMLLEX@
 VERSION = @PACKAGE_VERSION@
+TAR = @TAR@
+VERSION=@PACKAGE_VERSION@
+D=bedwyr-$(VERSION)
 
 # SOURCE FILES
 
 CORE_ML    = ndcore/term.ml ndcore/norm.ml ndcore/unify.ml ndcore/index.ml \
 	     ndcore/type.ml ndcore/typing.ml ndcore/pprint.ml
 TEST_ML    = ndcore/tests/oUnit.ml ndcore/tests/test.ml
-BEDWYR_ML  = table.ml system.ml prover.ml \
-	     config.ml parser.ml lexer.ml \
+BEDWYR_MLLY= table.ml system.ml prover.ml \
+	     config.ml parser.mly lexer.mll \
 	     main.ml
+BEDWYR_MLL = $(BEDWYR_MLLY:.mly=.ml)
+BEDWYR_ML  = $(BEDWYR_MLL:.mll=.ml)
 
 CORE_SRC   = $(CORE_ML)   $(wildcard $(CORE_ML:.ml=.mli))
+TEST_SRC   = $(TEST_ML)
 BEDWYR_SRC = $(BEDWYR_ML) $(wildcard $(BEDWYR_ML:.ml=.mli))
 
-BEDWYR = $(CORE_ML:.ml=.$(cmo)) $(BEDWYR_ML:.ml=.$(cmo))
-TEST   = $(CORE_ML:.ml=.$(cmo)) $(TEST_ML:.ml=.$(cmo))
+CORE_FILES   = $(CORE_SRC)
+TEST_FILES   = $(TEST_SRC)
+BEDWYR_FILES = $(BEDWYR_MLLY) $(wildcard $(BEDWYR_MLLY:.ml=.mli))
+
+CORE_O   = $(CORE_ML:.ml=.$(cmo))
+TEST_O   = $(TEST_ML:.ml=.$(cmo))
+BEDWYR_O = $(BEDWYR_ML:.ml=.$(cmo))
 
 # BUILDING
 
-bedwyr: $(BEDWYR)
-	$(OCAMLL) unix.$(cma) $(BEDWYR) -o bedwyr
+all: bedwyr
+
+# TODO build ndcore.cma *and* ndcore.cmxa,
+# since it is a lib, not exclusively a part of bedwyr
+ndcore.$(cma): $(CORE_O)
+	$(OCAMLL) $^ -a -o $@
+
+ndcore/test: ndcore.$(cma) $(TEST_O)
+	$(OCAMLL) unix.$(cma) $^ -o $@
+
+bedwyr: ndcore.$(cma) $(BEDWYR_O)
+	$(OCAMLL) unix.$(cma) $^ -o $@
 
 -include depend
-depend: $(CORE_SRC) $(BEDWYR_SRC) $(TEST_ML)
-	$(OCAMLDEP) $(CORE_SRC) $(BEDWYR_SRC) $(TEST_ML) > depend
+depend: $(CORE_SRC) $(TEST_SRC) $(BEDWYR_SRC)
+	$(OCAMLDEP) $^ > depend
 
 %.$(cmo): %.ml
 	$(OCAMLC) $<
@@ -52,31 +70,26 @@ depend: $(CORE_SRC) $(BEDWYR_SRC) $(TEST_ML)
 	  -e 's|{BUILD}|$(shell (svn info 2>&- || git svn info 2>&-) | grep Revision | sed -e "s/Revision: //")|'\
 	  $^ > $@
 
-# TARGETS FOR CORE LLAMBDA MODULES
+# OTHER TARGETS
 
 test: ndcore/test
-	ndcore/test
-ndcore/test: $(TEST)
-	$(OCAMLL) unix.$(cma) $(TEST) -o ndcore/test
+	@<
 
-doc:
+doc: $(CORE_SRC) $(BEDWYR_SRC)
 ifneq (@OCAMLDOC@,)
-	$(OCAMLDOC) -stars -d ../doc -html $(CORE_SRC) $(BEDWYR_SRC)
+	$(OCAMLDOC) -d ../doc -html $^
 endif
 
-# MISC
-
-run: bedwyr
-	ledit ./bedwyr
+bedwyr_src.tar: $(CORE_FILES) $(TEST_FILES) $(BEDWYR_FILES)
+	$(TAR) -cf $@ --xform 's|^|$(D)/src/|' $^
 
 .PHONY: clean
-
 clean:
 	rm -f bedwyr
-	rm -f Makefile
 	rm -f ndcore/test
+	rm -f bedwyr_src.tar
 	rm -f config.ml parser.ml parser.mli lexer.ml parser.output
-	rm -f *.cm[ixo] *.o
-	rm -f ndcore/*.cm[ixo] ndcore/*.o
-	rm -f ndcore/tests/*.cm[ixo] ndcore/tests/*.o
+	rm -f *.cm[ixoa] *.cmxa *.[oa]
+	rm -f ndcore/*.cm[ixoa] ndcore/*.cmxa ndcore/*.[oa]
+	rm -f ndcore/tests/*.cm[ixoa] ndcore/tests/*.cmxa ndcore/tests/*.[oa]
 	make -C ../doc clean

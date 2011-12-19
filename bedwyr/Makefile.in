@@ -1,8 +1,39 @@
+# DEFINITIONS
+
+cma = @cma@
+TAR = @TAR@
+VERSION=@PACKAGE_VERSION@
+D=bedwyr-$(VERSION)
+
+# SOURCE FILES
+
+XPL = list.def internal/scoping.def internal/checks.def \
+      miniml.def 3bits.def lambda.def progs.def \
+      graph-alt.def minmax.def multisim.def \
+      tictactoe.def \
+      pi/pi_trace.def pi/corr-assert.def pi/pi_modal.def \
+      pi/pi_mini.def pi/pi_nat.def pi/pi_church.def
+
+DOC_FILES  =
+#DOC_FILES  = doc/userguide.pdf doc/userguide.ps.gz doc/userguide.html \
+	     doc/*.tex doc/userguide.bib doc/Makefile
+ARCH_FILES = COPYING CHANGES README TODO configure.ac install-sh Makefile.in \
+	     contrib/bedwyr.el contrib/bedwyr.vim \
+	     src/Makefile.in \
+	     $(DOC_FILES) \
+	     $(shell find examples -type f '!' -path '*.svn*' -exec echo \{\} +)
+
+# BUILDING
+
 all: src/bedwyr
 
 .PHONY: src/bedwyr
-src/bedwyr: src/Makefile Makefile
+src/bedwyr: src/Makefile
 	make -C src bedwyr
+
+.PHONY: src/ndcore.$(cma)
+src/ndcore.$(cma): src/Makefile
+	make -C src ndcore.$(cma)
 
 src/Makefile: src/Makefile.in configure
 	./configure
@@ -13,34 +44,6 @@ Makefile: Makefile.in configure
 configure: configure.ac
 	autoconf
 
-XPL = list.def internal/scoping.def internal/checks.def \
-      miniml.def 3bits.def lambda.def progs.def \
-      graph-alt.def minmax.def multisim.def \
-      tictactoe.def \
-      pi/pi_trace.def pi/corr-assert.def pi/pi_modal.def \
-      pi/pi_mini.def pi/pi_nat.def pi/pi_church.def
-
-#	     doc/userguide.pdf doc/userguide.ps.gz doc/userguide.html 
-ARCH_FILES = COPYING CHANGES README TODO configure.ac install-sh Makefile.in \
-	     contrib/bedwyr.el contrib/bedwyr.vim \
-	     doc/*.tex doc/userguide.bib doc/Makefile \
-	     src/ndcore/term.ml src/ndcore/term.mli \
-	     src/ndcore/norm.ml src/ndcore/norm.mli \
-	     src/ndcore/unify.ml src/ndcore/unify.mli \
-	     src/ndcore/index.ml src/ndcore/index.mli \
-	     src/ndcore/type.ml \
-	     src/ndcore/typing.ml src/ndcore/typing.mli \
-	     src/ndcore/pprint.ml src/ndcore/pprint.mli \
-	     src/ndcore/tests/oUnit.ml \
-	     src/ndcore/tests/test.ml \
-	     src/table.ml src/table.mli \
-	     src/system.ml src/system.mli \
-	     src/prover.ml src/prover.mli \
-	     src/config.ml.in src/parser.mly src/lexer.mll \
-	     src/main.ml src/main.mli \
-	     src/Makefile.in \
-	     $(shell find examples -type f '!' -path '*.svn*' -exec echo \{\} +)
-
 .PHONY: test
 test: src/Makefile
 	@echo Testing the core LLambda library
@@ -49,7 +52,7 @@ test: src/Makefile
 	@bash -c 'time $(MAKE) examples_tests'
 
 .PHONY: examples_tests
-examples_tests: src/bedwyr
+examples_tests: src/bedwyr Makefile
 	@for i in $(XPL) ; do \
 	  echo "==== Running tests in $$i ====" ; \
 	  if src/bedwyr -t -I examples/$$i ; then echo "All done." ; else echo "Error." ; break ; fi ; \
@@ -66,17 +69,24 @@ superclean: clean
 	rm -f src/ndcore/depend
 
 clean:
+	rm -f $(D).tar.bz2 $(D).tar.gz
 	make -C src clean
+	rm -f src/Makefile
 	make -C doc clean
 
-VERSION=@PACKAGE_VERSION@
-D=bedwyr-$(VERSION)
+dist: src/Makefile bz2
+bz2: $(D).tar.bz2
+gz: $(D).tar.gz
 
-#dist: Makefile doc $(D).tar.bz2 $(D).tar.gz
-dist: Makefile $(D).tar.bz2 $(D).tar.gz
-
-$(D).tar.bz2: $(ARCH_FILES)
-	@tar -cvjf $@ --xform 's|^|$(D)/|' $^
-
-$(D).tar.gz: $(ARCH_FILES)
-	@tar -cvzf $@ --xform 's|^|$(D)/|' $^
+.PHONY: src/bedwyr_src.tar
+src/bedwyr_src.tar:
+	make -C src bedwyr_src.tar
+$(D).tar: $(ARCH_FILES) src/bedwyr_src.tar
+	$(TAR) -cf $@ --xform 's|^|$(D)/|' $(ARCH_FILES)
+	$(TAR) -Af $@ src/bedwyr_src.tar
+%.bz2: %
+	bzip2 -f $<
+	$(TAR) -tf $@
+%.gz: %
+	gzip -f $<
+	$(TAR) -tf $@

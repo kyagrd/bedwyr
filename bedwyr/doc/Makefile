@@ -1,5 +1,6 @@
+default:
 
-default: userguide.ps.gz userguide.pdf userguide.html
+#default: userguide.ps.gz userguide.pdf userguide.html
 
 clean:
 	rm -f userguide.ps.gz userguide.pdf userguide.html
@@ -25,8 +26,8 @@ bib:
 show: userguide.pdf
 	kpdf userguide.pdf&
 
-# Currently, the aux file mentions a bib file in Dale's LIX directory.  
-# Only he will be able to do the following command to create the 
+# Currently, the aux file mentions a bib file in Dale's LIX directory.
+# Only he will be able to do the following command to create the
 # userguide.bib file.
 
 userguide.bib: userguide.tex
