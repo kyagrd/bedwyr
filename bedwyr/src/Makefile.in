@@ -81,7 +81,7 @@ depend: $(CORE_SRC) $(TEST_SRC) $(BEDWYR_SRC)
 # OTHER TARGETS
 
 test: ndcore/test
-	@<
+	$<
 
 .PHONY: doc
 doc: bedwyr $(CORE_MLI) $(BEDWYR_MLI)

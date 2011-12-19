@@ -89,6 +89,8 @@ let find_leaf map bindings =
 
 (* Patterns allow eigenvariables and nabla variables as deBruijn indices. *)
 type pattern =
+  | QString of string
+  | Nat    of int
   | Var    of int
   | Cst    of Term.term * Term.var
   | DB     of int
@@ -127,6 +129,8 @@ let create_node ~allow_eigenvar bindings terms data =
   let rec compile bindings term =
     let term = Norm.hnorm term in
     match Term.observe term with
+      | Term.QString s -> QString s,bindings
+      | Term.Nat s -> Nat s,bindings
       | Term.DB i -> DB i, bindings
       | Term.NB i -> NB i, bindings
       | Term.Var ({Term.tag=Term.Constant} as v) ->
@@ -188,6 +192,8 @@ let superficial_match patterns terms =
     | NB i, Term.NB j
     | Lam (i,_), Term.Lam (j,_) -> i=j
     | Cst (_,v), Term.Var v' -> v==v'
+    | QString s1,Term.QString s2 -> s1=s2
+    | Nat i1,Term.Nat i2 -> i1=i2
     | True, Term.True
     | False, Term.False
     | Eq _, Term.Eq _
@@ -210,7 +216,7 @@ let superficial_match patterns terms =
 let rec rename term bindings n =
   let term = Norm.hnorm term in
   match Term.observe term with
-    | Term.Var _ | Term.DB _ | Term.True | Term.False ->
+    | Term.QString _ | Term.Nat _ | Term.Var _ | Term.DB _ | Term.True | Term.False ->
         term, bindings, n
     | Term.NB i ->
         begin try
@@ -283,6 +289,9 @@ let update ~allow_eigenvar index terms data =
    * corresponding to the former index in reverse order. *)
   let rec update_pattern bindings catches former_alt pattern term =
     match pattern, Term.observe (Norm.hnorm term) with
+      | QString s1, Term.QString s2 when s1=s2 ->
+          (false, pattern, bindings, catches, former_alt)
+      | Nat i, Term.Nat j
       | DB i, Term.DB j
       | NB i, Term.NB j when i = j ->
           (false, pattern, bindings, catches, former_alt)
@@ -422,6 +431,8 @@ let add ?(allow_eigenvar=true) index terms data =
 
 let rec filter bindings catches pattern term =
   match pattern, Term.observe (Norm.hnorm term) with
+    | QString s1, Term.QString s2 when s1=s2 -> bindings,catches
+    | Nat i, Term.Nat j
     | DB i, Term.DB j
     | NB i, Term.NB j when i=j -> bindings,catches
     | True, Term.True | False, Term.False -> bindings,catches
@@ -494,6 +505,8 @@ struct
   type item =
     | ZVar    of int
     | ZCst    of Term.term * Term.var
+    | ZQString of string
+    | ZNat    of int
     | ZDB     of int
     | ZNB     of int
     | ZTrue
@@ -510,7 +523,7 @@ struct
   type t = item list list
 
   let arity = function
-    | ZVar _ | ZCst _ | ZDB _ | ZNB _ | ZTrue | ZFalse -> 0
+    | ZVar _ | ZCst _ | ZQString _ | ZNat _ | ZDB _ | ZNB _ | ZTrue | ZFalse -> 0
     | ZEq | ZAnd | ZOr | ZArrow -> 2
     | ZApp n -> n
     | ZBinder _ | ZHole | ZLam _ -> 1
@@ -525,6 +538,8 @@ struct
     let row,subpats =
       List.fold_left
         (fun (row,subpats) -> function
+           | QString s -> (ZQString s)::row,subpats
+           | Nat i -> (ZNat i)::row,subpats
            | DB i  ->  (ZDB i)::row, subpats
            | NB i  ->  (ZNB i)::row, subpats
            | Cst (t,c) -> (ZCst (t,c))::row, subpats
@@ -562,6 +577,8 @@ struct
     let zip_step terms = function
       | ZVar i -> table.(i), terms
       | ZCst (t,_) -> t, terms
+      | ZQString s -> Term.qstring s,terms
+      | ZNat i -> Term.nat i,terms
       | ZDB i  -> Term.db i, terms
       | ZNB i  -> Term.nabla i, terms
       | ZTrue -> Term.op_true, terms

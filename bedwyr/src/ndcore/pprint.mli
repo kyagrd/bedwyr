@@ -24,8 +24,12 @@ val pp_kind : Format.formatter -> Type.simple_kind -> unit
 val kind_to_string : Type.simple_kind ->string
 
 (** Print a type. *)
-val pp_type : Typing.type_unifier option -> Format.formatter -> Type.simple_type -> unit
-val type_to_string : Typing.type_unifier option -> Type.simple_type ->string
+val pp_type : Format.formatter -> Type.simple_type -> unit
+val type_to_string : Type.simple_type -> string
+
+(** Print a type in a more unique way. *)
+val pp_type_norm : Typing.type_unifier option -> Format.formatter -> Type.simple_type -> unit
+val type_to_string_norm : Typing.type_unifier option -> Type.simple_type -> string
 
 (** Print a unifier. *)
 val pp_unifier : Format.formatter -> Typing.type_unifier -> unit

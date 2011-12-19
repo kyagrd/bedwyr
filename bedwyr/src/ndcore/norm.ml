@@ -38,7 +38,7 @@ let make_env n args =
 (* Head normalization function.*)
 let rec hnorm term =
   match Term.observe term with
-    | Term.QString _ | Term.Var _ | Term.DB _ | Term.NB _ | Term.True | Term.False
+    | Term.QString _ | Term.Nat _ | Term.Var _ | Term.DB _ | Term.NB _ | Term.True | Term.False
     | Term.Eq _ | Term.And _ | Term.Or _ | Term.Arrow _ | Term.Binder _ -> term
     | Term.Lam (n,t) -> Term.lambda n (hnorm t)
     | Term.App (t,args) ->
@@ -56,7 +56,7 @@ let rec hnorm term =
         let t = hnorm t in
         let susp x = Term.susp x ol nl e in
         begin match Term.observe t with
-          | Term.QString _ | Term.Var _ | Term.NB _ | Term.True | Term.False -> t
+          | Term.QString _ | Term.Nat _ | Term.Var _ | Term.NB _ | Term.True | Term.False -> t
           | Term.DB i ->
               if i > ol then
                 (* The index points to something outside the suspension *)
@@ -87,7 +87,7 @@ let rec hnorm term =
 let rec deep_norm t =
   let t = hnorm t in
   match Term.observe t with
-    | Term.QString _ | Term.Var _ | Term.DB _ | Term.NB _ | Term.True | Term.False -> t
+    | Term.QString _ | Term.Nat _ | Term.Var _ | Term.DB _ | Term.NB _ | Term.True | Term.False -> t
     | Term.Eq (t1,t2) -> Term.op_eq (deep_norm t1) (deep_norm t2)
     | Term.And (t1,t2) -> Term.op_and (deep_norm t1) (deep_norm t2)
     | Term.Or (t1,t2) -> Term.op_or (deep_norm t1) (deep_norm t2)

@@ -152,19 +152,20 @@ type command =
     Exit (** close all files and exit *)
   | Help (** display a short help message *)
   | Include of string list (** load a list of files *)
-  | Reset (** clears the current session *)
+  | Reset (** clear the current session *)
   | Reload (** reload the current session *)
   | Session of string list (** load these files as the current session *)
   | Debug of string option (** turn debugging on/off (default off) *)
   | Time of string option (** turn timing on/off (default off) *)
   | Equivariant of string option (** turn equivariant tabling on/off (default on) *)
-  | Show_table of Typing.pos * string (** displays the predicate's table *)
-  | Clear_tables (** calls [clear_tables] *)
-  | Clear_table of Typing.pos * string (** calls [clear_table] *)
+  | Env (** call [print_env] *)
+  | Show_table of Typing.pos * string (** call [show_table] *)
+  | Clear_tables (** call [clear_tables] *)
+  | Clear_table of Typing.pos * string (** call [clear_table] *)
   | Save_table of Typing.pos * string * string (** calls [save_table] *)
-  | Assert of Typing.preterm (** checks whether a query succeeds *)
-  | Assert_not of Typing.preterm (** checks whether a query fails *)
-  | Assert_raise of Typing.preterm (** checks whether a query crashes *)
+  | Assert of Typing.preterm (** check whether a query succeeds *)
+  | Assert_not of Typing.preterm (** check whether a query fails *)
+  | Assert_raise of Typing.preterm (** check whether a query crashes *)
 type input =
     KKind of (Typing.pos * string) list * Type.simple_kind (** type declaration *)
   | TType of (Typing.pos * string) list * Type.simple_type (** constant declaration *)
@@ -245,6 +246,9 @@ val get_def :
 
 (** Remove a definition. *)
 val remove_def : Term.term -> unit
+
+(** Display the inferred type of every declared object. *)
+val print_env : unit -> unit
 
 (** Display the content of a table. *)
 val show_table : Typing.pos * Term.term -> unit

@@ -139,19 +139,19 @@ let rec process ?(interactive=false) parse lexbuf =
       (* I/O *)
       | End_of_file -> raise End_of_file
       | Lexer.Illegal_string ->
-          Format.printf "%sIllegal string starting with \"%s\" in input.\n%!"
+          Format.printf "%sIllegal string starting with \"%s\" in input.@."
             (position_lex lexbuf)
             (String.escaped (Lexing.lexeme lexbuf)) ;
           if interactive then Lexing.flush_input lexbuf else exit 1
       | Parsing.Parse_error ->
-          Format.printf "%sSyntax error.\n%!"
+          Format.printf "%sSyntax error.@."
             (position_lex lexbuf) ;
           if interactive then Lexing.flush_input lexbuf else exit 1
 
       (* declarations *)
       | System.Invalid_type_declaration (n,p,k,s) ->
           Format.printf
-            "%sCannot declare type %s of kind %a: %s.\n%!"
+            "%sCannot declare type %s of kind %a: %s.@."
             (position_range p)
             n
             Pprint.pp_kind k
@@ -159,33 +159,33 @@ let rec process ?(interactive=false) parse lexbuf =
           exit 1
       | System.Invalid_const_declaration (n,p,t,s) ->
           Format.printf
-            "%sCannot declare constant %s of type %a: %s.\n%!"
+            "%sCannot declare constant %s of type %a: %s.@."
             (position_range p)
             n
-            (Pprint.pp_type None) t
+            Pprint.pp_type t
             s ;
           exit 1
       | System.Invalid_pred_declaration (n,p,t,s) ->
           Format.printf
-            "%sCannot declare predicate %s of type %a: %s.\n%!"
+            "%sCannot declare predicate %s of type %a: %s.@."
             (position_range p)
             n
-            (Pprint.pp_type None) t
+            Pprint.pp_type t
             s ;
           exit 1
       | System.Invalid_bound_declaration (n,p,t,s) ->
           Format.printf
-            "%sCannot give bound variable %s the type %a: %s.\n%!"
+            "%sCannot give bound variable %s the type %a: %s.@."
             (position_range p)
             n
-            (Pprint.pp_type None) t
+            Pprint.pp_type t
             s ;
           exit 1
 
       (* definitions *)
       | System.Missing_declaration (n,p) ->
           Format.printf
-            "%sUndeclared constant or predicate %s.\n%!"
+            "%sUndeclared constant or predicate %s.@."
             (match p with
                  Some p -> position_range p
                | None -> position_lex lexbuf)
@@ -193,20 +193,20 @@ let rec process ?(interactive=false) parse lexbuf =
           if interactive then Lexing.flush_input lexbuf else exit 1
       | Typing.Term_typing_error (p,ty1,ty2,unifier) ->
           Format.printf
-            "%sTyping error: this expression has type %s but is used as %s.\n%!"
+            "%sTyping error: this expression has type %a but is used as %a.@."
             (position_range p)
-            (Pprint.type_to_string (Some unifier) ty2)
-            (Pprint.type_to_string (Some unifier) ty1) ;
+            (Pprint.pp_type_norm (Some unifier)) ty2
+            (Pprint.pp_type_norm (Some unifier)) ty1 ;
           if interactive then Lexing.flush_input lexbuf else exit 1
       | Typing.Var_typing_error p ->
           Format.printf
-            "%sTyping error: this free variable cannot be of type %s.\n%!"
+            "%sTyping error: this free variable cannot be of type %a.@."
             (position_range p)
-            (Pprint.type_to_string None Type.TProp) ;
+            Pprint.pp_type Type.TProp ;
           if interactive then Lexing.flush_input lexbuf else exit 1
       | System.Inconsistent_definition (n,p,s) ->
           Format.printf
-            "%sInconsistent extension of definition for %s: %s.\n%!"
+            "%sInconsistent extension of definition for %s: %s.@."
             (position_range p)
             n
             s ;
@@ -214,11 +214,11 @@ let rec process ?(interactive=false) parse lexbuf =
 
       (* queries *)
       | System.Arity_mismatch (t,a) ->
-          Format.printf "Definition %a doesn't have arity %d !\n%!"
+          Format.printf "Definition %a doesn't have arity %d !@."
             Pprint.pp_term t a ;
           if interactive then Lexing.flush_input lexbuf else exit 1
       | Assertion_failed ->
-          Format.printf "Assertion failed.\n%!" ;
+          Format.printf "Assertion failed.@." ;
           if interactive then Lexing.flush_input lexbuf else exit 1
 
       (* unhandled non-interactive errors *)
@@ -226,20 +226,20 @@ let rec process ?(interactive=false) parse lexbuf =
 
       (* interactive errors *)
       | System.Interrupt ->
-          Format.printf "User interruption.\n%!" ;
+          Format.printf "User interruption.@." ;
           Lexing.flush_input lexbuf
       | Prover.Level_inconsistency ->
-          Format.printf "This formula cannot be handled by the left prover!\n%!" ;
+          Format.printf "This formula cannot be handled by the left prover!@." ;
           Lexing.flush_input lexbuf
       | Prover.Abort_search ->
           Format.printf "Proof search aborted!\n" ;
           Lexing.flush_input lexbuf
       | Unify.NotLLambda t ->
-          Format.printf "Not LLambda unification encountered: %a\n%!"
+          Format.printf "Not LLambda unification encountered: %a@."
             Pprint.pp_term t ;
           Lexing.flush_input lexbuf
       | Invalid_command ->
-          Format.printf "Invalid command, or wrong arguments.\n%!" ;
+          Format.printf "Invalid command, or wrong arguments.@." ;
           Lexing.flush_input lexbuf
       | Failure s ->
           Format.printf "%sError: %s\n"
@@ -321,6 +321,7 @@ and command c reset =
 
     (* Tabling-related commands *)
     | System.Equivariant value -> toggle_flag Index.eqvt_tbl value
+    | System.Env -> System.print_env ()
     | System.Show_table (p,name) -> System.show_table (p,Term.atom ~tag:Term.Constant name)
     | System.Clear_tables -> System.clear_tables ()
     | System.Clear_table (p,name) -> System.clear_table (p,Term.atom ~tag:Term.Constant name)
@@ -332,7 +333,7 @@ and command c reset =
     | System.Assert query' ->
         if !test then begin
           let query = System.translate_query query' in
-          Format.eprintf "@[<hv 2>Checking that@ %a@,...@]@\n%!"
+          Format.eprintf "@[<hv 2>Checking that@ %a@,...@]@."
             Pprint.pp_term query ;
           Prover.prove ~level:Prover.One ~local:0 ~timestamp:0 query
             ~success:(fun _ _ -> ()) ~failure:(fun () -> raise Assertion_failed)
@@ -340,7 +341,7 @@ and command c reset =
     | System.Assert_not query' ->
         if !test then begin
           let query = System.translate_query query' in
-          Format.eprintf "@[<hv 2>Checking that@ %a@ is false...@]@\n%!"
+          Format.eprintf "@[<hv 2>Checking that@ %a@ is false...@]@."
             Pprint.pp_term query ;
           Prover.prove ~level:Prover.One ~local:0 ~timestamp:0 query
             ~success:(fun _ _ -> raise Assertion_failed) ~failure:ignore
@@ -348,7 +349,7 @@ and command c reset =
     | System.Assert_raise query' ->
         if !test then begin
           let query = System.translate_query query' in
-          Format.eprintf "@[<hv 2>Checking that@ %a@ causes an error...@]@\n%!"
+          Format.eprintf "@[<hv 2>Checking that@ %a@ causes an error...@]@."
             Pprint.pp_term query ;
           if
             try

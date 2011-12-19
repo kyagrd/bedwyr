@@ -89,34 +89,41 @@ let pp_kind chan ki =
 let kind_to_string ki =
   do_formatter (fun () -> pp_kind formatter ki)
 
-let pp_type unifier chan ty =
-  let ty = match unifier with
-    | None -> ty
-    | Some unifier -> Typing.ty_norm unifier ty
-  in
+let pp_type chan ty =
   let rec aux chan = function
     | Ty name ->
-        fprintf chan "@[%s@]" name
+        fprintf chan "%s" name
     | TProp ->
-        fprintf chan "@[{prop}@]"
+        fprintf chan "{prop}"
     | TString ->
-        fprintf chan "@[{string}@]"
+        fprintf chan "{string}"
+    | TNat ->
+        fprintf chan "{nat}"
     | TRArrow (ty1::tys,ty2) ->
         fprintf chan "@[(%a -> %a)@]" aux ty1 aux (TRArrow (tys,ty2))
     | TRArrow ([],ty) ->
         aux chan ty
     | TVar i ->
-        fprintf chan "@[?%d@]" i
+        fprintf chan "?%d" i
   in
   fprintf chan "@[%a@]" aux ty
 
-let type_to_string unifier ty =
-  do_formatter (fun () -> pp_type unifier formatter ty)
+let type_to_string ty =
+  do_formatter (fun () -> pp_type formatter ty)
+
+let pp_type_norm unifier chan ty =
+  let ty = match unifier with
+    | None -> Typing.ty_norm ty
+    | Some unifier -> Typing.ty_norm ~unifier ty
+  in pp_type chan ty
+
+let type_to_string_norm unifier ty =
+  do_formatter (fun () -> pp_type_norm unifier formatter ty)
 
 let pp_unifier chan unifier =
   fprintf chan "@[{";
   Typing.iter
-    (fun i ty -> fprintf chan "@[ %d : %a ;@]" i (pp_type None) ty)
+    (fun i ty -> fprintf chan "@[ %d : %a ;@]" i pp_type ty)
     unifier;
   fprintf chan "}@]%!"
 
@@ -153,6 +160,7 @@ let print_full ~generic ~bound chan term =
           fprintf chan "%s"
             (get_nth bound (i-1) ("db(" ^ (string_of_int i) ^ ")"))
       | QString s -> fprintf chan "\"%s\"" s
+      | Nat i -> fprintf chan "%d" i
       | True -> fprintf chan "true"
       | False -> fprintf chan "false"
       | Eq (t1,t2) ->

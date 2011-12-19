@@ -66,6 +66,7 @@ type command =
   | Debug               of string option
   | Time                of string option
   | Equivariant         of string option
+  | Env
   | Show_table          of Typing.pos * string
   | Clear_tables
   | Clear_table         of Typing.pos * string
@@ -166,7 +167,7 @@ let kind_check ty =
           | [] -> PropTarget
           | _ -> PropArgument
         end
-    | Type.TString ->
+    | Type.TString | Type.TNat ->
         begin match tys with
           | [] -> NotPropTarget
           | ty::tys -> aux ty tys
@@ -195,14 +196,14 @@ let declare_const (p,name) ty =
     | TypeVariable ->
         raise (Invalid_const_declaration (name,p,ty,"no type variables yet"))
     | Undeclared ty' ->
-        raise (Invalid_const_declaration (name,p,ty,Format.sprintf "type %s was not declared" (Pprint.type_to_string None ty')))
+        raise (Invalid_const_declaration (name,p,ty,Format.sprintf "type %s was not declared" (Pprint.type_to_string ty')))
     | PropArgument ->
-        raise (Invalid_const_declaration (name,p,ty,Format.sprintf "%s can only be a target type for a predicate" (Pprint.type_to_string None Type.TProp)))
+        raise (Invalid_const_declaration (name,p,ty,Format.sprintf "%s can only be a target type for a predicate" (Pprint.type_to_string Type.TProp)))
     | NotPropTarget
     | FlexType ->
         Hashtbl.add const_types const_var ty
     | PropTarget ->
-        raise (Invalid_const_declaration (name,p,ty,Format.sprintf "%s can only be a target type for a predicate" (Pprint.type_to_string None Type.TProp)))
+        raise (Invalid_const_declaration (name,p,ty,Format.sprintf "%s can only be a target type for a predicate" (Pprint.type_to_string Type.TProp)))
 
 let create_def (flavour,p,name,ty) =
   let head_var = Term.get_var (Term.atom ~tag:Term.Constant name) in
@@ -216,11 +217,11 @@ let create_def (flavour,p,name,ty) =
     | TypeVariable ->
         raise (Invalid_pred_declaration (name,p,ty,"no type variables yet"))
     | Undeclared ty' ->
-        raise (Invalid_pred_declaration (name,p,ty,Format.sprintf "type %s was not declared" (Pprint.type_to_string None ty')))
+        raise (Invalid_pred_declaration (name,p,ty,Format.sprintf "type %s was not declared" (Pprint.type_to_string ty')))
     | PropArgument ->
-        raise (Invalid_pred_declaration (name,p,ty,Format.sprintf "%s can only be a target type" (Pprint.type_to_string None Type.TProp)))
+        raise (Invalid_pred_declaration (name,p,ty,Format.sprintf "%s can only be a target type" (Pprint.type_to_string Type.TProp)))
     | NotPropTarget ->
-        raise (Invalid_pred_declaration (name,p,ty,Format.sprintf "target type can only be %s" (Pprint.type_to_string None Type.TProp)))
+        raise (Invalid_pred_declaration (name,p,ty,Format.sprintf "target type can only be %s" (Pprint.type_to_string Type.TProp)))
     | FlexType
     | PropTarget ->
         (* Cleanup all tables.
@@ -332,13 +333,13 @@ let translate_term ?(expected_type=Type.TProp) pre_term free_types =
           raise (Invalid_bound_declaration (name,p,ty,Format.sprintf "type is not of kind %s" (Pprint.kind_to_string Type.KType)))
       | TypeVariable -> ty
       | Undeclared ty' ->
-          raise (Invalid_bound_declaration (name,p,ty,Format.sprintf "type %s was not declared" (Pprint.type_to_string None ty')))
+          raise (Invalid_bound_declaration (name,p,ty,Format.sprintf "type %s was not declared" (Pprint.type_to_string ty')))
       | PropArgument ->
-          raise (Invalid_bound_declaration (name,p,ty,Format.sprintf "%s can only be a target type for a predicate" (Pprint.type_to_string None Type.TProp)))
+          raise (Invalid_bound_declaration (name,p,ty,Format.sprintf "%s can only be a target type for a predicate" (Pprint.type_to_string Type.TProp)))
       | NotPropTarget
       | FlexType -> ty
       | PropTarget ->
-          raise (Invalid_bound_declaration (name,p,ty,Format.sprintf "%s can only be a target type for a predicate" (Pprint.type_to_string None Type.TProp)))
+          raise (Invalid_bound_declaration (name,p,ty,Format.sprintf "%s can only be a target type for a predicate" (Pprint.type_to_string Type.TProp)))
   in
   Typing.type_check_and_translate pre_term expected_type typed_free_var typed_declared_var typed_intern_var bound_var_type
 
@@ -401,7 +402,7 @@ let mk_clause p head body =
       (Term.logic_vars [body])
   in
   if !debug then
-    Format.eprintf "%a := %a\n%!"
+    Format.eprintf "%a := %a@."
       Pprint.pp_term (Term.app pred (List.rev new_params))
       Pprint.pp_term body ;
   (* body       Exists\\ U=X /\ (V=(f X (1)) /\ (g X (1) (2)))
@@ -494,6 +495,44 @@ let get_def ~check_arity head_tm =
 let remove_def head_tm =
   let head_var = Term.get_var head_tm in
   Hashtbl.remove defs head_var
+
+let print_env () =
+  let print_types () =
+    Format.printf "@[<hov 2>*** Types ***" ;
+    Hashtbl.iter
+      (fun v k -> Format.printf "@\n@[%s : %a@]"
+                    (Term.get_var_name v)
+                    Pprint.pp_kind k)
+      type_kinds ;
+    Format.printf "@]@\n"
+  in
+  let print_constants () =
+    Format.printf "@[<b 2>*** Constants ***" ;
+    Hashtbl.iter
+      (fun v t -> Format.printf "@\n@[%s : %a@]"
+                    (Term.get_var_name v)
+                    (Pprint.pp_type_norm None) t)
+      const_types ;
+    Format.printf "@]@\n"
+  in
+  let print_predicates () =
+    let string_of_flavour = function
+      | Normal -> ""
+      | Inductive -> "inductive "
+      | CoInductive -> "coinductive "
+    in
+    Format.printf "@[<b 2>*** Predicates ***" ;
+    Hashtbl.iter
+      (fun v (f,_,_,t) -> Format.printf "@\n@[%s%s : %a@]"
+                            (string_of_flavour f)
+                            (Term.get_var_name v)
+                            (Pprint.pp_type_norm None) t)
+      defs  ;
+    Format.printf "@]@."
+  in
+  print_types () ;
+  print_constants ();
+  print_predicates ()
 
 let show_table (p,head_tm) =
   try

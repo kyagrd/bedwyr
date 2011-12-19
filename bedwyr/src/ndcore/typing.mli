@@ -31,6 +31,8 @@ val change_pos :
 
 val pre_qstring : pos -> string -> preterm
 
+val pre_nat : pos -> int -> preterm
+
 val pre_freeid : pos -> string -> preterm
 
 val pre_predconstid : pos -> string -> preterm
@@ -67,7 +69,7 @@ val iter : (int -> Type.simple_type -> unit) -> type_unifier -> unit
 
 (** Display a type in its {i ground form}, ie a unique form with regards to the
   * unifier. *)
-val ty_norm : type_unifier -> Type.simple_type -> Type.simple_type
+val ty_norm : ?unifier:type_unifier -> Type.simple_type -> Type.simple_type
 
 (** {6 Type checking} *)
 
