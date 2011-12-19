@@ -19,6 +19,18 @@ if test "$OCAMLDEP" = no ; then
 	AC_MSG_ERROR(Cannot find ocamldep.)
 fi
 
+AC_ARG_ENABLE([doc],
+   AC_HELP_STRING(
+      [--enable-doc],
+      [build html documentation from the sources (disabled by default)]))
+
+if test "$enable_doc" = "yes" ; then
+        AC_PATH_PROG(OCAMLDOC,ocamldoc,no)
+        if test "$OCAMLDEP" = no ; then
+                AC_MSG_ERROR(Cannot find ocamldoc.)
+        fi
+fi
+
 AC_PATH_PROG(OCAMLLEX,ocamllex,no)
 if test "$OCAMLLEX" = no ; then
 	AC_MSG_ERROR(Cannot find ocamllex.)
@@ -37,27 +49,36 @@ AC_ARG_ENABLE([nativecode],
 if test "$enable_nativecode" = "no" ; then
     cma=cma
     cmo=cmo
-    cmi=cmi
-    ocamlcflags=""
-    ocamllflags="-linkpkg"
     OCAMLC="ocamlc"
 else
     cma=cmxa
     cmo=cmx
-    cmi=cmi
-    ocamlcflags=""
-    ocamllflags="-linkpkg"
     OCAMLC="ocamlopt"
     OCAMLDEP="$OCAMLDEP -native"
 fi
 
+AC_ARG_ENABLE([debug],
+   AC_HELP_STRING(
+      [--enable-debug],
+      [compile bedwyr with debugging information (disabled by default)]))
+
+if test "$enable_debug" = "yes" ; then
+    OCAMLCFLAGS="-g "
+    OCAMLLFLAGS="-g"
+else
+    OCAMLCFLAGS=""
+    OCAMLLFLAGS=""
+fi
+
 AC_SUBST(OCAMLC)
 AC_SUBST(OCAMLDEP)
+AC_SUBST(OCAMLDOC)
 AC_SUBST(OCAMLLEX)
 AC_SUBST(OCAMLYACC)
+AC_SUBST(OCAMLCFLAGS)
+AC_SUBST(OCAMLLFLAGS)
 AC_SUBST(cma)
 AC_SUBST(cmo)
-AC_SUBST(cmi)
 
 AC_CONFIG_FILES([src/Makefile],[chmod a-w src/Makefile])
 AC_CONFIG_FILES([Makefile],[chmod a-w Makefile])

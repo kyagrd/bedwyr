@@ -5,10 +5,10 @@ all: bedwyr
 
 cmo = @cmo@
 cma = @cma@
-OCAMLC = @OCAMLC@ -c -I ndcore -I ndcore/tests
-OCAMLL = @OCAMLC@
+OCAMLC = @OCAMLC@ @OCAMLCFLAGS@ -c -I ndcore -I ndcore/tests
+OCAMLL = @OCAMLC@ @OCAMLLFLAGS@
 OCAMLDEP = @OCAMLDEP@ -I ndcore -I ndcore/tests
-OCAMLDOC = ocamldoc -m A -I ndcore/
+OCAMLDOC = @OCAMLDOC@ -m A -I ndcore/
 OCAMLYACC = @OCAMLYACC@ -v
 OCAMLLEX = @OCAMLLEX@
 VERSION = @PACKAGE_VERSION@
@@ -16,7 +16,7 @@ VERSION = @PACKAGE_VERSION@
 # SOURCE FILES
 
 CORE_ML    = ndcore/term.ml ndcore/norm.ml ndcore/unify.ml ndcore/index.ml \
-	     type.ml typing.ml pprint.ml
+	     ndcore/type.ml ndcore/typing.ml ndcore/pprint.ml
 TEST_ML    = ndcore/tests/oUnit.ml ndcore/tests/test.ml
 BEDWYR_ML  = table.ml system.ml prover.ml \
 	     config.ml parser.ml lexer.ml \
@@ -58,8 +58,11 @@ test: ndcore/test
 	ndcore/test
 ndcore/test: $(TEST)
 	$(OCAMLL) unix.$(cma) $(TEST) -o ndcore/test
+
 doc:
+ifneq (@OCAMLDOC@,)
 	$(OCAMLDOC) -stars -d ../doc -html $(CORE_SRC) $(BEDWYR_SRC)
+endif
 
 # MISC
 
