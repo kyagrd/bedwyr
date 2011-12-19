@@ -159,6 +159,7 @@ type command =
   | Time of string option (** turn timing on/off (default off) *)
   | Equivariant of string option (** turn equivariant tabling on/off (default on) *)
   | Env (** call [print_env] *)
+  | Type_of of Typing.preterm (** call [print_type_of] *)
   | Show_table of Typing.pos * string (** call [show_table] *)
   | Clear_tables (** call [clear_tables] *)
   | Clear_table of Typing.pos * string (** call [clear_table] *)
@@ -200,12 +201,12 @@ exception Invalid_pred_declaration of string * Typing.pos *
 exception Invalid_bound_declaration of string * Typing.pos *
             Type.simple_type * string
 
-val declare_const : Typing.pos * string -> Type.simple_type' -> unit
+val declare_const : Typing.pos * string -> Type.simple_type -> unit
 
 (** Declare a predicate.
   * @return a variable corresponding to this predicate *)
 val create_def :
-  flavour * Typing.pos * string * Type.simple_type' -> Term.var
+  flavour * Typing.pos * string * Type.simple_type -> Term.var
 
 (** {6 Typechecking, predicates definitions} *)
 
@@ -214,8 +215,10 @@ exception Inconsistent_definition of string * Typing.pos * string
 
 (** Translate a pre-term, with typing and position information,
   * into a term, with variable sharing.
-  * Type checking is done on the fly,
-  * and no type information is kept in the terms from this point. *)
+  * Type checking (or rather type inference) is done on the fly,
+  * and no type information is kept in the terms from this point.
+  * If the term isn't well typed, or has a type that isn't [prop],
+  * an exception is raised and the global type unifier isn't updated. *)
 val translate_query : Typing.preterm -> Term.term
 
 (** Add a clause to the definition of a declared predicate.
@@ -242,13 +245,20 @@ val reset_defs : unit -> unit
   *)
 val get_def :
   check_arity:int ->
-  Term.term -> flavour * Term.term * Table.t option * Type.simple_type'
+  Term.term -> flavour * Term.term * Table.t option * Type.simple_type
 
 (** Remove a definition. *)
 val remove_def : Term.term -> unit
 
 (** Display the inferred type of every declared object. *)
 val print_env : unit -> unit
+
+(** Perform type checking on a pre-term and display the inferred type.
+  * The goal of this is to use the REPL to check the validity of a term
+  * without messing with the future inference,
+  * so the global type unifier is left unchanged
+  * even if the term is well typed and of type [prop]. *)
+val print_type_of : Typing.preterm -> unit
 
 (** Display the content of a table. *)
 val show_table : Typing.pos * Term.term -> unit

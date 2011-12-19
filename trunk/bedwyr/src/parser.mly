@@ -41,7 +41,7 @@
 %token TO WITH ON AS KEEP
 %token LBRACK RBRACK TURN STAR AT PLUS HASH
 %token EXIT HELP INCLUDE RESET RELOAD SESSION DEBUG TIME
-%token EQUIVARIANT ENV SHOW_TABLE CLEAR_TABLES CLEAR_TABLE SAVE_TABLE
+%token EQUIVARIANT ENV TYPEOF SHOW_TABLE CLEAR_TABLES CLEAR_TABLE SAVE_TABLE
 %token ASSERT ASSERT_NOT ASSERT_RAISE
 %token UNDERSCORE
 
@@ -108,6 +108,7 @@ meta_command:
   | HASH TIME opt_arg DOT               { System.Command (System.Time $3) }
   | HASH EQUIVARIANT opt_arg DOT        { System.Command (System.Equivariant $3) }
   | HASH ENV DOT                        { System.Command (System.Env) }
+  | HASH TYPEOF formula DOT             { System.Command (System.Type_of $3) }
   | HASH SHOW_TABLE lower_id DOT        { System.Command (System.Show_table (pos 3,$3)) }
   | HASH CLEAR_TABLES DOT               { System.Command (System.Clear_tables) }
   | HASH CLEAR_TABLE lower_id DOT       { System.Command (System.Clear_table (pos 3,$3)) }
@@ -182,7 +183,7 @@ term_abs:
 term:
   | term_list                           { let t,l = $1 in
                                           Typing.pre_app (pos 1) t l }
-  | token_id INFIX_ID token_id          { Typing.pre_app
+  | term INFIX_ID term                  { Typing.pre_app
                                             (pos 0)
                                             (Typing.pre_predconstid (pos 2) $2)
                                             [$1; $3] }
