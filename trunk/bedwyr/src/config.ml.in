@@ -19,6 +19,6 @@
 
 (** Build-time global variables. *)
 
-let package_name = "{PACKAGE_NAME}"
-let package_version = "{PACKAGE_VERSION}"
-let build = "{BUILD}"
+let package_name = "@PACKAGE_NAME@"
+let package_version = "@PACKAGE_VERSION@"
+let build = "@REVISION@"

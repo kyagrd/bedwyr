@@ -8,6 +8,7 @@ HTML = userguide.html
 
 clean:
 	rm -f $(PS) $(PDF) $(HTML)
+	rm -f *.aux *.log *.toc
 
 %.pdf: %.tex
 	pdflatex $<
