@@ -7,12 +7,17 @@ ARCH=$(PACKAGE_TARNAME)-$(PACKAGE_VERSION)
 
 TAR = @TAR@
 
+prefix        =@prefix@
+exec_prefix   =@exec_prefix@
+libdir        =@libdir@
+
 cmo = @cmo@
 cma = @cma@
-OCAMLC = @OCAMLC@ @OCAMLCFLAGS@ -c -I ndcore -I ndcore/tests
-OCAMLL = @OCAMLC@ @OCAMLLFLAGS@
-OCAMLDEP = @OCAMLDEP@ -I ndcore -I ndcore/tests
-OCAMLDOC = @OCAMLDOC@ -stars -m A -I ndcore/
+INCLUDES = -I ndcore -I ndcore/tests
+OCAMLC = @OCAMLC@ @OCAMLCFLAGS@ -I $(libdir)/ocaml/slimmer $(INCLUDES) -c
+OCAMLL = @OCAMLC@ @OCAMLLFLAGS@ -I $(libdir)/ocaml/slimmer $(INCLUDES)
+OCAMLDEP = @OCAMLDEP@ $(INCLUDES)
+OCAMLDOC = @OCAMLDOC@ -stars -m A -I ndcore
 OCAMLYACC = @OCAMLYACC@ -v
 OCAMLLEX = @OCAMLLEX@
 
@@ -44,39 +49,36 @@ BEDWYR_O = $(BEDWYR_ML:.ml=.$(cmo))
 
 # BUILDING
 
-all: bedwyr
+all: ndcore.$(cma) bedwyr
 
 # TODO build ndcore.cma *and* ndcore.cmxa,
-# since it is a lib, not just a part of bedwyr
-ndcore.$(cma): $(CORE_O)
+# since it must be installed as a lib,
+# not just used during the compilation of bedwyr
+ndcore/ndcore.$(cma): $(CORE_O)
 	$(OCAMLL) $^ -a -o $@
 
-ndcore/test: ndcore.$(cma) $(TEST_O)
-	$(OCAMLL) unix.$(cma) $^ -o $@
+ndcore/test: $(TEST_O)
+	$(OCAMLL) unix.$(cma) ndcore.$(cma) $^ -o $@
 
-bedwyr: ndcore.$(cma) $(BEDWYR_O)
-	$(OCAMLL) unix.$(cma) $^ -o $@
+bedwyr: $(BEDWYR_O)
+	$(OCAMLL) unix.$(cma) ndcore.$(cma) $^ -o $@
 
 -include depend
 depend: $(CORE_SRC) $(TEST_SRC) $(BEDWYR_SRC)
 	$(OCAMLDEP) $^ > depend
 
-%.$(cmo): %.ml
+.SUFFIXES: .mll .mly .ml .cmo .cmx .mli .cmi
+
+.ml.$(cmo):
 	$(OCAMLC) $<
-%.cmi: %.mli
+.mli.cmi:
 	$(OCAMLC) $<
-%.ml: %.mly
+.mly.ml:
 	$(OCAMLYACC) $<
-%.mli: %.mly
+.mly.mli:
 	$(OCAMLYACC) $<
-%.ml: %.mll
+.mll.ml:
 	$(OCAMLLEX) $<
-%.ml: %.ml.in
-	@sed \
-	  -e 's|{PACKAGE_NAME}|$(PACKAGE_NAME)|'\
-	  -e 's|{PACKAGE_VERSION}|$(PACKAGE_VERSION)|'\
-	  -e 's|{BUILD}|$(shell (svn info 2>&- || git svn info 2>&-) | grep Revision | sed -e "s/Revision: //")|'\
-	  $^ > $@
 
 # OTHER TARGETS
 
@@ -84,10 +86,17 @@ test: ndcore/test
 	$<
 
 .PHONY: doc
-doc: bedwyr $(CORE_MLI) $(BEDWYR_MLI)
+ndcore_doc: ndcore/ndcore.$(cma) $(CORE_MLI)
 ifneq (@OCAMLDOC@,)
-	$(OCAMLDOC) -d ../doc/html -html $(CORE_MLI) $(BEDWYR_MLI)
+	$(OCAMLDOC) -d ../doc/html/ndcore -html $(CORE_MLI)
 endif
+
+bedwyr_doc: bedwyr $(BEDWYR_MLI)
+ifneq (@OCAMLDOC@,)
+	$(OCAMLDOC) -d ../doc/html/bedwyr -html $(BEDWYR_MLI)
+endif
+
+doc: ndcore_doc bedwyr_doc
 
 $(PACKAGE_TARNAME).tar: $(CORE_FILES) $(TEST_FILES) $(BEDWYR_FILES)
 	$(TAR) -cf $@ --xform 's|^|$(ARCH)/src/|' $^
@@ -101,4 +110,4 @@ clean:
 	rm -f *.cm[ixoa] *.cmxa *.[oa]
 	rm -f ndcore/*.cm[ixoa] ndcore/*.cmxa ndcore/*.[oa]
 	rm -f ndcore/tests/*.cm[ixoa] ndcore/tests/*.cmxa ndcore/tests/*.[oa]
-	rm -f ../doc/html/*.html
+	rm -f ../doc/html/*/*

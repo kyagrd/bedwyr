@@ -1,8 +1,10 @@
 
-AC_INIT([Bedwyr],[1.3-alpha3],[https://gforge.inria.fr/tracker/?atid=1543&group_id=367],[bedwyr],[http://slimmer.gforge.inria.fr/bedwyr/])
+AC_INIT([Bedwyr],[1.3-alpha4],[https://gforge.inria.fr/tracker/?atid=1543&group_id=367],[bedwyr],[http://slimmer.gforge.inria.fr/bedwyr/])
 AC_PREREQ(2.57)
 AC_CONFIG_SRCDIR([src/main.ml])
 AC_PROG_INSTALL
+
+REVISION=$((svn info 2>&- || git svn info 2>&-) | grep Revision | sed -e "s/Revision: //" | tr -d '\n')
 
 #
 # OCaml stuff
@@ -37,7 +39,7 @@ fi
 AC_ARG_ENABLE([doc],
    AC_HELP_STRING(
       [--enable-doc],
-      [build html documentation from the sources (disabled by default)]))
+      [build the html documentation from the sources (disabled by default)]))
 
 if test "$enable_doc" = "yes" ; then
         AC_PATH_PROG(OCAMLDOC,ocamldoc,no)
@@ -78,7 +80,7 @@ AC_ARG_ENABLE([debug],
       [compile bedwyr with debugging information (disabled by default)]))
 
 if test "$enable_debug" = "yes" ; then
-    OCAMLCFLAGS="-g "
+    OCAMLCFLAGS="-g"
     OCAMLLFLAGS="-g"
 else
     OCAMLCFLAGS=""
@@ -94,7 +96,9 @@ AC_SUBST(OCAMLCFLAGS)
 AC_SUBST(OCAMLLFLAGS)
 AC_SUBST(cma)
 AC_SUBST(cmo)
+AC_SUBST(REVISION)
 
+AC_CONFIG_FILES([src/config.ml],[chmod a-w src/config.ml])
 AC_CONFIG_FILES([src/Makefile],[chmod a-w src/Makefile])
 AC_CONFIG_FILES([Makefile],[chmod a-w Makefile])
 AC_OUTPUT
