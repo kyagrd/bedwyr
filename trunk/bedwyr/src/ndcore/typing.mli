@@ -113,6 +113,7 @@ val type_check_and_translate :
   preterm ->
   Type.simple_type ->
   (pos * string -> Term.term * Type.simple_type) ->
+  ((Type.simple_type -> Type.simple_type) -> unit) ->
   (pos * string -> Term.term * Type.simple_type) ->
   (pos * string -> Term.term * Type.simple_type) ->
   (pos * string * Type.simple_type -> Type.simple_type) -> bool ->

@@ -242,7 +242,7 @@ let build_abstraction_types arity =
   in
   aux [] (fresh_tyvar ()) arity
 
-let type_check_and_translate pre_term expected_type typed_free_var typed_declared_var typed_intern_var bound_var_type infer =
+let type_check_and_translate pre_term expected_type typed_free_var normalize_types typed_declared_var typed_intern_var bound_var_type infer =
   let find_db s bvars =
     let rec aux n = function
       | [] -> None
@@ -349,5 +349,7 @@ let type_check_and_translate pre_term expected_type typed_free_var typed_declare
   if infer then begin
     global_unifier := unifier ;
     term,expected_type
-  end else
+  end else begin
+    normalize_types (ty_norm ~unifier:unifier) ;
     term,(ty_norm ~unifier:unifier expected_type)
+  end
