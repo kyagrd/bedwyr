@@ -197,7 +197,7 @@ exception Missing_declaration of string * Typing.pos option
 exception Inconsistent_definition of string * Typing.pos * string
 
 
-let translate_term ?(infer=true) ?(expected_type=Type.TProp) pre_term free_types =
+let translate_term ?(pure_args=[]) ?(infer=true) ?(expected_type=Type.TProp) pre_term free_types =
   (* return (and create if needed) a typed variable
    * corresponding to the name of a free variable *)
   let typed_free_var (_,name) =
@@ -301,7 +301,7 @@ let translate_term ?(infer=true) ?(expected_type=Type.TProp) pre_term free_types
   let bound_var_type (p,name,ty) =
     let _ = kind_check ty in ty
   in
-  Typing.type_check_and_translate pre_term expected_type typed_free_var normalize_types typed_declared_var typed_intern_var bound_var_type infer
+  Typing.type_check_and_translate pre_term expected_type typed_free_var normalize_types typed_declared_var typed_intern_var bound_var_type infer pure_args
 
 let translate_query pre_term =
   let free_types : (Term.var,Type.simple_type) Hashtbl.t =
@@ -388,8 +388,9 @@ let add_clause new_predicates (p,pre_head,pre_body) =
   let free_types : (Term.var,Type.simple_type) Hashtbl.t =
     Hashtbl.create 10
   in
-  let head,_ = translate_term pre_head free_types in
-  let body,_ = translate_term pre_body free_types in
+  let pure_args = Typing.pure_args pre_head in
+  let head,_ = translate_term ~pure_args pre_head free_types in
+  let body,_ = translate_term ~pure_args pre_body free_types in
   let head,arity,body =
     mk_clause p head body
   in

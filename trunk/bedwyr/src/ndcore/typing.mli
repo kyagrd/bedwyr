@@ -90,7 +90,10 @@ val ty_norm : ?unifier:type_unifier -> Type.simple_type -> Type.simple_type
 
 exception Term_typing_error of pos * Type.simple_type * Type.simple_type *
             type_unifier
-exception Var_typing_error of string option * pos option * Type.simple_type
+exception Var_typing_error of string option * pos * Type.simple_type
+
+(** Find which arguments of an application are free variables. *)
+val pure_args : preterm -> string list
 
 (** Type-check and translate a pre-term.
   * Either succeeds and realizes the type unification as side effect,
@@ -115,6 +118,9 @@ exception Var_typing_error of string option * pos option * Type.simple_type
   * @param bound_var_type a function returning the type of a bound variable
   * @param infer whether the result of the inference is to be kept in the
   * global type unifier or not
+  * @param pure_args names of free variables used as argument of a
+  * top-level application, ie which will be abstracted on,
+  * and whose type can therefore contain TProp
   * @return a type-checked Term.term and its type
   * @raise Var_typing_error if a free variable of type [prop] is found
   * @raise Term_typing_error if the pre-tem isn't well typed *)
@@ -125,5 +131,6 @@ val type_check_and_translate :
   ((Term.var -> Type.simple_type -> Type.simple_type) -> unit) ->
   (pos * string -> Term.term * Type.simple_type) ->
   (pos * string -> Term.term * Type.simple_type) ->
-  (pos * string * Type.simple_type -> Type.simple_type) -> bool ->
+  (pos * string * Type.simple_type -> Type.simple_type) ->
+  bool -> string list ->
   Term.term * Type.simple_type
