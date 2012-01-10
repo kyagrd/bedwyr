@@ -184,7 +184,7 @@ let ty_norm ?unifier ty =
 (* type checking *)
 exception Type_unification_error of simple_type * simple_type * simple_type Unifier.t
 exception Term_typing_error of pos * simple_type * simple_type * simple_type Unifier.t
-exception Var_typing_error of string option * pos option * simple_type
+exception Var_typing_error of string option * pos * simple_type
 
 let occurs unifier i =
   let rec aux = function
@@ -242,7 +242,19 @@ let build_abstraction_types arity =
   in
   aux [] (fresh_tyvar ()) arity
 
-let type_check_and_translate pre_term expected_type typed_free_var normalize_types typed_declared_var typed_intern_var bound_var_type infer =
+let pure_args pre_term =
+  let in_arg accum = function
+    | FreeID (_,s) -> s::accum
+    | _ -> accum
+  in
+  let rec in_app = function
+    | App (_,phd,pargs) ->
+        List.rev_append (in_app phd) (List.fold_left in_arg [] pargs)
+    | _ -> []
+  in
+  in_app pre_term
+
+let type_check_and_translate pre_term expected_type typed_free_var normalize_types typed_declared_var typed_intern_var bound_var_type infer pure_args =
   let find_db s bvars =
     let rec aux n = function
       | [] -> None
@@ -325,7 +337,7 @@ let type_check_and_translate pre_term expected_type typed_free_var normalize_typ
                  kind_check ty KType (fun _ -> KType)
                in
                if higher_order || propositional
-               then raise (Var_typing_error (None,Some p,ty)))
+               then raise (Var_typing_error (None,p,ty)))
             vars ;
           Term.binder b arity t,u
       | Lam (p,vars,pt) ->
@@ -357,12 +369,16 @@ let type_check_and_translate pre_term expected_type typed_free_var normalize_typ
   normalize_types
     (fun v ty ->
        let ty = ty_norm ~unifier:unifier ty in
-       let (_,_,higher_order,propositional) =
-         (* TODO replace this dummy atomic_kind by a no-op one *)
-         kind_check ty KType (fun _ -> KType)
-       in
-       if higher_order || propositional
-       then raise (Var_typing_error (Some (Term.get_var_name v),None,ty)) ;
+       let n = Term.get_var_name v in
+       let pure = List.mem n pure_args in
+       if not pure then begin
+         let (_,_,higher_order,propositional) =
+           (* TODO replace this dummy atomic_kind by a no-op one *)
+           kind_check ty KType (fun _ -> KType)
+         in
+         if higher_order || propositional
+         then raise (Var_typing_error (Some n,get_pos pre_term,ty))
+       end ;
        ty) ;
   if infer then begin
     global_unifier := unifier ;

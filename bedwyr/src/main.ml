@@ -221,9 +221,7 @@ let rec process ?(interactive=false) parse lexbuf =
       | Typing.Var_typing_error (n,p,ty) ->
           Format.printf
             "%sTyping error: cannot "
-            (match p with
-               | Some p -> position_range p
-               | None -> position_lex lexbuf) ;
+            (position_range p) ;
           (match n with
              | Some n -> Format.printf
                            "give free variable %s the type %a.@." n
