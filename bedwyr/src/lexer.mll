@@ -21,7 +21,7 @@
   open Parser
   open Lexing
 
-  exception Illegal_string
+  exception Illegal_string of char
 
   (* XXX incrline = new_line in OCaml >= 3.11.0 *)
   let incrline lexbuf =
@@ -42,22 +42,26 @@ let uchar = ['A'-'Z']
 let lchar = ['a'-'z']
 (* special symbols *)
 let prefix_special = ['`' '\'' '$']
-let infix_special  = ['+' '-' '*' '^' '<' '>' '=' '~' '|']
+let infix_special  = ['+' '-' '*' '^' '<' '>' '=' '~' '|' ':']
 let tail_special   = ['?' '!' '@' '#' '&' '_']
 
-let special_char = prefix_special | infix_special | tail_special
-let any_char = uchar | lchar | digit | special_char
+(*let special_char = prefix_special | infix_special | tail_special
+let any_char = uchar | lchar | digit | special_char*)
 let safe_char = uchar | lchar | digit |  prefix_special | tail_special
 
-let upper_name = uchar | (uchar any_char* safe_char)
+(*let upper_name = uchar | (uchar any_char* safe_char)
 let lower_name = (lchar|prefix_special) | ((lchar|prefix_special) any_char* safe_char)
 let infix_name = infix_special (special_char)*
-let intern_name = '_' any_char* safe_char
+let intern_name = '_' any_char* safe_char*)
+let upper_name = uchar safe_char*
+let lower_name = (lchar|prefix_special) safe_char*
+let infix_name = infix_special+
+let intern_name = '_' safe_char*
 
 let blank = ' ' | '\t' | '\r'
 
 let in_comment = '/' | '*' | [^'/' '*' '\n']+
-let in_qstring = [^'"' '\n']+
+let in_qstring = [^'\\' '"' '\n']+
 
 rule token = parse
   | "/*"                { comment 0 lexbuf }
@@ -205,7 +209,7 @@ rule token = parse
   | '\x04'              (* ctrl-D *)
   | eof                 { EOF }
 
-  | _                   { raise Illegal_string }
+  | _ as c              { raise (Illegal_string c) }
 
 and comment level = parse
   | in_comment          { comment level lexbuf }
@@ -219,6 +223,14 @@ and comment level = parse
   | eof                 { failwith "comment not closed at end of file" }
 
 and qstring = parse
+  | "\\\\"              { Buffer.add_char strbuf '\\' ;
+                          qstring lexbuf }
+  | "\\\""              { Buffer.add_char strbuf '"' ;
+                          qstring lexbuf }
+  | "\\\n"              { incrline lexbuf ;
+                          qstring lexbuf }
+  | '\\' (_ as c)       { Buffer.add_char strbuf c ;
+                          qstring lexbuf }
   | in_qstring as s     { Buffer.add_string strbuf s ;
                           qstring lexbuf }
   | '"'                 { let pos = (!strstart,lexbuf.lex_curr_p) in

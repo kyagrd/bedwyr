@@ -153,10 +153,10 @@ let rec process ?(interactive=false) parse lexbuf =
     with
       (* I/O *)
       | End_of_file -> raise End_of_file
-      | Lexer.Illegal_string ->
-          Format.printf "%sIllegal string starting with \"%s\" in input.@."
+      | Lexer.Illegal_string c ->
+          Format.printf "%sIllegal string starting with '%s' in input.@."
             (position_lex lexbuf)
-            (String.escaped (Lexing.lexeme lexbuf)) ;
+            (Char.escaped c) ;
           interactive_or_exit interactive lexbuf
       | Parsing.Parse_error ->
           Format.printf "%sSyntax error.@."
