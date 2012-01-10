@@ -170,36 +170,28 @@ let rec process ?(interactive=false) parse lexbuf =
             (position_lex lexbuf)
             n ;
           interactive_or_exit interactive lexbuf
-      | System.Invalid_type_declaration (n,p,k,s) ->
+      | System.Invalid_type_declaration (n,p,ki,s) ->
           Format.printf
             "%sCannot declare type %s of kind %a: %s.@."
             (position_range p)
             n
-            Pprint.pp_kind k
+            Pprint.pp_kind ki
             s ;
           exit 1
-      | System.Invalid_const_declaration (n,p,t,s) ->
+      | System.Invalid_const_declaration (n,p,ty,s) ->
           Format.printf
             "%sCannot declare constant %s of type %a: %s.@."
             (position_range p)
             n
-            Pprint.pp_type t
+            Pprint.pp_type ty
             s ;
           exit 1
-      | System.Invalid_pred_declaration (n,p,t,s) ->
+      | System.Invalid_pred_declaration (n,p,ty,s) ->
           Format.printf
             "%sCannot declare predicate %s of type %a: %s.@."
             (position_range p)
             n
-            Pprint.pp_type t
-            s ;
-          exit 1
-      | System.Invalid_bound_declaration (n,p,t,s) ->
-          Format.printf
-            "%sCannot give bound variable %s the type %a: %s.@."
-            (position_range p)
-            n
-            Pprint.pp_type t
+            Pprint.pp_type ty
             s ;
           exit 1
 
@@ -208,7 +200,7 @@ let rec process ?(interactive=false) parse lexbuf =
           Format.printf
             "%sUndeclared constant or predicate %s.@."
             (match p with
-                 Some p -> position_range p
+               | Some p -> position_range p
                | None -> position_lex lexbuf)
             n ;
           interactive_or_exit interactive lexbuf
@@ -226,11 +218,18 @@ let rec process ?(interactive=false) parse lexbuf =
             (Pprint.pp_type_norm (Some unifier)) ty2
             (Pprint.pp_type_norm (Some unifier)) ty1 ;
           interactive_or_exit interactive lexbuf
-      | Typing.Var_typing_error p ->
+      | Typing.Var_typing_error (n,p,ty) ->
           Format.printf
-            "%sTyping error: this free variable cannot be of type %a.@."
-            (position_range p)
-            Pprint.pp_type Type.TProp ;
+            "%sTyping error: cannot "
+            (match p with
+               | Some p -> position_range p
+               | None -> position_lex lexbuf) ;
+          (match n with
+             | Some n -> Format.printf
+                           "give free variable %s the type %a.@." n
+             | None -> Format.printf
+                         "quantify over type %a.@.")
+            Pprint.pp_type ty ;
           interactive_or_exit interactive lexbuf
       | System.Inconsistent_definition (n,p,s) ->
           Format.printf
