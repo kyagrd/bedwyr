@@ -1,6 +1,6 @@
 (****************************************************************************)
 (* Bedwyr prover                                                            *)
-(* Copyright (C) 2011 Quentin Heath                                         *)
+(* Copyright (C) 2012 Quentin Heath                                         *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -17,7 +17,7 @@
 (* Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA             *)
 (****************************************************************************)
 
-(** Pre-terms and type checking. *)
+(** Pre-terms and kind/type checking. *)
 
 (** Position information. For error messages only. *)
 type pos = Lexing.position * Lexing.position
@@ -58,6 +58,15 @@ val pre_binder :
 val pre_lambda : pos -> (pos * string * Type.simple_type) list -> preterm -> preterm
 
 val pre_app : pos -> preterm -> preterm list -> preterm
+
+(** {6 Kind checking} *)
+exception Type_kinding_error of pos * Type.simple_kind * Type.simple_kind
+
+val kind_check :
+  Type.simple_type ->
+  Type.simple_kind ->
+  (pos * string -> Type.simple_kind) ->
+  bool * bool * bool * bool
 
 (** {6 Type unifying} *)
 (** Type unifier type.

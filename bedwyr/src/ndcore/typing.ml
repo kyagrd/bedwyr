@@ -1,6 +1,6 @@
 (****************************************************************************)
 (* Bedwyr prover                                                            *)
-(* Copyright (C) 2011 Quentin Heath                                         *)
+(* Copyright (C) 2012 Quentin Heath                                         *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -19,9 +19,10 @@
 
 open Type
 
+type pos = Lexing.position * Lexing.position
+
 (* Pre-terms *)
 
-type pos = Lexing.position * Lexing.position
 type preterm = rawpreterm
 and rawpreterm =
   | QString of pos * string
@@ -72,7 +73,7 @@ let set_pos p = function
   | App (_,hd,tl) -> App (p,hd,tl)
 
 
-(* Generate pre-terms *)
+(* Creating pre-terms *)
 
 let change_pos (p1,_) t (_,p2) = set_pos (p1,p2) t
 
@@ -102,6 +103,54 @@ let pre_app p hd args = if args = [] then hd else match hd with
   | App (_,hd,args') -> App (p,hd,args'@args)
   | _ -> App (p,hd,args)
 
+
+(* kind checking *)
+exception Type_kinding_error of pos * simple_kind * simple_kind
+
+(* XXX all kind are assumed to be "*", so no real check is done here *)
+let kind_check ty expected_kind kind =
+  let check_eq ki expected_ki =
+    if ki <> expected_ki
+    then raise (Type_kinding_error ((Lexing.dummy_pos,Lexing.dummy_pos),expected_ki,ki))
+  in
+  let rec aux ty ki tykis (f,h,ho,p) = match ty with
+    | Ty name ->
+        (* XXX real position of the type? *)
+        check_eq (kind ((Lexing.dummy_pos,Lexing.dummy_pos),name)) ki ;
+        begin match tykis with
+          | [] -> (false,h,ho,false)
+          | (ty,ki)::tykis ->
+              aux ty ki tykis (false,h,ho,p)
+        end
+    | Type.TProp ->
+        check_eq KType ki ;
+        begin match tykis with
+          | [] -> (false,h,ho,p)
+          | (ty,ki)::tykis ->
+              aux ty ki tykis (false,h,true,p)
+        end
+    | Type.TString | Type.TNat ->
+        check_eq KType ki ;
+        begin match tykis with
+          | [] -> (false,h,ho,false)
+          | (ty,ki)::tykis ->
+              aux ty ki tykis (false,h,ho,p)
+        end
+    | Type.TRArrow ([],ty) ->
+        aux ty ki tykis (f,h,ho,p)
+    | Type.TRArrow (ty::tys',ty') ->
+        aux ty ki ((Type.TRArrow (tys',ty'),ki)::tykis)
+          (false,h,ho,p)
+    | Type.TVar _ ->
+        (* TODO we need to remember the kinds of type variables! *)
+        (*check_eq _ ki ;*)
+        begin match tykis with
+          | [] -> (f,true,ho,p)
+          | (ty,ki)::tykis ->
+              aux ty ki tykis (f,true,h,p)
+        end
+  in
+  aux ty expected_kind [] (true,false,false,true) (* flex, hollow, higher order, propositional *)
 
 (* type unifier type *)
 module Unifier = Map.Make(struct type t = int let compare = compare end)
