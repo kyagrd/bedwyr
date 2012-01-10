@@ -230,6 +230,18 @@ let translate_term ?(infer=true) ?(expected_type=Type.TProp) pre_term free_types
       Hashtbl.add free_types v ty ;
       t,ty
   in
+  let normalize_types ty_norm =
+    (* XXX [QH] yeah, reading-clearing-filling a hashtable is not elegant,
+     * but it is not safe to use Hashtbl.replace *during* the Hashtbl.iter,
+     * I don't want the unifier to leak from Typing,
+     * I don't want to build a new hashtable and to return it
+     * nor to have a hashtable of references (what good is a mutable structure
+     * if we don't mutate it?), so this will do until all the hashtables from System
+     * are replaced with maps (or not) *)
+    let l = Hashtbl.fold (fun v ty l -> (v,ty)::l) free_types [] in
+    Hashtbl.clear free_types ;
+    List.iter (fun (v,ty) -> Hashtbl.add free_types v (ty_norm ty)) l
+  in
   (* return a typed variable corresponding to the name
    * of a constant (predefined or not) or a predicate *)
   let typed_declared_var (p,name) =
@@ -299,7 +311,7 @@ let translate_term ?(infer=true) ?(expected_type=Type.TProp) pre_term free_types
   let bound_var_type (p,name,ty) =
     let _ = kind_check ty in ty
   in
-  Typing.type_check_and_translate pre_term expected_type typed_free_var typed_declared_var typed_intern_var bound_var_type infer
+  Typing.type_check_and_translate pre_term expected_type typed_free_var normalize_types typed_declared_var typed_intern_var bound_var_type infer
 
 let translate_query pre_term =
   let free_types : (Term.var,Type.simple_type) Hashtbl.t =
@@ -497,13 +509,20 @@ let get_types pre_term =
     Hashtbl.create 10
   in
   let ty = Type.fresh_tyvar () in
-  let _,ty = translate_term ~infer:false ~expected_type:ty pre_term free_types in
-  ty
+  let t,ty = translate_term ~infer:false ~expected_type:ty pre_term free_types in
+  t,ty,free_types
 
 let print_type_of pre_term =
-  let ty = get_types pre_term in
-  Format.printf "%a@."
-    Pprint.pp_type ty
+  let t,ty,free_types = get_types pre_term in
+  Format.printf "@[<v>@[%a :@;<1 2>%a@]"
+    Pprint.pp_term t
+    Pprint.pp_type ty ;
+  Hashtbl.iter
+    (fun v ty -> Format.printf "@,@[%s :@;<1 2>%a@]"
+                   (Term.get_var_name v)
+                   (Pprint.pp_type_norm None) ty)
+    free_types ;
+  Format.printf "@]@."
   (*Pprint.pp_type Format.std_formatter ty*)
 
 let show_table (p,head_tm) =
