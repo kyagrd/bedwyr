@@ -62,6 +62,12 @@ val pre_app : pos -> preterm -> preterm list -> preterm
 (** {6 Kind checking} *)
 exception Type_kinding_error of pos * Type.simple_kind * Type.simple_kind
 
+(** Kind-check a type.
+  * Always succeeds and returns [(f,h,ho,p)]
+  * (except when given a non-existing type).
+  * @param ty a simple type
+  * @param expected_kind the simple kind the type is supposed to have (usually [TKind])
+  * @param atomic_kind a function returning the kind of an atomic type *)
 val kind_check :
   Type.simple_type ->
   Type.simple_kind ->
@@ -84,7 +90,7 @@ val ty_norm : ?unifier:type_unifier -> Type.simple_type -> Type.simple_type
 
 exception Term_typing_error of pos * Type.simple_type * Type.simple_type *
             type_unifier
-exception Var_typing_error of pos
+exception Var_typing_error of string option * pos option * Type.simple_type
 
 (** Type-check and translate a pre-term.
   * Either succeeds and realizes the type unification as side effect,
@@ -96,9 +102,12 @@ exception Var_typing_error of pos
   * at present.
   * @param pre_term a pre-term built by the parser
   * @param expected_type the simple type the term is supposed to have (usually
-  * TProp)
+  * [TProp])
   * @param typed_free_var a function returning a type and a term when given the
   * name of a free variable
+  * @param normalize_types a function mapping a provided normalization operation
+  * on a set of types once the type unification is done
+  * and before the corresponding unifier is lost (ie when [infer] is false)
   * @param typed_declared_var a function returning a type and a term when given
   * the name of a declared constant or a predicate
   * @param typed_intern_var a function returning a type and a term when given
@@ -113,7 +122,7 @@ val type_check_and_translate :
   preterm ->
   Type.simple_type ->
   (pos * string -> Term.term * Type.simple_type) ->
-  ((Type.simple_type -> Type.simple_type) -> unit) ->
+  ((Term.var -> Type.simple_type -> Type.simple_type) -> unit) ->
   (pos * string -> Term.term * Type.simple_type) ->
   (pos * string -> Term.term * Type.simple_type) ->
   (pos * string * Type.simple_type -> Type.simple_type) -> bool ->

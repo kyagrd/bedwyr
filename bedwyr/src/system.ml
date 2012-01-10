@@ -152,13 +152,13 @@ exception Invalid_bound_declaration of string * Typing.pos * Type.simple_type * 
 
 
 let kind_check ?(expected_kind=Type.KType) ty =
-  let kind (p,name) =
+  let atomic_kind (p,name) =
     let type_var = Term.get_var (Term.atom ~tag:Term.Constant name) in
     try Hashtbl.find type_kinds type_var
     with Not_found ->
       raise (Missing_type (name,p))
   in
-  Typing.kind_check ty expected_kind kind
+  Typing.kind_check ty expected_kind atomic_kind
 
 let const_types : (Term.var,Type.simple_type) Hashtbl.t =
   Hashtbl.create 100
@@ -181,8 +181,8 @@ let create_def (flavour,p,name,ty) =
   then raise (Invalid_pred_declaration (name,p,ty,"predicate already declared"))
   else if Hashtbl.mem const_types head_var
   then raise (Invalid_pred_declaration (name,p,ty,"name conflict with a declared constant"))
-  else let (_,_,_,propositional) = kind_check ty in
-  if not propositional then
+  else let (flex,_,_,propositional) = kind_check ty in
+  if not (propositional || flex) then
     raise (Invalid_pred_declaration (name,p,ty,Format.sprintf "target type can only be %s" (Pprint.type_to_string Type.TProp)))
   else begin
     (* Cleanup all tables.
@@ -230,7 +230,7 @@ let translate_term ?(infer=true) ?(expected_type=Type.TProp) pre_term free_types
       Hashtbl.add free_types v ty ;
       t,ty
   in
-  let normalize_types ty_norm =
+  let normalize_types normed_type =
     (* XXX [QH] yeah, reading-clearing-filling a hashtable is not elegant,
      * but it is not safe to use Hashtbl.replace *during* the Hashtbl.iter,
      * I don't want the unifier to leak from Typing,
@@ -240,7 +240,7 @@ let translate_term ?(infer=true) ?(expected_type=Type.TProp) pre_term free_types
      * are replaced with maps (or not) *)
     let l = Hashtbl.fold (fun v ty l -> (v,ty)::l) free_types [] in
     Hashtbl.clear free_types ;
-    List.iter (fun (v,ty) -> Hashtbl.add free_types v (ty_norm ty)) l
+    List.iter (fun (v,ty) -> Hashtbl.add free_types v (normed_type v ty)) l
   in
   (* return a typed variable corresponding to the name
    * of a constant (predefined or not) or a predicate *)

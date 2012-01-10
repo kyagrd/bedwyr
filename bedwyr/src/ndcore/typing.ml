@@ -108,7 +108,7 @@ let pre_app p hd args = if args = [] then hd else match hd with
 exception Type_kinding_error of pos * simple_kind * simple_kind
 
 (* XXX all kind are assumed to be "*", so no real check is done here *)
-let kind_check ty expected_kind kind =
+let kind_check ty expected_kind atomic_kind =
   let check_eq ki expected_ki =
     if ki <> expected_ki
     then raise (Type_kinding_error ((Lexing.dummy_pos,Lexing.dummy_pos),expected_ki,ki))
@@ -116,31 +116,30 @@ let kind_check ty expected_kind kind =
   let rec aux ty ki tykis (f,h,ho,p) = match ty with
     | Ty name ->
         (* XXX real position of the type? *)
-        check_eq (kind ((Lexing.dummy_pos,Lexing.dummy_pos),name)) ki ;
+        check_eq (atomic_kind ((Lexing.dummy_pos,Lexing.dummy_pos),name)) ki ;
         begin match tykis with
-          | [] -> (false,h,ho,false)
+          | [] -> (false,h,ho,p)
           | (ty,ki)::tykis ->
               aux ty ki tykis (false,h,ho,p)
         end
     | Type.TProp ->
         check_eq KType ki ;
         begin match tykis with
-          | [] -> (false,h,ho,p)
+          | [] -> (false,h,ho,true)
           | (ty,ki)::tykis ->
               aux ty ki tykis (false,h,true,p)
         end
     | Type.TString | Type.TNat ->
         check_eq KType ki ;
         begin match tykis with
-          | [] -> (false,h,ho,false)
+          | [] -> (false,h,ho,p)
           | (ty,ki)::tykis ->
               aux ty ki tykis (false,h,ho,p)
         end
     | Type.TRArrow ([],ty) ->
         aux ty ki tykis (f,h,ho,p)
     | Type.TRArrow (ty::tys',ty') ->
-        aux ty ki ((Type.TRArrow (tys',ty'),ki)::tykis)
-          (false,h,ho,p)
+        aux ty ki ((Type.TRArrow (tys',ty'),ki)::tykis) (false,h,ho,p)
     | Type.TVar _ ->
         (* TODO we need to remember the kinds of type variables! *)
         (*check_eq _ ki ;*)
@@ -150,7 +149,8 @@ let kind_check ty expected_kind kind =
               aux ty ki tykis (f,true,h,p)
         end
   in
-  aux ty expected_kind [] (true,false,false,true) (* flex, hollow, higher order, propositional *)
+  aux ty expected_kind [] (true,false,false,false) (* flex, hollow, higher order, propositional *)
+
 
 (* type unifier type *)
 module Unifier = Map.Make(struct type t = int let compare = compare end)
@@ -184,7 +184,7 @@ let ty_norm ?unifier ty =
 (* type checking *)
 exception Type_unification_error of simple_type * simple_type * simple_type Unifier.t
 exception Term_typing_error of pos * simple_type * simple_type * simple_type Unifier.t
-exception Var_typing_error of pos
+exception Var_typing_error of string option * pos option * simple_type
 
 let occurs unifier i =
   let rec aux = function
@@ -261,13 +261,11 @@ let type_check_and_translate pre_term expected_type typed_free_var normalize_typ
           let u = unify_constraint u exty TNat in
           Term.nat i,u
       | FreeID (p,s) ->
-          begin match find_db s bvars,exty with
-            | Some (t,ty),_ ->
+          begin match find_db s bvars with
+            | Some (t,ty) ->
                 let u = unify_constraint u exty ty in
                 t,u
-            | None,TProp ->
-                raise (Var_typing_error p)
-            | None,_ ->
+            | None ->
                 let t,ty = typed_free_var (p,s) in
                 let u = unify_constraint u exty ty in
                 t,u
@@ -319,6 +317,16 @@ let type_check_and_translate pre_term expected_type typed_free_var normalize_typ
           let _ = List.map bound_var_type vars in
           let u = unify_constraint u exty TProp in
           let t,u = aux pt TProp bvars u in
+          List.iter
+            (fun (p,_,ty) ->
+               let ty = ty_norm ~unifier:u ty in
+               let (_,_,higher_order,propositional) =
+                 (* TODO replace this dummy atomic_kind by a no-op one *)
+                 kind_check ty KType (fun _ -> KType)
+               in
+               if higher_order || propositional
+               then raise (Var_typing_error (None,Some p,ty)))
+            vars ;
           Term.binder b arity t,u
       | Lam (p,vars,pt) ->
           let arity = List.length vars in
@@ -346,10 +354,19 @@ let type_check_and_translate pre_term expected_type typed_free_var normalize_typ
           raise (Term_typing_error (p,ty1,ty2,unifier))
   in
   let term,unifier = aux pre_term expected_type [] !global_unifier in
+  normalize_types
+    (fun v ty ->
+       let ty = ty_norm ~unifier:unifier ty in
+       let (_,_,higher_order,propositional) =
+         (* TODO replace this dummy atomic_kind by a no-op one *)
+         kind_check ty KType (fun _ -> KType)
+       in
+       if higher_order || propositional
+       then raise (Var_typing_error (Some (Term.get_var_name v),None,ty)) ;
+       ty) ;
   if infer then begin
     global_unifier := unifier ;
     term,expected_type
   end else begin
-    normalize_types (ty_norm ~unifier:unifier) ;
     term,(ty_norm ~unifier:unifier expected_type)
   end
