@@ -1,6 +1,6 @@
 (****************************************************************************)
 (* Bedwyr prover                                                            *)
-(* Copyright (C) 2005-2011 Baelde, Tiu, Ziegler, Gacek, Heath               *)
+(* Copyright (C) 2005-2012 Baelde, Tiu, Ziegler, Gacek, Heath               *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -21,22 +21,25 @@ exception Invalid_command
 exception Assertion_failed
 
 let welcome_msg =
-  Format.sprintf
-    "%s %s (revision %s) welcomes you.
+  Printf.sprintf
+    "%s %s%s welcomes you.
 
 This software is under GNU Public License.
-Copyright (C) 2005-2011 Slimmer project.
+Copyright (C) 2005-2012 Slimmer project.
 
 For a little help, type #help.
-\n"
+
+"
     Config.package_name
     Config.package_version
-    Config.build
+    (if Config.build="" then ""
+     else " (revision " ^ Config.build ^ ")")
+    
 
 let usage_msg =
   Config.package_name ^ " prover.
 This software is under GNU Public License.
-Copyright (c) 2005-2011 Slimmer project.
+Copyright (c) 2005-2012 Slimmer project.
 
 Usage: bedwyr [filename | option]*
 "
@@ -80,29 +83,41 @@ let _ =
     usage_msg
 
 let position (start,curr) =
-  let file = start.Lexing.pos_fname in
   let line1 = start.Lexing.pos_lnum in
   let line2 = curr.Lexing.pos_lnum in
   let char1 = start.Lexing.pos_cnum - start.Lexing.pos_bol + 1 in
   let char2 = curr.Lexing.pos_cnum - curr.Lexing.pos_bol in
 
   if line1 < line2 then
-    Format.sprintf "file \"%s\", line %d, character %d - line %d, character %d" file line1 char1 line2 char2
+    Printf.sprintf "line %d, character %d - line %d, character %d" line1 char1 line2 char2
   else if char1 < char2  then
-    Format.sprintf "file \"%s\", line %d, characters %d-%d" file line2 char1 char2
+    Printf.sprintf "line %d, characters %d-%d" line2 char1 char2
   else
-    Format.sprintf "file \"%s\", line %d, character %d" file line2 char2
+    Printf.sprintf "line %d, character %d" line2 char2
 
 let position_range (start,curr) =
-  if curr.Lexing.pos_fname = "" then
-    "" (* lexbuf information is rarely accurate at the toplevel *)
+  let name = curr.Lexing.pos_fname in
+  if name = "" then
+    (* lexbuf line information is rarely accurate at the toplevel,
+     * but character information is *)
+    Printf.sprintf "At %s:\n" (position (start,curr))
   else
-    Format.sprintf "In %s:\n" (position (start,curr))
+    Printf.sprintf "In file \"%s\", %s:\n" name (position (start,curr))
 
 let position_lex lexbuf =
   let start = lexbuf.Lexing.lex_start_p in
   let curr = lexbuf.Lexing.lex_curr_p in
   position_range (start,curr)
+
+let interactive_or_exit interactive lexbuf =
+  if interactive
+  then begin
+    Lexing.flush_input lexbuf ;
+    lexbuf.Lexing.lex_curr_p <- {
+        lexbuf.Lexing.lex_curr_p with
+          Lexing.pos_bol = 0 ;
+          Lexing.pos_lnum = 1 }
+  end else exit 1
 
 let do_cleanup f x clean =
   try f x ; clean () with e -> clean () ; raise e
@@ -142,13 +157,19 @@ let rec process ?(interactive=false) parse lexbuf =
           Format.printf "%sIllegal string starting with \"%s\" in input.@."
             (position_lex lexbuf)
             (String.escaped (Lexing.lexeme lexbuf)) ;
-          if interactive then Lexing.flush_input lexbuf else exit 1
+          interactive_or_exit interactive lexbuf
       | Parsing.Parse_error ->
           Format.printf "%sSyntax error.@."
             (position_lex lexbuf) ;
-          if interactive then Lexing.flush_input lexbuf else exit 1
+          interactive_or_exit interactive lexbuf
 
       (* declarations *)
+      | System.Missing_type (n,_) ->
+          Format.printf
+            "%sUndeclared type %s.@."
+            (position_lex lexbuf)
+            n ;
+          interactive_or_exit interactive lexbuf
       | System.Invalid_type_declaration (n,p,k,s) ->
           Format.printf
             "%sCannot declare type %s of kind %a: %s.@."
@@ -190,20 +211,27 @@ let rec process ?(interactive=false) parse lexbuf =
                  Some p -> position_range p
                | None -> position_lex lexbuf)
             n ;
-          if interactive then Lexing.flush_input lexbuf else exit 1
+          interactive_or_exit interactive lexbuf
+      | Typing.Type_kinding_error (_,ki1,ki2) ->
+          Format.printf
+            "%sKinding error: this type has kind %a but is used as %a.@."
+            (position_lex lexbuf)
+            Pprint.pp_kind ki2
+            Pprint.pp_kind ki1 ;
+          interactive_or_exit interactive lexbuf
       | Typing.Term_typing_error (p,ty1,ty2,unifier) ->
           Format.printf
             "%sTyping error: this expression has type %a but is used as %a.@."
             (position_range p)
             (Pprint.pp_type_norm (Some unifier)) ty2
             (Pprint.pp_type_norm (Some unifier)) ty1 ;
-          if interactive then Lexing.flush_input lexbuf else exit 1
+          interactive_or_exit interactive lexbuf
       | Typing.Var_typing_error p ->
           Format.printf
             "%sTyping error: this free variable cannot be of type %a.@."
             (position_range p)
             Pprint.pp_type Type.TProp ;
-          if interactive then Lexing.flush_input lexbuf else exit 1
+          interactive_or_exit interactive lexbuf
       | System.Inconsistent_definition (n,p,s) ->
           Format.printf
             "%sInconsistent extension of definition for %s: %s.@."
@@ -216,10 +244,10 @@ let rec process ?(interactive=false) parse lexbuf =
       | System.Arity_mismatch (t,a) ->
           Format.printf "Definition %a doesn't have arity %d !@."
             Pprint.pp_term t a ;
-          if interactive then Lexing.flush_input lexbuf else exit 1
+          interactive_or_exit interactive lexbuf
       | Assertion_failed ->
           Format.printf "Assertion failed.@." ;
-          if interactive then Lexing.flush_input lexbuf else exit 1
+          interactive_or_exit interactive lexbuf
 
       (* unhandled non-interactive errors *)
       | e when not interactive -> raise e
@@ -227,41 +255,41 @@ let rec process ?(interactive=false) parse lexbuf =
       (* interactive errors *)
       | System.Interrupt ->
           Format.printf "User interruption.@." ;
-          Lexing.flush_input lexbuf
+          interactive_or_exit interactive lexbuf
       | Prover.Level_inconsistency ->
           Format.printf "This formula cannot be handled by the left prover!@." ;
-          Lexing.flush_input lexbuf
+          interactive_or_exit interactive lexbuf
       | Prover.Abort_search ->
-          Format.printf "Proof search aborted!\n" ;
-          Lexing.flush_input lexbuf
+          Format.printf "Proof search aborted!@." ;
+          interactive_or_exit interactive lexbuf
       | Unify.NotLLambda t ->
           Format.printf "Not LLambda unification encountered: %a@."
             Pprint.pp_term t ;
-          Lexing.flush_input lexbuf
+          interactive_or_exit interactive lexbuf
       | Invalid_command ->
           Format.printf "Invalid command, or wrong arguments.@." ;
-          Lexing.flush_input lexbuf
+          interactive_or_exit interactive lexbuf
       | Failure s ->
-          Format.printf "%sError: %s\n"
+          Format.printf "%sError: %s@."
             (position_lex lexbuf)
             s ;
-          Lexing.flush_input lexbuf
+          interactive_or_exit interactive lexbuf
       | e ->
-          Format.printf "%sUnknown error: %s\n"
+          Format.printf "%sUnknown error: %s@."
             (position_lex lexbuf)
             (Printexc.to_string e) ;
-          Lexing.flush_input lexbuf
+          interactive_or_exit interactive lexbuf
     end ;
     if interactive then flush stdout
   done with
     | End_of_file -> ()
     | Failure s ->
-        Format.printf "%sError: %s\n"
+        Format.printf "%sError: %s@."
           (position_lex lexbuf)
           s ;
         exit 1
     | e ->
-        Format.printf "%sUnknown error: %s\n"
+        Format.printf "%sUnknown error: %s@."
           (position_lex lexbuf)
           (Printexc.to_string e) ;
         exit 1

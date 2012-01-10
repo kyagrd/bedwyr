@@ -194,6 +194,7 @@ val declare_type : Typing.pos * string -> Type.simple_kind -> unit
 
 (** {6 Constants and predicates declarations} *)
 
+exception Missing_type of string * Typing.pos
 exception Invalid_const_declaration of string * Typing.pos *
             Type.simple_type * string
 exception Invalid_pred_declaration of string * Typing.pos *
