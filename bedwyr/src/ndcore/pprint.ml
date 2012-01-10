@@ -1,6 +1,6 @@
 (****************************************************************************)
 (* An implementation of Higher-Order Pattern Unification                    *)
-(* Copyright (C) 2006-2011 Nadathur, Linnell, Baelde, Ziegler, Gacek, Heath *)
+(* Copyright (C) 2006-2012 Nadathur, Linnell, Baelde, Ziegler, Gacek, Heath *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -31,9 +31,9 @@ let string_of_tag = function
   | Logic -> "l"
 
 let string_of_binder = function
-  | Forall -> "Forall"
-  | Exists -> "Exists"
-  | Nabla -> "Nabla"
+  | Forall -> "forall"
+  | Exists -> "exists"
+  | Nabla -> "nabla"
 
 (* [assoc], [infix], [set_infix], [is_infix], [get_assoc] and [priority]
  * are commented out until we add real support for
@@ -76,37 +76,45 @@ let formatter,do_formatter =
        s)
 
 let pp_kind chan ki =
-  let rec aux chan = function
+  let rec aux par chan = function
     | KType ->
-        fprintf chan "@[*@]"
+        fprintf chan "*"
     | KRArrow (ki1::kis,ki2) ->
-        fprintf chan "@[(%a -> %a)@]" aux ki1 aux (KRArrow (kis,ki2))
+        let print =
+          if par then fprintf chan "@[(%a -> %a)@]"
+          else fprintf chan "@[%a -> %a@]"
+        in
+        print (aux true) ki1 (aux false) (KRArrow (kis,ki2))
     | KRArrow ([],ki) ->
-        aux chan ki
+        aux par chan ki
   in
-  fprintf chan "@[%a@]" aux ki
+  fprintf chan "@[%a@]" (aux false) ki
 
 let kind_to_string ki =
   do_formatter (fun () -> pp_kind formatter ki)
 
 let pp_type chan ty =
-  let rec aux chan = function
+  let rec aux par chan = function
     | Ty name ->
         fprintf chan "%s" name
     | TProp ->
-        fprintf chan "{prop}"
+        fprintf chan "prop"
     | TString ->
-        fprintf chan "{string}"
+        fprintf chan "string"
     | TNat ->
-        fprintf chan "{nat}"
+        fprintf chan "nat"
     | TRArrow (ty1::tys,ty2) ->
-        fprintf chan "@[(%a -> %a)@]" aux ty1 aux (TRArrow (tys,ty2))
+        let print =
+          if par then fprintf chan "@[(%a -> %a)@]"
+          else fprintf chan "@[%a -> %a@]"
+        in
+        print (aux true) ty1 (aux false) (TRArrow (tys,ty2))
     | TRArrow ([],ty) ->
-        aux chan ty
+        aux par chan ty
     | TVar i ->
         fprintf chan "?%d" i
   in
-  fprintf chan "@[%a@]" aux ty
+  fprintf chan "@[%a@]" (aux false) ty
 
 let type_to_string ty =
   do_formatter (fun () -> pp_type formatter ty)
@@ -266,8 +274,8 @@ let print_full ~generic ~bound chan term =
           in
           print head (pp ~bound:(List.rev_append more bound) 0) t ;
           List.iter free more
-      | Susp (t,_,_,l) ->
-          fprintf chan "<%d:%a>" (List.length l) (pp ~bound pr) t
+      | Susp (t,ol,_,_) ->
+          fprintf chan "<%d:%a>" ol (pp ~bound pr) t
       | Ptr  _ -> assert false (* observe *)
   in
   fprintf chan "@[%a@]" (pp ~bound 0) term

@@ -1,6 +1,6 @@
 (****************************************************************************)
 (* Bedwyr prover                                                            *)
-(* Copyright (C) 2006-2011 Andrew Gacek, David Baelde, Alwen Tiu            *)
+(* Copyright (C) 2006-2012 Andrew Gacek, David Baelde, Alwen Tiu            *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -41,22 +41,22 @@ let nabla_abstract t =
 
 let print head table =
   Format.printf
-    "Table for %a contains (P=Proved, D=Disproved):@\n"
+    "@[<v>Table for %a contains (P=Proved, D=Disproved):@,"
     Pprint.pp_term head ;
   Index.iter !table
     (fun t tag ->
        let t = nabla_abstract (Term.app t [head]) in
        match !tag with
-         | Proved    -> Format.printf " [P] %a@\n" Pprint.pp_term t
-         | Disproved -> Format.printf " [D] %a@\n" Pprint.pp_term t
+         | Proved    -> Format.printf " [P] %a@," Pprint.pp_term t
+         | Disproved -> Format.printf " [D] %a@," Pprint.pp_term t
          | Unset     -> ()
          | Working _ -> assert false) ;
-  Format.print_flush ()
+  Format.printf "@]@."
 
 let fprint fout head table =
   let fmt = (Format.formatter_of_out_channel fout) in
   Format.fprintf fmt
-    "%% Table for %a contains :@\n@\nDefine@;<1 2>proved,@;<1 2>disproved"
+    "@[%% Table for %a contains :@,@,@[<hov>Define@;<1 2>proved,@;<1 2>disproved"
     Pprint.pp_term head ;
   let first = ref true in
   Index.iter !table
@@ -75,7 +75,7 @@ let fprint fout head table =
          | Unset     -> ()
          | Working _ -> assert false
        end) ;
-  Format.fprintf fmt "@;<0 0>.@\n%!"
+  Format.fprintf fmt "@;<0 0>.@]@]@."
 
 let reset x = x := Index.empty
 
