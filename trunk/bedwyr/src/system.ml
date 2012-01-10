@@ -185,16 +185,6 @@ let create_def (flavour,p,name,ty) =
   if not (propositional || flex) then
     raise (Invalid_pred_declaration (name,p,ty,Format.sprintf "target type can only be %s" (Pprint.type_to_string Type.TProp)))
   else begin
-    (* Cleanup all tables.
-     * Cleaning only this definition's table is _not_ enough, since other
-     * definitions may rely on it.
-     * TODO: make it optional to speedup huge definitions ? *)
-    Hashtbl.iter
-      (fun k v ->
-         match v with
-           | _,_,Some t,_ -> Table.reset t
-           | _ -> ())
-      defs ;
     let t = (if flavour=Normal then None else Some (Table.create ())) in
     Hashtbl.add defs head_var (flavour, None, t, ty) ;
     head_var
