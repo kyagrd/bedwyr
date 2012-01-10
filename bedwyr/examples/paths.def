@@ -1,0 +1,100 @@
+% This definition file (developed with Bedwyr in mind) can be used to
+% do selected beta reductions on an untyped lambda term using the
+% notion of "paths" within such a term.  The goal (path T P) is
+% provable at the object level when P is a path through the lambda
+% term T (a term without marked beta redexes).  The goal (bpath T P)
+% is provable at the object level when P is a path through the lambda
+% term T: in this case, paths through a beta-redex do a kind of
+% "jump".
+
+% Since the most natural way to write these path predicates involve
+% hypothetical reasoning (open-world assumption), we cannot use
+% Bedwyr's implication directly (which involves the closed-world
+% assumption).  Instead, we need to have a clear two-level logic
+% approach.  We introduce an object-level logic with the type o and
+% then we introduce an interpreter for a small (second-order) subset
+% of that logic.  This two-level logic approach is built directly into
+% Abella.
+
+% The object-level logic program here is also written as lambda Prolog
+% code in the two associated Teyjus files paths.sig and paths.mod.
+
+%  -Dale (3 Jan 2012)
+
+% Specification of the object logic
+Kind o      type.            % type of object logic formulas
+Kind atom   type.            % type of object logic atoms
+Type atm    atom -> o.       % coerce an atom into a formula
+Type tt     o.               % true
+Type and    o -> o -> o.     % conjunction
+Type imp    atom -> o -> o.  % implication restricted to second order
+
+Kind alist type.                   % List of atoms
+Type nil   alist.                  % empty olist
+Type cons  atom -> alist -> alist. % non-empty olist
+
+Define memb : atom -> alist -> prop by
+  memb X (cons X _);
+  memb X (cons _ L) := memb X L.
+
+% Object level types and quantifiers
+Kind tm            type.
+Kind p             type.
+Type pitm          (tm -> o) -> o.
+Type pip           (p  -> o) -> o.
+
+% Constructors for untyped lambda-terms
+Type  app          tm -> (tm -> tm).
+Type  abs          (tm -> tm) -> tm.
+Type  beta         (tm -> tm) -> tm -> tm.
+% Constructors for paths through terms
+Type left, right   p -> p.
+Type bnd           (p -> p) -> p.
+% Object level predicates
+Type path, bpath   tm -> p  -> atom.
+Type jump          tm -> tm -> atom.
+
+% Object level specification (a lambda Prolog program)
+Define prog : atom -> o -> prop by
+  prog (path (app M _) (left P))  (atm (path M P));
+  prog (path (app _ M) (right P)) (atm (path M P));
+  prog (path (abs R)   (bnd S))   (pitm x\ pip p\ imp (path x p) (atm (path (R x) (S p))));
+
+  prog (bpath (abs R)    (bnd S))   (pitm x\ pip p\ imp (bpath x p) (atm (bpath (R x) (S p))));
+  prog (bpath (app M _)  (left P))  (atm (bpath M P));
+  prog (bpath (app _ M)  (right P)) (atm (bpath M P));
+  prog (bpath (beta R N) P)         (pitm x\ imp (jump x N) (atm (bpath (R x) P)));
+  prog (bpath X          P)         (and (atm (jump X N)) (atm (bpath N P))).
+
+% Interpreter for the object-logic
+Define seq : alist -> o -> prop by
+  seq L (atm A)   := memb A L \/ (prog A D /\ seq L D);
+  seq L (and G H) := seq L G /\ seq L H;
+  seq L (imp A G) := seq (cons A L) G;
+  seq L (pitm G)  := nabla x, seq L (G x);
+  seq L (pip  G)  := nabla x, seq L (G x).
+
+% The pv predicate holds of an atomic formula if that atomic formula
+% is a (minimal logic) consequence of the logic program stored in the
+% prog predicate.
+Define pv : atom -> prop by
+  pv A := seq nil (atm A).
+
+% The eqtm predicate determines equality of two untyped lambda-terms
+% (without marked beta redexes) upto alpha-congurence since two terms
+% are equal if and only if all paths in one are paths in the other.
+Define eqtm : tm -> tm -> prop by
+  eqtm T S := forall P, pv (path T P) -> pv (path S P).
+
+% beta_reduce normalizes the marked beta-redexes in the first argument
+% to get the term in the second argument.
+Define beta_reduce : tm -> tm -> prop by
+  beta_reduce T S := forall P, pv (bpath T P) -> pv (path S P).
+
+% Some sample queries for testing.
+% ?= beta_reduce (beta (x\ x) (abs x\ app x x)) S.
+% ?= beta_reduce (beta (x\ app x x) (abs x\ app x x)) S.
+% ?= beta_reduce (beta (x\ app x (app x x)) (abs x\ app x x)) S.
+% ?= beta_reduce (abs y\ (beta (x\ app x (app y x)) (abs x\ app x y))) S.
+% ?= beta_reduce (abs y\ (beta (x\ app x (beta (y\ app y x) (abs w\w))) (app y y))) S.
+%    S = abs (y\ app (app y y) (app (abs (w\ w)) (app y y)))
