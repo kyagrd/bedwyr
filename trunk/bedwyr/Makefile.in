@@ -1,14 +1,27 @@
+# Makefile.in designed for ndcore/bedwyr
+#
+# $(make TARGET=$TARGET) compiles
+# $(make TARGET=$TARGET install) installs
+# $(make TARGET=$TARGET dist) builds packages
+#
+# $TARGET can be "ndcore" for this library only,
+# "bedwyr" for the program only (requires ndcore to either
+# havinge been compiled just before, installed in a custom place
+# wrt the current Makefile config, or installed in a standard place),
+# and "" for both (in which case all the doc will be in /u/s/d/bedwyr).
+
 # DEFINITIONS
 
+ifeq ($(TARGET),)
 PACKAGE_TARNAME = @PACKAGE_TARNAME@
+else
+PACKAGE_TARNAME = $(TARGET)
+endif
 PACKAGE_VERSION = @PACKAGE_VERSION@
-ARCH_NAME=$(PACKAGE_TARNAME)-$(PACKAGE_VERSION)
+ARCH_NAME       = $(PACKAGE_TARNAME)-$(PACKAGE_VERSION)
 
-TAR= @TAR@
-FIND= @FIND@
-CPIO= @CPIO@ -dumpv
-#CPIO= @CPIO@ -dump -R root:root
-CHMOD= @CHMOD@
+TAR	= @TAR@ -p
+FIND	= @FIND@
 
 prefix        =@prefix@
 exec_prefix   =@exec_prefix@
@@ -22,7 +35,7 @@ datarootdir   =@datarootdir@
 #localstatedir =@localstatedir@
 #includedir    =@includedir@
 #oldincludedir =@oldincludedir@
-docdir        =@docdir@-$(PACKAGE_VERSION)
+docdir        =@docdir@
 #infodir       =@infodir@
 htmldir       =@htmldir@
 #dvidir        =@dvidir@
@@ -44,7 +57,7 @@ DATAROOTDIR   =$(DESTDIR)$(datarootdir)
 #LOCALSTATEDIR =$(DESTDIR)$(localstatedir)
 #INCLUDEDIR    =$(DESTDIR)$(includedir)
 #OLDINCLUDEDIR =$(DESTDIR)$(oldincludedir)
-DOCDIR        =$(DESTDIR)$(docdir)
+DOCDIR        =$(DESTDIR)$(docdir:@PACKAGE_TARNAME@=$(PACKAGE_TARNAME))
 #INFODIR       =$(DESTDIR)$(infodir)
 HTMLDIR       =$(DESTDIR)$(htmldir)
 #DVIDIR        =$(DESTDIR)$(dvidir)
@@ -54,22 +67,15 @@ LIBDIR        =$(DESTDIR)$(libdir)/ocaml/slimmer
 #LOCALEDIR     =$(DESTDIR)$(localedir)
 MANDIR        =$(DESTDIR)$(mandir)
 
-DIR_MODE=755
-BIN_MODE=755
-DOC_MODE=644
-INSTALL=install -v
-#INSTALL=install -o root -g root
-INSTALL_DIR = $(INSTALL) -m $(DIR_MODE) -d
-INSTALL_BIN = $(INSTALL) -m $(BIN_MODE) -p
-INSTALL_DOC = $(INSTALL) -m $(DOC_MODE) -p
+INSTALL     = @INSTALL@
+INSTALL_OPTS=-v
+INSTALL_DIR = @INSTALL_PROGRAM@ $(INSTALL_OPTS) -d
+INSTALL_BIN = @INSTALL_PROGRAM@ $(INSTALL_OPTS) -p
+INSTALL_DOC = @INSTALL_DATA@ $(INSTALL_OPTS) -p
 
 cma = @cma@
 
-ndcore = src/ndcore/ndcore.$(cma)
-bedwyr = src/bedwyr
-spec   = src/spec
-
-# SOURCE FILES
+# FILES
 
 XPL = list.def internal/scoping.def internal/checks.def \
       miniml.def 3bits.def lambda.def progs.def \
@@ -78,104 +84,125 @@ XPL = list.def internal/scoping.def internal/checks.def \
       pi/pi_trace.def pi/corr-assert.def pi/pi_modal.def \
       pi/pi_mini.def pi/pi_nat.def pi/pi_church.def
 
-NDCORE_DOC = COPYING CHANGES README TODO
-BEDWYR_DOC = COPYING CHANGES README TODO
-CONSTRIB   = contrib/bedwyr.el contrib/bedwyr.vim
-EXAMPLES   = $(shell find examples -type f '!' -path '*.svn*' '!' -name \*.old)
-USERGUIDE  = doc/*.tex doc/userguide.bib doc/Makefile
-PS         = userguide.ps.gz
-PDF        = userguide.pdf
-HTML       = userguide.html
-ARCH_FILES = configure.ac Makefile.in src/Makefile.in \
-	     $(DOC) $(CONSTRIB) $(EXAMPLES) \
-	     $(USERGUIDE)
+NDCORE_DOCS	= COPYING CHANGES README TODO
+BEDWYR_DOCS	= COPYING CHANGES README TODO
+CONTRIB		= contrib/emacs/bedwyr.el \
+		  contrib/vim/ftdetect/bedwyr.vim \
+		  contrib/vim/syntax/bedwyr.vim
+EXAMPLES	= $(shell find examples -type f '!' -path '*.svn*' \
+		  '!' -name \*~ '!' -name .\*.sw\* '!' -name \*.old)
+USERGUIDE	= doc/*.tex doc/userguide.bib doc/Makefile
+PDF		= userguide.pdf
+HTML		= userguide.html
+ARCH_FILES	= configure.ac Makefile.in install-sh \
+		  $(DOCS) $(CONSTRIB) $(EXAMPLES) \
+		  $(USERGUIDE)
+
+ndcore = src/ndcore/ndcore.$(cma)
+bedwyr = src/bedwyr
 
 # BUILDING
 
-all: $(PACKAGE_TARNAME)
-#all: ndcore bedwyr
+.PHONY: $(ndcore) $(bedwyr)
 
-.PHONY: ndcore
-ndcore: $(ndcore)
+all: Makefile
+ifeq ($(TARGET),ndcore)
+	make $(ndcore)
+else ifeq ($(TARGET),bedwyr)
+	make $(bedwyr)
+else ifeq ($(TARGET),)
+	make $(ndcore)
+	make $(bedwyr)
+endif
 
-.PHONY: bedwyr
-bedwyr: $(bedwyr)
+$(bedwyr): src/Makefile
+	make -C src
 
-.PHONY: spec
-spec: $(spec)
+$(ndcore): src/ndcore/Makefile
+	make -C src/ndcore
 
-$(ndcore): src/Makefile
-	make -C src ndcore/ndcore.$(cma)
+$(ndcore:$(cma)=a): src/ndcore/Makefile
+	make -C src/ndcore
 
-$(bedwyr): src/Makefile src/config.ml
-	make -C src bedwyr
-
-src/Makefile: src/Makefile.in configure
-	./configure --enable-doc
-
-Makefile: Makefile.in configure
-	./configure --enable-doc
+%: configure %.in
+	./$<
 
 configure: configure.ac
 	autoconf
 
-.PHONY: doc
-doc:
-	make -C src ndcore_doc
-	make -C src bedwyr_doc
-	make -C doc
-
 # TESTING
 
-.PHONY: test
-test: $(ndcore) $(bedwyr)
+.PHONY: test examples_tests
+
+test:
 	@echo Testing the core LLambda library
-	make -C src test
+	make -C src/ndcore test
 	@echo Testing bedwyr on examples
 	@bash -c 'time $(MAKE) examples_tests'
 
-.PHONY: examples_tests
-examples_tests: Makefile $(ndcore) $(bedwyr)
+examples_tests: src/bedwyr
 	@for i in $(XPL) ; do \
 	  echo "==== Running tests in $$i ====" ; \
-	  if $(bedwyr) -t -I examples/$$i ; then echo "All done." ; else echo "Error." ; break ; fi ; \
+	  if $< -t -I examples/$$i ; then echo "All done." ; \
+	  else echo "Error." ; break ; fi ; \
 	done
 
 # DOC
 
-doc/$(PS):
-	make -C doc $(PS)
-doc/$(PDF):
-	make -C doc $(PDF)
-doc/$(HTML):
-	make -C doc $(HTML)
+.PHONY: doc bedwyr_doc
+
+ifeq ($(TARGET),)
+doc: ndcore_doc bedwyr_doc
+else
+doc: $(TARGET)_doc
+endif
+
+ndcore_doc:
+ifneq (@OCAMLDOC@,)
+	make -C src/ndcore doc
+endif
+
+bedwyr_doc:
+ifneq (@OCAMLDOC@,)
+	make -C src doc
+	make -C doc
+endif
+
+#doc/$(PS):
+#	make -C doc $(PS)
+#doc/$(PDF):
+#	make -C doc $(PDF)
+#doc/$(HTML):
+#	make -C doc $(HTML)
 
 # INSTALL
 
-install: install_$(PACKAGE_TARNAME)
+ifeq ($(TARGET),)
+install: install_ndcore install_bedwyr
+else
+install: install_$(TARGET)
+endif
 
-install_ndcore: $(ndcore)
+install_ndcore: ndcore_doc $(NDCORE_DOCS:=.bz2)
 	@$(INSTALL_DIR) $(LIBDIR)
-	@$(INSTALL_BIN) $(ndcore) $(LIBDIR)
+	$(INSTALL_BIN) $(ndcore) $(ndcore:$(cma)=a) $(LIBDIR)
+	$(TAR) -xf $(ndcore:$(cma)=cmi.tar) -C $(LIBDIR)
 	@$(INSTALL_DIR) $(DOCDIR)
-	@$(INSTALL_DOC) $(NDCORE_DOC) $(DOCDIR)
+	@$(INSTALL_DOC) $(NDCORE_DOCS:=.bz2) $(DOCDIR)
 ifneq (@OCAMLDOC@,)
 	@$(INSTALL_DIR) $(HTMLDIR)/html
-	@make -C src ndcore_doc
-	@$(INSTALL_DOC) doc/html/ndcore/style.css doc/html/ndcore/*.html $(HTMLDIR)/html
+	@$(INSTALL_DOC) doc/html/ndcore/style.css doc/html/ndcore/*.html \
+	  $(HTMLDIR)/html
 endif
 
 #install_bedwyr: $(bedwyr) doc/$(PS) doc/$(PDF) doc/$(HTML)
-install_bedwyr: $(bedwyr)
+install_bedwyr: bedwyr_doc $(BEDWYR_DOCS:=.bz2)
 	@$(INSTALL_DIR) $(BINDIR)
 	@$(INSTALL_BIN) $(bedwyr) $(BINDIR)
 	@$(INSTALL_DIR) $(DOCDIR)
-	@$(INSTALL_DOC) $(BEDWYR_DOC) $(DOCDIR)
-	@$(INSTALL_DIR) $(DOCDIR)/contrib
-	@$(INSTALL_DOC) $(CONSTRIB) $(DOCDIR)/contrib
-	@tr ' ' '\n' <<<"examples $(EXAMPLES)" | ${CPIO} $(DOCDIR) 2>&1
-	@${FIND} $(DOCDIR)/examples -type d -exec ${CHMOD} $(DIR_MODE) {} +
-	@${FIND} $(DOCDIR)/examples -type f -exec ${CHMOD} ${DOC_MODE} {} +
+	@$(INSTALL_DOC) $(BEDWYR_DOCS:=.bz2) $(DOCDIR)
+	@for i in $(CONTRIB) ; do $(INSTALL_DOC) -D $$i $(DOCDIR)/$$i ; done
+	@for i in $(EXAMPLES) ; do $(INSTALL_DOC) -D $$i $(DOCDIR)/$$i ; done
 #	@$(INSTALL_DIR) $(PSDIR)
 #	@$(INSTALL_DIR) $(PDFDIR)
 #	@$(INSTALL_DIR) $(HTMLDIR)
@@ -184,40 +211,51 @@ install_bedwyr: $(bedwyr)
 #	@$(INSTALL_DOC) doc/$(HTML) $(HTMLDIR)
 ifneq (@OCAMLDOC@,)
 	@$(INSTALL_DIR) $(HTMLDIR)/html
-	@make -C src bedwyr_doc
-	@$(INSTALL_DOC) doc/html/bedwyr/style.css doc/html/bedwyr/*.html $(HTMLDIR)/html
+	@$(INSTALL_DOC) doc/html/bedwyr/style.css doc/html/bedwyr/*.html \
+	  $(HTMLDIR)/html
 endif
 #	@$(INSTALL_DIR) $(MANDIR)/man1
 #	@$(INSTALL_DOC) $(MAN) $(MANDIR)/man1
 
 # ARCHIVE
 
+.PHONY: dist src/$(PACKAGE_TARNAME).tar
+
 dist: src/Makefile bz2
 bz2: $(ARCH_NAME).tar.bz2
 gz: $(ARCH_NAME).tar.gz
 
-.PHONY: src/$(PACKAGE_TARNAME).tar
-src/bedwyr_src.tar:
+src/$(PACKAGE_TARNAME).tar:
 	make -C src $(PACKAGE_TARNAME).tar
 $(ARCH_NAME).tar: $(ARCH_FILES) src/$(PACKAGE_TARNAME).tar
 	$(TAR) -cf $@ --xform 's|^|$(ARCH_NAME)/|' $(ARCH_FILES)
 	$(TAR) -Af $@ src/$(PACKAGE_TARNAME).tar
-%.bz2: %
+
+%.tar.bz2: %.tar
 	bzip2 -f $<
 	$(TAR) -tf $@
-%.gz: %
+%.tar.gz: %.tar
 	gzip -f $<
 	$(TAR) -tf $@
 
+%.bz2: %
+	bzip2 -f -k $<
+%.gz: %
+	gzip -f -c $< > $@
+
 # OTHER TARGETS
+
+.PHONY: clean distclean
 
 distclean: clean
 	find . -name '*~' -exec rm \{\} \;
-	rm -f src/depend
-	rm -f src/ndcore/depend
+	rm -f *.bz2 *.gz *.tar
+	rm -f config.status config.log
+	rm -f Makefile
+	rm -f src/Makefile
+	rm -f src/ndcore/Makefile
 
 clean:
-	rm -f $(D).tar.bz2 $(D).tar.gz
 	make -C src clean
-	rm -f src/Makefile
+	make -C src/ndcore clean
 	make -C doc clean

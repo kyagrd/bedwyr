@@ -1,5 +1,5 @@
 
-AC_INIT([Bedwyr],[1.3-alpha4],[https://gforge.inria.fr/tracker/?atid=1543&group_id=367],[bedwyr],[http://slimmer.gforge.inria.fr/bedwyr/])
+AC_INIT([Bedwyr],[1.3-alpha5],[https://gforge.inria.fr/tracker/?atid=1543&group_id=367],[bedwyr],[http://slimmer.gforge.inria.fr/bedwyr/])
 AC_PREREQ(2.57)
 AC_CONFIG_SRCDIR([src/main.ml])
 AC_PROG_INSTALL
@@ -97,8 +97,12 @@ AC_SUBST(OCAMLLFLAGS)
 AC_SUBST(cma)
 AC_SUBST(cmo)
 AC_SUBST(REVISION)
+AC_SUBST(INSTALL)
+AC_SUBST(INSTALL_DATA)
+AC_SUBST(INSTALL_PROGRAM)
 
 AC_CONFIG_FILES([src/config.ml],[chmod a-w src/config.ml])
+AC_CONFIG_FILES([src/ndcore/Makefile],[chmod a-w src/ndcore/Makefile])
 AC_CONFIG_FILES([src/Makefile],[chmod a-w src/Makefile])
 AC_CONFIG_FILES([Makefile],[chmod a-w Makefile])
 AC_OUTPUT
