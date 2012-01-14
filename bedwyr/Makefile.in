@@ -12,13 +12,14 @@
 
 # DEFINITIONS
 
-ifeq ($(TARGET),)
 PACKAGE_TARNAME = @PACKAGE_TARNAME@
-else
-PACKAGE_TARNAME = $(TARGET)
-endif
 PACKAGE_VERSION = @PACKAGE_VERSION@
-ARCH_NAME       = $(PACKAGE_TARNAME)-$(PACKAGE_VERSION)
+DIST_NAME       = $(PACKAGE_TARNAME)-$(PACKAGE_VERSION)
+ifeq ($(TARGET),)
+PACKAGE_NAME = $(PACKAGE_TARNAME)
+else
+PACKAGE_NAME = $(TARGET)
+endif
 
 TAR	= @TAR@ -p
 FIND	= @FIND@
@@ -35,7 +36,7 @@ datarootdir   =@datarootdir@
 #localstatedir =@localstatedir@
 #includedir    =@includedir@
 #oldincludedir =@oldincludedir@
-docdir        =@docdir@
+docdir        =$(patsubst %$(PACKAGE_TARNAME),%$(PACKAGE_NAME),@docdir@)
 #infodir       =@infodir@
 htmldir       =@htmldir@
 #dvidir        =@dvidir@
@@ -57,7 +58,7 @@ DATAROOTDIR   =$(DESTDIR)$(datarootdir)
 #LOCALSTATEDIR =$(DESTDIR)$(localstatedir)
 #INCLUDEDIR    =$(DESTDIR)$(includedir)
 #OLDINCLUDEDIR =$(DESTDIR)$(oldincludedir)
-DOCDIR        =$(DESTDIR)$(docdir:@PACKAGE_TARNAME@=$(PACKAGE_TARNAME))
+DOCDIR        =$(DESTDIR)$(docdir)
 #INFODIR       =$(DESTDIR)$(infodir)
 HTMLDIR       =$(DESTDIR)$(htmldir)
 #DVIDIR        =$(DESTDIR)$(dvidir)
@@ -86,6 +87,7 @@ XPL = list.def internal/scoping.def internal/checks.def \
 
 NDCORE_DOCS	= COPYING CHANGES README TODO
 BEDWYR_DOCS	= COPYING CHANGES README TODO
+DOCS		= $(BEDWYR_DOCS)
 CONTRIB		= contrib/emacs/bedwyr.el \
 		  contrib/vim/ftdetect/bedwyr.vim \
 		  contrib/vim/syntax/bedwyr.vim
@@ -95,7 +97,7 @@ USERGUIDE	= doc/*.tex doc/userguide.bib doc/Makefile
 PDF		= userguide.pdf
 HTML		= userguide.html
 ARCH_FILES	= configure.ac Makefile.in install-sh \
-		  $(DOCS) $(CONSTRIB) $(EXAMPLES) \
+		  $(DOCS) $(CONTRIB) $(EXAMPLES) \
 		  $(USERGUIDE)
 
 ndcore = src/ndcore/ndcore.$(cma)
@@ -185,7 +187,7 @@ endif
 
 install_ndcore: ndcore_doc $(NDCORE_DOCS:=.bz2)
 	@$(INSTALL_DIR) $(LIBDIR)
-	$(INSTALL_BIN) $(ndcore) $(ndcore:$(cma)=a) $(LIBDIR)
+	$(INSTALL_BIN) $(ndcore) $(wildcard $(ndcore:$(cma)=a)) $(LIBDIR)
 	$(TAR) -xf $(ndcore:$(cma)=cmi.tar) -C $(LIBDIR)
 	@$(INSTALL_DIR) $(DOCDIR)
 	@$(INSTALL_DOC) $(NDCORE_DOCS:=.bz2) $(DOCDIR)
@@ -195,14 +197,11 @@ ifneq (@OCAMLDOC@,)
 	  $(HTMLDIR)/html
 endif
 
-#install_bedwyr: $(bedwyr) doc/$(PS) doc/$(PDF) doc/$(HTML)
 install_bedwyr: bedwyr_doc $(BEDWYR_DOCS:=.bz2)
 	@$(INSTALL_DIR) $(BINDIR)
 	@$(INSTALL_BIN) $(bedwyr) $(BINDIR)
 	@$(INSTALL_DIR) $(DOCDIR)
 	@$(INSTALL_DOC) $(BEDWYR_DOCS:=.bz2) $(DOCDIR)
-	@for i in $(CONTRIB) ; do $(INSTALL_DOC) -D $$i $(DOCDIR)/$$i ; done
-	@for i in $(EXAMPLES) ; do $(INSTALL_DOC) -D $$i $(DOCDIR)/$$i ; done
 #	@$(INSTALL_DIR) $(PSDIR)
 #	@$(INSTALL_DIR) $(PDFDIR)
 #	@$(INSTALL_DIR) $(HTMLDIR)
@@ -216,20 +215,33 @@ ifneq (@OCAMLDOC@,)
 endif
 #	@$(INSTALL_DIR) $(MANDIR)/man1
 #	@$(INSTALL_DOC) $(MAN) $(MANDIR)/man1
+	@$(INSTALL_DIR) $(DATAROOTDIR)/$(PACKAGE_NAME)
+	@for i in $(CONTRIB) ; do \
+	  $(INSTALL_DOC) -D $$i $(DATAROOTDIR)/$(PACKAGE_NAME)/$$i ; done
+	@for i in $(EXAMPLES) ; do \
+	  $(INSTALL_DOC) -D $$i $(DATAROOTDIR)/$(PACKAGE_NAME)/$$i ; done
 
 # ARCHIVE
 
-.PHONY: dist src/$(PACKAGE_TARNAME).tar
+.PHONY: dist src/ndcore/ndcore.tar src/bedwyr.tar dist.tar
 
-dist: src/Makefile bz2
-bz2: $(ARCH_NAME).tar.bz2
-gz: $(ARCH_NAME).tar.gz
+dist: Makefile
+	make $(DIST_NAME).tar.bz2
+	make $(DIST_NAME).tar.gz
 
-src/$(PACKAGE_TARNAME).tar:
-	make -C src $(PACKAGE_TARNAME).tar
-$(ARCH_NAME).tar: $(ARCH_FILES) src/$(PACKAGE_TARNAME).tar
-	$(TAR) -cf $@ --xform 's|^|$(ARCH_NAME)/|' $(ARCH_FILES)
-	$(TAR) -Af $@ src/$(PACKAGE_TARNAME).tar
+src/ndcore/ndcore.tar:
+	make -C src/ndcore archive
+
+src/bedwyr.tar:
+	make -C src archive
+
+dist.tar: $(ARCH_FILES)
+	$(TAR) -cf $@ --xform 's|^|$(DIST_NAME)/|' $^
+
+$(DIST_NAME).tar: src/ndcore/ndcore.tar src/bedwyr.tar dist.tar
+	$(TAR) -cf $@ -T /dev/null
+	for i in $^ ; do \
+	  $(TAR) -Af $@ $$i ; done
 
 %.tar.bz2: %.tar
 	bzip2 -f $<

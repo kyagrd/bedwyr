@@ -1,12 +1,16 @@
 # DEFINITIONS
 
+PACKAGE_TARNAME = @PACKAGE_TARNAME@
+PACKAGE_VERSION = @PACKAGE_VERSION@
+DIST_NAME       = $(PACKAGE_TARNAME)-$(PACKAGE_VERSION)
+
 TAR	= @TAR@
 
 prefix		= @prefix@
 exec_prefix	= @exec_prefix@
 libdir		= @libdir@
 
-LIBDIR        =$(DESTDIR)$(libdir)/ocaml/slimmer
+LIBDIR		= $(DESTDIR)$(libdir)/ocaml/slimmer
 
 cmo = @cmo@
 cma = @cma@
@@ -69,11 +73,14 @@ test: tests/test
 
 doc: $(NDCORE_O)
 ifneq (@OCAMLDOC@,)
+	mkdir -p ../../doc/html/ndcore
 	$(OCAMLDOC) -d ../../doc/html/ndcore -html $(NDCORE_MLI)
 endif
 
+archive: ndcore.tar
+
 ndcore.tar: $(NDCORE_SRC) $(TEST_SRC) Makefile.in
-	$(TAR) -cf $@ --xform 's|^|src/ndcore/|' $^
+	$(TAR) -cf $@ --xform 's|^|$(DIST_NAME)/src/ndcore/|' $^
 
 .PHONY: clean
 clean:

@@ -1,5 +1,9 @@
 # DEFINITIONS
 
+PACKAGE_TARNAME = @PACKAGE_TARNAME@
+PACKAGE_VERSION = @PACKAGE_VERSION@
+DIST_NAME       = $(PACKAGE_TARNAME)-$(PACKAGE_VERSION)
+
 TAR	= @TAR@
 
 prefix		= @prefix@
@@ -68,11 +72,14 @@ depend: $(BEDWYR_SRC)
 
 doc: $(BEDWYR_O)
 ifneq (@OCAMLDOC@,)
+	mkdir -p ../doc/html/bedwyr
 	$(OCAMLDOC) -d ../doc/html/bedwyr -html $(BEDWYR_MLI)
 endif
 
-bedwyr.tar: $(BEDWYR_FILES) Makefile.in
-	$(TAR) -cf $@ --xform 's|^|src/|' $^
+archive: bedwyr.tar
+
+bedwyr.tar: $(filter-out config.ml,$(BEDWYR_FILES)) config.ml.in Makefile.in
+	$(TAR) -cf $@ --xform 's|^|$(DIST_NAME)/src/|' $^
 
 .PHONY: clean
 clean:
