@@ -1,0 +1,85 @@
+# DEFINITIONS
+
+TAR	= @TAR@
+
+prefix		= @prefix@
+exec_prefix	= @exec_prefix@
+libdir		= @libdir@
+
+LIBDIR        =$(DESTDIR)$(libdir)/ocaml/slimmer
+
+cmo = @cmo@
+cma = @cma@
+INCLUDES = -I tests
+OCAMLDEP = @OCAMLDEP@ $(INCLUDES)
+OCAMLC = @OCAMLC@ @OCAMLCFLAGS@ $(INCLUDES) \
+	 -I $(LIBDIR) -I $(shell ocamlc -where)/slimmer -c
+OCAMLL = @OCAMLC@ @OCAMLLFLAGS@ $(INCLUDES) \
+	 -I $(LIBDIR) -I $(shell ocamlc -where)/slimmer
+OCAMLDOC = @OCAMLDOC@ \
+	   -stars -m A
+
+# SOURCE FILES
+
+NDCORE_ML  = term.ml norm.ml unify.ml index.ml type.ml typing.ml pprint.ml
+TEST_ML    = tests/oUnit.ml tests/test.ml
+
+NDCORE_MLI = $(wildcard $(NDCORE_ML:.ml=.mli))
+TEST_MLI = $(wildcard $(TEST_ML:.ml=.mli))
+
+NDCORE_SRC = $(NDCORE_ML) $(NDCORE_MLI)
+TEST_SRC   = $(TEST_ML) $(TEST_MLI)
+
+NDCORE_O = $(NDCORE_ML:.ml=.$(cmo))
+TEST_O   = $(TEST_ML:.ml=.$(cmo))
+
+# BUILDING
+
+all: ndcore.$(cma) ndcore.cmi.tar
+
+# TODO build ndcore.cma *and* ndcore.cmxa,
+# since it must be installed as a lib,
+# not just used during the compilation of bedwyr
+ndcore.$(cma): $(NDCORE_O)
+	$(OCAMLL) $^ -a -o $@
+
+ndcore.cmi.tar: $(NDCORE_ML:.ml=.cmi)
+	$(TAR) -cf $@ $^
+
+tests/test: ndcore.$(cma) $(TEST_O)
+	$(OCAMLL) unix.$(cma) $^ -o $@
+
+-include depend
+depend: $(NDCORE_SRC) $(TEST_SRC)
+	$(OCAMLDEP) $^ > depend
+
+.SUFFIXES: .mll .mly .ml .cmo .cmx .mli .cmi
+
+.ml.$(cmo):
+	$(OCAMLC) $<
+.mli.cmi:
+	$(OCAMLC) $<
+
+# OTHER TARGETS
+
+.PHONY: test doc ndcore.tar
+
+test: tests/test
+	./$<
+
+doc: $(NDCORE_O)
+ifneq (@OCAMLDOC@,)
+	$(OCAMLDOC) -d ../../doc/html/ndcore -html $(NDCORE_MLI)
+endif
+
+ndcore.tar: $(NDCORE_SRC) $(TEST_SRC) Makefile.in
+	$(TAR) -cf $@ --xform 's|^|src/ndcore/|' $^
+
+.PHONY: clean
+clean:
+	rm -f depend
+	rm -f *.cm[ixoa] *.cmxa *.[oa]
+	rm -f tests/test
+	rm -f tests/*.cm[ixoa] tests/*.cmxa tests/*.[oa]
+	rm -f ndcore.tar ndcore.cmi.tar
+	rm -f ../../doc/html/ndcore/*

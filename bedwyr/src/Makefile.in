@@ -1,70 +1,52 @@
 # DEFINITIONS
 
-PACKAGE_NAME = @PACKAGE_NAME@
-PACKAGE_TARNAME = @PACKAGE_TARNAME@
-PACKAGE_VERSION = @PACKAGE_VERSION@
-ARCH=$(PACKAGE_TARNAME)-$(PACKAGE_VERSION)
+TAR	= @TAR@
 
-TAR = @TAR@
+prefix		= @prefix@
+exec_prefix	= @exec_prefix@
+libdir		= @libdir@
 
-prefix        =@prefix@
-exec_prefix   =@exec_prefix@
-libdir        =@libdir@
+LIBDIR		= $(DESTDIR)$(libdir)/ocaml/slimmer
 
 cmo = @cmo@
 cma = @cma@
-INCLUDES = -I ndcore -I ndcore/tests
-OCAMLC = @OCAMLC@ @OCAMLCFLAGS@ -I $(libdir)/ocaml/slimmer $(INCLUDES) -c
-OCAMLL = @OCAMLC@ @OCAMLLFLAGS@ -I $(libdir)/ocaml/slimmer $(INCLUDES)
-OCAMLDEP = @OCAMLDEP@ $(INCLUDES)
-OCAMLDOC = @OCAMLDOC@ -stars -m A -I ndcore
+INCLUDES = -I ndcore
+OCAMLDEP = @OCAMLDEP@
+OCAMLC = @OCAMLC@ @OCAMLCFLAGS@ $(INCLUDES) \
+	 -I $(LIBDIR) -I $(shell ocamlc -where)/slimmer -c
+OCAMLL = @OCAMLC@ @OCAMLLFLAGS@ $(INCLUDES) \
+	 -I $(LIBDIR) -I $(shell ocamlc -where)/slimmer
+OCAMLDOC = @OCAMLDOC@ $(INCLUDES) \
+	   -I $(LIBDIR) -I $(shell ocamlc -where)/slimmer \
+	   -stars -m A
 OCAMLYACC = @OCAMLYACC@ -v
 OCAMLLEX = @OCAMLLEX@
 
 # SOURCE FILES
 
-CORE_ML    = ndcore/term.ml ndcore/norm.ml ndcore/unify.ml ndcore/index.ml \
-	     ndcore/type.ml ndcore/typing.ml ndcore/pprint.ml
-TEST_ML    = ndcore/tests/oUnit.ml ndcore/tests/test.ml
 BEDWYR_MLLY= table.ml system.ml prover.ml \
 	     config.ml parser.mly lexer.mll \
 	     main.ml
 BEDWYR_MLL = $(BEDWYR_MLLY:.mly=.ml)
 BEDWYR_ML  = $(BEDWYR_MLL:.mll=.ml)
 
-CORE_MLI   = $(wildcard $(CORE_ML:.ml=.mli))
 BEDWYR_MLI = $(filter-out parser.mli,$(wildcard $(BEDWYR_ML:.ml=.mli)))
 
-CORE_SRC   = $(CORE_ML)   $(CORE_MLI)
-TEST_SRC   = $(TEST_ML)
 BEDWYR_SRC = $(BEDWYR_ML) $(BEDWYR_MLI)
 
-CORE_FILES   = $(CORE_SRC)
-TEST_FILES   = $(TEST_SRC)
 BEDWYR_FILES = $(BEDWYR_MLLY) $(BEDWYR_MLI)
 
-CORE_O   = $(CORE_ML:.ml=.$(cmo))
-TEST_O   = $(TEST_ML:.ml=.$(cmo))
 BEDWYR_O = $(BEDWYR_ML:.ml=.$(cmo))
 
 # BUILDING
 
-all: ndcore.$(cma) bedwyr
-
-# TODO build ndcore.cma *and* ndcore.cmxa,
-# since it must be installed as a lib,
-# not just used during the compilation of bedwyr
-ndcore/ndcore.$(cma): $(CORE_O)
-	$(OCAMLL) $^ -a -o $@
-
-ndcore/test: $(TEST_O)
-	$(OCAMLL) unix.$(cma) ndcore.$(cma) $^ -o $@
+all: bedwyr
 
 bedwyr: $(BEDWYR_O)
 	$(OCAMLL) unix.$(cma) ndcore.$(cma) $^ -o $@
 
 -include depend
-depend: $(CORE_SRC) $(TEST_SRC) $(BEDWYR_SRC)
+depend: $(BEDWYR_SRC)
 	$(OCAMLDEP) $^ > depend
 
 .SUFFIXES: .mll .mly .ml .cmo .cmx .mli .cmi
@@ -82,32 +64,21 @@ depend: $(CORE_SRC) $(TEST_SRC) $(BEDWYR_SRC)
 
 # OTHER TARGETS
 
-test: ndcore/test
-	$<
+.PHONY: doc bedwyr.tar
 
-.PHONY: doc
-ndcore_doc: ndcore/ndcore.$(cma) $(CORE_MLI)
-ifneq (@OCAMLDOC@,)
-	$(OCAMLDOC) -d ../doc/html/ndcore -html $(CORE_MLI)
-endif
-
-bedwyr_doc: bedwyr $(BEDWYR_MLI)
+doc: $(BEDWYR_O)
 ifneq (@OCAMLDOC@,)
 	$(OCAMLDOC) -d ../doc/html/bedwyr -html $(BEDWYR_MLI)
 endif
 
-doc: ndcore_doc bedwyr_doc
-
-$(PACKAGE_TARNAME).tar: $(CORE_FILES) $(TEST_FILES) $(BEDWYR_FILES)
-	$(TAR) -cf $@ --xform 's|^|$(ARCH)/src/|' $^
+bedwyr.tar: $(BEDWYR_FILES) Makefile.in
+	$(TAR) -cf $@ --xform 's|^|src/|' $^
 
 .PHONY: clean
 clean:
+	rm -f depend
 	rm -f bedwyr
-	rm -f ndcore/test
-	rm -f bedwyr_src.tar
-	rm -f config.ml parser.ml parser.mli lexer.ml parser.output
 	rm -f *.cm[ixoa] *.cmxa *.[oa]
-	rm -f ndcore/*.cm[ixoa] ndcore/*.cmxa ndcore/*.[oa]
-	rm -f ndcore/tests/*.cm[ixoa] ndcore/tests/*.cmxa ndcore/tests/*.[oa]
-	rm -f ../doc/html/*/*
+	rm -f parser.ml parser.mli parser.output lexer.ml
+	rm -f bedwyr.tar
+	rm -f ../doc/html/bedwyr/*
