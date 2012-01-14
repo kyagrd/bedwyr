@@ -1,29 +1,49 @@
 #include "pi.def".
 
+Kind $nat       type.
+Type zero       obj -> p.
+Type succ       obj -> obj -> p.
+Type add        obj -> obj -> obj -> p.
+Type $nat       $nat -> obj -> p.
+Type nil        obj.
+Type s          $nat -> $nat.
+Type zz         $nat.
+Type t          obj.
+
+Define agent : p -> p -> prop by
+  agent (zero C)    (in C s\ in C n\ out n nil z);
+  agent (succ P C)  (in C s\ in C n\ out s P z);
+  agent (add P Q R) (nu s\ nu n\ out P s (out P n
+                    (in R ss\ in R nn\
+                      (plus (in s k\ nu kk\ (par (out ss kk z) (add k Q kk)))
+                            (in n nil\ out Q ss (out Q nn z))))));
+  agent ($nat (s N) C) (in C s\ in C zz\ nu n\ par (out s n z) ($nat N n));
+  agent ($nat zz    C) (zero C).
+
 % Tests about simulations (the third one has several solutions)
-#assert (weak_sim (nat (s (s zz)) c) (nat (s (s zz)) c)).
-#assert (weak_sim (nat (s zz) c)
-                  (nu x\ nu y\ par (par (nat zz x) (nat (s zz) y))
+#assert (weak_sim agent ($nat (s (s zz)) c) ($nat (s (s zz)) c)).
+#assert (weak_sim agent ($nat (s zz) c)
+                  (nu x\ nu y\ par (par ($nat zz x) ($nat (s zz) y))
                                    (add x y c))).
 
 % Tests about bisimulations
-#assert (weak_bisim (nu u\ nu d\ (par (nat zz u)
-                                 (par (nat (s zz) d)
+#assert (weak_bisim agent (nu u\ nu d\ (par ($nat zz u)
+                                 (par ($nat (s zz) d)
                                       (add u d t))))
-                    (nat (s zz) t)).
+                    ($nat (s zz) t)).
 
-#assert (weak_bisim (nu u\ nu d\ (par (nat (s (s zz)) d)
-                                 (par (nat (s (s (s zz))) u)
+#assert (weak_bisim agent (nu u\ nu d\ (par ($nat (s (s zz)) d)
+                                 (par ($nat (s (s (s zz))) u)
                                       (add u d t))))
-                    (nat (s (s (s (s (s zz))))) t)).
+                    ($nat (s (s (s (s (s zz))))) t)).
 
 % Similar example, but different evolution of the table, which used to crash.
-#assert (weak_bisim (nat (s (s (s (s (s zz))))) t)
+#assert (weak_bisim agent ($nat (s (s (s (s (s zz))))) t)
                     (nu two\ nu three\
-                      (par (nat (s (s zz)) two)
-                      (par (nat (s (s (s zz))) three) (add two three t))))).
+                      (par ($nat (s (s zz)) two)
+                      (par ($nat (s (s (s zz))) three) (add two three t))))).
 
-#assert_not (weak_bisim (nu u\ nu d\ (par (nat (s zz) d)
-                                     (par (nat (s zz) u)
+#assert_not (weak_bisim agent (nu u\ nu d\ (par ($nat (s zz) d)
+                                     (par ($nat (s zz) u)
                                           (add u d t))))
-                       (nat (s zz) t)).
+                       ($nat (s zz) t)).

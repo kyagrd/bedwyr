@@ -1,3 +1,5 @@
+Kind    foo,bar type.
+Type    f       foo -> bar.
 
 % This one should be ruled out because the unification on the right becomes
 % non-LLambda after the left unif: it has the form (H (f x) = f a).
@@ -9,7 +11,7 @@
 #assert_raise (forall y x, exists z, x = y -> z = x).
 
 % A similar case.
-#assert_raise (forall x y, exists a, forall t, (x=t /\ y=t) -> a=t).
+#assert_raise (forall x y, exists a, forall t, (x = t /\ y = t) -> a = t).
 
 % Here the right unification will eventually be (A x = x) which is no problem.
 #assert (forall y, exists a, forall x, x = y -> a = x).

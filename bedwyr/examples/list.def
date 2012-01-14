@@ -5,45 +5,34 @@
 % since coverage and determinancy checks would be useful to lambda prolog
 % programmers, for example.
 
-Kind    list,
-        elt     type.
+Kind    list    type.
 
 Type    nil     list.
-Type    cons    elt -> list -> list.
+Type    cons    nat -> list -> list.
 
-Define
-  list
-by
+Define list : list -> prop by
   list nil;
   list (cons X nil);
   list (cons X (cons Y nil));
   list (cons X (cons Y (cons Z nil))).
 
-Define
-  member
-by
+Define member : nat -> list -> prop by
   member X (cons X _);
   member X (cons _ L) := member X L.
 
-Define
-  append
-by
+Define append : list -> list -> list -> prop by
   append nil K K;
   append (cons X L) K (cons X M) := append L K M.
 
 % In the following checks, we assume the mode: append +L +K -M.
 
 % Coverage implicitly proves termination
-Define
-  coverage
-by
+Define coverage : prop by
   coverage := forall L K, list L -> exists M, append L K M.
 
-Define
-  determinacy
-by
+Define determinacy : prop by
   determinacy := forall L K M Mp,
-      list L -> append L K M => append L K Mp => M = Mp.
+    list L -> append L K M -> append L K Mp -> M = Mp.
 
 #assert coverage.
 #assert determinacy.
