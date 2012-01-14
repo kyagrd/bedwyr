@@ -1,37 +1,31 @@
 #include "pi.def".
 
-%% A simple illustration of how to encode traces
-%% and to check if two processes satisfy all the same traces.
+% A simple illustration of how to encode traces
+% and to check if two processes satisfy all the same traces.
 
-% kind trace  type.
-% type end    trace.
-% type tr     a -> trace -> trace.
-% type trp    (n -> a) -> (n -> trace) -> trace.
+Kind trace      type.
+Type $end       trace.
+Type tr         a -> trace -> trace.
+Type trp        (obj -> a) -> (obj -> trace) -> trace.
 
-Define
-  trace
-by
-  trace P end;
-  trace P (tr  Act Trace) := one P Act P' /\ trace P' Trace;
-  trace P (trp Act Trace) := onep P Act P' /\ nabla x, trace (P' x) (Trace x).
+Define trace : p -> trace -> prop by
+  trace P $end;
+  trace P (tr  Act Trace) := one  dummy_agent P Act P' /\ trace P' Trace;
+  trace P (trp Act Trace) := onep dummy_agent P Act P' /\ nabla x, trace (P' x) (Trace x).
 
-Define
-  trace_eq
-by
+Define trace_eq : p -> p -> prop by
   trace_eq P Q := (forall T, trace P T -> trace Q T) /\
-                (forall T, trace Q T -> trace P T).
+                  (forall T, trace Q T -> trace P T).
 
-Define
-  separating_trace
-by
+Define separating_trace : p -> p -> trace -> prop by
   separating_trace P Q T := trace P T /\ (trace Q T -> false).
 
-% ?= example 5 P, example 6 Q, separating_trace P Q T.
+% ?= example 5 P /\ example 6 Q /\ separating_trace P Q T.
 % Solution found:
-%  P = (nu (x1\par (in x (x2\z)) (out x x1 z)))
-%  Q = (nu (x1\plus (in x (x2\out x x1 z)) (out x x1 (in x (x2\z)))))
-%  T = (tr tau end)
-% More [y] ? y
+%  P = nu (x1\ par (in x (x2\ z)) (out x x1 z))
+%  Q = nu (x1\ plus (in x (x2\ out x x1 z)) (out x x1 (in x (x2\ z))))
+%  T = tr tau $end
+% More [y] ?
 % No more solutions.
 % ?=
 

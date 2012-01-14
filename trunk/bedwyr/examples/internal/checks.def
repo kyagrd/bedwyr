@@ -1,14 +1,19 @@
+Kind    foo,
+        bar,
+        baz     type.
+
+Type    f       foo -> bar -> baz.
+Type    g       foo -> bar.
+Type    h       foo -> baz.
 
 #assert_not false.
-#assert_raise (X=1 -> X=1).
+#assert_raise (X = 1 -> X = 1).
 
-Define
-  inductive p
-by
-  p X Y := X=Y -> false.
+Define inductive p : foo -> foo -> prop by
+  p X Y := X = Y -> false.
 #assert (forall x, nabla y, p x y).
 #assert_not (nabla y, forall x, p x y).
 
-#assert_raise (forall x y, exists z, x=y -> z=x).
-#assert_raise (forall x a y, exists z, f x a = f y a -> z=x).
-#assert_raise (forall x, exists y, forall z, x = f z -> y = g z).
+#assert_raise (forall x y, exists z, x = y -> z = x).
+#assert_raise (forall x a y, exists z, f x a = f y a -> z = x).
+#assert_raise (forall x, exists y, forall z, x = g z -> y = h z).

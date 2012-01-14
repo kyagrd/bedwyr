@@ -3,50 +3,68 @@
 
 %% To use this intrepreter, you need to
 %%   #include "seq.def".
+%%
 %% Then you need to pick a name of a binary predicate to use to store
 %% clauses: first argument is the head and the second is the body.
-%% Then, for every predicate, say, q, of the object-logic, insert the
-%% declaration
-%%     atom (q X Y Z).   <- the arity may vary, of course.
+%%
+%% Then, declare a predicate [atom] of type (bool -> prop),
+%% and for every predicate, say, q, of the object-logic, insert the
+%% clause
+%%     atom (q X1 ... Xn).
+%%
 %% Finally, call the goal
-%%     prv Prog Goal.
+%%     prv Atom Prog Goal.
 %% in order to attempt the proof of the Goal from the logic program
-%% encoded in Prog.
+%% encoded in Prog where atoms are charaterized by the predicate Atom.
 
 % Object logic is freely generated from
-%   tt, and, implied , implies , _forall, _exists
+%   tt, and, <-- , --> , $forall, $exists
 
 % Notice that the interpreter does not use lists: conjunctions can be
 % used instead.  The empty list is true (tt).
 
-Define
-  prv
-by
-  prv Prog B := seq Prog tt B.
+Kind    bool,
+        obj     type.
 
+Type    tt      bool.
+Type    and,
+        -->,
+        <--     bool -> bool -> bool.
+Type    $forall,
+        $exists (obj -> bool) -> bool.
+
+Define
 % ?- seq Prog List Goal.
 % Attempts to prove the Goal from the assumptions in List and
 % the logic programming clauses described by Prog.
+  seq : (bool -> prop) ->
+        (bool -> bool -> prop) ->
+        bool -> bool -> prop,
+  bc : (bool -> prop) ->
+       (bool -> bool -> prop) ->
+       bool -> bool -> bool -> prop
+by
+% Do right rules first.
+  seq Atom Prog L tt;
+  seq Atom Prog L (and B C)  := seq Atom Prog L B /\ seq Atom Prog L C;
+  seq Atom Prog L (G <-- D)   := seq Atom Prog (and D L) G;
+  seq Atom Prog L (D --> G)   := seq Atom Prog (and D L) G;
+  seq Atom Prog L ($forall B) := nabla x, seq Atom Prog L (B x);
+  seq Atom Prog L ($exists B) := exists x, seq Atom Prog L (B x);
+% Pick a formula on which to backchain.
+  seq Atom Prog L A := Atom A /\ (bc Atom Prog L L A \/ (Prog A Body /\ seq Atom Prog L Body));
+
 
 % Backchaining is done in a focused fashion.
-Define
-  bc
-by
-  bc Prog L A A := atom A;
-  bc Prog L (and X Y)  A := bc Prog L X A \/ bc Prog L Y A;
-  bc Prog L (D implied G)   A := bc Prog L D A /\ seq Prog L G;
-  bc Prog L (G implies D)   A := bc Prog L D A /\ seq Prog L G;
-  bc Prog L (_forall D) A := exists t, bc Prog L (D t) A.
+  bc Atom Prog L A A := Atom A;
+  bc Atom Prog L (and X Y)  A := bc Atom Prog L X A \/ bc Atom Prog L Y A;
+  bc Atom Prog L (D <-- G)   A := bc Atom Prog L D A /\ seq Atom Prog L G;
+  bc Atom Prog L (G --> D)   A := bc Atom Prog L D A /\ seq Atom Prog L G;
+  bc Atom Prog L ($forall D) A := exists t, bc Atom Prog L (D t) A.
 
-% Do right rules first.
 Define
-  seq
+  prv : (bool -> prop) ->
+        (bool -> bool -> prop) ->
+        bool -> prop
 by
-  seq Prog L tt;
-  seq Prog L (and B C)  := seq Prog L B /\ seq Prog L C;
-  seq Prog L (G implied D)   := seq Prog (and D L) G;
-  seq Prog L (D implies G)   := seq Prog (and D L) G;
-  seq Prog L (_forall B) := nabla x, seq Prog L (B x);
-  seq Prog L (_exists B) := exists x, seq Prog L (B x);
-% Pick a formula on which to backchain.
-  seq Prog L A := atom A /\ (bc Prog L L A \/ (Prog A Body /\ seq Prog L Body)).
+  prv Atom Prog B := seq Atom Prog tt B.
