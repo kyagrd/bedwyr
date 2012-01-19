@@ -19,9 +19,11 @@
 
 (** Pre-terms and kind/type checking. *)
 
-(** Position information. For error messages only. *)
+(** Position information during parsing. For error messages only. *)
 type pos = Lexing.position * Lexing.position
 
+(** Pre-term with type and position information,
+  * but without substitutions and sharing. *)
 type preterm
 
 (** {6 Creating pre-terms} *)
@@ -60,14 +62,20 @@ val pre_lambda : pos -> (pos * string * Type.simple_type) list -> preterm -> pre
 val pre_app : pos -> preterm -> preterm list -> preterm
 
 (** {6 Kind checking} *)
+
+(** Kind checking error. *)
 exception Type_kinding_error of pos * Type.simple_kind * Type.simple_kind
 
-(** Kind-check a type.
-  * Always succeeds and returns [(f,h,ho,p)]
-  * (except when given a non-existing type).
-  * @param ty a simple type
-  * @param expected_kind the simple kind the type is supposed to have (usually [TKind])
-  * @param atomic_kind a function returning the kind of an atomic type *)
+(** [kind_check ty expected_kind atomic_kind] checks that type [ty]
+  * is of the kind [expected_kind] (usually [TKind]).
+  * In the current implementation, types are simple types,
+  * so it always succeeds (except when given a non-existing type).
+  *
+  * [atomic_kind] is a function returning the kind of an atomic type,
+  * and the returned value is [(flex,hollow,hogher_order,propositional)],
+  * describing whether the type is an unassigned type variable,
+  * contains unassigned type variables, contains [TProp]
+  * and ends with [TProp]. *)
 val kind_check :
   Type.simple_type ->
   Type.simple_kind ->
@@ -76,7 +84,8 @@ val kind_check :
 
 (** {6 Type unifying} *)
 (** Type unifier type.
-  * A binding [k,v] symbolizes the substitution [(TVar k) -> v]. *)
+  * Used as an environment for the type variables
+  * (a binding [k,v] symbolizes the substitution [(TVar k) -> v]). *)
 type type_unifier
 
 (** Apply a function on each substitution of a unifier. *)
@@ -88,39 +97,38 @@ val ty_norm : ?unifier:type_unifier -> Type.simple_type -> Type.simple_type
 
 (** {6 Type checking} *)
 
+(** Type checking error on a term. *)
 exception Term_typing_error of pos * Type.simple_type * Type.simple_type *
             type_unifier
+
+(** Type checking error on a free or bound variable. *)
 exception Var_typing_error of string option * pos * Type.simple_type
 
 (** Find which arguments of an application are free variables. *)
 val pure_args : preterm -> string list
 
-(** Type-check and translate a pre-term.
-  * Either succeeds and realizes the type unification as side effect,
+(** [atomic_kind pt ty fv nt dv iv bv i pa] checks that the pre-term [pt]
+  * build by the parser has the type [ty] (usually [TProp]),
+  * and either translates it to the corresponding term
+  * and realizes the type unification as side effect,
   * or raises an exception to indicate nonunifiability
   * or to signal a case outside of the authorized types.
   *
-  * In any case, a lot of fresh type variables are created that aren't needed
-  * after this stage. Nothing is done to clean up the global type unifier
-  * at present.
-  * @param pre_term a pre-term built by the parser
-  * @param expected_type the simple type the term is supposed to have (usually
-  * [TProp])
-  * @param typed_free_var a function returning a type and a term when given the
-  * name of a free variable
-  * @param normalize_types a function mapping a provided normalization operation
-  * on a set of types once the type unification is done
-  * and before the corresponding unifier is lost (ie when [infer] is false)
-  * @param typed_declared_var a function returning a type and a term when given
-  * the name of a declared constant or a predicate
-  * @param typed_intern_var a function returning a type and a term when given
-  * the name of a pre-defined constant or predicate
-  * @param bound_var_type a function returning the type of a bound variable
-  * @param infer whether the result of the inference is to be kept in the
-  * global type unifier or not
-  * @param pure_args names of free variables used as argument of a
-  * top-level application, ie which will be abstracted on,
-  * and whose type can therefore contain TProp
+  * Whether it succeeds or not, a lot of fresh type variables are created
+  * that aren't needed after this stage, and nothing is done to clean up
+  * the global type unifier at present, so this function has a memory leak.
+  *
+  * [fv], [dv], [iv] and [bv] are functions returning the type (and,
+  * depending on the case, the corresponding term) of a free, declared,
+  * intern or bound variable.
+  * [nt] maps a provided function on a set of types once the type unification
+  * is done and before the corresponding unifier is lost
+  * (ie when [i] is false).
+  * [i] states whether the result of the inference is to be kept in the
+  * global type unifier or not, and
+  * [pa] are the names of free variables used as argument of a top-level
+  * (wrt a definition) application, ie which will be abstracted on,
+  * and whose type can therefore contain [TProp].
   * @return a type-checked Term.term and its type
   * @raise Var_typing_error if a free variable of type [prop] is found
   * @raise Term_typing_error if the pre-tem isn't well typed *)

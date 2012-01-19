@@ -47,6 +47,7 @@ Y = Y
 T = (abs (x1\ abs (x2\ pr x1 x2)))
 More [y] ? y
 No more solutions. v}
+      *
       * {e WARNING}: Because [_abstract] can abstract any logic variables,
       * and because while the input files are type-checked,
       * the underlying abstract machine of bedwyr is untyped,
@@ -58,7 +59,17 @@ No more solutions. v}
       * for some distinct types [alpha] and [beta],
       * then the above query will still succeed despite the fact that
       * [abs] is applied to terms of types [alpha -> gamma]
-      * and [beta -> gamma].
+      * and [beta -> gamma]:
+      * {v ?= #typeof pr.
+pr : alpha -> beta -> gamma
+?= #typeof abs.
+abs : (beta -> gamma) -> gamma
+?= #typeof _abstract.
+_abstract : ?4 -> ((?5 -> ?4) -> ?4) -> ?4 -> prop
+?= #typeof abs (x1\ abs (x2\ pr x1 x2)).
+At line 4, characters 30-31:
+Typing error: this expression has type beta but is used as 
+alpha. v}
       *
       * Hence type checking does not guarantee runtime type soundness
       * ("well typed programs don't go wrong").
@@ -91,15 +102,15 @@ No more solutions. v}
       * syntatically equivalent modulo renaming of nabla variables.
       *
       * For example:
-      * {v ?= nabla x\ nabla y\ _eqvt (f x y) (f y x).
+      * {v ?= nabla x y, _eqvt (f x y) (f y x).
 Yes.
 More [y] ? y
 No more solutions.
-?= nabla x\ nabla y\ _eqvt (f x x) (f y y).
+?= nabla x y, _eqvt (f x x) (f y y).
 Yes.
 More [y] ? y
 No more solutions.
-?= nabla x\ nabla y\ _eqvt (f x x) (f x y).
+?= nabla x y, _eqvt (f x x) (f x y).
 No. v} *)
     val var_check_eqvt : Term.var
 
@@ -222,12 +233,8 @@ exception Inconsistent_definition of string * Typing.pos * string
   * an exception is raised and the global type unifier isn't updated. *)
 val translate_query : Typing.preterm -> Term.term
 
-(** Add a clause to the definition of a declared predicate.
-  * A list of the variables corresponding to the predicates
-  * declared in the current definition block is given;
-  * the predicate must match one of them.
-  * @param new_predicates said list
-  * *)
+(** [add_clause l (p,h,b)] adds the clause [h := b] to a definition,
+  * as long as the name of the corresponding predicate is in the list [l]. *)
 val add_clause :
   Term.var list -> Typing.pos * Typing.preterm * Typing.preterm -> unit
 
@@ -240,7 +247,6 @@ val reset_defs : unit -> unit
 
 (** Get a definition.
   * @param check_arity the expected arity of the predicate
-  * @param head_tm the term corresponding to the predicate
   * @raise Missing_declaration if [head_tm] is not an existing predicate
   * @raise Arity_mismatch if [head_tm] exists but is not of arity [check_arity]
   *)

@@ -30,11 +30,21 @@ type var = private {
   lts : int
 }
 
+(** Quantifier: [forall], [exists] or [nabla]. *)
 type binder = Forall | Exists | Nabla
 type term
+
+(** Reference on a term. Enables sharing. *)
 type ptr
+
+(** Substitution term. *)
 type envitem = Dum of int | Binding of term * int
+
+(** Substitution environment. *)
 type env = envitem list
+
+(** Term of type [term] observed via the function [observe].
+  * Doesn't use the constructor [Ptr]. *)
 type rawterm =
   | QString of string
   | Nat of int
@@ -148,6 +158,10 @@ val atom : ?tag:tag -> string -> term
   * @raise Not_found if no hint is found
   * (should not happen for a variable defined by the parser) *)
 val get_var_name : var -> string
+
+(** @return the naming hint attached to the variable,
+  * or a default hint if there is none *)
+val get_hint : term -> string
 
 (** Find an unique name for [v] (based on a naming hint if there is one)
   * and registers it in the symbols table. *)

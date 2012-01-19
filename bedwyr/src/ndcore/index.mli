@@ -55,9 +55,11 @@ val eqvt_tbl : bool ref
 
 (** {6 Indexing} *)
 
+(** Type of an index of elements of type ['a]. *)
 type 'a t
 val empty  : 'a t
 
+(** Eigen variable in level 0, or logic variable. *)
 exception Cannot_table
 
 (** {6 Update} *)

@@ -28,8 +28,10 @@ val pp_type : Format.formatter -> Type.simple_type -> unit
 val type_to_string : Type.simple_type -> string
 
 (** Print a type in a more unique way. *)
-val pp_type_norm : Typing.type_unifier option -> Format.formatter -> Type.simple_type -> unit
-val type_to_string_norm : Typing.type_unifier option -> Type.simple_type -> string
+val pp_type_norm :
+  Typing.type_unifier option -> Format.formatter -> Type.simple_type -> unit
+val type_to_string_norm :
+  Typing.type_unifier option -> Type.simple_type -> string
 
 (** Print a unifier. *)
 val pp_unifier : Format.formatter -> Typing.type_unifier -> unit
@@ -38,13 +40,14 @@ val pp_unifier : Format.formatter -> Typing.type_unifier -> unit
   * Ensures consistent namings, using naming hints when available.
   * Behaves consistently from one call to another
   * unless Term.reset_namespace is called between executions.
-  * @param generic list of names for generic variables
-  * @param bound list of names for "free bound variables"
-  * The names from [generic] and [bound] are assumed not to conflict with
-  * any other name. The good way to ensure that is to use [Term.get_dummy_name]
-  * and [Term.free].
   *
-  * The input term should be fully normalized. *)
+  * The names from [generic] and [bound] are assumed not to conflict with
+  * any other name. The good way to ensure that is to use
+  * [Term.get_dummy_name] and [Term.free].
+  *
+  * The input term should be fully normalized.
+  * @param generic list of names for generic variables
+  * @param bound list of names for "free bound variables" *)
 val term_to_string_full :
   generic:string list -> bound:string list -> Term.term -> string
 

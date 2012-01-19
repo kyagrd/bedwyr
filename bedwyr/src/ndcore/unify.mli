@@ -24,8 +24,14 @@ type error =
   | TypesMismatch
   | ConstClash of (Term.term * Term.term)
 
+(** Miscellaneous unification errors. *)
 exception Error      of error
+
+(** Not a pattern. *)
 exception NotLLambda of Term.term
+
+(** Formula encountered by the unifier. *)
+exception Formula_as_Term of Term.term
 
 module type Param =
 sig
