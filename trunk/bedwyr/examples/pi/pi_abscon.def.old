@@ -51,16 +51,14 @@
 % At the meta level we want to prove the following theorems:
 %
 % (1) canonical forms:
-%     forall A B, (nabla x, canonical (A x)) /\ restrict (new A) B =-> canonical B.
+%     forall A B, (nabla x, canonical (A x)) /\ restrict (new A) B ==> canonical B.
 % (2) type preservation:
-%     forall P X A, process P /\ one P X A =-> canonical A.
+%     forall P X A, process P /\ one P X A ==> canonical A.
 %
 
 
 % processes
-Define
-  process
-by
+Define process by
   process z;
   process (in X A) := absAgent A;
   process (out X A) := conAgent A;
@@ -71,24 +69,18 @@ by
   process (match X Y P) := process P.
 
 % abstractions
-Define
-  absAgent
-by
+Define absAgent by
   absAgent (ag P) := process P;
   absAgent (new P) := nabla x, absAgent (P x);
   absAgent (abs P) := nabla x, absAgent (P x).
 
 % concretions
-Define
-  conAgent
-by
+Define conAgent by
   conAgent (ag P) := process P;
   conAgent (new P) := nabla x, conAgent (P x);
   conAgent (con M P) := conAgent P.
 
-Define
-  agent
-by
+Define agent by
   agent A := absAgent A \/ conAgent A.
 
 % Canonical agents:
@@ -99,31 +91,23 @@ by
 %      (new x\ con x (P x))
 %
 
-Define
-  canonAbs
-by
+Define canonAbs by
   canonAbs (ag P);
   canonAbs (abs P) := nabla x, canonAbs (P x).
 
-Define
-  canonCon
-by
+Define canonCon by
   canonCon (ag P);
   canonCon (con X P) := canonCon P;
   canonCon (new x\ con x (P x)) := nabla x, canonCon (P x).
 
-Define
-  canonical
-by
+Define canonical by
   canonical A := agent A /\ (canonAbs A \/ canonCon A).
 
 
 % == Some auxiliary predicates ==========================================
 
 % merge a (parameterized) process with an agent.
-Define
-  merge
-by
+Define merge by
   merge M (ag P) A := A = (ag (M P));
   merge M (abs A) (abs B) := nabla x, merge M (A x) (B x);
   merge M (con X A) (con X B) := merge M A B;
@@ -131,9 +115,7 @@ by
 
 % Assuming that (nabla x, canonical (P x)) holds, running
 % "restrict (new P) A" gives us a canonical agent A.
-Define
-  restrict
-by
+Define restrict by
   restrict (new x\ ag (P x)) (ag (nu P));
   restrict (new x\ con x (P x)) (new x\ con x (P x));
   restrict (new x\ con M (P x)) (con M R) := restrict (new P) R;
@@ -143,9 +125,7 @@ by
     nabla y, restrict (new x\ M x y) (R y).
 
 % Apply a canonical abstraction to a canonical concretion.
-Define
-  apply
-by
+Define apply by
   apply (ag P) (ag Q) M R := R = (M P Q);
   apply A (new B) M (nu R) := nabla x, apply A (B x) M (R x);
   apply (abs A) (con X B) M R := apply (A X) B M R.
@@ -158,9 +138,7 @@ by
 %  dn : name -> action (input action)
 %  tau : action
 
-Define
-  one
-by
+Define one by
   one (in X A) (dn X) A;
   one (out X A) (up X) A;
   one (taup P) tau (ag P);
@@ -188,18 +166,14 @@ by
 % We can assume without loss of generality that the agents are in
 % canonical forms.
 
-Define
-  coinductive bisimAgent
-by
+Define coinductive bisimAgent by
   bisimAgent (ag P) (ag Q) := bisim P Q;
   bisimAgent (abs M) (abs N) := forall x, bisimAgent (M x) (N x);
   bisimAgent (con X A) (con X B) := bisimAgent A B;
   bisimAgent (new x\ con x (M x)) (new x\ con x (N x)) :=
                 nabla x, bisimAgent (M x) (N x).
 
-Define
-  coinductive bisim
-by
+Define coinductive bisim by
   bisim P Q :=
     (forall A X, one P X A -> exists B, one Q X B /\ bisimAgent A B) /\
     (forall B X, one Q X B -> exists A, one P X A /\ bisimAgent A B).
@@ -207,31 +181,23 @@ by
 
 % == Examples ========================================================
 
-Define
-  proc
-by
+Define proc by
   proc 1 (x\ in x (abs y1\ abs y2\ ag (match y1 y2 (out c (ag z)))));
   proc 2 (x\ nu w\ out x (con w (con w (ag z))));
   proc 3 (x\ nu a\ nu b\ out x (con a (con b (ag z)))).
 
 % nu x.( x(y1,y2).[y1=y2]~c.0 | (nu w. ~x<w,w>.0) | (nu a.nu b. ~x<a,b>.0))
-Define
-  example
-by
+Define example by
   example 1 (nu x\ par (P x) (par (Q x) (R x))) :=
     proc 1 P /\ proc 2 Q /\ proc 3 R;
   % tau.~c.0 + tau.0
   example 2 (plus (taup (out c (ag z))) (taup z)).
 
-Define
-  test1
-by
+Define test1 by
   test1 := example 1 P /\ example 2 Q /\ process P /\ process Q /\ bisim P Q.
 
 
-Define
-  pair
-by
+Define pair by
   pair 1 R T :=
     P1 = (y\ out c (con y (ag z))) /\
     P = (x\ in x (abs y\ ag (P1 y))) /\
@@ -243,9 +209,7 @@ by
     T2 = taup (nu x\ nu k\ par (P1 k) (Q1 k)) /\
     T = plus T1 T2.
 
-Define
-  test2
-by
+Define test2 by
   test2 := pair 1 R T /\ process R /\ process T /\ bisim R T.
 
 

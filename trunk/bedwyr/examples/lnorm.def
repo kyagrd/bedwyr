@@ -33,38 +33,40 @@
 
 #include "seq.def".
 
-Define
-  pr
-by
-  pr G := seq lnorm tt G.
+Type abs,bnd    (name -> name) -> name.
+Type app        name -> name -> name.
+Type beta       name -> (name -> name) -> name.
+Type left,right name -> name.
 
-Define
-  atom
-by
+Type lred,insert_beta,
+     path,path' name -> name -> form.
+
+Type ap,bp,fp,gp,
+     a,b,f,g    name.
+
+Define atom : form -> prop by
   atom (lred A B);
   atom (path A B);
   atom (path' A B);
   atom (insert_beta A B).
 
 % Reduce marked beta-redexes using Bedwyr beta-reduction.
-Define
-  lnorm
-by
+Define lnorm : form -> form -> prop by
   lnorm (lred (abs R) (abs S))
-      (_forall x\ _forall y\ lred x y implies lred (R x) (S y));
+      ($forall x\ $forall y\ lred x y --> lred (R x) (S y));
   lnorm (lred (app M N) (app P Q))
       (and (lred M P) (lred N Q));
   lnorm (lred (beta N R) P)
       (lred S P) := (R N) = S;   % reschedule unification to keep to L-lambda.
   % Compute paths through a lambda-term.
   lnorm (path (abs R) (bnd P))
-      (_forall x\ _forall p\ path x p implies path (R x) (P p));
+      ($forall x\ $forall p\ path x p --> path (R x) (P p));
   lnorm (path (app M N) (left  P))
       (path M P);
   lnorm (path (app N M) (right P))
       (path M P);
   lnorm (path (beta N R) P)
-      (_forall x\ (_forall Q\ path x Q implied path N Q) implies path (R x) P);
+      ($forall x\ ($forall Q\ path x Q <-- path N Q) --> path (R x) P);
   lnorm (path a ap) tt;   % Add a few constants
   lnorm (path b bp) tt;
   lnorm (path f fp) tt;
@@ -72,7 +74,7 @@ by
   % This predicate is the same as above, except that it does not contain
   % the case for marked beta-redexes.
   lnorm (path' (abs R) (bnd P))
-      (_forall x\ _forall p\ path' x p implies path' (R x) (P p));
+      ($forall x\ $forall p\ path' x p --> path' (R x) (P p));
   lnorm (path' (app M N) (left  P))
       (path' M P);
   lnorm (path' (app N M) (right P))
@@ -84,21 +86,20 @@ by
   % This predicate can be used to insert marked beta-redexes into a term.
   lnorm (insert_beta (app (abs R) N) (beta N' R'))
       (and (insert_beta N N')
-           (_forall x\ insert_beta x x implies insert_beta (R x) (R' x)));
+           ($forall x\ insert_beta x x --> insert_beta (R x) (R' x)));
   lnorm (insert_beta (app M N) (app P Q))
       (and (insert_beta M P) (insert_beta N Q));
   lnorm (insert_beta (abs R) (abs R'))
-      (_forall x\ insert_beta x x implies insert_beta (R x) (R' x)).
+      ($forall x\ insert_beta x x --> insert_beta (R x) (R' x)).
+
+Define pr : form -> prop by
+  pr G := seq atom lnorm tt G.
 
 % M is a reduction of N if all paths in N are paths in M.
-Define
-  reduce
-by
+Define reduce : name -> name -> prop by
   reduce N M := forall p, pr (path N p) -> pr (path' M p).
 
-Define
-  example
-by
+Define example : nat -> name -> prop by
   example 1 (app (app (abs x\ abs y\ app x y) (abs w\ app w w)) (abs x\ x));
   example 2 (app (beta (abs w\ app w w) (x\ abs y\ app x y)) (abs x\ x));
   example 3 (abs x\ app x x);

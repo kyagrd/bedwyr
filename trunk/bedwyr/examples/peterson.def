@@ -24,30 +24,25 @@
 %       }
 %    }
 
-Define
-  boolean
-by
+Kind state      type.
+Type state      nat -> nat -> nat -> nat -> nat -> state.
+
+Define boolean : nat -> prop by
   boolean 0;
   boolean 1.
 
-Define
-  section
-by
+Define section : nat -> prop by
   section 1;
   section 2;
   section 3;
   section 4;
   section 5.
 
-Define
-  node
-by
+Define node : state -> prop by
   node (state P0 P1 A0 A1 T) := section P0 /\ section P1 /\
     boolean A0 /\ boolean A1 /\ boolean T.
 
-Define
-  arrow
-by
+Define arrow : state -> state -> prop by
   arrow (state  1 P1 A0 A1 T) (state  2 P1  1 A1 T);
   arrow (state  2 P1 A0 A1 T) (state  3 P1 A0 A1 1);
   arrow (state  3 P1 A0  0 T) (state  5 P1 A0  0 T);
@@ -64,23 +59,18 @@ by
   arrow (state P0  4 A0 A1 0) (state P0  3 A0 A1 0);
   arrow (state P0  5 A0 A1 T) (state P0  1 A0  0 T).
 
-Define
-  inductive path
-by
+Define inductive path : state -> state -> prop by
   path X X;
   path X Y := arrow X Z /\ path Z Y.
 
-Define
-  initial
-by
+Define initial : state -> prop by
   initial (state 1 1 0 0 0).
-Define
-  bad
-by
+Define bad : state -> prop by
   bad (state 5 5 A0 A1 T) := boolean A0 /\ boolean A1 /\ boolean T.
 
-Define
-  test
-by
-  test := initial I /\ (forall B, bad B /\ path I B -> print (error) /\ false) /\
-        print (peterson is right).
+Define test : prop by
+  test := initial I /\ (forall B, bad B /\ path I B -> println "Error" /\ false) /\
+        println "Peterson is right".
+
+#time.
+#assert test.

@@ -19,31 +19,17 @@
 
 #include "pi/pi.def".
 
+Type chi,cho,null,fail  name.
+
+Kind trace      type.
+Type $end       trace.
+Type tr         a -> trace -> trace.
+Type trp        a -> (name -> trace) -> trace.
+
 % Allow agent-style definitions as a controled recursion
-Define
-  one
-by
-  one  P A PP := def P Body /\ one  Body A PP.
-Define
-  onep
-by
-  onep P A PP := def P Body /\ onep Body A PP.
-
-% Traces of actions
-Define
-  trace
-by
-  trace P end;
-  trace P (tr  Act      Trace) := one P Act P' /\ trace P' Trace;
-  trace P (trp (up X)   Trace) := onep P (up X) P' /\
-                                nabla x, trace (P' x) (Trace x);
-  trace P (trp (dn X Y) Trace) := onep P (dn X) P' /\ trace (P' Y) Trace.
-
 % These are the models of the [i]nnocent and [g]uilty nodes.
-
-Define
-  def
-by
+Type i,g        p.
+Define def : p -> p -> prop by
   def i (nu a\ nu loop\
         (par (out cho a z)
         (par (out loop null z)
@@ -54,13 +40,20 @@ by
         (par (out loop null z)
              (bang (in loop x\ in chi y\ out loop null z))))).
 
+% Traces of actions
+Define trace : p -> trace -> prop by
+  trace P $end;
+  trace P (tr  Act      Trace) := one def P Act P' /\ trace P' Trace;
+  trace P (trp (up X _) Trace) := onep def P (up X) P' /\
+                                nabla x, trace (P' x) (Trace x);
+  trace P (trp (dn X Y) Trace) := onep def P (dn X) P' /\ trace (P' Y) (Trace Y).
+
 % 2. Find a separating trace (non-logical approach) ===========================
 % The goal is to find T such that (trace i T) but not (trace g T).
 % Here is a first attempt at finding it.
 
-Define
-  separating_trace
-by
+Define peng : trace -> prop by peng _.
+Define separating_trace : p -> p -> trace -> prop by
   separating_trace P Q T := trace P T /\ peng T /\ (trace Q T -> false).
 
 % This approach is natural, except for the special "non-logical" operator "peng"
@@ -105,26 +98,21 @@ by
 % Run the following:
 %   src/bedwyr examples/mute.def -e "separate i g." | examples/mute.pl
 
-Define
-  separate
-by
+Define separate : p -> p -> prop by
   separate P Q :=
   exists T,
-    trace P T /\ print (left T) /\ trace Q T /\ print (right T) /\ false.
+    trace P T /\ print "left " /\ println T /\ trace Q T /\ print "right " /\ println T /\ false.
 
 % A. Type check ===============================================================
 % Add a few valid names.
-Define
-  picheck
-by
-  picheck (name cho) tt;
-  picheck (name chi) tt;
-  picheck (name fail) tt;
-  picheck (name null) tt.
+Define picheck' : form -> form -> prop by
+  picheck' A B := picheck A B;
+  picheck' (name cho) tt;
+  picheck' (name chi) tt;
+  picheck' (name fail) tt;
+  picheck' (name null) tt.
 
 % Type-check defined processes.
-Define
-  tc
-by
-  tc := forall N P, def N P -> print ("Checking" N) /\ prv picheck (proc P).
+Define tc : prop by
+  tc := forall N P, def N P -> print "Checking " /\ println N /\ prv atom picheck' (proc P).
 #assert tc.

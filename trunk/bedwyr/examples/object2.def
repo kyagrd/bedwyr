@@ -5,23 +5,28 @@
 
 % Example taken from the CADE2007 system description for Bedwyr.
 
-Define
-  memb
-by
+Kind list,form  type.
+Type nil        list.
+Type cons       form -> list -> list.
+
+Kind obj        type.
+Type p          obj -> obj -> form.
+Type impl       form -> form -> form.
+Type $forall    (obj -> form) -> form.
+
+Define memb : form -> list -> prop by
   memb A (cons A L);
   memb A (cons B L) := memb A L.
 
-Define
-  pv
-by
+Define pv : list -> form -> prop by
   pv L (p X Y) := memb (p X Y) L;
   pv L (impl A B) := pv (cons A L) B;
-  pv L (_forall B) := nabla x, pv L (B x).
+  pv L ($forall B) := nabla x, pv L (B x).
 
 #assert
   (forall r s t,
-     pv nil (_forall x\ impl (p x r) (_forall y\ impl (p y s) (p x t))) -> r = t).
+     pv nil ($forall x\ impl (p x r) ($forall y\ impl (p y s) (p x t))) -> r = t).
 
 #assert_not
   (forall r s t,
-     pv nil (_forall x\ impl (p x r) (_forall y\ impl (p y s) (p x t))) -> r = s).
+     pv nil ($forall x\ impl (p x r) ($forall y\ impl (p y s) (p x t))) -> r = s).
