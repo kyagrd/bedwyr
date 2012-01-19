@@ -370,13 +370,12 @@ let type_check_and_translate pre_term expected_type typed_free_var normalize_typ
     (fun v ty ->
        let ty = ty_norm ~unifier:unifier ty in
        let n = Term.get_var_name v in
-       let pure = List.mem n pure_args in
-       if not pure then begin
+       if not (List.mem n pure_args) then begin
          let (_,_,higher_order,propositional) =
            (* TODO replace this dummy atomic_kind by a no-op one *)
            kind_check ty KType (fun _ -> KType)
          in
-         if higher_order || propositional
+         if infer && (higher_order || propositional)
          then raise (Var_typing_error (Some n,get_pos pre_term,ty))
        end ;
        ty) ;
