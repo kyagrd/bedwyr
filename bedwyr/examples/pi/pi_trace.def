@@ -6,7 +6,7 @@
 Kind trace      type.
 Type $end       trace.
 Type tr         a -> trace -> trace.
-Type trp        (obj -> a) -> (obj -> trace) -> trace.
+Type trp        (name -> a) -> (name -> trace) -> trace.
 
 Define trace : p -> trace -> prop by
   trace P $end;

@@ -24,20 +24,43 @@
 
 % Operational semantics for finite pi-calculus with assertions.
 
-% bound input
+Kind obj        type.
+Type c          obj.    % Names
 
+Kind a          type.   % Actions
+Type tau        a.
+Type dn,up      obj -> obj -> a.
+Type bgn,nd     obj -> a.
+
+Kind p       type.   % Processes
+Type in   	obj -> (obj -> p) -> p.
+Type out  	obj -> obj -> p -> p.
+Type begin,$end obj -> p -> p.
+Type taup 	p -> p.
+Type match      obj -> obj -> p -> p.
+%  Type    plus, par   p -> p -> p.
+Type par        p -> p -> p.
+Type nu         (obj -> p) -> p.
+%  Type    bang    p -> p.
+Type stop,z     p.
+
+
+% bound input
 Define
-  one,
-  onep
+  one : p -> a -> p -> prop,
+  onep : p -> (obj -> a) -> (obj -> p) -> prop
 by
   onep (in X M) (dn X) M;
+
   % free output
-  one (out X Y P) (up X Y) P;
+  one  (out X Y P) (up X Y) P;
+
   % tau
   one  (taup P) tau P;
+
   % assertions
   one (begin L P) (bgn L) P;
-  one (end L P) (nd L) P;
+  one ($end L P) (nd L) P;
   % match prefix
   one  (match X X P) A Q := one P A Q;
   onep (match X X P) A M := onep P A M;
@@ -46,9 +69,11 @@ by
   one  (par P Q) A (par P Q1) := one Q A Q1;
   onep (par P Q) A (x\par (M x) Q) := onep P A M;
   onep (par P Q) A (x\par P (N x)) := onep Q A N;
+
   % restriction
   one  (nu x\P x) A (nu x\Q x)      := nabla x, one  (P x) A (Q x);
   onep (nu x\P x) A (y\ nu x\Q x y) := nabla x, onep (P x) A (y\ Q x y);
+
   % open
   onep (nu x\M x) (up X) N := nabla y, one (M y) (up X y) (N y);
   onep (nu x\M x) bgn N := nabla y, one (M y) (bgn y) (N y);
@@ -58,22 +83,20 @@ by
     exists X, onep P (dn X) M /\ onep Q (up X) N;
   one (par P Q) tau (nu y\ par (M y) (N y)) :=
     exists X, onep P (up X) M /\ onep Q (dn X) N;
+
   % comm
   one (par P Q) tau (par R T) :=
     exists X Y M, onep P (dn X) M /\ one Q (up X Y) T /\ R = (M Y);
   one (par P Q) tau (par R T) :=
     exists X Y M, onep Q (dn X) M /\ one P (up X Y) R /\ T = (M Y).
 
-
 % traces
 
-Define
-  trace
-by
+Define trace : p -> p -> prop by
   trace P stop;
   trace P (begin L T) :=
     one P (bgn L) Q /\ trace Q T;
-  trace P (end L T) :=
+  trace P ($end L T) :=
     one P (nd L) Q /\ trace Q T;
   trace P T :=
     one P tau Q /\ trace Q T;
@@ -86,49 +109,39 @@ by
   trace P (nu x\ begin x (T x)) :=
     onep P bgn Q /\
     nabla x, trace (Q x) (T x);
-  trace P (nu x\ end x (T x)) :=
+  trace P (nu x\ $end x (T x)) :=
     onep P nd Q /\
     nabla x, trace (Q x) (T x).
 
 
-Define
-  remove
-by
+Kind list       type.
+Type cons       obj -> list -> list.
+Type nil        list.
+Define remove : obj -> list -> list -> prop by
   remove X (cons X L) L;
   remove X (cons Y L) R := remove X L R.
 
 % Check whether a trace is a correspondence. The list L is the accumulated
 % "begin" assertions. Use tabling to speed up proof search.
-Define
-  inductive iscorr
-by
+Define inductive iscorr : list -> p -> prop by
   iscorr L stop;
   iscorr L (begin M T) := iscorr (cons M L) T;
-  iscorr L (end M T) := remove M L L1 /\ iscorr L1 T;
+  iscorr L ($end M T) := remove M L L1 /\ iscorr L1 T;
   iscorr L (nu x\(T x)) := nabla x, iscorr L (T x).
 
 
-Define
-  safe
-by
+Define safe : p -> prop by
   safe P :=
-   forall T, (trace P T /\ print ("Checking trace:" T))  ->  iscorr nil T.
+   forall T, (trace P T /\ print " Checking trace: " /\ println T)  ->  iscorr nil T.
 
-
-Define
-  sender
-by
-  sender (c\ (nu m\ nu ack\ out c m (out c ack (in ack y\ end m z)))).
-Define
-  rcver
-by
+Define sender : (obj -> p) -> prop by
+  sender (c\ (nu m\ nu ack\ out c m (out c ack (in ack y\ $end m z)))).
+Define rcver : (obj -> p) -> prop by
   rcver  (c\ in c m\ in c ack\ begin m (out ack m z)).
 
-Define
-  example
-by
+Define example : nat -> p -> prop by
   % Example 0: unsafe;
-  example 0 (nu x\ par (begin x z) (end x z));
+  example 0 (nu x\ par (begin x z) ($end x z));
   % Example 1: safe. Channel c is restricted
   example 1 (nu c\ par (P c) (Q c)) := sender P /\ rcver Q;
   % Example 2: unsafe
@@ -141,4 +154,4 @@ by
 #assert_not (example 2 P /\ safe P).
 #assert (example 3 P /\ safe P).
 
-% TODO: implement more complicated examples from [Gordon & Jeffrey].
+% TODO implement more complicated examples from [Gordon & Jeffrey].

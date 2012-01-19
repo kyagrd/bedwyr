@@ -3,13 +3,13 @@
 % Church natural numbers as encoded in the MWB examples
 Type    zero,
         un,
-        deux    obj -> obj -> p.
+        deux    name -> name -> p.
 Type    succ,
-        copy    obj -> obj -> obj -> obj -> p.
-Type    add     obj -> obj -> obj -> obj -> obj -> obj -> p.
+        copy    name -> name -> name -> name -> p.
+Type    add     name -> name -> name -> name -> name -> name -> p.
 
 Kind    ch_nat  type.
-Type    church  obj -> obj -> ch_nat -> p.
+Type    church  name -> name -> ch_nat -> p.
 Type    zz      ch_nat.
 Type    ss      ch_nat -> ch_nat.
 

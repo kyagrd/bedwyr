@@ -1,8 +1,8 @@
 % This is an alternate presentation of graphs where the graph structure
 % is not hardcoded into the predicates, but rather is kept as a
-% datastrcture of the following form:
-%   (graph (c 1 (c 2 (c 3 (c 4 nil))))
-%          (c (arrow 1 2) (c (arrow 3 4) nil)))
+% datastructure of the following form:
+%   (mkgraph (cc 1 (cc 2 (cc 3 (cc 4 nil))))
+%            (ca (arrow 1 2) (ca (arrow 3 4) nil)))
 % where the the first list is the nodes of the graph and the second is
 % the arrows of the graph. The benefit of this representation is that
 % we modify the graph on the fly (as seen in the 'tree' predicate).
@@ -12,48 +12,56 @@
 
 % List utilities
 
-Define
-  member
-by
-  member X (c X L);
-  member X (c Y L) := member X L.
+Kind    list,
+        arrow,
+        alist,
+        graph   type.
 
-Define
-  remove
-by
-  remove (c X L) X L;
-  remove (c Y L) X (c Y Lp) := remove L X Lp.
+Type    nil     list.
+Type    cc      nat -> list -> list.
+
+Type    mkarrow nat -> nat -> arrow.
+Type    anil    alist.
+Type    ca      arrow -> alist -> alist.
+
+Type    mkgraph list -> alist -> graph.
+
+Define member : nat -> list -> prop by
+  member X (cc X L);
+  member X (cc Y L) := member X L.
+
+Define remove : list -> nat -> list -> prop by
+  remove (cc X L) X L;
+  remove (cc Y L) X (cc Y Lp) := remove L X Lp.
+
+Define amember : arrow -> alist -> prop by
+  amember X (ca X L);
+  amember X (ca Y L) := amember X L.
+
+Define aremove : alist -> arrow -> alist -> prop by
+  aremove (ca X L) X L;
+  aremove (ca Y L) X (ca Y Lp) := aremove L X Lp.
 
 % Nodes of the graph
 
-Define
-  node
-by
-  node (graph N A) X := member X N.
+Define node : graph -> nat -> prop by
+  node (mkgraph N _) X := member X N.
 
 % Directed predicates
 
-Define
-  arrow
-by
-  arrow (graph N A) X Y := member (arrow X Y) A.
+Define arrow : graph -> nat -> nat -> prop by
+  arrow (mkgraph _ A) X Y := amember (mkarrow X Y) A.
 
-Define
-  path
-by
+Define path : graph -> nat -> nat -> prop by
   path G X Y := arrow G X Y;
   path G X Y := arrow G X Z /\ path G Z Y.
 
 % Undirected predicates
 
-Define
-  edge
-by
+Define edge : graph -> nat -> nat -> prop by
   edge G X Y := arrow G X Y \/ arrow G Y X.
 
-Define
-  inductive edgepath
-by
+Define inductive edgepath : graph -> nat -> nat -> prop by
   edgepath G X X := node G X;
   edgepath G X Y := edge G X Z /\ edgepath G Z Y.
 % If we make it coinductive then infinite paths starting from node X
@@ -62,56 +70,45 @@ by
 
 % Notions of connectedness
 
-Define
-  connected
-by
-  connected G := forall X Y, node G X -> node G Y => edgepath G X Y.
+Define connected : graph -> prop by
+  connected G := forall X Y, node G X -> node G Y -> edgepath G X Y.
 
-Define
-  disconnected
-by
+Define disconnected : graph -> prop by
   disconnected G := exists X Y,
                     node G X /\ node G Y /\ (edgepath G X Y -> false).
 
-Define
-  removearrow
-by
-  removearrow (graph N A) X (graph N Ap) := remove A X Ap.
+Define removearrow : graph -> arrow -> graph -> prop by
+  removearrow (mkgraph N A) X (mkgraph N Ap) := aremove A X Ap.
 
 % A tree is a connected graph that becomes disconnected
 % if you remove any edge.
 
-Define
-  tree
-by
+Define tree : graph -> prop by
   tree G := connected G /\ forall A Gp, removearrow G A Gp -> disconnected Gp.
 
-Define
-  nottree
-by
+Define nottree : graph -> prop by
   nottree G := disconnected G \/
              exists A Gp, removearrow G A Gp /\ connected Gp.
 
 % Queries to try
-Define
-  graph
-by
+Define graph : nat -> graph -> prop by
   %       3
   %      / \
   % 1 - 2   5 - 6
   %      \
   %       4
-  graph 1  (graph (c 1 (c 2 (c 3 (c 4 (c 5 (c 6 nil))))))
-                (c (arrow 1 2) (c (arrow 2 3) (c (arrow 2 4)
-                   (c (arrow 3 5) (c (arrow 5 6) nil))))));
+  graph 1  (mkgraph (cc 1 (cc 2 (cc 3 (cc 4 (cc 5 (cc 6 nil))))))
+                (ca (mkarrow 1 2) (ca (mkarrow 2 3) (ca (mkarrow 2 4)
+                   (ca (mkarrow 3 5) (ca (mkarrow 5 6) anil))))));
   %       3
   %      / \
   % 1 - 2   5 - 6
   %      \ /
   %       4
-  graph 2  (graph (c 1 (c 2 (c 3 (c 4 (c 5 (c 6 nil))))))
-                (c (arrow 1 2) (c (arrow 2 3) (c (arrow 2 4)
-                   (c (arrow 3 5) (c (arrow 4 5) (c (arrow 5 6) nil))))))).
+  graph 2  (mkgraph (cc 1 (cc 2 (cc 3 (cc 4 (cc 5 (cc 6 nil))))))
+                (ca (mkarrow 1 2) (ca (mkarrow 2 3) (ca (mkarrow 2 4)
+                   (ca (mkarrow 3 5) (ca (mkarrow 4 5)
+                      (ca (mkarrow 5 6) anil))))))).
 
 #assert_not (graph 1 G /\ disconnected G).
 

@@ -1,14 +1,14 @@
 #include "pi.def".
 
 Kind $nat       type.
-Type zero       obj -> p.
-Type succ       obj -> obj -> p.
-Type add        obj -> obj -> obj -> p.
-Type $nat       $nat -> obj -> p.
-Type nil        obj.
+Type zero       name -> p.
+Type succ       name -> name -> p.
+Type add        name -> name -> name -> p.
+Type $nat       $nat -> name -> p.
+Type nil        name.
 Type s          $nat -> $nat.
 Type zz         $nat.
-Type t          obj.
+Type t          name.
 
 Define agent : p -> p -> prop by
   agent (zero C)    (in C s\ in C n\ out n nil z);

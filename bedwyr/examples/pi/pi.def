@@ -12,24 +12,24 @@
 %%%%    Static type checking of pi-calculus expressions     %%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Type    a,c,x,y obj.    % Names
+Type    a,c,x,y name.    % Names
 
 Kind    a       type.   % Actions
 Type    tau     a.
-Type    dn,up   obj -> obj -> a.
+Type    dn,up   name -> name -> a.
 
 Kind    p       type.   % Processes
-Type    in   	obj -> (obj -> p) -> p.
-Type    out  	obj -> obj -> p -> p.
+Type    in   	name -> (name -> p) -> p.
+Type    out  	name -> name -> p -> p.
 Type    taup 	p -> p.
-Type    match   obj -> obj -> p -> p.
+Type    match   name -> name -> p -> p.
 Type    plus, par   p -> p -> p.
-Type    nu      (obj -> p) -> p.
+Type    nu      (name -> p) -> p.
 Type    bang    p -> p.
 Type    z       p.
 
 %Define  one   : p -> a -> p -> prop.
-%Define  onep  : p -> (obj -> a) -> (obj -> p) -> prop.
+%Define  onep  : p -> (name -> a) -> (name -> p) -> prop.
 
 % {{{
 % Type checking for names, actions, and processes are implemented directly.
@@ -39,11 +39,11 @@ Type    z       p.
 % This will allow us to write typing rules using familiar
 % (lambda Prolog-like) clauses.
 
-Type    name    obj -> bool.
-Type    action  a -> bool.
-Type    proc    p -> bool.
+Type    name    name -> form.
+Type    action  a -> form.
+Type    proc    p -> form.
 
-Define atom : bool -> prop by
+Define atom : form -> prop by
   atom (name   A);
   atom (action A);
   atom (proc   A).
@@ -52,7 +52,7 @@ Define atom : bool -> prop by
 % the pi-calculus: names, actions, processes.  Best to think of "picheck"
 % as really the ":-" in lambda Prolog written as a prefix symbol.
 
-Define picheck : bool -> bool -> prop by
+Define picheck : form -> form -> prop by
   picheck (name a) tt;
   picheck (name x) tt;
   picheck (name y) tt;
@@ -116,7 +116,7 @@ Define example : nat -> p -> prop by
 % bound input
 Define
   one : (p -> p -> prop) -> p -> a -> p -> prop,
-  onep : (p -> p -> prop) -> p -> (obj -> a) -> (obj -> p) -> prop
+  onep : (p -> p -> prop) -> p -> (name -> a) -> (name -> p) -> prop
 by
   onep Agent (in X M) (dn X) M;
 
@@ -226,7 +226,7 @@ Define weak_one : (p -> p -> prop) -> p -> a -> p -> prop by
   weak_one Agent Q (up X Y) P := taus Agent Q QQ /\ one Agent QQ A PP /\ taus Agent PP P;
   weak_one Agent Q tau QQ     := taus Agent Q QQ.
 
-Define weak_onep : (p -> p -> prop) -> p -> (obj -> a) -> (obj -> p) -> prop by
+Define weak_onep : (p -> p -> prop) -> p -> (name -> a) -> (name -> p) -> prop by
   weak_onep Agent Q (up X) P :=
     taus Agent Q QQ /\ onep Agent QQ (up X) PP /\ nabla x, taus Agent (PP x) (P x);
   weak_onep Agent Q (dn X) P :=
