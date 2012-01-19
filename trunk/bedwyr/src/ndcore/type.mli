@@ -21,12 +21,15 @@
 
 (** {6 Kinds} *)
 
+(** Kind from the theory of simple types. *)
 type simple_kind = KType | KRArrow of simple_kind' list * simple_kind'
 and simple_kind' = simple_kind
 val ki_arrow : simple_kind -> simple_kind -> simple_kind
 
 (** {6 Types} *)
 
+(** Type from the theory of simple types (including predefined ones),
+  * plus type variables. *)
 type simple_type =
     Ty of string
   | TProp
