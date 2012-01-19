@@ -5,23 +5,23 @@ Kind    ty      type.
 
 %object-level constants 
 Type    nil     list.
-Type    cons    obj -> list -> list.
+Type    cons    name -> list -> list.
 
 %object-level predicates
-Type    append  list -> list -> list -> bool.
-Type    a,b     bool.
-Type    p       obj -> obj -> bool.
-Type    type_of obj -> ty -> bool.
-Type    copy    obj -> obj -> bool.
-Type    subst   (obj -> obj) -> obj -> obj -> bool.
-Type    eval    obj -> obj -> bool.
+Type    append  list -> list -> list -> form.
+Type    a,b     form.
+Type    p       name -> name -> form.
+Type    type_of name -> ty -> form.
+Type    copy    name -> name -> form.
+Type    subst   (name -> name) -> name -> name -> form.
+Type    eval    name -> name -> form.
 
 % objecy-level constructors
-Type    lam     (obj -> obj) -> obj.
-Type    app     obj -> obj -> obj.
+Type    lam     (name -> name) -> name.
+Type    app     name -> name -> name.
 Type    ~>      ty -> ty -> ty.
 
-Define atom : bool -> prop by
+Define atom : form -> prop by
   atom (append X Y Z);
   atom a;
   atom b;
@@ -60,13 +60,13 @@ by
 
 % The empty theory can be written as (x\y\ false).
 
-Define exprog : bool -> bool -> prop by
+Define exprog : form -> form -> prop by
 % Appending of two lists
   exprog (append nil L L) tt;
   exprog (append (cons X L) K (cons X M)) (append L K M).
 
 % object-level clauses
-Define prog : bool -> bool -> prop by
+Define prog : form -> form -> prop by
 % Specification of simply typing inference for untyped lambda-calculus.
   prog (type_of (lam x\ B x) (Tin ~> Tout))
      ($forall x\ type_of x Tin --> type_of (B x) Tout);
