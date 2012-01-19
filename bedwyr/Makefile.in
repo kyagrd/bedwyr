@@ -79,7 +79,7 @@ cma = @cma@
 # FILES
 
 XPL = list.def internal/scoping.def internal/checks.def \
-      miniml.def 3bits.def lambda.def progs.def \
+      3bits.def lambda.def progs.def \
       graph-alt.def minmax.def multisim.def \
       tictactoe.def \
       pi/pi_trace.def pi/corr-assert.def pi/pi_modal.def \
@@ -257,7 +257,30 @@ $(DIST_NAME).tar: src/ndcore/ndcore.tar src/bedwyr.tar dist.tar
 
 # OTHER TARGETS
 
-.PHONY: clean distclean
+.PHONY: help clean distclean
+
+help:
+	@echo " help           this message"
+	@echo
+	@echo " all (default)  compiles the library/program wrt \$$TARGET"
+	@echo " test           runs a test on ndcore, then on bedwyr"
+	@echo " doc            compiles the doc from the sources wrt \$$TARGET"
+	@echo "                (requires the compilation of the lib/program)"
+	@echo
+	@echo " install        install the files wrt to the command-line"
+	@echo "                variables \$$DESTDIR and \$$TARGET and the"
+	@echo "                parameters given to ./configure"
+	@echo
+	@echo " dist           build $(DIST_NAME).tar.bz2"
+	@echo "                and $(DIST_NAME).tar.gz"
+	@echo
+	@echo " help           display this message"
+	@echo " distclean      remove almost all generated files"
+	@echo " clean          remove compiled files"
+	@echo
+	@echo " \$$TARGET can be \"ndcore\" (for the library only), \"bedwyr\""
+	@echo " (for the programm only, requires ndcore to be previously"
+	@echo " compiled or installed), or \"\" (default, compiles both)"
 
 distclean: clean
 	find . -name '*~' -exec rm \{\} \;

@@ -1,14 +1,25 @@
+            ========================================
+            # Bedwyr 1.3 the not-so-sound-logician #
+            ========================================
 
-========================================
-# Bedwyr 1.2 the not-so-sound-logician #
-========================================
+ Index
+-------
 
-This is Bedwyr, a theorem prover for the Level-0/1 fragment of the Linc logic.
-This is free software, licensed under GPL version 2.
+1. what
+2. license
+3. getting
+4. building
+5. documentation
+6. installing
+7. distribution
 
-Webpage: http://slimmer.gforge.inria.fr/bedwyr
 
-Bedwyr is based on Alwen Tiu's Level-0/1, and Nadathur & Linell's LLambda
+ What is Bedwyr?
+-----------------
+
+Bedwyr is a theorem prover for the Level-0/1 fragment of the Linc logic.
+
+It is based on Alwen Tiu's Level-0/1, and Nadathur & Linell's LLambda
 library, both written in SML. The OCaml translation has been done by
 Baelde & Ziegler. It is currently under work by Baelde & Gacek.
 The system also benefited from the wisdom of Miller, Nadathur and Pientka.
@@ -17,21 +28,60 @@ For background on the system, see "Mixing Finite Success and Finite Failure
 in an Automated Prover" (Alwen Tiu and Gopalan Nadathur and Dale Miller):
 http://www.lix.polytechnique.fr/Labo/Dale.Miller/papers/eshol05sub.pdf
 
-Building and running the system:
-# autoconf
-# ./configure
-# make
-# src/bedwyr
+Webpage: http://slimmer.gforge.inria.fr/bedwyr/
 
-Type "#help." in Bedwyr for a little help.
+
+ License
+---------
+
+This is free software, licensed under GPL version 2.
+A copy of this license can be found in COPYING.
+
+
+ Obtaining Bedwyr
+------------------
+
+Released sources may be obtained from:
+  https://gforge.inria.fr/frs/?group_id=367
+
+Development sources may be obtained via the commands
+  svn checkout svn://scm.gforge.inria.fr/svn/slimmer
+or
+  svn checkout --username anonsvn https://scm.gforge.inria.fr/svn/slimmer
+(the password is the username).
+
+
+ Building Bedwyr
+-----------------
+
+For proper compilation, the following packages are required:
+- OCaml (tested with 3.10.0 and 3.12.1)
+- autotools (at least autoconf and make)
+- tar and bzip2 (needed for the installation)
+- some other standard tools
+
+Usually, the three commands
+  $ autoconf
+  $ ./configure
+  $ make
+should suffice. Then, run
+  $ src/bedwyr
+or
+  $ src/bedwyr <example>.def
+to launch Bedwyr, and type "#help." for a little help.
+
+
+ Documentation
+---------------
+
 See doc/userguide.(ps.gz|pdf) for more information on how to use it.
 
-Structure of the distribution:
 /examples
   A few simple examples.
 /src
   Source code for the prover.
 /src/ndcore
   Code for the unification and non-destructive normalization of LLambda.
-  Also contains a term indexing module, currenlty only used for tabling.
-  This comes with oUnit and Test for testing it.
+  Also contains a term indexing module, currenlty only used for tabling,
+  and a typing module for type-checking.
+  This comes with OUnit and Test for testing it.
