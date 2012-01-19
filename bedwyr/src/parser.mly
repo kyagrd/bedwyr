@@ -1,6 +1,6 @@
 /****************************************************************************
  * Bedwyr prover                                                            *
- * Copyright (C) 2006-2011 Baelde, Tiu, Ziegler, Heath                      *
+ * Copyright (C) 2006-2012 Baelde, Tiu, Ziegler, Heath                      *
  *                                                                          *
  * This program is free software; you can redistribute it and/or modify     *
  * it under the terms of the GNU General Public License as published by     *
@@ -55,13 +55,15 @@
 %nonassoc LPAREN
 %nonassoc RPAREN
 
-%nonassoc BSLASH
 %nonassoc COMMA
-
 %right RARROW
 %left OR
 %left AND
+
+%nonassoc BSLASH
 %nonassoc EQ
+
+%nonassoc INFIX_ID
 
 /* Higher */
 
@@ -138,7 +140,8 @@ ty:
   | PROP                                { Type.TProp }
   | STRING                              { Type.TString }
   | NAT                                 { Type.TNat }
-  | lower_id			        { Type.Ty $1 }
+  | lower_id                            { Type.Ty $1 }
+  | UNDERSCORE                          { Type.fresh_tyvar () }
   | ty RARROW ty                        { Type.ty_arrow $1 $3 }
   | LPAREN ty RPAREN                    { $2 }
 
@@ -171,7 +174,8 @@ term_list:
 
 term_atom:
   | LPAREN term RPAREN                  { $2 }
-  | LPAREN formula RPAREN               { Typing.change_pos (pos 1) $2 (pos 3) }
+  | LPAREN INFIX_ID RPAREN              { Typing.pre_predconstid (pos 0) $2 }
+  | formula_atom                        { $1 }
   | token_id                            { $1 }
   | QSTRING                             { let p,s = $1 in
                                           Typing.pre_qstring p s }
@@ -181,16 +185,19 @@ term_abs:
   | abound_id BSLASH term               { Typing.pre_lambda (pos 0) [$1] $3 }
 
 term:
-  | term_list                           { let t,l = $1 in
+  | term_list %prec INFIX_ID            { let t,l = $1 in
                                           Typing.pre_app (pos 1) t l }
   | term INFIX_ID term                  { Typing.pre_app
                                             (pos 0)
                                             (Typing.pre_predconstid (pos 2) $2)
                                             [$1; $3] }
 
-formula:
+formula_atom:
   | TRUE                                { Typing.pre_true (pos 0) }
   | FALSE                               { Typing.pre_false (pos 0) }
+  | LPAREN formula RPAREN               { Typing.change_pos (pos 1) $2 (pos 3) }
+
+formula:
   | term EQ term                        { Typing.pre_eq (pos 0) $1 $3 }
   | formula AND formula                 { Typing.pre_and (pos 0) $1 $3 }
   | formula OR formula                  { Typing.pre_or (pos 0) $1 $3 }
