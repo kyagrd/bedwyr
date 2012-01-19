@@ -49,28 +49,20 @@ by
 % weak bisimulation
 
 
-Define
-  taus
-by
+Define taus by
   taus P QQ := one P tau Q /\ taus Q QQ;
   taus P P.
 
-Define
-  weak_one
-by
+Define weak_one by
   weak_one Q (up X Y) P := taus Q QQ /\ one QQ A PP /\ taus PP P;
   weak_one Q tau QQ     := taus Q QQ.
-Define
-  weak_onep
-by
+Define weak_onep by
   weak_onep Q (up X) P :=
     taus Q QQ /\ onep QQ (up X) PP /\ nabla x, taus (PP x) (P x);
   weak_onep Q (dn X) P :=
   taus Q QQ /\ onep QQ (dn X) PP /\ nabla x, taus (PP x) (P x). % forall -> not llam
 
-Define
-  coinductive weak_bisim
-by
+Define coinductive weak_bisim by
   weak_bisim P Q :=
 	(forall A P1, one P A P1 ->
            exists Q1, weak_one Q A Q1 /\ weak_bisim P1 Q1) /\
@@ -93,18 +85,14 @@ by
 
 % reduction for some structural congruences
 
-Define
-  red
-by
+Define red by
   red (nu x\ P) P;
   red (nu x\ par P (M x)) (par P (nu M));
   red (nu x\ par (M x) P) (par (nu M) P);
   red (par z P) P;
   red (par P z) P.
 
-Define
-  congr
-by
+Define congr by
   congr P Q := red P Q;
   congr (taup P) (taup Q) := congr P Q;
   congr (in X M) (in X N) := nabla x, congr (M x) (N x);
@@ -117,9 +105,7 @@ by
 
 % equality modulo structural congruence and other equalities
 
-Define
-  eq
-by
+Define eq by
   eq struct P P := forall Q, congr P Q -> false;
   eq struct P R := congr P Q /\ eq struct Q R.
 
@@ -129,18 +115,14 @@ by
 %  (!P | !Q) is weakly bisimilar to !Q if and only if
 %   P  is weakly bisimilar to Q.
 
-Define
-  weak_bisim_eq
-by
+Define weak_bisim_eq by
   weak_bisim_eq (par (bang P) (bang Q)) (bang Q) :=
   weak_bisim P Q;
   weak_bisim_eq (par P (bang Q)) (bang Q) :=
   weak_bisim P Q.
 
 
-Define
-  eq
-by
+Define eq by
   eq weak P Q := weak_bisim_eq P Q;
   eq X P P.
 
@@ -148,16 +130,12 @@ by
 % bisimulation modulo some equality theories.
 % the parameter E gives the type of equality we want.
 
-Define
-  coinductive bisim_mod
-by
+Define coinductive bisim_mod by
   bisim_mod E P Q :=
   exists R T,
     eq E P R /\ eq E Q T /\ bisim E R T.
 
-Define
-  coinductive bisim
-by
+Define coinductive bisim by
   bisim E P Q :=
 	(forall A P1, one P A P1 -> exists Q1, one Q A Q1 /\ bisim_mod E P1 Q1) /\
 	(forall X M, onep P (dn X) M -> exists N, onep Q (dn X) N /\
@@ -172,9 +150,7 @@ by
 
 % some simple examples
 
-Define
-  example
-by
+Define example by
   example 1 (bang (nu x\ par (out x a z) (in x y\ out c y z)));
   example 2 (bang (taup (out c a z)));
   example 3 (bang (nu x\ par (out x a z) (in x y\ z)));
@@ -183,26 +159,18 @@ by
 
 % Process 1 and process 2 are bisimilar modulo the weak bisimilarity.
 % In this case the bisim predicate actually gives weak bisimilarity.
-Define
-  test1
-by
+Define test1 by
   test1 := example 1 P /\ example 2 Q /\ bisim_mod weak P Q.
 
 % Process 3 and 4 are strongly bisimilar. In this case it's enough
 % to use only structural congruence.
-Define
-  test2
-by
+Define test2 by
   test2 := example 3 P /\ example 4 Q /\ bisim_mod struct P Q.
 
-Define
-  test3
-by
+Define test3 by
   test3 := example 1 P /\ bisim_mod weak P (par P P).
 
-Define
-  test4
-by
+Define test4 by
   test4 := example 1 P /\ example 2 Q /\ bisim_mod weak P (par P Q).
 
 

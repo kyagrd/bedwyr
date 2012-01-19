@@ -3,37 +3,40 @@
 % by Dale Miller and Alwen Tiu. Proceedings of LICS 2003,
 % edited by Phokion Kolaitis. Ottawa, July 2003, pp. 118-127
 
-% Interpreter for an object-level logic
+Kind    bool,
+        obj     type.
 
+Type    t,f     bool.
+Type    and,imp bool -> bool -> bool.
+Type    $forall,
+        $exists (obj -> bool) -> bool.
+Type    q       obj -> obj -> obj -> bool.
+Type    pair    obj -> obj -> obj.
+
+% Additional definition clauses
+Define atom : bool -> prop by
+  atom (q X Y Z).
+Define prog : bool -> prop by
+  prog ($forall x\ $forall y\ q x x y);
+  prog ($forall x\ $forall y\ q x y x);
+  prog ($forall x\ $forall y\ q y x x).
+
+% Interpreter for an object-level logic
 Define
-  pv,
-  bd
+  pv : bool -> prop,
+  bc : bool -> bool -> prop
 by
   pv t;
   pv (and G G') := pv G /\ pv G';
-  pv (_forall G) := nabla x, pv (G x);
-  pv (_exists G) := exists x, pv (G x);
+  pv ($forall G) := nabla x, pv (G x);
+  pv ($exists G) := exists x, pv (G x);
   pv A := atom A /\ exists D, prog D /\ bc D A;
 
   bc A A := atom A;
   bc (imp G D) A := bc D A /\ pv G;
-  bc (_forall D) A := exists t, bc (D t) A.
-
-% Additional definition clauses
-
-Define
-  atom
-by
-  atom (q X Y Z).
-Define
-  prog
-by
-  prog (_forall x\ _forall y\ q x x y);
-  prog (_forall x\ _forall y\ q x y x);
-  prog (_forall x\ _forall y\ q y x x).
+  bc ($forall D) A := exists t, bc (D t) A.
 
 % Tests
 
-#assert
-   (forall x y z,
-      pv (_forall u\ _forall v\ q (pair u x) (pair v y) (pair v z)) -> y = z).
+#assert forall x y z,
+  pv ($forall u\ $forall v\ q (pair u x) (pair v y) (pair v z)) -> y = z.

@@ -1,0 +1,392 @@
+% Mini-ML, evaluation, type checking and type inference.
+% Author: David Baelde
+%
+% Our "Mini-ML" has let-polymorphism and patterns over pairs.
+% This is an unfinished development, it would need to be type-checked and
+% cleaned up. Type inference of the match construct is not yet written.
+%
+% vi: foldmethod=marker
+
+Kind tm,nm,
+     pt,
+     ty,bty     type.
+
+% *** Types ***
+Type int,bool   bty.
+
+Type tycst      bty -> ty.
+Type tyassoc    nm -> ty -> tm.
+Type arrow      ty -> ty -> ty.
+Type times      ty -> ty -> ty.
+Type tyabs      (ty -> ty) -> ty.
+Type tyvar      nm -> ty.
+Type ++         ty -> ty -> ty.
+Type ~~         ty -> ty -> ty.
+
+% *** Values ***
+Type nil        tm.
+Type cons       tm -> tm -> tm.
+
+Type cst,var    nm -> tm.
+Type assoc      nm -> tm -> tm.
+Type abs        (tm -> tm) -> tm.
+Type app        tm -> tm -> tm.
+Type let        tm -> (tm -> tm) -> tm.
+Type match      tm -> tm -> tm. % tm -> (pt*tm) list -> tm
+
+% *** Patterns ***
+Type hole       pt.
+Type ptcons     pt -> pt -> pt.
+Type ptassoc    pt -> tm -> tm.
+
+Type ptcst      nm -> pt.
+
+Type pttyassoc  pt -> ty -> tm.
+
+% *** Constants ***
+Type tru,fls    nm.
+Type x,y,z,z0   nm.
+Type s          nm -> nm.
+
+% ----- Basic list manipulations
+
+% Membership
+Define mem : tm -> tm -> prop by
+  mem X (cons X L);
+  mem X (cons Y L) := mem X L.
+
+% Concatenation
+Define concat : tm -> tm -> tm -> prop by
+  concat nil L L;
+  concat (cons X T) L (cons X O) := concat T L O.
+
+% [remove X LX L] iff [LX] is [L] where [X] has been inserted somewhere;
+% note that [LX = L] is impossible here.
+Define remove : tm -> tm -> tm -> prop by
+  remove X (cons X L) L;
+  remove X (cons Y L) (cons Y L') := (Y = X -> false) /\ remove X L L'.
+
+% remove_all removes several (or none) occurences of an item in a list
+Define remove_all : tm -> tm -> tm -> prop by
+  remove_all X (cons X L) L' := remove_all X L L';
+  remove_all X (cons Y L) (cons Y L') := (Y = X -> false) /\ remove_all X L L';
+  remove_all X nil nil.
+
+% [minus A B S] iff S = A\B
+Define minus : tm -> tm -> tm -> prop by
+  minus L nil L;
+  minus L (cons X M) L' := remove_all X L L'' /\ minus L'' M L'.
+
+% {{{
+% ----- Weak call-by-value reduction
+
+% [extract P M B] filters the term M through the pattern P and applies
+% the body B to the extracted sub-terms, yielding B'.
+Define extract : pt -> tm -> tm -> tm -> prop by
+  extract hole M B (app B M);
+  extract (ptcons P Q) (cons M N) B B'' := extract P M B B' /\ extract Q N B' B'';
+  extract (ptcst C) (cst C) B B.
+
+Define eval : tm -> tm -> tm -> prop by
+  eval G (cst C) (cst C);
+  eval G (var X) M := mem (assoc X M) G;
+  eval G (abs F) (abs F);
+  eval G (app M N) V := eval G M (abs F) /\ eval G (F N) V;
+  eval G (let D B) V :=
+    eval G D VD /\ nabla x, eval (cons (assoc x VD) G) (B (var x)) V;
+  eval G (cons M N) (cons VM VN) := eval G M VM /\ eval G N VN;
+  eval G (match X CL) V :=
+    mem (ptassoc C B) CL /\ extract C X B B' /\ eval G B' V.
+
+% ----- Testing the evaluation
+
+Define test : nat -> tm -> prop by
+  test 0 (abs x\ match x
+          (cons (ptassoc (ptcons hole hole) (abs a\ abs b\ a)) nil));
+  test 1 (app F (cons (cst tru) (cst fls))) := test 0 F;
+  test 2 (let FST
+         (fst\ let (app fst (cons (cst tru) (cst fls)))
+                (x\ app fst (cons x (cst fls))))) := test 0 FST.
+
+#assert (forall x, test 1 x -> forall y, eval nil x y -> y = cst tru).
+#assert (forall x, test 2 x -> forall y, eval nil x y -> y = cst tru).
+
+% ----- Type-checking
+
+Define cst_typeof : nm -> ty -> prop by
+  cst_typeof z0 (tycst int);
+  cst_typeof (s X) (tycst int) := cst_typeof X (tycst int);
+  cst_typeof tru (tycst bool);
+  cst_typeof fls (tycst bool).
+
+Define
+  tm_typeof : tm -> tm -> ty -> prop,
+  extract_typeof : tm -> tm -> tm -> ty -> prop
+by
+  tm_typeof G (cst C) T := cst_typeof C T;
+  tm_typeof G (var X) T := mem (tyassoc X T) G;
+  tm_typeof G (abs F) (arrow T1 T2) :=
+    nabla x, tm_typeof (cons (tyassoc x T1) G) (F (var x)) T2;
+  tm_typeof G (app M N) T := tm_typeof G M (arrow T1 T) /\ tm_typeof G N T1;
+  tm_typeof G (let D B) T :=
+    tm_typeof G D TD /\
+    print "Type of " /\ print D /\ print " is " /\ println TD /\
+    nabla x, tm_typeof (cons (tyassoc x TD) G) (B (var x)) T;
+  tm_typeof G (cons M N) (times TM TN) :=
+    tm_typeof G M TM /\ tm_typeof G N TN;
+  tm_typeof G (match X CL) T :=
+    tm_typeof G X TX /\
+    forall pat body, mem (ptassoc pat body) CL ->
+      extract_typeof (cons (pttyassoc pat TX) nil) G body T;
+  tm_typeof G V (tyabs T) :=
+    false /\
+    V = abs F /\
+    nabla x, tm_typeof G V (T x);
+  % This last clause can make the spec loop...
+  % it is not suitable for inference, any failed attempt will loop.
+  % The problem is that the spec has to make some guesses
+  % even on ground queries, so it loops there too, sometimes.
+  % (V = abs F) limits the damage a bit..;
+
+  extract_typeof (cons (pttyassoc hole TH) L) G (abs B) T :=
+    % TODO should we apply [x] or [var x] ?
+    % [var x] causes a not-llambda more often, possibly
+    nabla x, extract_typeof L (cons (tyassoc x TH) G) (B (var x)) T;
+  extract_typeof (cons (pttyassoc (ptcst X) TX) L) G B T :=
+    cst_typeof X TX /\ extract_typeof L G B T;
+  extract_typeof (cons (pttyassoc (ptcons P Q) (times TP TQ)) L) G B T :=
+    extract_typeof (cons (pttyassoc P TP) (cons (pttyassoc Q TQ) L)) G B T;
+  extract_typeof nil G B T := tm_typeof G B T.
+
+#assert (extract_typeof (cons (pttyassoc
+                                 (ptcons (ptcst tru) hole)
+                                 (times (tycst bool) (tycst bool)))
+                           nil)
+           nil (abs x\x) (tycst bool)).
+#assert (tm_typeof nil
+           (match (cons (cst tru) (cst fls))
+              (cons (ptassoc (ptcons (ptcst tru) hole) (abs x\ x)) nil))
+           (tycst bool)).
+
+#assert forall x, test 0 x ->
+                  tm_typeof nil x
+                    (arrow (times (tycst int) (tycst bool)) (tycst int)).
+#assert forall x, test 1 x -> tm_typeof nil x (tycst bool).
+
+% This is derivable if you enable the last (looping) clause to tm_typeof...
+% #assert (forall x, test 0 x ->
+%          tm_typeof nil x (tyabs x\ tyabs y\ arrow (times x y) x)).
+
+% }}}
+
+% This one requires the polymorphic let
+% #assert (forall x, test 2 x -> tm_typeof nil x bool).
+
+% ----- Type inference
+% Now we have to handle unification by ourselves,
+% and generalize when possible...
+
+% [subst T X V T'] expresses "T' = T[V/X]"
+% It should work on types, type environments, type equations...
+
+% It would be nice to say (nabla x, subst (T (var x)) X V (T' (var x)))
+% but it's not Llambda... hence the list of bound variables.
+Define subst : tm -> ty -> nm -> ty -> ty -> prop by
+/*
+  subst BV A X V A := mem A BV;
+*/
+  subst BV (tyabs F) X V (tyabs F') :=
+    nabla x, subst (cons (var x) BV) (F (tyvar x)) X V (F' (tyvar x));
+  subst BV (tyvar X) X V V;
+  subst BV (tyvar Y) X V (tyvar Y) := X = Y -> false;
+/*
+  subst BV (tycst C) X V (tycst C);
+  subst BV (times A B) X V (times A' B') :=
+    subst BV A X V A' /\
+    subst BV B X V B';
+*/
+  subst BV (arrow A B) X V (arrow A' B') :=
+    subst BV A X V A' /\
+    subst BV B X V B';
+/*
+  subst BV nil X V nil;
+  subst BV (cons H L) X V (cons H' L') :=
+    subst BV H X V H' /\
+    subst BV L X V L';
+  subst BV (assoc N B) X V (assoc N B') :=
+    subst BV B X V B';
+  subst BV (H ++ L) X V (H' ++ L') :=
+    subst BV H X V H' /\
+    subst BV L X V L';
+  subst BV (A = B) X V (A' = B') :=
+    subst BV A X V A' /\
+    subst BV B X V B';
+  subst BV (instantiate (A = B)) X V (instantiate (A' = B')) :=
+    subst BV A X V A' /\
+    subst BV B X V B';
+  subst BV (type G M T) X V (type G' M T') :=
+    subst BV G X V G' /\
+    subst BV T X V T';
+  subst BV (generalize G T Y) X V (generalize G' T' Y) :=
+    subst BV G X V G' /\
+    subst BV T X V T';
+  subst BV (result T) X V (result T') :=
+    subst BV T X V T';
+  */
+subst _ _ _ _ _ := false.
+
+Define occurs : nm -> ty -> prop by
+  occurs X (tyvar X);
+  occurs X (arrow M N) := occurs X M \/ occurs X N;
+  occurs X (times M N) := occurs X M \/ occurs X N;
+  occurs X (tyabs M) := nabla x, occurs X (M x).
+
+/*
+% List of free type variables in a (list of) types.
+Define freetyvars by
+  freetyvars (tyvar T) (cons T nil);
+  freetyvars (tycst C) nil;
+  freetyvars (arrow A B) L := freetyvars A LA /\ freetyvars B LB /\ concat LA LB L;
+  freetyvars (times A B) L := freetyvars A LA /\ freetyvars B LB /\ concat LA LB L;
+  freetyvars (tyabs F) L :=
+  nabla x, exists LX,
+    freetyvars (F (tyvar x)) LX /\ minus LX (cons x nil) L;
+  freetyvars nil nil;
+  freetyvars (cons A B) L := freetyvars A LA /\ freetyvars B LB /\ concat LA LB L;
+  freetyvars (assoc X T) L := freetyvars T L.
+
+#assert (freetyvars
+ (tyabs x\ tyabs y\ arrow (tyvar z) (arrow x (tyvar t)))
+ (cons z (cons t nil))).
+ */
+
+Define abstract_over by
+  abstract_over nil T T;
+  % XXX dirty: X is actually the name of a type, not a term!
+  abstract_over (cons (var X) Vars) T TG :=
+    abstract_over Vars T T' /\
+    (((occurs X T' -> false) /\ TG = T') \/
+     (occurs X T' /\ (nabla t, subst nil T' X t (T'' t)) /\ TG = tyabs T'')).
+
+#assert (occurs x (arrow (tyvar x) (tycst bool))).
+#assert (occurs y (arrow (tyvar x) (tycst bool)) -> false).
+/*
+% XXX doesn't type-check
+#assert (abstract_over (cons x (cons y nil))
+                       (arrow (tyvar x) (arrow (tyvar y) (tyvar x)))
+                       (tyabs x\ tyabs y\ arrow x (arrow y x))).
+% XXX type-checks but not L-lambda
+#assert (abstract_over (cons (var x) (cons (var y) nil))
+                       (arrow (tyvar x) (arrow (tyvar y) (tyvar x)))
+                       (tyabs X\ tyabs Y\ arrow X (arrow Y X))).
+*/
+#assert (abstract_over (cons (var x) nil)
+                       (arrow (tyvar x) (tyvar y))
+                       (tyabs X\ arrow X (tyvar y))).
+
+% Return the mgu for a list of constraints, which are either:
+%  * equations over types:                         (T1 = T2)
+%  * equations between a type T and a schemata S:  (instantiate (S = T))
+%  * typing judgements:                            (type G M T)
+%  * generalization statements:                    (generalize G T X)
+
+Define infer : ty -> ty -> prop by
+/*
+  infer (abs L) (abs S) := nabla x, infer (L (tyvar x)) (S x);
+  % infer nil nil;
+  infer (result X) (result X);
+  % >>>>>>>>> Treat type unifications
+  % This never generates new (generic) variables.
+  % TODO occur-check (btw, is it needed in the absence of recursion ?)
+  infer ((tyvar V = T) ++ L) S := subst nil L V T L' /\ infer L' S;
+  infer ((T = tyvar V) ++ L) S :=
+    (forall t, T = tyvar t -> false) /\ % only for avoiding multiple successes
+    subst nil L V T L' /\ infer L' S;
+  infer ((tycst C = tycst C) ++ L) S := infer L S;
+  infer ((times L1 L2 = times R1 R2) ++ L) S := infer ((L1 = R1) ++ ((L2 = R2) ++ L)) S;
+  infer ((arrow L1 L2 = arrow R1 R2) ++ L) S := infer ((L1 = R1) ++ ((L2 = R2) ++ L)) S;
+  % Before actually unifying types, type schemata should be instantiated
+  % with new existential variables.
+  infer ((instantiate (tyabs A = B)) ++ L) (abs S) :=
+    nabla x, infer ((instantiate (A (tyvar x) = B)) ++ L) (S x);
+  infer ((instantiate (A = B)) ++ L) S :=
+    (forall x, tyabs x = A -> false) /\ infer ((A = B) ++ L) S;
+  % >>>>>>>>> Treat typing judgements
+  infer ((type G (cst C) T) ++ L) S := cst_typeof C TC /\ infer ((T = tycst TC) ++ L) S;
+  infer ((type G (var V) T) ++ L) S :=
+    mem (assoc V TV) G /\ infer ((instantiate (TV = T)) ++ L) S;
+  infer ((type G (app M N) T) ++ L) (abs S) :=
+    nabla t, infer ((type G N (tyvar t)) ++
+                 ((type G M (arrow (tyvar t) T)) ++ L))
+                 (S t);
+  infer ((type G (abs M) T) ++ L) (abs t1\ abs t2\ S t1 t2) :=
+    nabla t1 t2 x,
+      infer ((T = arrow (tyvar t1) (tyvar t2)) ++
+            ((type (cons (assoc x (tyvar t1)) G) (M (var x)) (tyvar t2)) ++ L))
+            (S t1 t2);
+  infer ((type G (cons A B) T) ++ L) (abs t1\ abs t2\ S t1 t2) :=
+    nabla t1 t2,
+      infer ((T = times (tyvar t1) (tyvar t2)) ++
+            ((type G A (tyvar t1)) ++
+            ((type G B (tyvar t2)) ++ L)))
+            (S t1 t2);
+  infer ((type G (let D B) T) ++ L) (abs t\ abs tgen\ S t tgen) :=
+    nabla t tgen x,
+      infer ((type G D (tyvar t)) ++
+            ((generalize G (tyvar t) tgen) ++
+            ((type (cons (assoc x (tyvar tgen)) G) (B (var x)) T) ++ L)))
+            (S t tgen);
+  % >>>>>>>>> Type generalization
+  infer ((generalize G T X) ++ L) S :=
+    freetyvars T FVT /\
+    freetyvars G FVG /\
+    minus FVT FVG GV /\
+    abstract_over GV T TG /\
+    subst nil L X TG L' /\
+    infer L' S;
+    */
+  infer _ _ := false.
+
+% Remove useless (existential) abstractions over the result.
+% XXX Gné ? what's "result" ?
+Type result     ty -> ty.
+Define gc : ty -> ty -> prop by
+  gc (result X) X;
+  gc (tyabs I) O :=
+  nabla x,
+    gc (I (tyvar x)) (I' (tyvar x)) /\
+    ((occurs x (I' (tyvar x)) /\ O = tyabs I') \/
+     ((occurs x (I' (tyvar x)) -> false) /\ O = I' (tyvar x))).
+
+Define test_term : nat -> tm -> prop by
+  test_term 0 (cons (cst tru) (cst fls));
+  test_term 1 (app (abs x\ x) (cst tru));
+  test_term 2 (let (cst tru) (x\x));
+  test_term 3 (let (abs x\ x) (x\x));
+  test_term 4 (let (abs x\ abs y\ x) k\
+              let (cst tru) t\
+               let (cst fls) f\
+                cons (app (app k t) f) (app (app k f) t));
+  test_term 5 (let (abs x\ abs y\ x) k\
+              let (cst tru) t\
+               let (cst z0) z\
+                cons (app (app k t) z) (app (app k z) t)).
+
+Type $type      tm -> tm -> ty -> ty.
+Define itest : nat -> tm -> ty -> prop by
+  itest N T S :=
+    test_term N T /\ infer (tyabs x\ ($type nil T x)  ++  result x) S' /\
+    gc S' S /\
+    % Now evaluate the term, infer its type again and check consistency.
+    eval nil T T' /\ infer (tyabs x\ ($type nil T' x)  ++  result x) S'' /\
+    gc S'' S.
+
+/*
+#assert (itest 0 T (times (tycst bool) (tycst bool))).
+#assert (itest 1 T (tycst bool)).
+#assert (itest 2 T (tycst bool)).
+#assert (itest 3 T (tyabs x\ arrow x x)).
+#assert (itest 4 T (times (tycst bool) (tycst bool))).
+#assert (itest 5 T (times (tycst bool) (tycst int))).
+*/
+#env.
