@@ -49,6 +49,10 @@ all: bedwyr
 bedwyr: $(BEDWYR_O)
 	$(OCAMLL) unix.$(cma) ndcore.$(cma) $^ -o $@
 
+ifneq ($(strip $(wildcard ndcore/ndcore.$(cma))),)
+bedwyr: ndcore/ndcore.$(cma)
+endif
+
 -include depend
 depend: $(BEDWYR_SRC)
 	$(OCAMLDEP) $^ > depend
