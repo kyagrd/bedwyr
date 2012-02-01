@@ -107,7 +107,7 @@ exception Var_typing_error of string option * pos * Type.simple_type
 (** Find which arguments of an application are free variables. *)
 val pure_args : preterm -> string list
 
-(** [atomic_kind pt ty fv nt dv iv bv i pa] checks that the pre-term [pt]
+(** [type_check_and_translate pt ty fv nt dv iv bv i pa] checks that the pre-term [pt]
   * build by the parser has the type [ty] (usually [TProp]),
   * and either translates it to the corresponding term
   * and realizes the type unification as side effect,
