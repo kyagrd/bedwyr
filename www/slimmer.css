@@ -1,15 +1,10 @@
 body
 { font-family: trebuchet ms, verdana, helvetica; 
-  margin-left:  2%;
-  margin-right: 2%;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
   color: black;
   font-size: small;
-
-}
-
-.narrow {
-  width: 60%;
-  margin-left: auto; margin-right: auto;
 }
 
 a img { border: 0 }
@@ -69,3 +64,5 @@ ul {margin: 0; list-style-type: circle; }
 
 div.odd  {padding: 2; background-color: #efefef;}
 div.even {padding: 2; background-color: #FFFFFF;}
+
+code {background-color: #fdd;}
