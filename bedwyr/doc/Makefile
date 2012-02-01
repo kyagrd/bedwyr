@@ -8,6 +8,7 @@ BIB	= userguide.bib
 LATEX	 = latex
 PDFLATEX = pdflatex
 HEVEA	 = hevea -noiso
+GZIP	 = gzip -9
 
 all: $(PS) $(PDF) $(HTML)
 
@@ -39,7 +40,7 @@ htclean:
 .dvi.ps:
 	dvips $< -o $@
 %.gz: %
-	gzip -f $<
+	$(GZIP) -f $<
 
 .bbl.pdf:
 	$(PDFLATEX) $*
