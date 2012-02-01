@@ -208,6 +208,8 @@ val declare_type : Typing.pos * string -> Type.simple_kind -> unit
 exception Missing_type of string * Typing.pos
 exception Invalid_const_declaration of string * Typing.pos *
             Type.simple_type * string
+exception Invalid_flavour of string * Typing.pos *
+            string * string
 exception Invalid_pred_declaration of string * Typing.pos *
             Type.simple_type * string
 exception Invalid_bound_declaration of string * Typing.pos *
@@ -218,7 +220,9 @@ val declare_const : Typing.pos * string -> Type.simple_type -> unit
 (** Declare a predicate.
   * @return a variable corresponding to this predicate *)
 val create_def :
-  flavour * Typing.pos * string * Type.simple_type -> Term.var
+  Term.var list * flavour ->
+  flavour * Typing.pos * string * Type.simple_type ->
+  Term.var list * flavour
 
 (** {6 Typechecking, predicates definitions} *)
 

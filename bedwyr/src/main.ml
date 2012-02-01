@@ -140,7 +140,11 @@ let rec process ?(interactive=false) parse lexbuf =
             (fun s -> System.declare_const s t)
             l
       | System.Def (decls,defs) ->
-          let new_predicates = List.map System.create_def decls in
+          let new_predicates,_ = List.fold_left
+                                   System.create_def
+                                   ([],System.Normal)
+                                   decls
+          in
           List.iter (System.add_clause new_predicates) defs
       | System.Query t ->
           do_cleanup
@@ -157,6 +161,11 @@ let rec process ?(interactive=false) parse lexbuf =
           Format.printf "%sIllegal string starting with '%s' in input.@."
             (position_lex lexbuf)
             (Char.escaped c) ;
+          interactive_or_exit interactive lexbuf
+      | Lexer.Illegal_name ->
+          Format.printf "%s%s is an illegal token, baybe you forgot a space.@."
+            (position_lex lexbuf)
+            (Lexing.lexeme lexbuf) ;
           interactive_or_exit interactive lexbuf
       | Parsing.Parse_error ->
           Format.printf "%sSyntax error.@."
@@ -185,6 +194,14 @@ let rec process ?(interactive=false) parse lexbuf =
             n
             Pprint.pp_type ty
             s ;
+          exit 1
+      | System.Invalid_flavour (n,p,gf,f) ->
+          Format.printf
+            "%sCannot declare predicate %s of flavour %s: %s was used in the same definition block.@."
+            (position_range p)
+            n
+            gf
+            f ;
           exit 1
       | System.Invalid_pred_declaration (n,p,ty,s) ->
           Format.printf
@@ -261,6 +278,10 @@ let rec process ?(interactive=false) parse lexbuf =
           interactive_or_exit interactive lexbuf
       | Unify.NotLLambda t ->
           Format.printf "Not LLambda unification encountered: %a@."
+            Pprint.pp_term t ;
+          interactive_or_exit interactive lexbuf
+      | Unify.Formula_as_Term t ->
+          Format.printf "Formula encounterd by the unifier: %a@."
             Pprint.pp_term t ;
           interactive_or_exit interactive lexbuf
       | Invalid_command ->
