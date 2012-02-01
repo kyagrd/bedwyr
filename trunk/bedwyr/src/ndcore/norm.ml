@@ -1,6 +1,6 @@
 (****************************************************************************)
 (* An implementation of Higher-Order Pattern Unification                    *)
-(* Copyright (C) 2006-2011 Nadathur, Linnell, Baelde, Ziegler, Gacek, Heath *)
+(* Copyright (C) 2006-2012 Nadathur, Linnell, Baelde, Ziegler, Gacek, Heath *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -47,9 +47,7 @@ let rec hnorm term =
           | Term.Lam (n,t) ->
               let e, n', args' = make_env n args in
               let ol = List.length e in
-              if n' > 0
-              then hnorm (Term.susp (Term.lambda n' t) ol 0 e)
-              else hnorm (Term.app (Term.susp t ol 0 e) args')
+              hnorm (Term.app (Term.susp (Term.lambda n' t) ol 0 e) args')
           | _ -> Term.app t args
         end
     | Term.Susp (t,ol,nl,e) ->
@@ -71,12 +69,12 @@ let rec hnorm term =
           | Term.And (t1,t2) -> Term.op_and (susp t1) (susp t2)
           | Term.Or (t1,t2) -> Term.op_or (susp t1) (susp t2)
           | Term.Arrow (t1,t2) -> Term.op_arrow (susp t1) (susp t2)
-          | Term.Binder (b,n,t) ->
+          | Term.Binder (b,n,t) -> 
               Term.binder b n (hnorm (Term.susp t (ol+n) (nl+n)
                                            (add_dummies e n nl)))
           | Term.Lam (n,t) ->
               Term.lambda n (hnorm (Term.susp t (ol+n) (nl+n)
-                                     (add_dummies e n nl)))
+                                      (add_dummies e n nl)))
           | Term.App (t,args) ->
               hnorm (Term.app (susp t) (List.map susp args))
           | Term.Ptr _ | Term.Susp _ -> assert false
@@ -96,8 +94,9 @@ let rec deep_norm t =
     | Term.Lam (n,t) -> Term.lambda n (deep_norm t)
     | Term.App (a,b) ->
         begin match Term.observe a with
-          | Term.Var _ | Term.DB _ | Term.NB _ | Term.True | Term.False ->
+          | Term.QString _ | Term.Nat _ | Term.Var _ | Term.DB _ | Term.NB _ | Term.True | Term.False ->
               Term.app a (List.map deep_norm b)
-          | _ -> Term.app (deep_norm a) (List.map deep_norm b)
+          (* XXX is the outer deep_norm really usefull? *)
+          | _ -> deep_norm (Term.app (deep_norm a) (List.map deep_norm b))
         end
     | Term.Ptr _ | Term.Susp _ -> assert false
