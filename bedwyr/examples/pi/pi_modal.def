@@ -121,9 +121,9 @@ Define lsat : list -> p -> form -> prop by
 
 Type form       form -> form.
 
-Define $atom : form -> prop by
-  $atom X := atom X;
-  $atom (form A).
+Define atom' : form -> prop by
+  atom' X := atom X;
+  atom' (form A).
 
 Define formcheck : form -> form -> prop by
   formcheck (name x) tt;
@@ -131,28 +131,28 @@ Define formcheck : form -> form -> prop by
   formcheck (action tau) tt;
   formcheck (form top) tt;
   formcheck (form bot) tt;
-  formcheck (form (land A B)) (and (form A) (form B));
-  formcheck (form (lor A B)) (and (form A) (form B));
-  formcheck (form (boxMatch X Y A)) (and (name X) (and (name Y) (form A)));
-  formcheck (form (diaMatch X Y A)) (and (name X) (and (name Y) (form A)));
-  formcheck (form (boxAct X A)) (and (action X) (form A));
-  formcheck (form (diaAct X A)) (and (action X) (form A));
+  formcheck (form (land A B)) ((form A) && (form B));
+  formcheck (form (lor A B)) ((form A) && (form B));
+  formcheck (form (boxMatch X Y A)) ((name X) && ((name Y) && (form A)));
+  formcheck (form (diaMatch X Y A)) ((name X) && ((name Y) && (form A)));
+  formcheck (form (boxAct X A)) ((action X) && (form A));
+  formcheck (form (diaAct X A)) ((action X) && (form A));
   formcheck (form (boxOut X A))
-          (and (name X) ($forall u\ (name u) --> (form (A u))));
+          ((name X) && (for_all u\ (name u) --> (form (A u))));
   formcheck (form (diaOut X A))
-          (and (name X) ($forall u\ (name u) --> (form (A u))));
+          ((name X) && (for_all u\ (name u) --> (form (A u))));
   formcheck (form (boxIn  X A))
-          (and (name X) ($forall u\ (name u) --> (form (A u))));
+          ((name X) && (for_all u\ (name u) --> (form (A u))));
   formcheck (form (diaIn  X A))
-          (and ($forall u\ (name u) --> (form (A u))) (name X));
+          ((for_all u\ (name u) --> (form (A u))) && (name X));
   formcheck (form (boxInL X A))
-          (and (name X) ($forall u\ (name u) --> (form (A u))));
+          ((name X) && (for_all u\ (name u) --> (form (A u))));
   formcheck (form (diaInL X A))
-          (and (name X) ($forall u\ (name u) --> (form (A u))));
+          ((name X) && (for_all u\ (name u) --> (form (A u))));
   formcheck (form (boxInE X A))
-          (and (name X) ($forall u\ (name u) --> (form (A u))));
+          ((name X) && (for_all u\ (name u) --> (form (A u))));
   formcheck (form (diaInE X A))
-          (and (name X) ($forall u\ (name u) --> (form (A u)))).
+          ((name X) && (for_all u\ (name u) --> (form (A u)))).
 
 
 % Some examples ===============================================================
@@ -183,12 +183,12 @@ Define
   typecheck_form : prop
 by
   typecheck_form := forall A N,
-                      assert N A -> prv $atom formcheck (form A);
+                      assert N A -> prv atom' formcheck (form A);
   typecheck_proc := forall P N,
-                      process N P -> prv $atom picheck (proc P).
+                      process N P -> prv atom' picheck (proc P).
 Define wrong_form : nat -> prop by
   wrong_form N := exists P,
-                    assert N P /\ (prv $atom formcheck (form P) -> false).
+                    assert N P /\ (prv atom' formcheck (form P) -> false).
 
 #assert typecheck_proc.
 #assert typecheck_form.

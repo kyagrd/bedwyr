@@ -1,18 +1,18 @@
 % Simple lambda calculus examples.
 
 Kind    name,
-        $type,
-        $env,
+        ty,
+        env,
         term    type.
 
 Type    a,b     name.
 
 Type    t,tt,
-        t1,t2   $type.
-Type    arrow   $type -> $type -> $type.
+        t1,t2   ty.
+Type    arrow   ty -> ty -> ty.
 
-Type    nil     $env.
-Type    bind    name -> $type -> $env -> $env.
+Type    nil     env.
+Type    bind    name -> ty -> env -> env.
 
 Type    var     name -> term.
 Type    app     term -> term -> term.
@@ -20,17 +20,17 @@ Type    abs     (term -> term) -> term.
 
 % Typing environment ==========================================================
 
-Define $type : $env -> name -> $type -> prop by
-  $type (bind A T E) A T;
-  $type (bind A B E) X T := $type E X T.
+Define ty : env -> name -> ty -> prop by
+  ty (bind A T E) A T;
+  ty (bind A B E) X T := ty E X T.
 
 % Adding a (A = X -> false) guard to the second clause would avoid
 % unnecessary searches, but would make the definition invalid in Level 0.
 
 % Simply typed lambda-calculus ================================================
 
-Define wt : $env -> term -> $type -> prop by
-  wt E (var A) T            := $type E A T;
+Define wt : env -> term -> ty -> prop by
+  wt E (var A) T            := ty E A T;
   wt E (app X Y) T          := wt E X (arrow H T) /\ wt E Y H;
   wt E (abs F) (arrow Tx T) := nabla x, wt (bind x Tx E) (F (var x)) T.
 
@@ -54,8 +54,8 @@ Define wt : $env -> term -> $type -> prop by
 #assert_not (exists T, wt nil (abs x\ app x x) T).
 #assert ((exists T, wt nil (abs x\ app x x) T) -> false).
 
-#assert_not (forall x y, $type (bind x t1 (bind y t2 nil)) y t1 -> false).
-#assert     (nabla x y,  $type (bind x t1 (bind y t2 nil)) y t1 -> false).
+#assert_not (forall x y, ty (bind x t1 (bind y t2 nil)) y t1 -> false).
+#assert     (nabla x y,  ty (bind x t1 (bind y t2 nil)) y t1 -> false).
 
 % If we had written the wt predicate using a forall instead of the nabla then:
 % (1) it would have been on Level 1 instead of 0;

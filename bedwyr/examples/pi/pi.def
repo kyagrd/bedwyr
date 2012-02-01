@@ -57,15 +57,15 @@ Define picheck : form -> form -> prop by
   picheck (name x) tt;
   picheck (name y) tt;
   picheck (action tau) tt;
-  picheck (action (up X Y))     (and (name X) (name Y));
-  picheck (action (dn X Y))     (and (name X) (name Y));
-  picheck (proc (in X P))       (and ($forall x\ (name x) --> (proc (P x))) (name X));
-  picheck (proc (out X Y P))    (and (and (name X) (name Y)) (proc P));
+  picheck (action (up X Y))     ((name X) && (name Y));
+  picheck (action (dn X Y))     ((name X) && (name Y));
+  picheck (proc (in X P))       ((for_all x\ (name x) --> (proc (P x))) && (name X));
+  picheck (proc (out X Y P))    (((name X) && (name Y)) && (proc P));
   picheck (proc (taup P))       (proc P);
-  picheck (proc (match  X Y P)) (and (and (name X) (name Y)) (proc P));
-  picheck (proc (plus P Q))     (and (proc P) (proc Q));
-  picheck (proc (par  P Q))     (and (proc P) (proc Q));
-  picheck (proc (nu P))         ($forall x\ (name x) --> (proc (P x)));
+  picheck (proc (match  X Y P)) (((name X) && (name Y)) && (proc P));
+  picheck (proc (plus P Q))     ((proc P) && (proc Q));
+  picheck (proc (par  P Q))     ((proc P) && (proc Q));
+  picheck (proc (nu P))         (for_all x\ (name x) --> (proc (P x)));
   picheck (proc (bang P))       (proc P);
   picheck (proc z)              tt.
 

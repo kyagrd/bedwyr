@@ -18,7 +18,7 @@
 %% encoded in Prog where atoms are charaterized by the predicate Atom.
 
 % Object logic is freely generated from
-%   tt, and, <-- , --> , $forall, $exists
+%   tt, &&, <-- , --> , for_all, for_some
 
 % Notice that the interpreter does not use lists: conjunctions can be
 % used instead.  The empty list is true (tt).
@@ -27,11 +27,11 @@ Kind    form,
         name    type.
 
 Type    tt      form.
-Type    and,
+Type    &&,
         -->,
         <--     form -> form -> form.
-Type    $forall,
-        $exists (name -> form) -> form.
+Type    for_all,
+        for_some (name -> form) -> form.
 
 Define
 % ?- seq Prog List Goal.
@@ -46,21 +46,21 @@ Define
 by
 % Do right rules first.
   seq Atom Prog L tt;
-  seq Atom Prog L (and B C)  := seq Atom Prog L B /\ seq Atom Prog L C;
-  seq Atom Prog L (G <-- D)   := seq Atom Prog (and D L) G;
-  seq Atom Prog L (D --> G)   := seq Atom Prog (and D L) G;
-  seq Atom Prog L ($forall B) := nabla x, seq Atom Prog L (B x);
-  seq Atom Prog L ($exists B) := exists x, seq Atom Prog L (B x);
+  seq Atom Prog L (B && C)  := seq Atom Prog L B /\ seq Atom Prog L C;
+  seq Atom Prog L (G <-- D)   := seq Atom Prog (D && L) G;
+  seq Atom Prog L (D --> G)   := seq Atom Prog (D && L) G;
+  seq Atom Prog L (for_all B) := nabla x, seq Atom Prog L (B x);
+  seq Atom Prog L (for_some B) := exists x, seq Atom Prog L (B x);
 % Pick a formula on which to backchain.
   seq Atom Prog L A := Atom A /\ (bc Atom Prog L L A \/ (Prog A Body /\ seq Atom Prog L Body));
 
 
 % Backchaining is done in a focused fashion.
   bc Atom Prog L A A := Atom A;
-  bc Atom Prog L (and X Y)  A := bc Atom Prog L X A \/ bc Atom Prog L Y A;
+  bc Atom Prog L (X && Y)  A := bc Atom Prog L X A \/ bc Atom Prog L Y A;
   bc Atom Prog L (D <-- G)   A := bc Atom Prog L D A /\ seq Atom Prog L G;
   bc Atom Prog L (G --> D)   A := bc Atom Prog L D A /\ seq Atom Prog L G;
-  bc Atom Prog L ($forall D) A := exists t, bc Atom Prog L (D t) A.
+  bc Atom Prog L (for_all D) A := exists t, bc Atom Prog L (D t) A.
 
 Define
   prv : (form -> prop) ->

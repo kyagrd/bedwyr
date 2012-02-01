@@ -17,7 +17,7 @@ Type    subst   (name -> name) -> name -> name -> form.
 Type    eval    name -> name -> form.
 
 % objecy-level constructors
-Type    lam     (name -> name) -> name.
+Type    abs     (name -> name) -> name.
 Type    app     name -> name -> name.
 Type    ~>      ty -> ty -> ty.
 
@@ -31,11 +31,11 @@ Define atom : form -> prop by
   atom (subst R S T);
   atom (eval E V).
 
-#assert prv atom (x\y\ (false)) ((and a b) --> (and tt a)).
+#assert prv atom (x\y\ (false)) ((a && b) --> (tt && a)).
 #assert
   forall t u w,
     prv atom
-      (x\y\ (false)) ($forall x\ $forall y\ (p x t) --> (p y u) --> (p x w)) ->
+      (x\y\ (false)) (for_all x\ for_all y\ (p x t) --> (p y u) --> (p x w)) ->
     w = t.
 
 % Simple union of two binary relations.  These can be used to
@@ -68,28 +68,28 @@ Define exprog : form -> form -> prop by
 % object-level clauses
 Define prog : form -> form -> prop by
 % Specification of simply typing inference for untyped lambda-calculus.
-  prog (type_of (lam x\ B x) (Tin ~> Tout))
-     ($forall x\ type_of x Tin --> type_of (B x) Tout);
-  prog (type_of (app A B) Tout) (and (type_of A (Tin ~> Tout)) (type_of B Tin));
+  prog (type_of (abs x\ B x) (Tin ~> Tout))
+     (for_all x\ type_of x Tin --> type_of (B x) Tout);
+  prog (type_of (app A B) Tout) ((type_of A (Tin ~> Tout)) && (type_of B Tin));
 % Implementation of substitution into the untyped lambda-calculus.
-  prog (copy (app M N) (app M' N')) (and (copy M M') (copy N N'));
-  prog (copy (lam M) (lam M))
-     ($forall x\ $forall x'\ copy x x' --> copy (M x) (M' x'));
-  prog (subst R S T) ($forall x\ copy x S --> copy (R x) T);
+  prog (copy (app M N) (app M' N')) ((copy M M') && (copy N N'));
+  prog (copy (abs M) (abs M))
+     (for_all x\ for_all x'\ copy x x' --> copy (M x) (M' x'));
+  prog (subst R S T) (for_all x\ copy x S --> copy (R x) T);
 % Call-by-value evaluation
-  prog (eval (lam x\ M x) (lam x\ M x)) tt;
+  prog (eval (abs x\ M x) (abs x\ M x)) tt;
   prog (eval (app M N) V)
-     (and (and (eval M (lam M')) (subst M' N M'')) (eval M'' V)).
+     (((eval M (abs M')) && (subst M' N M'')) && (eval M'' V)).
 
-#assert prv atom prog (type_of (lam x\ lam y\ x) T).
+#assert prv atom prog (type_of (abs x\ abs y\ x) T).
 
-#assert prv atom prog (type_of (app (lam x\ lam y\ x) (lam x\ x)) T).
+#assert prv atom prog (type_of (app (abs x\ abs y\ x) (abs x\ x)) T).
 
-#assert_not   forall T, prv atom prog (type_of (lam x\ app x x) T).
-#assert       forall T, prv atom prog (type_of (lam x\ app x x) T) -> false.
-#assert_raise (forall T, prv atom prog (type_of (lam x\ app x x) T) -> false) -> true.
+#assert_not   forall T, prv atom prog (type_of (abs x\ app x x) T).
+#assert       forall T, prv atom prog (type_of (abs x\ app x x) T) -> false.
+#assert_raise (forall T, prv atom prog (type_of (abs x\ app x x) T) -> false) -> true.
 
-#assert forall T S, prv atom prog (type_of (lam x\ x) (T ~> S)) -> T = S.
+#assert forall T S, prv atom prog (type_of (abs x\ x) (T ~> S)) -> T = S.
 
 % The following has four proofs.
-#assert exists R, prv atom prog (subst R (lam x\x) (app (lam x\x) (lam y\y))).
+#assert exists R, prv atom prog (subst R (abs x\x) (app (abs x\x) (abs y\y))).
