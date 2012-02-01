@@ -87,13 +87,13 @@ XPL = list.def internal/scoping.def internal/checks.def \
       pi/pi_trace.def pi/corr-assert.def pi/pi_modal.def \
       pi/pi_mini.def pi/pi_nat.def pi/pi_church.def
 
-# debhelper has his own tools to install copyright and changelog
+# debhelper has his own tools to install those standard docs
 ifeq ($(DISTRIB),debian)
-NDCORE_DOCS	= README TODO
-BEDWYR_DOCS	= README TODO
+NDCORE_DOCS	=
+BEDWYR_DOCS	=
 else
-NDCORE_DOCS	= COPYING CHANGES README TODO
-BEDWYR_DOCS	= COPYING CHANGES README TODO
+NDCORE_DOCS	= COPYING ChangeLog README TODO
+BEDWYR_DOCS	= COPYING ChangeLog README TODO
 endif
 DOCS		= $(BEDWYR_DOCS)
 CONTRIB		= contrib/emacs/bedwyr.el \
@@ -106,7 +106,7 @@ TEX_FILES	= $(USERGUIDE).tex
 PS_FILES	= $(USERGUIDE).ps.gz
 PDF_FILES	= $(USERGUIDE).pdf
 HTML_FILES	= $(USERGUIDE).html
-USERGUIDE_FILES	= doc/$(TEX_FILES).tex doc/userguide.bib doc/Makefile
+USERGUIDE_FILES	= doc/$(TEX_FILES) doc/userguide.bib doc/Makefile
 ARCH_FILES	= configure.ac Makefile.in install-sh \
 		  $(DOCS) $(CONTRIB) $(EXAMPLES) \
 		  $(USERGUIDE_FILES)
@@ -194,7 +194,9 @@ install_ndcore: ndcore_doc $(NDCORE_DOCS:=.bz2)
 	$(INSTALL_DOC) $(ndcore) $(wildcard $(ndcore:$(cma)=a)) $(LIBDIR)
 	$(TAR) -xf $(ndcore:$(cma)=cmi.tar) -C $(LIBDIR)
 	@$(INSTALL_DIR) $(DOCDIR)
+ifneq ($(NDCORE_DOCS:=.bz2),)
 	@$(INSTALL_DOC) $(NDCORE_DOCS:=.bz2) $(DOCDIR)
+endif
 ifneq (@OCAMLDOC@,)
 	@$(INSTALL_DIR) $(HTMLDIR)/html
 	@$(INSTALL_DOC) doc/html/ndcore/style.css doc/html/ndcore/*.html \
@@ -205,7 +207,9 @@ install_bedwyr: bedwyr_doc $(BEDWYR_DOCS:=.bz2)
 	@$(INSTALL_DIR) $(BINDIR)
 	@$(INSTALL_BIN) $(bedwyr) $(BINDIR)
 	@$(INSTALL_DIR) $(DOCDIR)
+ifneq ($(BEDWYR_DOCS:=.bz2),)
 	@$(INSTALL_DOC) $(BEDWYR_DOCS:=.bz2) $(DOCDIR)
+endif
 ifneq (@OCAMLDOC@,)
 	@$(INSTALL_DIR) $(PSDIR)
 	@$(INSTALL_DIR) $(PDFDIR)
