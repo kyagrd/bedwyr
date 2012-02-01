@@ -22,6 +22,7 @@
   open Lexing
 
   exception Illegal_string of char
+  exception Illegal_name
 
   (* XXX incrline = new_line in OCaml >= 3.11.0 *)
   let incrline lexbuf =
@@ -30,9 +31,61 @@
           pos_bol = lexbuf.lex_curr_p.pos_cnum ;
           pos_lnum = 1 + lexbuf.lex_curr_p.pos_lnum }
 
+  (* keep track of the content of a quoted string
+   * across multiple lines *)
   let strbuf = Buffer.create 128
-
+  (* also keep track of the beginning of the string *)
   let strstart = ref dummy_pos
+
+  (* keep track of the token parsed just before the comment *)
+  let prev_token = ref None
+
+  let keyword_table = Hashtbl.create 41
+  let _ = List.iter (fun (k,t) -> Hashtbl.add keyword_table k t)
+            [ (* Abella's tactics (minus "exists" and "assert") *)
+              "induction",      IND;
+              "coinduction",    COIND;
+              "intros",         INTROS;
+              "case",           CASE;
+              "search",         SEARCH;
+              "apply",          APPLY;
+              "backchain",      BACKCHAIN;
+              "unfold",         UNFOLD;
+              "split",          SPLIT;
+              "split*",         SPLITSTAR;
+              "left",           LEFT;
+              "right",          RIGHT;
+              "permute",        PERMUTE;
+              "inst",           INST;
+              "cut",            CUT;
+              "monotone",       MONOTONE;
+              "undo",           UNDO;
+              "skip",           SKIP;
+              "abort",          ABORT;
+              "clear",          CLEAR;
+              "abbrev",         ABBREV;
+              "unabbrev",       UNABBREV;
+              (* Bedwyr only meta-keywords *)
+              "quit",           EXIT;
+              "exit",           EXIT;
+              "help",           HELP;
+              "include",        INCLUDE;
+              "reset",          RESET;
+              "reload",         RELOAD;
+              "session",        SESSION;
+              "debug",          DEBUG;
+              "time",           TIME;
+              "equivariant",    EQUIVARIANT;
+              "env",            ENV;
+              "typeof",         TYPEOF;
+              "show_table",     SHOW_TABLE;
+              "clear_tables",   CLEAR_TABLES;
+              "clear_table",    CLEAR_TABLE;
+              "save_table",     SAVE_TABLE;
+              "assert",         ASSERT;
+              "assert_not",     ASSERT_NOT;
+              "assert_raise",   ASSERT_RAISE
+            ]
 }
 
 let digit = ['0'-'9']
@@ -40,23 +93,20 @@ let number = digit+
 
 let uchar = ['A'-'Z']
 let lchar = ['a'-'z']
-(* special symbols *)
-let prefix_special = ['`' '\'' '$']
-let infix_special  = ['+' '-' '*' '^' '<' '>' '=' '~' '|' ':']
-let tail_special   = ['?' '!' '@' '#' '&' '_']
 
-(*let special_char = prefix_special | infix_special | tail_special
-let any_char = uchar | lchar | digit | special_char*)
+(* special symbols *)
+let prefix_special = ['?' '`' '\'' '$']
+let infix_special  = ['-' '^' '<' '>' '=' '~' '+' '*' '&' ':' '|']
+let tail_special   = ['_' '/' '@' '#' '!']
+
 let safe_char = uchar | lchar | digit |  prefix_special | tail_special
 
-(*let upper_name = uchar | (uchar any_char* safe_char)
-let lower_name = (lchar|prefix_special) | ((lchar|prefix_special) any_char* safe_char)
-let infix_name = infix_special (special_char)*
-let intern_name = '_' any_char* safe_char*)
 let upper_name = uchar safe_char*
 let lower_name = (lchar|prefix_special) safe_char*
 let infix_name = infix_special+
-let intern_name = '_' safe_char*
+let intern_name = '_' safe_char+
+
+let illegal_name = ((upper_name|lower_name) infix_special) | infix_name safe_char
 
 let blank = ' ' | '\t' | '\r'
 
@@ -64,6 +114,12 @@ let in_comment = '/' | '*' | [^'/' '*' '\n']+
 let in_qstring = [^'\\' '"' '\n']+
 
 rule token = parse
+  | (upper_name as n) "/*" { prev_token := Some (UPPER_ID n) ;
+                             comment 0 lexbuf }
+  | (lower_name as n) "/*" { prev_token := Some (LOWER_ID n) ;
+                             comment 0 lexbuf }
+  | (intern_name as n) "/*" { prev_token := Some (INTERN_ID n) ;
+                              comment 0 lexbuf }
   | "/*"                { comment 0 lexbuf }
   | '%' [^'\n']* '\n'?  { incrline lexbuf; token lexbuf }
   | blank               { token lexbuf }
@@ -133,30 +189,6 @@ rule token = parse
   | "Show"              { SHOW }
   | "Quit"              { QUIT }
 
-  (* Abella's tactics (minus "exists" and "assert") *)
-  | "induction"         { IND }
-  | "coinduction"       { COIND }
-  | "intros"            { INTROS }
-  | "case"              { CASE }
-  | "search"            { SEARCH }
-  | "apply"             { APPLY }
-  | "backchain"         { BACKCHAIN }
-  | "unfold"            { UNFOLD }
-  | "split"             { SPLIT }
-  | "split*"            { SPLITSTAR }
-  | "left"              { LEFT }
-  | "right"             { RIGHT }
-  | "permute"           { PERMUTE }
-  | "inst"              { INST }
-  | "cut"               { CUT }
-  | "monotone"          { MONOTONE }
-  | "undo"              { UNDO }
-  | "skip"              { SKIP }
-  | "abort"             { ABORT }
-  | "clear"             { CLEAR }
-  | "abbrev"            { ABBREV }
-  | "unabbrev"          { UNABBREV }
-
   (* Abella only keywords *)
   | "to"                { TO }
   | "with"              { WITH }
@@ -169,41 +201,24 @@ rule token = parse
   | "*"                 { STAR }
   | "@"                 { AT }
   | "+"                 { PLUS }
-  | "_"                 { UNDERSCORE }
-
-  (* Bedwyr only meta-keywords *)
   | "#"                 { HASH }
-  | "quit"
-  | "exit"              { EXIT }
-  | "help"              { HELP }
-  | "include"           { INCLUDE }
-  | "reset"             { RESET }
-  | "reload"            { RELOAD }
-  | "session"           { SESSION }
-  | "debug"             { DEBUG }
-  | "time"              { TIME }
-  | "equivariant"       { EQUIVARIANT }
-  | "env"               { ENV }
-  | "typeof"            { TYPEOF }
-  | "show_table"        { SHOW_TABLE }
-  | "clear_tables"      { CLEAR_TABLES }
-  | "clear_table"       { CLEAR_TABLE }
-  | "save_table"        { SAVE_TABLE }
-  | "assert"            { ASSERT }
-  | "assert_not"        { ASSERT_NOT }
-  | "assert_raise"      { ASSERT_RAISE }
+  | "_"                 { UNDERSCORE }
 
   (* bound variable, free variable in a query *)
   | upper_name as n     { UPPER_ID n }
 
   (* bound variable, type/prefix constant/predicate *)
-  | lower_name as n     { LOWER_ID n }
+  | lower_name as n     { try Hashtbl.find keyword_table n
+                          with Not_found -> LOWER_ID n }
 
   (* infix constant *)
   | infix_name as n     { INFIX_ID n }
 
   (* intern constant *)
   | intern_name as n    { INTERN_ID n }
+
+  (* ambiguous names *)
+  | illegal_name        { raise Illegal_name }
 
   (* misc *)
   | '\x04'              (* ctrl-D *)
@@ -215,7 +230,9 @@ and comment level = parse
   | in_comment          { comment level lexbuf }
   | "/*"                { comment (level + 1) lexbuf }
   | "*/"                { if level = 0 then
-                            token lexbuf
+                            match !prev_token with
+                              | None -> token lexbuf
+                              | Some t -> prev_token := None ; t
                           else
                             comment (level - 1) lexbuf }
   | '\n'                { incrline lexbuf ;
