@@ -12,7 +12,7 @@ Type cons       form -> list -> list.
 Kind obj        type.
 Type p          obj -> obj -> form.
 Type impl       form -> form -> form.
-Type $forall    (obj -> form) -> form.
+Type for_all    (obj -> form) -> form.
 
 Define memb : form -> list -> prop by
   memb A (cons A L);
@@ -21,12 +21,12 @@ Define memb : form -> list -> prop by
 Define pv : list -> form -> prop by
   pv L (p X Y) := memb (p X Y) L;
   pv L (impl A B) := pv (cons A L) B;
-  pv L ($forall B) := nabla x, pv L (B x).
+  pv L (for_all B) := nabla x, pv L (B x).
 
 #assert
   (forall r s t,
-     pv nil ($forall x\ impl (p x r) ($forall y\ impl (p y s) (p x t))) -> r = t).
+     pv nil (for_all x\ impl (p x r) (for_all y\ impl (p y s) (p x t))) -> r = t).
 
 #assert_not
   (forall r s t,
-     pv nil ($forall x\ impl (p x r) ($forall y\ impl (p y s) (p x t))) -> r = s).
+     pv nil (for_all x\ impl (p x r) (for_all y\ impl (p y s) (p x t))) -> r = s).

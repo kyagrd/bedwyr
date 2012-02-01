@@ -53,20 +53,20 @@ Define atom : form -> prop by
 % Reduce marked beta-redexes using Bedwyr beta-reduction.
 Define lnorm : form -> form -> prop by
   lnorm (lred (abs R) (abs S))
-      ($forall x\ $forall y\ lred x y --> lred (R x) (S y));
+      (for_all x\ for_all y\ lred x y --> lred (R x) (S y));
   lnorm (lred (app M N) (app P Q))
-      (and (lred M P) (lred N Q));
+      ((lred M P) && (lred N Q));
   lnorm (lred (beta N R) P)
       (lred S P) := (R N) = S;   % reschedule unification to keep to L-lambda.
   % Compute paths through a lambda-term.
   lnorm (path (abs R) (bnd P))
-      ($forall x\ $forall p\ path x p --> path (R x) (P p));
+      (for_all x\ for_all p\ path x p --> path (R x) (P p));
   lnorm (path (app M N) (left  P))
       (path M P);
   lnorm (path (app N M) (right P))
       (path M P);
   lnorm (path (beta N R) P)
-      ($forall x\ ($forall Q\ path x Q <-- path N Q) --> path (R x) P);
+      (for_all x\ (for_all Q\ path x Q <-- path N Q) --> path (R x) P);
   lnorm (path a ap) tt;   % Add a few constants
   lnorm (path b bp) tt;
   lnorm (path f fp) tt;
@@ -74,7 +74,7 @@ Define lnorm : form -> form -> prop by
   % This predicate is the same as above, except that it does not contain
   % the case for marked beta-redexes.
   lnorm (path' (abs R) (bnd P))
-      ($forall x\ $forall p\ path' x p --> path' (R x) (P p));
+      (for_all x\ for_all p\ path' x p --> path' (R x) (P p));
   lnorm (path' (app M N) (left  P))
       (path' M P);
   lnorm (path' (app N M) (right P))
@@ -85,12 +85,12 @@ Define lnorm : form -> form -> prop by
   lnorm (path' g gp) tt;
   % This predicate can be used to insert marked beta-redexes into a term.
   lnorm (insert_beta (app (abs R) N) (beta N' R'))
-      (and (insert_beta N N')
-           ($forall x\ insert_beta x x --> insert_beta (R x) (R' x)));
+      ((insert_beta N N') &&
+           (for_all x\ insert_beta x x --> insert_beta (R x) (R' x)));
   lnorm (insert_beta (app M N) (app P Q))
-      (and (insert_beta M P) (insert_beta N Q));
+      ((insert_beta M P) && (insert_beta N Q));
   lnorm (insert_beta (abs R) (abs R'))
-      ($forall x\ insert_beta x x --> insert_beta (R x) (R' x)).
+      (for_all x\ insert_beta x x --> insert_beta (R x) (R' x)).
 
 Define pr : form -> prop by
   pr G := seq atom lnorm tt G.
