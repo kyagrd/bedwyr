@@ -23,6 +23,8 @@ endif
 
 TAR	= @TAR@ -p
 FIND	= @FIND@
+BZIP2	= bzip2 -9
+GZIP	= gzip -9
 
 prefix        =@prefix@
 exec_prefix   =@exec_prefix@
@@ -85,20 +87,29 @@ XPL = list.def internal/scoping.def internal/checks.def \
       pi/pi_trace.def pi/corr-assert.def pi/pi_modal.def \
       pi/pi_mini.def pi/pi_nat.def pi/pi_church.def
 
+# debhelper has his own tools to install copyright and changelog
+ifeq ($(DISTRIB),debian)
+NDCORE_DOCS	= README TODO
+BEDWYR_DOCS	= README TODO
+else
 NDCORE_DOCS	= COPYING CHANGES README TODO
 BEDWYR_DOCS	= COPYING CHANGES README TODO
+endif
 DOCS		= $(BEDWYR_DOCS)
 CONTRIB		= contrib/emacs/bedwyr.el \
 		  contrib/vim/ftdetect/bedwyr.vim \
 		  contrib/vim/syntax/bedwyr.vim
 EXAMPLES	= $(shell find examples -type f '!' -path '*.svn*' \
 		  '!' -name \*~ '!' -name .\*.sw\* '!' -name \*.old)
-USERGUIDE	= doc/*.tex doc/userguide.bib doc/Makefile
-PDF		= userguide.pdf
-HTML		= userguide.html
+USERGUIDE	= userguide-1.3
+TEX_FILES	= $(USERGUIDE).tex
+PS_FILES	= $(USERGUIDE).ps.gz
+PDF_FILES	= $(USERGUIDE).pdf
+HTML_FILES	= $(USERGUIDE).html
+USERGUIDE_FILES	= doc/$(TEX_FILES).tex doc/userguide.bib doc/Makefile
 ARCH_FILES	= configure.ac Makefile.in install-sh \
 		  $(DOCS) $(CONTRIB) $(EXAMPLES) \
-		  $(USERGUIDE)
+		  $(USERGUIDE_FILES)
 
 ndcore = src/ndcore/ndcore.$(cma)
 bedwyr = src/bedwyr
@@ -170,13 +181,6 @@ ifneq (@OCAMLDOC@,)
 	make -C doc
 endif
 
-#doc/$(PS):
-#	make -C doc $(PS)
-#doc/$(PDF):
-#	make -C doc $(PDF)
-#doc/$(HTML):
-#	make -C doc $(HTML)
-
 # INSTALL
 
 ifeq ($(TARGET),)
@@ -187,7 +191,7 @@ endif
 
 install_ndcore: ndcore_doc $(NDCORE_DOCS:=.bz2)
 	@$(INSTALL_DIR) $(LIBDIR)
-	$(INSTALL_BIN) $(ndcore) $(wildcard $(ndcore:$(cma)=a)) $(LIBDIR)
+	$(INSTALL_DOC) $(ndcore) $(wildcard $(ndcore:$(cma)=a)) $(LIBDIR)
 	$(TAR) -xf $(ndcore:$(cma)=cmi.tar) -C $(LIBDIR)
 	@$(INSTALL_DIR) $(DOCDIR)
 	@$(INSTALL_DOC) $(NDCORE_DOCS:=.bz2) $(DOCDIR)
@@ -202,16 +206,16 @@ install_bedwyr: bedwyr_doc $(BEDWYR_DOCS:=.bz2)
 	@$(INSTALL_BIN) $(bedwyr) $(BINDIR)
 	@$(INSTALL_DIR) $(DOCDIR)
 	@$(INSTALL_DOC) $(BEDWYR_DOCS:=.bz2) $(DOCDIR)
-#	@$(INSTALL_DIR) $(PSDIR)
-#	@$(INSTALL_DIR) $(PDFDIR)
-#	@$(INSTALL_DIR) $(HTMLDIR)
-#	@$(INSTALL_DOC) doc/$(PS) $(PSDIR)
-#	@$(INSTALL_DOC) doc/$(PDF) $(PDFDIR)
-#	@$(INSTALL_DOC) doc/$(HTML) $(HTMLDIR)
 ifneq (@OCAMLDOC@,)
-	@$(INSTALL_DIR) $(HTMLDIR)/html
+	@$(INSTALL_DIR) $(PSDIR)
+	@$(INSTALL_DIR) $(PDFDIR)
+	@$(INSTALL_DIR) $(HTMLDIR)
+	@$(INSTALL_DOC) doc/$(PS_FILES) $(PSDIR)
+	@$(INSTALL_DOC) doc/$(PDF_FILES) $(PDFDIR)
+	@$(INSTALL_DOC) doc/$(HTML_FILES) $(HTMLDIR)
+	@$(INSTALL_DIR) $(HTMLDIR)/ref
 	@$(INSTALL_DOC) doc/html/bedwyr/style.css doc/html/bedwyr/*.html \
-	  $(HTMLDIR)/html
+	  $(HTMLDIR)/ref
 endif
 #	@$(INSTALL_DIR) $(MANDIR)/man1
 #	@$(INSTALL_DOC) $(MAN) $(MANDIR)/man1
@@ -243,17 +247,10 @@ $(DIST_NAME).tar: src/ndcore/ndcore.tar src/bedwyr.tar dist.tar
 	for i in $^ ; do \
 	  $(TAR) -Af $@ $$i ; done
 
-%.tar.bz2: %.tar
-	bzip2 -f $<
-	$(TAR) -tf $@
-%.tar.gz: %.tar
-	gzip -f $<
-	$(TAR) -tf $@
-
 %.bz2: %
-	bzip2 -f -k $<
+	$(BZIP2) -f -k $<
 %.gz: %
-	gzip -f -c $< > $@
+	$(GZIP) -f -c $< > $@
 
 # OTHER TARGETS
 
@@ -286,9 +283,12 @@ distclean: clean
 	find . -name '*~' -exec rm \{\} \;
 	rm -f *.bz2 *.gz *.tar
 	rm -f config.status config.log
+	rm -f src/config.ml
+	rm -f configure
 	rm -f Makefile
 	rm -f src/Makefile
 	rm -f src/ndcore/Makefile
+	rm -rf autom4te.cache
 
 clean:
 	make -C src clean

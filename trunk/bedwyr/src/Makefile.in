@@ -46,11 +46,12 @@ BEDWYR_O = $(BEDWYR_ML:.ml=.$(cmo))
 
 all: bedwyr
 
+ifneq ($(strip $(wildcard ndcore/ndcore.$(cma))),)
+bedwyr: ndcore/ndcore.$(cma) $(BEDWYR_O)
+	$(OCAMLL) unix.$(cma) $^ -o $@
+else
 bedwyr: $(BEDWYR_O)
 	$(OCAMLL) unix.$(cma) ndcore.$(cma) $^ -o $@
-
-ifneq ($(strip $(wildcard ndcore/ndcore.$(cma))),)
-bedwyr: ndcore/ndcore.$(cma)
 endif
 
 -include depend
