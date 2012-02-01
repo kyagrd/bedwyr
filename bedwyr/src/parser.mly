@@ -63,7 +63,7 @@
 %nonassoc BSLASH
 %nonassoc EQ
 
-%nonassoc INFIX_ID
+%right INFIX_ID
 
 /* Higher */
 
@@ -173,9 +173,11 @@ term_list:
   | term_atom term_list                 { let t,l = $2 in $1,t::l }
 
 term_atom:
+  | TRUE                                { Typing.pre_true (pos 0) }
+  | FALSE                               { Typing.pre_false (pos 0) }
+  | LPAREN formula RPAREN               { Typing.change_pos (pos 1) $2 (pos 3) }
   | LPAREN term RPAREN                  { $2 }
   | LPAREN INFIX_ID RPAREN              { Typing.pre_predconstid (pos 0) $2 }
-  | formula_atom                        { $1 }
   | token_id                            { $1 }
   | QSTRING                             { let p,s = $1 in
                                           Typing.pre_qstring p s }
@@ -191,11 +193,6 @@ term:
                                             (pos 0)
                                             (Typing.pre_predconstid (pos 2) $2)
                                             [$1; $3] }
-
-formula_atom:
-  | TRUE                                { Typing.pre_true (pos 0) }
-  | FALSE                               { Typing.pre_false (pos 0) }
-  | LPAREN formula RPAREN               { Typing.change_pos (pos 1) $2 (pos 3) }
 
 formula:
   | term EQ term                        { Typing.pre_eq (pos 0) $1 $3 }
