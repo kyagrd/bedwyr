@@ -56,6 +56,10 @@ struct
 end
 
 type flavour = Normal | Inductive | CoInductive
+let string_of_flavour = function
+  | Normal -> "Normal"
+  | Inductive -> "Inductive"
+  | CoInductive -> "CoInductive"
 type command =
   | Exit
   | Help
@@ -147,6 +151,7 @@ let declare_type (p,name) ki =
 
 exception Missing_type of string * Typing.pos
 exception Invalid_const_declaration of string * Typing.pos * Type.simple_type * string
+exception Invalid_flavour of string * Typing.pos * string * string
 exception Invalid_pred_declaration of string * Typing.pos * Type.simple_type * string
 exception Invalid_bound_declaration of string * Typing.pos * Type.simple_type * string
 
@@ -175,20 +180,29 @@ let declare_const (p,name) ty =
   else let _ = kind_check ty in
   Hashtbl.add const_types const_var ty
 
-let create_def (flavour,p,name,ty) =
-  let head_var = Term.get_var (Term.atom ~tag:Term.Constant name) in
-  if Hashtbl.mem defs head_var
-  then raise (Invalid_pred_declaration (name,p,ty,"predicate already declared"))
-  else if Hashtbl.mem const_types head_var
-  then raise (Invalid_pred_declaration (name,p,ty,"name conflict with a declared constant"))
-  else let (flex,_,_,propositional) = kind_check ty in
-  if not (propositional || flex) then
-    raise (Invalid_pred_declaration (name,p,ty,Format.sprintf "target type can only be %s" (Pprint.type_to_string Type.TProp)))
-  else begin
-    let t = (if flavour=Normal then None else Some (Table.create ())) in
-    Hashtbl.add defs head_var (flavour, None, t, ty) ;
-    head_var
-  end
+let create_def (new_predicates,global_flavour) (flavour,p,name,ty) =
+  let global_flavour = match global_flavour,flavour with
+    | Normal,_ -> flavour
+    | _,Normal -> global_flavour
+    | _ when global_flavour=flavour -> flavour
+    | _ -> raise (Invalid_flavour (name,p,string_of_flavour global_flavour,string_of_flavour flavour))
+  in
+  let new_predicate =
+    let head_var = Term.get_var (Term.atom ~tag:Term.Constant name) in
+    if Hashtbl.mem defs head_var
+    then raise (Invalid_pred_declaration (name,p,ty,"predicate already declared"))
+    else if Hashtbl.mem const_types head_var
+    then raise (Invalid_pred_declaration (name,p,ty,"name conflict with a declared constant"))
+    else let (flex,_,_,propositional) = kind_check ty in
+    if not (propositional || flex) then
+      raise (Invalid_pred_declaration (name,p,ty,Format.sprintf "target type can only be %s" (Pprint.type_to_string Type.TProp)))
+    else begin
+      let t = (if flavour=Normal then None else Some (Table.create ())) in
+      Hashtbl.add defs head_var (flavour, None, t, ty) ;
+      head_var
+    end
+  in
+  (new_predicate::new_predicates),global_flavour
 
 
 (* typechecking, predicates definitions *)
@@ -486,7 +500,7 @@ let print_env () =
     in
     Format.printf "@[<v 1>*** Predicates ***" ;
     Hashtbl.iter
-      (fun v (f,_,_,ty) -> Format.printf "@,@[%s%s :@;<1 2>%a@]"
+      (fun v (f,_,_,ty) -> Format.printf "@,@[%s%s :@;<1 4>%a@]"
                             (string_of_flavour f)
                             (Term.get_var_name v)
                             (Pprint.pp_type_norm None) ty)
@@ -507,7 +521,7 @@ let get_types pre_term =
 
 let print_type_of pre_term =
   let t,ty,free_types = get_types pre_term in
-  Format.printf "@[<v>@[%a :@;<1 2>%a@]"
+  Format.printf "@[<v 3>@[%a :@;<1 2>%a@]"
     Pprint.pp_term t
     Pprint.pp_type ty ;
   Hashtbl.iter
