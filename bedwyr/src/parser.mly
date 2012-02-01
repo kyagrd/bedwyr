@@ -34,7 +34,7 @@
 %token PROP STRING NAT EQ AND OR FORALL EXISTS NABLA TRUE FALSE
 %token CLOSE THEOREM QED QUERY IMPORT SPECIFICATION SSPLIT
 %token SET SHOW QUIT
-%token IND COIND INTROS CASE SEARCH APPLY BACKCHAIN UNFOLD
+%token IND COIND INTROS CASE SEARCH APPLY BACKCHAIN UNFOLD ASSERT_T
 %token SPLIT SPLITSTAR LEFT RIGHT PERMUTE
 %token INST CUT MONOTONE
 %token UNDO SKIP ABORT CLEAR ABBREV UNABBREV
@@ -100,25 +100,25 @@ meta_command:
   | SET                                 { failwith "Abella command only" }
   | SHOW                                { failwith "Abella command only" }
   | QUIT                                { failwith "Abella command only" }
-  | HASH EXIT DOT                       { System.Command (System.Exit) }
-  | HASH HELP DOT                       { System.Command (System.Help) }
-  | HASH INCLUDE string_args DOT        { System.Command (System.Include $3) }
-  | HASH RESET DOT                      { System.Command (System.Reset) }
-  | HASH RELOAD DOT                     { System.Command (System.Reload) }
-  | HASH SESSION string_args DOT        { System.Command (System.Session $3) }
-  | HASH DEBUG opt_arg DOT              { System.Command (System.Debug $3) }
-  | HASH TIME opt_arg DOT               { System.Command (System.Time $3) }
-  | HASH EQUIVARIANT opt_arg DOT        { System.Command (System.Equivariant $3) }
-  | HASH ENV DOT                        { System.Command (System.Env) }
-  | HASH TYPEOF formula DOT             { System.Command (System.Type_of $3) }
-  | HASH SHOW_TABLE lower_id DOT        { System.Command (System.Show_table (pos 3,$3)) }
-  | HASH CLEAR_TABLES DOT               { System.Command (System.Clear_tables) }
-  | HASH CLEAR_TABLE lower_id DOT       { System.Command (System.Clear_table (pos 3,$3)) }
-  | HASH SAVE_TABLE lower_id QSTRING DOT{ let _,s = $4 in
-                                          System.Command (System.Save_table (pos 3,$3,s)) }
-  | HASH ASSERT formula DOT             { System.Command (System.Assert $3) }
-  | HASH ASSERT_NOT formula DOT         { System.Command (System.Assert_not $3) }
-  | HASH ASSERT_RAISE formula DOT       { System.Command (System.Assert_raise $3) }
+  | EXIT DOT                            { System.Command (System.Exit) }
+  | HELP DOT                            { System.Command (System.Help) }
+  | INCLUDE string_args DOT             { System.Command (System.Include $2) }
+  | RESET DOT                           { System.Command (System.Reset) }
+  | RELOAD DOT                          { System.Command (System.Reload) }
+  | SESSION string_args DOT             { System.Command (System.Session $2) }
+  | DEBUG opt_arg DOT                   { System.Command (System.Debug $2) }
+  | TIME opt_arg DOT                    { System.Command (System.Time $2) }
+  | EQUIVARIANT opt_arg DOT             { System.Command (System.Equivariant $2) }
+  | ENV DOT                             { System.Command (System.Env) }
+  | TYPEOF formula DOT                  { System.Command (System.Type_of $2) }
+  | SHOW_TABLE lower_id DOT             { System.Command (System.Show_table (pos 2,$2)) }
+  | CLEAR_TABLES DOT                    { System.Command (System.Clear_tables) }
+  | CLEAR_TABLE lower_id DOT            { System.Command (System.Clear_table (pos 2,$2)) }
+  | SAVE_TABLE lower_id QSTRING DOT     { let _,s = $3 in
+                                          System.Command (System.Save_table (pos 2,$2,s)) }
+  | ASSERT formula DOT                  { System.Command (System.Assert $2) }
+  | ASSERT_NOT formula DOT              { System.Command (System.Assert_not $2) }
+  | ASSERT_RAISE formula DOT            { System.Command (System.Assert_raise $2) }
   | EOF                                 { raise End_of_file }
 
 /* kinds, types */
@@ -228,7 +228,7 @@ lower_id:
   | APPLY                               { "apply" }
   | BACKCHAIN                           { "backchain" }
   | UNFOLD                              { "unfold" }
-  | ASSERT                              { "assert" }
+  | ASSERT_T                            { "assert" }
   | SPLIT                               { "split" }
   | SPLITSTAR                           { "split*" }
   | LEFT                                { "left" }

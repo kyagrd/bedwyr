@@ -167,6 +167,11 @@ let rec process ?(interactive=false) parse lexbuf =
             (position_lex lexbuf)
             (Lexing.lexeme lexbuf) ;
           interactive_or_exit interactive lexbuf
+      | Lexer.Unknown_command n ->
+          Format.printf "%sUnknown command %s, use #help for a short list.@."
+            (position_lex lexbuf)
+            n ;
+          interactive_or_exit interactive lexbuf
       | Parsing.Parse_error ->
           Format.printf "%sSyntax error.@."
             (position_lex lexbuf) ;
