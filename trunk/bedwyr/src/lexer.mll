@@ -23,6 +23,7 @@
 
   exception Illegal_string of char
   exception Illegal_name
+  exception Unknown_command of string
 
   (* XXX incrline = new_line in OCaml >= 3.11.0 *)
   let incrline lexbuf =
@@ -40,9 +41,9 @@
   (* keep track of the token parsed just before the comment *)
   let prev_token = ref None
 
-  let keyword_table = Hashtbl.create 41
+  let keyword_table = Hashtbl.create 22
   let _ = List.iter (fun (k,t) -> Hashtbl.add keyword_table k t)
-            [ (* Abella's tactics (minus "exists" and "assert") *)
+            [ (* Abella's tactics (minus "exists") *)
               "induction",      IND;
               "coinduction",    COIND;
               "intros",         INTROS;
@@ -51,6 +52,7 @@
               "apply",          APPLY;
               "backchain",      BACKCHAIN;
               "unfold",         UNFOLD;
+              "assert",         ASSERT_T;
               "split",          SPLIT;
               "split*",         SPLITSTAR;
               "left",           LEFT;
@@ -64,9 +66,11 @@
               "abort",          ABORT;
               "clear",          CLEAR;
               "abbrev",         ABBREV;
-              "unabbrev",       UNABBREV;
-              (* Bedwyr only meta-keywords *)
-              "quit",           EXIT;
+              "unabbrev",       UNABBREV
+            ]
+  let command_table = Hashtbl.create 19
+  let _ = List.iter (fun (k,t) -> Hashtbl.add command_table k t)
+            [ "quit",           EXIT;
               "exit",           EXIT;
               "help",           HELP;
               "include",        INCLUDE;
@@ -203,6 +207,10 @@ rule token = parse
   | "+"                 { PLUS }
   | "#"                 { HASH }
   | "_"                 { UNDERSCORE }
+
+  (* Bedwyr only meta-keywords *)
+  | '#' (lower_name as n) { try Hashtbl.find command_table n
+                            with Not_found -> raise (Unknown_command n) }
 
   (* bound variable, free variable in a query *)
   | upper_name as n     { UPPER_ID n }
