@@ -51,22 +51,22 @@ about computer systems than about proof theory foundations.
 </p>
 
 
-<h2>Current developers</h2>
+<h2 id="developers">Current developers</h2>
 
 <p>
 Bedwyr is an open source project.
-The latest release is version 1.2 (April 2010).
 We welcome contributions from
 others of example applications and new features.  The developers
 behind the current distribution are:
 </p>
 <ul>
 <li> <a href="http://www.lix.polytechnique.fr/~dbaelde">David
-Baelde</a> & <a
+Baelde</a>, <a
 href="http://www.lix.polytechnique.fr/Labo/Dale.Miller/">Dale
-Miller</a>  (INRIA & LIX/Ecole Polytechnique) 
+Miller</a> &amp; <a href="http://www.lix.polytechnique.fr/~heath/">Quentin Heath</a>
+(INRIA &amp; LIX/Ecole Polytechnique) 
 </li>
-<li> <a href="http://www.cs.umn.edu/~agacek/">Andrew Gacek</a>  & <a
+<li> <a href="http://www.cs.umn.edu/~agacek/">Andrew Gacek</a>  &amp; <a
 href="http://www.cs.umn.edu/~gopalan/">Gopalan Nadathur</a>
 (University of Minnesota)  
 </li>
@@ -77,50 +77,77 @@ href="http://www.cs.umn.edu/~gopalan/">Gopalan Nadathur</a>
 <p>
 The team thanks Brigitte Pientka, for her advices regarding tabling, and
 Axelle Ziegler, for her help in translating an early implementation
-from SML to OCaml.  Much of the effort for this work is supported
-within the context of the <a
-href="http://slimmer.gforge.inria.fr/">Slimmer</a> project, which is 
-supported by funds from INRIA and NSF. Support has also been provided
-by the NSF Grant OISE-0553462 (IRES-REUSSI). Of course, the
-      opinions, findings, and conclusions or recommendations expressed
-      in this material are those of the project participants and do not
-      necessarily reflect the views of INRIA or the National Science
-      Foundation. 
+from SML to OCaml.</p>
+<p>Much of the effort for this work was initially supported within the
+context of the <a href="http://slimmer.gforge.inria.fr/">Slimmer</a>
+project, which was funded by INRIA and NSF,
+and by the NSF Grant OISE-0553462 (IRES-REUSSI).
+It is now supported by the BATT ADJ effort, another INRIA grant.
+Of course, the opinions, findings, and conclusions or recommendations
+expressed in this material are those of the project participants and
+do not necessarily reflect the views of INRIA or the National Science
+Foundation. 
 </p>
 
-<h2>Links</h2>
+<h2 id="download">Download</h2>
 
-<p><font color=green><b>Documentation:</b></font>
-      The <a 
-      href="http://gforge.inria.fr/docman/index.php?group_id=367&selected_doc_group_id=482&language_id=7"
-      >Bedwyr
-      User's Guide</a> is available in
-      <a 
-      href="http://gforge.inria.fr/docman/view.php/367/705/userguide.pdf"
-      >pdf</a>,
-      <a
-      href="http://gforge.inria.fr/docman/view.php/367/706/userguide.ps.gz"
-      >ps</a>
-      or <a
-      href="http://gforge.inria.fr/docman/view.php/367/707/userguide.html"
-      >html</a>.
+<p>The latest stable release is version 1.2 (April 2010).
+Version 1.3 should be published during February 2012.</p>
+
+<p><font color=green><b>Sources:</b></font>
+<a href="https://gforge.inria.fr/frs/?group_id=367">
+  Get the tarballs</a> of all past releases.</p>
+<p><font color=green><b>SCM:</b></font> 
+The current development version is available from the
+<a href="http://gforge.inria.fr/scm/?group_id=367">
+  subversion repository</a> hosted by INRIA's Gforge.
+You can
+<a href="http://gforge.inria.fr/scm/viewvc.php/trunk/bedwyr/?root=slimmer">
+  browse the repository</a>, especially the
+<a href="http://gforge.inria.fr/scm/viewvc.php/trunk/bedwyr/examples/?root=slimmer">
+  examples</a>.</p>
+<p><font color=green><b>Packages:</b></font> 
+Some packages of <em>bedwyr</em> (complete program with all the examples)
+and <em>ndcore</em> (standalone core library for development purposes)
+are available for Debian (current stable, ie <em>Squeeze</em>,
+but might work for other versions or even derivatives such as Ubuntu).
+To get them:
+<ul>
+  <li>add <code>deb http://slimmer.gforge.inria.fr/releases/debian/
+    squeeze main</code> to your <code>/etc/apt/sources.list</code></li>
+  <li>add this <a href="/quentin.heath@inria.fr.asc">GPG key</a>
+    to your APT keyring, for instance by running
+    <code>wget -O - http://slimmer.gforge.inria.fr/quentin.heath@inria.fr.asc
+      | apt-key add -</code></li>
+  <li>run <code>apt-get update</code> and check that the packages
+    are available, for instance by running
+    <code>apt-cache policy bedwyr</code></li>
+</ul>
 </p>
 
-<p><font color=green><b>Download:</b></font>
-  <a href="https://gforge.inria.fr/frs/?group_id=367">Get the latest 
-  version</a> of Bedwyr's source code.
-</p>
 
-<p><font color=green><b>Open source repository: </b></font> 
-      Active development versions are available from the 
-      <a href="http://gforge.inria.fr/scm/?group_id=367">Bedwyr
-      subversion repository</a> hosted by INRIA's Gforge.
-      You can
-      <a href="http://gforge.inria.fr/scm/viewvc.php/trunk/bedwyr/?root=slimmer">
-      browse the repository</a>, especially the
-      <a href="http://gforge.inria.fr/scm/viewvc.php/trunk/bedwyr/examples/?root=slimmer">
-      examples</a>.
-      </p>
+<h2 id="documentation">Documentation</h2>
+
+<p><font color=green><b>Bedwyr User's Guide:</b></font>
+  The <a 
+    href="http://gforge.inria.fr/docman/index.php?group_id=367&selected_doc_group_id=482&language_id=7"
+    >user's guide</a> for version 1.0 is available in <a
+    href="http://gforge.inria.fr/docman/view.php/367/705/userguide.pdf"
+    >pdf</a>, <a
+    href="http://gforge.inria.fr/docman/view.php/367/706/userguide.ps.gz"
+    >ps</a> or <a
+    href="http://gforge.inria.fr/docman/view.php/367/707/userguide.html"
+    >html</a>.
+    An up-to-date version will be released with Bedwyr 1.3.
+</p>
+<!--p><font color=green><b>Source code documentation:</b></font> 
+  More technical documentation is provided for the <a
+    href="/bedwyr/ocamldoc/"
+    >program</a> and the <a
+    href="/bedwyr/ocamldoc/ndcore/"
+    >library</a>.</p-->
+
+<h2 id="links">Links</h2>
 
 <p><font color=green><b>Some relevant publications:</b></font> 
 <ol>
