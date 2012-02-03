@@ -34,16 +34,17 @@
 %   boxInL, diaInL : name -> (name -> form) -> form. ('late' bound input)
 %   boxInE, diaInE : name -> (name -> form) -> form. ('early' bound input)
 
-#include "pi.def".
+#include "pi-new.def".
 
-Type top,bot    form.
-Type land,lor   form -> form -> form.
-Type boxMatch,diaMatch  name -> name -> form -> form.
-Type boxAct,diaAct      a -> form -> form.
-Type boxOut,diaOut,
-     boxIn,diaIn,
-     boxInL,diaInL,
-     boxInE,diaInE      name -> (name -> form) -> form.
+Kind form                type.
+Type top, bot            form.
+Type land, lor           form -> form -> form.
+Type boxMatch, diaMatch  name -> name -> form -> form.
+Type boxAct, diaAct      a -> form -> form.
+Type boxOut, diaOut,
+     boxIn, diaIn,
+     boxInL, diaInL,
+     boxInE, diaInE      name -> (name -> form) -> form.
 
 % A "lazy" but incomplete encoding.
 
@@ -54,31 +55,31 @@ Define sat : p -> form -> prop by
   sat P (boxMatch X Y A) := (X = Y) -> sat P A;
   sat P (diaMatch X Y A) := (X = Y) /\ sat P A;
   sat P (boxAct X A) :=
-     forall P1, one dummy_agent P X P1 -> sat P1 A;
+     forall P1, one P X P1 -> sat P1 A;
   sat P (diaAct X A) :=
-     exists P1, one dummy_agent P X P1 /\ sat P1 A;
+     exists P1, one P X P1 /\ sat P1 A;
   sat P (boxOut X A) :=
-     forall Q, onep dummy_agent P (up X) Q -> nabla y, sat (Q y) (A y);
+     forall Q, onep P (up X) Q -> nabla y, sat (Q y) (A y);
   sat P (diaOut X A) :=
-     exists Q, onep dummy_agent P (up X) Q /\ nabla y, sat (Q y) (A y);
+     exists Q, onep P (up X) Q /\ nabla y, sat (Q y) (A y);
   sat P (boxIn X A) :=
-     forall Q, onep dummy_agent P (dn X) Q -> forall y, sat (Q y) (A y);
+     forall Q, onep P (dn X) Q -> forall y, sat (Q y) (A y);
   sat P (diaIn X A) :=
-     exists Q, onep dummy_agent P (dn X) Q /\ exists y, sat (Q y) (A y);
+     exists Q, onep P (dn X) Q /\ exists y, sat (Q y) (A y);
   sat P (boxInL X A) :=
-     forall Q, onep dummy_agent P (dn X) Q -> exists y, sat (Q y) (A y);
+     forall Q, onep P (dn X) Q -> exists y, sat (Q y) (A y);
   sat P (diaInL X A) :=
-     exists Q, onep dummy_agent P (dn X) Q /\ forall y, sat (Q y) (A y);
+     exists Q, onep P (dn X) Q /\ forall y, sat (Q y) (A y);
   sat P (boxInE X A) :=
-     exists y, forall Q, onep dummy_agent P (dn X) Q -> sat (Q y) (A y);
+     exists y, forall Q, onep P (dn X) Q -> sat (Q y) (A y);
   sat P (diaInE X A) :=
-     forall y, exists Q, onep dummy_agent P (dn X) Q /\ sat (Q y) (A y).
+     forall y, exists Q, onep P (dn X) Q /\ sat (Q y) (A y).
 
 
 % A complete encoding: using explicit list of names.
 
 Kind list       type.
-Type cons       _.
+Type cons       _ -> list -> list.
 Type nil        list.
 
 Define member : name -> list -> prop by
@@ -87,72 +88,34 @@ Define member : name -> list -> prop by
 Define lsat : list -> p -> form -> prop by
   lsat L P top;
   lsat L P (land A B) := lsat L P A /\ lsat L P B;
-  lsat L P (lor A B) := lsat L P A \/ lsat L P B;
+  lsat L P (lor  A B) := lsat L P A \/ lsat L P B;
   lsat L P (boxMatch X Y A) := (X = Y) -> lsat L P A;
   lsat L P (diaMatch X Y A) := (X = Y) /\ lsat L P A;
-  lsat L P (boxAct X A) := forall P1, one dummy_agent P X P1 -> lsat L P1 A;
-  lsat L P (diaAct X A) := exists P1, one dummy_agent P X P1 /\ lsat L P1 A;
+  lsat L P (boxAct X A) := forall P1, one P X P1 -> lsat L P1 A;
+  lsat L P (diaAct X A) := exists P1, one P X P1 /\ lsat L P1 A;
   lsat L P (boxOut X A) :=
-    forall Q, onep dummy_agent P (up X) Q -> nabla y, lsat (cons y L) (Q y) (A y);
+    forall Q, onep P (up X) Q -> nabla y, lsat (cons y L) (Q y) (A y);
   lsat L P (diaOut X A) :=
-    exists Q, onep dummy_agent P (up X) Q /\ nabla y, lsat (cons y L) (Q y) (A y);
+    exists Q, onep P (up X) Q /\ nabla y, lsat (cons y L) (Q y) (A y);
   lsat L P (boxIn X A) :=
-    forall Q, onep dummy_agent P (dn X) Q ->
+    forall Q, onep P (dn X) Q ->
       nabla w, forall y, (member y (cons w L) -> lsat (cons w L) (Q y) (A y));
   lsat L P (diaIn X A) :=
-    exists Q, onep dummy_agent P (dn X) Q /\
+    exists Q, onep P (dn X) Q /\
       nabla w, exists y, (member y (cons w L) /\ lsat (cons w L) (Q y) (A y));
   lsat L P (boxInL X A) :=
-    forall Q, onep dummy_agent P (dn X) Q ->
+    forall Q, onep P (dn X) Q ->
       nabla w, exists y, (member y (cons w L) /\ lsat (cons w L) (Q y) (A y));
   lsat L P (diaInL X A) :=
-    exists Q, onep dummy_agent P (dn X) Q /\
+    exists Q, onep P (dn X) Q /\
       nabla w, forall y, (member y (cons w L) -> lsat (cons w L) (Q y) (A y));
   lsat L P (boxInE X A) :=
     nabla w, exists y,
       (member y (cons w L) /\
-         forall Q, onep dummy_agent P (dn X) Q -> lsat (cons w L) (Q y) (A y));
+         forall Q, onep P (dn X) Q -> lsat (cons w L) (Q y) (A y));
   lsat L P (diaInE X A) :=
     nabla w, forall y, member y (cons w L) ->
-      exists Q, onep dummy_agent P (dn X) Q /\ lsat (cons w L) (Q y) (A y).
-
-
-% Type checking processes and assertions ======================================
-
-Type form       form -> form.
-
-Define atom' : form -> prop by
-  atom' X := atom X;
-  atom' (form A).
-
-Define formcheck : form -> form -> prop by
-  formcheck (name x) tt;
-  formcheck (name y) tt;
-  formcheck (action tau) tt;
-  formcheck (form top) tt;
-  formcheck (form bot) tt;
-  formcheck (form (land A B)) ((form A) && (form B));
-  formcheck (form (lor A B)) ((form A) && (form B));
-  formcheck (form (boxMatch X Y A)) ((name X) && ((name Y) && (form A)));
-  formcheck (form (diaMatch X Y A)) ((name X) && ((name Y) && (form A)));
-  formcheck (form (boxAct X A)) ((action X) && (form A));
-  formcheck (form (diaAct X A)) ((action X) && (form A));
-  formcheck (form (boxOut X A))
-          ((name X) && (for_all u\ (name u) --> (form (A u))));
-  formcheck (form (diaOut X A))
-          ((name X) && (for_all u\ (name u) --> (form (A u))));
-  formcheck (form (boxIn  X A))
-          ((name X) && (for_all u\ (name u) --> (form (A u))));
-  formcheck (form (diaIn  X A))
-          ((for_all u\ (name u) --> (form (A u))) && (name X));
-  formcheck (form (boxInL X A))
-          ((name X) && (for_all u\ (name u) --> (form (A u))));
-  formcheck (form (diaInL X A))
-          ((name X) && (for_all u\ (name u) --> (form (A u))));
-  formcheck (form (boxInE X A))
-          ((name X) && (for_all u\ (name u) --> (form (A u))));
-  formcheck (form (diaInE X A))
-          ((name X) && (for_all u\ (name u) --> (form (A u)))).
+      exists Q, onep P (dn X) Q /\ lsat (cons w L) (Q y) (A y).
 
 
 % Some examples ===============================================================
@@ -177,22 +140,6 @@ Define process : nat -> p -> prop by
   process 4 (in x u\ nu y\ ((plus (taup (taup z))
                            (plus (taup z)
                                  (taup (match u y (taup z))))))).
-
-Define
-  typecheck_proc : prop,
-  typecheck_form : prop
-by
-  typecheck_form := forall A N,
-                      assert N A -> prv atom' formcheck (form A);
-  typecheck_proc := forall P N,
-                      process N P -> prv atom' picheck (proc P).
-Define wrong_form : nat -> prop by
-  wrong_form N := exists P,
-                    assert N P /\ (prv atom' formcheck (form P) -> false).
-
-#assert typecheck_proc.
-#assert typecheck_form.
-#assert_not (wrong_form N).
 
 
 % Counterexample to the completeness of sat:
