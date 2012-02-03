@@ -1,0 +1,22 @@
+% small subset of progs.def
+
+#include "seq.def".
+
+Kind    ty      type.
+
+Type    type_of name -> ty -> form.
+Type    abs     (name -> name) -> name.
+Type    app     name -> name -> name.
+Type    ~>      ty -> ty -> ty.
+
+Define simple : form -> form -> prop by
+  simple (type_of (app M N) Tb)
+    (type_of M (Ta ~> Tb) && type_of N Ta);
+  simple (type_of (abs R) (Ta ~> Tb))
+    (for_all x\ type_of x Ta --> type_of (R x) Tb).
+
+Define atom : form -> prop by
+  atom (type_of X T).
+
+#assert (exists Ty, seq atom simple tt
+                      (type_of (abs x\ app x x) Ty)) -> false.
