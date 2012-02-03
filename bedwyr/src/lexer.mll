@@ -100,7 +100,8 @@ let lchar = ['a'-'z']
 
 (* special symbols *)
 let prefix_special = ['?' '`' '\'' '$']
-let infix_special  = ['-' '^' '<' '>' '=' '~' '+' '*' '&' ':' '|']
+let infix_special2 = ['-' '^' '<' '>' '=' '~' '+' '&' ':' '|']
+let infix_special  = infix_special2 | '*'
 let tail_special   = ['_' '/' '@' '#' '!']
 
 let safe_char = uchar | lchar | digit |  prefix_special | tail_special
@@ -122,6 +123,8 @@ rule token = parse
                              comment 0 lexbuf }
   | (intern_name as n) "/*" { prev_token := Some (INTERN_ID n) ;
                               comment 0 lexbuf }
+  | "_/*"               { prev_token := Some (UNDERSCORE) ;
+                          comment 0 lexbuf }
   | "/*"                { comment 0 lexbuf }
   | '%' [^'\n']* '\n'?  { incrline lexbuf; token lexbuf }
   | blank               { token lexbuf }
@@ -224,7 +227,7 @@ rule token = parse
   | intern_name as n    { INTERN_ID n }
 
   (* ambiguous names *)
-  | ((upper_name|lower_name) as n1) (infix_special+ as n2)
+  | ((upper_name|lower_name) as n1) (infix_special2 infix_special* as n2)
   | (infix_name as n1) (safe_char+ as n2)
                         { raise (Illegal_name (n1,n2)) }
 
