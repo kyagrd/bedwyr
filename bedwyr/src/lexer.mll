@@ -22,7 +22,7 @@
   open Lexing
 
   exception Illegal_string of char
-  exception Illegal_name
+  exception Illegal_name of string * string
   exception Unknown_command of string
 
   (* XXX incrline = new_line in OCaml >= 3.11.0 *)
@@ -109,8 +109,6 @@ let upper_name = uchar safe_char*
 let lower_name = (lchar|prefix_special) safe_char*
 let infix_name = infix_special+
 let intern_name = '_' safe_char+
-
-let illegal_name = ((upper_name|lower_name) infix_special) | infix_name safe_char
 
 let blank = ' ' | '\t' | '\r'
 
@@ -226,7 +224,9 @@ rule token = parse
   | intern_name as n    { INTERN_ID n }
 
   (* ambiguous names *)
-  | illegal_name        { raise Illegal_name }
+  | ((upper_name|lower_name) as n1) (infix_special+ as n2)
+  | (infix_name as n1) (safe_char+ as n2)
+                        { raise (Illegal_name (n1,n2)) }
 
   (* misc *)
   | '\x04'              (* ctrl-D *)

@@ -162,10 +162,11 @@ let rec process ?(interactive=false) parse lexbuf =
             (position_lex lexbuf)
             (Char.escaped c) ;
           interactive_or_exit interactive lexbuf
-      | Lexer.Illegal_name ->
-          Format.printf "%s%s is an illegal token, baybe you forgot a space.@."
+      | Lexer.Illegal_name (n1,n2) ->
+          Format.printf "%s%s is an illegal token, did you mean \"%s %s\"?@."
             (position_lex lexbuf)
-            (Lexing.lexeme lexbuf) ;
+            (Lexing.lexeme lexbuf)
+            n1 n2 ;
           interactive_or_exit interactive lexbuf
       | Lexer.Unknown_command n ->
           Format.printf "%sUnknown command %s, use #help for a short list.@."
