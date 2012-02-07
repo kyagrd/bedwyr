@@ -146,7 +146,7 @@ let kind_check ty expected_kind atomic_kind =
         begin match tykis with
           | [] -> (f,true,ho,p)
           | (ty,ki)::tykis ->
-              aux ty ki tykis (f,true,h,p)
+              aux ty ki tykis (f,true,ho,p)
         end
   in
   aux ty expected_kind [] (true,false,false,false) (* flex, hollow, higher order, propositional *)
@@ -206,7 +206,7 @@ let occurs unifier i =
  * or at least we should avoid unnecessary chained references *)
 let unify_constraint unifier ty1' ty2' =
   let rec aux u ty1 ty2 = match ty1,ty2 with
-    | _,_ when ty1 = ty2 -> u
+    | _ when ty1 = ty2 -> u
     | TRArrow ([],ty1),_ ->
         aux u ty1 ty2
     | _,TRArrow ([],ty2) ->
