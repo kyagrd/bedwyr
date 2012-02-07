@@ -61,7 +61,7 @@ for Debian (http://slimmer.gforge.inria.fr/releases/debian/).
 For proper compilation, the following packages are required:
 - OCaml (tested with 3.10.0 and 3.12.1)
 - autotools (at least autoconf) and GNU make
-- tar, gzip and bzip2 (needed for the installation)
+- bash, tar, gzip and bzip2 (needed for the installation)
 - some other standard tools
 
 Usually, the three commands
