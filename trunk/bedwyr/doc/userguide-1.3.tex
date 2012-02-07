@@ -15,8 +15,13 @@
 \usepackage{hevea}
 \loadcssfile{http://slimmer.gforge.inria.fr/bedwyr/bd.css}
 
+% XXX unfortunately, hevea doesn't seem to handle
+% hyperref correctly (ie it breaks all formulas)
+%\usepackage{hyperref}
+\providecommand{\texorpdfstring}[2]{#1}
+
 \usepackage{fancyvrb}
-\newcommand{\mytilde}{\raise.27ex\hbox{$\scriptstyle\sim$}}
+\newcommand{\mytilde}{\raise.3ex\hbox{$\scriptstyle\sim$}}
 \RecustomVerbatimEnvironment{Verbatim}{Verbatim}{commandchars=\\\{\}}
 
 \newcommand{\lp}{$\lambda$Prolog}
@@ -173,7 +178,7 @@ The Bedwyr distribution is organized as follows:
 Bedwyr's main build dependency is the OCaml compiler suite.
 You also need some standard tools you may already have, especially
 autoconf and GNU make (part of the GNU toolchain),
-and tar, gzip and bzip2 for the installation.
+and bash, tar, gzip and bzip2 for the installation.
 
 Then, the procedure is quite simple.
 
@@ -558,12 +563,12 @@ a (s (s z)).
 
 % The less-than-or-equal relation
 leq z N.
-leq (s N) (s M) := leq N M.
+leq (s N) (s M) :- leq N M.
 
 % Compute the maximum of a
-maxa N := a N, pi x\ a x => leq x N.
+maxa N :- a N, pi x\ a x => leq x N.
 \end{verbatim}
-\caption{Computing the maximum of a defined predicate.}
+\caption{Computing the maximum of a defined predicate (\lp).}
 \label{maxa-lp}
 \end{figure}
 
@@ -615,7 +620,7 @@ Define leq : int -> int -> prop by
 Define maxa : int -> prop by
   maxa N := a N, forall  x, a x -> leq x N.
 \end{verbatim}
-\caption{Computing the maximum of a defined predicate.}
+\caption{Computing the maximum of a defined predicate (Bedwyr).}
 \label{maxa-bdw}
 \end{figure}
 
@@ -641,7 +646,7 @@ $\longrightarrow A$, finite failure is captured by proving the sequent
 $A\longrightarrow$, and simulation is captured by proving the sequent
 $A\longrightarrow B$.
 
-\subsection{The $\nabla$ quantifier}
+\subsection{The \texorpdfstring{$\nabla$}{nabla} quantifier}
 
 In order to treat specifications using $\lambda$-tree syntax
 properly, it appears that a new quantifier, called $\nabla$, is
@@ -783,8 +788,9 @@ implicitly allow extra axioms on $\nabla$ (see \cite{tiu06lfmtp}) in
 order to be able to inspect in a meaningful way one predicate's table
 from another logic program.
 
-For example, if we define \texttt{Define inductive neq by neq X Y := X =
-Y -> false.}, and ask the queries \texttt{forall x, nabla y, neq x y}
+For example, if we define
+\begin{verbatim}Define inductive neq by neq X Y := X = Y -> false.\end{verbatim}
+and ask the queries \texttt{forall x, nabla y, neq x y}
 and \texttt{nabla y, forall x, neq x y}, we end up with the following
 puzzling table:
 \begin{verbatim}
@@ -921,7 +927,7 @@ resulting from depth-first search certainly reappear in Bedwyr.  We
 mention two additional sources of incompleteness in the proof search
 engine of Bedwyr.
 
-\subsubsection{\Ll{} and non-\Ll{} unification problems}
+\subsubsection{\texorpdfstring{\Ll{}}{Llambda} and non-\texorpdfstring{\Ll{}}{Llambda} unification problems}
 A subset of \lp, called \Ll, was presented in \cite{miller91jlc} where
 it was shown that an implementation of proof search could be written
 in which only a small subset of higher-order unification was required.
@@ -1104,7 +1110,7 @@ in Bedwyr.  One can, however, rewrite these clauses as simply
 \begin{Verbatim}
 Define simple : form -> form -> prop by
   simple (type_of (app M N) Tb)
-    (type_of M (Ta ~> Tb) && type_of N Ta);
+    (type_of M (Ta \mytilde> Tb) && type_of N Ta);
   simple (type_of (abs R) (Ta \mytilde> Tb))
     (for_all x\ type_of x Ta --> type_of (R x) Tb).
 
@@ -1132,7 +1138,7 @@ in the usual way and the Bedwyr can be used to reason about that specification.
 This general approach has been described in more detail in
 \cite{miller06ijcar}.
 
-\subsection{The $\pi$-calculus example in more detail}
+\subsection{The \texorpdfstring{$\pi$}{pi}-calculus example in more detail}
 \label{pi-examples}
 
 To illustrate another example and how it
