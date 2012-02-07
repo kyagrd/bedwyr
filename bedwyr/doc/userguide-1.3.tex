@@ -244,7 +244,7 @@ which gives us three token categories:
     \verb.Foo?0., \verb.B@r., \verb.My_Var'.
   \item prefix names, starting with \verb.a-z. or a prefix character and
     containing any letter, digit, or prefix or tail character (ie
-    anything but an infix: \verb.l33t., \verb.h#sh., \verb.?Your_Var.
+    anything but an infix): \verb.l33t., \verb.h#sh., \verb.?Your_Var.
   \item infix names, the only ones to contain infix characters, and
     containing nothing else: \verb.-->., \verb.|=., \verb.^^.
 \end{itemize}
@@ -1137,7 +1137,7 @@ This general approach has been described in more detail in
 
 To illustrate another example and how it
 can be used, consider the implementation of the $\pi$-calculus that is
-contained in the example file \verb+pi/pi.def+.  Of the several
+contained in the example file \verb+pi/pi-new.def+.  Of the several
 things defined in that file, the operational semantics for the
 $\pi$-calculus is given using one-step transitions: for a specific
 example, see Figure~\ref{one-step}.  First notice that the syntax of
@@ -1168,9 +1168,9 @@ onep (in X M)    (dn X) M;
 one  (out X Y P) (up X Y) P;
 one  (match X X P) A Q := one  P A Q;
 onep (match X X P) A M := onep P A M;
-one  (nu x\P x) A (nu x\Q x) :=
+one  (nu P) A (nu Q)          :=
   nabla x, one  (P x) A (Q x);
-onep (nu x\P x) A (y\ nu x\Q x y) :=
+onep (nu P) A (y\ nu x\Q x y) :=
   nabla x, onep (P x) A (y\ Q x y);
 one (par P Q) tau (par R T) :=
   exists X Y M, onep P (dn X) M /\
@@ -1180,9 +1180,8 @@ one (par P Q) tau (par R T) :=
     one P (up X Y) R /\ T = (M Y);
 [...]
 \end{verbatim}
-\caption{Some lines in {\tt pi.def} used to define one-step transitions.
-The first argument (\texttt{Agent : (p -> p -> prop)}) was
-systematically removed. See the example file for the full definition.}
+\caption{Some lines in {\tt pi-new.def} used to define one-step transitions.
+See the example file for the full definition.}
 \label{one-step}
 
 \begin{verbatim}
@@ -1191,18 +1190,21 @@ Define coinductive bisim : p -> p -> prop by
     (forall A P1, one P A P1 ->
       exists Q1, one Q A Q1 /\ bisim P1 Q1) /\
     (forall X M, onep P (dn X) M ->
-      exists N, onep Q (dn X) N /\ forall w, bisim (M w) (N w)) /\
+      exists N, onep Q (dn X) N /\
+      forall w, bisim (M w) (N w)) /\
     (forall X M, onep P (up X) M ->
-      exists N, onep Q (up X) N /\ nabla w, bisim (M w) (N w)) /\
+      exists N, onep Q (up X) N /\
+      nabla w, bisim (M w) (N w)) /\
     (forall A Q1, one Q A Q1 ->
       exists P1, one P A P1 /\ bisim P1 Q1) /\
     (forall X N, onep Q (dn X) N ->
-      exists M, onep P (dn X) M /\ forall w, bisim (M w) (N w)) /\
+      exists M, onep P (dn X) M /\
+      forall w, bisim (M w) (N w)) /\
     (forall X N, onep Q (up X) N ->
-      exists M, onep P (up X) M /\ nabla w, bisim (M w) (N w)).
+      exists M, onep P (up X) M /\
+      nabla w, bisim (M w) (N w)).
 \end{verbatim}
-\caption{The definition of (open) bisimulation. See remark under
-Figure~\ref{one-step}.}
+\caption{The definition of (open) bisimulation.}
 \label{bisim}
 \end{figure}
 
@@ -1233,20 +1235,19 @@ scope, $\alpha\beta\eta$-conversion, etc).
 It is now possible to test some simple examples in the system.  For
 example,
 \begin{verbatim}
- $ src/bedwyr examples/pi/pi.def
+ $ src/bedwyr examples/pi/pi-new.def
 [...welcome message...]
-?= bisim dummy_agent (in a x\ in a y\ z)
+?= bisim (in a x\ in a y\ z)
      (in a x\ nu w\ in a y\ out w w z).
 Yes.
 More [y] ? y
 No more solutions.
-?= bisim dummy_agent (in a x\ nu y\ match x y (out c c z))
+?= bisim (in a x\ nu y\ match x y (out c c z))
      (in a x\ z).
 Yes.
 More [y] ? y
 No more solutions.
-?= bisim dummy_agent
-     (nu x\ out a x (in c y\ match x y (out c c z)))
+?= bisim (nu x\ out a x (in c y\ match x y (out c c z)))
      (nu x\ out a x (in c y\ z)).
 No.
 ?=
