@@ -120,22 +120,22 @@ bedwyr = src/bedwyr
 
 all: Makefile
 ifeq ($(TARGET),ndcore)
-	make $(ndcore)
+	$(MAKE) $(ndcore)
 else ifeq ($(TARGET),bedwyr)
-	make $(bedwyr)
+	$(MAKE) $(bedwyr)
 else ifeq ($(TARGET),)
-	make $(ndcore)
-	make $(bedwyr)
+	$(MAKE) $(ndcore)
+	$(MAKE) $(bedwyr)
 endif
 
 $(bedwyr): src/Makefile
-	make -C src
+	$(MAKE) -C src
 
 $(ndcore): src/ndcore/Makefile
-	make -C src/ndcore
+	$(MAKE) -C src/ndcore
 
 $(ndcore:$(cma)=a): src/ndcore/Makefile
-	make -C src/ndcore
+	$(MAKE) -C src/ndcore
 
 %: configure %.in
 	./$<
@@ -149,7 +149,7 @@ configure: configure.ac
 
 test:
 	@echo Testing the core LLambda library
-	make -C src/ndcore test
+	$(MAKE) -C src/ndcore test
 	@echo Testing bedwyr on examples
 	@bash -c 'time $(MAKE) examples_tests'
 
@@ -172,13 +172,13 @@ endif
 
 ndcore_doc:
 ifneq (@OCAMLDOC@,)
-	make -C src/ndcore doc
+	$(MAKE) -C src/ndcore doc
 endif
 
 bedwyr_doc:
 ifneq (@OCAMLDOC@,)
-	make -C src doc
-	make -C doc
+	$(MAKE) -C src doc
+	$(MAKE) -C doc
 endif
 
 # INSTALL
@@ -198,9 +198,9 @@ ifneq ($(NDCORE_DOCS:=.bz2),)
 	@$(INSTALL_DOC) $(NDCORE_DOCS:=.bz2) $(DOCDIR)
 endif
 ifneq (@OCAMLDOC@,)
-	@$(INSTALL_DIR) $(HTMLDIR)/html
+	@$(INSTALL_DIR) $(HTMLDIR)/ref
 	@$(INSTALL_DOC) doc/html/ndcore/style.css doc/html/ndcore/*.html \
-	  $(HTMLDIR)/html
+	  $(HTMLDIR)/ref
 endif
 
 install_bedwyr: bedwyr_doc $(BEDWYR_DOCS:=.bz2)
@@ -234,14 +234,14 @@ endif
 .PHONY: dist src/ndcore/ndcore.tar src/bedwyr.tar dist.tar
 
 dist: Makefile
-	make $(DIST_NAME).tar.bz2
-	make $(DIST_NAME).tar.gz
+	$(MAKE) $(DIST_NAME).tar.bz2
+	$(MAKE) $(DIST_NAME).tar.gz
 
 src/ndcore/ndcore.tar:
-	make -C src/ndcore archive
+	$(MAKE) -C src/ndcore archive
 
 src/bedwyr.tar:
-	make -C src archive
+	$(MAKE) -C src archive
 
 dist.tar: $(ARCH_FILES)
 	$(TAR) -cf $@ --xform 's|^|$(DIST_NAME)/|' $^
@@ -295,6 +295,6 @@ distclean: clean
 	rm -rf autom4te.cache
 
 clean:
-	make -C src clean
-	make -C src/ndcore clean
-	make -C doc clean
+	$(MAKE) -C src clean
+	$(MAKE) -C src/ndcore clean
+	$(MAKE) -C doc clean
