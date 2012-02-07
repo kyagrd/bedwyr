@@ -70,6 +70,8 @@ LIBDIR        =$(DESTDIR)$(libdir)/ocaml/slimmer
 #LOCALEDIR     =$(DESTDIR)$(localedir)
 MANDIR        =$(DESTDIR)$(mandir)
 
+VIMFILES = /usr/share/vim/vimfiles
+
 INSTALL     = @INSTALL@
 INSTALL_OPTS=-v
 INSTALL_DIR = @INSTALL_PROGRAM@ $(INSTALL_OPTS) -d
@@ -96,9 +98,10 @@ NDCORE_DOCS	= COPYING ChangeLog README TODO
 BEDWYR_DOCS	= COPYING ChangeLog README TODO
 endif
 DOCS		= $(BEDWYR_DOCS)
+VIM_CONTRIB	= ftdetect/bedwyr.vim \
+		  syntax/bedwyr.vim
 CONTRIB		= contrib/emacs/bedwyr.el \
-		  contrib/vim/ftdetect/bedwyr.vim \
-		  contrib/vim/syntax/bedwyr.vim
+		  $(VIM_CONTRIB:%=contrib/vim/%)
 EXAMPLES	= $(shell find examples -type f '!' -path '*.svn*' \
 		  '!' -name \*~ '!' -name .\*.sw\* '!' -name \*.old)
 USERGUIDE	= userguide-1.3
@@ -226,6 +229,8 @@ endif
 	@$(INSTALL_DIR) $(DATAROOTDIR)/$(PACKAGE_NAME)
 	@for i in $(CONTRIB) ; do \
 	  $(INSTALL_DOC) -D $$i $(DATAROOTDIR)/$(PACKAGE_NAME)/$$i ; done
+	@for i in $(VIM_CONTRIB) ; do \
+	  $(INSTALL_DOC) -D $$i $(VIMFILES)/$$i ; done
 	@for i in $(EXAMPLES) ; do \
 	  $(INSTALL_DOC) -D $$i $(DATAROOTDIR)/$(PACKAGE_NAME)/$$i ; done
 
