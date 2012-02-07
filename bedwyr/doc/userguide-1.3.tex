@@ -16,7 +16,7 @@
 \loadcssfile{http://slimmer.gforge.inria.fr/bedwyr/bd.css}
 
 % XXX unfortunately, hevea doesn't seem to handle
-% hyperref correctly (ie it breaks all formulas)
+% hyperref correctly (i.e. it breaks all formulas)
 %\usepackage{hyperref}
 \providecommand{\texorpdfstring}[2]{#1}
 
@@ -212,140 +212,28 @@ one minute):
 
 
 % ============================================================================
-\section{Syntax}
-
-Although the concrete syntax of Bedwyr was originally derived from that
-of \lp{} in the Teyjus implementation\cite{nadathur99cade}, it has
-now evolved in such a way that,by design, it resembles that of Abella
-(Andrew Gacek,
-\urldef{\thisurl}\url{http://abella.cs.umn.edu/}\ahrefurl{\thisurl}), a
-proof assistant itself derived both from \lp{} and from the first
-implementation of Bedwyr. This means that there is no compatibility
-whatsoever between versions 1.2 and 1.3.
-
-\subsection{Tokens}
-
-Names for objects such as types, predicates, constants and variables are
-character strings built with letters, digits and the special
-characters \verb.-^<>=~+*&:|., \verb.?`$'. and \verb._/@#!..
-As a general rule, variables starting with an uppercase character
-(\verb.A-Z.) in a query or the body of a definition are free variables
-that are implicitly existentially quantified, a digit cannot be the
-first character of a name, and the contiguous characters \verb./*.
-cannot be part of names, even different ones.
-Moreover, keywords are implicitly excluded from the present
-definition.
-
-More precisely, we divide the special characters into three categories:
-\begin{itemize}
-  \item infix characters (\verb.-^<>=~+*&:|.)
-  \item prefix characters (\verb.?`$'.)
-  \item tail characters (\verb._/@#!.)
-\end{itemize}
-which gives us three token categories:
-\begin{itemize}
-  \item upper names, starting with \verb.A-Z. and containing any letter,
-    digit, or prefix or tail character (ie anything but an infix):
-    \verb.Foo?0., \verb.B@r., \verb.My_Var'.
-  \item prefix names, starting with \verb.a-z. or a prefix character and
-    containing any letter, digit, or prefix or tail character (ie
-    anything but an infix): \verb.l33t., \verb.h#sh., \verb.?Your_Var.
-  \item infix names, the only ones to contain infix characters, and
-    containing nothing else: \verb.-->., \verb.|=., \verb.^^.
-\end{itemize}
-As already said, a free variable will be denoted by an upper name. A
-bound variable can use either an upper or a prefix name, but it is
-customary to use upper names for explicitly existentially quantified
-variables, so that visual consistency is kept when we take advantage of
-the implicit quantification of free variables. A type or predicate can
-use any prefix name, a constant can use any prefix or infix name.
-
-Though no name can begin with \verb._.\footnote{Actually, such names
-exist and are accepted by the parser, but are rejected by the type,
-constant and predicate declarations, as they are read-only names, only
-used for undocumented, internally defined predicates (usually
-experimental, non-logical, and with side-effects).}, this character can
-serve as a placeholder for an unspecified term, in which case it serves
-as a fresh one-time free variable, except when used instead of a
-variable name in a binding (abstraction or quantification), where it
-serves as vacuous abstraction.
-
-\subsection{Concrete syntax}
-
-The grammar for formulas and terms is given in Figure~\ref{concrete}.
-The abstraction over variable \verb.x. in \verb.term. is denoted by
-\verb.x\term. | which is read as $\lambda x. term$. The scope of the
-infix $\lambda$-abstraction extends to the right as far as possible
-inside of a term, but not across formula operators: the term
-\verb.x\ y\ f y x = g x y. is parenthesized as
-\verb.(x\ (y\ ((f y) x))) = ((g x) y)..
-On the other hand, the scope of the n-ary quantifiers extends to the
-right even over formula operators: the formula
-{\tt forall x y, f y x = g x y} is parenthesized as
-{\tt forall x y, (((f y) x) = ((g x) y))}.
-
-\begin{figure}
-\[\begin{array}{rclp{5cm}}
-form &::=& term\;\verb.=.\;term         & equality \\
-     & | & form\;\verb./\.\;form        & conjunction \\
-     & | & form\;\verb.\/.\;form        & disjunction \\
-     & | & form\;\verb.->.\;form        & implication \\
-     & | & \verb.forall x y z,.\;form   & universal quantification \\
-     & | & \verb.exists X Y Z,.\;form   & existential quantification \\
-     & | & \verb.nabla x y z,.\;form    & generic quantification \\
-     & | & term                         & \\
-term &::=& atom*                        & application \\
-     & | & atom*\;id\verb.\.\;term      & application on an
-                                          abstraction \\
-     & | & term\;infix\;term            & (partial) infix application \\
-atom &::=& true\;|\;false               & {\tt prop} \\
-     & | & \verb.(.term\verb.).         & \\
-     & | & \verb.(.formula\verb.).      & \\
-     & | & \verb.(.infix\verb.).        & prefix version of an infix
-                                          constant\\
-     & | & \verb.".string\verb.".       & {\tt string} \\
-     & | & [0-9]+                       & {\tt nat} \\
-     & | & id                           & name \\
-\end{array}\]
-\caption{Grammar for formulas and terms.}
-\label{concrete}
-\end{figure}
-
-In its normal state, an infix constant has to be at least of arity 2:
-{\tt (x **)} raises a parsing error, but {\tt (x ** y)} is legal, and can
-even be applied to another term if {\tt **} is of arity arity 3 or more.
-It is also possible to use the prefix version of an infix constant by
-surrounding it with parenthesis, in which case any arity is permitted:
-{\tt (**) x} and {\tt (**) x y z} are both syntacticly legal.
-
-A normal application has precedence over the application of an infix
-constant: {\tt w x ** y z} is parenthesized as {\tt (w x) ** (y z)};
-otherwise, all infix constants have the same priority, and are
-right-associative, to mimic the behavior of {\tt ->}.
-
-%\subsection{Abstract syntax}
-%TODO say something about the distinction formula/term?
-
-
-% ============================================================================
 \section{User interface}
 
 When you run Bedwyr, you specify a file or collection of files for it to
 load; the objects declared and defined in those files will be loaded in
 the corresponding order. You can then use the interactive toplevel to
-ask queries against those definitions or run meta-commands.
+ask queries against those definitions, or call meta-commands.
+Those queries and commands can also be specified on the command-line via
+the option \verb.-e. (e.g.
+\texttt{bedwyr -e 'X = 0.' -e '\#typeof X = 1.'}), in which case they are
+processed in the order they are given, after the files and before the
+toplevel.
 
 \subsection{Definition files}
 
-Definition files are usually named with a \verb|.def| extension.
-You can find several of them in the \verb.examples. directory
-of the Bedwyr distribution.
-They contain declarations for the types (${\tt Kind}\;id\;{\tt type.}$)
-and the constants (${\tt Type}\;id\;type{\tt .}$) that are not
-predefined, definitions, and meta-commands.
-Definitions are given as blocks with a header containing declarations
-and a body containing a set of clauses, in which uppercase variables are
-implicitly universally quantified:
+Definition files are usually named with a \verb|.def| extension. You can
+find several of them in the \verb.examples. directory of the Bedwyr
+distribution. They contain definitions, meta-commands, and declarations
+for the types (${\tt Kind}\;id\;{\tt type.}$) and the constants (${\tt
+Type}\;id\;type{\tt .}$) that are not predefined. Definitions are given
+as blocks with a header containing declarations and an optional body
+containing a set of clauses, in which uppercase variables are implicitly
+universally quantified:
 \[\begin{array}{rcl}
   def\_block    &::=& {\tt Define}\;declarations{\tt .} \\
                 & | & {\tt Define}\;declarations\;{\tt by}\;
@@ -360,13 +248,13 @@ implicitly universally quantified:
                 & | & id\;atom* \\
 \end{array}\]
 
-An empty definition for a given predicate means that it is always false,
-an bodiless clause means that the head is always true.
+An empty definition for a given predicate means that it is always false;
+a bodiless clause means that the head is always true.
 A predicate can only depend on predicates defined up to its definition
-block, so multiple predicates on one block is the only way to achieve
+block, so multiple predicates in one block is the only way to achieve
 mutual recursion.
 
-The only meta-command that is really intended to definition files is the
+The only meta-command that is really intended for definition files is the
 include command:
 \begin{verbatim}#include "another/file.def".\end{verbatim}
 The \verb.#include. can really be seen as the inclusion of another file,
@@ -374,8 +262,9 @@ as Bedwyr doesn't have any namespace or module system.
 
 \subsubsection{Emacs mode}
 
-Assuming Bedwyr is installed in system folders, you can use the Emacs
-mode for Bedwyr by adding these two lines to your \url{~/.emacs} file:
+Assuming Bedwyr is installed in standard Linux system folders, you can
+use the Emacs mode for Bedwyr by adding these two lines to your
+\url{~/.emacs} file:
 \begin{verbatim}
 (load "/usr/share/bedwyr/contrib/emacs/bedwyr.el")
 (setq bedwyr-program "/usr/bin/bedwyr")
@@ -389,12 +278,13 @@ and load the current file you are working on.
 
 \subsubsection{Vim syntax highlighting}
 
-There is also a basic syntax highlighting file in
-\verb;contrib/vim/syntax/;:
+There is also a basic syntax highlighting file for vim. With a standard
+system installation, the files in \verb+/usr/share/vim/vimfiles/+ should
+suffice; otherwise do the following:
 \begin{itemize}
-  \item copy {\tt /usr/share/bedwyr/contrib/vim/syntax/bedwyr.vim} to
+  \item copy {\tt contrib/vim/syntax/bedwyr.vim} to
     your \url{~/.vim/syntax/} directory to make it available
-  \item copy {\tt /usr/share/bedwyr/contrib/vim/ftdetect/bedwyr.vim} to
+  \item copy {\tt contrib/vim/ftdetect/bedwyr.vim} to
     your \url{~/.vim/ftdetect/} directory to have it used automatically
     for all {\tt *.def} files
 \end{itemize}
@@ -551,7 +441,7 @@ implements ``higher-order pattern unification'' (also called
 \Ll-unification) \cite{miller91jlc}.   This kind of unification
 appears to be the weakest extension to first-order unification that
 treats bindings as a primitive.  A number of automated deduction systems
-implement this kind of unification (eg, Twelf, Teyjus, Coq, and
+implement this kind of unification (e.g., Twelf, Teyjus, Coq, and
 Minlog).  Full $\beta$-conversion is implemented by Bedwyr as well.
 
 \begin{figure}
@@ -1275,6 +1165,126 @@ described in \cite{gordon03tcs}.
 %The file \verb+pi_abscon.def+ specifies the polyadic $\pi$-calculus
 %following \cite{milner99book}.
 
+
+\appendix
+
+% ============================================================================
+\section{Syntax}
+
+Although the concrete syntax of Bedwyr was originally derived from that
+of \lp{} in the Teyjus implementation\cite{nadathur99cade}, it has
+now evolved in such a way that, by design, it resembles that of Abella
+(Andrew Gacek,
+\urldef{\thisurl}\url{http://abella.cs.umn.edu/}\ahrefurl{\thisurl}), a
+proof assistant itself derived both from \lp{} and from the first
+implementation of Bedwyr. This means that there is no syntactic
+compatibility whatsoever between versions 1.2 and 1.3.
+
+\subsection{Tokens}
+
+Names for objects such as types, predicates, constants and variables are
+character strings built with letters, digits and the special characters
+\verb.-^<>=~+*&:|., \verb.?`$'. and \verb._/@#!.. Names must be
+separated by space-like characters (space, \verb.TAB., \verb.CR.,
+\verb.LF.), parentheses or C-style inline comments. As a general rule,
+variables starting with an uppercase character (\verb.A-Z.) in a query
+or the body of a definition are free variables which are implicitly
+existentially quantified, a digit cannot be the first character of a
+name, and the contiguous characters \verb./*. are never part of names
+and always start an inline comment, except in a quoted string. Moreover,
+keywords are implicitly excluded from the present definition.
+
+More precisely, we divide the special characters into three categories:
+\begin{itemize}
+  \item infix characters (\verb.-^<>=~+*&:|.)
+  \item prefix characters (\verb.?`$'.)
+  \item tail characters (\verb._/@#!.)
+\end{itemize}
+which gives us three token categories:
+\begin{itemize}
+  \item upper names, starting with \verb.A-Z. and containing any letter,
+    digit, or prefix or tail character (i.e., anything but an infix):
+    \verb.Foo?0., \verb.B@r., \verb.My_Var'.
+  \item prefix names, starting with \verb.a-z. or a prefix character and
+    containing any letter, digit, or prefix or tail character (i.e.,
+    anything but an infix): \verb.l33t., \verb.h#sh., \verb.?Your_Var.
+  \item infix names, the only ones to contain infix characters, and
+    containing nothing else: \verb.-->., \verb.|=., \verb.^^.
+\end{itemize}
+As already said, a free variable will be denoted by an upper name. A
+bound variable can use either an upper or a prefix name, but it is
+customary to use upper names for explicitly existentially quantified
+variables, so that visual consistency is kept when we take advantage of
+the implicit quantification of free variables. A type or predicate can
+use any prefix name, a constant can use any prefix or infix name.
+
+Though no name can begin with \verb._.\footnote{Actually, such names
+exist and are accepted by the parser, but are rejected by the type,
+constant and predicate declarations, as they are read-only names, only
+used for undocumented, internally defined predicates (usually
+experimental, non-logical, and with side-effects).}, this character can
+serve as a placeholder for an unspecified term, in which case it serves
+as a fresh one-time free variable, except when used instead of a
+variable name in a binding (abstraction or quantification), where it
+serves as vacuous abstraction.
+
+\subsection{Concrete syntax}
+
+The grammar for formulas and terms is given in Figure~\ref{concrete}.
+The abstraction over variable \verb.x. in \verb.term. is denoted by
+\verb.x\term. | which is read as $\lambda x. term$. The scope of the
+infix $\lambda$-abstraction extends to the right as far as possible
+inside of a term, but not across formula operators: the term
+\verb.x\ y\ f y x = g x y. is parenthesized as
+\verb.(x\ (y\ ((f y) x))) = ((g x) y)..
+On the other hand, the scope of the n-ary quantifiers extends to the
+right even over formula operators: the formula
+{\tt forall x y, f y x = g x y} is parenthesized as
+{\tt forall x y, (((f y) x) = ((g x) y))}.
+
+\begin{figure}
+\[\begin{array}{rclp{5cm}}
+form &::=& term\;\verb.=.\;term         & equality \\
+     & | & form\;\verb./\.\;form        & conjunction \\
+     & | & form\;\verb.\/.\;form        & disjunction \\
+     & | & form\;\verb.->.\;form        & implication \\
+     & | & \verb.forall x y z,.\;form   & universal quantification \\
+     & | & \verb.exists X Y Z,.\;form   & existential quantification \\
+     & | & \verb.nabla x y z,.\;form    & generic quantification \\
+     & | & term                         & \\
+term &::=& atom*                        & application \\
+     & | & atom*\;id\verb.\.\;term      & application on an
+                                          abstraction \\
+     & | & term\;infix\;term            & (partial) infix application \\
+atom &::=& true\;|\;false               & {\tt prop} \\
+     & | & \verb.(.term\verb.).         & \\
+     & | & \verb.(.formula\verb.).      & \\
+     & | & \verb.(.infix\verb.).        & prefix version of an infix
+                                          constant\\
+     & | & \verb.".string\verb.".       & {\tt string} \\
+     & | & [0-9]+                       & {\tt nat} \\
+     & | & id                           & name \\
+\end{array}\]
+\caption{Grammar for formulas and terms.}
+\label{concrete}
+\end{figure}
+
+In its normal state, an infix constant has to be at least of arity 2:
+{\tt (x **)} raises a parsing error, but {\tt (x ** y)} is legal, and can
+even be applied to another term if {\tt **} is of arity arity 3 or more.
+It is also possible to use the prefix version of an infix constant by
+surrounding it with parentheses, in which case any arity is permitted:
+{\tt (**) x} and {\tt (**) x y z} are both syntacticly legal.
+
+A normal application has precedence over the application of an infix
+constant: {\tt w x ** y z} is parenthesized as {\tt (w x) ** (y z)};
+otherwise, all infix constants have the same priority, and are
+right-associative, to mimic the behavior of {\tt ->}.
+
+%\subsection{Abstract syntax}
+%TODO say something about the distinction formula/term?
+
+
 \bibliography{userguide}
 
 \noindent Any paper listed above that was written by one of the
@@ -1282,11 +1292,11 @@ authors of this guide can be found on their respective home pages.
 \end{document}
 
 % LocalWords:  runtime Bedwyr unary Bedwyr's instan Twelf Wikipedia Bedivere% LocalWords:  Alwen
-% LocalWords:  hoas Pfenning Slimmer's Gforge SVN src contrib OCaml autoconf ie
+% LocalWords:  hoas Pfenning Slimmer's Gforge SVN src contrib OCaml autoconf i.e.
 % LocalWords:  toolchain gzip bzip bedwyr ocamlopt nativecode userguide Abella
 % LocalWords:  ocamldoc Gacek ary forall rclp nabla nat arity syntacticly rcl
 % LocalWords:  toplevel decl flavour coinductive namespace emacs ledit rlwrap
-% LocalWords:  bashrc filenames equivariant un env typeof eg Coq Minlog leq neq
+% LocalWords:  bashrc filenames equivariant un env typeof e.g. Coq Minlog leq neq
 % LocalWords:  maxa reachability bisimulation foundedness pred scopings bisim
 % LocalWords:  predicate's automata lld rru rrd ur dr llu dll bisimilar tac CCS
 % LocalWords:  bisimilarity peterson declaratively progs tt onep
