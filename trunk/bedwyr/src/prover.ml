@@ -321,7 +321,7 @@ let rec prove depth ~success ~failure ~level ~timestamp ~local g =
           | goal::goals ->
               prove (depth+1)
                 ~local ~level ~timestamp
-                ~success:(fun ts k -> conj ts k goals)
+                ~success:(fun ts' k -> conj (max ts ts') k goals)
                 ~failure
                 goal
         in
@@ -410,9 +410,9 @@ let rec prove depth ~success ~failure ~level ~timestamp ~local g =
         in
         let rec prove_conj ts failure = function
           | [] -> success ts failure
-          | (ts,g)::gs ->
-              prove (depth+1) ~level ~local ~timestamp:ts ~failure
-                ~success:(fun ts' k -> prove_conj ts k gs)
+          | (ts'',g)::gs ->
+              prove (depth+1) ~level ~local ~timestamp:ts'' ~failure
+                ~success:(fun ts' k -> prove_conj (max ts ts') k gs)
                 g
         in
         prove (depth+1) ~level:Zero ~local ~timestamp a

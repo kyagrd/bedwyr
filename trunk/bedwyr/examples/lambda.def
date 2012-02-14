@@ -43,13 +43,11 @@ Define wt : env -> term -> ty -> prop by
 #assert (forall T, wt (bind a t (bind b (arrow t tt) nil))
                   (app (var b) (var a)) T -> T = tt).
 
-% < XXX magic bug >
 #assert (forall T Ta Tb,
            wt (bind a Ta (bind b Tb nil))
               (app (abs x\ (app (var a) (var b))) (var a))
               T
            -> exists A B, Ta = arrow A B).
-% </ XXX magic bug >
 
 #assert_not (exists T, wt nil (abs x\ app x x) T).
 #assert ((exists T, wt nil (abs x\ app x x) T) -> false).
