@@ -34,7 +34,7 @@
 %   boxInL, diaInL : name -> (name -> form) -> form. ('late' bound input)
 %   boxInE, diaInE : name -> (name -> form) -> form. ('early' bound input)
 
-#include "pi-new.def".
+#include "pi.def".
 
 Kind form                type.
 Type top, bot            form.

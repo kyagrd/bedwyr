@@ -1,0 +1,47 @@
+#include "pi.def".
+
+% Church natural numbers as encoded in the MWB examples
+Type    zero,
+        un,
+        deux    name -> name -> p.
+Type    succ,
+        copy    name -> name -> name -> name -> p.
+Type    add     name -> name -> name -> name -> name -> name -> p.
+
+Kind    ch_nat  type.
+Type    church  name -> name -> ch_nat -> p.
+Type    zzz      ch_nat.
+Type    sss      ch_nat -> ch_nat.
+
+Define agent : p -> p -> prop by
+  agent (zero S Z) (nu i\ out Z i z);
+  agent (un   S Z) (nu i\ out S i (nu i\ out Z i z));
+  agent (deux S Z) (nu i\ out S i (nu i\ out S i (nu i\ out Z i z)));
+  agent (succ S Z Y W) (nu i\ out Y i (copy S Z Y W));
+  agent (copy S Z Y W) (plus (in S i\ succ S Z Y W)
+                              (in Z i\ nu i\ out W i z));
+  agent (add S1 Z1 S2 Z2 Y W)
+      (plus (in S1 i\ nu i\ out Y i (add S1 Z1 S2 Z2 Y W))
+            (in Z1 i\ copy S2 Z2 Y W));
+  agent (church S Z zzz)     (nu i\ out Z i z);
+  agent (church S Z (sss N)) (nu i\ out S i (church S Z N)).
+
+#asssert
+  (weak_bisim agent
+    (deux x y)
+    (nu x1\ nu y1\ nu x2\ nu y2\
+      par (un x1 y1) (par (un x2 y2) (add x1 y1 x2 y2 x y)))).
+#asssert
+  (weak_bisim agent
+    (deux x y)
+    (nu x1\ nu x2\ nu y1\ nu y2\
+      par (zero x1 y1) (par (deux x2 y2) (add x1 y1 x2 y2 x y)))).
+
+#asssert (weak_bisim agent (deux x y) (church x y (sss (sss zzz)))).
+#asssert
+  (weak_bisim agent
+    (church x y (sss (sss (sss (sss (sss (sss (sss (sss (sss (sss zzz)))))))))))
+    (nu s1\ nu z1\ nu s2\ nu z2\
+      (par (church s1 z1 (sss (sss (sss (sss (sss zzz))))))
+      (par (church s2 z2 (sss (sss (sss (sss (sss zzz))))))
+      (add s1 z1 s2 z2 x y))))).
