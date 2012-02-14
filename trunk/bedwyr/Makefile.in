@@ -70,7 +70,7 @@ LIBDIR        =$(DESTDIR)$(libdir)/ocaml/slimmer
 #LOCALEDIR     =$(DESTDIR)$(localedir)
 MANDIR        =$(DESTDIR)$(mandir)
 
-VIMFILES = /usr/share/vim/vimfiles
+VIMFILES = $(DESTDIR)/usr/share/vim/vimfiles
 
 INSTALL     = @INSTALL@
 INSTALL_OPTS=-v
@@ -230,7 +230,7 @@ endif
 	@for i in $(CONTRIB) ; do \
 	  $(INSTALL_DOC) -D $$i $(DATAROOTDIR)/$(PACKAGE_NAME)/$$i ; done
 	@for i in $(VIM_CONTRIB) ; do \
-	  $(INSTALL_DOC) -D $$i $(VIMFILES)/$$i ; done
+	  $(INSTALL_DOC) -D contrib/vim/$$i $(VIMFILES)/$$i ; done
 	@for i in $(EXAMPLES) ; do \
 	  $(INSTALL_DOC) -D $$i $(DATAROOTDIR)/$(PACKAGE_NAME)/$$i ; done
 

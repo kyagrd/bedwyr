@@ -52,7 +52,8 @@ or
 (the password is the username).
 
 The project is also available in two packages (ndcore and bedwyr)
-for Debian (http://slimmer.gforge.inria.fr/releases/debian/).
+for Debian (http://slimmer.gforge.inria.fr/releases/debian/)
+and Gentoo (overlay 'dawan').
 
 
  4. Building Bedwyr
