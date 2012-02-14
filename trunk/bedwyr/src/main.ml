@@ -421,7 +421,7 @@ and command c reset =
 
 let _ =
   load_session () ;
-  List.iter (fun s -> input_queries (Lexing.from_string s)) !queries ;
+  List.iter (fun s -> input_queries (Lexing.from_string s)) (List.rev !queries) ;
   if !interactive then begin
     Format.printf "%s%!" welcome_msg ;
     input_queries ~interactive:true (Lexing.from_channel stdin)
