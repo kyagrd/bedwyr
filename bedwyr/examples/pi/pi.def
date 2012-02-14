@@ -1,87 +1,37 @@
-% Specification of late pi-calculus and strong bisimulation
+% Specification of late pi-calculus and open bisimulation
 %
-% Please refer to the following paper for background:
+% Please refer to one of the following paper for background.  They
+% are available from the authors web pages.
 %
-% Alwen Tiu and Dale Miller. A proof search specification of
-% the pi-calculus. Proceedings of FGUC04.
-% Available from http://www.loria.fr/~tiu
-
-#include "../seq.def".
+% (1) Alwen Tiu and Dale Miller.  Proof search specifications of
+%     bisimulation and modal logics for the pi-calculus. ACM 
+%     Transactions on Computational Logic (TOCL), 11(2), 2010. 
+% (2) Alwen Tiu and Dale Miller. A proof search specification of
+%     the pi-calculus. Proceedings of FGUC04. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%    Static type checking of pi-calculus expressions     %%%%
+%%%%     lambda-tree syntax for pi-calculus expressions     %%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Type    a,c,x,y name.    % Names
+Kind    name    type.
+Type    a,b,c,x,y name.     % some names
 
-Kind    a       type.   % Actions
-Type    tau     a.
-Type    dn,up   name -> name -> a.
+Kind    a           type.   % exactly three action constructors
+Type    tau         a.
+Type    dn,up       name -> name -> a.
 
-Kind    p       type.   % Processes
-Type    in   	name -> (name -> p) -> p.
-Type    out  	name -> name -> p -> p.
-Type    taup 	p -> p.
-Type    match   name -> name -> p -> p.
+Kind    p           type.   % Processes
+Type    in   	    name -> (name -> p) -> p.
+Type    out  	    name -> name -> p -> p.
+Type    taup 	    p -> p.
+Type    match       name -> name -> p -> p.
 Type    plus, par   p -> p -> p.
-Type    nu      (name -> p) -> p.
-Type    bang    p -> p.
-Type    z       p.
+Type    nu          (name -> p) -> p.
+Type    bang        p -> p.
+Type    z           p.
 
-%Define  one   : p -> a -> p -> prop.
-%Define  onep  : p -> (name -> a) -> (name -> p) -> prop.
-
-% {{{
-% Type checking for names, actions, and processes are implemented directly.
-% This was useful when Bedwyr didn't do any static checking of syntax.
-
-% ../seq.def includes a small interpreter for hereditary Harrop formulas.
-% This will allow us to write typing rules using familiar
-% (lambda Prolog-like) clauses.
-
-Type    name    name -> form.
-Type    action  a -> form.
-Type    proc    p -> form.
-
-Define atom : form -> prop by
-  atom (name   A);
-  atom (action A);
-  atom (proc   A).
-
-% The logic program clauses for checking of the three syntactic classes in
-% the pi-calculus: names, actions, processes.  Best to think of "picheck"
-% as really the ":-" in lambda Prolog written as a prefix symbol.
-
-Define picheck : form -> form -> prop by
-  picheck (name a) tt;
-  picheck (name x) tt;
-  picheck (name y) tt;
-  picheck (action tau) tt;
-  picheck (action (up X Y))     ((name X) && (name Y));
-  picheck (action (dn X Y))     ((name X) && (name Y));
-  picheck (proc (in X P))       ((for_all x\ (name x) --> (proc (P x))) && (name X));
-  picheck (proc (out X Y P))    (((name X) && (name Y)) && (proc P));
-  picheck (proc (taup P))       (proc P);
-  picheck (proc (match  X Y P)) (((name X) && (name Y)) && (proc P));
-  picheck (proc (plus P Q))     ((proc P) && (proc Q));
-  picheck (proc (par  P Q))     ((proc P) && (proc Q));
-  picheck (proc (nu P))         (for_all x\ (name x) --> (proc (P x)));
-  picheck (proc (bang P))       (proc P);
-  picheck (proc z)              tt.
-
-% Check that all examples (listed below) actually type check.
-Define typecheck : (nat -> p -> prop) -> prop by
-  typecheck Example := forall N P, Example N P -> prv atom picheck (proc P).
-
-% Tell us which clause does not type check (if any).
-Define whichwrong : (nat -> p -> prop) -> nat -> prop by
-  whichwrong Example N := exists P, Example N P /\ (prv atom picheck (proc P) -> false).
-
-% }}}
-% {{{
-%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%                 A few example processes                %%%%
+%%%%             A few simple example processes             %%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Define example : nat -> p -> prop by
@@ -90,8 +40,8 @@ Define example : nat -> p -> prop by
   example 2  (plus (in x y\out x a z) (out x a (in x y\z)));
   example 3  (in x u\ (plus (taup (taup z)) (taup z)));
   example 4  (in x u\ (plus (taup (taup z))
-                    (plus (taup z)
-                          (taup (match u y (taup z))))));
+                      (plus (taup z)
+                            (taup (match u y (taup z))))));
   example 5  (nu a\ (par (in x y\z) (out x a z)));
   example 6  (nu a\ (plus (in x y\out x a z) (out x a (in x y\z))));
   example 7  (taup z);
@@ -99,13 +49,63 @@ Define example : nat -> p -> prop by
   example 9  (nu x\ out a x z);
   example 10 (par (in x y\ z) (nu y\ out x y z));
   example 11 (in x u\ nu y\ ((plus (taup (taup z))
-                           (plus (taup z)
-                                 (taup (match u y (taup z)))))));
+                             (plus (taup z)
+                                   (taup (match u y (taup z)))))));
+%% The example pi-expressions above are "finite pi-expressions" since 
+%% they do not involve the replication operator no recursive definitions.
+%% The following three examples use bang explicitly.
   example 12 (bang P) := example 1 P;
   example 13 (bang (nu x\ par (out x a z) (in x y\ out c y z)));
   example 14 (bang (taup (out c a z))).
 
-% }}}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%     Place here a list of defined pi-calculus agents    %%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Type  quiet  p.
+% The following constants are used to present an approach to arithmetic
+Type  null   name.
+Type  zz     name.
+Type  s      name -> name.
+Type  zero   name -> p.
+Type  suc    name -> name -> p.
+Type  num    name -> name -> p.
+Type  add    name -> name -> name -> p.
+% The following constants are used to encode the lambda-calculus, following
+% the first Milner, Parrow, & Walker paper.
+Type    zzero, un, deux   name -> name -> p.
+Type    succ, copy        name -> name -> name -> name -> p.
+Type    ssum              name -> name -> name -> name -> name -> name -> p.
+Kind    ch_nat            type.
+Type    church            name -> name -> ch_nat -> p.
+Type    zzz               ch_nat.
+Type    sss               ch_nat -> ch_nat.
+
+Define
+   pidef : p -> p -> prop
+by
+   pidef quiet       (nu x\ out x x z);
+% The follow define processes related to arithmetic
+   pidef (zero C)    (in C s\ in C n\ out n null z);
+   pidef (suc P C)   (in C s\ in C n\ out s P z);
+   pidef (add P Q R) (nu s\ nu n\ out P s (out P n
+                     (in R ss\ in R nn\
+                      (plus (in s k\ nu kk\ (par (out ss kk z) (add k Q kk)))
+                            (in n null\ out Q ss (out Q nn z))))));
+   pidef (num (s N) C) (in C s\ in C zz\ nu n\ par (out s n z) (num N n));
+   pidef (num zz    C) (zero C);
+% The follow define processes related to encoding the lambda-calculus
+   pidef (zzero S Z)    (nu i\ out Z i z);
+   pidef (un   S Z)     (nu i\ out S i (nu i\ out Z i z));
+   pidef (deux S Z)     (nu i\ out S i (nu i\ out S i (nu i\ out Z i z)));
+   pidef (succ S Z Y W) (nu i\ out Y i (copy S Z Y W));
+   pidef (copy S Z Y W) (plus (in S i\ succ S Z Y W)
+                              (in Z i\ nu i\ out W i z));
+   pidef (ssum S1 Z1 S2 Z2 Y W)
+         (plus (in S1 i\ nu i\ out Y i (ssum S1 Z1 S2 Z2 Y W))
+               (in Z1 i\ copy S2 Z2 Y W));
+   pidef (church S Z zzz)     (nu i\ out Z i z);
+   pidef (church S Z (sss N)) (nu i\ out S i (church S Z N)).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%     One step transition rules for the pi-calculus      %%%%
@@ -115,151 +115,206 @@ Define example : nat -> p -> prop by
 
 % bound input
 Define
-  one : (p -> p -> prop) -> p -> a -> p -> prop,
-  onep : (p -> p -> prop) -> p -> (name -> a) -> (name -> p) -> prop
+  one  :  p ->          a  ->          p  -> prop,
+  onep :  p -> (name -> a) -> (name -> p) -> prop
 by
-  onep Agent (in X M) (dn X) M;
+  onep (in X M) (dn X) M;
 
   % free output
-  one  Agent (out X Y P) (up X Y) P;
+  one  (out X Y P) (up X Y) P;
 
   % tau
-  one  Agent (taup P) tau P;
+  one  (taup P) tau P;
 
   % match prefix
-  one  Agent (match X X P) A Q := one Agent P A Q;
-  onep Agent (match X X P) A M := onep Agent P A M;
+  one  (match X X P) A Q := one P A Q;
+  onep (match X X P) A M := onep P A M;
 
   % sum
-  one  Agent (plus P Q) A R := one  Agent P A R;
-  one  Agent (plus P Q) A R := one  Agent Q A R;
-  onep Agent (plus P Q) A M := onep Agent P A M;
-  onep Agent (plus P Q) A M := onep Agent Q A M;
+  one  (plus P Q) A R := one  P A R;
+  one  (plus P Q) A R := one  Q A R;
+  onep (plus P Q) A M := onep P A M;
+  onep (plus P Q) A M := onep Q A M;
 
   % par
-  one  Agent (par P Q) A (par P1 Q) := one Agent P A P1;
-  one  Agent (par P Q) A (par P Q1) := one Agent Q A Q1;
-  onep Agent (par P Q) A (x\par (M x) Q) := onep Agent P A M;
-  onep Agent (par P Q) A (x\par P (N x)) := onep Agent Q A N;
+  one  (par P Q) A (par P1 Q) := one P A P1;
+  one  (par P Q) A (par P Q1) := one Q A Q1;
+  onep (par P Q) A (x\par (M x) Q) := onep P A M;
+  onep (par P Q) A (x\par P (N x)) := onep Q A N;
 
   % restriction
-  one  Agent (nu x\P x) A (nu x\Q x)      := nabla x, one  Agent (P x) A (Q x);
-  onep Agent (nu x\P x) A (y\ nu x\Q x y) := nabla x, onep Agent (P x) A (y\ Q x y);
+  one  (nu P) A (nu Q)          := nabla x, one  (P x) A (Q x);
+  onep (nu P) A (y\ nu x\Q x y) := nabla x, onep (P x) A (y\ Q x y);
 
   % open
-  onep Agent (nu x\M x) (up X) N := nabla y, one Agent (M y) (up X y) (N y);
+  onep (nu x\M x) (up X) N := nabla y, one (M y) (up X y) (N y);
 
   % close
-  one Agent (par P Q) tau (nu y\ par (M y) (N y)) :=
-    exists X, onep Agent P (dn X) M /\ onep Agent Q (up X) N;
-  one Agent (par P Q) tau (nu y\ par (M y) (N y)) :=
-    exists X, onep Agent P (up X) M /\ onep Agent Q (dn X) N;
+  one (par P Q) tau (nu y\ par (M y) (N y)) :=
+    exists X, onep P (dn X) M /\ onep Q (up X) N;
+  one (par P Q) tau (nu y\ par (M y) (N y)) :=
+    exists X, onep P (up X) M /\ onep Q (dn X) N;
 
   % comm
-  one Agent (par P Q) tau (par R T) :=
-    exists X Y M, onep Agent P (dn X) M /\ one Agent Q (up X Y) T /\ R = (M Y);
-  one Agent (par P Q) tau (par R T) :=
-    exists X Y M, onep Agent Q (dn X) M /\ one Agent P (up X Y) R /\ T = (M Y);
+  one (par P Q) tau (par R T) :=
+    exists X Y M, onep P (dn X) M /\ one Q (up X Y) T /\ R = (M Y);
+  one (par P Q) tau (par R T) :=
+    exists X Y M, onep Q (dn X) M /\ one P (up X Y) R /\ T = (M Y);
 
   % Rep-act
-  one  Agent (bang P) A (par P1 (bang P)) := one Agent P A P1;
-  onep Agent (bang P) X (y\ par (M y) (bang P)) := onep Agent P X M;
+  one  (bang P) A (par P1 (bang P))       := one P A P1;
+  onep (bang P) X (y\ par (M y) (bang P)) := onep P X M;
 
   % Rep-com
-  one Agent (bang P) tau (par (par R T) (bang P)) :=
-    exists X Y M, onep Agent P (dn X) M /\ one Agent P (up X Y) R /\ T = (M Y);
+  one (bang P) tau (par (par R T) (bang P)) :=
+    exists X Y M, onep P (dn X) M /\ one P (up X Y) R /\ T = (M Y);
 
   % Rep-close
-  one Agent (bang P) tau (par (nu y\ par (M y) (N y)) (bang P)) :=
-    exists X, onep Agent P (up X) M /\ onep Agent P (dn X) N;
+  one (bang P) tau (par (nu y\ par (M y) (N y)) (bang P)) :=
+    exists X, onep P (up X) M /\ onep P (dn X) N;
 
-  % Allow agent-style definitions as a controled recursion
-  % XXX needs to be here (instead of pi_church.def and pi_nat.def)
-  % until we find a nice way to run-time augment a fix-point definition
-  one  Agent P A PP := Agent P Body /\ one  Agent Body A PP;
-  onep Agent P A PP := Agent P Body /\ onep Agent Body A PP.
+  % Allow agent-style definitions
+  one  P A PP := pidef P Body /\ one  Body A PP;
+  onep P A PP := pidef P Body /\ onep Body A PP.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%              Simulation and bisimulation               %%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Define coinductive sim : (p -> p -> prop) -> p -> p -> prop by
-  sim Agent P Q :=
-	(forall A P1, one Agent P A P1 -> exists Q1, one Agent Q A Q1 /\ sim Agent P1 Q1) /\
-	(forall X M, onep Agent P (dn X) M -> exists N, onep Agent Q (dn X) N /\
-					forall w, sim Agent (M w) (N w)) /\
-	(forall X M, onep Agent P (up X) M -> exists N, onep Agent Q (up X) N /\
-					nabla w, sim Agent (M w) (N w)).
+Define coinductive sim :  p -> p -> prop by
+  sim P Q :=
+	(forall A P1, one P A P1 -> exists Q1, one Q A Q1 /\ sim P1 Q1) /\
+	(forall X M, onep P (dn X) M -> exists N, onep Q (dn X) N /\
+					forall w, sim (M w) (N w)) /\
+	(forall X M, onep P (up X) M -> exists N, onep Q (up X) N /\
+					nabla w, sim (M w) (N w)).
 
-Define coinductive bisim : (p -> p -> prop) -> p -> p -> prop by
-  bisim Agent P Q :=
-	(forall A P1, one Agent P A P1 -> exists Q1, one Agent Q A Q1 /\ bisim Agent P1 Q1) /\
-	(forall X M, onep Agent P (dn X) M -> exists N, onep Agent Q (dn X) N /\
-					forall w, bisim Agent (M w) (N w)) /\
-	(forall X M, onep Agent P (up X) M -> exists N, onep Agent Q (up X) N /\
-					nabla w, bisim Agent (M w) (N w)) /\
-	(forall A Q1, one Agent Q A Q1 -> exists P1, one Agent P A P1 /\ bisim Agent P1 Q1) /\
-	(forall X N, onep Agent Q (dn X) N -> exists M, onep Agent P (dn X) M /\
-					forall w, bisim Agent (M w) (N w)) /\
-	(forall X N, onep Agent Q (up X) N -> exists M, onep Agent P (up X) M /\
-					nabla w, bisim Agent (M w) (N w)).
+Define coinductive bisim : p -> p -> prop by
+  bisim P Q :=
+	(forall A P1, one P A P1 -> exists Q1, one Q A Q1 /\ bisim P1 Q1) /\
+	(forall X M, onep P (dn X) M -> exists N, onep Q (dn X) N /\
+					forall w, bisim (M w) (N w)) /\
+	(forall X M, onep P (up X) M -> exists N, onep Q (up X) N /\
+					nabla w, bisim (M w) (N w)) /\
+	(forall A Q1, one Q A Q1 -> exists P1, one P A P1 /\ bisim P1 Q1) /\
+	(forall X N, onep Q (dn X) N -> exists M, onep P (dn X) M /\
+					forall w, bisim (M w) (N w)) /\
+	(forall X N, onep Q (up X) N -> exists M, onep P (up X) M /\
+					nabla w, bisim (M w) (N w)).
 
-% Dummy agent (always false)
-Define dummy_agent : p -> p -> prop.
+%% Of the finite pi-calculus examples above (numbered 1-11), the following
+%% three pairs name (open) bisimilar pi-expressions: 
+%% (3, 11), (5, 10), (7, 8).
 
-#assert (bisim dummy_agent (in a x\ in a y\ z) (in a x\ nu w\ in a y\ z)).
-#assert (forall P, bisim dummy_agent (in a x\ nu y\ match x y P)
+#assert (bisim (in a x\ in a y\ z) (in a x\ nu w\ in a y\ z)).
+#assert (forall P, bisim (in a x\ nu y\ match x y P)
                      (in a x\ z)).
 #assert_not (P = out a a z /\
-             bisim dummy_agent (nu x\ out a x (in c y\ match x y P))
+             bisim (nu x\ out a x (in c y\ match x y P))
                    (nu x\ out a x (in c y\ z))).
 
-% {{{
-% Weak bisimulation ===========================================================
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%           Weak Simulation and bisimulation             %%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Define taus : (p -> p -> prop) -> p -> p -> prop by
-  taus Agent P QQ := one Agent P tau Q /\ taus Agent Q QQ;
-  taus Agent P P.
+Define taus : p -> p -> prop by
+  taus P QQ := one P tau Q /\ taus Q QQ;
+  taus P P.
 
-Define weak_one : (p -> p -> prop) -> p -> a -> p -> prop by
-  weak_one Agent Q (up X Y) P := taus Agent Q QQ /\ one Agent QQ A PP /\ taus Agent PP P;
-  weak_one Agent Q tau QQ     := taus Agent Q QQ.
+Define weak_one : p -> a -> p -> prop by
+  weak_one Q (up X Y) P := taus Q QQ /\ one QQ A PP /\ taus PP P;
+  weak_one Q tau QQ     := taus Q QQ.
 
-Define weak_onep : (p -> p -> prop) -> p -> (name -> a) -> (name -> p) -> prop by
-  weak_onep Agent Q (up X) P :=
-    taus Agent Q QQ /\ onep Agent QQ (up X) PP /\ nabla x, taus Agent (PP x) (P x);
-  weak_onep Agent Q (dn X) P :=
-    taus Agent Q QQ /\ onep Agent QQ (dn X) PP /\ nabla x, taus Agent (PP x) (P x). % forall -> not llam
+Define weak_onep : p -> (name -> a) -> (name -> p) -> prop by
+  weak_onep Q (up X) P :=
+    taus Q QQ /\ onep QQ (up X) PP /\ nabla x, taus (PP x) (P x);
+  weak_onep Q (dn X) P :=
+    taus Q QQ /\ onep QQ (dn X) PP /\ nabla x, taus (PP x) (P x).
 
-Define coinductive weak_sim : (p -> p -> prop) -> p -> p -> prop by
-  weak_sim Agent P Q :=
+Define coinductive weak_sim : p -> p -> prop by
+  weak_sim P Q :=
     forall A X M M',
-      (one Agent  P A M       -> exists N, weak_one  Agent Q A N /\
-                                   weak_sim Agent M N) /\
-      (onep Agent P (dn X) M' -> exists N, weak_onep Agent Q (dn X) N /\
-                                   forall w, weak_sim Agent (M' w) (N w)) /\
-      (onep Agent P (up X) M' -> exists N, weak_onep Agent Q (up X) N /\
-                                   nabla w, weak_sim Agent (M' w) (N w)).
+      (one  P A M       -> exists N, weak_one  Q A N /\
+                                   weak_sim M N) /\
+      (onep P (dn X) M' -> exists N, weak_onep Q (dn X) N /\
+                                   forall w, weak_sim (M' w) (N w)) /\
+      (onep P (up X) M' -> exists N, weak_onep Q (up X) N /\
+                                   nabla w, weak_sim (M' w) (N w)).
 
-Define coinductive weak_bisim : (p -> p -> prop) -> p -> p -> prop by
-  weak_bisim Agent P Q :=
-	(forall A P1, one Agent P A P1      -> exists Q1, weak_one Agent Q A Q1 /\ 
-                                                weak_bisim Agent P1 Q1) /\
+Define coinductive weak_bisim : p -> p -> prop by
+  weak_bisim P Q :=
+	(forall A P1, one P A P1      -> exists Q1, weak_one Q A Q1 /\ 
+                                                weak_bisim P1 Q1) /\
 
-	(forall X M, onep Agent P (dn X) M -> exists N, weak_onep Agent Q (dn X) N /\
-					        forall w, weak_bisim Agent (M w) (N w)) /\
+	(forall X M, onep P (dn X) M -> exists N, weak_onep Q (dn X) N /\
+					        forall w, weak_bisim (M w) (N w)) /\
 
-	(forall X M, onep Agent P (up X) M -> exists N, weak_onep Agent Q (up X) N /\
-					        nabla w, weak_bisim Agent (M w) (N w)) /\
+	(forall X M, onep P (up X) M -> exists N, weak_onep Q (up X) N /\
+					        nabla w, weak_bisim (M w) (N w)) /\
 
-	(forall A Q1, one Agent Q A Q1     -> exists P1, weak_one Agent P A P1 /\
-                                                weak_bisim Agent P1 Q1) /\
+	(forall A Q1, one Q A Q1     -> exists P1, weak_one P A P1 /\
+                                                weak_bisim P1 Q1) /\
 
-	(forall X N, onep Agent Q (dn X) N -> exists M, weak_onep Agent P (dn X) M /\
-                                                forall w, weak_bisim Agent (M w) (N w)) /\
+	(forall X N, onep Q (dn X) N -> exists M, weak_onep P (dn X) M /\
+                                                forall w, weak_bisim (M w) (N w)) /\
 
-	(forall X N, onep Agent Q (up X) N -> exists M, weak_onep Agent P (up X) M /\
-                                                nabla w, weak_bisim Agent (M w) (N w)).
+	(forall X N, onep Q (up X) N -> exists M, weak_onep P (up X) M /\
+                                                nabla w, weak_bisim (M w) (N w)).
 
-% }}}
+%% Of the finite pi-calculus examples above (numbered 1-11), the following
+%% seven pairs name (open) weak bisimilar pi-expressions: 
+%% (0, 7), (0, 8), (3, 4), (3, 11), (4, 11), (5, 10), (7, 8).
+
+
+% Tests about simulations (the third one has several solutions)
+#assert (weak_sim (num (s (s zz)) c) (num (s (s zz)) c)).
+#assert (weak_sim (num (s zz) c)
+                  (nu x\ nu y\ par (par (num zz x) (num (s zz) y))
+                                   (add x y c))).
+
+% Tests about bisimulations
+#assert (forall t, weak_bisim (nu u\ nu d\ (par (num zz u)
+                                           (par (num (s zz) d)
+                                                (add u d t))))
+                              (num (s zz) t)).
+
+#assert (forall t, weak_bisim (nu u\ nu d\ (par (num (s (s zz)) d)
+                                 (par (num (s (s (s zz))) u)
+                                      (add u d t))))
+                    (num (s (s (s (s (s zz))))) t)).
+
+% Similar example, but different evolution of the table, which used to crash.
+#assert (forall t, weak_bisim (num (s (s (s (s (s zz))))) t)
+                    (nu two\ nu three\
+                      (par (num (s (s zz)) two)
+                      (par (num (s (s (s zz))) three) (add two three t))))).
+
+#assert_not (forall t, weak_bisim (nu u\ nu d\ (par (num (s zz) d)
+                                     (par (num (s zz) u)
+                                          (add u d t))))
+                       (num (s zz) t)).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Some checking with encodings of lambda-terms
+
+#assert
+  (forall x y, weak_bisim 
+     (deux x y)
+     (nu x1\ nu y1\ nu x2\ nu y2\
+           par (un x1 y1) (par (un x2 y2) (ssum x1 y1 x2 y2 x y)))).
+#assert
+  (forall x y, weak_bisim
+    (deux x y)
+    (nu x1\ nu x2\ nu y1\ nu y2\
+      par (zzero x1 y1) (par (deux x2 y2) (ssum x1 y1 x2 y2 x y)))).
+
+#assert (forall x y, weak_bisim (deux x y) (church x y (sss (sss zzz)))).
+#assert
+  (weak_bisim
+    (church x y (sss (sss (sss (sss (sss (sss (sss (sss (sss (sss zzz)))))))))))
+    (nu s1\ nu z1\ nu s2\ nu z2\
+      (par (church s1 z1 (sss (sss (sss (sss (sss zzz))))))
+      (par (church s2 z2 (sss (sss (sss (sss (sss zzz))))))
+      (ssum s1 z1 s2 z2 x y))))).
+

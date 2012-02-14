@@ -1,6 +1,6 @@
 % Checking correspondence assertions for pi-processes
 %
-% We extends the language of finite forall calculus with assertions of the
+% We extends the language of finite pi calculus with assertions of the
 % form "begin L P" and "end L P", where L is a message.
 % The process (begin L P) (likewise, (end L P)) makes a transition
 % labelled with (begin L) and then behaves like P.

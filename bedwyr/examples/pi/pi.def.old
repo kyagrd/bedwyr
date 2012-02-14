@@ -1,0 +1,265 @@
+% Specification of late pi-calculus and strong bisimulation
+%
+% Please refer to the following paper for background:
+%
+% Alwen Tiu and Dale Miller. A proof search specification of
+% the pi-calculus. Proceedings of FGUC04.
+% Available from http://www.loria.fr/~tiu
+
+#include "../seq.def".
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%    Static type checking of pi-calculus expressions     %%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Type    a,c,x,y name.    % Names
+
+Kind    a       type.   % Actions
+Type    tau     a.
+Type    dn,up   name -> name -> a.
+
+Kind    p       type.   % Processes
+Type    in   	name -> (name -> p) -> p.
+Type    out  	name -> name -> p -> p.
+Type    taup 	p -> p.
+Type    match   name -> name -> p -> p.
+Type    plus, par   p -> p -> p.
+Type    nu      (name -> p) -> p.
+Type    bang    p -> p.
+Type    z       p.
+
+%Define  one   : p -> a -> p -> prop.
+%Define  onep  : p -> (name -> a) -> (name -> p) -> prop.
+
+% {{{
+% Type checking for names, actions, and processes are implemented directly.
+% This was useful when Bedwyr didn't do any static checking of syntax.
+
+% ../seq.def includes a small interpreter for hereditary Harrop formulas.
+% This will allow us to write typing rules using familiar
+% (lambda Prolog-like) clauses.
+
+Type    name    name -> form.
+Type    action  a -> form.
+Type    proc    p -> form.
+
+Define atom : form -> prop by
+  atom (name   A);
+  atom (action A);
+  atom (proc   A).
+
+% The logic program clauses for checking of the three syntactic classes in
+% the pi-calculus: names, actions, processes.  Best to think of "picheck"
+% as really the ":-" in lambda Prolog written as a prefix symbol.
+
+Define picheck : form -> form -> prop by
+  picheck (name a) tt;
+  picheck (name x) tt;
+  picheck (name y) tt;
+  picheck (action tau) tt;
+  picheck (action (up X Y))     ((name X) && (name Y));
+  picheck (action (dn X Y))     ((name X) && (name Y));
+  picheck (proc (in X P))       ((for_all x\ (name x) --> (proc (P x))) && (name X));
+  picheck (proc (out X Y P))    (((name X) && (name Y)) && (proc P));
+  picheck (proc (taup P))       (proc P);
+  picheck (proc (match  X Y P)) (((name X) && (name Y)) && (proc P));
+  picheck (proc (plus P Q))     ((proc P) && (proc Q));
+  picheck (proc (par  P Q))     ((proc P) && (proc Q));
+  picheck (proc (nu P))         (for_all x\ (name x) --> (proc (P x)));
+  picheck (proc (bang P))       (proc P);
+  picheck (proc z)              tt.
+
+% Check that all examples (listed below) actually type check.
+Define typecheck : (nat -> p -> prop) -> prop by
+  typecheck Example := forall N P, Example N P -> prv atom picheck (proc P).
+
+% Tell us which clause does not type check (if any).
+Define whichwrong : (nat -> p -> prop) -> nat -> prop by
+  whichwrong Example N := exists P, Example N P /\ (prv atom picheck (proc P) -> false).
+
+% }}}
+% {{{
+%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%                 A few example processes                %%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Define example : nat -> p -> prop by
+  example 0  (nu x\ match x a (taup z));
+  example 1  (par (in x y\z) (out x a z));
+  example 2  (plus (in x y\out x a z) (out x a (in x y\z)));
+  example 3  (in x u\ (plus (taup (taup z)) (taup z)));
+  example 4  (in x u\ (plus (taup (taup z))
+                    (plus (taup z)
+                          (taup (match u y (taup z))))));
+  example 5  (nu a\ (par (in x y\z) (out x a z)));
+  example 6  (nu a\ (plus (in x y\out x a z) (out x a (in x y\z))));
+  example 7  (taup z);
+  example 8  (nu x\ (par (in x y\z) (out x a z)));
+  example 9  (nu x\ out a x z);
+  example 10 (par (in x y\ z) (nu y\ out x y z));
+  example 11 (in x u\ nu y\ ((plus (taup (taup z))
+                           (plus (taup z)
+                                 (taup (match u y (taup z)))))));
+  example 12 (bang P) := example 1 P;
+  example 13 (bang (nu x\ par (out x a z) (in x y\ out c y z)));
+  example 14 (bang (taup (out c a z))).
+
+% }}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%     One step transition rules for the pi-calculus      %%%%
+%%%%     Notice the rules are nearly identical to the       %%%%
+%%%%     published inference rules for the pi-calculus.     %%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% bound input
+Define
+  one : (p -> p -> prop) -> p -> a -> p -> prop,
+  onep : (p -> p -> prop) -> p -> (name -> a) -> (name -> p) -> prop
+by
+  onep Agent (in X M) (dn X) M;
+
+  % free output
+  one  Agent (out X Y P) (up X Y) P;
+
+  % tau
+  one  Agent (taup P) tau P;
+
+  % match prefix
+  one  Agent (match X X P) A Q := one Agent P A Q;
+  onep Agent (match X X P) A M := onep Agent P A M;
+
+  % sum
+  one  Agent (plus P Q) A R := one  Agent P A R;
+  one  Agent (plus P Q) A R := one  Agent Q A R;
+  onep Agent (plus P Q) A M := onep Agent P A M;
+  onep Agent (plus P Q) A M := onep Agent Q A M;
+
+  % par
+  one  Agent (par P Q) A (par P1 Q) := one Agent P A P1;
+  one  Agent (par P Q) A (par P Q1) := one Agent Q A Q1;
+  onep Agent (par P Q) A (x\par (M x) Q) := onep Agent P A M;
+  onep Agent (par P Q) A (x\par P (N x)) := onep Agent Q A N;
+
+  % restriction
+  one  Agent (nu x\P x) A (nu x\Q x)      := nabla x, one  Agent (P x) A (Q x);
+  onep Agent (nu x\P x) A (y\ nu x\Q x y) := nabla x, onep Agent (P x) A (y\ Q x y);
+
+  % open
+  onep Agent (nu x\M x) (up X) N := nabla y, one Agent (M y) (up X y) (N y);
+
+  % close
+  one Agent (par P Q) tau (nu y\ par (M y) (N y)) :=
+    exists X, onep Agent P (dn X) M /\ onep Agent Q (up X) N;
+  one Agent (par P Q) tau (nu y\ par (M y) (N y)) :=
+    exists X, onep Agent P (up X) M /\ onep Agent Q (dn X) N;
+
+  % comm
+  one Agent (par P Q) tau (par R T) :=
+    exists X Y M, onep Agent P (dn X) M /\ one Agent Q (up X Y) T /\ R = (M Y);
+  one Agent (par P Q) tau (par R T) :=
+    exists X Y M, onep Agent Q (dn X) M /\ one Agent P (up X Y) R /\ T = (M Y);
+
+  % Rep-act
+  one  Agent (bang P) A (par P1 (bang P)) := one Agent P A P1;
+  onep Agent (bang P) X (y\ par (M y) (bang P)) := onep Agent P X M;
+
+  % Rep-com
+  one Agent (bang P) tau (par (par R T) (bang P)) :=
+    exists X Y M, onep Agent P (dn X) M /\ one Agent P (up X Y) R /\ T = (M Y);
+
+  % Rep-close
+  one Agent (bang P) tau (par (nu y\ par (M y) (N y)) (bang P)) :=
+    exists X, onep Agent P (up X) M /\ onep Agent P (dn X) N;
+
+  % Allow agent-style definitions as a controled recursion
+  % XXX needs to be here (instead of pi_church.def and pi_nat.def)
+  % until we find a nice way to run-time augment a fix-point definition
+  one  Agent P A PP := Agent P Body /\ one  Agent Body A PP;
+  onep Agent P A PP := Agent P Body /\ onep Agent Body A PP.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%              Simulation and bisimulation               %%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Define coinductive sim : (p -> p -> prop) -> p -> p -> prop by
+  sim Agent P Q :=
+	(forall A P1, one Agent P A P1 -> exists Q1, one Agent Q A Q1 /\ sim Agent P1 Q1) /\
+	(forall X M, onep Agent P (dn X) M -> exists N, onep Agent Q (dn X) N /\
+					forall w, sim Agent (M w) (N w)) /\
+	(forall X M, onep Agent P (up X) M -> exists N, onep Agent Q (up X) N /\
+					nabla w, sim Agent (M w) (N w)).
+
+Define coinductive bisim : (p -> p -> prop) -> p -> p -> prop by
+  bisim Agent P Q :=
+	(forall A P1, one Agent P A P1 -> exists Q1, one Agent Q A Q1 /\ bisim Agent P1 Q1) /\
+	(forall X M, onep Agent P (dn X) M -> exists N, onep Agent Q (dn X) N /\
+					forall w, bisim Agent (M w) (N w)) /\
+	(forall X M, onep Agent P (up X) M -> exists N, onep Agent Q (up X) N /\
+					nabla w, bisim Agent (M w) (N w)) /\
+	(forall A Q1, one Agent Q A Q1 -> exists P1, one Agent P A P1 /\ bisim Agent P1 Q1) /\
+	(forall X N, onep Agent Q (dn X) N -> exists M, onep Agent P (dn X) M /\
+					forall w, bisim Agent (M w) (N w)) /\
+	(forall X N, onep Agent Q (up X) N -> exists M, onep Agent P (up X) M /\
+					nabla w, bisim Agent (M w) (N w)).
+
+% Dummy agent (always false)
+Define dummy_agent : p -> p -> prop.
+
+#assert (bisim dummy_agent (in a x\ in a y\ z) (in a x\ nu w\ in a y\ z)).
+#assert (forall P, bisim dummy_agent (in a x\ nu y\ match x y P)
+                     (in a x\ z)).
+#assert_not (P = out a a z /\
+             bisim dummy_agent (nu x\ out a x (in c y\ match x y P))
+                   (nu x\ out a x (in c y\ z))).
+
+% {{{
+% Weak bisimulation ===========================================================
+
+Define taus : (p -> p -> prop) -> p -> p -> prop by
+  taus Agent P QQ := one Agent P tau Q /\ taus Agent Q QQ;
+  taus Agent P P.
+
+Define weak_one : (p -> p -> prop) -> p -> a -> p -> prop by
+  weak_one Agent Q (up X Y) P := taus Agent Q QQ /\ one Agent QQ A PP /\ taus Agent PP P;
+  weak_one Agent Q tau QQ     := taus Agent Q QQ.
+
+Define weak_onep : (p -> p -> prop) -> p -> (name -> a) -> (name -> p) -> prop by
+  weak_onep Agent Q (up X) P :=
+    taus Agent Q QQ /\ onep Agent QQ (up X) PP /\ nabla x, taus Agent (PP x) (P x);
+  weak_onep Agent Q (dn X) P :=
+    taus Agent Q QQ /\ onep Agent QQ (dn X) PP /\ nabla x, taus Agent (PP x) (P x). % forall -> not llam
+
+Define coinductive weak_sim : (p -> p -> prop) -> p -> p -> prop by
+  weak_sim Agent P Q :=
+    forall A X M M',
+      (one Agent  P A M       -> exists N, weak_one  Agent Q A N /\
+                                   weak_sim Agent M N) /\
+      (onep Agent P (dn X) M' -> exists N, weak_onep Agent Q (dn X) N /\
+                                   forall w, weak_sim Agent (M' w) (N w)) /\
+      (onep Agent P (up X) M' -> exists N, weak_onep Agent Q (up X) N /\
+                                   nabla w, weak_sim Agent (M' w) (N w)).
+
+Define coinductive weak_bisim : (p -> p -> prop) -> p -> p -> prop by
+  weak_bisim Agent P Q :=
+	(forall A P1, one Agent P A P1      -> exists Q1, weak_one Agent Q A Q1 /\ 
+                                                weak_bisim Agent P1 Q1) /\
+
+	(forall X M, onep Agent P (dn X) M -> exists N, weak_onep Agent Q (dn X) N /\
+					        forall w, weak_bisim Agent (M w) (N w)) /\
+
+	(forall X M, onep Agent P (up X) M -> exists N, weak_onep Agent Q (up X) N /\
+					        nabla w, weak_bisim Agent (M w) (N w)) /\
+
+	(forall A Q1, one Agent Q A Q1     -> exists P1, weak_one Agent P A P1 /\
+                                                weak_bisim Agent P1 Q1) /\
+
+	(forall X N, onep Agent Q (dn X) N -> exists M, weak_onep Agent P (dn X) M /\
+                                                forall w, weak_bisim Agent (M w) (N w)) /\
+
+	(forall X N, onep Agent Q (up X) N -> exists M, weak_onep Agent P (up X) M /\
+                                                nabla w, weak_bisim Agent (M w) (N w)).
+
+% }}}
