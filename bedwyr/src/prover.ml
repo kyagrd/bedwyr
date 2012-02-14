@@ -1,6 +1,6 @@
 (****************************************************************************)
 (* Bedwyr prover                                                            *)
-(* Copyright (C) 2005-2011 Baelde, Tiu, Ziegler, Gacek, Heath               *)
+(* Copyright (C) 2005-2012 Baelde, Tiu, Ziegler, Gacek, Heath               *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -125,7 +125,7 @@ let do_fprint newline goals =
  * which can be seen as a more usual continuation, typically
  * restoring modifications and backtracking.
  * [timestamp] must be the oldest timestamp in the goal. *)
-let rec prove ~success ~failure ~level ~timestamp ~local g =
+let rec prove depth ~success ~failure ~level ~timestamp ~local g =
 
   if check_interrupt () then begin
     clear_disprovable () ;
@@ -140,22 +140,16 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
   (* Function to prove _distinct predicate *)
   let prove_distinct goals =
     let sol = ref [] in
-    let match_list l1 l2 = List.for_all2 (fun x y -> eq x y) l1 l2 in
+    let match_list l1 l2 = List.for_all2 eq l1 l2 in
     let a = match goals with [a] -> a | _ -> invalid_goal () in
     let a = Norm.deep_norm a in
     let vars = if level = Zero then eigen_vars [a] else logic_vars [a] in
-    prove ~level ~timestamp ~failure ~local a
+    prove (depth+1) ~level ~timestamp ~failure ~local a
       ~success:(fun ts k ->
-                  let tm_list = List.map (fun v -> shared_copy v) vars in
-                  let p =
-                    try Some (List.find (fun vs -> match_list tm_list vs) !sol )
-                    with Not_found -> None
-                  in
-                  begin match p with
-                    | Some _ -> k ()
-                    | None   ->
-                        sol := tm_list :: !sol ;
-                        success ts k
+                  let tm_list = List.map shared_copy vars in
+                  if List.exists (match_list tm_list) !sol then k () else begin
+                    sol := tm_list :: !sol ;
+                    success ts k
                   end)
   in
 
@@ -172,7 +166,7 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
       List.fold_left (fun t v -> app b [abstract_flex v t]) a vars
     in
     let g = op_eq c d in
-    prove ~level ~success ~failure ~timestamp ~local g
+    prove (depth+1) ~level ~success ~failure ~timestamp ~local g
   in
 
   (* Function to prove _not predicate *)
@@ -180,7 +174,7 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
     let a = match goals with [a] -> a | _ -> invalid_goal () in
     let a = Norm.deep_norm a in
     let state = save_state () in
-    prove ~level ~timestamp ~local a
+    prove (depth+1) ~level ~timestamp ~local a
       ~success:(fun ts k ->
                   restore_state state ;
                   failure ())
@@ -197,23 +191,23 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
     let c = Norm.deep_norm c in
     let succeeded = ref false in
     let state = save_state () in
-    prove ~level ~timestamp ~local a
+    prove (depth+1) ~level ~timestamp ~local a
       ~success:(fun ts k ->
                   (*  restore_state state ; *)
                   (*  prove ~success ~failure ~level ~timestamp ~local (op_and a b) *)
                   succeeded := true ;
-                  prove ~success ~level ~timestamp:ts ~local b
+                  prove (depth+1) ~success ~level ~timestamp:ts ~local b
                     ~failure:k)
       (* (fun () -> restore_state state ; failure()) *)
       ~failure:(fun () ->
                   restore_state state ;
                   if !succeeded then failure () else
-                    prove ~success ~failure ~level ~timestamp ~local c)
+                    prove (depth+1) ~success ~failure ~level ~timestamp ~local c)
   in
 
   let prove_atom d args =
     if !debug then
-     printf "Proving %a...\n" Pprint.pp_term g ;
+      printf "[%d] Proving %a...@." depth Pprint.pp_term g ;
     let kind,body,table,_ = get_def ~check_arity:(List.length args) d in
     let status =
       match table with
@@ -227,15 +221,15 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
     in
     match status with
       | OffTopic ->
-          prove ~level ~timestamp ~local ~success ~failure
+          prove (depth+1) ~level ~timestamp ~local ~success ~failure
             (app body args)
       | Known Table.Proved ->
           if !debug then
-             printf "Goal %a proved using table\n" Pprint.pp_term g;
+             printf "Goal %a proved using table@." Pprint.pp_term g;
           success timestamp failure
       | Known Table.Disproved ->
           if !debug then
-            printf "Known disproved\n" ;
+            printf "Known disproved@." ;
           failure ()
       | Known (Table.Working disprovable) ->
           if kind = CoInductive then
@@ -293,12 +287,12 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
             | Index.Cannot_table -> false
           then begin
             Stack.push (status,disprovable) disprovable_stack ;
-            prove ~level ~local ~timestamp
+            prove (depth+1) ~level ~local ~timestamp
               ~success:table_update_success
               ~failure:table_update_failure
               (app body args)
           end else
-            prove ~level ~local ~success ~failure ~timestamp
+            prove (depth+1) ~level ~local ~success ~failure ~timestamp
               (app body args)
   in
 
@@ -325,7 +319,7 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
         let rec conj ts failure = function
           | [] -> success ts failure
           | goal::goals ->
-              prove
+              prove (depth+1)
                 ~local ~level ~timestamp
                 ~success:(fun ts k -> conj ts k goals)
                 ~failure
@@ -338,7 +332,7 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
         let rec alt = function
           | [] -> failure ()
           | g::goals ->
-              prove
+              prove (depth+1)
                 ~level ~local ~success ~timestamp
                 ~failure:(fun () -> alt goals)
                 g
@@ -417,11 +411,11 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
         let rec prove_conj ts failure = function
           | [] -> success ts failure
           | (ts,g)::gs ->
-              prove ~level ~local ~timestamp:ts ~failure
+              prove (depth+1) ~level ~local ~timestamp:ts ~failure
                 ~success:(fun ts' k -> prove_conj ts k gs)
                 g
         in
-        prove ~level:Zero ~local ~timestamp a
+        prove (depth+1) ~level:Zero ~local ~timestamp a
           ~success:store_subst
           ~failure:(fun () ->
                       prove_conj timestamp failure (make_copies !ev_substs b))
@@ -438,7 +432,7 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
           aux [] n
         in
         let goal = app goal vars in
-        prove ~local ~timestamp:(timestamp + n) ~level ~success ~failure goal
+        prove (depth+1) ~local ~timestamp:(timestamp + n) ~level ~success ~failure goal
 
     (* Local quantification *)
     | Binder (Nabla,n,goal) ->
@@ -451,7 +445,7 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
           aux [] n
         in
         let goal = app goal vars in
-        prove ~local:(local + n) ~timestamp ~level ~success ~failure goal
+        prove (depth+1) ~local:(local + n) ~timestamp ~level ~success ~failure goal
 
     (* Existential quantification *)
     | Binder (Exists,n,goal) ->
@@ -471,7 +465,7 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
               timestamp,aux [] n
         in
         let goal = app goal vars in
-        prove ~local ~timestamp ~level ~success ~failure goal
+        prove (depth+1) ~local ~timestamp ~level ~success ~failure goal
 
     | App (hd,goals) ->
         let goals = List.map Norm.hnorm goals in
@@ -510,7 +504,7 @@ let rec prove ~success ~failure ~level ~timestamp ~local g =
              let a = match goals with [a] -> a | _ -> invalid_goal () in
              let a = Norm.deep_norm a in
              let state = save_state () in
-             prove ~level ~local ~timestamp ~failure a
+             prove (depth+1) ~level ~local ~timestamp ~failure a
                ~success:(fun ts k -> success ts (fun () -> restore_state state ; failure ()) )
 
           (* Proving distinct-predicate *)
@@ -568,7 +562,7 @@ let prove ~success ~failure ~level ~timestamp ~local g =
     failure ()
   in
   try
-    prove ~success ~failure ~level ~timestamp ~local g
+    prove 0 ~success ~failure ~level ~timestamp ~local g
   with e ->
     clear_disprovable () ;
     restore_state s0 ;
@@ -584,15 +578,15 @@ let toplevel_prove g =
       (fun () -> t0 := Unix.gettimeofday ()),
       (fun () ->
          if !time then
-           printf "+ %.0fms\n" (1000. *. (Unix.gettimeofday () -. !t0)))
+           printf "+ %.0fms@." (1000. *. (Unix.gettimeofday () -. !t0)))
   in
   let show _ k =
     time () ;
     found := true ;
-    if vars = [] then printf "Yes.\n" else
-      printf "Solution found:\n" ;
+    if vars = [] then printf "Yes.@." else
+      printf "Solution found:@." ;
     List.iter
-      (fun (o,t) -> printf " %s = %a\n" o Pprint.pp_term t)
+      (fun (o,t) -> printf " %s = %a@." o Pprint.pp_term t)
       vars ;
     printf "More [y] ? %!" ;
     let l = input_line stdin in
@@ -601,12 +595,12 @@ let toplevel_prove g =
       k ()
     end else begin
       restore_state s0 ;
-      printf "Search stopped.\n"
+      printf "Search stopped.@."
     end
   in
   prove ~level:One ~local:0 ~timestamp:0 g
     ~success:show
     ~failure:(fun () ->
                 time () ;
-                if !found then printf "No more solutions.\n"
-                else printf "No.\n")
+                if !found then printf "No more solutions.@."
+                else printf "No.@.")
