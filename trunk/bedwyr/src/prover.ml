@@ -46,6 +46,8 @@ module Left =
                 let constant_like = Constant
               end)
 
+let debug_max_depth = -1
+
 let unify lvl a b =
   try
     (if lvl = Zero then Left.pattern_unify else Right.pattern_unify) a b ;
@@ -205,9 +207,12 @@ let rec prove depth ~success ~failure ~level ~timestamp ~local g =
                     prove (depth+1) ~success ~failure ~level ~timestamp ~local c)
   in
 
+  if !debug && depth<=debug_max_depth then begin
+    printf "[%d/%d/%d] Proving %a...@." depth local timestamp Pprint.pp_term g ;
+  end ;
   let prove_atom d args =
     if !debug then
-      printf "[%d] Proving %a...@." depth Pprint.pp_term g ;
+      printf "Proving %a...@." Pprint.pp_term g ;
     let kind,body,table,_ = get_def ~check_arity:(List.length args) d in
     let status =
       match table with
@@ -366,7 +371,7 @@ let rec prove depth ~success ~failure ~level ~timestamp ~local g =
                 let var v =
                   match observe v with
                     | Var v when v.tag = Eigen -> v
-                    | _ -> raise (Unify.NotLLambda v)
+                    | _ -> assert false
                 in
                 fun () ->
                   (* This is called when some left solution has been
