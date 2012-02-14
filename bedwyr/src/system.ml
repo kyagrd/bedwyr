@@ -365,7 +365,7 @@ let mk_clause p head body =
       body
       (* XXX Here be the magic bug™ (or at least a way to go in or out of the
        * corner case) *)
-      (List.rev prolog)
+      prolog
   in
   (* body       U=X /\ (V=(f X Y) /\ (g X Y Z))
    * Quantify existentially over the initial free variables. *)
