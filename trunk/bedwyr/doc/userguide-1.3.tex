@@ -104,8 +104,8 @@ type systems, syntax with bindings contains functional objects, which
 make rich syntactic manipulations difficult.  Bedwyr, on the other
 hand, follows the {\em $\lambda$-tree} approach \cite{miller00cl} to
 hoas: in particular, Bedwyr's use of $\lambda$-abstraction is meant to
-provide an abstract form in which only the names used for binding
-names are hidden: the rest of the structure of syntactic expressions
+provide an abstract form of syntax in which only the names of bindings
+are hidden: the rest of the structure of syntactic expressions
 remains.
 
 \paragraph{Is Bedwyr efficient?}
@@ -139,9 +139,10 @@ this guide know: we are looking for contributions.
 
 \paragraph{Background assumed}
 To read this guide, we shall assume that the reader is familiar with
-the implementation of proof search that is found in, say, Prolog, \lp{},
-or Twelf.  While familiarity with various foundations-oriented papers
-(particularly, \cite{mcdowell03tcs, miller05tocl,tiu04phd}) is
+the implementation of proof search that is found in, say, Prolog,
+\lp{}, or Twelf.  While familiarity with various foundations-oriented
+papers (particularly,
+\cite{mcdowell03tcs,miller05tocl,tiu04phd,baelde08lfmtp,tiu10tocl}) is
 important for understanding fully this system, much can be learned
 from studying the examples provided in the distribution.
 
@@ -293,12 +294,13 @@ suffice; otherwise do the following:
 
 The interactive toplevel is automatically loaded once the files have
 been parsed, unless the flag \verb.-I. is passed to Bedwyr. You can
-either query a formula, or run a command. In queries, free variables are
+either query a formula, or run a command. In queries, free and bound
+variables are 
 the only objects that can be used without prior declaration, and their
 instantiations in solutions are displayed.
 
-In the following example we load a set of definitions and check a
-theorem about it: $\lambda x.x\;x$ has no simple type.
+In the following example we load a set of definitions and prove that
+the untyped $\lambda$-term $\lambda x.x\;x$ has no simple type.
 
 \begin{verbatim}
  $ src/bedwyr examples/lambda.def
@@ -309,19 +311,17 @@ More [y] ?
 No more solutions.
 ?=
 \end{verbatim}
-
-The query expresses the fact that there does not exist a simple type for
-type for $\lambda x (x x)$.
 Notice that we had to use the term \verb+(abs x\ app x x)+ instead of
-\verb+(x1\ x1 x1)+: the former encodes $\lambda x (x x)$ by mapping
+\verb+(x1\ x1 x1)+: the former encodes the untyped $\lambda$-term
+$\lambda x (x x)$ by mapping 
 object-level abstraction to {\tt abs} and object-level application to
-{\tt app}, while the latter encodes this $\lambda$-term directly,
-which is not possible anymore since type-checking was introduced in
-version 1.3.
+{\tt app}, while the latter is not a legal term in Bedwyr.  (Prior to
+version 1.3, Bedwyr did not use simple typing on its own terms.)
 
 Most of the errors that can stop the reading of a file (parsing or
 typing error, undeclared object, etc) are correctly caught by the
-toplevel, though the line number is usually irrelevant.
+toplevel, though the line number reported for the error is often not
+useful.
 
 \subsubsection{Line editing}
 
@@ -425,7 +425,12 @@ syntax is supported \cite{miller00cl}).  Induction and co-induction
 are also available.  The nabla $\nabla$ quantifier has been added to
 this logic in order to increase the expressiveness of programs using
 $\lambda$-tree syntax in negated situations.  The proof theory of LINC
-is given in \cite{miller05tocl,tiu04phd}.
+is given in \cite{miller05tocl,tiu04phd}.  Since this earlier work on
+LINC, more recent work on the logic $\mathcal{G}$
+\cite{gacek.twolevel,gacek11ic} and with fixed points in linear logic
+\cite{baelde08phd,baelde12tocl} has further improved our understanding
+of using fixed points, induction, co-induction, and
+$\nabla$-quantification.
 
 Below we provide a high-level overview of the logical aspects of Bedwyr.
 More explicit information on this system can be found in
@@ -471,9 +476,10 @@ programming language.
 For example, consider the \lp{} program in Figure~\ref{maxa-lp} (the
 signature has been left out), where the last clause has an implication
 \verb.=>. in the goal. During proof search, this implication
-causes \lp{} to add \verb.c., a new eigenvariable of the proof search,
+causes \lp{} to add a new eigenvariable, say \verb.c., to the runtime
+signature 
 and to extend the current program with an atomic fact about it:
-\verb.(a c).. In such a new world, however, the {\tt leq} relation to
+\verb.(a c).. In such a new world, however, the {\tt leq} relation
 does not have any information about this ``non-standard'' number
 {\tt c}.
 Bedwyr on the contrary accepts the ``closed-world assumption'': the
@@ -579,6 +585,8 @@ universal variables.
 To illustrate this,
 consider the following goal:
 \[ \forall x \qs (\exists y \qs x=s~y) \Rightarrow x=0 \Rightarrow false \]
+(This formula formalizes the fact that if $x$ is the successor of some
+number then $x$ is not zero.)
 Bedwyr will call prover 1 on it. The prover introduces a universal variable
 and reaches the first implication.
 It then calls prover 0 on $(\exists y \qs x = s~y)$.
@@ -831,7 +839,7 @@ bound in the scope of the binding of the functional variable.
 
 Bedwyr allows for unrestricted applications of variables to argument
 but it is only willing to solve \Ll-unification problems.  As a result,
-Bedwyr will occasionally complain that it needs to solve a ``not LL
+Bedwyr will occasionally complain that it needs to solve a ``not LLambda
 unification problem'' and stop searching for a proof.
 
 To illustrate this aspect of Bedwyr's incompleteness, consider the
@@ -902,7 +910,7 @@ No more solutions.
 ?=
 \end{verbatim}
 The first query is certainly meaningful and is provable if there is a
-term different from {\tt a}: in Bedwyr, this query generates a
+term different from 42 (say, 43): in Bedwyr, this query generates a
 run-time error since it requires dealing with an prover-1
 existential variable within prover-0 unification. The second query illustrates
 that some instances of prover-0 unification can tolerate the
@@ -1026,14 +1034,14 @@ meta-language in which a simple intuitionistic logic is encoded as an
 object logic: computations can then be specified in the object-logic
 in the usual way and the Bedwyr can be used to reason about that specification.
 This general approach has been described in more detail in
-\cite{miller06ijcar}.
+\cite{miller06ijcar,gacek.twolevel}.
 
 \subsection{The \texorpdfstring{$\pi$}{pi}-calculus example in more detail}
 \label{pi-examples}
 
 To illustrate another example and how it
 can be used, consider the implementation of the $\pi$-calculus that is
-contained in the example file \verb+pi/pi-new.def+.  Of the several
+contained in the example file \verb+pi/pi.def+.  Of the several
 things defined in that file, the operational semantics for the
 $\pi$-calculus is given using one-step transitions: for a specific
 example, see Figure~\ref{one-step}.  First notice that the syntax of
@@ -1076,7 +1084,7 @@ one (par P Q) tau (par R T) :=
     one P (up X Y) R /\ T = (M Y);
 [...]
 \end{verbatim}
-\caption{Some lines in {\tt pi-new.def} used to define one-step transitions.
+\caption{Some lines in {\tt pi.def} used to define one-step transitions.
 See the example file for the full definition.}
 \label{one-step}
 
@@ -1131,7 +1139,7 @@ scope, $\alpha\beta\eta$-conversion, etc).
 It is now possible to test some simple examples in the system.  For
 example,
 \begin{verbatim}
- $ src/bedwyr examples/pi/pi-new.def
+ $ src/bedwyr examples/pi/pi.def
 [...welcome message...]
 ?= bisim (in a x\ in a y\ z)
      (in a x\ nu w\ in a y\ out w w z).
