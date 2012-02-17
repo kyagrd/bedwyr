@@ -194,7 +194,7 @@ let create_def (new_predicates,global_flavour) (flavour,p,name,ty) =
     else begin
       let t = (if flavour=Normal then None else Some (Table.create ())) in
       Hashtbl.add defs head_var (Predicate (flavour, None, t, ty)) ;
-      head_var
+      head_var,ty
     end
   in
   (new_predicate::new_predicates),global_flavour

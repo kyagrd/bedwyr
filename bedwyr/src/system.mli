@@ -218,9 +218,9 @@ val declare_const : Typing.pos * string -> Type.simple_type -> unit
 (** Declare a predicate.
   * @return a variable corresponding to this predicate *)
 val create_def :
-  Term.var list * flavour ->
+  (Term.var * Type.simple_type) list * flavour ->
   flavour * Typing.pos * string * Type.simple_type ->
-  Term.var list * flavour
+  (Term.var * Type.simple_type) list * flavour
 
 (** {6 Typechecking, predicates definitions} *)
 

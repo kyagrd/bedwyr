@@ -83,6 +83,7 @@ val kind_check :
   bool * bool * bool * bool
 
 (** {6 Type unifying} *)
+
 (** Type unifier type.
   * Used as an environment for the type variables
   * (a binding [k,v] symbolizes the substitution [(TVar k) -> v]). *)
@@ -97,12 +98,17 @@ val ty_norm : ?unifier:type_unifier -> Type.simple_type -> Type.simple_type
 
 (** {6 Type checking} *)
 
+val check_ground : Type.simple_type -> bool
+
 (** Type checking error on a term. *)
 exception Term_typing_error of pos * Type.simple_type * Type.simple_type *
             type_unifier
 
 (** Type checking error on a free or bound variable. *)
 exception Var_typing_error of string option * pos * Type.simple_type
+
+(** Type incompletely inferred. *)
+exception Hollow_type of Term.var
 
 (** Find which arguments of an application are free variables. *)
 val pure_args : preterm -> string list

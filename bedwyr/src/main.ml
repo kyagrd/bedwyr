@@ -145,7 +145,12 @@ let rec process ?(interactive=false) parse lexbuf =
                                    ([],System.Normal)
                                    decls
           in
-          List.iter (System.add_clause new_predicates) defs
+          List.iter (System.add_clause (List.map fst new_predicates)) defs ;
+          List.iter
+            (fun (v,ty) ->
+               if not (Typing.check_ground ty)
+               then raise (Typing.Hollow_type v))
+            new_predicates
       | System.Query t ->
           do_cleanup
             (fun pre_query ->
@@ -267,6 +272,12 @@ let rec process ?(interactive=false) parse lexbuf =
              | None -> Format.printf
                          "quantify over type %a.@.")
             Pprint.pp_type ty ;
+          interactive_or_exit interactive lexbuf
+      | Typing.Hollow_type v ->
+          Format.printf
+            "%sTyping error: type incompletely inferred for %s."
+            (position_lex lexbuf)
+            (Term.get_var_name v) ;
           interactive_or_exit interactive lexbuf
       | System.Inconsistent_definition (n,p,s) ->
           Format.printf
