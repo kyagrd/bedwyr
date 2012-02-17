@@ -8,8 +8,10 @@ TAR	= @TAR@
 
 prefix		= @prefix@
 exec_prefix	= @exec_prefix@
+nddocdir	= $(patsubst %$(PACKAGE_TARNAME),%ndcore,@docdir@)
 libdir		= @libdir@
 
+NDDOCDIR	= $(DESTDIR)$(nddocdir)
 LIBDIR		= $(DESTDIR)$(libdir)/ocaml/slimmer
 
 cmo = @cmo@
@@ -55,7 +57,7 @@ bedwyr: $(BEDWYR_O)
 endif
 
 -include depend
-depend: $(BEDWYR_SRC)
+depend: $(BEDWYR_SRC) parser.mli
 	$(OCAMLDEP) $^ > depend
 
 .SUFFIXES: .mll .mly .ml .cmo .cmx .mli .cmi
@@ -64,9 +66,7 @@ depend: $(BEDWYR_SRC)
 	$(OCAMLC) $<
 .mli.cmi:
 	$(OCAMLC) $<
-.mly.ml:
-	$(OCAMLYACC) $<
-.mly.mli:
+%.ml %.mli: %.mly
 	$(OCAMLYACC) $<
 .mll.ml:
 	$(OCAMLLEX) $<
@@ -75,10 +75,21 @@ depend: $(BEDWYR_SRC)
 
 .PHONY: doc bedwyr.tar
 
-doc: $(BEDWYR_O)
+ifneq ($(strip $(wildcard ndcore/ocamldoc.dump)),)
+NDCORE_DUMP	= -load ndcore/ocamldoc.dump
+else
+  ifneq ($(strip $(wildcard $(NDDOCDIR)/ocamldoc.dump)),)
+NDCORE_DUMP	= -load $(NDDOCDIR)/ocamldoc.dump
+  endif
+endif
+
+doc: ../doc/html/bedwyr/index.html
+
+../doc/html/bedwyr/index.html: $(BEDWYR_O)
 ifneq (@OCAMLDOC@,)
 	mkdir -p ../doc/html/bedwyr
-	$(OCAMLDOC) -d ../doc/html/bedwyr -html $(BEDWYR_MLI)
+	$(OCAMLDOC) -d ../doc/html/bedwyr -html $(BEDWYR_MLI) \
+	  $(NDCORE_DUMP)
 endif
 
 archive: bedwyr.tar

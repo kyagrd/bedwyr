@@ -71,10 +71,13 @@ depend: $(NDCORE_SRC) $(TEST_SRC)
 test: tests/test
 	./$<
 
-doc: $(NDCORE_O)
+doc: ../../doc/html/ndcore/index.html
+
+../../doc/html/ndcore/index.html: $(NDCORE_O)
 ifneq (@OCAMLDOC@,)
 	mkdir -p ../../doc/html/ndcore
 	$(OCAMLDOC) -d ../../doc/html/ndcore -html $(NDCORE_MLI)
+	$(OCAMLDOC) -dump ocamldoc.dump $(NDCORE_MLI)
 endif
 
 archive: ndcore.tar

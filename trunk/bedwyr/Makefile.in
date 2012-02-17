@@ -70,7 +70,7 @@ LIBDIR        =$(DESTDIR)$(libdir)/ocaml/slimmer
 #LOCALEDIR     =$(DESTDIR)$(localedir)
 MANDIR        =$(DESTDIR)$(mandir)
 
-VIMFILES = $(DESTDIR)/usr/share/vim/vimfiles
+VIMFILES = $(DATAROOTDIR)/vim/vimfiles
 
 INSTALL     = @INSTALL@
 INSTALL_OPTS=-v
@@ -181,7 +181,7 @@ endif
 bedwyr_doc:
 ifneq (@OCAMLDOC@,)
 	$(MAKE) -C src doc
-	$(MAKE) -C doc
+	$(MAKE) -j1 -C doc
 endif
 
 # INSTALL
@@ -191,6 +191,8 @@ install: install_ndcore install_bedwyr
 else
 install: install_$(TARGET)
 endif
+
+NDCORE_DUMP	= src/ndcore/ocamldoc.dump
 
 install_ndcore: ndcore_doc $(NDCORE_DOCS:=.bz2)
 	@$(INSTALL_DIR) $(LIBDIR)
@@ -204,6 +206,7 @@ ifneq (@OCAMLDOC@,)
 	@$(INSTALL_DIR) $(HTMLDIR)/ref
 	@$(INSTALL_DOC) doc/html/ndcore/style.css doc/html/ndcore/*.html \
 	  $(HTMLDIR)/ref
+	@$(INSTALL_DOC) $(NDCORE_DUMP) $(DOCDIR)
 endif
 
 install_bedwyr: bedwyr_doc $(BEDWYR_DOCS:=.bz2)
