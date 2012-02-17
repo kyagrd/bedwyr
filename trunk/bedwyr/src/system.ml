@@ -51,6 +51,12 @@ struct
   let var_fprintln      = Term.get_var fprintln
   let var_fopen_out     = Term.get_var fopen_out
   let var_fclose_out    = Term.get_var fclose_out
+
+
+  let predefined = [ var_not ; var_ite ; var_abspred ; var_distinct ; 
+                     var_assert_rigid ; var_abort_search ; var_cutpred ; 
+                     var_check_eqvt ; var_print ; var_println ; var_fprint ; 
+                     var_fprintln ; var_fopen_out ; var_fclose_out ]
 end
 
 type flavour = Normal | Inductive | CoInductive
@@ -172,7 +178,7 @@ let defs : (Term.var,object_declaration) Hashtbl.t =
 
 let declare_const (p,name) ty =
   let const_var = Term.get_var (Term.atom ~tag:Term.Constant name) in
-  if Hashtbl.mem defs const_var
+  if Hashtbl.mem defs const_var || List.mem const_var Logic.predefined
   then raise (Invalid_const_declaration (name,p,ty,"name conflict"))
   else let _ = kind_check ty in
   Hashtbl.add defs const_var (Constant ty)
@@ -186,7 +192,7 @@ let create_def (new_predicates,global_flavour) (flavour,p,name,ty) =
   in
   let new_predicate =
     let head_var = Term.get_var (Term.atom ~tag:Term.Constant name) in
-    if Hashtbl.mem defs head_var
+    if Hashtbl.mem defs head_var || List.mem head_var Logic.predefined
     then raise (Invalid_pred_declaration (name,p,ty,"name conflict"))
     else let (flex,_,_,propositional) = kind_check ty in
     if not (propositional || flex) then
