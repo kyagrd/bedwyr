@@ -182,9 +182,14 @@ let ty_norm ?unifier ty =
 
 
 (* type checking *)
+let check_ground ty =
+  let _,hollow,_,_ = kind_check (ty_norm ty) KType (fun _ -> KType) in
+  not hollow
+
 exception Type_unification_error of simple_type * simple_type * simple_type Unifier.t
 exception Term_typing_error of pos * simple_type * simple_type * simple_type Unifier.t
 exception Var_typing_error of string option * pos * simple_type
+exception Hollow_type of Term.var
 
 let occurs unifier i =
   let rec aux = function
