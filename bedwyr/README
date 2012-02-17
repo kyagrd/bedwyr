@@ -95,10 +95,8 @@ If for some reason you don't want to use bedwyr fresh out of the tarball,
 and you won't or can't use one of the provided packages,
 you can use the `make install` facility with the following variables:
 - $TARGET can either install just ndcore and its documentation ("ndcore"),
-  bedwyr and its documentation and examples ("bedwyr"), or both ("", default).
-  In the last case, all the documentation will be in a single place,
-  ..../share/doc/bedwyr/, and due to some name conflicts, some of ndcore's
-  files (index*.html) will be missing
+  bedwyr and all the documentation and examples ("bedwyr"),
+  or both ("", default)
 - $DESTDIR (default: "") is a prefix added to all paths, that can be used
   to install the files in a temporary copy of the file hierarchy,
   so that an aborted installation won't leave any file in system folders

@@ -15,6 +15,7 @@ all: $(PS) $(PDF) $(HTML)
 clean:
 	rm -f $(PS) $(PDF) $(HTML)
 	rm -f *.aux *.log *.toc *.blg *.bbl *.dvi *.haux *.htoc
+	rm -f html/ndcore/* html/bedwyr/*
 
 htclean:
 	rm -f *.haux *.htoc *.html
