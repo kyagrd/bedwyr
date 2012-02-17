@@ -228,6 +228,7 @@ val create_def :
 
 exception Missing_declaration of string * Typing.pos option
 exception Inconsistent_definition of string * Typing.pos * string
+exception Missing_definition of string * Typing.pos option
 
 (** Translate a pre-term, with typing and position information,
   * into a term, with variable sharing.
@@ -244,7 +245,7 @@ val add_clause :
 
 (** {6 Using definitions} *)
 
-exception Arity_mismatch of Term.term * int
+exception Missing_table of string * Typing.pos option
 
 (** Remove all definitions. *)
 val reset_defs : unit -> unit
@@ -252,7 +253,6 @@ val reset_defs : unit -> unit
 (** Get a definition.
   * @param check_arity the expected arity of the predicate
   * @raise Missing_declaration if [head_tm] is not an existing predicate
-  * @raise Arity_mismatch if [head_tm] exists but is not of arity [check_arity]
   *)
 val get_def :
   check_arity:int ->

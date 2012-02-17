@@ -221,7 +221,23 @@ let rec process ?(interactive=false) parse lexbuf =
       (* definitions *)
       | System.Missing_declaration (n,p) ->
           Format.printf
-            "%sUndeclared constant or predicate %s.@."
+            "%sUndeclared object %s.@."
+            (match p with
+               | Some p -> position_range p
+               | None -> position_lex lexbuf)
+            n ;
+          interactive_or_exit interactive lexbuf
+      | System.Missing_definition (n,p) ->
+          Format.printf
+            "%sUndefined predicate (%s was declared as a constant).@."
+            (match p with
+               | Some p -> position_range p
+               | None -> position_lex lexbuf)
+            n ;
+          interactive_or_exit interactive lexbuf
+      | System.Missing_table (n,p) ->
+          Format.printf
+            "%sNo table (%s is neither inductive nor coinductive).@."
             (match p with
                | Some p -> position_range p
                | None -> position_lex lexbuf)
@@ -261,10 +277,6 @@ let rec process ?(interactive=false) parse lexbuf =
           exit 1
 
       (* queries *)
-      | System.Arity_mismatch (t,a) ->
-          Format.printf "Definition %a doesn't have arity %d !@."
-            Pprint.pp_term t a ;
-          interactive_or_exit interactive lexbuf
       | Assertion_failed ->
           Format.printf "Assertion failed.@." ;
           interactive_or_exit interactive lexbuf
