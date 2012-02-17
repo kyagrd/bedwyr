@@ -26,19 +26,19 @@ Define agent : p -> p -> prop by
   agent (church S Z zzz)     (nu i\ out Z i z);
   agent (church S Z (sss N)) (nu i\ out S i (church S Z N)).
 
-#asssert
+#assert
   (weak_bisim agent
     (deux x y)
     (nu x1\ nu y1\ nu x2\ nu y2\
       par (un x1 y1) (par (un x2 y2) (add x1 y1 x2 y2 x y)))).
-#asssert
+#assert
   (weak_bisim agent
     (deux x y)
     (nu x1\ nu x2\ nu y1\ nu y2\
       par (zero x1 y1) (par (deux x2 y2) (add x1 y1 x2 y2 x y)))).
 
-#asssert (weak_bisim agent (deux x y) (church x y (sss (sss zzz)))).
-#asssert
+#assert (weak_bisim agent (deux x y) (church x y (sss (sss zzz)))).
+#assert
   (weak_bisim agent
     (church x y (sss (sss (sss (sss (sss (sss (sss (sss (sss (sss zzz)))))))))))
     (nu s1\ nu z1\ nu s2\ nu z2\

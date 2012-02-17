@@ -87,7 +87,7 @@ XPL = list.def internal/scoping.def internal/checks.def \
       graph-alt.def minmax.def multisim.def \
       tictactoe.def \
       pi/pi_trace.def pi/corr-assert.def pi/pi_modal.def \
-      pi/pi_mini.def pi/pi_nat.def pi/pi_church.def
+      pi/pi_asserts.def
 
 # debhelper has his own tools to install those standard docs
 ifeq ($(DISTRIB),debian)

@@ -1,0 +1,67 @@
+#include "pi.def".
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Some checking on simulation and bisimulation
+
+#assert (bisim (in a x\ in a y\ z) (in a x\ nu w\ in a y\ z)).
+#assert (forall P, bisim (in a x\ nu y\ match x y P)
+                     (in a x\ z)).
+#assert_not (P = out a a z /\
+             bisim (nu x\ out a x (in c y\ match x y P))
+                   (nu x\ out a x (in c y\ z))).
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Some checking on weak simulation and bisimulation
+
+% Tests about simulations (the third one has several solutions)
+#assert (weak_sim (num (s (s zz)) c) (num (s (s zz)) c)).
+#assert (weak_sim (num (s zz) c)
+                  (nu x\ nu y\ par (par (num zz x) (num (s zz) y))
+                                   (add x y c))).
+
+% Tests about bisimulations
+#assert (forall t, weak_bisim (nu u\ nu d\ (par (num zz u)
+                                           (par (num (s zz) d)
+                                                (add u d t))))
+                              (num (s zz) t)).
+
+#assert (forall t, weak_bisim (nu u\ nu d\ (par (num (s (s zz)) d)
+                                 (par (num (s (s (s zz))) u)
+                                      (add u d t))))
+                    (num (s (s (s (s (s zz))))) t)).
+
+% Similar example, but different evolution of the table, which used to crash.
+#assert (forall t, weak_bisim (num (s (s (s (s (s zz))))) t)
+                    (nu two\ nu three\
+                      (par (num (s (s zz)) two)
+                      (par (num (s (s (s zz))) three) (add two three t))))).
+
+#assert_not (forall t, weak_bisim (nu u\ nu d\ (par (num (s zz) d)
+                                     (par (num (s zz) u)
+                                          (add u d t))))
+                       (num (s zz) t)).
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Some checking with encodings of lambda-terms
+
+#assert
+  (forall x y, weak_bisim
+     (deux x y)
+     (nu x1\ nu y1\ nu x2\ nu y2\
+           par (un x1 y1) (par (un x2 y2) (ssum x1 y1 x2 y2 x y)))).
+#assert
+  (forall x y, weak_bisim
+    (deux x y)
+    (nu x1\ nu x2\ nu y1\ nu y2\
+      par (zzero x1 y1) (par (deux x2 y2) (ssum x1 y1 x2 y2 x y)))).
+
+#assert (forall x y, weak_bisim (deux x y) (church x y (sss (sss zzz)))).
+#assert
+  (weak_bisim
+    (church x y (sss (sss (sss (sss (sss (sss (sss (sss (sss (sss zzz)))))))))))
+    (nu s1\ nu z1\ nu s2\ nu z2\
+      (par (church s1 z1 (sss (sss (sss (sss (sss zzz))))))
+      (par (church s2 z2 (sss (sss (sss (sss (sss zzz))))))
+      (ssum s1 z1 s2 z2 x y))))).

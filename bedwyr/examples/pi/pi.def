@@ -4,10 +4,10 @@
 % are available from the authors web pages.
 %
 % (1) Alwen Tiu and Dale Miller.  Proof search specifications of
-%     bisimulation and modal logics for the pi-calculus. ACM 
-%     Transactions on Computational Logic (TOCL), 11(2), 2010. 
+%     bisimulation and modal logics for the pi-calculus. ACM
+%     Transactions on Computational Logic (TOCL), 11(2), 2010.
 % (2) Alwen Tiu and Dale Miller. A proof search specification of
-%     the pi-calculus. Proceedings of FGUC04. 
+%     the pi-calculus. Proceedings of FGUC04.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%     lambda-tree syntax for pi-calculus expressions     %%%%
@@ -51,7 +51,7 @@ Define example : nat -> p -> prop by
   example 11 (in x u\ nu y\ ((plus (taup (taup z))
                              (plus (taup z)
                                    (taup (match u y (taup z)))))));
-%% The example pi-expressions above are "finite pi-expressions" since 
+%% The example pi-expressions above are "finite pi-expressions" since
 %% they do not involve the replication operator no recursive definitions.
 %% The following three examples use bang explicitly.
   example 12 (bang P) := example 1 P;
@@ -204,15 +204,11 @@ Define coinductive bisim : p -> p -> prop by
 					nabla w, bisim (M w) (N w)).
 
 %% Of the finite pi-calculus examples above (numbered 1-11), the following
-%% three pairs name (open) bisimilar pi-expressions: 
+%% three pairs name (open) bisimilar pi-expressions:
 %% (3, 11), (5, 10), (7, 8).
 
-#assert (bisim (in a x\ in a y\ z) (in a x\ nu w\ in a y\ z)).
-#assert (forall P, bisim (in a x\ nu y\ match x y P)
-                     (in a x\ z)).
-#assert_not (P = out a a z /\
-             bisim (nu x\ out a x (in c y\ match x y P))
-                   (nu x\ out a x (in c y\ z))).
+%% See pi_asserts.def for some examples
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%           Weak Simulation and bisimulation             %%%%
@@ -244,7 +240,7 @@ Define coinductive weak_sim : p -> p -> prop by
 
 Define coinductive weak_bisim : p -> p -> prop by
   weak_bisim P Q :=
-	(forall A P1, one P A P1      -> exists Q1, weak_one Q A Q1 /\ 
+	(forall A P1, one P A P1      -> exists Q1, weak_one Q A Q1 /\
                                                 weak_bisim P1 Q1) /\
 
 	(forall X M, onep P (dn X) M -> exists N, weak_onep Q (dn X) N /\
@@ -263,58 +259,7 @@ Define coinductive weak_bisim : p -> p -> prop by
                                                 nabla w, weak_bisim (M w) (N w)).
 
 %% Of the finite pi-calculus examples above (numbered 1-11), the following
-%% seven pairs name (open) weak bisimilar pi-expressions: 
+%% seven pairs name (open) weak bisimilar pi-expressions:
 %% (0, 7), (0, 8), (3, 4), (3, 11), (4, 11), (5, 10), (7, 8).
 
-
-% Tests about simulations (the third one has several solutions)
-#assert (weak_sim (num (s (s zz)) c) (num (s (s zz)) c)).
-#assert (weak_sim (num (s zz) c)
-                  (nu x\ nu y\ par (par (num zz x) (num (s zz) y))
-                                   (add x y c))).
-
-% Tests about bisimulations
-#assert (forall t, weak_bisim (nu u\ nu d\ (par (num zz u)
-                                           (par (num (s zz) d)
-                                                (add u d t))))
-                              (num (s zz) t)).
-
-#assert (forall t, weak_bisim (nu u\ nu d\ (par (num (s (s zz)) d)
-                                 (par (num (s (s (s zz))) u)
-                                      (add u d t))))
-                    (num (s (s (s (s (s zz))))) t)).
-
-% Similar example, but different evolution of the table, which used to crash.
-#assert (forall t, weak_bisim (num (s (s (s (s (s zz))))) t)
-                    (nu two\ nu three\
-                      (par (num (s (s zz)) two)
-                      (par (num (s (s (s zz))) three) (add two three t))))).
-
-#assert_not (forall t, weak_bisim (nu u\ nu d\ (par (num (s zz) d)
-                                     (par (num (s zz) u)
-                                          (add u d t))))
-                       (num (s zz) t)).
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Some checking with encodings of lambda-terms
-
-#assert
-  (forall x y, weak_bisim 
-     (deux x y)
-     (nu x1\ nu y1\ nu x2\ nu y2\
-           par (un x1 y1) (par (un x2 y2) (ssum x1 y1 x2 y2 x y)))).
-#assert
-  (forall x y, weak_bisim
-    (deux x y)
-    (nu x1\ nu x2\ nu y1\ nu y2\
-      par (zzero x1 y1) (par (deux x2 y2) (ssum x1 y1 x2 y2 x y)))).
-
-#assert (forall x y, weak_bisim (deux x y) (church x y (sss (sss zzz)))).
-#assert
-  (weak_bisim
-    (church x y (sss (sss (sss (sss (sss (sss (sss (sss (sss (sss zzz)))))))))))
-    (nu s1\ nu z1\ nu s2\ nu z2\
-      (par (church s1 z1 (sss (sss (sss (sss (sss zzz))))))
-      (par (church s2 z2 (sss (sss (sss (sss (sss zzz))))))
-      (ssum s1 z1 s2 z2 x y))))).
-
+%% See pi_asserts.def for some examples
