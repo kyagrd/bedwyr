@@ -30,7 +30,7 @@ htclean:
 # This cancels the predefined .tex.dvi rule,
 # which uses tex instead of latex,
 # and which I don't want to redefine since
-# depending on the bbl makes more sence dependency-wise.
+# depending on the bbl makes more sense dependency-wise.
 # For some reason, ".tex.dvi:" doesn't cancel the rule.
 %.dvi: %.tex
 
@@ -53,11 +53,11 @@ htclean:
 	  done
 
 # Finding whether hevea really needs to be re-run is complicated
-# since it doesn't procuce a log file, so instead of playing with tee and
-# file descriptors I will always re-run it.
-%.html: %.dvi %.bbl
+# since it doesn't always warn, so I first make sure that latex was
+# run enough times.
+.dvi.html:
 	@echo $(HEVEA) $*
-	@bash -c 'while ( ($(HEVEA) $* 2>&1 | tee >(cat >&3) | grep -q "Rerun me to get cross-references right") 3>&1 ) ; do  \
+	@bash -c 'while ( ($(HEVEA) $* 2>&1 | tee >(cat >&3) | grep -q "Rerun me to get cross-references right") 3>&1 ) ; do \
 	  echo "Reruning hevea to get cross-references right" ; \
 	  done'
 
