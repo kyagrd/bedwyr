@@ -42,9 +42,9 @@ module Logic :
       * Example query:
       * {v ?= _abstract (pr X Y) abs T.
 Solution found:
-X = X
-Y = Y
-T = (abs (x1\ abs (x2\ pr x1 x2)))
+ X = X
+ Y = Y
+ T = (abs (x1\ abs (x2\ pr x1 x2)))
 More [y] ? y
 No more solutions. v}
       *
@@ -145,8 +145,6 @@ No more solutions.
 Yes.
 More [y] ? y
 No more solutions.
-?= fclose "test.txt".
-No definition found for fclose !
 ?= fclose_out "test.txt".
 Yes.
 More [y] ? y
