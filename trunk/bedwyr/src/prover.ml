@@ -82,22 +82,28 @@ type 'a answer = Known of 'a | Unknown | OffTopic
 let do_open_file g =
   match g with
     | [n] ->
-        let name = get_name n in
-        begin try
-          ignore (open_user_file name) ; true
-        with
-          | Sys_error e -> Printf.eprintf "fopen_out: failed opening file %s\n %s \n" name e ; false
+        begin match observe n with
+          | QString name ->
+              begin try
+                ignore (open_user_file name) ; true
+              with
+                | Sys_error e -> Printf.eprintf "fopen_out: failed opening file %s\n %s \n" name e ; false
+              end
+          | _ -> assert false
         end
-    | _ -> false
+    | _ -> print_string "bite" ; false
 
 let do_close_file g =
   match g with
     | [n] ->
-        let name = get_name n in
-        begin try
-          close_user_file name ; true
-        with
-          | Sys_error e ->  Printf.eprintf "fclose_out: failed closing file %s\n %s \n" name e ; false
+        begin match observe n with
+          | QString name ->
+              begin try
+                close_user_file name ; true
+              with
+                | Sys_error e ->  Printf.eprintf "fclose_out: failed closing file %s\n %s \n" name e ; false
+              end
+          | _ -> assert false
         end
     | _ -> false
 
@@ -107,15 +113,18 @@ let do_fprint newline goals =
       else fprintf fmt "%a%!" Pprint.pp_term t
   in
   begin match goals with
-    | (h::l) ->
-        begin try
-          let f = get_user_file (get_name h) in
-          let fmt = formatter_of_out_channel f in
-          List.iter (print_fun fmt) l ;
-          true
-        with
-          | Not_found -> false
-          | e -> raise e
+    | h::l ->
+        begin match observe h with
+          | QString name ->
+              begin try
+                let f = get_user_file name in
+                let fmt = formatter_of_out_channel f in
+                List.iter (print_fun fmt) l ;
+                true
+              with
+                | Not_found -> false
+              end
+          | _ -> assert false
         end
     | _ -> false
   end
