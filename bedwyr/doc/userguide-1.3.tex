@@ -335,7 +335,7 @@ or \urldef{\thisurl}\url{http://utopia.knoware.nl/~hlub/uck/rlwrap/}
 
 Then you can simply run \verb.ledit src/bedwyr.. One can also define
 an alias in his \verb;.bashrc;, such as the following which also
-make use of \url{~/.bedwyr_history} to remember history from one session to
+makes use of \url{~/.bedwyr_history} to remember history from one session to
 another:\\
 \verb|alias bedwyr="ledit -h |\url{~/.bedwyr_history}%
 \verb| -x /path/to/bedwyr"|.
@@ -1019,9 +1019,9 @@ See \verb+progs_small.def+ for the complete declarations. The first
 definition describes a logic program called {\tt simple} that directly
 encodes the above \lp{} program; the second definition tells the
 interpreter in {\tt seq.def} how to recognize an object-level atomic
-formula.  A call to \verb+seq atom simple tt (type_of term Ty)+ will now
-attempt to perform simple type checking on {\tt term}.  Specifically, it
-should now be possible to prove in Bedwyr the goal
+formula.  A call to \texttt{seq atom simple tt (type\_of term Ty)} will
+now attempt to perform simple type checking on {\tt term}.
+Specifically, it should now be possible to prove in Bedwyr the goal
 \begin{verbatim}
 (exists Ty, seq atom simple tt (type_of (abs x\ app x x) Ty))
   -> false.
