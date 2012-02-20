@@ -38,6 +38,21 @@
   (* also keep track of the beginning of the string *)
   let strstart = ref dummy_pos
 
+  let escape_table = Hashtbl.create 4
+  let _ = List.iter (fun (k,t) -> Hashtbl.add escape_table k t)
+            [ (* standard escaping characters *)
+              'b',  '\b';
+              't',  '\t';
+              'n',  '\n';
+              'r',  '\r'
+            ]
+
+  let addChar c =
+    Buffer.add_char strbuf
+      (try Hashtbl.find escape_table c
+       with Not_found -> c)
+  let addString s = Buffer.add_string strbuf s
+
   (* keep track of the token parsed just before the comment *)
   let prev_token = ref None
 
@@ -251,19 +266,15 @@ and comment level = parse
   | eof                 { failwith "comment not closed at end of file" }
 
 and qstring = parse
-  | "\\\\"              { Buffer.add_char strbuf '\\' ;
-                          qstring lexbuf }
-  | "\\\""              { Buffer.add_char strbuf '"' ;
-                          qstring lexbuf }
   | "\\\n"              { incrline lexbuf ;
                           qstring lexbuf }
-  | '\\' (_ as c)       { Buffer.add_char strbuf c ;
+  | '\\' (_ as c)       { addChar c ;
                           qstring lexbuf }
-  | in_qstring as s     { Buffer.add_string strbuf s ;
+  | in_qstring as s     { addString s ;
                           qstring lexbuf }
   | '"'                 { let pos = (!strstart,lexbuf.lex_curr_p) in
                           QSTRING (pos,Buffer.contents strbuf) }
-  | '\n'                { Buffer.add_char strbuf '\n' ;
+  | '\n'                { addChar '\n' ;
                           incrline lexbuf ;
                           qstring lexbuf }
   | eof                 { failwith "string not closed at end of file" }
