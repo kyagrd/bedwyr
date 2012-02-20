@@ -30,8 +30,10 @@ struct
 
   let print             = Term.atom ~tag:Term.Constant "print"
   let println           = Term.atom ~tag:Term.Constant "println"
+  let printstr          = Term.atom ~tag:Term.Constant "printstr"
   let fprint            = Term.atom ~tag:Term.Constant "fprint"
   let fprintln          = Term.atom ~tag:Term.Constant "fprintln"
+  let fprintstr         = Term.atom ~tag:Term.Constant "fprintstr"
   let fopen_out         = Term.atom ~tag:Term.Constant "fopen_out"
   let fclose_out        = Term.atom ~tag:Term.Constant "fclose_out"
 
@@ -47,16 +49,20 @@ struct
 
   let var_print         = Term.get_var print
   let var_println       = Term.get_var println
+  let var_printstr      = Term.get_var printstr
   let var_fprint        = Term.get_var fprint
   let var_fprintln      = Term.get_var fprintln
+  let var_fprintstr     = Term.get_var fprintstr
   let var_fopen_out     = Term.get_var fopen_out
   let var_fclose_out    = Term.get_var fclose_out
 
 
-  let predefined = [ var_not ; var_ite ; var_abspred ; var_distinct ; 
-                     var_assert_rigid ; var_abort_search ; var_cutpred ; 
-                     var_check_eqvt ; var_print ; var_println ; var_fprint ; 
-                     var_fprintln ; var_fopen_out ; var_fclose_out ]
+  let predefined = [ var_not ; var_ite ; var_abspred ; var_distinct ;
+                     var_assert_rigid ; var_abort_search ; var_cutpred ;
+                     var_check_eqvt ;
+                     var_print ; var_println ; var_printstr ;
+                     var_fprint ; var_fprintln ; var_fprintstr ;
+                     var_fopen_out ; var_fclose_out ]
 end
 
 type flavour = Normal | Inductive | CoInductive
@@ -265,12 +271,16 @@ let translate_term ?(pure_args=[]) ?(infer=true) ?(expected_type=Type.TProp) pre
         | v when v = Logic.var_println ->
             let ty = Type.fresh_tyvar () in
             Type.TRArrow ([ty],Type.TProp)
+        | v when v = Logic.var_printstr ->
+            Type.TRArrow ([Type.TString],Type.TProp)
         | v when v = Logic.var_fprint ->
             let ty = Type.fresh_tyvar () in
             Type.TRArrow ([Type.TString;ty],Type.TProp)
         | v when v = Logic.var_fprintln ->
             let ty = Type.fresh_tyvar () in
             Type.TRArrow ([Type.TString;ty],Type.TProp)
+        | v when v = Logic.var_fprintstr ->
+            Type.TRArrow ([Type.TString;Type.TString],Type.TProp)
         | v when v = Logic.var_fopen_out ->
             Type.TRArrow ([Type.TString],Type.TProp)
         | v when v = Logic.var_fclose_out ->

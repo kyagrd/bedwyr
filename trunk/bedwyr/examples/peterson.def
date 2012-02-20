@@ -69,8 +69,7 @@ Define bad : state -> prop by
   bad (state 5 5 A0 A1 T) := boolean A0 /\ boolean A1 /\ boolean T.
 
 Define test : prop by
-  test := initial I /\ (forall B, bad B /\ path I B -> println "Error" /\ false) /\
-        println "Peterson is right".
+  test := initial I /\ (forall B, bad B /\ path I B -> printstr "Error\n" /\ false) /\
+        printstr "Peterson is right\n".
 
-#time.
 #assert test.

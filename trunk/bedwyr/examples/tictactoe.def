@@ -95,9 +95,9 @@ Define play_to_tie : list -> list -> prop by
 
 Define play : board -> prop by
   play L' := convert L L' /\ nowinner L /\ exists K,
-      ((move L o K /\ play_to_win L K /\ println "Playing to win...") \/
-       (move L o K /\ play_to_tie L K /\ println "Playing to tie...") \/
-       (move L o K /\ println "Playing to lose...")) /\
+      ((move L o K /\ play_to_win L K /\ printstr "Playing to win...\n") \/
+       (move L o K /\ play_to_tie L K /\ printstr "Playing to tie...\n") \/
+       (move L o K /\ printstr "Playing to lose...\n")) /\
       convert K K' /\ println K'.
 
 #assert (convert Board (board (row x x x) (row b b b) (row b b b)) /\

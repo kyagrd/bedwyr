@@ -42,9 +42,9 @@ Define atom : form -> prop by
 % join together two logic programming specifications.
 
 Define
-  orelse : (_ -> _ -> prop) ->
-           (_ -> _ -> prop) ->
-           _ -> _ -> prop
+  orelse : (form -> form -> prop) ->
+           (form -> form -> prop) ->
+           form -> form -> prop
 %  orelse : ('a -> ('b -> prop)) ->
 %           ('a -> ('b -> prop)) ->
 %           'a -> 'b -> prop
