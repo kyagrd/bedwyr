@@ -130,7 +130,7 @@ by
   tm_typeof G (app M N) T := tm_typeof G M (arrow T1 T) /\ tm_typeof G N T1;
   tm_typeof G (let D B) T :=
     tm_typeof G D TD /\
-    print "Type of " /\ print D /\ print " is " /\ println TD /\
+    printstr "Type of " /\ print D /\ printstr " is " /\ println TD /\
     nabla x, tm_typeof (cons (tyassoc x TD) G) (B (var x)) T;
   tm_typeof G (cons M N) (times TM TN) :=
     tm_typeof G M TM /\ tm_typeof G N TN;

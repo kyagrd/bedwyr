@@ -164,7 +164,7 @@ Define domain : nat -> prop by
 
 Define printsum : nat -> nat -> nat -> prop by
   printsum A B S :=
-    print A /\ print " + " /\ print B /\ print " = " /\ println S.
+    print A /\ printstr " + " /\ print B /\ printstr " = " /\ println S.
 
 % Test that our fourbit adder is sound and complete relative to addition on
 % the integers 0 through 15

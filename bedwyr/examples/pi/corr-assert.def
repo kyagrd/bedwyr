@@ -132,7 +132,7 @@ Define inductive iscorr : list -> p -> prop by
 
 Define safe : p -> prop by
   safe P :=
-   forall T, (trace P T /\ print " Checking trace: " /\ println T)  ->  iscorr nil T.
+   forall T, (trace P T /\ printstr "  Checking trace: " /\ println T)  ->  iscorr nil T.
 
 Define sender : (obj -> p) -> prop by
   sender (c\ (nu m\ nu ack\ out c m (out c ack (in ack y\ $end m z)))).

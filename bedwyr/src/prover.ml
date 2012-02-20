@@ -107,11 +107,7 @@ let do_close_file g =
         end
     | _ -> false
 
-let do_fprint newline goals =
-  let print_fun fmt t =
-      if newline then fprintf fmt "%a@." Pprint.pp_term t
-      else fprintf fmt "%a%!" Pprint.pp_term t
-  in
+let do_fprint print_fun goals =
   begin match goals with
     | h::l ->
         begin match observe h with
@@ -534,12 +530,33 @@ let rec prove depth ~success ~failure ~level ~timestamp ~local g =
               List.iter (fun t -> printf "%a@." Pprint.pp_term t) goals ;
               success timestamp failure
 
+          | Var v when v == Logic.var_printstr ->
+              List.iter (fun t -> match observe t with
+                           | QString s -> printf "%s%!" s
+                           | _ -> assert false)
+                goals ;
+              success timestamp failure
+
           | Var v when v == Logic.var_fprint ->
-              if do_fprint false goals then success timestamp failure
+              let print_fun fmt t =
+                fprintf fmt "%a%!" Pprint.pp_term t
+              in
+              if do_fprint print_fun goals then success timestamp failure
               else failure ()
 
           | Var v when v == Logic.var_fprintln ->
-              if do_fprint true goals then success timestamp failure
+              let print_fun fmt t =
+                fprintf fmt "%a@." Pprint.pp_term t
+              in
+              if do_fprint print_fun goals then success timestamp failure
+              else failure ()
+
+          | Var v when v == Logic.var_fprintstr ->
+              let print_fun fmt t = match observe t with
+                | QString s -> fprintf fmt "%s%!" s
+                | _ -> assert false
+              in
+              if do_fprint print_fun goals then success timestamp failure
               else failure ()
 
           (* Opening file for output *)

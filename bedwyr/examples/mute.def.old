@@ -19,10 +19,10 @@
 
 #include "pi/pi.def".
 
-Type chi,cho,null,fail  name.
+Type chi,cho,fail  name.
 
 Kind trace      type.
-Type $end       trace.
+Type done       trace.
 Type tr         a -> trace -> trace.
 Type trp        a -> (name -> trace) -> trace.
 
@@ -42,7 +42,7 @@ Define def : p -> p -> prop by
 
 % Traces of actions
 Define trace : p -> trace -> prop by
-  trace P $end;
+  trace P done;
   trace P (tr  Act      Trace) := one def P Act P' /\ trace P' Trace;
   trace P (trp (up X _) Trace) := onep def P (up X) P' /\
                                 nabla x, trace (P' x) (Trace x);
@@ -101,7 +101,7 @@ Define separating_trace : p -> p -> trace -> prop by
 Define separate : p -> p -> prop by
   separate P Q :=
   exists T,
-    trace P T /\ print "left " /\ println T /\ trace Q T /\ print "right " /\ println T /\ false.
+    trace P T /\ printstr "left " /\ println T /\ trace Q T /\ printstr "right " /\ println T /\ false.
 
 % A. Type check ===============================================================
 % Add a few valid names.
@@ -114,5 +114,5 @@ Define picheck' : form -> form -> prop by
 
 % Type-check defined processes.
 Define tc : prop by
-  tc := forall N P, def N P -> print "Checking " /\ println N /\ prv atom picheck' (proc P).
+  tc := forall N P, def N P -> printstr "Checking " /\ println N /\ prv atom picheck' (proc P).
 #assert tc.

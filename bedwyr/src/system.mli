@@ -35,9 +35,9 @@ module Logic :
     val var_ite : Term.var
 
     (** {[_abstract : 'a -> (('b -> 'a) -> 'a) -> 'a -> prop]}
-      * [_abstract T Abs T'] abstracts the logic variables in T of type 'b,
-      * applies the constructor Abs to each abstraction,
-      * and unify the result with T'.
+      * [_abstract T Abs T'] assumes the logic variables in T are of type 'b,
+      * abstracts them, applies the constructor Abs to each abstraction,
+      * and unifies the result with T'.
       *
       * Example query:
       * {v ?= _abstract (pr X Y) abs T.
@@ -79,7 +79,18 @@ alpha. v}
     val var_abspred : Term.var
 
     (** {[_distinct : prop -> prop]} Calling [_distinct P]
-      * directs bedwyr to produce only distinct answer substitutions. *)
+      * directs bedwyr to produce only distinct answer substitutions:
+      * {v ?= true \/ true.
+Yes.
+More [y] ?
+Yes.
+More [y] ?
+No more solutions.
+?= _distinct (true \/ true).
+Yes.
+More [y] ?
+No more solutions.
+?= v} *)
     val var_distinct : Term.var
 
     (** {[_rigid : 'a -> prop]} This is a meta-level assertion predicate.
@@ -102,15 +113,15 @@ alpha. v}
       * syntatically equivalent modulo renaming of nabla variables.
       *
       * For example:
-      * {v ?= nabla x y, _eqvt (f x y) (f y x).
+      * {v ?= forall f, nabla x y, _eqvt (f x y) (f y x).
 Yes.
 More [y] ? y
 No more solutions.
-?= nabla x y, _eqvt (f x x) (f y y).
+?= forall f, nabla x y, _eqvt (f x x) (f y y).
 Yes.
 More [y] ? y
 No more solutions.
-?= nabla x y, _eqvt (f x x) (f x y).
+?= forall f, nabla x y, _eqvt (f x x) (f x y).
 No. v} *)
     val var_check_eqvt : Term.var
 
@@ -122,13 +133,19 @@ No. v} *)
     (** {[println : 'a -> prop]} [print] +  '\n'. *)
     val var_println : Term.var
 
+    (** {[printstr : 'a -> prop]} Print a string without quotation marks. *)
+    val var_printstr : Term.var
+
     (** {[fprint : string -> 'a -> prop]} Print a term in the file
       * specified in the first argument and returns [true].
       * Fails if the file was not opened yet. *)
     val var_fprint : Term.var
 
-    (** {[fprintln : string -> 'a -> prop]} [fprint] +  '\n'. *)
+    (** {[fprintln : string -> 'a -> prop]} [println] in a file. *)
     val var_fprintln : Term.var
+
+    (** {[var_fprintstr : string -> 'a -> prop]} [printstr] in a file. *)
+    val var_fprintstr : Term.var
 
     (** {[fopen_out : string -> prop]} Open a file for writing. *)
     val var_fopen_out : Term.var

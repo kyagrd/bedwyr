@@ -38,7 +38,7 @@ Define inductive edgepath : nat -> nat -> prop by
   edgepath X Y := edge X Y;
   edgepath X Y := edge X Z /\ edgepath Z Y.
 
-Define print_arrow : nat -> nat -> prop by print_arrow X Y := print X /\ print " to " /\ println Y.
+Define print_arrow : nat -> nat -> prop by print_arrow X Y := print X /\ printstr " to " /\ println Y.
 
 % Queries to try
 
