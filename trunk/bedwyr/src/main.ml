@@ -109,20 +109,20 @@ let position_lex lexbuf =
   let curr = lexbuf.Lexing.lex_curr_p in
   position_range (start,curr)
 
-let interactive_or_exit interactive lexbuf =
-  if interactive
-  then begin
-    Lexing.flush_input lexbuf ;
-    lexbuf.Lexing.lex_curr_p <- {
-        lexbuf.Lexing.lex_curr_p with
-          Lexing.pos_bol = 0 ;
-          Lexing.pos_lnum = 1 }
-  end else exit 1
-
 let do_cleanup f x clean =
   try f x ; clean () with e -> clean () ; raise e
 
 let rec process ?(interactive=false) parse lexbuf =
+  let interactive_or_exit () =
+    if interactive
+    then begin
+      Lexing.flush_input lexbuf ;
+      lexbuf.Lexing.lex_curr_p <- {
+        lexbuf.Lexing.lex_curr_p with
+            Lexing.pos_bol = 0 ;
+            Lexing.pos_lnum = 1 }
+    end else exit 1
+  in
   try while true do
     let reset =
       let s = Term.save_state () in
@@ -166,22 +166,22 @@ let rec process ?(interactive=false) parse lexbuf =
           Format.printf "%sIllegal string starting with '%s' in input.@."
             (position_lex lexbuf)
             (Char.escaped c) ;
-          interactive_or_exit interactive lexbuf
+          interactive_or_exit ()
       | Lexer.Illegal_name (n1,n2) ->
           Format.printf "%s%s is an illegal token, did you mean \"%s %s\"?@."
             (position_lex lexbuf)
             (Lexing.lexeme lexbuf)
             n1 n2 ;
-          interactive_or_exit interactive lexbuf
+          interactive_or_exit ()
       | Lexer.Unknown_command n ->
           Format.printf "%sUnknown command %s, use #help for a short list.@."
             (position_lex lexbuf)
             n ;
-          interactive_or_exit interactive lexbuf
+          interactive_or_exit ()
       | Parsing.Parse_error ->
           Format.printf "%sSyntax error.@."
             (position_lex lexbuf) ;
-          interactive_or_exit interactive lexbuf
+          interactive_or_exit ()
 
       (* declarations *)
       | System.Missing_type (n,_) ->
@@ -189,7 +189,7 @@ let rec process ?(interactive=false) parse lexbuf =
             "%sUndeclared type %s.@."
             (position_lex lexbuf)
             n ;
-          interactive_or_exit interactive lexbuf
+          interactive_or_exit ()
       | System.Invalid_type_declaration (n,p,ki,s) ->
           Format.printf
             "%sCannot declare type %s of kind %a: %s.@."
@@ -231,7 +231,7 @@ let rec process ?(interactive=false) parse lexbuf =
                | Some p -> position_range p
                | None -> position_lex lexbuf)
             n ;
-          interactive_or_exit interactive lexbuf
+          interactive_or_exit ()
       | System.Missing_definition (n,p) ->
           Format.printf
             "%sUndefined predicate (%s was declared as a constant).@."
@@ -239,7 +239,7 @@ let rec process ?(interactive=false) parse lexbuf =
                | Some p -> position_range p
                | None -> position_lex lexbuf)
             n ;
-          interactive_or_exit interactive lexbuf
+          interactive_or_exit ()
       | System.Missing_table (n,p) ->
           Format.printf
             "%sNo table (%s is neither inductive nor coinductive).@."
@@ -247,21 +247,21 @@ let rec process ?(interactive=false) parse lexbuf =
                | Some p -> position_range p
                | None -> position_lex lexbuf)
             n ;
-          interactive_or_exit interactive lexbuf
+          interactive_or_exit ()
       | Typing.Type_kinding_error (_,ki1,ki2) ->
           Format.printf
             "%sKinding error: this type has kind %a but is used as %a.@."
             (position_lex lexbuf)
             Pprint.pp_kind ki2
             Pprint.pp_kind ki1 ;
-          interactive_or_exit interactive lexbuf
+          interactive_or_exit ()
       | Typing.Term_typing_error (p,ty1,ty2,unifier) ->
           Format.printf
             "%sTyping error: this expression has type %a but is used as %a.@."
             (position_range p)
             (Pprint.pp_type_norm (Some unifier)) ty2
             (Pprint.pp_type_norm (Some unifier)) ty1 ;
-          interactive_or_exit interactive lexbuf
+          interactive_or_exit ()
       | Typing.Var_typing_error (n,p,ty) ->
           Format.printf
             "%sTyping error: cannot "
@@ -272,13 +272,13 @@ let rec process ?(interactive=false) parse lexbuf =
              | None -> Format.printf
                          "quantify over type %a.@.")
             Pprint.pp_type ty ;
-          interactive_or_exit interactive lexbuf
+          interactive_or_exit ()
       | Typing.Hollow_type v ->
           Format.printf
             "%sTyping error: type incompletely inferred for %s."
             (position_lex lexbuf)
             (Term.get_var_name v) ;
-          interactive_or_exit interactive lexbuf
+          interactive_or_exit ()
       | System.Inconsistent_definition (n,p,s) ->
           Format.printf
             "%sInconsistent extension of definition for %s: %s.@."
@@ -290,7 +290,7 @@ let rec process ?(interactive=false) parse lexbuf =
       (* queries *)
       | Assertion_failed ->
           Format.printf "Assertion failed.@." ;
-          interactive_or_exit interactive lexbuf
+          interactive_or_exit ()
 
       (* unhandled non-interactive errors *)
       | e when not interactive -> raise e
@@ -298,34 +298,34 @@ let rec process ?(interactive=false) parse lexbuf =
       (* interactive errors *)
       | System.Interrupt ->
           Format.printf "User interruption.@." ;
-          interactive_or_exit interactive lexbuf
+          interactive_or_exit ()
       | Prover.Level_inconsistency ->
           Format.printf "This formula cannot be handled by the left prover!@." ;
-          interactive_or_exit interactive lexbuf
+          interactive_or_exit ()
       | Prover.Abort_search ->
           Format.printf "Proof search aborted!@." ;
-          interactive_or_exit interactive lexbuf
+          interactive_or_exit ()
       | Unify.NotLLambda t ->
           Format.printf "Not LLambda unification encountered: %a@."
             Pprint.pp_term t ;
-          interactive_or_exit interactive lexbuf
+          interactive_or_exit ()
       | Unify.Formula_as_Term t ->
           Format.printf "Formula encounterd by the unifier: %a@."
             Pprint.pp_term t ;
-          interactive_or_exit interactive lexbuf
+          interactive_or_exit ()
       | Invalid_command ->
           Format.printf "Invalid command, or wrong arguments.@." ;
-          interactive_or_exit interactive lexbuf
+          interactive_or_exit ()
       | Failure s ->
           Format.printf "%sError: %s@."
             (position_lex lexbuf)
             s ;
-          interactive_or_exit interactive lexbuf
+          interactive_or_exit ()
       | e ->
           Format.printf "%sUnknown error: %s@."
             (position_lex lexbuf)
             (Printexc.to_string e) ;
-          interactive_or_exit interactive lexbuf
+          interactive_or_exit ()
     end ;
     if interactive then flush stdout
   done with
@@ -357,7 +357,7 @@ and input_queries ?(interactive=false) lexbuf =
 
 
 and load_session () =
-  System.reset_defs () ;
+  System.reset_decls () ;
   inclfiles := [] ;
   List.iter input_from_file !session
 
@@ -437,7 +437,7 @@ and command c reset =
         end
   in
   let reset = match c with
-    | System.Include _ | System.Reset | System.Reload | System.Session _ -> (fun () -> ())
+    | System.Include _ | System.Reset | System.Reload | System.Session _ -> ignore
     | _ -> reset
   in
   do_cleanup aux c reset
