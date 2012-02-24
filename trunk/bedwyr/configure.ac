@@ -42,8 +42,23 @@ AC_ARG_ENABLE([doc],
 
 if test "$enable_doc" = "yes" ; then
         AC_PATH_PROG(OCAMLDOC,ocamldoc,no)
-        if test "$OCAMLDEP" = no ; then
+        if test "$OCAMLDOC" = no ; then
                 AC_MSG_ERROR(Cannot find ocamldoc.)
+        fi
+
+        AC_PATH_PROG(LATEX,latex,no)
+        if test "$LATEX" = no ; then
+                AC_MSG_ERROR(Cannot find latex.)
+        fi
+
+        AC_PATH_PROG(PDFLATEX,pdflatex,no)
+        if test "$PDFLATEX" = no ; then
+                AC_MSG_ERROR(Cannot find pdflatex.)
+        fi
+
+        AC_PATH_PROG(HEVEA,hevea,no)
+        if test "$HEVEA" = no ; then
+                AC_MSG_ERROR(Cannot find hevea.)
         fi
 fi
 
@@ -89,6 +104,9 @@ fi
 AC_SUBST(OCAMLC)
 AC_SUBST(OCAMLDEP)
 AC_SUBST(OCAMLDOC)
+AC_SUBST(LATEX)
+AC_SUBST(PDFLATEX)
+AC_SUBST(HEVEA)
 AC_SUBST(OCAMLLEX)
 AC_SUBST(OCAMLYACC)
 AC_SUBST(OCAMLCFLAGS)
@@ -103,6 +121,7 @@ AC_SUBST(INSTALL_PROGRAM)
 AC_CONFIG_FILES([src/config.ml],[chmod a-w src/config.ml])
 AC_CONFIG_FILES([src/ndcore/Makefile],[chmod a-w src/ndcore/Makefile])
 AC_CONFIG_FILES([src/Makefile],[chmod a-w src/Makefile])
+AC_CONFIG_FILES([doc/Makefile],[chmod a-w doc/Makefile])
 AC_CONFIG_FILES([Makefile],[chmod a-w Makefile])
 AC_OUTPUT
 

@@ -1,3 +1,12 @@
+# DEFINITIONS
+
+LATEX	 = @LATEX@
+PDFLATEX = @PDFLATEX@
+HEVEA	 = @HEVEA@ -noiso
+GZIP	 = gzip -9
+
+# FILES
+
 GUIDE	= userguide-1.3
 TEX	= $(GUIDE).tex
 PS	= $(GUIDE).ps.gz
@@ -5,10 +14,7 @@ PDF	= $(GUIDE).pdf
 HTML	= $(GUIDE).html
 BIB	= userguide.bib
 
-LATEX	 = latex
-PDFLATEX = pdflatex
-HEVEA	 = hevea -noiso
-GZIP	 = gzip -9
+# BUILDING
 
 all: $(PS) $(PDF) $(HTML)
 
