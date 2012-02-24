@@ -35,11 +35,11 @@
            and from the NSF Grants CCR-0429572 (that also included
            support for Slimmer) and OISE-0553462.}
 }
-\author{David Baelde$^1$, 
-        Andrew Gacek$^2$, 
-        Quentin Heath$^3$, \\  
+\author{David Baelde$^1$,
+        Andrew Gacek$^2$,
+        Quentin Heath$^3$, \\
         Dale Miller$^3$,
-        Gopalan Nadathur$^4$, 
+        Gopalan Nadathur$^4$,
         Alwen Tiu$^5$ \\ \\
 $^1$ITU, Copenhagen\\
 $^2$Rockwell Collins\\
@@ -196,8 +196,8 @@ since it is much faster. If you don't have it or don't want it (e.g.
 for easier debugging) use \texttt{./configure --disable-nativecode}.
 
 You can also enable the documentation generation by using
-\texttt{./configure --enable-doc}. This userguide and the ocamldoc
-documentation will appear in \texttt{doc/}.
+\texttt{./configure --enable-doc} and \texttt{make doc}. This userguide
+and the ocamldoc documentation will be generated in \texttt{doc/}.
 
 \subsection{Test}
 
@@ -249,8 +249,8 @@ universally quantified:
                 & | & id\;atom* \\
 \end{array}\]
 
-An empty definition for a given predicate means that it is always false;
-a bodiless clause means that the head is always true.
+A predicate with an empty definition is always false;
+the head of a bodiless clause is always true.
 A predicate can only depend on predicates defined up to its definition
 block, so multiple predicates in one block is the only way to achieve
 mutual recursion.
@@ -280,7 +280,8 @@ and load the current file you are working on.
 \subsubsection{Vim syntax highlighting}
 
 There is also a basic syntax highlighting file for vim. With a standard
-system installation, the files in \verb+/usr/share/vim/vimfiles/+ should
+system installation, the files
+\verb+/usr/share/vim/vimfiles/[ftdetect|syntax]/bedwyr.vim+ should
 suffice; otherwise do the following:
 \begin{itemize}
   \item copy {\tt contrib/vim/syntax/bedwyr.vim} to
@@ -295,7 +296,7 @@ suffice; otherwise do the following:
 The interactive toplevel is automatically loaded once the files have
 been parsed, unless the flag \verb.-I. is passed to Bedwyr. You can
 either query a formula, or run a command. In queries, free and bound
-variables are 
+variables are
 the only objects that can be used without prior declaration, and their
 instantiations in solutions are displayed.
 
@@ -313,7 +314,7 @@ No more solutions.
 \end{verbatim}
 Notice that we had to use the term \verb+(abs x\ app x x)+ instead of
 \verb+(x1\ x1 x1)+: the former encodes the untyped $\lambda$-term
-$\lambda x (x x)$ by mapping 
+$\lambda x (x x)$ by mapping
 object-level abstraction to {\tt abs} and object-level application to
 {\tt app}, while the latter is not a legal term in Bedwyr.  (Prior to
 version 1.3, Bedwyr did not use simple typing on its own terms.)
@@ -334,16 +335,17 @@ or \urldef{\thisurl}\url{http://utopia.knoware.nl/~hlub/uck/rlwrap/}
 
 
 Then you can simply run \verb.ledit src/bedwyr.. One can also define
-an alias in his \verb;.bashrc;, such as the following which also
+an alias in his \url{~/.bashrc}, such as the following which also
 makes use of \url{~/.bedwyr_history} to remember history from one session to
 another:\\
 \verb|alias bedwyr="ledit -h |\url{~/.bedwyr_history}%
 \verb| -x /path/to/bedwyr"|.
 
-\subsection{Session management commands}
+\subsection{Meta-commands}
 
-Several commands alter the internal set of definitions of Bedwyr:
-\verb.#include., \verb.#session., \verb.#reload. and \verb.#reset..
+\subsubsection{Session management}
+
+Those commands alter the internal set of definitions of Bedwyr:
 \begin{itemize}
   \item
     \verb.#include. is meant to be used in \verb;.def; files.
@@ -361,7 +363,7 @@ Several commands alter the internal set of definitions of Bedwyr:
     \verb.#reset. clears all the definitions and empties the session.
 \end{itemize}
 
-\subsection{Assertions}
+\subsubsection{Assertions}
 
 Three kinds of assertions can be used in definition files.
 These tests are not executed unless the \verb.-t. flag has been passed
@@ -380,11 +382,11 @@ Our examples include a lot of assertions, to make sure that definitions have
 (and keep) the intended meaning. These assertions are also the basis of
 Bedwyr's correctness and performance tests ran using \verb.make test..
 
-\subsection{Other commands}
+\subsubsection{Other commands}
 \begin{itemize}
   \item Tabling
     \begin{itemize}
-      \item \verb.#equivariant on. (un)sets an alternative tabling mode
+      \item \verb.#equivariant on. sets an alternative tabling mode
       \item \verb.#clear_table p. clears the results cached for a
         predicate
       \item \verb.#clear_tables. clears all cached results
@@ -399,7 +401,7 @@ Bedwyr's correctness and performance tests ran using \verb.make test..
       \item \verb.#typeof F. type-checks a formula, and also displays
         the type of its free variables
       \item \verb.#show_table p. prints the table of a predicate
-      \item \verb+#show_table p "file.def"+ outputs the table of a
+      \item \verb+#save_table p "file.def"+ outputs the table of a
         predicate in a Bedwyr-compatible format
     \end{itemize}
 
@@ -477,7 +479,7 @@ For example, consider the \lp{} program in Figure~\ref{maxa-lp} (the
 signature has been left out), where the last clause has an implication
 \verb.=>. in the goal. During proof search, this implication
 causes \lp{} to add a new eigenvariable, say \verb.c., to the runtime
-signature 
+signature
 and to extend the current program with an atomic fact about it:
 \verb.(a c).. In such a new world, however, the {\tt leq} relation
 does not have any information about this ``non-standard'' number
@@ -687,7 +689,10 @@ order to be able to inspect in a meaningful way one predicate's table
 from another logic program.
 
 For example, if we define
-\begin{verbatim}Define inductive neq by neq X Y := X = Y -> false.\end{verbatim}
+\begin{verbatim}
+Define inductive neq : nat -> nat -> prop by
+  neq X Y := X = Y -> false.
+\end{verbatim}
 and ask the queries \texttt{forall x, nabla y, neq x y}
 and \texttt{nabla y, forall x, neq x y}, we end up with the following
 puzzling table:
@@ -786,8 +791,8 @@ of loop detection on an inductive definition, which might actually be true.
 Consider the following example.
 \begin{verbatim}
 Define
-  inductive p,
-  inductive q
+  inductive p : prop,
+  inductive q : prop
 by
   p := q \/ true;
   q := p.
@@ -877,7 +882,7 @@ this same query now returns an appropriate solution.
 ?= instan (all x\ p x) a (p X).
 Solution found:
  X = a
-More [y] ? 
+More [y] ?
 No more solutions.
 ?=
 \end{verbatim}
@@ -886,7 +891,7 @@ unification problems that are outside the \Ll-subset: delaying
 ``difficult'' unification problems in the hope that future
 instantiations and $\beta$-reduction will make them ``simple'' is
 employed in such systems as Twelf and the second version of the Teyjus
-implementation of \lp{} \cite{teyjus.website}. 
+implementation of \lp{} \cite{teyjus.website}.
 
 \subsubsection{Restriction on the occurrences of logic variables}
 \label{restrict-logic-variables}
@@ -911,7 +916,7 @@ No more solutions.
 \end{verbatim}
 The first query is certainly meaningful and is provable if there is a
 term different from 42 (say, 43): in Bedwyr, this query generates a
-run-time error since it requires dealing with an prover-1
+run-time error since it requires dealing with a prover-1
 existential variable within prover-0 unification. The second query illustrates
 that some instances of prover-0 unification can tolerate the
 occurrences of prover-1 existential variables.
@@ -924,7 +929,7 @@ At line 1, character 38:
 Error: logic variable on the left
 ?= exists X, X = 17 /\ (X = 42 -> false).
 Yes.
-More [y] ? 
+More [y] ?
 No more solutions.
 ?=
 \end{verbatim}
@@ -1044,17 +1049,15 @@ can be used, consider the implementation of the $\pi$-calculus that is
 contained in the example file \verb+pi/pi.def+.  Of the several
 things defined in that file, the operational semantics for the
 $\pi$-calculus is given using one-step transitions: for a specific
-example, see Figure~\ref{one-step}.  First notice that the syntax of
-clauses is almost identical to that used in \lp{}.  In
-particular, the backslash is used to denote the $\lambda$-binder.  The
-main syntactic difference is that the head and body of clauses are
+example, see Figure~\ref{one-step}.  First notice some similarities
+between the syntax of clauses and that used in \lp{}.  In
+particular, the backslash is used to denote the $\lambda$-binder.  One
+of the syntactic difference is that the head and body of clauses are
 separated from each other using the \verb+:=+ instead of the
 \verb+:-+ (turnstile).  The former symbol is used to remind
 the Bedwyr user that programs are used to define ``if and only if''
 completions of specifications (whereas, in \lp{} the \verb+:-+ is the
-more usual ``if'' interpretation).  Unlike \lp{}, Bedwyr is
-untyped so there are no {\tt kind} and {\tt type} declarations and no
-static checking of your source code.
+more usual ``if'' interpretation).
 
 Beyond the syntactic differences, the operational semantics of \lp{}
 and Bedwyr differ significantly.  If a specification is simply a Horn
@@ -1182,8 +1185,7 @@ described in \cite{gordon03tcs}.
 Although the concrete syntax of Bedwyr was originally derived from that
 of \lp{} in the Teyjus implementation\cite{nadathur99cade}, it has
 now evolved in such a way that, by design, it resembles that of Abella
-(Andrew Gacek,
-\urldef{\thisurl}\url{http://abella.cs.umn.edu/}\ahrefurl{\thisurl}), a
+\cite{abella.website}, a
 proof assistant itself derived both from \lp{} and from the first
 implementation of Bedwyr. This means that there is no syntactic
 compatibility whatsoever between versions 1.2 and 1.3.
@@ -1194,13 +1196,14 @@ Names for objects such as types, predicates, constants and variables are
 character strings built with letters, digits and the special characters
 \verb.-^<>=~+*&:|., \verb.?`$'. and \verb._/@#!.. Names must be
 separated by space-like characters (space, \verb.TAB., \verb.CR.,
-\verb.LF.), parentheses or C-style inline comments. As a general rule,
-variables starting with an uppercase character (\verb.A-Z.) in a query
-or the body of a definition are free variables which are implicitly
-existentially quantified, a digit cannot be the first character of a
-name, and the contiguous characters \verb./*. are never part of names
-and always start an inline comment, except in a quoted string. Moreover,
-keywords are implicitly excluded from the present definition.
+\verb.LF.), parentheses or C-style inline nested comments.
+As a general rule, variables starting with an uppercase character
+(\verb.A-Z.) in a query or the body of a definition are free variables
+which are implicitly existentially quantified, a digit cannot be the
+first character of a name, and the contiguous characters \verb./*. are
+never part of names and always start an inline comment, except in a
+quoted string.
+Moreover, keywords are implicitly excluded from the present definition.
 
 More precisely, we divide the special characters into three categories:
 \begin{itemize}
@@ -1278,8 +1281,8 @@ atom &::=& true\;|\;false               & {\tt prop} \\
 \end{figure}
 
 In its normal state, an infix constant has to be at least of arity 2:
-{\tt (x **)} raises a parsing error, but {\tt (x ** y)} is legal, and can
-even be applied to another term if {\tt **} is of arity arity 3 or more.
+{\tt (x **)} raises a parsing error, while {\tt (x ** y)} is legal and
+can even be applied to another term if {\tt **} is of arity 3 or more.
 It is also possible to use the prefix version of an infix constant by
 surrounding it with parentheses, in which case any arity is permitted:
 {\tt (**) x} and {\tt (**) x y z} are both syntacticly legal.
