@@ -111,8 +111,6 @@ let rec check_flex_args l fts flts =
           | True | False
           | Eq _ | And _ | Or _ | Arrow _ | Binder _ ->
               fat t
-          (*| QString _ | Nat _ ->
-              check_flex_args q fts flts*)
           | Var v when constant v.tag && v.ts>fts && unique_var v q ->
               check_flex_args q fts flts
           | DB i when unique_bv i q -> check_flex_args q fts flts
@@ -847,7 +845,7 @@ and unify t1 t2 = match observe t1,observe t2 with
         unify (lambda (n1-n2) t1) t2
       else
         unify t1 (lambda (n2-n1) t2)
-  | _ -> failwith "ogic variable on the left"
+  | _ -> failwith "logic variable on the left"
 
 let pattern_unify t1 t2 = unify (Norm.hnorm t1) (Norm.hnorm t2)
 

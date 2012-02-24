@@ -33,7 +33,7 @@ type level =
   | Zero (** Logic vars are forbidden and eigen vars can be instantiated. *)
   | One (** Logic vars are instantiated and eigen vars are constants. *)
 
-(** Attempt to prove that the goal [(nabla x_1..x_local . g)(S)] by
+(** Attempt to prove the goal [(nabla x_1..x_local . g)(S)] by
   * destructively instantiating it,
   * calling [success] on every success, and finishing with [failure]
   * which can be seen as a more usual continuation, typically
