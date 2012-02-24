@@ -120,7 +120,7 @@ let close_user_file name =
     close_out f ;
     Hashtbl.remove user_files name
   with
-    | Sys_error e -> Hashtbl.remove user_files name
+    | Sys_error _ -> Hashtbl.remove user_files name
     | _ -> ()
 
 let get_user_file name =
@@ -451,7 +451,9 @@ exception Arity_mismatch of Term.term * int
 exception Missing_table of string * Typing.pos option
 
 
-let reset_defs () = Hashtbl.clear defs
+let reset_decls () =
+  Hashtbl.clear defs ;
+  Hashtbl.clear type_kinds
 
 let get_pred ?pos head_tm failure =
   let head_var = Term.get_var head_tm in
@@ -467,7 +469,7 @@ let get_pred ?pos head_tm failure =
     raise (Missing_declaration (name,pos))
 
 let get_def ~check_arity head_tm =
-  let _,(f,b,t,ty) = get_pred head_tm (fun () -> ()) in
+  let _,(f,b,t,ty) = get_pred head_tm ignore in
   match b with
     (* XXX in the case of an empty definition (b = None),
      * we can't infer the arity of the predicate,
@@ -557,7 +559,7 @@ let get_table p head_tm success failure =
     | None -> failure () ; raise (Missing_table (name,Some p))
 
 let show_table (p,head_tm) =
-  get_table p head_tm (Table.print head_tm) (fun () -> ())
+  get_table p head_tm (Table.print head_tm) ignore
 
 let clear_tables () =
   Hashtbl.iter
@@ -567,16 +569,19 @@ let clear_tables () =
     defs
 
 let clear_table (p,head_tm) =
-  get_table p head_tm (Table.reset) (fun () -> ())
+  get_table p head_tm (Table.reset) ignore
 
 let save_table (p,head_tm) file =
   try
     let fout = open_out_gen [Open_wronly;Open_creat;Open_excl] 0o600 file in
-    get_table p head_tm
-      (fun table -> Table.fprint fout head_tm table ; close_out fout)
-      (fun () -> close_out fout)
+    try
+      get_table p head_tm
+        (fun table -> Table.fprint fout head_tm table ; close_out fout)
+        (fun () -> close_out fout)
+    with Sys_error e ->
+      Printf.printf "Couldn't close file (%s).@." e
   with Sys_error e ->
-    Printf.printf "Couldn't open file %s for writing! Make sure that the file doesn't already exist.\n" file
+    Printf.printf "Couldn't open file for writing (%s).@." e
 
 
 (* Handle user interruptions *)

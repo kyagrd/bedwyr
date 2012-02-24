@@ -1,6 +1,6 @@
 (****************************************************************************)
 (* An implementation of Higher-Order Pattern Unification                    *)
-(* Copyright (C) 2006-2011 Nadathur, Linnell, Baelde, Ziegler, Gacek, Tiu,  *)
+(* Copyright (C) 2006-2012 Nadathur, Linnell, Baelde, Ziegler, Gacek, Tiu,  *)
 (*                         Heath                                            *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
@@ -198,6 +198,8 @@ module Hint = struct
   let var_names = ref M.empty
   let add var name =
     var_names := M.add var.id name !var_names ;
+    (* TODO define the finalization function before,
+     * when [var] isn't defined? *)
     Gc.finalise (fun v -> var_names := M.remove v.id !var_names) var
   let find var =
     M.find var.id !var_names
@@ -265,7 +267,7 @@ let get_subst state =
   assert (!count >= 0) ;
   try
     Stack.iter
-      (fun (v,old) ->
+      (fun (v,_) ->
          if !count = 0 then raise Done ;
          subst := (v,!v)::!subst ;
          decr count)
@@ -295,8 +297,8 @@ let eq_subst sub1 sub2 =
           let (_,d) = (List.find (fun (x,y) -> v==x)) s2 in
           if (eq_ptr c d) then (aux rest s2) else false
   in
-  try (aux sub1 sub2 && aux sub2 sub1) with
-      Not_found -> false
+  try (aux sub1 sub2 && aux sub2 sub1)
+  with Not_found -> false
 
 (* Handling variable names *)
 

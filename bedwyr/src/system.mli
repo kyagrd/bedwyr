@@ -169,7 +169,7 @@ No more solutions. v}
       * The file "test.txt" will contain the string "Test printing". *)
   end
 
-(** Describes whether tabling is possible, and if so, how it is used. *)
+(** Describe whether tabling is possible, and if so, how it is used. *)
 type flavour =
     Normal (** only unfolding can be done *)
   | Inductive (** tabling is possible, and loop is a failure *)
@@ -263,7 +263,7 @@ val add_clause :
 exception Missing_table of string * Typing.pos option
 
 (** Remove all definitions. *)
-val reset_defs : unit -> unit
+val reset_decls : unit -> unit
 
 (** Get a definition.
   * @param check_arity the expected arity of the predicate
