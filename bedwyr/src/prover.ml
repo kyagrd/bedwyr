@@ -91,7 +91,7 @@ let do_open_file g =
               end
           | _ -> assert false
         end
-    | _ -> print_string "bite" ; false
+    | _ -> false
 
 let do_close_file g =
   match g with
@@ -126,7 +126,7 @@ let do_fprint print_fun goals =
   end
 
 
-(* Attemps to prove that the goal [(nabla x_1..x_local . g)(S)] by
+(* Attempt to prove the goal [(nabla x_1..x_local . g)(S)] by
  * destructively instantiating it,
  * calling [success] on every success, and finishing with [failure]
  * which can be seen as a more usual continuation, typically
