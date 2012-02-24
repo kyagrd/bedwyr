@@ -34,6 +34,9 @@ Define path : nat -> nat -> prop by
 Define edge : nat -> nat -> prop by
   edge X Y := arrow X Y \/ arrow Y X.
 
+% Without tabling, a closed request, such as "edgepath 1 6",
+% will return the same solution ("Yes") infinity many times.
+% However, currently, "edgepath 1 Y" cannot be tabled.
 Define inductive edgepath : nat -> nat -> prop by
   edgepath X Y := edge X Y;
   edgepath X Y := edge X Z /\ edgepath Z Y.
@@ -45,6 +48,8 @@ Define print_arrow : nat -> nat -> prop by print_arrow X Y := print X /\ printst
 Define allpaths : prop by
   allpaths := path X Y /\ print_arrow X Y /\ false.
 
+% Because we don't table terms with logic variables,
+% this currently doesn't terminate.
 Define alledgepaths : prop by
   alledgepaths := edgepath X Y /\ print_arrow X Y /\ false.
 
