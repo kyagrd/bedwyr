@@ -109,7 +109,7 @@ TEX_FILES	= $(USERGUIDE).tex
 PS_FILES	= $(USERGUIDE).ps.gz
 PDF_FILES	= $(USERGUIDE).pdf
 HTML_FILES	= $(USERGUIDE).html
-USERGUIDE_FILES	= doc/$(TEX_FILES) doc/userguide.bib doc/Makefile
+USERGUIDE_FILES	= doc/$(TEX_FILES) doc/userguide.bib doc/Makefile.in
 ARCH_FILES	= configure.ac Makefile.in install-sh \
 		  $(DOCS) $(CONTRIB) $(EXAMPLES) \
 		  $(USERGUIDE_FILES)
@@ -168,9 +168,9 @@ examples_tests: src/bedwyr
 .PHONY: doc bedwyr_doc
 
 ifeq ($(TARGET),)
-doc: ndcore_doc bedwyr_doc
+doc: doc/Makefile ndcore_doc bedwyr_doc
 else
-doc: $(TARGET)_doc
+doc: doc/Makefile $(TARGET)_doc
 endif
 
 ndcore_doc:
