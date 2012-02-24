@@ -39,14 +39,14 @@ let nabla_abstract t =
 
 let print head table =
   Format.printf
-    "@[<v>Table for %a contains (P=Proved, D=Disproved):@,"
+    "@[<v>Table for %a contains (P=Proved, D=Disproved):"
     Pprint.pp_term head ;
   Index.iter !table
     (fun t tag ->
        let t = nabla_abstract (Term.app t [head]) in
        match !tag with
-         | Proved    -> Format.printf " [P] %a@," Pprint.pp_term t
-         | Disproved -> Format.printf " [D] %a@," Pprint.pp_term t
+         | Proved    -> Format.printf "@;<1 1>[P] %a" Pprint.pp_term t
+         | Disproved -> Format.printf "@;<1 1>[D] %a" Pprint.pp_term t
          | Unset     -> ()
          | Working _ -> assert false) ;
   Format.printf "@]@."
