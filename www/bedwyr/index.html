@@ -99,8 +99,7 @@ Foundation.
 
 <h2 id="download">Download</h2>
 
-<p>The latest stable release is version 1.2 (April 2010).
-Version 1.3 should be published during February 2012.</p>
+<p>The latest stable release is version 1.3 (February 2012).</p>
 
 <p><font color=green><b>Sources:</b></font>
 <a href="https://gforge.inria.fr/frs/?group_id=367">
@@ -119,7 +118,7 @@ Some packages of <em>bedwyr</em> (complete program with all the examples)
 and <em>ndcore</em> (standalone core library for development purposes)
 are available for Debian (amd64 and i386; current stable, ie <em>Squeeze</em>,
 but might work for other versions or even derivatives such as Ubuntu).
-To get them:
+To get them:</p>
 <ul>
   <li>add <code>deb http://slimmer.gforge.inria.fr/releases/debian/
     squeeze main</code> to your <code>/etc/apt/sources.list</code></li>
@@ -131,7 +130,14 @@ To get them:
     are available, for instance by running
     <code>apt-cache policy bedwyr</code></li>
 </ul>
-</p>
+<p>Those packages are also available for Gentoo (~amd64 and ~x86),
+in the overlay <em>dawan</em>:</p>
+<ul>
+  <li>install <em>layman</em> and run <code>layman -a dawan</code></li>
+  <li>make sure that <code>/var/lib/layman/make.conf</code> adds
+  <code>/var/lib/layman/dawan</code> to <code>$PORTDIR_OVERLAY</code>
+  and is included in <code>/etc/make.conf</code>
+</ul>
 
 
 <h2 id="documentation">Documentation</h2>
@@ -139,14 +145,13 @@ To get them:
 <p><font color=green><b>Bedwyr User's Guide:</b></font>
   The <a
     href="https://gforge.inria.fr/docman/index.php?group_id=367&selected_doc_group_id=482&language_id=7"
-    >user's guide</a> for version 1.0 is available in <a
-    href="https://gforge.inria.fr/docman/view.php/367/705/userguide.pdf"
+    >user's guide</a> for version 1.3 is available in <a
+    href="https://gforge.inria.fr/docman/view.php/367/7800/userguide-1.3.pdf"
     >pdf</a>, <a
-    href="https://gforge.inria.fr/docman/view.php/367/706/userguide.ps.gz"
+    href="https://gforge.inria.fr/docman/view.php/367/7798/userguide-1.3.ps.gz"
     >ps</a> or <a
-    href="https://gforge.inria.fr/docman/view.php/367/707/userguide.html"
+    href="https://gforge.inria.fr/docman/view.php/367/7799/userguide-1.3.html"
     >html</a>.
-    An up-to-date version will be released with Bedwyr 1.3.
 </p>
 <!--p><font color=green><b>Source code documentation:</b></font>
   More technical documentation is provided for the <a

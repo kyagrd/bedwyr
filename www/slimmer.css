@@ -1,8 +1,8 @@
 body
 { font-family: trebuchet ms, verdana, helvetica; 
   max-width: 800px;
-  margin-left: auto;
-  margin-right: auto;
+  margin: 0 auto;
+  padding: 10px;
   color: black;
   font-size: small;
 }
