@@ -88,7 +88,7 @@ ndcore.tar: $(NDCORE_SRC) $(TEST_SRC) Makefile.in
 .PHONY: clean
 clean:
 	rm -f depend
-	rm -f *.cm[ixoa] *.cmxa *.[oa]
+	rm -f *.cm[ixoa] *.cmxa *.[oa] *.dump
 	rm -f tests/test
 	rm -f tests/*.cm[ixoa] tests/*.cmxa tests/*.[oa]
 	rm -f ndcore.tar ndcore.cmi.tar
