@@ -134,10 +134,7 @@ endif
 $(bedwyr): src/Makefile
 	$(MAKE) -C src
 
-$(ndcore): src/ndcore/Makefile
-	$(MAKE) -C src/ndcore
-
-$(ndcore:$(cma)=a): src/ndcore/Makefile
+$(ndcore) $(ndcore:$(cma)=a): src/ndcore/Makefile
 	$(MAKE) -C src/ndcore
 
 %: configure %.in
@@ -148,20 +145,27 @@ configure: configure.ac
 
 # TESTING
 
-.PHONY: test examples_tests
+.PHONY: test test_ndcore test_bedwyr
 
 test:
+ifeq ($(TARGET),)
+	$(MAKE) test_ndcore
+	$(MAKE) test_bedwyr
+else
+	$(MAKE) test_$(TARGET)
+endif
+
+test_ndcore: $(ndcore)
 	@echo Testing the core LLambda library
 	$(MAKE) -C src/ndcore test
-	@echo Testing bedwyr on examples
-	@bash -c 'time $(MAKE) examples_tests'
 
-examples_tests: src/bedwyr
-	@for i in $(XPL) ; do \
+test_bedwyr: $(bedwyr)
+	@echo Testing bedwyr on examples
+	@bash -c 'time for i in $(XPL) ; do \
 	  echo "==== Running tests in $$i ====" ; \
 	  if $< -t -I examples/$$i ; then echo "All done." ; \
 	  else echo "Error." ; break ; fi ; \
-	done
+	  done'
 
 # DOC
 
