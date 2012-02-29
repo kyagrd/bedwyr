@@ -1,7 +1,6 @@
-
-* Experiments on static analyses: typing, and mode checking (which could allow
+* Experiments on static analyses (mode checking, which could allow
   to statically avoid logical variables on the left). This would probably
-  be done thanks to the "parse" special predicate.
+  be done in the Typing module (to be renamed).
 
 * Unification optimization for "fresh" variables: avoid occurs-check. Hopefully
   this could help a lot on the efficiency of type checking.
