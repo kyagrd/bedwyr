@@ -76,8 +76,8 @@ doc: ../../doc/html/ndcore/index.html
 ../../doc/html/ndcore/index.html: $(NDCORE_O)
 ifneq (@OCAMLDOC@,)
 	mkdir -p ../../doc/html/ndcore
-	$(OCAMLDOC) -d ../../doc/html/ndcore -html $(NDCORE_MLI)
 	$(OCAMLDOC) -dump ocamldoc.dump $(NDCORE_MLI)
+	$(OCAMLDOC) -load ocamldoc.dump -d ../../doc/html/ndcore -html
 endif
 
 archive: ndcore.tar
@@ -88,8 +88,8 @@ ndcore.tar: $(NDCORE_SRC) $(TEST_SRC) Makefile.in
 .PHONY: clean
 clean:
 	rm -f depend
-	rm -f *.cm[ixoa] *.cmxa *.[oa] *.dump
+	rm -f *.cm[ixoa] *.cmxa *.[oa]
 	rm -f tests/test
 	rm -f tests/*.cm[ixoa] tests/*.cmxa tests/*.[oa]
-	rm -f ndcore.tar ndcore.cmi.tar
+	rm -f ndcore.tar ndcore.cmi.tar ocamldoc.dump ocamldoc.dump.bz2
 	rm -f ../../doc/html/ndcore/*

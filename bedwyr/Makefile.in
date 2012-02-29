@@ -167,22 +167,26 @@ examples_tests: src/bedwyr
 
 .PHONY: doc bedwyr_doc
 
-ifeq ($(TARGET),)
-doc: doc/Makefile ndcore_doc bedwyr_doc
+ifeq (@OCAMLDOC@,)
+doc:
+	@echo "Documentation generation disabled,"
+	@echo "run \"./configure --enable-doc\" to enable it."
 else
-doc: doc/Makefile $(TARGET)_doc
+  ifeq ($(TARGET),)
+doc: ndcore_doc bedwyr_doc
+  else
+doc: $(TARGET)_doc
+  endif
 endif
 
-ndcore_doc:
-ifneq (@OCAMLDOC@,)
+NDCORE_DUMP	= src/ndcore/ocamldoc.dump
+
+ndcore_doc $(NDCORE_DUMP):
 	$(MAKE) -C src/ndcore doc
-endif
 
-bedwyr_doc:
-ifneq (@OCAMLDOC@,)
+bedwyr_doc: doc/Makefile
 	$(MAKE) -C src doc
 	$(MAKE) -j1 -C doc
-endif
 
 # INSTALL
 
@@ -192,9 +196,12 @@ else
 install: install_$(TARGET)
 endif
 
-NDCORE_DUMP	= src/ndcore/ocamldoc.dump
+ifneq (@OCAMLDOC@,)
+install_ndcore: install_ndcore_doc
+install_bedwyr: install_bedwyr_doc
+endif
 
-install_ndcore: ndcore_doc $(NDCORE_DOCS:=.bz2)
+install_ndcore: $(ndcore) $(NDCORE_DOCS:=.bz2)
 	@$(INSTALL_DIR) $(LIBDIR)
 	$(INSTALL_DOC) $(ndcore) $(wildcard $(ndcore:$(cma)=a)) $(LIBDIR)
 	$(TAR) -xf $(ndcore:$(cma)=cmi.tar) -C $(LIBDIR)
@@ -202,21 +209,29 @@ install_ndcore: ndcore_doc $(NDCORE_DOCS:=.bz2)
 ifneq ($(NDCORE_DOCS:=.bz2),)
 	@$(INSTALL_DOC) $(NDCORE_DOCS:=.bz2) $(DOCDIR)
 endif
-ifneq (@OCAMLDOC@,)
+
+install_ndcore_doc: ndcore_doc $(NDCORE_DUMP:=.bz2)
 	@$(INSTALL_DIR) $(HTMLDIR)/ref
 	@$(INSTALL_DOC) doc/html/ndcore/style.css doc/html/ndcore/*.html \
 	  $(HTMLDIR)/ref
-	@$(INSTALL_DOC) $(NDCORE_DUMP) $(DOCDIR)
-endif
+	@$(INSTALL_DOC) $(NDCORE_DUMP:=.bz2) $(DOCDIR)
 
-install_bedwyr: bedwyr_doc $(BEDWYR_DOCS:=.bz2)
+install_bedwyr: $(bedwyr) $(BEDWYR_DOCS:=.bz2)
 	@$(INSTALL_DIR) $(BINDIR)
 	@$(INSTALL_BIN) $(bedwyr) $(BINDIR)
 	@$(INSTALL_DIR) $(DOCDIR)
 ifneq ($(BEDWYR_DOCS:=.bz2),)
 	@$(INSTALL_DOC) $(BEDWYR_DOCS:=.bz2) $(DOCDIR)
 endif
-ifneq (@OCAMLDOC@,)
+	@$(INSTALL_DIR) $(DATAROOTDIR)/$(PACKAGE_NAME)
+	@for i in $(CONTRIB) ; do \
+	  $(INSTALL_DOC) -D $$i $(DATAROOTDIR)/$(PACKAGE_NAME)/$$i ; done
+	@for i in $(VIM_CONTRIB) ; do \
+	  $(INSTALL_DOC) -D contrib/vim/$$i $(VIMFILES)/$$i ; done
+	@for i in $(EXAMPLES) ; do \
+	  $(INSTALL_DOC) -D $$i $(DATAROOTDIR)/$(PACKAGE_NAME)/$$i ; done
+
+install_bedwyr_doc: bedwyr_doc
 	@$(INSTALL_DIR) $(PSDIR)
 	@$(INSTALL_DIR) $(PDFDIR)
 	@$(INSTALL_DIR) $(HTMLDIR)
@@ -226,16 +241,6 @@ ifneq (@OCAMLDOC@,)
 	@$(INSTALL_DIR) $(HTMLDIR)/ref
 	@$(INSTALL_DOC) doc/html/bedwyr/style.css doc/html/bedwyr/*.html \
 	  $(HTMLDIR)/ref
-endif
-#	@$(INSTALL_DIR) $(MANDIR)/man1
-#	@$(INSTALL_DOC) $(MAN) $(MANDIR)/man1
-	@$(INSTALL_DIR) $(DATAROOTDIR)/$(PACKAGE_NAME)
-	@for i in $(CONTRIB) ; do \
-	  $(INSTALL_DOC) -D $$i $(DATAROOTDIR)/$(PACKAGE_NAME)/$$i ; done
-	@for i in $(VIM_CONTRIB) ; do \
-	  $(INSTALL_DOC) -D contrib/vim/$$i $(VIMFILES)/$$i ; done
-	@for i in $(EXAMPLES) ; do \
-	  $(INSTALL_DOC) -D $$i $(DATAROOTDIR)/$(PACKAGE_NAME)/$$i ; done
 
 # ARCHIVE
 
