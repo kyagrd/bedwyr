@@ -78,8 +78,8 @@ depend: $(BEDWYR_SRC) parser.mli
 ifneq ($(strip $(wildcard ndcore/ocamldoc.dump)),)
 NDCORE_DUMP	= -load ndcore/ocamldoc.dump
 else
-  ifneq ($(strip $(wildcard $(NDDOCDIR)/ocamldoc.dump)),)
-NDCORE_DUMP	= -load $(NDDOCDIR)/ocamldoc.dump
+  ifneq ($(strip $(wildcard $(NDDOCDIR)/ocamldoc.dump.bz2)),)
+NDCORE_DUMP	= -load <(bzip2 -c -d $(NDDOCDIR)/ocamldoc.dump.bz2)
   endif
 endif
 
@@ -88,8 +88,8 @@ doc: ../doc/html/bedwyr/index.html
 ../doc/html/bedwyr/index.html: $(BEDWYR_O)
 ifneq (@OCAMLDOC@,)
 	mkdir -p ../doc/html/bedwyr
-	$(OCAMLDOC) -d ../doc/html/bedwyr -html $(BEDWYR_MLI) \
-	  $(NDCORE_DUMP)
+	bash -c '$(OCAMLDOC) -d ../doc/html/bedwyr -html $(BEDWYR_MLI) \
+	  $(NDCORE_DUMP)'
 endif
 
 archive: bedwyr.tar
