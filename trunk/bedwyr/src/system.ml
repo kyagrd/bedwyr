@@ -199,7 +199,7 @@ let create_def (new_predicates,global_flavour) (flavour,p,name,ty) =
   let new_predicate =
     let head_var = Term.get_var (Term.atom ~tag:Term.Constant name) in
     if Hashtbl.mem defs head_var || List.mem head_var Logic.predefined
-    then raise (Invalid_pred_declaration (name,p,ty,"name conflict"))
+    then raise (Invalid_pred_declaration (name,p,ty,"name conflict with a predefined predicate"))
     else let (flex,_,_,propositional) = kind_check ty in
     if not (propositional || flex) then
       raise (Invalid_pred_declaration (name,p,ty,Format.sprintf "target type can only be %s" (Pprint.type_to_string Type.TProp)))
@@ -210,6 +210,10 @@ let create_def (new_predicates,global_flavour) (flavour,p,name,ty) =
     end
   in
   (new_predicate::new_predicates),global_flavour
+
+let declare_preds decls =
+  let new_predicates,_ = List.fold_left create_def ([],Normal) decls in
+  new_predicates
 
 
 (* typechecking, predicates definitions *)
@@ -427,7 +431,7 @@ let add_clause new_predicates (p,pre_head,pre_body) =
     end with Not_found ->
       raise (Inconsistent_definition (name,p,"predicate not declared"))
   in
-  if List.mem head_var new_predicates then begin
+  if List.exists (fun (v,_) -> v == head_var) new_predicates then begin
     let b =
       match b with
         | None -> Term.lambda arity body
@@ -444,10 +448,12 @@ let add_clause new_predicates (p,pre_head,pre_body) =
     Hashtbl.replace defs head_var (Predicate (f,Some b,t,ty)) ;
   end else raise (Inconsistent_definition (name,p,"predicate not declared in this block"))
 
+let add_clauses new_predicates clauses =
+  List.iter (add_clause new_predicates) clauses
+
 
 (* Using definitions *)
 
-exception Arity_mismatch of Term.term * int
 exception Missing_table of string * Typing.pos option
 
 

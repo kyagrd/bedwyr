@@ -331,7 +331,6 @@ let atom ?tag name =
   let tag = match tag with
     | Some tag -> tag
     | None ->
-        Format.eprintf "WARNING: unspecified tag for \"%s\"!\n" name ;
         begin match name.[0] with
           | 'A'..'Z' -> Logic
           | _ -> Constant

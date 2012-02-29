@@ -1,6 +1,6 @@
 (****************************************************************************)
 (* Bedwyr prover                                                            *)
-(* Copyright (C) 2006-2011 David Baelde, Alwen Tiu                          *)
+(* Copyright (C) 2006-2012 David Baelde, Alwen Tiu                          *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -17,6 +17,22 @@
 (* Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA             *)
 (****************************************************************************)
 
+(* In the tree, variables are identified by uniques numbers, which I'll call
+ * the [VID] (variable id). We could get rid of that and rely only on the order
+ * in which we meet the vars in the tree, but that would involve extra
+ * care when changing an algorithm (insertion/lookup or fold).
+ * So at the end of a branch we have a collection of variables with [VID]s,
+ * and we want to store a constraint describing this collection, such that
+ * two formulas satisfying the same rigid structure and map are indeed
+ * logically equivalent.
+ * We first get rid of [VID]s, which are not necessarily \[0,1,2..n\],
+ * and renumber variables using [CID]s (constraint id) from 0 to n.
+ * In the constraint we store:
+ * - the maximum [VID]
+ * - an array mapping [CID] to [VID]
+ * - an array describing variable equalities: to each variable (denoted by its
+ *   [CID]) is associated the smallest (in term of [CID]) equal variable.
+ * - the array mapping [CID]s to local timestamps. *)
 type constraints = { max_vid : int ;
                      vid     : int array ;
                      eq      : int array ;
@@ -414,7 +430,6 @@ let update ~allow_eigenvar index terms data =
         else
           update_index bindings terms (node::index') index
   in
-  (* update_index [] (List.map (Term.shared_copy) (nb_rename terms)) [] index *)
   if !eqvt_tbl then
     update_index [] (nb_rename terms) [] index
   else

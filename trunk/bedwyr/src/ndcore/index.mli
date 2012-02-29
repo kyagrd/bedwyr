@@ -29,25 +29,7 @@
   * Currently the Nabla indices are handled as part of the rigid structure of
   * terms, which means that weakening and swapping are not supported.
   * Later, the set of nabla variables could be extracted and simplified to an
-  * essential representation just like eigenvariables.
-  *
-  * {1 Constraint management}
-  * In the tree, variables are identified by uniques numbers, which I'll call
-  * the [VID] (variable id). We could get rid of that and rely only on the order
-  * in which we meet the vars in the tree, but that would involve extra
-  * care when changing an algorithm (insertion/lookup or fold).
-  * So at the end of a branch we have a collection of variables with [VID]s,
-  * and we want to store a constraint describing this collection, such that
-  * two formulas satisfying the same rigid structure and map are indeed
-  * logically equivalent.
-  * We first get rid of [VID]s, which are not necessarily \[0,1,2..n\], and renumber
-  * variables using [CID]s (constraint id) from 0 to n. In the constraint we
-  * store:
-  * - the maximum [VID]
-  * - an array mapping [CID] to [VID]
-  * - an array describing variable equalities: to each variable (denoted by its
-  *   [CID]) is associated the smallest (in term of [CID]) equal variable.
-  * - the array mapping [CID]s to local timestamps. *)
+  * essential representation just like eigenvariables. *)
 
 
 (** Option to turn on/off equivariant tabling. *)

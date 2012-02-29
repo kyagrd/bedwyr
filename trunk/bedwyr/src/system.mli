@@ -232,12 +232,12 @@ exception Invalid_bound_declaration of string * Typing.pos *
 
 val declare_const : Typing.pos * string -> Type.simple_type -> unit
 
-(** Declare a predicate.
-  * @return a variable corresponding to this predicate *)
-val create_def :
-  (Term.var * Type.simple_type) list * flavour ->
-  flavour * Typing.pos * string * Type.simple_type ->
-  (Term.var * Type.simple_type) list * flavour
+(** Declare predicates.
+  * @return the list of variables and types
+  *  corresponding to those predicates *)
+val declare_preds :
+  (flavour * Typing.pos * string * Type.simple_type) list ->
+  (Term.var * Type.simple_type) list
 
 (** {6 Typechecking, predicates definitions} *)
 
@@ -253,10 +253,13 @@ exception Missing_definition of string * Typing.pos option
   * an exception is raised and the global type unifier isn't updated. *)
 val translate_query : Typing.preterm -> Term.term
 
-(** [add_clause l (p,h,b)] adds the clause [h := b] to a definition,
-  * as long as the name of the corresponding predicate is in the list [l]. *)
-val add_clause :
-  Term.var list -> Typing.pos * Typing.preterm * Typing.preterm -> unit
+(** For each [(p,h,b)] of [c],
+  * [add_clauses l c] adds the clause [h := b] to a definition,
+  * as long as the var of the corresponding predicate is in the list [l]. *)
+val add_clauses :
+  (Term.var * Type.simple_type) list ->
+  (Typing.pos * Typing.preterm * Typing.preterm) list ->
+  unit
 
 (** {6 Using definitions} *)
 
