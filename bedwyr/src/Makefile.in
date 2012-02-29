@@ -101,7 +101,7 @@ bedwyr.tar: $(filter-out config.ml,$(BEDWYR_FILES)) config.ml.in Makefile.in
 clean:
 	rm -f depend
 	rm -f bedwyr
-	rm -f *.cm[ixoa] *.cmxa *.[oa]
+	rm -f *.cm[ixoa] *.cmxa *.[oa] a.out
 	rm -f parser.ml parser.mli parser.output lexer.ml
 	rm -f bedwyr.tar
 	rm -f ../doc/html/bedwyr/*

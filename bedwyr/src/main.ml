@@ -140,12 +140,8 @@ let rec process ?(interactive=false) parse lexbuf =
             (fun s -> System.declare_const s t)
             l
       | System.Def (decls,defs) ->
-          let new_predicates,_ = List.fold_left
-                                   System.create_def
-                                   ([],System.Normal)
-                                   decls
-          in
-          List.iter (System.add_clause (List.map fst new_predicates)) defs ;
+          let new_predicates = System.declare_preds decls in
+          System.add_clauses new_predicates defs ;
           List.iter
             (fun (v,ty) ->
                if not (Typing.check_ground ty)
