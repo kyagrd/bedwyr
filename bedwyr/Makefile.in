@@ -165,14 +165,15 @@ test:
 #endif
 
 test_ndcore: src/ndcore/test.$(TEST_SUFFIX)
-
-src/ndcore/test.$(TEST_SUFFIX):
-	@$(OCAMLBUILD) $@
 	@echo Testing the core LLambda library
-	@_build/$@
+	@_build/$<
+
+test_batyping: src/batyping/test.$(TEST_SUFFIX)
+	@echo Testing the Bedwyr-Abella typing library
+	@_build/$<
 
 test_bedwyr: $(bedwyr_prefix).$(TEST_SUFFIX)
-	@echo Testing bedwyr on examples $^ //
+	@echo Testing bedwyr on examples
 	@time for i in $(XPL) ; do \
 	  echo "==== Running tests in $$i ====" ; \
 	  if _build/$< -t -I examples/$$i ; then echo "All done." ; \

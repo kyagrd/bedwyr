@@ -18,7 +18,6 @@
 (****************************************************************************)
 
 open Term
-open Type
 open Format
 
 exception Found of int
@@ -74,66 +73,6 @@ let formatter,do_formatter =
        let s = Buffer.contents buf in
        Buffer.clear buf ;
        s)
-
-let pp_kind chan ki =
-  let rec aux par chan = function
-    | KType ->
-        fprintf chan "*"
-    | KRArrow (ki1::kis,ki2) ->
-        let print =
-          if par then fprintf chan "@[(%a -> %a)@]"
-          else fprintf chan "@[%a -> %a@]"
-        in
-        print (aux true) ki1 (aux false) (KRArrow (kis,ki2))
-    | KRArrow ([],ki) ->
-        aux par chan ki
-  in
-  fprintf chan "@[%a@]" (aux false) ki
-
-let kind_to_string ki =
-  do_formatter (fun () -> pp_kind formatter ki)
-
-let pp_type chan ty =
-  let rec aux par chan = function
-    | Ty name ->
-        fprintf chan "%s" name
-    | TProp ->
-        fprintf chan "prop"
-    | TString ->
-        fprintf chan "string"
-    | TNat ->
-        fprintf chan "nat"
-    | TRArrow (ty1::tys,ty2) ->
-        let print =
-          if par then fprintf chan "@[(%a -> %a)@]"
-          else fprintf chan "@[%a -> %a@]"
-        in
-        print (aux true) ty1 (aux false) (TRArrow (tys,ty2))
-    | TRArrow ([],ty) ->
-        aux par chan ty
-    | TVar i ->
-        fprintf chan "?%d" i
-  in
-  fprintf chan "@[%a@]" (aux false) ty
-
-let type_to_string ty =
-  do_formatter (fun () -> pp_type formatter ty)
-
-let pp_type_norm unifier chan ty =
-  let ty = match unifier with
-    | None -> Typing.ty_norm ty
-    | Some unifier -> Typing.ty_norm ~unifier ty
-  in pp_type chan ty
-
-let type_to_string_norm unifier ty =
-  do_formatter (fun () -> pp_type_norm unifier formatter ty)
-
-let pp_unifier chan unifier =
-  fprintf chan "@[{";
-  Typing.iter
-    (fun i ty -> fprintf chan "@[ %d : %a ;@]" i pp_type ty)
-    unifier;
-  fprintf chan "}@]%!"
 
 (* Print a term. Ensures consistent namings, using naming hints when available.
  * Behaves consistently from one call to another unless Term.reset_namespace

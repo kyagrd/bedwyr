@@ -17,24 +17,7 @@
 (* Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA             *)
 (****************************************************************************)
 
-(** Kinds, types and terms pretty-printing. *)
-
-(** Print a kind. *)
-val pp_kind : Format.formatter -> Type.simple_kind -> unit
-val kind_to_string : Type.simple_kind ->string
-
-(** Print a type. *)
-val pp_type : Format.formatter -> Type.simple_type -> unit
-val type_to_string : Type.simple_type -> string
-
-(** Print a type in a more unique way. *)
-val pp_type_norm :
-  Typing.type_unifier option -> Format.formatter -> Type.simple_type -> unit
-val type_to_string_norm :
-  Typing.type_unifier option -> Type.simple_type -> string
-
-(** Print a unifier. *)
-val pp_unifier : Format.formatter -> Typing.type_unifier -> unit
+(** Terms pretty-printing. *)
 
 (** Convert a term.
   * Ensures consistent namings, using naming hints when available.
