@@ -1,6 +1,6 @@
 (****************************************************************************)
 (* Bedwyr prover                                                            *)
-(* Copyright (C) 2005-2011 Baelde, Tiu, Ziegler, Heath                      *)
+(* Copyright (C) 2005-2012 Baelde, Tiu, Ziegler, Heath                      *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -180,38 +180,53 @@ val close_user_file : string -> unit
 val get_user_file : string -> out_channel
 val open_user_file : string -> out_channel
 
+
+
+
+(* module Typing : Typing.S with type pos = Input.pos *)
+module Typing : Typing.S
+
+
+
+
 (** {6 Type declarations} *)
 
-exception Invalid_type_declaration of string * Typing.pos *
-            Type.simple_kind * string
-val declare_type : Typing.pos * string -> Type.simple_kind -> unit
+exception Invalid_type_declaration of string * Input.pos *
+            Typing.ki * string
+val declare_type : Input.pos * string -> Typing.ki -> unit
 
 (** {6 Constants and predicates declarations} *)
 
-exception Missing_type of string * Typing.pos
-exception Invalid_const_declaration of string * Typing.pos *
-            Type.simple_type * string
-exception Invalid_flavour of string * Typing.pos *
-            string * string
-exception Invalid_pred_declaration of string * Typing.pos *
-            Type.simple_type * string
-exception Invalid_bound_declaration of string * Typing.pos *
-            Type.simple_type * string
+(** Describe whether tabling is possible, and if so, how it is used. *)
+type flavour =
+    Normal (** only unfolding can be done *)
+  | Inductive (** tabling is possible, and loop is a failure *)
+  | CoInductive (** tabling is possible, and loop is a success *)
 
-val declare_const : Typing.pos * string -> Type.simple_type -> unit
+exception Missing_type of string * Input.pos
+exception Invalid_const_declaration of string * Input.pos *
+            Typing.ty * string
+exception Invalid_flavour of string * Input.pos *
+            string * string
+exception Invalid_pred_declaration of string * Input.pos *
+            Typing.ty * string
+exception Invalid_bound_declaration of string * Input.pos *
+            Typing.ty * string
+
+val declare_const : Input.pos * string -> Typing.ty -> unit
 
 (** Declare predicates.
   * @return the list of variables and types
   *  corresponding to those predicates *)
 val declare_preds :
-  (flavour * Typing.pos * string * Type.simple_type) list ->
-  (Term.var * Type.simple_type) list
+  (flavour * Input.pos * string * Typing.ty) list ->
+  (Term.var * Typing.ty) list
 
 (** {6 Typechecking, predicates definitions} *)
 
-exception Missing_declaration of string * Typing.pos option
-exception Inconsistent_definition of string * Typing.pos * string
-exception Missing_definition of string * Typing.pos option
+exception Missing_declaration of string * Input.pos option
+exception Inconsistent_definition of string * Input.pos * string
+exception Missing_definition of string * Input.pos option
 
 (** Translate a pre-term, with typing and position information,
   * into a term, with variable sharing.
@@ -219,19 +234,19 @@ exception Missing_definition of string * Typing.pos option
   * and no type information is kept in the terms from this point.
   * If the term isn't well typed, or has a type that isn't [prop],
   * an exception is raised and the global type unifier isn't updated. *)
-val translate_query : Typing.preterm -> Term.term
+val translate_query : Input.preterm -> Term.term
 
 (** For each [(p,h,b)] of [c],
   * [add_clauses l c] adds the clause [h := b] to a definition,
   * as long as the var of the corresponding predicate is in the list [l]. *)
 val add_clauses :
-  (Term.var * Type.simple_type) list ->
-  (Typing.pos * Typing.preterm * Typing.preterm) list ->
+  (Term.var * Typing.ty) list ->
+  (Input.pos * Input.preterm * Input.preterm) list ->
   unit
 
 (** {6 Using definitions} *)
 
-exception Missing_table of string * Typing.pos option
+exception Missing_table of string * Input.pos option
 
 (** Remove all definitions. *)
 val reset_decls : unit -> unit
@@ -242,7 +257,7 @@ val reset_decls : unit -> unit
   *)
 val get_def :
   check_arity:int ->
-  Term.term -> flavour * Term.term * Table.t option * Type.simple_type
+  Term.term -> flavour * Term.term * Table.t option * Typing.ty
 
 (** Remove a definition. *)
 val remove_def : Term.term -> unit
@@ -255,21 +270,21 @@ val print_env : unit -> unit
   * without messing with the future inference,
   * so the global type unifier is left unchanged
   * even if the term is well typed and of type [prop]. *)
-val print_type_of : Typing.preterm -> unit
+val print_type_of : Input.preterm -> unit
 
 (** Display the content of a table. *)
-val show_table : Typing.pos * Term.term -> unit
+val show_table : Input.pos * Term.term -> unit
 
 (** Remove all tables. *)
 val clear_tables : unit -> unit
 
 (** Remove a table. *)
-val clear_table : Typing.pos * Term.term -> unit
+val clear_table : Input.pos * Term.term -> unit
 
 (** Save the content of a table to a file.
   * The proved and disproved entries are stored as arguments
   * to the predicates [proved] and [disproved], respectively. *)
-val save_table : Typing.pos * Term.term -> string -> unit
+val save_table : Input.pos * Term.term -> string -> unit
 exception Interrupt
 
 (** @return [true] if a user interruption was detected since the last call to
