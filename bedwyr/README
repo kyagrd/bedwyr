@@ -63,7 +63,7 @@ The ndcore package isn't needed for bedwyr to run.
 
 For proper compilation, the following packages are required:
 - OCaml (tested with 3.10.0, 3.11.2 and 3.12.1)
-- autotools (at least autoconf) and GNU make
+- autotools (at least autoconf-2.60) and GNU make
 - bash, tar, gzip and bzip2 (needed for the installation)
 - some other standard tools
 
