@@ -105,6 +105,9 @@ module type S = sig
 
   val global_unifier : type_unifier ref
 
+  (** Clear the global unifier. *)
+  val clear : unit -> unit
+
   (** Display a type in its {i ground form}, ie a unique form with regards to the
     * unifier. *)
   val ty_norm : ?unifier:type_unifier -> ty -> ty
