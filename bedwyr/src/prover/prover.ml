@@ -47,7 +47,7 @@ module Left =
               end)
 
 let debug_max_depth = -1 (* limited but global version of #debug *)
-let freezing_point = ref (-1)
+let freezing_point = ref 0
 
 type temperature = Unfrozen | Frozen of int
 
@@ -71,12 +71,13 @@ let clear_disprovable () =
   with Stack.Empty -> ()
 
 exception Found
-let mark_not_disprovable_until d =
+let mark_not_disprovable_until ?(included=false) d =
   try
     Stack.iter (fun (_,disprovable) ->
-                  if disprovable == d
-                  then raise Found
-                  else disprovable := false)
+                  if disprovable == d then begin
+                    if included then disprovable := false ;
+                    raise Found
+                  end else disprovable := false)
       disprovable_stack
   with Found -> ()
 
@@ -220,7 +221,7 @@ let rec prove temperatures depth ~success ~failure ~level ~timestamp ~local g =
   (* 2-step procedure (table, definition)
    * to prove a predicative atom *)
   let prove_atom d args (v,temperature,temperatures) =
-    if !debug || depth<=debug_max_depth then
+    if false && !debug || depth<=debug_max_depth then
       eprintf "[%d] Proving %a...@."
         (match temperature with Frozen t -> t | _ -> !freezing_point (*"∞"*))
         Pprint.pp_term g ;
@@ -250,11 +251,26 @@ let rec prove temperatures depth ~success ~failure ~level ~timestamp ~local g =
             eprintf "Known disproved@." ;
           failure ()
       | Known (Table.Working disprovable) ->
-          if flavour = CoInductive then
-            success timestamp failure
-          else begin
-            mark_not_disprovable_until disprovable ;
-            failure ()
+          begin match temperature with
+            | Frozen t ->
+                (* Unfortunately, a theorem is not a clause
+                 * that we can add to a definition,
+                 * since it doesn't respect the flavour (e.g. the
+                 * predicate notxwins from tictactoe.def involves no loop,
+                 * and thus can be marked inductive as well as coinductive,
+                 * whereas its theorem notxwins_symetries has loops
+                 * from which we can conclude nothing).
+                 * Therefore no atom is disprovable. *)
+                mark_not_disprovable_until ~included:true disprovable ;
+                failure ()
+            | Unfrozen ->
+                if flavour = CoInductive then
+                  success timestamp failure
+                else begin
+                  (* XXX Why exactly are the intermediate atoms not disproved? *)
+                  mark_not_disprovable_until disprovable ;
+                  failure ()
+                end
           end
       | Unknown
       | Known Table.Unset ->

@@ -17,6 +17,33 @@ Define convert : list -> board -> prop by
   convert (c A (c B (c C (c D (c E (c F (c G (c H (c I nil')))))))))
           (board (row A B C) (row D E F) (row G H I)).
 
+% Useful for theorems.
+% The extended version of this theorem, with the horizontal flip,
+% the half turn and the anticlockwise turn enabled,
+% adds too much complexity for backward chaining
+% (for the third and fourth asserts).
+Define symetries : list -> list -> prop by
+  % vertical flip
+  symetries
+    (c A (c B (c C (c D (c E (c F (c G (c H (c I nil')))))))))
+    (c C (c B (c A (c F (c E (c D (c I (c H (c G nil')))))))));
+% % horizontal flip
+% symetries
+%   (c A (c B (c C (c D (c E (c F (c G (c H (c I nil')))))))))
+%   (c G (c H (c I (c D (c E (c F (c A (c B (c C nil')))))))));
+% % anticlockwise turn
+% symetries
+%   (c A (c B (c C (c D (c E (c F (c G (c H (c I nil')))))))))
+%   (c C (c F (c I (c B (c E (c H (c A (c D (c G nil')))))))));
+% % half turn
+% symetries
+%   (c A (c B (c C (c D (c E (c F (c G (c H (c I nil')))))))))
+%   (c I (c H (c G (c F (c E (c D (c C (c B (c A nil')))))))));
+  % clockwise turn
+  symetries
+    (c A (c B (c C (c D (c E (c F (c G (c H (c I nil')))))))))
+    (c G (c D (c A (c H (c E (c B (c I (c F (c C nil'))))))))).
+
 % winner Player Board
 % True if Player has won on the Board
 Define winner : cell -> list -> prop by
@@ -28,6 +55,10 @@ Define winner : cell -> list -> prop by
   winner W (c A (c B (c W (c C (c D (c W (c E (c F (c W nil')))))))));
   winner W (c W (c A (c B (c C (c W (c D (c E (c F (c W nil')))))))));
   winner W (c A (c B (c W (c C (c W (c D (c W (c E (c F nil'))))))))).
+
+Theorem winner_symetries :
+  symetries List List' /\ winner W List -> winner W List'.
+% TODO proof
 
 % nowinner Board
 % True if nobody has won on the Board yet
@@ -78,19 +109,24 @@ Define inductive owins : list -> prop by
 % True if x does not have a winning strategy for Board, assuming o plays first.
 % It would be nice to use (forall L, xwins L -> false), but xwins is level 1.
 Define coinductive notxwins : list -> prop by
-  notxwins L := tie L \/ winner o L;
+  notxwins L := tie L;
+  notxwins L := winner o L;
   notxwins L := nowinner L /\ exists K, move L o K /\
                   (tie K \/ winner o K \/ forall M, move K x M -> notxwins M).
+
+Theorem notxwins_symetries :
+  symetries List List' /\ notxwins List -> notxwins List'.
+% TODO proof
 
 % play Board
 % This predicate lets you play tic-tac-toe against the computer.
 % Given a board, the computer attempts to make a move in a winning
 % strategy. If this is not possible, it attempts to make a move in a
 % non-losing strategy. If this is not possible, it just makes some move.
-Define play_to_win : list -> list -> prop by  
+Define play_to_win : list -> list -> prop by
   play_to_win L K := winner o K \/ somemove K /\ forall M, move K x M -> owins M.
 
-Define play_to_tie : list -> list -> prop by  
+Define play_to_tie : list -> list -> prop by
   play_to_tie L K := tie K \/ forall M, move K x M -> notxwins M.
 
 Define play : board -> prop by
@@ -108,6 +144,19 @@ Define play : board -> prop by
 
 #assert (convert Board (board (row x b o) (row b b b) (row b b b)) /\
          notxwins Board).
+% Performance in byte-mode (@heath)
+% Whatever the freezing point is, backward chaining isn't beneficial.
+%   0.50 (v1.4, fp=0)
+%   0.55 (v1.4, fp=1)
+%   0.72 (v1.4, fp=2)
+%   1.03 (v1.4, fp=3)
 
 #assert (convert Board (board (row b b b) (row b b b) (row b b b)) /\
          notxwins Board).
+% Performance in byte-mode (@heath)
+% A performance gain is sensible until fp = 2, and then is compensated by
+% the additional computations.
+%   1.14 (v1.4, fp=0)
+%   1.13 (v1.4, fp=1)
+%   0.62 (v1.4, fp=2)
+%   2.17 (v1.4, fp=3)
