@@ -34,7 +34,7 @@ For a little help, type #help.
     Config.package_version
     (if Config.build="" then ""
      else " (revision " ^ Config.build ^ ")")
-    
+
 
 let usage_msg =
   Config.package_name ^ " prover.
@@ -352,6 +352,7 @@ and input_queries ?(interactive=false) lexbuf =
 
 and load_session () =
   System.reset_decls () ;
+  Input.Typing.clear () ;
   inclfiles := [] ;
   List.iter include_file !session
 

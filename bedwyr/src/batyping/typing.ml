@@ -69,6 +69,7 @@ module type S = sig
   type type_unifier
   val iter : (int -> ty -> unit) -> type_unifier -> unit
   val global_unifier : type_unifier ref
+  val clear : unit -> unit
   val ty_norm : ?unifier:type_unifier -> ty -> ty
   val pp_type_norm :
     ?unifier:type_unifier -> Format.formatter -> ty -> unit
@@ -245,6 +246,9 @@ module Make (I : INPUT) = struct
 
   let global_unifier : ty Unifier.t ref = ref Unifier.empty
 
+  let clear () =
+    global_unifier := Unifier.empty
+
   let ty_norm ?unifier ty =
     let u = match unifier with
       | None -> !global_unifier
@@ -266,7 +270,8 @@ module Make (I : INPUT) = struct
     let ty = match unifier with
       | None -> ty_norm ty
       | Some unifier -> ty_norm ~unifier ty
-    in pp_type chan ty
+    in
+    pp_type chan ty
 
   let type_to_string_norm ?unifier ty =
     let ty = match unifier with
@@ -299,7 +304,10 @@ module Make (I : INPUT) = struct
   exception Type_unification_error of ty * ty * ty Unifier.t
 
   (* TODO [unifier] needs to be GC-ed,
-   * or at least we should avoid unnecessary chained references *)
+   * or at least we should avoid unnecessary chained references,
+   * for instance by soft-normaliying (leaving only the last
+   * typaram) and removing the pure typarams from the unifier
+   *)
   let unify_constraint unifier ty1' ty2' =
     let rec aux u ty1 ty2 = match ty1,ty2 with
       | _ when ty1 = ty2 -> u
