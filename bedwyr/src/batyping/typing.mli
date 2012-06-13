@@ -19,97 +19,110 @@
 
 (** Kinds, types, checking and pretty-printing. *)
 
-(* TODO XXX dégager ça !! *)
-(** Position information during parsing. For error messages only. *)
-type pos = Lexing.position * Lexing.position
-val dummy_pos : pos
+(** Input signature of the functor {!Typing.Make}. *)
+module type INPUT = sig
+  type pos
+  (** Type of the position information during parsing. For error messages only. *)
 
-(** {6 Kinds} *)
+  val dummy_pos : pos
+  (** Dummy position for post-parsing errors. *)
+end
 
-(** Kind allowing type operators. *)
-type ki = Ki of ki list * ki_base
-and ki_base =
-  | KType
-val ki_arrow : ki list -> ki -> ki
+(** Output signature of the functor {!Typing.Make}. *)
+module type S = sig
+  type pos
+  val dummy_pos : pos
 
-(** Print a kind. *)
-val pp_kind : Format.formatter -> ki -> unit
-val kind_to_string : ki ->string
+  (** {6 Kinds} *)
 
-(** {6 Types} *)
+  (** Kind allowing type operators. *)
+  type ki = Ki of ki list * ki_base
+  and ki_base =
+    | KType     (** kind of proper types ({e *}) *)
+  val ki_arrow : ki list -> ki -> ki
 
-(** Simple types (including some predefined ones). *)
-type ty = Ty of ty list * ty_base
-and ty_base =
-  | TConst      of string       (** user-defined base type *)
-  | TProp
-  | TString
-  | TNat
-  | TVar        of int          (** type variables (for polymorphism) *)
-  | TParam      of int          (** type parameters (for type inference) *)
-val ty_arrow : ty list -> ty -> ty
-val fresh_tyvar : unit -> ty
-val fresh_typaram : unit -> ty
-val build_abstraction_types : int -> ty list * ty
+  (** Print a kind. *)
+  val pp_kind : Format.formatter -> ki -> unit
+  val kind_to_string : ki ->string
 
-(** Print a type. *)
-val pp_type : Format.formatter -> ty -> unit
-val type_to_string : ty -> string
+  (** {6 Types} *)
 
-(** {6 Kind checking} *)
+  (** Simple types (including some predefined ones). *)
+  type ty = Ty of ty list * ty_base
+  and ty_base =
+    | TConst      of string       (** user-defined base type *)
+    | TProp
+    | TString
+    | TNat
+    | TVar        of int          (** type variables (for polymorphism) *)
+    | TParam      of int          (** type parameters (for type inference) *)
+  val ty_arrow : ty list -> ty -> ty
+  val fresh_tyvar : unit -> ty
+  val fresh_typaram : unit -> ty
+  val build_abstraction_types : int -> ty list * ty
 
-(** Kind checking error. *)
-exception Type_kinding_error of pos * ki * ki
+  (** Print a type. *)
+  val pp_type : Format.formatter -> ty -> unit
+  val type_to_string : ty -> string
 
-(** [kind_check ty expected_kind atomic_kind] checks that type [ty]
-  * and all its subtypes are of the kind [expected_kind] (usually [TKind]).
-  * In the current implementation, types are simple types,
-  * so it always succeeds (except when given a non-existing type).
-  *
-  * [atomic_kind] is a function returning the kind of an atomic type,
-  * and the returned value is [(flex,hollow,propositional,higher_order)],
-  * describing whether the type is an unresolved type parameter,
-  * contains unresolved type parameters, ends with [TProp]
-  * or contains [TProp]. *)
-val kind_check :
-  ty ->
-  ki ->
-  (pos * string -> ki) ->
-  bool * bool * bool * bool
+  (** {6 Kind checking} *)
 
-(** {6 Type unifying} *)
+  (** Kind checking error. *)
+  exception Type_kinding_error of pos * ki * ki
 
-(** Type unifier type.
-  * Used as an environment for the type variables
-  * (a binding [k,v] symbolizes the substitution [(TVar k) -> v]). *)
-type type_unifier
+  (** [kind_check ty expected_kind atomic_kind] checks that type [ty]
+    * and all its subtypes are of the kind [expected_kind] (usually [TKind]).
+    * In the current implementation, types are simple types,
+    * so it always succeeds (except when given a non-existing type).
+    *
+    * [atomic_kind] is a function returning the kind of an atomic type,
+    * and the returned value is [(flex,hollow,propositional,higher_order)],
+    * describing whether the type is an unresolved type parameter,
+    * contains unresolved type parameters, ends with [TProp]
+    * or contains [TProp]. *)
+  val kind_check :
+    ty ->
+    ki ->
+    (pos * string -> ki) ->
+    bool * bool * bool * bool
 
-(** Apply a function on each substitution of a unifier. *)
-val iter : (int -> ty -> unit) -> type_unifier -> unit
+  (** {6 Type unifying} *)
 
-val global_unifier : type_unifier ref
+  (** Type unifier type.
+    * Used as an environment for the type variables
+    * (a binding [k,v] symbolizes the substitution [(TVar k) -> v]). *)
+  type type_unifier
 
-(** Display a type in its {i ground form}, ie a unique form with regards to the
-  * unifier. *)
-val ty_norm : ?unifier:type_unifier -> ty -> ty
+  (** Apply a function on each substitution of a unifier. *)
+  val iter : (int -> ty -> unit) -> type_unifier -> unit
 
-(** Print a type in a more unique way. *)
-val pp_type_norm :
-  ?unifier:type_unifier -> Format.formatter -> ty -> unit
-val type_to_string_norm :
-  ?unifier:type_unifier -> ty -> string
+  val global_unifier : type_unifier ref
 
-(** {6 Type checking} *)
+  (** Display a type in its {i ground form}, ie a unique form with regards to the
+    * unifier. *)
+  val ty_norm : ?unifier:type_unifier -> ty -> ty
 
-(** Type incompletely inferred. *)
-exception Hollow_type of string
+  (** Print a type in a more unique way. *)
+  val pp_type_norm :
+    ?unifier:type_unifier -> Format.formatter -> ty -> unit
+  val type_to_string_norm :
+    ?unifier:type_unifier -> ty -> string
 
-(** Check whether a type was completely inferred. *)
-val check_ground : string -> ty -> unit
+  (** {6 Type checking} *)
 
-(** Type unification impossible. *)
-exception Type_unification_error of ty * ty * type_unifier
+  (** Type incompletely inferred. *)
+  exception Hollow_type of string
 
-(** Refines the provided unifier accordingly to a pair of types.
-  * TODO Does this unification procedure have a name?*)
-val unify_constraint : type_unifier -> ty -> ty -> type_unifier
+  (** Check whether a type was completely inferred. *)
+  val check_ground : string -> ty -> unit
+
+  (** Type unification impossible. *)
+  exception Type_unification_error of ty * ty * type_unifier
+
+  (** Refines the provided unifier accordingly to a pair of types.
+    * TODO Does this unification procedure have a name?*)
+  val unify_constraint : type_unifier -> ty -> ty -> type_unifier
+end
+
+(** Output signature of the functor {!Typing.Make}. *)
+module Make (I : INPUT) : S with type pos = I.pos
