@@ -68,7 +68,7 @@ abs : (beta -> gamma) -> gamma
 _abstract : ?4 -> ((?5 -> ?4) -> ?4) -> ?4 -> prop
 ?= #typeof abs (x1\ abs (x2\ pr x1 x2)).
 At line 4, characters 30-31:
-Typing error: this expression has type beta but is used as 
+Typing error: this expression has type beta but is used as
 alpha. v}
       *
       * Hence type checking does not guarantee runtime type soundness
@@ -219,7 +219,6 @@ val declare_preds :
 
 exception Missing_declaration of string * Input.pos option
 exception Inconsistent_definition of string * Input.pos * string
-exception Missing_definition of string * Input.pos option
 
 (** Translate a pre-term, with typing and position information,
   * into a term, with variable sharing.
@@ -237,8 +236,16 @@ val add_clauses :
   (Input.pos * Input.preterm * Input.preterm) list ->
   unit
 
+(** {6 Theorem definitions} *)
+
+exception Inconsistent_theorem of string * Input.pos * string
+
+(** If possible, add the theorem to the tabling extended rules. *)
+val add_theorem : (Input.pos * string * Input.preterm) -> unit
+
 (** {6 Using definitions} *)
 
+exception Missing_definition of string * Input.pos option
 exception Missing_table of string * Input.pos option
 
 (** Remove all definitions. *)

@@ -153,7 +153,7 @@ let kind_check ?(expected_kind=Typing.ktype) ty =
 
 type object_declaration =
   | Constant of Typing.ty
-  | Predicate of (flavour*Term.term option*Table.t option*Typing.ty)
+  | Predicate of (flavour*Term.term option*Term.term option*Table.t option*Typing.ty)
 
 let defs : (Term.var,object_declaration) Hashtbl.t =
     Hashtbl.create 100
@@ -186,7 +186,7 @@ let create_def (new_predicates,global_flavour) (flavour,p,name,ty) =
       raise (Invalid_pred_declaration (name,p,ty,Format.sprintf "target type can only be %s" (Typing.type_to_string Typing.tprop)))
     else begin
       let t = (if flavour=Normal then None else Some (Table.create ())) in
-      Hashtbl.add defs head_var (Predicate (flavour, None, t, ty)) ;
+      Hashtbl.add defs head_var (Predicate (flavour, None, None, t, ty)) ;
       head_var,ty
     end
   in
@@ -201,7 +201,6 @@ let declare_preds decls =
 
 exception Missing_declaration of string * Typing.pos option
 exception Inconsistent_definition of string * Typing.pos * string
-exception Missing_definition of string * Typing.pos option
 
 
 let translate_term
@@ -252,7 +251,7 @@ let translate_term
     try begin
       match Hashtbl.find defs v with
         | Constant ty -> t,ty
-        | Predicate (_,_,_,ty) -> t,ty
+        | Predicate (_,_,_,_,ty) -> t,ty
     end with Not_found ->
       let ty = match v with
         | v when v = Logic.var_print ->
@@ -332,21 +331,21 @@ let translate_query pre_term =
   in
   let term,_ = translate_term pre_term free_types in term
 
-let mk_clause p head body =
+let mk_clause head body wrong_structure =
   (* Replace the params by fresh variables and
    * put the constraints on the parameters in the body:
    *     head          := body
    *     d X X (f X Y) := g X Y Z
    * --> d X U V       := (U = X) /\ ((V = (f X Y)) /\ (g X Y Z))
    * --> d X U V       := forall Z Y, (U = X) /\ ((V = (f X Y)) /\ (g X Y Z))
-   * --> d == \\\ Exists\\ (4)=(5) /\ ((3)=(f (5) (1)) /\ (g (5) (1) (2)))
+   * --> d == \\\ Exists\\ #4=#5 /\ (#3=(f #5 #1) /\ (g #5 #1 #2))
    *)
   let pred,params = match Term.observe head with
     | Term.Var ({Term.tag=Term.Constant}) -> head,[]
     | Term.App (pred,params) -> pred,params
-    | _ -> raise (Inconsistent_definition ("an unknown predicate",p,"term structure incorrect"))
+    | _ -> wrong_structure ()
   in
-  (* pred       pred
+  (* pred       d
    * params     [X;X;(f X Y)]
    * Create the prolog (new equalities added to the body) and the new set
    * of variables used as parameters.
@@ -388,7 +387,7 @@ let mk_clause p head body =
     Format.eprintf "%a := %a@."
       Pprint.pp_term (Term.app pred (List.rev new_params))
       Pprint.pp_term body ;
-  (* body       Exists\\ U=X /\ (V=(f X (1)) /\ (g X (1) (2)))
+  (* body       Exists\\ U=X /\ (V=(f X #1) /\ (g X #1 #2))
    * Finally, abstract over parameters *)
   let arity,body =
     if new_params = [] then 0,body else
@@ -400,10 +399,24 @@ let mk_clause p head body =
         | Term.Lam (n,b) -> n,b
         | _ -> assert false
   in
-  (* pred       pred
+  (* pred       d
    * arity      3
-   * body       Exists\\ (4)=(5) /\ ((3)=(f (5) (1)) /\ (g (5) (1) (2))) *)
+   * body       Exists\\ #4=#5 /\ (#3=(f #5 #1) /\ (g #5 #1 #2)) *)
   (pred, arity, body)
+
+let mk_def_clause p head body =
+  let wrong_structure () =
+    raise (Inconsistent_definition
+             ("some predicate",p,"head term structure incorrect"))
+  in
+  mk_clause head body wrong_structure
+
+let get_pred head_var fail_const fail_missing =
+  try begin
+    match Hashtbl.find defs head_var with
+      | Constant _ -> fail_const ()
+      | Predicate x -> x
+  end with Not_found -> fail_missing ()
 
 let add_clause new_predicates (p,pre_head,pre_body) =
   let free_types : (Term.var,Typing.ty) Hashtbl.t =
@@ -413,18 +426,14 @@ let add_clause new_predicates (p,pre_head,pre_body) =
   let head,_ = translate_term ~free_args pre_head free_types in
   let body,_ = translate_term ~free_args pre_body free_types in
   let head,arity,body =
-    mk_clause p head body
+    mk_def_clause p head body
   in
   let head_var = Term.get_var head in
   let name = Term.get_name head in
-  let f,b,t,ty =
-    try begin
-      match Hashtbl.find defs head_var with
-        | Constant _ ->
-            raise (Inconsistent_definition (name,p,"object declared as a constant"))
-        | Predicate x -> x
-    end with Not_found ->
-      raise (Inconsistent_definition (name,p,"predicate not declared"))
+  let f,b,th,t,ty =
+    get_pred head_var
+      (fun () -> raise (Inconsistent_definition (name,p,"object declared as a constant")))
+      (fun () -> raise (Inconsistent_definition (name,p,"predicate not declared")))
   in
   if List.exists (fun (v,_) -> v == head_var) new_predicates then begin
     let b =
@@ -436,19 +445,65 @@ let add_clause new_predicates (p,pre_head,pre_body) =
                   Term.lambda a (Term.op_or b body)
               | _ when arity=0 ->
                   Term.op_or b body
-              | _ -> raise (Inconsistent_definition (name,p,Format.sprintf "predicate is not of arity %d" arity))
+              | _ -> assert false
             end
     in
     let b = Norm.hnorm b in
-    Hashtbl.replace defs head_var (Predicate (f,Some b,t,ty)) ;
+    Hashtbl.replace defs head_var (Predicate (f,Some b,th,t,ty)) ;
   end else raise (Inconsistent_definition (name,p,"predicate not declared in this block"))
 
 let add_clauses new_predicates clauses =
   List.iter (add_clause new_predicates) clauses
 
 
+(* theorem definitions *)
+
+exception Inconsistent_theorem of string * Input.pos * string
+
+
+let mk_theorem (p,n) theorem =
+  (* Check whether the theorem has the right structure. *)
+  let body,head = match Term.observe theorem with
+    | Term.Arrow (body,head) -> body,head
+    | _ -> raise (Inconsistent_theorem (n,p,"formula structure incorrect"))
+  in
+  let wrong_structure () =
+    raise (Inconsistent_theorem (n,p,"head term structure incorrect"))
+  in
+  mk_clause head body wrong_structure
+
+let add_theorem (p,n,pre_theorem) =
+  let free_types : (Term.var,Typing.ty) Hashtbl.t =
+    Hashtbl.create 10
+  in
+  let theorem,_ = translate_term pre_theorem free_types in
+  let head,arity,body = mk_theorem (p,n) theorem in
+  let head_var = Term.get_var head in
+  let name = Term.get_name head in
+  let f,b,th,t,ty =
+    get_pred head_var
+      (fun () -> raise (Inconsistent_definition (name,p,"object declared as a constant")))
+      (fun () -> raise (Inconsistent_definition (name,p,"predicate not declared")))
+  in
+  let th =
+    match th with
+      | None -> Term.lambda arity body
+      | Some th ->
+          begin match Term.observe th with
+            | Term.Lam (a,b) when arity=a ->
+                Term.lambda a (Term.op_or th body)
+            | _ when arity=0 ->
+                Term.op_or th body
+            | _ -> assert false
+          end
+  in
+  let th = Norm.hnorm th in
+  Hashtbl.replace defs head_var (Predicate (f,b,Some th,t,ty))
+
+
 (* Using definitions *)
 
+exception Missing_definition of string * Typing.pos option
 exception Missing_table of string * Typing.pos option
 
 
@@ -456,21 +511,18 @@ let reset_decls () =
   Hashtbl.clear defs ;
   Hashtbl.clear type_kinds
 
-let get_pred ?pos head_tm failure =
+let get_name_pred ?pos head_tm failure =
   let head_var = Term.get_var head_tm in
   let name = Term.get_name head_tm in
-  try begin
-    match Hashtbl.find defs head_var with
-      | Constant _ ->
-            failure () ;
-          raise (Missing_definition (name,pos))
-      | Predicate x -> name,x
-  end with Not_found ->
-    failure () ;
-    raise (Missing_declaration (name,pos))
+  let x =
+    get_pred head_var
+      (fun () -> failure () ; raise (Missing_definition (name,pos)))
+      (fun () -> failure () ; raise (Missing_declaration (name,pos)))
+  in
+  name,x
 
 let get_def ~check_arity head_tm =
-  let _,(f,b,t,ty) = get_pred head_tm ignore in
+  let _,(f,b,_,t,ty) = get_name_pred head_tm ignore in
   match b with
     (* XXX in the case of an empty definition (b = None),
      * we can't infer the arity of the predicate,
@@ -500,7 +552,7 @@ let print_env () =
                    match v with
                      | Constant ty ->
                          (Term.get_var_name k,ty)::lc,lp
-                     | Predicate (f,_,_,ty) ->
+                     | Predicate (f,_,_,_,ty) ->
                          lc,(Term.get_var_name k,f,ty)::lp)
                 defs ([],[])
   in
@@ -554,7 +606,7 @@ let print_type_of pre_term =
   (*Pprint.pp_type Format.std_formatter ty*)
 
 let get_table p head_tm success failure =
-  let name,(_,_,table,ty) = get_pred ~pos:p head_tm failure in
+  let name,(_,_,_,table,ty) = get_name_pred ~pos:p head_tm failure in
   match table with
     | Some table -> success table ty
     | None -> failure () ; raise (Missing_table (name,Some p))
@@ -565,7 +617,7 @@ let show_table (p,head_tm) =
 let clear_tables () =
   Hashtbl.iter
     (fun _ v -> match v with
-       | Predicate (_,_,Some t,_) -> Table.reset t
+       | Predicate (_,_,_,Some t,_) -> Table.reset t
        | _ -> ())
     defs
 

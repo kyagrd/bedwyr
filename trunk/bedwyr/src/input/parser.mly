@@ -31,8 +31,9 @@
 %token KIND TYPE COMMA RARROW CLAUSEEQ DOT
 %token IMP BSLASH LPAREN RPAREN CONS
 %token KKIND TTYPE DEFINE INDUCTIVE COINDUCTIVE COLON BY DEFEQ SEMICOLON
+%token THEOREM
 %token PROP STRING NAT EQ AND OR FORALL EXISTS NABLA TRUE FALSE
-%token CLOSE THEOREM QED QUERY IMPORT SPECIFICATION SSPLIT
+%token CLOSE QED QUERY IMPORT SPECIFICATION SSPLIT
 %token SET SHOW QUIT
 %token IND COIND INTROS CASE SEARCH APPLY BACKCHAIN UNFOLD ASSERT_T
 %token SPLIT SPLITSTAR LEFT RIGHT PERMUTE
@@ -88,8 +89,8 @@ top_command:
   | TTYPE const_clist ty DOT            { Input.TType ($2,$3) }
   | DEFINE decls BY defs DOT            { Input.Def ($2,$4) }
   | DEFINE decls DOT                    { Input.Def ($2,[]) }
+  | THEOREM theorem DOT                 { Input.Theorem $2 }
   | CLOSE                               { failwith "Abella command only" }
-  | THEOREM                             { failwith "Abella command only" }
   | QED                                 { failwith "Abella command only" }
   | QUERY                               { failwith "Abella command only" }
   | IMPORT                              { failwith "Abella command only" }
@@ -166,6 +167,9 @@ defs:
 def:
   | formula                             { pos 0,$1,Input.pre_true (pos 0) }
   | formula DEFEQ formula               { pos 0,$1,$3 }
+
+theorem:
+  | lower_id COLON formula              { pos 1,$1,$3 }
 
 term_list:
   | term_atom                           { $1,[] }

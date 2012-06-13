@@ -154,6 +154,7 @@ let rec process ?(interactive=false) parse lexbuf =
             t
             reset
       | Input.Command c -> command c reset
+      | Input.Theorem thm -> System.add_theorem thm
     with
       (* I/O *)
       | End_of_file -> raise End_of_file
@@ -218,7 +219,7 @@ let rec process ?(interactive=false) parse lexbuf =
             s ;
           exit 1
 
-      (* definitions *)
+      (* definitions and theorems *)
       | System.Missing_declaration (n,p) ->
           Format.printf
             "%sUndeclared object %s.@."
@@ -277,6 +278,13 @@ let rec process ?(interactive=false) parse lexbuf =
       | System.Inconsistent_definition (n,p,s) ->
           Format.printf
             "%sInconsistent extension of definition for %s: %s.@."
+            (position_range p)
+            n
+            s ;
+          exit 1
+      | System.Inconsistent_theorem (n,p,s) ->
+          Format.printf
+            "%sInconsistent definition for the theorem %s: %s.@."
             (position_range p)
             n
             s ;

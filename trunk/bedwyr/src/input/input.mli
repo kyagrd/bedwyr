@@ -74,11 +74,11 @@ val free_args : preterm -> string list
 
 (** {6 Input AST ({e .def} file or REPL)} *)
 
-(** Describe whether tabling is possible, and if so, how it is used. *)
+(** Flavouring keyword, prefixing a predicate declaration. *)
 type flavour =
-    Normal (** only unfolding can be done *)
-  | Inductive (** tabling is possible, and loop is a failure *)
-  | CoInductive (** tabling is possible, and loop is a success *)
+    Normal (** no keyword *)
+  | Inductive (** {b inductive} *)
+  | CoInductive (** {b coinductive} *)
 
 (** "Hash-command" (meta-commands, mostly designed for the REPL
   * but also available in input files). *)
@@ -133,6 +133,8 @@ type input =
   (** query (interactive mode) *)
   | Command of command
   (** meta-command (any mode) *)
+  | Theorem of (pos * string * preterm)
+  (** theorem (imported from Abella) *)
 
 (** {6 Pre-terms' type checking} *)
 
