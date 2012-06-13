@@ -80,7 +80,8 @@ let _ =
       "Execute query."
     ]
     (fun f -> session := f::!session)
-    usage_msg
+    usage_msg ;
+  session := List.rev (!session)
 
 let position (start,curr) =
   let line1 = start.Lexing.pos_lnum in
@@ -349,11 +350,10 @@ and input_defs lexbuf =
 and input_queries ?(interactive=false) lexbuf =
   process ~interactive Parser.input_query lexbuf
 
-
 and load_session () =
   System.reset_decls () ;
   inclfiles := [] ;
-  List.iter input_from_file !session
+  List.iter include_file !session
 
 and toggle_flag flag value =
   flag :=
@@ -376,11 +376,9 @@ and command c reset =
 
     (* Session management *)
     | Input.Include l -> List.iter include_file l
-    | Input.Reset -> inclfiles := [] ; session := [] ; load_session ()
+    | Input.Reset -> session := [] ; load_session ()
     | Input.Reload -> load_session ()
-    | Input.Session l ->
-        session := l ;
-        load_session ()
+    | Input.Session l -> session := l ; load_session ()
 
     (* Turn debugging on/off. *)
     | Input.Debug value -> toggle_flag System.debug value
