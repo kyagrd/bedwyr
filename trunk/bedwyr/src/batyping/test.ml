@@ -1,4 +1,11 @@
 open OUnit
+
+module I : Typing.INPUT = struct
+  type pos = unit * unit
+  let dummy_pos = (),()
+end
+module Typing = Typing.Make (I)
+
 open Typing
 
 (*let eq a b = Term.eq (Norm.deep_norm a) (Norm.deep_norm b)
@@ -25,6 +32,8 @@ type uterm =
   | ULam of pos * string * ty * uterm
   | UApp of pos * uterm * uterm
  *)
+
+(* TODO add occurs-check, self-application, Andrew's tests (from Abella), etc *)
 
 let test =
   "BaTyping" >:::
