@@ -1,0 +1,6 @@
+<src>: include
+<src/ndcore> or <src/oUnit>: include
+
+<**/test.{native,byte}>: use_unix,use_oUnit
+<src/ndcore/test.{native,byte}>: use_ndcore
+<src/bedwyr.{native,byte}>: use_unix,use_ndcore

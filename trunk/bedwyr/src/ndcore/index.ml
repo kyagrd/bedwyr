@@ -42,8 +42,8 @@ let dummy_var = Term.get_var (Term.fresh ~ts:(-1) ~lts:(-1) Term.Constant)
 
 exception Found of int
 
-(* Option to turn on/off equivariant tabling *)
-let eqvt_tbl = ref true
+(* Option to turn on/off equivariant indexing. *)
+let eqvt_index = ref true
 
 let get_constraints bindings =
   let n = List.length bindings in
@@ -430,7 +430,7 @@ let update ~allow_eigenvar index terms data =
         else
           update_index bindings terms (node::index') index
   in
-  if !eqvt_tbl then
+  if !eqvt_index then
     update_index [] (nb_rename terms) [] index
   else
     update_index [] (List.map Norm.hnorm terms) [] index
@@ -499,7 +499,7 @@ let rec find bindings index terms =
           find bindings index terms
 
 let find index terms =
-  let ts = if !eqvt_tbl then (nb_rename terms) else (List.map Norm.hnorm terms) in
+  let ts = if !eqvt_index then (nb_rename terms) else (List.map Norm.hnorm terms) in
   try Some (find [] index ts) with _ -> None
 
 (* == FOLD ================================================================== *)
@@ -695,3 +695,6 @@ let iter index f =
   and iter_index mz = List.iter (iter_node mz) in
 
   iter_index MZ.empty index
+
+(* == PRINT ================================================================== *)
+

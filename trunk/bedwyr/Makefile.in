@@ -20,11 +20,16 @@ PACKAGE_NAME = $(PACKAGE_TARNAME)
 else
 PACKAGE_NAME = $(TARGET)
 endif
+LIB_SUFFIXES	= @LIB_SUFFIXES@
+BIN_SUFFIXES	= @BIN_SUFFIXES@
+TEST_SUFFIX	= @TEST_SUFFIX@
 
-TAR	= @TAR@ -p
-FIND	= @FIND@
-BZIP2	= bzip2 -9
-GZIP	= gzip -9
+SHELL		= @BASH@
+TAR		= @TAR@ -p
+FIND		= @FIND@
+GZIP		= @GZIP@ -4
+BZIP2		= @BZIP2@ -9
+OCAMLBUILD	= @OCAMLBUILD@ -classic-display
 
 prefix		= @prefix@
 exec_prefix	= @exec_prefix@
@@ -35,9 +40,9 @@ datarootdir	= @datarootdir@
 #datadir	= @datadir@
 #sysconfdir	= @sysconfdir@
 #sharedstatedir	= @sharedstatedir@
-#localstatedir 	= @localstatedir@
+#localstatedir	= @localstatedir@
 #includedir	= @includedir@
-#oldincludedir 	= @oldincludedir@
+#oldincludedir	= @oldincludedir@
 docdir		= $(patsubst %$(PACKAGE_TARNAME),%$(PACKAGE_NAME),@docdir@)
 #infodir	= @infodir@
 htmldir		= @htmldir@
@@ -57,9 +62,9 @@ DATAROOTDIR	= $(DESTDIR)$(datarootdir)
 #DATADIR	= $(DESTDIR)$(datadir)
 #SYSCONFDIR	= $(DESTDIR)$(sysconfdir)
 #SHAREDSTATEDIR	= $(DESTDIR)$(sharedstatedir)
-#LOCALSTATEDIR 	= $(DESTDIR)$(localstatedir)
+#LOCALSTATEDIR	= $(DESTDIR)$(localstatedir)
 #INCLUDEDIR	= $(DESTDIR)$(includedir)
-#OLDINCLUDEDIR 	= $(DESTDIR)$(oldincludedir)
+#OLDINCLUDEDIR	= $(DESTDIR)$(oldincludedir)
 DOCDIR		= $(DESTDIR)$(docdir)
 #INFODIR	= $(DESTDIR)$(infodir)
 HTMLDIR		= $(DESTDIR)$(htmldir)
@@ -70,7 +75,7 @@ LIBDIR		= $(DESTDIR)$(libdir)/ocaml/slimmer
 #LOCALEDIR	= $(DESTDIR)$(localedir)
 MANDIR		= $(DESTDIR)$(mandir)
 
-VIMFILES 	= $(DATAROOTDIR)/vim/vimfiles
+VIMFILES	= $(DATAROOTDIR)/vim/vimfiles
 
 INSTALL     = @INSTALL@
 INSTALL_OPTS=-v
@@ -111,31 +116,38 @@ HTML_FILES	= $(MANUAL:%=doc/%).html
 ARCH_FILES	= configure.ac Makefile.in install-sh \
 		  $(DOCS) $(CONTRIB) $(EXAMPLES)
 
-ndcore = src/ndcore/ndcore.$(cma)
-bedwyr = src/bedwyr
+ndcore_prefix	= src/ndcore/ndcore
+bedwyr_prefix	= src/bedwyr
+
+ndcore_libs	= $(LIB_SUFFIXES:%=$(ndcore_prefix).%)
+bedwyr_bins	= $(BIN_SUFFIXES:%=$(bedwyr_prefix).%)
 
 # BUILDING
 
-.PHONY: $(ndcore) $(bedwyr)
+#.PHONY: $(ndcore_libs) $(bedwyr_bins)
 
-all: Makefile
+build: src/config.ml src/ndcore/Makefile src/Makefile doc/Makefile Makefile src/ndcore/META
 ifeq ($(TARGET),ndcore)
-	$(MAKE) $(ndcore)
+	$(MAKE) $(ndcore_libs)
 else ifeq ($(TARGET),bedwyr)
-	$(MAKE) $(bedwyr)
-else ifeq ($(TARGET),)
-	$(MAKE) $(ndcore)
-	$(MAKE) $(bedwyr)
+	$(MAKE) $(bedwyr_bins)
+#else ifeq ($(TARGET),)
+#	$(MAKE) $(ndcore_libs)
+#	$(MAKE) $(bedwyr_bins)
 endif
 
-$(bedwyr): src/Makefile
-	$(MAKE) -C src
+$(ndcore_libs): src/ndcore/Makefile
 
-$(ndcore) $(ndcore:$(cma)=a): src/ndcore/Makefile
-	$(MAKE) -C src/ndcore
+$(bedwyr_bins): src/Makefile
 
-%: configure %.in
-	./$<
+%.byte %.native %.cma %.cmxa %.a:
+	@$(OCAMLBUILD) $@
+
+%: config.status %.in
+	@./$< $@
+
+config.status: configure
+	./$< --no-create --disable-doc --disable-nativecode
 
 configure: configure.ac
 	autoconf
@@ -145,24 +157,27 @@ configure: configure.ac
 .PHONY: test test_ndcore test_bedwyr
 
 test:
-ifeq ($(TARGET),)
-	$(MAKE) test_ndcore
-	$(MAKE) test_bedwyr
-else
+#ifeq ($(TARGET),)
+#	$(MAKE) test_ndcore
+#	$(MAKE) test_bedwyr
+#else
 	$(MAKE) test_$(TARGET)
-endif
+#endif
 
-test_ndcore: $(ndcore)
+test_ndcore: src/ndcore/test.$(TEST_SUFFIX)
+
+src/ndcore/test.$(TEST_SUFFIX):
+	@$(OCAMLBUILD) $@
 	@echo Testing the core LLambda library
-	$(MAKE) -C src/ndcore test
+	@_build/$@
 
-test_bedwyr: $(bedwyr)
-	@echo Testing bedwyr on examples
-	@bash -c 'time for i in $(XPL) ; do \
+test_bedwyr: $(bedwyr_prefix).$(TEST_SUFFIX)
+	@echo Testing bedwyr on examples $^ //
+	@time for i in $(XPL) ; do \
 	  echo "==== Running tests in $$i ====" ; \
-	  if $< -t -I examples/$$i ; then echo "All done." ; \
+	  if _build/$< -t -I examples/$$i ; then echo "All done." ; \
 	  else echo "Error." ; break ; fi ; \
-	  done'
+	  done
 
 # DOC
 
@@ -170,8 +185,8 @@ test_bedwyr: $(bedwyr)
 
 ifeq (@OCAMLDOC@,)
 doc:
-	@echo "Documentation generation disabled,"
-	@echo "run \"./configure --enable-doc\" to enable it."
+	@echo 'Documentation generation disabled,'
+	@echo 'run "./configure --enable-doc" to enable it.'
 else
   ifeq ($(TARGET),)
 doc: ndcore_doc bedwyr_doc
@@ -206,10 +221,10 @@ install_ndcore: install_ndcore_doc
 install_bedwyr: install_bedwyr_doc
 endif
 
-install_ndcore: $(ndcore) $(NDCORE_DOCS:=.bz2)
+install_ndcore: $(ndcore_lib) $(NDCORE_DOCS:=.bz2)
 	@$(INSTALL_DIR) $(LIBDIR)
-	$(INSTALL_DOC) $(ndcore) $(wildcard $(ndcore:$(cma)=a)) $(LIBDIR)
-	$(TAR) -xf $(ndcore:$(cma)=cmi.tar) -C $(LIBDIR)
+	$(INSTALL_DOC) $(ndcore_lib) $(wildcard $(ndcore_lib:$(cma)=a)) $(LIBDIR)
+	$(TAR) -xf $(ndcore_lib:$(cma)=cmi.tar) -C $(LIBDIR)
 	@$(INSTALL_DIR) $(DOCDIR)
 ifneq ($(NDCORE_DOCS:=.bz2),)
 	@$(INSTALL_DOC) $(NDCORE_DOCS:=.bz2) $(DOCDIR)
@@ -221,9 +236,9 @@ install_ndcore_doc: ndcore_doc $(NDCORE_DUMP:=.bz2)
 	  $(HTMLDIR)/ref
 	@$(INSTALL_DOC) $(NDCORE_DUMP:=.bz2) $(DOCDIR)
 
-install_bedwyr: $(bedwyr) $(BEDWYR_DOCS:=.bz2)
+install_bedwyr: $(bedwyr_bin) $(BEDWYR_DOCS:=.bz2)
 	@$(INSTALL_DIR) $(BINDIR)
-	@$(INSTALL_BIN) $(bedwyr) $(BINDIR)
+	@$(INSTALL_BIN) $(bedwyr_bin) $(BINDIR)
 	@$(INSTALL_DIR) $(DOCDIR)
 ifneq ($(BEDWYR_DOCS:=.bz2),)
 	@$(INSTALL_DOC) $(BEDWYR_DOCS:=.bz2) $(DOCDIR)
@@ -282,13 +297,16 @@ $(DIST_NAME).tar: src/ndcore/ndcore.tar src/bedwyr.tar doc/manual.tar dist.tar
 help:
 	@echo ' help           this message'
 	@echo
-	@echo ' all (default)  compiles the library/program wrt $$TARGET'
-	@echo ' test           runs a test on ndcore, then on bedwyr'
-	@echo ' doc            compiles the doc from the sources wrt $$TARGET'
-	@echo '                (requires the compilation of the lib/program)'
+	@echo '   $$TARGET can be "ndcore" (for the library only), "bedwyr"'
+	@echo '   (for the programm only, requires ndcore to be previously'
+	@echo '   compiled or installed), or "" (default, for both)'
 	@echo
-	@echo ' install        install the files wrt to the command-line'
-	@echo '                variables $$DESTDIR and $$TARGET and the'
+	@echo ' build (default) compiles $$TARGET'
+	@echo ' test           runs tests on $$TARGET'
+	@echo ' doc            compiles the doc of $$TARGET'
+	@echo '                (requires <build> for ocamlbuild)'
+	@echo ' install        install the files of $$TARGET wrt to the'
+	@echo '                command-line variable $$DESTDIR and and the'
 	@echo '                parameters given to ./configure'
 	@echo
 	@echo ' dist           build $(DIST_NAME).tar.bz2'
@@ -297,23 +315,20 @@ help:
 	@echo ' help           display this message'
 	@echo ' distclean      remove almost all generated files'
 	@echo ' clean          remove compiled files'
-	@echo
-	@echo ' $$TARGET can be "ndcore" (for the library only), "bedwyr"'
-	@echo ' (for the programm only, requires ndcore to be previously'
-	@echo ' compiled or installed), or "" (default, compiles both)'
 
 distclean: clean
-	find . -name '*~' -exec rm \{\} \;
-	rm -f *.bz2 *.gz *.tar
-	rm -f config.status config.log
-	rm -f src/config.ml
-	rm -f configure
-	rm -f Makefile
-	rm -f src/Makefile
-	rm -f src/ndcore/Makefile
-	rm -rf autom4te.cache
+	@find . -name '*~' -exec rm -vf \{\} \;
+	@rm -vf *.bz2 *.gz *.tar
+	@rm -vf config.status config.log
+	@rm -vf src/config.ml
+	@rm -vf configure
+	@rm -vf Makefile
+	@rm -vf src/Makefile
+	@rm -vf src/ndcore/Makefile
+	@rm -rvf autom4te.cache
 
 clean:
+	$(OCAMLBUILD) -clean
 	$(MAKE) -C src clean
 	$(MAKE) -C src/ndcore clean
 	$(MAKE) -C doc clean
