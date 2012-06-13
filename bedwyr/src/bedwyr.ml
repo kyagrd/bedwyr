@@ -131,30 +131,28 @@ let rec process ?(interactive=false) parse lexbuf =
     in
     if interactive then Format.printf "?= %!" ;
     begin try match (parse Lexer.token lexbuf) with
-      | System.KKind (l, k) ->
+      | Input.KKind (l, k) ->
           List.iter
             (fun s -> System.declare_type s k)
             l
-      | System.TType (l, t) ->
+      | Input.TType (l, t) ->
           List.iter
             (fun s -> System.declare_const s t)
             l
-      | System.Def (decls,defs) ->
+      | Input.Def (decls,defs) ->
           let new_predicates = System.declare_preds decls in
           System.add_clauses new_predicates defs ;
           List.iter
-            (fun (v,ty) ->
-               if not (Typing.check_ground ty)
-               then raise (Typing.Hollow_type v))
+            (fun (v,ty) -> Input.Typing.check_ground (Term.get_var_name v) ty)
             new_predicates
-      | System.Query t ->
+      | Input.Query t ->
           do_cleanup
             (fun pre_query ->
                let query = System.translate_query pre_query in
                Prover.toplevel_prove query)
             t
             reset
-      | System.Command c -> command c reset
+      | Input.Command c -> command c reset
     with
       (* I/O *)
       | End_of_file -> raise End_of_file
@@ -191,7 +189,7 @@ let rec process ?(interactive=false) parse lexbuf =
             "%sCannot declare type %s of kind %a: %s.@."
             (position_range p)
             n
-            Pprint.pp_kind ki
+            Input.Typing.pp_kind ki
             s ;
           exit 1
       | System.Invalid_const_declaration (n,p,ty,s) ->
@@ -199,7 +197,7 @@ let rec process ?(interactive=false) parse lexbuf =
             "%sCannot declare constant %s of type %a: %s.@."
             (position_range p)
             n
-            Pprint.pp_type ty
+            Input.Typing.pp_type ty
             s ;
           exit 1
       | System.Invalid_flavour (n,p,gf,f) ->
@@ -215,7 +213,7 @@ let rec process ?(interactive=false) parse lexbuf =
             "%sCannot declare predicate %s of type %a: %s.@."
             (position_range p)
             n
-            Pprint.pp_type ty
+            Input.Typing.pp_type ty
             s ;
           exit 1
 
@@ -244,21 +242,21 @@ let rec process ?(interactive=false) parse lexbuf =
                | None -> position_lex lexbuf)
             n ;
           interactive_or_exit ()
-      | Typing.Type_kinding_error (_,ki1,ki2) ->
+      | Input.Typing.Type_kinding_error (_,ki1,ki2) ->
           Format.printf
             "%sKinding error: this type has kind %a but is used as %a.@."
             (position_lex lexbuf)
-            Pprint.pp_kind ki2
-            Pprint.pp_kind ki1 ;
+            Input.Typing.pp_kind ki2
+            Input.Typing.pp_kind ki1 ;
           interactive_or_exit ()
-      | Typing.Term_typing_error (p,ty1,ty2,unifier) ->
+      | Input.Term_typing_error (p,ty1,ty2,unifier) ->
           Format.printf
             "%sTyping error: this expression has type %a but is used as %a.@."
             (position_range p)
-            (Pprint.pp_type_norm (Some unifier)) ty2
-            (Pprint.pp_type_norm (Some unifier)) ty1 ;
+            (Input.Typing.pp_type_norm ~unifier) ty2
+            (Input.Typing.pp_type_norm ~unifier) ty1 ;
           interactive_or_exit ()
-      | Typing.Var_typing_error (n,p,ty) ->
+      | Input.Var_typing_error (n,p,ty) ->
           Format.printf
             "%sTyping error: cannot "
             (position_range p) ;
@@ -267,13 +265,13 @@ let rec process ?(interactive=false) parse lexbuf =
                            "give free variable %s the type %a.@." n
              | None -> Format.printf
                          "quantify over type %a.@.")
-            Pprint.pp_type ty ;
+            Input.Typing.pp_type ty ;
           interactive_or_exit ()
-      | Typing.Hollow_type v ->
+      | Input.Typing.Hollow_type n ->
           Format.printf
             "%sTyping error: type incompletely inferred for %s."
             (position_lex lexbuf)
-            (Term.get_var_name v) ;
+            n ;
           interactive_or_exit ()
       | System.Inconsistent_definition (n,p,s) ->
           Format.printf
@@ -373,36 +371,36 @@ and include_file fname =
 
 and command c reset =
   let aux = function
-    | System.Exit -> System.close_all_files (); exit 0
-    | System.Help -> Format.printf "%s" help_msg
+    | Input.Exit -> System.close_all_files (); exit 0
+    | Input.Help -> Format.printf "%s" help_msg
 
     (* Session management *)
-    | System.Include l -> List.iter include_file l
-    | System.Reset -> inclfiles := [] ; session := [] ; load_session ()
-    | System.Reload -> load_session ()
-    | System.Session l ->
+    | Input.Include l -> List.iter include_file l
+    | Input.Reset -> inclfiles := [] ; session := [] ; load_session ()
+    | Input.Reload -> load_session ()
+    | Input.Session l ->
         session := l ;
         load_session ()
 
     (* Turn debugging on/off. *)
-    | System.Debug value -> toggle_flag System.debug value
+    | Input.Debug value -> toggle_flag System.debug value
 
     (* Turn timing on/off. *)
-    | System.Time value -> toggle_flag System.time value
+    | Input.Time value -> toggle_flag System.time value
 
     (* Tabling-related commands *)
-    | System.Equivariant value -> toggle_flag Index.eqvt_index value
-    | System.Env -> System.print_env ()
-    | System.Type_of pre_term -> System.print_type_of pre_term
-    | System.Show_table (p,name) -> System.show_table (p,Term.atom ~tag:Term.Constant name)
-    | System.Clear_tables -> System.clear_tables ()
-    | System.Clear_table (p,name) -> System.clear_table (p,Term.atom ~tag:Term.Constant name)
+    | Input.Equivariant value -> toggle_flag Index.eqvt_index value
+    | Input.Env -> System.print_env ()
+    | Input.Type_of pre_term -> System.print_type_of pre_term
+    | Input.Show_table (p,name) -> System.show_table (p,Term.atom ~tag:Term.Constant name)
+    | Input.Clear_tables -> System.clear_tables ()
+    | Input.Clear_table (p,name) -> System.clear_table (p,Term.atom ~tag:Term.Constant name)
     (* save the content of a table to a file. An exception is thrown if
      * file already exists. *)
-    | System.Save_table (p,name,file) -> System.save_table (p,Term.atom ~tag:Term.Constant name) file
+    | Input.Save_table (p,name,file) -> System.save_table (p,Term.atom ~tag:Term.Constant name) file
 
     (* Testing commands *)
-    | System.Assert pre_query ->
+    | Input.Assert pre_query ->
         if !test then begin
           let query = System.translate_query pre_query in
           Format.eprintf "@[<hv 2>Checking that@ %a@,...@]@."
@@ -410,7 +408,7 @@ and command c reset =
           Prover.prove ~level:Prover.One ~local:0 ~timestamp:0 query
             ~success:(fun _ _ -> ()) ~failure:(fun () -> raise Assertion_failed)
         end
-    | System.Assert_not pre_query ->
+    | Input.Assert_not pre_query ->
         if !test then begin
           let query = System.translate_query pre_query in
           Format.eprintf "@[<hv 2>Checking that@ %a@ is false...@]@."
@@ -418,7 +416,7 @@ and command c reset =
           Prover.prove ~level:Prover.One ~local:0 ~timestamp:0 query
             ~success:(fun _ _ -> raise Assertion_failed) ~failure:ignore
         end
-    | System.Assert_raise pre_query ->
+    | Input.Assert_raise pre_query ->
         if !test then begin
           let query = System.translate_query pre_query in
           Format.eprintf "@[<hv 2>Checking that@ %a@ causes an error...@]@."
@@ -433,7 +431,7 @@ and command c reset =
         end
   in
   let reset = match c with
-    | System.Include _ | System.Reset | System.Reload | System.Session _ -> ignore
+    | Input.Include _ | Input.Reset | Input.Reload | Input.Session _ -> ignore
     | _ -> reset
   in
   do_cleanup aux c reset

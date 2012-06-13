@@ -180,14 +180,7 @@ val close_user_file : string -> unit
 val get_user_file : string -> out_channel
 val open_user_file : string -> out_channel
 
-
-
-
-(* module Typing : Typing.S with type pos = Input.pos *)
-module Typing : Typing.S
-
-
-
+open Input
 
 (** {6 Type declarations} *)
 
@@ -219,7 +212,7 @@ val declare_const : Input.pos * string -> Typing.ty -> unit
   * @return the list of variables and types
   *  corresponding to those predicates *)
 val declare_preds :
-  (flavour * Input.pos * string * Typing.ty) list ->
+  (Input.flavour * Input.pos * string * Typing.ty) list ->
   (Term.var * Typing.ty) list
 
 (** {6 Typechecking, predicates definitions} *)
