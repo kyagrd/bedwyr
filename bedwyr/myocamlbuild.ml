@@ -21,8 +21,13 @@ let _ =
         flag ["ocaml" ; "native" ; "compile"] (A "-nodynlink") ;
         (* flag ["ocaml" ; "link" ; "program"] (A "-linkpkg") ; *)
 
-        ocaml_lib "src/ndcore/ndcore" ;
+        (* add "~extern:true" when using external libs *)
         ocaml_lib "src/oUnit/oUnit" ;
+
+        ocaml_lib "src/ndcore/ndcore" ;
+        ocaml_lib "src/batyping/batyping" ;
+        ocaml_lib "src/input/input" ;
+        ocaml_lib "src/prover/prover" ;
 
         ()
     | _ -> ()

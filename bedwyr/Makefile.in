@@ -20,16 +20,17 @@ PACKAGE_NAME = $(PACKAGE_TARNAME)
 else
 PACKAGE_NAME = $(TARGET)
 endif
+DIST_SUFFIXES	= @DIST_SUFFIXES@
 LIB_SUFFIXES	= @LIB_SUFFIXES@
 BIN_SUFFIXES	= @BIN_SUFFIXES@
 TEST_SUFFIX	= @TEST_SUFFIX@
 
 SHELL		= @BASH@
-TAR		= @TAR@ -p
-FIND		= @FIND@
-GZIP		= @GZIP@ -4
-BZIP2		= @BZIP2@ -9
-OCAMLBUILD	= @OCAMLBUILD@ -classic-display
+TAR		= "@TAR@" -p
+FIND		= "@FIND@"
+GZIP		= "@GZIP@" -4
+BZIP2		= "@BZIP2@" -9
+OCAMLBUILD	= "@OCAMLBUILD@" -classic-display
 
 prefix		= @prefix@
 exec_prefix	= @exec_prefix@
@@ -78,7 +79,7 @@ MANDIR		= $(DESTDIR)$(mandir)
 VIMFILES	= $(DATAROOTDIR)/vim/vimfiles
 
 INSTALL     = @INSTALL@
-INSTALL_OPTS=-v
+INSTALL_OPTS= -v
 INSTALL_DIR = @INSTALL_PROGRAM@ $(INSTALL_OPTS) -d
 INSTALL_BIN = @INSTALL_PROGRAM@ $(INSTALL_OPTS) -p
 INSTALL_DOC = @INSTALL_DATA@ $(INSTALL_OPTS) -p
@@ -95,6 +96,7 @@ XPL = list.def internal/scoping.def internal/checks.def \
       pi/pi_asserts.def
 
 # debhelper has his own tools to install those standard docs
+# TODO however, better move this to a patch in the debsrc
 ifeq ($(DISTRIB),debian)
 NDCORE_DOCS	=
 BEDWYR_DOCS	=
@@ -107,7 +109,7 @@ VIM_CONTRIB	= ftdetect/bedwyr.vim \
 		  syntax/bedwyr.vim
 CONTRIB		= contrib/emacs/bedwyr.el \
 		  $(VIM_CONTRIB:%=contrib/vim/%)
-EXAMPLES	= $(shell find examples -type f '!' -path '*.svn*' \
+EXAMPLES	= $(shell $(FIND) examples -type f '!' -path '*.svn*' \
 		  '!' -name \*~ '!' -name .\*.sw\* '!' -name \*.old)
 MANUAL		= manual-1.4
 PS_FILES	= $(MANUAL:%=doc/%).ps.gz
@@ -115,6 +117,8 @@ PDF_FILES	= $(MANUAL:%=doc/%).pdf
 HTML_FILES	= $(MANUAL:%=doc/%).html
 ARCH_FILES	= configure.ac Makefile.in install-sh \
 		  $(DOCS) $(CONTRIB) $(EXAMPLES)
+
+bedwyr_dist	= $(DIST_SUFFIXES:%=$(DIST_NAME).%)
 
 ndcore_prefix	= src/ndcore/ndcore
 bedwyr_prefix	= src/bedwyr
@@ -127,13 +131,13 @@ bedwyr_bins	= $(BIN_SUFFIXES:%=$(bedwyr_prefix).%)
 #.PHONY: $(ndcore_libs) $(bedwyr_bins)
 
 build: src/config.ml src/ndcore/Makefile src/Makefile doc/Makefile Makefile src/ndcore/META
-ifeq ($(TARGET),ndcore)
+ifeq ($(TARGET),)
+	$(MAKE) $(ndcore_libs)
+	$(MAKE) $(bedwyr_bins)
+else ifeq ($(TARGET),ndcore)
 	$(MAKE) $(ndcore_libs)
 else ifeq ($(TARGET),bedwyr)
 	$(MAKE) $(bedwyr_bins)
-#else ifeq ($(TARGET),)
-#	$(MAKE) $(ndcore_libs)
-#	$(MAKE) $(bedwyr_bins)
 endif
 
 $(ndcore_libs): src/ndcore/Makefile
@@ -157,27 +161,46 @@ configure: configure.ac
 .PHONY: test test_ndcore test_bedwyr
 
 test:
-#ifeq ($(TARGET),)
-#	$(MAKE) test_ndcore
-#	$(MAKE) test_bedwyr
-#else
-	$(MAKE) test_$(TARGET)
-#endif
+ifeq ($(TARGET),)
+	@$(MAKE) test_ndcore
+	@echo
+	@$(MAKE) test_batyping
+	@echo
+	@$(MAKE) test_input
+	@echo
+	@$(MAKE) test_prover
+	@echo
+	@$(MAKE) test_bedwyr
+else
+	@$(MAKE) test_$(TARGET)
+endif
 
 test_ndcore: src/ndcore/test.$(TEST_SUFFIX)
-	@echo Testing the core LLambda library
+	@echo '** Testing the core LLambda library **'
 	@_build/$<
+	@echo " ***"
 
 test_batyping: src/batyping/test.$(TEST_SUFFIX)
-	@echo Testing the Bedwyr-Abella typing library
+	@echo '** Testing the Bedwyr-Abella typing library **'
 	@_build/$<
+	@echo " ***"
+
+test_input: src/input/test.$(TEST_SUFFIX)
+	@echo '** Testing the *.def and REPL input library **'
+	@_build/$<
+	@echo " ***"
+
+test_prover: src/prover/test.$(TEST_SUFFIX)
+	@echo '** Testing the theorem prover library **'
+	@_build/$<
+	@echo " ***"
 
 test_bedwyr: $(bedwyr_prefix).$(TEST_SUFFIX)
-	@echo Testing bedwyr on examples
+	@echo '** Testing bedwyr on examples **'
 	@time for i in $(XPL) ; do \
 	  echo "==== Running tests in $$i ====" ; \
 	  if _build/$< -t -I examples/$$i ; then echo "All done." ; \
-	  else echo "Error." ; break ; fi ; \
+	  else echo "Error." ; exit 1 ; fi ; \
 	  done
 
 # DOC
@@ -267,7 +290,7 @@ install_bedwyr_doc: bedwyr_doc
 
 .PHONY: dist src/ndcore/ndcore.tar src/bedwyr.tar doc/manual.tar dist.tar
 
-dist: $(DIST_NAME).tar.bz2 $(DIST_NAME).tar.gz
+dist: $(bedwyr_dist)
 
 src/ndcore/ndcore.tar:
 	$(MAKE) -C src/ndcore archive
@@ -309,16 +332,18 @@ help:
 	@echo ' install        install the files of $$TARGET wrt to the'
 	@echo '                command-line variable $$DESTDIR and and the'
 	@echo '                parameters given to ./configure'
+#ifneq ($(bedwyr_dist),)
 	@echo
-	@echo ' dist           build $(DIST_NAME).tar.bz2'
-	@echo '                and $(DIST_NAME).tar.gz'
+	@echo ' dist           build archives'
+	@echo '                ($(DIST_NAME).{$(DIST_SUFFIXES)})'
+#endif
 	@echo
 	@echo ' help           display this message'
 	@echo ' distclean      remove almost all generated files'
 	@echo ' clean          remove compiled files'
 
 distclean: clean
-	@find . -name '*~' -exec rm -vf \{\} \;
+	@$(FIND) . -name '*~' -exec rm -vf \{\} \;
 	@rm -vf *.bz2 *.gz *.tar
 	@rm -vf config.status config.log
 	@rm -vf src/config.ml

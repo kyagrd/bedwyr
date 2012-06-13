@@ -1,6 +1,12 @@
 <src>: include
-<src/ndcore> or <src/oUnit>: include
+# remove the following "include"s when using external libs
+<src/oUnit> or <src/ndcore> or <src/batyping> or <src/input> or <src/prover>: include
 
 <**/test.{native,byte}>: use_unix,use_oUnit
-<src/ndcore/test.{native,byte}>: use_ndcore
-<src/bedwyr.{native,byte}>: use_unix,use_ndcore
+
+<src/ndcore/*.{native,byte}>: use_ndcore
+<src/batyping/*.{native,byte}>: use_batyping
+<src/input/*.{native,byte}>: use_batyping,use_input
+<src/prover/*.{native,byte}>: use_batyping,use_input,use_prover
+
+<src/bedwyr.{native,byte}>: use_unix,use_ndcore,use_batyping,use_input,use_prover
