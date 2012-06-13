@@ -346,20 +346,15 @@ let translate_query pre_term =
   in
   let term,_ = translate_term pre_term free_types in term
 
-let mk_clause head body wrong_structure =
-  (* Replace the params by fresh variables and
-   * put the constraints on the parameters in the body:
-   *     head          := body
-   *     d X X (f X Y) := g X Y Z
-   * --> d X U V       := (U = X) /\ ((V = (f X Y)) /\ (g X Y Z))
-   * --> d X U V       := forall Z Y, (U = X) /\ ((V = (f X Y)) /\ (g X Y Z))
-   * --> d == \\\ Exists\\ #4=#5 /\ (#3=(f #5 #1) /\ (g #5 #1 #2))
-   *)
-  let pred,params = match Term.observe head with
-    | Term.Var ({Term.tag=Term.Constant}) -> head,[]
-    | Term.App (pred,params) -> pred,params
-    | _ -> wrong_structure ()
-  in
+(* Replace the params by fresh variables and
+ * put the constraints on the parameters in the body:
+ *     pred [params] := body
+ *     d X X (f X Y) := g X Y Z
+ * --> d X U V       := (U = X) /\ ((V = (f X Y)) /\ (g X Y Z))
+ * --> d X U V       := forall Z Y, (U = X) /\ ((V = (f X Y)) /\ (g X Y Z))
+ * --> d == \\\ Exists\\ #4=#5 /\ (#3=(f #5 #1) /\ (g #5 #1 #2))
+ *)
+let mk_clause pred params body =
   (* pred       d
    * params     [X;X;(f X Y)]
    * Create the prolog (new equalities added to the body) and the new set
@@ -430,11 +425,13 @@ let get_pred head_var fail_const fail_missing =
   end with Not_found -> fail_missing ()
 
 let mk_def_clause p head body =
-  let wrong_structure () =
-    raise (Inconsistent_definition
-             ("some predicate",p,"head term structure incorrect"))
+  let pred,params = match Term.observe head with
+    | Term.Var ({Term.tag=Term.Constant}) -> head,[]
+    | Term.App (pred,params) -> pred,params
+    | _ -> raise (Inconsistent_definition
+                    ("some predicate",p,"head term structure incorrect"))
   in
-  mk_clause head body wrong_structure
+  mk_clause pred params body
 
 let add_def_clause new_predicates (p,pre_head,pre_body) =
   let free_types : (Term.var,Typing.ty) Hashtbl.t =
@@ -495,6 +492,11 @@ let mk_theorem_clauses (p,n) theorem =
       in
       aux []
     in
+    let split head = match Term.observe head with
+      | Term.Var ({Term.tag=Term.Constant}) -> head,[]
+      | Term.App (pred,params) -> pred,params
+      | _ -> raise (Inconsistent_theorem (n,p,"head term structure incorrect"))
+    in
     (* [newl] is a list of deep-normed theorem clauses
      * [oldl] is a list of theorems built with theorem clauses, /\ and -> *)
     let rec aux newl = function
@@ -505,7 +507,8 @@ let mk_theorem_clauses (p,n) theorem =
             | Term.Arrow (body,head) ->
                 let head = Norm.deep_norm head in
                 let body = Norm.deep_norm body in
-                aux ((head,body)::newl) oldl
+                let pred,params = split head in
+                aux ((pred,params,body)::newl) oldl
             | Term.Binder (Term.Forall,n,t) ->
                 let t = Term.lambda n t in
                 aux newl ((Term.app t (vars n))::oldl)
@@ -513,18 +516,16 @@ let mk_theorem_clauses (p,n) theorem =
                 aux newl (t1::t2::oldl)
             (* TODO allow atomic facts,
              * ie auto-translate "p X" to "true -> p X" *)
-            (*| Term.App _ -> Format.printf " - App -@." ; newl*)
             | _ ->
-                raise (Inconsistent_theorem (n,p,"formula structure incorrect"))
+                let head = Norm.deep_norm theorem in
+                let pred,params = split head in
+                aux ((pred,params,Term.op_true)::newl) oldl
           end
     in
     aux [] [theorem]
   in
-  let wrong_structure () =
-    raise (Inconsistent_theorem (n,p,"head term structure incorrect"))
-  in
   List.rev_map
-    (fun (head,body) -> mk_clause head body wrong_structure)
+    (fun (pred,params,body) -> mk_clause pred params body)
     (clean_theorem theorem)
 
 let add_theorem_clause p (pred,arity,body) =

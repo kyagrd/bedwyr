@@ -419,6 +419,9 @@ let rec prove temperatures depth ~success ~failure ~level ~timestamp ~local g =
               Table.add ~allow_eigenvar:(level=One) table args status ;
               true
             with
+              (* XXX can Table.add raise Index.Cannot_table
+               * if Table.find didn't?
+               * if not, replace this by an "assert false" *)
               | Index.Cannot_table -> false
             then begin
               Stack.push (status,disprovable) disprovable_stack ;
@@ -536,6 +539,9 @@ let rec prove temperatures depth ~success ~failure ~level ~timestamp ~local g =
             match observe v with
               | Var v when v.tag = Eigen -> v
               | _ -> assert false
+              (* XXX should probably be
+               * "raise (Unify.NotLLambda v)",
+               * but can we find an example of failure? *)
           in
           fun () ->
             (* This is called when some left solution has been
@@ -544,6 +550,8 @@ let rec prove temperatures depth ~success ~failure ~level ~timestamp ~local g =
             let rec unicity = function
               | [] -> ()
               | (va,a)::tl ->
+                  (* TODO this doesn't need to be checked in that order,
+                   * so make it tail-rec *)
                   if List.exists (fun (_,b) -> a=b) tl then
                     raise (Unify.NotLLambda va) ;
                   unicity tl
@@ -590,7 +598,7 @@ let rec prove temperatures depth ~success ~failure ~level ~timestamp ~local g =
     (* Level 1: Universal quantification *)
     | Binder (Forall,n,goal) ->
         assert_level_one level ;
-        let goal = Norm.hnorm (lambda n goal) in
+        let goal = lambda n goal in
         let vars =
           let rec aux l = function
             | n when n <= 0 -> l
@@ -604,7 +612,7 @@ let rec prove temperatures depth ~success ~failure ~level ~timestamp ~local g =
 
     (* Local quantification *)
     | Binder (Nabla,n,goal) ->
-        let goal = Norm.hnorm (lambda n goal) in
+        let goal = lambda n goal in
         let vars =
           let rec aux l = function
             | n when n <= 0 -> l
@@ -618,7 +626,7 @@ let rec prove temperatures depth ~success ~failure ~level ~timestamp ~local g =
 
     (* Existential quantification *)
     | Binder (Exists,n,goal) ->
-        let goal = Norm.hnorm (lambda n goal) in
+        let goal = lambda n goal in
         let timestamp,vars = match level with
           | Zero ->
               let rec aux l = function
