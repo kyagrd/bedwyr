@@ -1,0 +1,244 @@
+\part{Tutorials}
+\label{tutorials}
+
+
+% ============================================================================
+\section{Examples of Bedwyr code}
+
+\begin{flushright}
+%% Tell me if I'm violating conventions about quotes,
+%% but I thought it'd be nicer to avoid the split after "than the",
+%% so I moved Mark Twain on its own line to avoid a too long second line.
+%% - David
+Few things are harder to put up with \\
+than the annoyance of a good example. \\ -- Mark Twain
+\end{flushright}
+
+The distribution of Bedwyr comes with several examples of its use.
+These examples can be classified roughly as follows.
+
+\begin{description}
+% TODO check that said examples were translated,
+% remove old ones, and put them in folders according to
+% the following list
+\item[Basic examples] These examples are small and illustrate some
+  simple aspects of the system.
+
+\item[Model checking] Some simple model-checking-style examples are
+  provided.
+
+\item[Games] Bedwyr allows for a simple approach to explore for
+  winning strategies in some simple games, such as tic-tac-toe.
+
+\item[$\lambda$-calculus] Various relations and properties of the
+  $\lambda$-calculus are developed in some definition files.
+
+\item[Simulation and bisimulation] These relationships between
+  processes where an important class of examples for which the theory
+  behind Bedwyr was targeted.  Examples of checking simulation is done
+  for abstract transition systems, value-passing CCS, and the
+  $\pi$-calculus.  The $\pi$-calculus examples are of particular note:
+  all side-conditions for defining the operational semantics and
+  bisimulation are handled directly and declaratively by the logic
+  underlying Bedwyr.  See Section~\ref{pi-examples} below for some more
+  details about the $\pi$-calculus in Bedwyr.
+
+\end{description}
+
+\subsection{Hypothetical reasoning}
+
+For those familiar with \lp{}, a key difference between
+Bedwyr and \lp{} is that the latter allows for ``hypothetical''
+reasoning and such reasoning is central to the way that \lp{} treats
+bindings in syntax.    Bedwyr treats implication and universals in
+goal formulas in a completely different way: via the closed world
+assumption.
+
+Sometimes, when dealing with $\lambda$-tree syntax in Bedwyr, one
+wishes to program operations as one might do in \lp{}.  This is possible
+in the sense that one can write in Bedwyr an interpreter for suitable
+fragments of \lp{}.  This is done, for example, in the {\tt seq.def}
+definition file.  There is a goal-directed proof search procedure for a
+small part of hereditary Harrop formulas (in particular, the minimal
+theory of the fragment based on $\top$, $\wedge$, $\supset$, and
+$\forall$).  This interpreter is prepared to use a logic program that
+is stored as a binary predicate.  For example, in \lp{}, one would write
+type checking for simple types over the untyped $\lambda$-calculus
+encoded using {\tt app} and {\tt abs} as
+\begin{verbatim}
+typeof (app M N) B :- typeof M (arrow A B), typeof N A.
+typeof (abs R) (arrow A B) :- pi x\ typeof x A => typeof (R x) B.
+\end{verbatim}
+The hypothetical reasoning that is involved in typing the object-level
+$\lambda$-binder in the second clause above is not available directly
+in Bedwyr.  One can, however, rewrite these clauses as simply
+``facts'' in Bedwyr:
+\begin{Verbatim}
+Define simple : form -> form -> prop by
+  simple (type_of (app M N) Tb)
+    (type_of M (Ta \mytilde> Tb) && type_of N Ta);
+  simple (type_of (abs R) (Ta \mytilde> Tb))
+    (for_all x\ type_of x Ta --> type_of (R x) Tb).
+
+Define atom : form -> prop by
+  atom (type_of X T).
+\end{Verbatim}
+See \verb+progs_small.def+ for the complete declarations. The first
+definition describes a logic program called {\tt simple} that directly
+encodes the above \lp{} program; the second definition tells the
+interpreter in {\tt seq.def} how to recognize an object-level atomic
+formula.  A call to \texttt{seq atom simple tt (type\_of term Ty)} will
+now attempt to perform simple type checking on {\tt term}.
+Specifically, it should now be possible to prove in Bedwyr the goal
+\begin{verbatim}
+(exists Ty, seq atom simple tt (type_of (abs x\ app x x) Ty))
+  -> false.
+\end{verbatim}
+in other words, the self-application $\lambda x(x x)$ does not have a
+simple type.
+
+This ``two-level approach'' of specification uses Bedwyr as a
+meta-language in which a simple intuitionistic logic is encoded as an
+object logic: computations can then be specified in the object-logic
+in the usual way and the Bedwyr can be used to reason about that specification.
+This general approach has been described in more detail in
+\cite{miller06ijcar,gacek.twolevel}.
+
+\subsection{The \texorpdfstring{$\pi$}{pi}-calculus example in more detail}
+\label{pi-examples}
+
+To illustrate another example and how it
+can be used, consider the implementation of the $\pi$-calculus that is
+contained in the example file \verb+pi/pi.def+.  Of the several
+things defined in that file, the operational semantics for the
+$\pi$-calculus is given using one-step transitions: for a specific
+example, see Figure~\ref{one-step}.  First notice some similarities
+between the syntax of clauses and that used in \lp{}.  In
+particular, the backslash is used to denote the $\lambda$-binder.  One
+of the syntactic difference is that the head and body of clauses are
+separated from each other using the \verb+:=+ instead of the
+\verb+:-+ (turnstile).  The former symbol is used to remind
+the Bedwyr user that programs are used to define ``if and only if''
+completions of specifications (whereas, in \lp{} the \verb+:-+ is the
+more usual ``if'' interpretation).
+
+Beyond the syntactic differences, the operational semantics of \lp{}
+and Bedwyr differ significantly.  If a specification is simply a Horn
+clause program, the two systems coincide. They differ in the operational
+interpretation of implication: in Bedwyr, to prove $A\supset B$, all
+possible ways to prove $A$ are explored and
+for each answer substitution $\theta$ that is found, the goal
+$B\theta$ is attempted (see Section~\ref{psearch}).  Bedwyr also
+contains the $\nabla$-quantifier \cite{miller05tocl}.
+
+\begin{figure}
+\begin{verbatim}
+[...]
+onep (in X M)    (dn X) M;
+one  (out X Y P) (up X Y) P;
+one  (match X X P) A Q := one  P A Q;
+onep (match X X P) A M := onep P A M;
+one  (nu P) A (nu Q)          :=
+  nabla x, one  (P x) A (Q x);
+onep (nu P) A (y\ nu x\Q x y) :=
+  nabla x, onep (P x) A (y\ Q x y);
+one (par P Q) tau (par R T) :=
+  exists X Y M, onep P (dn X) M /\
+    one Q (up X Y) T /\ R = (M Y);
+one (par P Q) tau (par R T) :=
+  exists X Y M, onep Q (dn X) M /\
+    one P (up X Y) R /\ T = (M Y);
+[...]
+\end{verbatim}
+\caption{Some lines in {\tt pi.def} used to define one-step transitions.
+See the example file for the full definition.}
+\label{one-step}
+
+\begin{verbatim}
+Define coinductive bisim : p -> p -> prop by
+  bisim P Q :=
+    (forall A P1, one P A P1 ->
+      exists Q1, one Q A Q1 /\ bisim P1 Q1) /\
+    (forall X M, onep P (dn X) M ->
+      exists N, onep Q (dn X) N /\
+      forall w, bisim (M w) (N w)) /\
+    (forall X M, onep P (up X) M ->
+      exists N, onep Q (up X) N /\
+      nabla w, bisim (M w) (N w)) /\
+    (forall A Q1, one Q A Q1 ->
+      exists P1, one P A P1 /\ bisim P1 Q1) /\
+    (forall X N, onep Q (dn X) N ->
+      exists M, onep P (dn X) M /\
+      forall w, bisim (M w) (N w)) /\
+    (forall X N, onep Q (up X) N ->
+      exists M, onep P (up X) M /\
+      nabla w, bisim (M w) (N w)).
+\end{verbatim}
+\caption{The definition of (open) bisimulation.}
+\label{bisim}
+\end{figure}
+
+Returning to the example in Figure~\ref{one-step}, notice that two
+predicates are defined: {\tt one} and {\tt onep}.  The first one
+relates a process, an action, and a process.  The second one relates a
+process, an abstraction of an action, and an abstraction of a
+process.  The {\tt one} predicate is used to capture ``free
+transitions'' and the ``$\tau$-transition'' while the second is used
+to capture bounded transitions.  See \cite{tiu04fguc,tiu05concur} for
+more details on this encoding strategy for the $\pi$-calculus.
+
+Figure~\ref{bisim} provides all that is necessary to specify (open)
+bisimulation for (finite) $\pi$-calculus.  The keyword {\tt
+coinductive} tells the system that it will be attempting to explore a
+greatest fixed point. That keyword also enables tabling, which avoids redundant
+computations and accept loops as successes (see Section \ref{tabling}).
+The other cases should look natural, at least
+once one understands the $\lambda$-tree approach to representing syntax
+and the use of the $\nabla$-quantifier.  The main thing to point out
+here is that in the specification, no special side conditions need to
+be added to the system: all the familiar side conditions from the
+usual papers on the $\pi$-calculus are treated by the implementation
+of the Bedwyr logic: the user of the system no longer needs to deal
+with them explicitly but implicitly and declaratively (via quantifier
+scope, $\alpha\beta\eta$-conversion, etc).
+
+It is now possible to test some simple examples in the system.  For
+example,
+\begin{verbatim}
+ $ src/bedwyr examples/pi/pi.def
+[...welcome message...]
+?= bisim (in a x\ in a y\ z)
+     (in a x\ nu w\ in a y\ out w w z).
+Yes.
+More [y] ? y
+No more solutions.
+?= bisim (in a x\ nu y\ match x y (out c c z))
+     (in a x\ z).
+Yes.
+More [y] ? y
+No more solutions.
+?= bisim (nu x\ out a x (in c y\ match x y (out c c z)))
+     (nu x\ out a x (in c y\ z)).
+No.
+?=
+\end{verbatim}
+These query prove that
+$a(x).a(y).0$ and $a(x).(\nu w).a(y).w!w.0$ are bisimilar,
+that
+$a(x).(\nu y).[x=y].c!c.0$ and $a(x).0$ are bisimilar, and that
+$(\nu x).a!x.c(y).[x=y].c!c.0$ and
+$(\nu x).a!x.c(y).0$ are not bisimilar.
+
+Several other aspects of the $\pi$-calculus are explored in the examples
+files of the distribution.  For example, the file \verb+pi_modal.def+
+contains a specification of the modal logics for mobility described in
+\cite{milner93tcs}, and the file \verb+corr-assert.def+ specifies the
+checking of ``correspondence assertions'' for the $\pi$-calculus as
+described in \cite{gordon03tcs}.
+% TODO rehabilitate pi_abscon.def
+%The file \verb+pi_abscon.def+ specifies the polyadic $\pi$-calculus
+%following \cite{milner99book}.
+
+% - hypothetical reasoning
+% - pi-calculus
+% - etc.(=>expand!)

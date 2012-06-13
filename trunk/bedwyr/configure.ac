@@ -3,7 +3,7 @@ AC_PREREQ(2.60)
 AC_CONFIG_SRCDIR([src/bedwyr.ml])
 AC_PROG_INSTALL
 
-REVISION=$((((svn info 2>&- || git svn info 2>&-) || git describe --tags 2>&- 1>&3) | grep Revision | sed -e "s/Revision: //") 3>&1 | tr -d '\n')
+REVISION=$((((svn info 2>&- || git svn info 2>&-) || git describe --tags --dirty 2>&- 1>&3) | grep Revision | sed -e "s/Revision: //") 3>&1 | tr -d '\n')
 
 #
 # Additional options
@@ -80,14 +80,39 @@ if test "$enable_doc" != "no" ; then
                 AC_MSG_ERROR(Cannot find latex.)
         fi
 
-        AC_PATH_PROG(PDFLATEX,pdflatex,no)
-        if test "$PDFLATEX" = no ; then
-                AC_MSG_ERROR(Cannot find pdflatex.)
+        AC_PATH_PROG(BIBTEX,bibtex,no)
+        if test "$BIBTEX" = no ; then
+                AC_MSG_ERROR(Cannot find bibtex.)
+        fi
+
+        AC_PATH_PROG(DVIPS,dvips,no)
+        if test "$DVIPS" = no ; then
+                AC_MSG_ERROR(Cannot find dvips.)
+        fi
+
+        AC_PATH_PROG(PS2PDF,ps2pdf,no)
+        if test "$PS2PDF" = no ; then
+                AC_MSG_ERROR(Cannot find ps2pdf.)
         fi
 
         AC_PATH_PROG(HEVEA,hevea,no)
         if test "$HEVEA" = no ; then
                 AC_MSG_ERROR(Cannot find hevea.)
+        fi
+
+        AC_PATH_PROG(BIBHVA,bibhva,no)
+        if test "$BIBHVA" = no ; then
+                AC_MSG_ERROR(Cannot find bibhva.)
+        fi
+
+        AC_PATH_PROG(IMAGEN,imagen,no)
+        if test "$IMAGEN" = no ; then
+                AC_MSG_ERROR(Cannot find imagen.)
+        fi
+
+        AC_PATH_PROG(HACHA,hacha,no)
+        if test "$HACHA" = no ; then
+                AC_MSG_ERROR(Cannot find hacha.)
         fi
 fi
 

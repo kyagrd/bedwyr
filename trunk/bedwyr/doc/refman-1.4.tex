@@ -1,0 +1,128 @@
+\documentclass[a4paper]{article} % defaults to letter
+
+% xypic is simply a wrapper for xy,
+% but is preferred since it is understood by hevea
+\usepackage[all]{xypic}
+
+% we want Type 1 fonts instead of CM/Type 3 (vectorial vs bitmap),
+% plus math fonts
+\usepackage{ae,aecompl}
+\usepackage{amsfonts}
+
+% all sorts of links: internal, external, multi-line...
+\usepackage[
+% linkbordercolor={1 0 0}, % default: red
+% citebordercolor={0 1 0}, % default: green
+% filebordercolor={1 0 1}, % default: magenta
+% urlbordercolor={0 1 1},  % default: cyan
+  pdftitle={Bedwyr ReferenceManual 1.4}
+]{hyperref}
+\usepackage{breakurl}
+
+% hevea commands, to be ignored by latex
+\usepackage{hevea}
+\loadcssfile{http://slimmer.gforge.inria.fr/bedwyr/bd.css}
+
+\bibliographystyle{alpha}
+
+% draw a nice tilde in the Verbatim environment
+\usepackage{fancyvrb}
+\newcommand{\mytilde}{\raise.3ex\hbox{$\scriptstyle\sim$}}
+\RecustomVerbatimEnvironment{Verbatim}{Verbatim}{commandchars=\\\{\}}
+
+\newcommand{\lp}{$\lambda$Prolog}
+\newcommand{\Ll}{$L_\lambda$}
+\newcommand{\qs}{\; . \;}
+
+\title{{\Huge A Reference Manual for\\Bedwyr v1.4}
+   \thanks{Support has been obtained for this work from the following
+           sources: from INRIA (first through the ``\'Equipes
+           Associ{\'e}es'' Slimmer, and the ``ADT'' BATT),
+           and from the NSF Grants CCR-0429572 (that also included
+           support for Slimmer) and OISE-0553462.}
+}
+\author{David Baelde$^1$,
+        Andrew Gacek$^2$,
+        Quentin Heath$^3$, \\
+        Dale Miller$^3$,
+        Gopalan Nadathur$^4$,
+        Alwen Tiu$^5$ \\ \\
+$^1$ITU, Copenhagen\\
+$^2$Rockwell Collins\\
+$^3$INRIA Saclay and LIX/\'Ecole Polytechnique\\
+$^4$University of Minnesota\\
+$^5$Australian National University
+}
+
+\includeonly{userguide-1.4,tutorials-1.4,sysdesc-1.4}
+%\includeonly{userguide-1.4,sysdesc-1.4}
+
+\begin{document}
+\maketitle
+\tableofcontents
+\newpage
+
+\section*{Foreword}
+
+This manual documents the release 1.4 of Bedwyr.
+It is organized as follows:
+\begin{itemize}
+  \item Part I, a user's guide
+  \item Part II, a collection of tutorials and examples
+  \item Part III, a deeper system description
+\end{itemize}
+
+For a faster start, please refer to the
+\href{http://slimmer.gforge.inria.fr/bedwyr/}
+  {Quick-Start Guide to Bedwyr}
+and then read the examples in \partname \ref{tutorials}.
+
+The source code documentation can be found
+\href{http://slimmer.gforge.inria.fr/bedwyr/}{here}.
+
+The Bedwyr system is copyright \copyright 2005-2012 Slimmer project.
+It is free software, licensed under the version 2 of the GNU Public License.
+More details about the development can be found on the website of the
+\href{http://slimmer.gforge.inria.fr/}{Slimmer project}.
+
+The complete distribution of the system, including documentation,
+examples, documentation sources and links to related publications
+can be found on the same website.
+Development and old version are available.
+
+% ============================================================================
+\include{userguide-1.4}
+
+% ============================================================================
+\include{tutorials-1.4}
+
+% ============================================================================
+\include{sysdesc-1.4}
+
+\appendix
+
+\bibliography{userguide}
+
+\noindent Any paper listed above that was written by one of the
+authors of this guide can be found on their respective home pages.
+
+\end{document}
+
+% LocalWords:  runtime Bedwyr unary Bedwyr's instan Twelf Wikipedia Bedivere Alwen
+% LocalWords:  hoas Pfenning Slimmer's Gforge SVN src contrib OCaml autoconf i.e.
+% LocalWords:  toolchain gzip bzip bedwyr ocamlopt nativecode userguide Abella
+% LocalWords:  ocamldoc Gacek ary forall rclp nabla nat arity syntactically rcl
+% LocalWords:  toplevel decl flavour coinductive namespace emacs ledit rlwrap
+% LocalWords:  bashrc filenames equivariant un env typeof e.g. Coq Minlog leq neq
+% LocalWords:  maxa reachability bisimulation foundedness pred scopings bisim
+% LocalWords:  predicate's automata lld rru rrd ur dr llu dll bisimilar tac CCS
+% LocalWords:  bisimilarity peterson declaratively progs tt onep
+
+% Add some mention of
+%   finite failure is incorporated.  Seldom used in the definition of
+%   operational semantics (mismatch in pi-calculus is an exception).
+%   Meta-level properties of SOS often are related to negation.  One
+%   might want to proof the no trace reveals a secret (say, in the
+%   spi-calculus).  Proving (bisim P 0) means that P makes no
+%   transitions.  Etc.  Properties of SOS thus, often, involve
+%   negative information.
