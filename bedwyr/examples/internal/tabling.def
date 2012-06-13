@@ -101,6 +101,7 @@ Define print_p2 : prop by
 
 Theorem p2_th1 : (true -> p2 b) /\
                  (forall X, true -> p2 c).
+Theorem p2_th2 : p2 d.
 
 #assert print_p2.
 #debug on.
@@ -108,6 +109,7 @@ Theorem p2_th1 : (true -> p2 b) /\
 #freezing 1.
 #assert p2 b.
 #assert p2 c.
+#assert p2 d.
 
 #freezing 0.
 #debug off.
