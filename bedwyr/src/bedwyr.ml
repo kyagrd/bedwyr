@@ -391,7 +391,7 @@ and command c reset =
     | System.Time value -> toggle_flag System.time value
 
     (* Tabling-related commands *)
-    | System.Equivariant value -> toggle_flag Index.eqvt_tbl value
+    | System.Equivariant value -> toggle_flag Index.eqvt_index value
     | System.Env -> System.print_env ()
     | System.Type_of pre_term -> System.print_type_of pre_term
     | System.Show_table (p,name) -> System.show_table (p,Term.atom ~tag:Term.Constant name)

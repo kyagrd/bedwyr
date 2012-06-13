@@ -4,6 +4,7 @@ PACKAGE_TARNAME = @PACKAGE_TARNAME@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 DIST_NAME       = $(PACKAGE_TARNAME)-$(PACKAGE_VERSION)
 
+SHELL	= @BASH@
 TAR	= @TAR@
 
 prefix		= @prefix@
@@ -87,9 +88,9 @@ ndcore.tar: $(NDCORE_SRC) $(TEST_SRC) Makefile.in
 
 .PHONY: clean
 clean:
-	rm -f depend
-	rm -f *.cm[ixoa] *.cmxa *.[oa] a.out
-	rm -f tests/test
-	rm -f tests/*.cm[ixoa] tests/*.cmxa tests/*.[oa]
-	rm -f ndcore.tar ndcore.cmi.tar ocamldoc.dump ocamldoc.dump.bz2
-	rm -f ../../doc/html/ndcore/*
+	@rm -vf depend
+	@rm -vf *.cm[ixoa] *.cmxa *.[oa] a.out
+	@rm -vf tests/test
+	@rm -vf tests/*.cm[ixoa] tests/*.cmxa tests/*.[oa]
+	@rm -vf ndcore.tar ndcore.cmi.tar ocamldoc.dump ocamldoc.dump.bz2
+	@rm -vf ../../doc/html/ndcore/*

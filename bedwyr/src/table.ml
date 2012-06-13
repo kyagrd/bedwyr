@@ -33,7 +33,7 @@ let nabla_abstract t =
   let l = Term.get_nablas t in
   let max = List.fold_left (fun a b -> if (a < b) then b else a) 0 l in
   let rec make_list = function 0 -> [] | n -> n::make_list (n-1) in
-  let bindings = if !Index.eqvt_tbl then l else make_list max in
+  let bindings = if !Index.eqvt_index then l else make_list max in
   List.fold_left
     (fun s i -> (Term.quantify Term.Nabla (Term.nabla i) s)) t bindings
 
@@ -60,19 +60,18 @@ let fprint fout head table =
   Index.iter !table
     (fun t tag ->
        let t = nabla_abstract (Term.app t [head]) in
-       if !first then begin
-         first := false ;
-         match !tag with
-           | Proved    -> Format.fprintf fmt "@;<1 0>by@;<1 2>proved %a" Pprint.pp_term t
-           | Disproved -> Format.fprintf fmt "@;<1 0>by@;<1 2>disproved %a" Pprint.pp_term t
-           | Unset     -> ()
-           | Working _ -> assert false
-       end else begin match !tag with
-         | Proved    -> Format.fprintf fmt " ;@;<1 2>proved %a" Pprint.pp_term t
-         | Disproved -> Format.fprintf fmt " ;@;<1 2>disproved %a" Pprint.pp_term t
+       let print =
+         if !first then begin
+           first := false ;
+           Format.fprintf fmt "@;<1 0>by@;<1 2>%s %a"
+         end else
+           Format.fprintf fmt " ;@;<1 2>%s %a"
+       in
+       match !tag with
+         | Proved    -> print "proved" Pprint.pp_term t
+         | Disproved -> print "disproved" Pprint.pp_term t
          | Unset     -> ()
-         | Working _ -> assert false
-       end) ;
+         | Working _ -> assert false) ;
   Format.fprintf fmt "@;<0 0>.@]@]@."
 
 let reset x = x := Index.empty

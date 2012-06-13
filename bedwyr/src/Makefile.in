@@ -4,6 +4,7 @@ PACKAGE_TARNAME = @PACKAGE_TARNAME@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 DIST_NAME       = $(PACKAGE_TARNAME)-$(PACKAGE_VERSION)
 
+SHELL	= @BASH@
 TAR	= @TAR@
 
 prefix		= @prefix@
@@ -89,8 +90,8 @@ doc: ../doc/html/bedwyr/index.html
 ../doc/html/bedwyr/index.html: $(BEDWYR_O)
 ifneq (@OCAMLDOC@,)
 	mkdir -p ../doc/html/bedwyr
-	bash -c '$(OCAMLDOC) -d ../doc/html/bedwyr -html $(BEDWYR_MLI) \
-	  $(NDCORE_DUMP)'
+	$(OCAMLDOC) -d ../doc/html/bedwyr -html $(BEDWYR_MLI) \
+	  $(NDCORE_DUMP)
 endif
 
 archive: bedwyr.tar
@@ -100,9 +101,9 @@ bedwyr.tar: $(filter-out config.ml,$(BEDWYR_FILES)) config.ml.in Makefile.in
 
 .PHONY: clean
 clean:
-	rm -f depend
-	rm -f bedwyr
-	rm -f *.cm[ixoa] *.cmxa *.[oa] a.out
-	rm -f parser.ml parser.mli parser.output lexer.ml
-	rm -f bedwyr.tar
-	rm -f ../doc/html/bedwyr/*
+	@rm -vf depend
+	@rm -vf bedwyr
+	@rm -vf *.cm[ixoa] *.cmxa *.[oa] a.out
+	@rm -vf parser.ml parser.mli parser.output lexer.ml
+	@rm -vf bedwyr.tar
+	@rm -vf ../doc/html/bedwyr/*

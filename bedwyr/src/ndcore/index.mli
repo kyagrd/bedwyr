@@ -32,8 +32,8 @@
   * essential representation just like eigenvariables. *)
 
 
-(** Option to turn on/off equivariant tabling. *)
-val eqvt_tbl : bool ref
+(** Option to turn on/off equivariant indexing. *)
+val eqvt_index : bool ref
 
 (** {6 Indexing} *)
 

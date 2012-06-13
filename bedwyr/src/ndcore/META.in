@@ -1,0 +1,7 @@
+# Specifications for the "ndcore" library:
+requires = ""
+version = "@PACKAGE_VERSION@"
+description = "Non-destructive Higher-Order Pattern Unification"
+#directory = "^"
+archive(byte) = "ndcore.cma"
+archive(native) = "ndcore.cmxa"
