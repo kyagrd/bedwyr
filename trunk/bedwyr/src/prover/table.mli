@@ -62,7 +62,7 @@ val print : Term.term -> t -> unit
 
 (** Print a table to a file.
   * Nabla variables are abstracted and explicitly quantified. *)
-val fprint : out_channel -> Term.term -> t -> unit
+val fprint : out_channel -> Term.term -> t -> Input.Typing.ty -> unit
 
 (** Empty the table. *)
 val reset : t -> unit

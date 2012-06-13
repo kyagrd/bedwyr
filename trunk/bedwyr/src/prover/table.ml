@@ -51,11 +51,14 @@ let print head table =
          | Working _ -> assert false) ;
   Format.printf "@]@."
 
-let fprint fout head table =
+let fprint fout head table ty =
   let fmt = (Format.formatter_of_out_channel fout) in
+  let ty = Input.Typing.ty_arrow [ty] ty in
   Format.fprintf fmt
-    "@[%% Table for %a contains :@,@,@[<hov>Define@;<1 2>proved,@;<1 2>disproved"
-    Pprint.pp_term head ;
+    "@[%% Table for %a contains :@,@,@[<hov>Define@;<1 2>proved : %a,@;<1 2>disproved : %a"
+    Pprint.pp_term head
+    (fun ty -> Input.Typing.pp_type_norm ty) ty
+    (fun ty -> Input.Typing.pp_type_norm ty) ty ;
   let first = ref true in
   Index.iter !table
     (fun t tag ->

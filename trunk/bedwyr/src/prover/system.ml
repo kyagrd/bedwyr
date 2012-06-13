@@ -554,13 +554,13 @@ let print_type_of pre_term =
   (*Pprint.pp_type Format.std_formatter ty*)
 
 let get_table p head_tm success failure =
-  let name,(_,_,table,_) = get_pred ~pos:p head_tm failure in
+  let name,(_,_,table,ty) = get_pred ~pos:p head_tm failure in
   match table with
-    | Some table -> success table
+    | Some table -> success table ty
     | None -> failure () ; raise (Missing_table (name,Some p))
 
 let show_table (p,head_tm) =
-  get_table p head_tm (Table.print head_tm) ignore
+  get_table p head_tm (fun table _ -> Table.print head_tm table) ignore
 
 let clear_tables () =
   Hashtbl.iter
@@ -570,19 +570,19 @@ let clear_tables () =
     defs
 
 let clear_table (p,head_tm) =
-  get_table p head_tm (Table.reset) ignore
+  get_table p head_tm (fun table _ -> Table.reset table) ignore
 
 let save_table (p,head_tm) file =
   try
     let fout = open_out_gen [Open_wronly;Open_creat;Open_excl] 0o600 file in
     try
       get_table p head_tm
-        (fun table -> Table.fprint fout head_tm table ; close_out fout)
+        (fun table ty -> Table.fprint fout head_tm table ty ; close_out fout)
         (fun () -> close_out fout)
     with Sys_error e ->
-      Printf.printf "Couldn't close file (%s).@." e
+      Format.printf "Couldn't close file (%s).@." e
   with Sys_error e ->
-    Printf.printf "Couldn't open file for writing (%s).@." e
+    Format.printf "Couldn't open file for writing (%s).@." e
 
 
 (* Handle user interruptions *)
