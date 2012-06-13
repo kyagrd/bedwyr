@@ -221,7 +221,7 @@ let rec prove temperatures depth ~success ~failure ~level ~timestamp ~local g =
   (* 2-step procedure (table, definition)
    * to prove a predicative atom *)
   let prove_atom d args (v,temperature,temperatures) =
-    if false && !debug || depth<=debug_max_depth then
+    if !debug || depth<=debug_max_depth then
       eprintf "[%d] Proving %a...@."
         (match temperature with Frozen t -> t | _ -> !freezing_point (*"∞"*))
         Pprint.pp_term g ;
@@ -428,223 +428,218 @@ let rec prove temperatures depth ~success ~failure ~level ~timestamp ~local g =
           (* Check that all eigen-variables on which logic vars
            * can depend are instantiated to distinct eigenvars.
            * Then LLambda unifications will be preserved. *)
-          match eigen with
-            | [] -> fun () -> ()
-            | _ ->
-                let var v =
-                  match observe v with
-                    | Var v when v.tag = Eigen -> v
-                      | _ -> assert false
-                  in
-                  fun () ->
-                    (* This is called when some left solution has been
-                     * found. We check that everything is a variable. *)
-                    let eigen = List.map (fun v -> v,var v) eigen in
-                    let rec unicity = function
-                      | [] -> ()
-                      | (va,a)::tl ->
-                          if List.exists (fun (_,b) -> a=b) tl then
-                            raise (Unify.NotLLambda va) ;
-                          unicity tl
-                    in
-                    unicity eigen
+          let var v =
+            match observe v with
+              | Var v when v.tag = Eigen -> v
+              | _ -> assert false
           in
-          (* Solve [a] using level 0,
-           * remind of the solution substitutions as slices of the bind stack,
-           * then prove [b] at level 1 for every solution for [a],
-           * thanks to the commutability between patches for [a] and [b],
-           * one modifying eigenvars,
-           * the other modifying logical variables. *)
-          let ev_substs = ref [] in
-          let state = save_state () in
-          let store_subst ts k =
-            (* We store the state in which we should leave the system
-             * when calling [k].
-             * Then we complete the current solution with the reverse
-             * flip of variables to eigenvariables, and we get sigma which
-             * we store. *)
-            check_variables () ;
-            ev_substs := (ts,get_subst state)::!ev_substs ;
-            k ()
-          in
-          let make_copies evs g =
-            List.map
-              (fun (ts,sigma) ->
-                 let unsig = apply_subst sigma in
-                 let newg = shared_copy g in
-                 undo_subst unsig ;
-                 (ts, newg))
-              evs
-          in
-          let rec prove_conj ts failure = function
-            | [] -> success ts failure
-            | (ts'',g)::gs ->
-                prove temperatures (depth+1) ~level ~local ~timestamp:ts''
-                  ~success:(fun ts' k -> prove_conj (max ts ts') k gs)
-                  ~failure g
-          in
-          prove temperatures (depth+1) ~level:Zero ~local ~timestamp a
-            ~success:store_subst
-            ~failure:(fun () ->
-                        prove_conj timestamp failure (make_copies !ev_substs b))
-
-      (* Level 1: Universal quantification *)
-      | Binder (Forall,n,goal) ->
-          assert_level_one level ;
-          let goal = Norm.hnorm (lambda n goal) in
-          let vars =
-            let rec aux l = function
-              | n when n <= 0 -> l
-              | n -> aux ((fresh ~lts:local Eigen ~ts:(timestamp + n))::l) (n-1)
+          fun () ->
+            (* This is called when some left solution has been
+             * found. We check that everything is a variable. *)
+            let eigen = List.map (fun v -> v,var v) eigen in
+            let rec unicity = function
+              | [] -> ()
+              | (va,a)::tl ->
+                  if List.exists (fun (_,b) -> a=b) tl then
+                    raise (Unify.NotLLambda va) ;
+                  unicity tl
             in
-            aux [] n
+            unicity eigen
+        in
+        (* Solve [a] using level 0,
+         * remind of the solution substitutions as slices of the bind stack,
+         * then prove [b] at level 1 for every solution for [a],
+         * thanks to the commutability between patches for [a] and [b],
+         * one modifying eigenvars,
+         * the other modifying logical variables. *)
+        let substs = ref [] in
+        let state = save_state () in
+        let store_subst ts k =
+          check_variables () ;
+          (* We get sigma by comparing the current solution
+           * with the state [k] will leave the system in,
+           * and we store it. *)
+          substs := (ts,get_subst state)::!substs ;
+          k ()
+        in
+        let make_copies vs g =
+          List.map
+            (fun (ts,sigma) ->
+               let unsig = apply_subst sigma in
+               let newg = shared_copy g in
+               undo_subst unsig ;
+               (ts, newg))
+            vs
+        in
+        let rec prove_conj ts failure = function
+          | [] -> success ts failure
+          | (ts'',g)::gs ->
+              prove temperatures (depth+1) ~level ~local ~timestamp:ts''
+                ~success:(fun ts' k -> prove_conj (max ts ts') k gs)
+                ~failure g
+        in
+        prove temperatures (depth+1) ~level:Zero ~local ~timestamp a
+          ~success:store_subst
+          ~failure:(fun () ->
+                      prove_conj timestamp failure (make_copies !substs b))
+
+    (* Level 1: Universal quantification *)
+    | Binder (Forall,n,goal) ->
+        assert_level_one level ;
+        let goal = Norm.hnorm (lambda n goal) in
+        let vars =
+          let rec aux l = function
+            | n when n <= 0 -> l
+            | n -> aux ((fresh ~lts:local Eigen ~ts:(timestamp + n))::l) (n-1)
           in
-          let goal = app goal vars in
-          prove temperatures (depth+1) ~local ~timestamp:(timestamp + n) ~level
-            ~success ~failure goal
+          aux [] n
+        in
+        let goal = app goal vars in
+        prove temperatures (depth+1) ~local ~timestamp:(timestamp + n) ~level
+          ~success ~failure goal
 
-      (* Local quantification *)
-      | Binder (Nabla,n,goal) ->
-          let goal = Norm.hnorm (lambda n goal) in
-          let vars =
-            let rec aux l = function
-              | n when n <= 0 -> l
-              | n -> aux ((nabla (local + n))::l) (n-1)
-            in
-            aux [] n
+    (* Local quantification *)
+    | Binder (Nabla,n,goal) ->
+        let goal = Norm.hnorm (lambda n goal) in
+        let vars =
+          let rec aux l = function
+            | n when n <= 0 -> l
+            | n -> aux ((nabla (local + n))::l) (n-1)
           in
-          let goal = app goal vars in
-          prove temperatures (depth+1) ~local:(local + n) ~timestamp ~level
-            ~success ~failure goal
+          aux [] n
+        in
+        let goal = app goal vars in
+        prove temperatures (depth+1) ~local:(local + n) ~timestamp ~level
+          ~success ~failure goal
 
-      (* Existential quantification *)
-      | Binder (Exists,n,goal) ->
-          let goal = Norm.hnorm (lambda n goal) in
-          let timestamp,vars = match level with
-            | Zero ->
-                let rec aux l = function
-                  | n when n <= 0 -> l
-                  | n -> aux ((fresh ~lts:local Eigen ~ts:(timestamp + n))::l) (n-1)
-                in
-                timestamp + n,aux [] n
-            | One ->
-                let rec aux l = function
-                  | n when n <= 0 -> l
-                  | n -> aux ((fresh ~lts:local Logic ~ts:timestamp)::l) (n-1)
-                in
-                timestamp,aux [] n
-          in
-          let goal = app goal vars in
-          prove temperatures (depth+1) ~local ~timestamp ~level
-            ~success ~failure goal
+    (* Existential quantification *)
+    | Binder (Exists,n,goal) ->
+        let goal = Norm.hnorm (lambda n goal) in
+        let timestamp,vars = match level with
+          | Zero ->
+              let rec aux l = function
+                | n when n <= 0 -> l
+                | n -> aux ((fresh ~lts:local Eigen ~ts:(timestamp + n))::l) (n-1)
+              in
+              timestamp + n,aux [] n
+          | One ->
+              let rec aux l = function
+                | n when n <= 0 -> l
+                | n -> aux ((fresh ~lts:local Logic ~ts:timestamp)::l) (n-1)
+              in
+              timestamp,aux [] n
+        in
+        let goal = app goal vars in
+        prove temperatures (depth+1) ~local ~timestamp ~level
+          ~success ~failure goal
 
-      | App (hd,goals) ->
-          let goals = List.map Norm.hnorm goals in
-          begin match observe hd with
-            (* Checking equivariance between terms *)
-            | Var v when v == Logic.var_check_eqvt ->
-                let a,b = match goals with [a;b] -> a,b | _ -> invalid_goal () in
-                let a = Norm.deep_norm a in
-                let b = Norm.deep_norm b in
-                if (eqvt a b) then success timestamp failure else failure ()
+    | App (hd,goals) ->
+        let goals = List.map Norm.hnorm goals in
+        begin match observe hd with
+          (* Checking equivariance between terms *)
+          | Var v when v == Logic.var_check_eqvt ->
+              let a,b = match goals with [a;b] -> a,b | _ -> invalid_goal () in
+              let a = Norm.deep_norm a in
+              let b = Norm.deep_norm b in
+              if (eqvt a b) then success timestamp failure else failure ()
 
-            (* Proving a negation-as-failure *)
-            | Var v when v == Logic.var_not ->
-                prove_not goals
+          (* Proving a negation-as-failure *)
+          | Var v when v == Logic.var_not ->
+              prove_not goals
 
-            (* Proving if-then-else *)
-            | Var v when v == Logic.var_ite ->
-                prove_ite goals
+          (* Proving if-then-else *)
+          | Var v when v == Logic.var_ite ->
+              prove_ite goals
 
-            (* Proving abstract-predicate *)
-            | Var v when v == Logic.var_abspred ->
-                prove_abstract goals
+          (* Proving abstract-predicate *)
+          | Var v when v == Logic.var_abspred ->
+              prove_abstract goals
 
-            (* Checking rigidity assumption *)
-            | Var v when v == Logic.var_assert_rigid ->
-               let a = match goals with [a] -> a | _ -> invalid_goal () in
-               let a = Norm.deep_norm a in
-               let vars = if level = Zero then eigen_vars [a] else logic_vars [a] in
-               begin match vars with
-                 | [] -> success timestamp failure
-                 | _ -> raise Variable_leakage
-               end
+          (* Checking rigidity assumption *)
+          | Var v when v == Logic.var_assert_rigid ->
+             let a = match goals with [a] -> a | _ -> invalid_goal () in
+             let a = Norm.deep_norm a in
+             let vars = if level = Zero then eigen_vars [a] else logic_vars [a] in
+             begin match vars with
+               | [] -> success timestamp failure
+               | _ -> raise Variable_leakage
+             end
 
-            (* proving cut predicate *)
-            | Var v when v == Logic.var_cutpred ->
-               let a = match goals with [a] -> a | _ -> invalid_goal () in
-               let a = Norm.deep_norm a in
-               let state = save_state () in
-               prove temperatures (depth+1) ~level ~local ~timestamp ~failure a
-                 ~success:(fun ts k -> success ts (fun () -> restore_state state ; failure ()) )
+          (* proving cut predicate *)
+          | Var v when v == Logic.var_cutpred ->
+             let a = match goals with [a] -> a | _ -> invalid_goal () in
+             let a = Norm.deep_norm a in
+             let state = save_state () in
+             prove temperatures (depth+1) ~level ~local ~timestamp ~failure a
+               ~success:(fun ts k -> success ts (fun () -> restore_state state ; failure ()) )
 
-            (* Proving distinct-predicate *)
-            | Var v when v == Logic.var_distinct ->
-                prove_distinct goals
+          (* Proving distinct-predicate *)
+          | Var v when v == Logic.var_distinct ->
+              prove_distinct goals
 
-            (* Output *)
-            | Var v when v == Logic.var_print ->
-                List.iter (fun t -> printf "%a%!" Pprint.pp_term t) goals ;
-                success timestamp failure
+          (* Output *)
+          | Var v when v == Logic.var_print ->
+              List.iter (fun t -> printf "%a%!" Pprint.pp_term t) goals ;
+              success timestamp failure
 
-            | Var v when v == Logic.var_println ->
-                List.iter (fun t -> printf "%a@." Pprint.pp_term t) goals ;
-                success timestamp failure
+          | Var v when v == Logic.var_println ->
+              List.iter (fun t -> printf "%a@." Pprint.pp_term t) goals ;
+              success timestamp failure
 
-            | Var v when v == Logic.var_printstr ->
-                List.iter (fun t -> match observe t with
-                             | QString s -> printf "%s%!" s
-                             | _ -> assert false)
-                  goals ;
-                success timestamp failure
+          | Var v when v == Logic.var_printstr ->
+              List.iter (fun t -> match observe t with
+                           | QString s -> printf "%s%!" s
+                           | _ -> assert false)
+                goals ;
+              success timestamp failure
 
-            | Var v when v == Logic.var_fprint ->
-                let print_fun fmt t =
-                  fprintf fmt "%a%!" Pprint.pp_term t
-                in
-                if do_fprint print_fun goals then success timestamp failure
-                else failure ()
+          | Var v when v == Logic.var_fprint ->
+              let print_fun fmt t =
+                fprintf fmt "%a%!" Pprint.pp_term t
+              in
+              if do_fprint print_fun goals then success timestamp failure
+              else failure ()
 
-            | Var v when v == Logic.var_fprintln ->
-                let print_fun fmt t =
-                  fprintf fmt "%a@." Pprint.pp_term t
-                in
-                if do_fprint print_fun goals then success timestamp failure
-                else failure ()
+          | Var v when v == Logic.var_fprintln ->
+              let print_fun fmt t =
+                fprintf fmt "%a@." Pprint.pp_term t
+              in
+              if do_fprint print_fun goals then success timestamp failure
+              else failure ()
 
-            | Var v when v == Logic.var_fprintstr ->
-                let print_fun fmt t = match observe t with
-                  | QString s -> fprintf fmt "%s%!" s
-                  | _ -> assert false
-                in
-                if do_fprint print_fun goals then success timestamp failure
-                else failure ()
+          | Var v when v == Logic.var_fprintstr ->
+              let print_fun fmt t = match observe t with
+                | QString s -> fprintf fmt "%s%!" s
+                | _ -> assert false
+              in
+              if do_fprint print_fun goals then success timestamp failure
+              else failure ()
 
-            (* Opening file for output *)
-            | Var v when v == Logic.var_fopen_out ->
-                assert_level_one level ;
-                if (do_open_file goals) then success timestamp failure
-                else failure ()
+          (* Opening file for output *)
+          | Var v when v == Logic.var_fopen_out ->
+              assert_level_one level ;
+              if (do_open_file goals) then success timestamp failure
+              else failure ()
 
-            | Var v when v == Logic.var_fclose_out ->
-                assert_level_one level ;
-                if (do_close_file goals) then success timestamp failure
-                else failure ()
+          | Var v when v == Logic.var_fclose_out ->
+              assert_level_one level ;
+              if (do_close_file goals) then success timestamp failure
+              else failure ()
 
-            (* Check for definitions *)
-            | Var v ->
-                let temperature,temperatures =
-                  try List.assq v temperatures,List.remove_assq v temperatures
-                  with Not_found -> Unfrozen,temperatures
-                in
-                prove_atom hd goals (v,temperature,temperatures)
+          (* Check for definitions *)
+          | Var v ->
+              let temperature,temperatures =
+                try List.assq v temperatures,List.remove_assq v temperatures
+                with Not_found -> Unfrozen,temperatures
+              in
+              prove_atom hd goals (v,temperature,temperatures)
 
-            (* Invalid goal *)
-            | _ -> invalid_goal ()
-          end
+          (* Invalid goal *)
+          | _ -> invalid_goal ()
+        end
 
-      (* Failure *)
-      | _ -> invalid_goal ()
+    (* Failure *)
+    | _ -> invalid_goal ()
 
 (* Wrap prove with sanity checks. *)
 let prove ~success ~failure ~level ~timestamp ~local g =
