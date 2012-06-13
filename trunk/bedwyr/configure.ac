@@ -3,7 +3,7 @@ AC_PREREQ(2.60)
 AC_CONFIG_SRCDIR([src/bedwyr.ml])
 AC_PROG_INSTALL
 
-REVISION=$((svn info 2>&- || git svn info 2>&-) | grep Revision | sed -e "s/Revision: //" | tr -d '\n')
+REVISION=$((((svn info 2>&- || git svn info 2>&-) || git describe --tags 2>&- 1>&3) | grep Revision | sed -e "s/Revision: //") 3>&1 | tr -d '\n')
 
 #
 # Additional options
@@ -52,12 +52,16 @@ fi
 
 AC_PATH_PROG(GZIP,gzip,no)
 if test "$GZIP" = no ; then
-	AC_MSG_ERROR(Cannot find gzip.)
+	AC_MSG_WARN(Cannot find gzip.)
+else
+	DIST_SUFFIXES="tar.gz"
 fi
 
 AC_PATH_PROG(BZIP2,bzip2,no)
 if test "$BZIP2" = no ; then
-	AC_MSG_ERROR(Cannot find bzip2.)
+	AC_MSG_WARN(Cannot find bzip2.)
+else
+	DIST_SUFFIXES="$DIST_SUFFIXES tar.bz2"
 fi
 
 #
@@ -149,6 +153,7 @@ fi
 #
 ##############################################################################
 
+AC_SUBST(DIST_SUFFIXES)
 AC_SUBST(LIB_SUFFIXES)
 AC_SUBST(BIN_SUFFIXES)
 AC_SUBST(TEST_SUFFIX)
