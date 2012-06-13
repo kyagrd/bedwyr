@@ -8,6 +8,7 @@ TAR	= @TAR@
 
 prefix		= @prefix@
 exec_prefix	= @exec_prefix@
+datarootdir	= @datarootdir@
 nddocdir	= $(patsubst %$(PACKAGE_TARNAME),%ndcore,@docdir@)
 libdir		= @libdir@
 

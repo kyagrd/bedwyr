@@ -26,51 +26,51 @@ FIND	= @FIND@
 BZIP2	= bzip2 -9
 GZIP	= gzip -9
 
-prefix        =@prefix@
-exec_prefix   =@exec_prefix@
-bindir        =@bindir@
-#sbindir       =@sbindir@
-#libexecdir    =@libexecdir@
-datarootdir   =@datarootdir@
-#datadir       =@datadir@
-#sysconfdir    =@sysconfdir@
-#sharedstatedir=@sharedstatedir@
-#localstatedir =@localstatedir@
-#includedir    =@includedir@
-#oldincludedir =@oldincludedir@
-docdir        =$(patsubst %$(PACKAGE_TARNAME),%$(PACKAGE_NAME),@docdir@)
-#infodir       =@infodir@
-htmldir       =@htmldir@
-#dvidir        =@dvidir@
-pdfdir        =@pdfdir@
-psdir         =@psdir@
-libdir        =@libdir@
-#localedir     =@localedir@
-mandir        =@mandir@
+prefix		= @prefix@
+exec_prefix	= @exec_prefix@
+bindir		= @bindir@
+#sbindir	= @sbindir@
+#libexecdir	= @libexecdir@
+datarootdir	= @datarootdir@
+#datadir	= @datadir@
+#sysconfdir	= @sysconfdir@
+#sharedstatedir	= @sharedstatedir@
+#localstatedir 	= @localstatedir@
+#includedir	= @includedir@
+#oldincludedir 	= @oldincludedir@
+docdir		= $(patsubst %$(PACKAGE_TARNAME),%$(PACKAGE_NAME),@docdir@)
+#infodir	= @infodir@
+htmldir		= @htmldir@
+#dvidir		= @dvidir@
+pdfdir		= @pdfdir@
+psdir		= @psdir@
+libdir		= @libdir@
+#localedir	= @localedir@
+mandir		= @mandir@
 
-PREFIX        =$(DESTDIR)$(prefix)
-EXEC_PREFIX   =$(DESTDIR)$(exec_prefix)
-BINDIR        =$(DESTDIR)$(bindir)
-#SBINDIR       =$(DESTDIR)$(sbindir)
-#LIBEXECDIR    =$(DESTDIR)$(libexecdir)
-DATAROOTDIR   =$(DESTDIR)$(datarootdir)
-#DATADIR       =$(DESTDIR)$(datadir)
-#SYSCONFDIR    =$(DESTDIR)$(sysconfdir)
-#SHAREDSTATEDIR=$(DESTDIR)$(sharedstatedir)
-#LOCALSTATEDIR =$(DESTDIR)$(localstatedir)
-#INCLUDEDIR    =$(DESTDIR)$(includedir)
-#OLDINCLUDEDIR =$(DESTDIR)$(oldincludedir)
-DOCDIR        =$(DESTDIR)$(docdir)
-#INFODIR       =$(DESTDIR)$(infodir)
-HTMLDIR       =$(DESTDIR)$(htmldir)
-#DVIDIR        =$(DESTDIR)$(dvidir)
-PDFDIR        =$(DESTDIR)$(pdfdir)
-PSDIR         =$(DESTDIR)$(psdir)
-LIBDIR        =$(DESTDIR)$(libdir)/ocaml/slimmer
-#LOCALEDIR     =$(DESTDIR)$(localedir)
-MANDIR        =$(DESTDIR)$(mandir)
+PREFIX		= $(DESTDIR)$(prefix)
+EXEC_PREFIX	= $(DESTDIR)$(exec_prefix)
+BINDIR		= $(DESTDIR)$(bindir)
+#SBINDIR	= $(DESTDIR)$(sbindir)
+#LIBEXECDIR	= $(DESTDIR)$(libexecdir)
+DATAROOTDIR	= $(DESTDIR)$(datarootdir)
+#DATADIR	= $(DESTDIR)$(datadir)
+#SYSCONFDIR	= $(DESTDIR)$(sysconfdir)
+#SHAREDSTATEDIR	= $(DESTDIR)$(sharedstatedir)
+#LOCALSTATEDIR 	= $(DESTDIR)$(localstatedir)
+#INCLUDEDIR	= $(DESTDIR)$(includedir)
+#OLDINCLUDEDIR 	= $(DESTDIR)$(oldincludedir)
+DOCDIR		= $(DESTDIR)$(docdir)
+#INFODIR	= $(DESTDIR)$(infodir)
+HTMLDIR		= $(DESTDIR)$(htmldir)
+#DVIDIR		= $(DESTDIR)$(dvidir)
+PDFDIR		= $(DESTDIR)$(pdfdir)
+PSDIR		= $(DESTDIR)$(psdir)
+LIBDIR		= $(DESTDIR)$(libdir)/ocaml/slimmer
+#LOCALEDIR	= $(DESTDIR)$(localedir)
+MANDIR		= $(DESTDIR)$(mandir)
 
-VIMFILES = $(DATAROOTDIR)/vim/vimfiles
+VIMFILES 	= $(DATAROOTDIR)/vim/vimfiles
 
 INSTALL     = @INSTALL@
 INSTALL_OPTS=-v
@@ -280,27 +280,27 @@ $(DIST_NAME).tar: src/ndcore/ndcore.tar src/bedwyr.tar doc/manual.tar dist.tar
 .PHONY: help clean distclean
 
 help:
-	@echo " help           this message"
+	@echo ' help           this message'
 	@echo
-	@echo " all (default)  compiles the library/program wrt \$$TARGET"
-	@echo " test           runs a test on ndcore, then on bedwyr"
-	@echo " doc            compiles the doc from the sources wrt \$$TARGET"
-	@echo "                (requires the compilation of the lib/program)"
+	@echo ' all (default)  compiles the library/program wrt $$TARGET'
+	@echo ' test           runs a test on ndcore, then on bedwyr'
+	@echo ' doc            compiles the doc from the sources wrt $$TARGET'
+	@echo '                (requires the compilation of the lib/program)'
 	@echo
-	@echo " install        install the files wrt to the command-line"
-	@echo "                variables \$$DESTDIR and \$$TARGET and the"
-	@echo "                parameters given to ./configure"
+	@echo ' install        install the files wrt to the command-line'
+	@echo '                variables $$DESTDIR and $$TARGET and the'
+	@echo '                parameters given to ./configure'
 	@echo
-	@echo " dist           build $(DIST_NAME).tar.bz2"
-	@echo "                and $(DIST_NAME).tar.gz"
+	@echo ' dist           build $(DIST_NAME).tar.bz2'
+	@echo '                and $(DIST_NAME).tar.gz'
 	@echo
-	@echo " help           display this message"
-	@echo " distclean      remove almost all generated files"
-	@echo " clean          remove compiled files"
+	@echo ' help           display this message'
+	@echo ' distclean      remove almost all generated files'
+	@echo ' clean          remove compiled files'
 	@echo
-	@echo " \$$TARGET can be \"ndcore\" (for the library only), \"bedwyr\""
-	@echo " (for the programm only, requires ndcore to be previously"
-	@echo " compiled or installed), or \"\" (default, compiles both)"
+	@echo ' $$TARGET can be "ndcore" (for the library only), "bedwyr"'
+	@echo ' (for the programm only, requires ndcore to be previously'
+	@echo ' compiled or installed), or "" (default, compiles both)'
 
 distclean: clean
 	find . -name '*~' -exec rm \{\} \;
