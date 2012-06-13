@@ -160,8 +160,12 @@ let defs : (Term.var,object_declaration) Hashtbl.t =
 
 let declare_const (p,name) ty =
   let const_var = Term.get_var (Term.atom ~tag:Term.Constant name) in
-  if Hashtbl.mem defs const_var || List.mem const_var Logic.predefined
-  then raise (Invalid_const_declaration (name,p,ty,"name conflict"))
+  if Hashtbl.mem defs const_var
+  then raise (Invalid_const_declaration
+                (name,p,ty,"name conflict"))
+  else if List.mem const_var Logic.predefined
+  then raise (Invalid_const_declaration
+                (name,p,ty,"name conflict with a predefined predicate"))
   else let _ = kind_check ty in
   Hashtbl.add defs const_var (Constant ty)
 
@@ -175,15 +179,23 @@ let create_def (new_predicates,global_flavour) (flavour,p,name,ty) =
     | Normal,_ -> flavour
     | _,Normal -> global_flavour
     | _ when global_flavour=flavour -> flavour
-    | _ -> raise (Invalid_flavour (name,p,string_of_flavour global_flavour,string_of_flavour flavour))
+    | _ -> raise (Invalid_flavour
+                    (name,p,string_of_flavour global_flavour,string_of_flavour flavour))
   in
   let new_predicate =
     let head_var = Term.get_var (Term.atom ~tag:Term.Constant name) in
-    if Hashtbl.mem defs head_var || List.mem head_var Logic.predefined
-    then raise (Invalid_pred_declaration (name,p,ty,"name conflict with a predefined predicate"))
+    if Hashtbl.mem defs head_var
+    then raise (Invalid_pred_declaration
+                  (name,p,ty,"name conflict"))
+    else if List.mem head_var Logic.predefined
+    then raise (Invalid_pred_declaration
+                  (name,p,ty,"name conflict with a predefined predicate"))
     else let (flex,_,propositional,_) = kind_check ty in
     if not (propositional || flex) then
-      raise (Invalid_pred_declaration (name,p,ty,Format.sprintf "target type can only be %s" (Typing.type_to_string Typing.tprop)))
+      raise (Invalid_pred_declaration
+               (name,p,ty,Format.sprintf
+                            "target type can only be %s"
+                            (Typing.type_to_string Typing.tprop)))
     else begin
       let t = (if flavour=Normal then None else Some (Table.create ())) in
       Hashtbl.add defs head_var (Predicate (flavour, None, None, t, ty)) ;
@@ -404,13 +416,6 @@ let mk_clause head body wrong_structure =
    * body       Exists\\ #4=#5 /\ (#3=(f #5 #1) /\ (g #5 #1 #2)) *)
   (pred, arity, body)
 
-let mk_def_clause p head body =
-  let wrong_structure () =
-    raise (Inconsistent_definition
-             ("some predicate",p,"head term structure incorrect"))
-  in
-  mk_clause head body wrong_structure
-
 let get_pred head_var fail_const fail_missing =
   try begin
     match Hashtbl.find defs head_var with
@@ -418,7 +423,14 @@ let get_pred head_var fail_const fail_missing =
       | Predicate x -> x
   end with Not_found -> fail_missing ()
 
-let add_clause new_predicates (p,pre_head,pre_body) =
+let mk_def_clause p head body =
+  let wrong_structure () =
+    raise (Inconsistent_definition
+             ("some predicate",p,"head term structure incorrect"))
+  in
+  mk_clause head body wrong_structure
+
+let add_def_clause new_predicates (p,pre_head,pre_body) =
   let free_types : (Term.var,Typing.ty) Hashtbl.t =
     Hashtbl.create 10
   in
@@ -432,8 +444,10 @@ let add_clause new_predicates (p,pre_head,pre_body) =
   let name = Term.get_name head in
   let f,b,th,t,ty =
     get_pred head_var
-      (fun () -> raise (Inconsistent_definition (name,p,"object declared as a constant")))
-      (fun () -> raise (Inconsistent_definition (name,p,"predicate not declared")))
+      (fun () -> raise (Inconsistent_definition
+                          (name,p,"object declared as a constant")))
+      (fun () -> raise (Inconsistent_definition
+                          (name,p,"predicate not declared")))
   in
   if List.exists (fun (v,_) -> v == head_var) new_predicates then begin
     let b =
@@ -450,10 +464,11 @@ let add_clause new_predicates (p,pre_head,pre_body) =
     in
     let b = Norm.hnorm b in
     Hashtbl.replace defs head_var (Predicate (f,Some b,th,t,ty)) ;
-  end else raise (Inconsistent_definition (name,p,"predicate not declared in this block"))
+  end else raise (Inconsistent_definition
+                    (name,p,"predicate not declared in this block"))
 
 let add_clauses new_predicates clauses =
-  List.iter (add_clause new_predicates) clauses
+  List.iter (add_def_clause new_predicates) clauses
 
 
 (* theorem definitions *)
@@ -482,15 +497,17 @@ let add_theorem (p,n,pre_theorem) =
   let name = Term.get_name head in
   let f,b,th,t,ty =
     get_pred head_var
-      (fun () -> raise (Inconsistent_definition (name,p,"object declared as a constant")))
-      (fun () -> raise (Inconsistent_definition (name,p,"predicate not declared")))
+      (fun () -> raise (Inconsistent_theorem
+                          (name,p,"target object declared as a constant")))
+      (fun () -> raise (Inconsistent_theorem
+                          (name,p,"predicate not declared")))
   in
   let th =
     match th with
       | None -> Term.lambda arity body
       | Some th ->
           begin match Term.observe th with
-            | Term.Lam (a,b) when arity=a ->
+            | Term.Lam (a,th) when arity=a ->
                 Term.lambda a (Term.op_or th body)
             | _ when arity=0 ->
                 Term.op_or th body
@@ -501,7 +518,7 @@ let add_theorem (p,n,pre_theorem) =
   Hashtbl.replace defs head_var (Predicate (f,b,Some th,t,ty))
 
 
-(* Using definitions *)
+(* Using predicates *)
 
 exception Missing_definition of string * Typing.pos option
 exception Missing_table of string * Typing.pos option
@@ -522,20 +539,45 @@ let get_name_pred ?pos head_tm failure =
   name,x
 
 let get_def ~check_arity head_tm =
-  let _,(f,b,_,t,ty) = get_name_pred head_tm ignore in
-  match b with
-    (* XXX in the case of an empty definition (b = None),
-     * we can't infer the arity of the predicate,
-     * so the actual value of the body returned should be
-     * Lam (n,False) with an a priori unknown n.
-     * Therefore, so long as we allow empty definitions and hollow types,
-     * [check_arity] is mandatory. *)
-    | None -> f,Term.lambda check_arity Term.op_false,t,ty
-    | Some b -> f,b,t,ty
+  let _,(f,b,th,t,ty) = get_name_pred head_tm ignore in
+  (* XXX in the case of an empty definition (b = None),
+   * we can't infer the arity of the predicate,
+   * so the actual value of the body returned should be
+   * Lam (n,False) with an a priori unknown n, which isn't possible.
+   * Therefore, so long as we allow empty definitions and hollow types,
+   * [check_arity] is mandatory. *)
+  let b = match b with
+    | None -> Term.lambda check_arity Term.op_false
+    | Some b -> b
+  in
+  let th = match th with
+    | None -> Term.lambda check_arity Term.op_false
+    | Some th -> th
+  in
+  f,b,th,t,ty
 
 let remove_def head_tm =
   let head_var = Term.get_var head_tm in
   Hashtbl.remove defs head_var
+
+let get_table p head_tm success failure =
+  let name,(_,_,_,table,ty) = get_name_pred ~pos:p head_tm failure in
+  match table with
+    | Some table -> success table ty
+    | None -> failure () ; raise (Missing_table (name,Some p))
+
+let clear_tables () =
+  Hashtbl.iter
+    (fun _ v -> match v with
+       | Predicate (_,_,_,Some t,_) -> Table.reset t
+       | _ -> ())
+    defs
+
+let clear_table (p,head_tm) =
+  get_table p head_tm (fun table _ -> Table.reset table) ignore
+
+
+(* I/O *)
 
 let print_env () =
   let print_types () =
@@ -603,26 +645,9 @@ let print_type_of pre_term =
                    (fun ty -> Typing.pp_type_norm ty) ty)
     free_types ;
   Format.printf "@]@."
-  (*Pprint.pp_type Format.std_formatter ty*)
-
-let get_table p head_tm success failure =
-  let name,(_,_,_,table,ty) = get_name_pred ~pos:p head_tm failure in
-  match table with
-    | Some table -> success table ty
-    | None -> failure () ; raise (Missing_table (name,Some p))
 
 let show_table (p,head_tm) =
   get_table p head_tm (fun table _ -> Table.print head_tm table) ignore
-
-let clear_tables () =
-  Hashtbl.iter
-    (fun _ v -> match v with
-       | Predicate (_,_,_,Some t,_) -> Table.reset t
-       | _ -> ())
-    defs
-
-let clear_table (p,head_tm) =
-  get_table p head_tm (fun table _ -> Table.reset table) ignore
 
 let save_table (p,head_tm) file =
   try
@@ -637,8 +662,9 @@ let save_table (p,head_tm) file =
     Format.printf "Couldn't open file for writing (%s).@." e
 
 
-(* Handle user interruptions *)
+(* Misc *)
 
+(* Handle user interruptions *)
 let interrupt = ref false
 exception Interrupt
 let _ =

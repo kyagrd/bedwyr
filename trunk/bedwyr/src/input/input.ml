@@ -139,6 +139,7 @@ type command =
   | Debug               of string option
   | Time                of string option
   | Equivariant         of string option
+  | Freezing            of int
   | Env
   | Type_of             of preterm
   | Show_table          of pos * string

@@ -83,7 +83,7 @@
               "abbrev",         ABBREV;
               "unabbrev",       UNABBREV
             ]
-  let command_table = Hashtbl.create 19
+  let command_table = Hashtbl.create 20
   let _ = List.iter (fun (k,t) -> Hashtbl.add command_table k t)
             [ "quit",           EXIT;
               "exit",           EXIT;
@@ -95,6 +95,7 @@
               "debug",          DEBUG;
               "time",           TIME;
               "equivariant",    EQUIVARIANT;
+              "freezing",       FREEZING;
               "env",            ENV;
               "typeof",         TYPEOF;
               "show_table",     SHOW_TABLE;

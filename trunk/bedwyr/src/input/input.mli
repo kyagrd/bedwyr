@@ -84,37 +84,39 @@ type flavour =
   * but also available in input files). *)
 type command =
     Exit
-  (** [#exit.]  close all files and exit *)
+  (** [#exit.] close all files and exit *)
   | Help
-  (** [#help.]  display a short help message *)
+  (** [#help.] display a short help message *)
   | Include of string list
   (** [#include "f1.def" "f2.def".] load a list of files *)
   | Reset
-  (** [#reset.]  clear the current session *)
+  (** [#reset.] clear the current session *)
   | Reload
-  (** [#reload.]  reload the current session *)
+  (** [#reload.] reload the current session *)
   | Session of string list
   (** [#session "f1.def" "f2.def".] load these files as the current session *)
   | Debug of string option
   (** [#debug on.] turn debugging on/off (default off) *)
   | Time of string option
-  (** [#time on.]  turn timing on/off (default off) *)
+  (** [#time on.] turn timing on/off (default off) *)
   | Equivariant of string option
   (** [#equivariant on.] turn equivariant tabling on/off (default on) *)
+  | Freezing of int
+  (** [#freezing 42.] set the freezing-point to a non-negative value (default -1) *)
   | Env
-  (** [#env.]  call {!Input.print_env} *)
+  (** [#env.] call {!Input.print_env} *)
   | Type_of of preterm
-  (** [#type_of.]  call {!Input.print_type_of} *)
+  (** [#type_of.] call {!Input.print_type_of} *)
   | Show_table of pos * string
-  (** [#show_table.]  call {!Input.show_table} *)
+  (** [#show_table.] call {!Input.show_table} *)
   | Clear_tables
-  (** [#clear_tables.]  call {!Input.clear_tables} *)
+  (** [#clear_tables.] call {!Input.clear_tables} *)
   | Clear_table of pos * string
-  (** [#clear_table.]  call {!Input.clear_table} *)
+  (** [#clear_table.] call {!Input.clear_table} *)
   | Save_table of pos * string * string
   (** [#save_table.] call {!Input.save_table} *)
   | Assert of preterm
-  (** [#assert.]  check whether a query succeeds *)
+  (** [#assert.] check whether a query succeeds *)
   | Assert_not of preterm
   (** [#assert_not.] check whether a query fails *)
   | Assert_raise of preterm

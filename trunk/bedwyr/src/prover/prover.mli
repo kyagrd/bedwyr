@@ -33,6 +33,9 @@ type level =
   | Zero (** Logic vars are forbidden and eigen vars can be instantiated. *)
   | One (** Logic vars are instantiated and eigen vars are constants. *)
 
+(** Maximum number of theorem unfolding in backward chaining (-1: no limit). *)
+val freezing_point : int ref
+
 (** Attempt to prove the goal [(nabla x_1..x_local . g)(S)] by
   * destructively instantiating it,
   * calling [success] on every success, and finishing with [failure]
@@ -46,6 +49,6 @@ val prove :
   failure:(unit -> 'a) ->
   level:level -> timestamp:int -> local:int -> Term.term -> 'a
 
-(** Run the REPL, calls [prove] on the queries,
+(** Run the REPL, call [prove] on the queries,
   * and offer to print the solutions one by one. *)
 val toplevel_prove : Term.term -> unit

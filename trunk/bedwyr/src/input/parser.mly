@@ -41,8 +41,8 @@
 %token UNDO SKIP ABORT CLEAR ABBREV UNABBREV
 %token TO WITH ON AS KEEP
 %token LBRACK RBRACK TURN STAR AT PLUS HASH
-%token EXIT HELP INCLUDE RESET RELOAD SESSION DEBUG TIME
-%token EQUIVARIANT ENV TYPEOF SHOW_TABLE CLEAR_TABLES CLEAR_TABLE SAVE_TABLE
+%token EXIT HELP INCLUDE RESET RELOAD SESSION DEBUG TIME EQUIVARIANT FREEZING
+%token ENV TYPEOF SHOW_TABLE CLEAR_TABLES CLEAR_TABLE SAVE_TABLE
 %token ASSERT ASSERT_NOT ASSERT_RAISE
 %token UNDERSCORE
 
@@ -107,9 +107,10 @@ meta_command:
   | RESET DOT                           { Input.Command (Input.Reset) }
   | RELOAD DOT                          { Input.Command (Input.Reload) }
   | SESSION string_args DOT             { Input.Command (Input.Session $2) }
-  | DEBUG opt_arg DOT                   { Input.Command (Input.Debug $2) }
-  | TIME opt_arg DOT                    { Input.Command (Input.Time $2) }
-  | EQUIVARIANT opt_arg DOT             { Input.Command (Input.Equivariant $2) }
+  | DEBUG opt_bool DOT                  { Input.Command (Input.Debug $2) }
+  | TIME opt_bool DOT                   { Input.Command (Input.Time $2) }
+  | EQUIVARIANT opt_bool DOT            { Input.Command (Input.Equivariant $2) }
+  | FREEZING opt_nat DOT                { Input.Command (Input.Freezing $2) }
   | ENV DOT                             { Input.Command (Input.Env) }
   | TYPEOF formula DOT                  { Input.Command (Input.Type_of $2) }
   | SHOW_TABLE lower_id DOT             { Input.Command (Input.Show_table (pos 2,$2)) }
@@ -153,9 +154,9 @@ decls:
   | decl COMMA decls                    { $1::$3 }
 
 decl:
-  | flavor apred_id                     { let p,name,ty = $2 in ($1,p,name,ty) }
+  | flavour apred_id                    { let p,name,ty = $2 in ($1,p,name,ty) }
 
-flavor:
+flavour:
   |                                     { Input.Normal      }
   | INDUCTIVE                           { Input.Inductive   }
   | COINDUCTIVE                         { Input.CoInductive }
@@ -289,11 +290,15 @@ string_args:
   | QSTRING string_args                 { let _,s = $1 in
                                           s::$2 }
 
-opt_arg:
+opt_bool:
   |                                     { None }
   | any_id                              { Some $1 }
   | ON                                  { Some "on" }
   | TRUE                                { Some "true" }
   | FALSE                               { Some "false" }
+
+opt_nat:
+  |                                     { -1 }
+  | NUM                                 { $1 }
 
 %%
