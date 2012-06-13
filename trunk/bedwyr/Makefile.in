@@ -6,7 +6,7 @@
 #
 # $TARGET can be "ndcore" for this library only,
 # "bedwyr" for the program only (requires ndcore to either
-# havinge been compiled just before, installed in a custom place
+# having been compiled just before, installed in a custom place
 # wrt the current Makefile config, or installed in a standard place),
 # and "" for both (in which case all the doc will be in /u/s/d/bedwyr).
 
@@ -169,7 +169,7 @@ test_bedwyr: $(bedwyr)
 
 # DOC
 
-.PHONY: doc bedwyr_doc
+.PHONY: doc ndcore_doc bedwyr_doc bedwyr_ref userguide
 
 ifeq (@OCAMLDOC@,)
 doc:
@@ -188,9 +188,13 @@ NDCORE_DUMP	= src/ndcore/ocamldoc.dump
 ndcore_doc $(NDCORE_DUMP):
 	$(MAKE) -C src/ndcore doc
 
-bedwyr_doc: doc/Makefile
-	$(MAKE) -C src doc
+bedwyr_doc: userguide bedwyr_ref
+
+userguide: doc/Makefile
 	$(MAKE) -j1 -C doc
+
+bedwyr_ref:
+	$(MAKE) -C src doc
 
 # INSTALL
 
@@ -250,9 +254,7 @@ install_bedwyr_doc: bedwyr_doc
 
 .PHONY: dist src/ndcore/ndcore.tar src/bedwyr.tar dist.tar
 
-dist: Makefile
-	$(MAKE) $(DIST_NAME).tar.bz2
-	$(MAKE) $(DIST_NAME).tar.gz
+dist: $(DIST_NAME).tar.bz2 $(DIST_NAME).tar.gz
 
 src/ndcore/ndcore.tar:
 	$(MAKE) -C src/ndcore archive
