@@ -1,28 +1,57 @@
 Kind obj        type.
 
-Type a,b,c,d,e  obj.
+Type a,b,c,
+     d,e,f      obj.
 
-% a - b - c
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% First example
+% simple backward chaining
+% with no external predicates in the theorems
+%
+%   c - d
+%  /
+% a - b
+%  \
+%   e _ f
 
-Define inductive p : obj -> obj -> prop by
-  p a b ;
-  p b c ;
-  p a c.
+Define inductive p1 : obj -> prop by
+  p1 a := printstr "This is a computation intensive request to (p1 a).\n";
+  p1 b := printstr "This is a computation intensive request to (p1 b).\n";
+  p1 c := printstr "This is a computation intensive request to (p1 c).\n";
+  p1 d := printstr "This is a computation intensive request to (p1 d).\n";
+  p1 e := printstr "This is a computation intensive request to (p1 e).\n";
+  p1 f := printstr "This is a computation intensive request to (p1 f).\n".
 
-Theorem demo_th_1 : p a b -> p a c.
+Define print_p1 : prop by
+  print_p1 := printstr "
+%   c - d
+%  /
+% a - b
+%  \\
+%   e _ f\n\n".
 
+Theorem p1_th1 : p1 a -> p1 b.
+Theorem p1_th2 : p1 a -> p1 c.
+Theorem p1_th3 : p1 c -> p1 d.
+Theorem p1_th4 : p1 a -> p1 e.
+Theorem p1_th5 : p1 e -> p1 f.
+
+#assert print_p1.
 #debug on.
-#show_table p.
-#assert p a b.
-#show_table p.
-#assert p a c.
-#show_table p.
-#assert p a c.
+
+#freezing 42.
+#assert p1 a.
+#show_table p1.
+#assert p1 a.
+#assert p1 b.
+#show_table p1.
+#assert p1 d.
+#show_table p1.
+#freezing 1.
+#assert p1 f.
+#show_table p1.
+
 #debug off.
+#clear_table p1.
 
 #exit.
-
-/*
- * first example:
- * BC(p a b >> p a c)
- */

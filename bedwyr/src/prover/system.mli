@@ -243,7 +243,7 @@ exception Inconsistent_theorem of string * Input.pos * string
 (** If possible, add the theorem to the tabling extended rules. *)
 val add_theorem : (Input.pos * string * Input.preterm) -> unit
 
-(** {6 Using definitions} *)
+(** {6 Using predicates} *)
 
 exception Missing_definition of string * Input.pos option
 exception Missing_table of string * Input.pos option
@@ -257,10 +257,18 @@ val reset_decls : unit -> unit
   *)
 val get_def :
   check_arity:int ->
-  Term.term -> flavour * Term.term * Table.t option * Typing.ty
+  Term.term -> flavour * Term.term * Term.term * Table.t option * Typing.ty
 
 (** Remove a definition. *)
 val remove_def : Term.term -> unit
+
+(** Remove all tables. *)
+val clear_tables : unit -> unit
+
+(** Remove a table. *)
+val clear_table : Input.pos * Term.term -> unit
+
+(** {6 I/O} *)
 
 (** Display the inferred type of every declared object. *)
 val print_env : unit -> unit
@@ -275,16 +283,13 @@ val print_type_of : Input.preterm -> unit
 (** Display the content of a table. *)
 val show_table : Input.pos * Term.term -> unit
 
-(** Remove all tables. *)
-val clear_tables : unit -> unit
-
-(** Remove a table. *)
-val clear_table : Input.pos * Term.term -> unit
-
 (** Save the content of a table to a file.
   * The proved and disproved entries are stored as arguments
   * to the predicates [proved] and [disproved], respectively. *)
 val save_table : Input.pos * Term.term -> string -> unit
+
+(** {6 Misc} *)
+
 exception Interrupt
 
 (** @return [true] if a user interruption was detected since the last call to

@@ -284,7 +284,7 @@ let rec process ?(interactive=false) parse lexbuf =
           exit 1
       | System.Inconsistent_theorem (n,p,s) ->
           Format.printf
-            "%sInconsistent definition for the theorem %s: %s.@."
+            "%sInconsistent definition of the theorem %s: %s.@."
             (position_range p)
             n
             s ;
@@ -397,6 +397,7 @@ and command c reset =
 
     (* Tabling-related commands *)
     | Input.Equivariant value -> toggle_flag Index.eqvt_index value
+    | Input.Freezing temp -> Prover.freezing_point := temp
     | Input.Env -> System.print_env ()
     | Input.Type_of pre_term -> System.print_type_of pre_term
     | Input.Show_table (p,name) -> System.show_table (p,Term.atom ~tag:Term.Constant name)
