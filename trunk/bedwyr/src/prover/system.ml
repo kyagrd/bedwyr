@@ -246,6 +246,9 @@ let translate_term
       let t,v =
         if was_free then t,v else begin
           Term.free name ;
+          (* XXX in case we actually use this variable on day,
+           * we should depend on the level to create an instantiable variable,
+           * ie not always a Logic one (cf [mk_clause])*)
           let t = Term.atom ~tag:Term.Logic name in
           let v = Term.get_var t in
           t,v
@@ -393,6 +396,9 @@ let mk_clause head body wrong_structure =
          if List.exists (Term.eq v) new_params then body
          else Term.quantify Term.Exists v body)
       body
+      (* XXX in case [body] wasn't created by [translate_term],
+       * we should depend on the level to look for instantiable variables,
+       * ie not always Logic ones (cf [translate_term]) *)
       (Term.logic_vars [body])
   in
   if !debug then
@@ -437,11 +443,11 @@ let add_def_clause new_predicates (p,pre_head,pre_body) =
   let free_args = Input.free_args pre_head in
   let head,_ = translate_term ~free_args pre_head free_types in
   let body,_ = translate_term ~free_args pre_body free_types in
-  let head,arity,body =
+  let pred,arity,body =
     mk_def_clause p head body
   in
-  let head_var = Term.get_var head in
-  let name = Term.get_name head in
+  let head_var = Term.get_var pred in
+  let name = Term.get_name pred in
   let f,b,th,t,ty =
     get_pred head_var
       (fun () -> raise (Inconsistent_definition
@@ -476,25 +482,54 @@ let add_clauses new_predicates clauses =
 exception Inconsistent_theorem of string * Input.pos * string
 
 
-let mk_theorem (p,n) theorem =
+let mk_theorem_clauses (p,n) theorem =
   (* Check whether the theorem has the right structure. *)
-  let body,head = match Term.observe theorem with
-    | Term.Arrow (body,head) -> body,head
-    | _ -> raise (Inconsistent_theorem (n,p,"formula structure incorrect"))
+  let clean_theorem theorem =
+    let vars =
+      let rec aux l = function
+        | n when n <= 0 -> l
+        (* XXX in case [translate_term] changes how it deals with free variables,
+         * we should depend on the level to create an instantiable variable,
+         * ie not always a Logic one (cf [mk_clause] and [translate_term])*)
+        | n -> aux ((Term.fresh ~ts:0 ~lts:0 Term.Logic)::l) (n-1)
+      in
+      aux []
+    in
+    (* [newl] is a list of deep-normed theorem clauses
+     * [oldl] is a list of theorems built with theorem clauses, /\ and -> *)
+    let rec aux newl = function
+      | [] -> newl
+      | theorem::oldl ->
+          let theorem = Norm.hnorm theorem in
+          begin match Term.observe theorem with
+            | Term.Arrow (body,head) ->
+                let head = Norm.deep_norm head in
+                let body = Norm.deep_norm body in
+                aux ((head,body)::newl) oldl
+            | Term.Binder (Term.Forall,n,t) ->
+                let t = Term.lambda n t in
+                aux newl ((Term.app t (vars n))::oldl)
+            | Term.And (t1,t2) ->
+                aux newl (t1::t2::oldl)
+            (* TODO allow atomic facts,
+             * ie auto-translate "p X" to "true -> p X" *)
+            (*| Term.App _ -> Format.printf " - App -@." ; newl*)
+            | _ ->
+                raise (Inconsistent_theorem (n,p,"formula structure incorrect"))
+          end
+    in
+    aux [] [theorem]
   in
   let wrong_structure () =
     raise (Inconsistent_theorem (n,p,"head term structure incorrect"))
   in
-  mk_clause head body wrong_structure
+  List.rev_map
+    (fun (head,body) -> mk_clause head body wrong_structure)
+    (clean_theorem theorem)
 
-let add_theorem (p,n,pre_theorem) =
-  let free_types : (Term.var,Typing.ty) Hashtbl.t =
-    Hashtbl.create 10
-  in
-  let theorem,_ = translate_term pre_theorem free_types in
-  let head,arity,body = mk_theorem (p,n) theorem in
-  let head_var = Term.get_var head in
-  let name = Term.get_name head in
+let add_theorem_clause p (pred,arity,body) =
+  let head_var = Term.get_var pred in
+  let name = Term.get_name pred in
   let f,b,th,t,ty =
     get_pred head_var
       (fun () -> raise (Inconsistent_theorem
@@ -516,6 +551,14 @@ let add_theorem (p,n,pre_theorem) =
   in
   let th = Norm.hnorm th in
   Hashtbl.replace defs head_var (Predicate (f,b,Some th,t,ty))
+
+let add_theorem (p,n,pre_theorem) =
+  let free_types : (Term.var,Typing.ty) Hashtbl.t =
+    Hashtbl.create 10
+  in
+  let theorem,_ = translate_term pre_theorem free_types in
+  let clauses = mk_theorem_clauses (p,n) theorem in
+  List.iter (add_theorem_clause p) clauses
 
 
 (* Using predicates *)
@@ -560,11 +603,11 @@ let remove_def head_tm =
   let head_var = Term.get_var head_tm in
   Hashtbl.remove defs head_var
 
-let get_table p head_tm success failure =
-  let name,(_,_,_,table,ty) = get_name_pred ~pos:p head_tm failure in
+let get_table pos head_tm success failure =
+  let name,(_,_,_,table,ty) = get_name_pred ~pos head_tm failure in
   match table with
     | Some table -> success table ty
-    | None -> failure () ; raise (Missing_table (name,Some p))
+    | None -> failure () ; raise (Missing_table (name,Some pos))
 
 let clear_tables () =
   Hashtbl.iter
