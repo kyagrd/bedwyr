@@ -47,7 +47,7 @@
 
 %token <int> NUM
 %token <string> UPPER_ID LOWER_ID INFIX_ID INTERN_ID
-%token <(Typing.pos * string)> QSTRING
+%token <(Input.Typing.pos * string)> QSTRING
 %token EOF
 
 /* Lower */
@@ -68,8 +68,8 @@
 /* Higher */
 
 %start input_def input_query
-%type <System.input> input_def
-%type <System.input> input_query
+%type <Input.input> input_def
+%type <Input.input> input_query
 
 %%
 
@@ -80,14 +80,14 @@ input_def:
   | meta_command                        { $1 }
 
 input_query:
-  | formula DOT                         { System.Query $1 }
+  | formula DOT                         { Input.Query $1 }
   | meta_command                        { $1 }
 
 top_command:
-  | KKIND type_clist ki DOT             { System.KKind ($2,$3) }
-  | TTYPE const_clist ty DOT            { System.TType ($2,$3) }
-  | DEFINE decls BY defs DOT            { System.Def ($2,$4) }
-  | DEFINE decls DOT                    { System.Def ($2,[]) }
+  | KKIND type_clist ki DOT             { Input.KKind ($2,$3) }
+  | TTYPE const_clist ty DOT            { Input.TType ($2,$3) }
+  | DEFINE decls BY defs DOT            { Input.Def ($2,$4) }
+  | DEFINE decls DOT                    { Input.Def ($2,[]) }
   | CLOSE                               { failwith "Abella command only" }
   | THEOREM                             { failwith "Abella command only" }
   | QED                                 { failwith "Abella command only" }
@@ -100,25 +100,25 @@ meta_command:
   | SET                                 { failwith "Abella command only" }
   | SHOW                                { failwith "Abella command only" }
   | QUIT                                { failwith "Abella command only" }
-  | EXIT DOT                            { System.Command (System.Exit) }
-  | HELP DOT                            { System.Command (System.Help) }
-  | INCLUDE string_args DOT             { System.Command (System.Include $2) }
-  | RESET DOT                           { System.Command (System.Reset) }
-  | RELOAD DOT                          { System.Command (System.Reload) }
-  | SESSION string_args DOT             { System.Command (System.Session $2) }
-  | DEBUG opt_arg DOT                   { System.Command (System.Debug $2) }
-  | TIME opt_arg DOT                    { System.Command (System.Time $2) }
-  | EQUIVARIANT opt_arg DOT             { System.Command (System.Equivariant $2) }
-  | ENV DOT                             { System.Command (System.Env) }
-  | TYPEOF formula DOT                  { System.Command (System.Type_of $2) }
-  | SHOW_TABLE lower_id DOT             { System.Command (System.Show_table (pos 2,$2)) }
-  | CLEAR_TABLES DOT                    { System.Command (System.Clear_tables) }
-  | CLEAR_TABLE lower_id DOT            { System.Command (System.Clear_table (pos 2,$2)) }
+  | EXIT DOT                            { Input.Command (Input.Exit) }
+  | HELP DOT                            { Input.Command (Input.Help) }
+  | INCLUDE string_args DOT             { Input.Command (Input.Include $2) }
+  | RESET DOT                           { Input.Command (Input.Reset) }
+  | RELOAD DOT                          { Input.Command (Input.Reload) }
+  | SESSION string_args DOT             { Input.Command (Input.Session $2) }
+  | DEBUG opt_arg DOT                   { Input.Command (Input.Debug $2) }
+  | TIME opt_arg DOT                    { Input.Command (Input.Time $2) }
+  | EQUIVARIANT opt_arg DOT             { Input.Command (Input.Equivariant $2) }
+  | ENV DOT                             { Input.Command (Input.Env) }
+  | TYPEOF formula DOT                  { Input.Command (Input.Type_of $2) }
+  | SHOW_TABLE lower_id DOT             { Input.Command (Input.Show_table (pos 2,$2)) }
+  | CLEAR_TABLES DOT                    { Input.Command (Input.Clear_tables) }
+  | CLEAR_TABLE lower_id DOT            { Input.Command (Input.Clear_table (pos 2,$2)) }
   | SAVE_TABLE lower_id QSTRING DOT     { let _,s = $3 in
-                                          System.Command (System.Save_table (pos 2,$2,s)) }
-  | ASSERT formula DOT                  { System.Command (System.Assert $2) }
-  | ASSERT_NOT formula DOT              { System.Command (System.Assert_not $2) }
-  | ASSERT_RAISE formula DOT            { System.Command (System.Assert_raise $2) }
+                                          Input.Command (Input.Save_table (pos 2,$2,s)) }
+  | ASSERT formula DOT                  { Input.Command (Input.Assert $2) }
+  | ASSERT_NOT formula DOT              { Input.Command (Input.Assert_not $2) }
+  | ASSERT_RAISE formula DOT            { Input.Command (Input.Assert_raise $2) }
   | EOF                                 { raise End_of_file }
 
 /* kinds, types */
@@ -128,8 +128,8 @@ type_clist:
   | lower_id COMMA type_clist           { (pos 1,$1)::$3 }
 
 ki:
-  | TYPE                                { Type.KType }
-  | ki RARROW ki                        { Type.ki_arrow $1 $3 }
+  | ki RARROW ki                        { Input.Typing.ki_arrow [$1] $3 }
+  | TYPE                                { Input.Typing.ktype }
   | LPAREN ki RPAREN                    { $2 }
 
 const_clist:
@@ -137,12 +137,12 @@ const_clist:
   | const_id COMMA const_clist          { (pos 1,$1)::$3 }
 
 ty:
-  | PROP                                { Type.TProp }
-  | STRING                              { Type.TString }
-  | NAT                                 { Type.TNat }
-  | lower_id                            { Type.Ty $1 }
-  | UNDERSCORE                          { Type.fresh_tyvar () }
-  | ty RARROW ty                        { Type.ty_arrow $1 $3 }
+  | ty RARROW ty                        { Input.Typing.ty_arrow [$1] $3 }
+  | lower_id                            { Input.Typing.tconst $1 }
+  | PROP                                { Input.Typing.tprop }
+  | STRING                              { Input.Typing.tstring }
+  | NAT                                 { Input.Typing.tnat }
+  | UNDERSCORE                          { Input.Typing.fresh_typaram () }
   | LPAREN ty RPAREN                    { $2 }
 
 /* definitions */
@@ -155,16 +155,16 @@ decl:
   | flavor apred_id                     { let p,name,ty = $2 in ($1,p,name,ty) }
 
 flavor:
-  |                                     { System.Normal      }
-  | INDUCTIVE                           { System.Inductive   }
-  | COINDUCTIVE                         { System.CoInductive }
+  |                                     { Input.Normal      }
+  | INDUCTIVE                           { Input.Inductive   }
+  | COINDUCTIVE                         { Input.CoInductive }
 
 defs:
   | def                                 { [$1] }
   | def SEMICOLON defs                  { $1::$3 }
 
 def:
-  | formula                             { pos 0,$1,Typing.pre_true (pos 0) }
+  | formula                             { pos 0,$1,Input.pre_true (pos 0) }
   | formula DEFEQ formula               { pos 0,$1,$3 }
 
 term_list:
@@ -173,33 +173,33 @@ term_list:
   | term_atom term_list                 { let t,l = $2 in $1,t::l }
 
 term_atom:
-  | TRUE                                { Typing.pre_true (pos 0) }
-  | FALSE                               { Typing.pre_false (pos 0) }
-  | LPAREN formula RPAREN               { Typing.change_pos (pos 1) $2 (pos 3) }
+  | TRUE                                { Input.pre_true (pos 0) }
+  | FALSE                               { Input.pre_false (pos 0) }
+  | LPAREN formula RPAREN               { Input.change_pos (pos 1) $2 (pos 3) }
   | LPAREN term RPAREN                  { $2 }
-  | LPAREN INFIX_ID RPAREN              { Typing.pre_predconstid (pos 0) $2 }
+  | LPAREN INFIX_ID RPAREN              { Input.pre_predconstid (pos 0) $2 }
   | token_id                            { $1 }
   | QSTRING                             { let p,s = $1 in
-                                          Typing.pre_qstring p s }
-  | NUM                                 { Typing.pre_nat (pos 1) $1 }
+                                          Input.pre_qstring p s }
+  | NUM                                 { Input.pre_nat (pos 1) $1 }
 
 term_abs:
-  | abound_id BSLASH term               { Typing.pre_lambda (pos 0) [$1] $3 }
+  | abound_id BSLASH term               { Input.pre_lambda (pos 0) [$1] $3 }
 
 term:
   | term_list %prec INFIX_ID            { let t,l = $1 in
-                                          Typing.pre_app (pos 1) t l }
-  | term INFIX_ID term                  { Typing.pre_app
+                                          Input.pre_app (pos 1) t l }
+  | term INFIX_ID term                  { Input.pre_app
                                             (pos 0)
-                                            (Typing.pre_predconstid (pos 2) $2)
+                                            (Input.pre_predconstid (pos 2) $2)
                                             [$1; $3] }
 
 formula:
-  | term EQ term                        { Typing.pre_eq (pos 0) $1 $3 }
-  | formula AND formula                 { Typing.pre_and (pos 0) $1 $3 }
-  | formula OR formula                  { Typing.pre_or (pos 0) $1 $3 }
-  | formula RARROW formula              { Typing.pre_arrow (pos 0) $1 $3 }
-  | binder pabound_list COMMA formula   { Typing.pre_binder (pos 0) $1 $2 $4 }
+  | term EQ term                        { Input.pre_eq (pos 0) $1 $3 }
+  | formula AND formula                 { Input.pre_and (pos 0) $1 $3 }
+  | formula OR formula                  { Input.pre_or (pos 0) $1 $3 }
+  | formula RARROW formula              { Input.pre_arrow (pos 0) $1 $3 }
+  | binder pabound_list COMMA formula   { Input.pre_binder (pos 0) $1 $2 $4 }
   | term %prec LPAREN                   { $1 }
 
 binder:
@@ -261,22 +261,22 @@ any_id:
 
 /* annotated id types */
 apred_id:
-  | lower_id                            { pos 1,$1,Type.fresh_tyvar () }
+  | lower_id                            { pos 1,$1,Input.Typing.fresh_typaram () }
   | lower_id COLON ty                   { pos 1,$1,$3 }
 
 abound_id:
-  | bound_id                            { pos 1,$1,Type.fresh_tyvar () }
+  | bound_id                            { pos 1,$1,Input.Typing.fresh_typaram () }
   | bound_id COLON ty                   { pos 1,$1,$3 }
 
 pabound_id:
-  | bound_id                            { pos 1,$1,Type.fresh_tyvar () }
+  | bound_id                            { pos 1,$1,Input.Typing.fresh_typaram () }
   | LPAREN bound_id COLON ty RPAREN     { pos 2,$2,$4 }
 
 /* predicate or constant in a term */
 token_id:
-  | upper_id                            { Typing.pre_freeid (pos 1) $1 }
-  | lower_id                            { Typing.pre_predconstid (pos 1) $1 }
-  | INTERN_ID                           { Typing.pre_internid (pos 1) $1 }
+  | upper_id                            { Input.pre_freeid (pos 1) $1 }
+  | lower_id                            { Input.pre_predconstid (pos 1) $1 }
+  | INTERN_ID                           { Input.pre_internid (pos 1) $1 }
 
 /* misc (commands) */
 

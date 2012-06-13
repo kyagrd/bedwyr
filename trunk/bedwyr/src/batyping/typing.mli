@@ -21,11 +21,11 @@
 
 (** Input signature of the functor {!Typing.Make}. *)
 module type INPUT = sig
+  (** Type of some additional information. *)
   type pos
-  (** Type of the position information during parsing. For error messages only. *)
 
+  (** Dummy information. *)
   val dummy_pos : pos
-  (** Dummy position for post-parsing errors. *)
 end
 
 (** Output signature of the functor {!Typing.Make}. *)
@@ -40,6 +40,7 @@ module type S = sig
   and ki_base =
     | KType     (** kind of proper types ({e *}) *)
   val ki_arrow : ki list -> ki -> ki
+  val ktype : ki
 
   (** Print a kind. *)
   val pp_kind : Format.formatter -> ki -> unit
@@ -57,6 +58,12 @@ module type S = sig
     | TVar        of int          (** type variables (for polymorphism) *)
     | TParam      of int          (** type parameters (for type inference) *)
   val ty_arrow : ty list -> ty -> ty
+  val tconst : string -> ty
+  val tprop : ty
+  val tstring : ty
+  val tnat : ty
+  val tvar : int -> ty
+  val tparam : int -> ty
   val fresh_tyvar : unit -> ty
   val fresh_typaram : unit -> ty
   val build_abstraction_types : int -> ty list * ty
@@ -107,8 +114,6 @@ module type S = sig
     ?unifier:type_unifier -> Format.formatter -> ty -> unit
   val type_to_string_norm :
     ?unifier:type_unifier -> ty -> string
-
-  (** {6 Type checking} *)
 
   (** Type incompletely inferred. *)
   exception Hollow_type of string
