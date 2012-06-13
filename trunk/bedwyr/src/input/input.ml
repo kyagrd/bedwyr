@@ -140,6 +140,7 @@ type command =
   | Time                of string option
   | Equivariant         of string option
   | Freezing            of int
+  | Saturation          of int
   | Env
   | Type_of             of preterm
   | Show_table          of pos * string

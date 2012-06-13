@@ -102,7 +102,9 @@ type command =
   | Equivariant of string option
   (** [#equivariant on.] turn equivariant tabling on/off (default on) *)
   | Freezing of int
-  (** [#freezing 42.] set the freezing-point to a non-negative value (default -1) *)
+  (** [#freezing 42.] set the freezing-point to a non-negative value or -1 (default 0) *)
+  | Saturation of int
+  (** [#saturation 42.] set the saturation pressure to a non-negative value or -1 (default 0) *)
   | Env
   (** [#env.] call {!Input.print_env} *)
   | Type_of of preterm

@@ -48,6 +48,7 @@ module Left =
 
 let debug_max_depth = -1 (* limited but global version of #debug *)
 let freezing_point = ref 0
+let saturation_pressure = ref 0
 
 type temperature = Unfrozen | Frozen of int
 
@@ -222,10 +223,11 @@ let rec prove temperatures depth ~success ~failure ~level ~timestamp ~local g =
    * to prove a predicative atom *)
   let prove_atom d args (v,temperature,temperatures) =
     if !debug || depth<=debug_max_depth then
-      eprintf "[%d] Proving %a...@."
-        (match temperature with Frozen t -> t | _ -> !freezing_point (*"∞"*))
+      eprintf "[%s] Proving %a...@."
+        (match temperature with Frozen t -> string_of_int t | _ -> "+")
         Pprint.pp_term g ;
-    let flavour,body,theorem,table,_ = get_def ~check_arity:(List.length args) d in
+    let arity = List.length args in
+    let flavour,body,theorem,table,_ = get_def ~check_arity:arity d in
     (* first step, first sub-step: look at the table
      * (whether the atom is frozen or not is irrelevent at this point) *)
     let status =
@@ -278,13 +280,13 @@ let rec prove temperatures depth ~success ~failure ~level ~timestamp ~local g =
            * or Unset has been left, in which case the [Table.add]
            * will overwrite it. *)
           let prove body success failure temperatures =
+            let table = match table with Some t -> t | None -> assert false in
             let disprovable = ref true in
             let status = ref (Table.Working disprovable) in
             let s0 = save_state () in
             let table_update_success ts k =
-              status := Table.Proved ;
               ignore (Stack.pop disprovable_stack) ;
-              disprovable := false ;
+              status := Table.Proved ;
               (* TODO check that optimization: since we know that
                * there is at most one success, we ignore
                * the continuation [k] and directly jump to the
@@ -292,9 +294,109 @@ let rec prove temperatures depth ~success ~failure ~level ~timestamp ~local g =
                * cleanup handlers, which are just jumps to
                * previous states.
                * It is actually quite useful in examples/graph-alt.def. *)
-              success ts
-                (fun () ->
-                   restore_state s0 ; failure ())
+              let k () = success ts (fun () -> restore_state s0 ; failure ()) in
+              (* XXX Here be the Forward-Chaining XXX *)
+              let saturate =
+                match temperature with
+                  | Frozen _ ->
+                      (* XXX for now we don't forward-chain during backward chaining;
+                       * if someday we do, we must skip "Working _"
+                       * instead of failing on it *)
+                      fun k -> k ()
+                  | Unfrozen ->
+                      (* [theorem] corresponds to the fact
+                       * "forall X, theorem X -> p X" *)
+                      let vars =
+                        let rec aux l = function
+                          | n when n <= 0 -> l
+                          | n -> aux ((fresh ~lts:local Eigen ~ts:(timestamp + n))::l) (n-1)
+                        in
+                        aux [] arity
+                      in
+                      let timestamp = timestamp + arity in
+                      let th_body = app theorem vars in
+                      (* [store_subst] is nearly the same as for Arrow *)
+                      let substs = ref [] in
+                      let state = save_state () in
+                      let store_subst ts k =
+                        (* XXX check_variables? *)
+                        substs := (get_subst state)::!substs ;
+                        k ()
+                      in
+                      (* [make_copies] is nearly the same as for Arrow *)
+                      let make_copies vs =
+                        List.map
+                          (fun sigma ->
+                             let unsig = apply_subst sigma in
+                             let newvars = List.map shared_copy vars in
+                             undo_subst unsig ;
+                             newvars)
+                          vs
+                      in
+                      let rec fc k pressure = function
+                        | [] -> k ()
+                        | args::copies ->
+                            if !debug || depth<=debug_max_depth then
+                              eprintf "(%d) Tabling %a...@."
+                                pressure
+                                Pprint.pp_term (app d args);
+                            let k () = fc k pressure copies in
+                            match begin
+                              try match Table.find table args with
+                                | Some {contents=c} -> Known c
+                                | None -> Unknown
+                              with
+                                | Index.Cannot_table -> OffTopic
+                            end with
+                              | OffTopic -> k ()
+                              | Known Table.Proved ->
+                                  if !debug || depth<=debug_max_depth then
+                                    eprintf
+                                      "Goal (%a) already proved!@."
+                                      Pprint.pp_term (app d args);
+                                  k ()
+                              | Known Table.Disproved -> failwith "did we just prove false?"
+                              | Known (Table.Working _) -> assert false
+                              | Unknown
+                              | Known Table.Unset ->
+                                  let status = ref Table.Proved in
+                                  (* XXX allow_eigenvar? *)
+                                  begin try Table.add ~allow_eigenvar:(level=One) table args status
+                                  with Index.Cannot_table -> assert false end ;
+                                  if !debug || depth<=debug_max_depth then
+                                    eprintf
+                                      "Goal (%a) proved using forward chaining@."
+                                      Pprint.pp_term (app d args);
+                                  aux args k pressure
+                      and aux args k = function
+                        | pressure when pressure < !saturation_pressure ->
+                            (* TODO replace this DFS by a BFS
+                             * (or at least try whether it's more efficient
+                             * memory-wise) *)
+                            let failure () =
+                              let copies = make_copies !substs in
+                              substs := [] ;
+                              fc k ((pressure+1)) copies
+                            in
+                            (* XXX for now we don't backward-chain during forward chaining;
+                             * we must also use [args] at least once
+                             * to improve performance *)
+                            prove ((v,Frozen 0)::temperatures) (depth+1) ~local ~timestamp
+                              ~level:Zero ~success:store_subst ~failure th_body
+                        | pressure when !saturation_pressure < 0 ->
+                            let failure () =
+                              let copies = make_copies !substs in
+                              substs := [] ;
+                              fc k pressure copies
+                            in
+                            prove ((v,Frozen 0)::temperatures) (depth+1) ~local ~timestamp
+                              ~level:Zero ~success:store_subst ~failure th_body
+                        | _ -> k ()
+                      in
+                      fun k -> aux args k 0
+              in
+              (* XXX There was the Forward-Chaining XXX *)
+              saturate k
             in
             let table_update_failure () =
               begin match !status with
@@ -307,14 +409,12 @@ let rec prove temperatures depth ~success ~failure ~level ~timestamp ~local g =
                     ignore (Stack.pop disprovable_stack) ;
                     if !disprovable then begin
                       status := Table.Disproved ;
-                      disprovable := false ;
                     end else
                       status := Table.Unset
                 | Table.Disproved | Table.Unset -> assert false
               end ;
               failure ()
             in
-            let table = match table with Some t -> t | None -> assert false in
             if try
               Table.add ~allow_eigenvar:(level=One) table args status ;
               true
@@ -338,14 +438,18 @@ let rec prove temperatures depth ~success ~failure ~level ~timestamp ~local g =
                   t,
                   (fun timestamp failure ->
                      if !debug || depth<=debug_max_depth then
-                       eprintf "Frozen goal (%a) proved using backward chaining@." Pprint.pp_term g;
+                       eprintf
+                         "Frozen goal (%a) proved using backward chaining@."
+                         Pprint.pp_term g;
                      success timestamp failure),
                   failure
               | Unfrozen ->
                   !freezing_point,
                   (fun timestamp failure ->
                      if !debug || depth<=debug_max_depth then
-                       eprintf "Unfrozen goal (%a) proved using backward chaining@." Pprint.pp_term g;
+                       eprintf
+                         "Unfrozen goal (%a) proved using backward chaining@."
+                         Pprint.pp_term g;
                      success timestamp failure),
                   (* second step: unfreeze the atom,
                    * unfold the definition *)
@@ -589,7 +693,7 @@ let rec prove temperatures depth ~success ~failure ~level ~timestamp ~local g =
           | Var v when v == Logic.var_printstr ->
               List.iter (fun t -> match observe t with
                            | QString s -> printf "%s%!" s
-                           | _ -> assert false)
+                           | _ -> failwith "an actual quoted string is needed by printstr")
                 goals ;
               success timestamp failure
 
@@ -610,7 +714,7 @@ let rec prove temperatures depth ~success ~failure ~level ~timestamp ~local g =
           | Var v when v == Logic.var_fprintstr ->
               let print_fun fmt t = match observe t with
                 | QString s -> fprintf fmt "%s%!" s
-                | _ -> assert false
+                | _ -> failwith "an actual quoted string is needed by fprintstr"
               in
               if do_fprint print_fun goals then success timestamp failure
               else failure ()
