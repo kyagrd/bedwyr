@@ -25,9 +25,6 @@ type pos = Lexing.position * Lexing.position
 (** Dummy position for post-parsing errors. *)
 val dummy_pos : pos
 
-(* XXX
-module Typing : Typing.S
- * XXX *)
 module Typing : Typing.S with type pos = pos
 
 (** Pre-term with type and position information,
@@ -35,10 +32,6 @@ module Typing : Typing.S with type pos = pos
 type preterm
 
 (** {6 Pre-terms creation} *)
-
-(** [change_pos (p1,_) t (_,p2)] replaces the position by [(p1,p2)] in [t]. *)
-val change_pos :
-  pos -> preterm -> pos -> preterm
 
 val pre_qstring : pos -> string -> preterm
 
@@ -69,6 +62,15 @@ val pre_binder :
 val pre_lambda : pos -> (pos * string * Typing.ty) list -> preterm -> preterm
 
 val pre_app : pos -> preterm -> preterm list -> preterm
+
+(** {6 Pre-terms manipulation} *)
+
+(** [change_pos (p1,_) t (_,p2)] replaces the position by [(p1,p2)] in [t]. *)
+val change_pos :
+  pos -> preterm -> pos -> preterm
+
+(** Find which arguments of an application are free variables. *)
+val free_args : preterm -> string list
 
 (** {6 Input AST ({e .def} file or REPL)} *)
 
@@ -116,7 +118,7 @@ type command =
   | Assert_not of preterm
   (** [#assert_not.] check whether a query fails *)
   | Assert_raise of preterm
-(** [#assert_raise.] check whether a query crashes *)
+  (** [#assert_raise.] check whether a query crashes *)
 
 (** Top AST for any input (file or REPL). *)
 type input =
@@ -141,10 +143,7 @@ exception Term_typing_error of pos * Typing.ty * Typing.ty *
 (** Type checking error on a free or bound variable. *)
 exception Var_typing_error of string option * pos * Typing.ty
 
-(** Find which arguments of an application are free variables. *)
-val pure_args : preterm -> string list
-
-(** [type_check_and_translate pt ty fv nt dv iv bv i pa] checks that the pre-term [pt]
+(** [type_check_and_translate pt ty (fv,dv,iv,bv)] checks that the pre-term [pt]
   * build by the parser has the type [ty] (usually [TProp]),
   * and either translates it to the corresponding term
   * and realizes the type unification as side effect,
@@ -158,24 +157,25 @@ val pure_args : preterm -> string list
   * [fv], [dv], [iv] and [bv] are functions returning the type (and,
   * depending on the case, the corresponding term) of a free, declared,
   * intern or bound variable.
-  * [nt] maps a provided function on a set of types once the type unification
-  * is done and before the corresponding unifier is lost
-  * (ie when [i] is false).
-  * [i] states whether the result of the inference is to be kept in the
-  * global type unifier or not, and
-  * [pa] are the names of free variables used as argument of a top-level
+  * @param infer whether the result of the inference is to be kept in the
+  * global type unifier or not
+  * @param iter_free_types function that maps a provided action on a set of types
+  * once the type unification is done
+  * (and before the corresponding unifier is lost, if [infer] is false)
+  * @param free_args names of the free variables used as argument of a top-level
   * (wrt a definition) application, ie which will be abstracted on,
-  * and whose type can therefore contain [TProp].
+  * and whose type are therefore allowed to contain [TProp]
   * @return a type-checked Term.term and its type
   * @raise Var_typing_error if a free variable of type [prop] is found
   * @raise Term_typing_error if the pre-tem isn't well typed *)
 val type_check_and_translate :
+  ?infer:bool ->
+  ?iter_free_types:((Term.var -> Typing.ty -> Typing.ty) -> unit) ->
+  ?free_args:string list ->
   preterm ->
   Typing.ty ->
-  (pos * string -> Term.term * Typing.ty) ->
-  ((Term.var -> Typing.ty -> Typing.ty) -> unit) ->
-  (pos * string -> Term.term * Typing.ty) ->
-  (pos * string -> Term.term * Typing.ty) ->
-  (pos * string * Typing.ty -> Typing.ty) ->
-  bool -> string list ->
+  ((pos * string -> Term.term * Typing.ty) *
+   (pos * string -> Term.term * Typing.ty) *
+   (pos * string -> Term.term * Typing.ty) *
+   (pos * string * Typing.ty -> Typing.ty)) ->
   Term.term * Typing.ty

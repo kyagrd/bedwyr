@@ -77,20 +77,20 @@ module type S = sig
   (** Kind checking error. *)
   exception Type_kinding_error of pos * ki * ki
 
-  (** [kind_check ty expected_kind atomic_kind] checks that type [ty]
+  (** [kind_check ty expected_kind] checks that type [ty]
     * and all its subtypes are of the kind [expected_kind] (usually [TKind]).
     * In the current implementation, types are simple types,
     * so it always succeeds (except when given a non-existing type).
     *
-    * [atomic_kind] is a function returning the kind of an atomic type,
-    * and the returned value is [(flex,hollow,propositional,higher_order)],
-    * describing whether the type is an unresolved type parameter,
+    * @param atomic_kind function returning the kind of an atomic type
+    * @returns [(flex,hollow,propositional,higher_order)]
+    * (describing whether the type is an unresolved type parameter,
     * contains unresolved type parameters, ends with [TProp]
-    * or contains [TProp]. *)
+    * or contains [TProp]) *)
   val kind_check :
+    ?atomic_kind:(pos * string -> ki) ->
     ty ->
     ki ->
-    (pos * string -> ki) ->
     bool * bool * bool * bool
 
   (** {6 Type unifying} *)
@@ -129,5 +129,6 @@ module type S = sig
   val unify_constraint : type_unifier -> ty -> ty -> type_unifier
 end
 
-(** Output signature of the functor {!Typing.Make}. *)
+(** Functor building an implementation of the typing structure
+  * given a position type. *)
 module Make (I : INPUT) : S with type pos = I.pos
