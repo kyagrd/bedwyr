@@ -36,6 +36,9 @@ type level =
 (** Maximum number of theorem unfolding in backward chaining (-1: no limit). *)
 val freezing_point : int ref
 
+(** Maximum number of steps in forward chaining (-1: no limit). *)
+val saturation_pressure : int ref
+
 (** Attempt to prove the goal [(nabla x_1..x_local . g)(S)] by
   * destructively instantiating it,
   * calling [success] on every success, and finishing with [failure]

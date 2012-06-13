@@ -41,7 +41,8 @@
 %token UNDO SKIP ABORT CLEAR ABBREV UNABBREV
 %token TO WITH ON AS KEEP
 %token LBRACK RBRACK TURN STAR AT PLUS HASH
-%token EXIT HELP INCLUDE RESET RELOAD SESSION DEBUG TIME EQUIVARIANT FREEZING
+%token EXIT HELP INCLUDE RESET RELOAD SESSION
+%token DEBUG TIME EQUIVARIANT FREEZING SATURATION
 %token ENV TYPEOF SHOW_TABLE CLEAR_TABLES CLEAR_TABLE SAVE_TABLE
 %token ASSERT ASSERT_NOT ASSERT_RAISE
 %token UNDERSCORE
@@ -111,6 +112,7 @@ meta_command:
   | TIME opt_bool DOT                   { Input.Command (Input.Time $2) }
   | EQUIVARIANT opt_bool DOT            { Input.Command (Input.Equivariant $2) }
   | FREEZING opt_nat DOT                { Input.Command (Input.Freezing $2) }
+  | SATURATION opt_nat DOT              { Input.Command (Input.Saturation $2) }
   | ENV DOT                             { Input.Command (Input.Env) }
   | TYPEOF formula DOT                  { Input.Command (Input.Type_of $2) }
   | SHOW_TABLE lower_id DOT             { Input.Command (Input.Show_table (pos 2,$2)) }

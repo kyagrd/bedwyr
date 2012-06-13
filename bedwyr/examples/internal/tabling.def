@@ -8,6 +8,7 @@ Type a,b,c,
 % simple backward chaining
 % with no external predicates in the theorems
 %
+% p1:
 %   c - d
 %  /
 % a - b
@@ -36,21 +37,39 @@ Theorem p1_th3 : p1 c -> p1 d.
 Theorem p1_th4 : p1 a -> p1 e.
 Theorem p1_th5 : p1 e -> p1 f.
 
+%#assert print_p1.
+%#debug on.
+%
+%#freezing 42.
+%#assert p1 a.
+%#show_table p1.
+%#assert p1 a.
+%#assert p1 b.
+%#show_table p1.
+%#assert p1 d.
+%#show_table p1.
+%#freezing 1.
+%#assert p1 f.
+%#show_table p1.
+%
+%#freezing 0.
+%#debug off.
+%#clear_table p1.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Second example
+% simple forward chaining
+% with no external predicates in the theorems
+
 #assert print_p1.
 #debug on.
 
-#freezing 42.
-#assert p1 a.
-#show_table p1.
-#assert p1 a.
-#assert p1 b.
-#show_table p1.
+#assert p1 c.
+#saturation 1.
+#assert p1 e.
 #assert p1 d.
-#show_table p1.
-#freezing 1.
-#assert p1 f.
-#show_table p1.
 
+#saturation 0.
 #debug off.
 #clear_table p1.
 

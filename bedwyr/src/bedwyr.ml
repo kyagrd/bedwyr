@@ -398,6 +398,7 @@ and command c reset =
     (* Tabling-related commands *)
     | Input.Equivariant value -> toggle_flag Index.eqvt_index value
     | Input.Freezing temp -> Prover.freezing_point := temp
+    | Input.Saturation pressure -> Prover.saturation_pressure := pressure
     | Input.Env -> System.print_env ()
     | Input.Type_of pre_term -> System.print_type_of pre_term
     | Input.Show_table (p,name) -> System.show_table (p,Term.atom ~tag:Term.Constant name)
