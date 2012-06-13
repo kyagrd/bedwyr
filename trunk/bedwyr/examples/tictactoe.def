@@ -22,25 +22,25 @@ Define convert : list -> board -> prop by
 % the half turn and the anticlockwise turn enabled,
 % adds too much complexity for backward chaining
 % (for the third and fourth asserts).
-Define symetries : list -> list -> prop by
+Define symmetries : list -> list -> prop by
   % vertical flip
-  symetries
+  symmetries
     (c A (c B (c C (c D (c E (c F (c G (c H (c I nil')))))))))
     (c C (c B (c A (c F (c E (c D (c I (c H (c G nil')))))))));
 % % horizontal flip
-% symetries
+% symmetries
 %   (c A (c B (c C (c D (c E (c F (c G (c H (c I nil')))))))))
 %   (c G (c H (c I (c D (c E (c F (c A (c B (c C nil')))))))));
 % % anticlockwise turn
-% symetries
+% symmetries
 %   (c A (c B (c C (c D (c E (c F (c G (c H (c I nil')))))))))
 %   (c C (c F (c I (c B (c E (c H (c A (c D (c G nil')))))))));
 % % half turn
-% symetries
+% symmetries
 %   (c A (c B (c C (c D (c E (c F (c G (c H (c I nil')))))))))
 %   (c I (c H (c G (c F (c E (c D (c C (c B (c A nil')))))))));
   % clockwise turn
-  symetries
+  symmetries
     (c A (c B (c C (c D (c E (c F (c G (c H (c I nil')))))))))
     (c G (c D (c A (c H (c E (c B (c I (c F (c C nil'))))))))).
 
@@ -56,8 +56,8 @@ Define winner : cell -> list -> prop by
   winner W (c W (c A (c B (c C (c W (c D (c E (c F (c W nil')))))))));
   winner W (c A (c B (c W (c C (c W (c D (c W (c E (c F nil'))))))))).
 
-Theorem winner_symetries :
-  symetries List List' /\ winner W List -> winner W List'.
+Theorem winner_symmetries :
+  symmetries List List' /\ winner W List -> winner W List'.
 % TODO proof
 
 % nowinner Board
@@ -114,8 +114,8 @@ Define coinductive notxwins : list -> prop by
   notxwins L := nowinner L /\ exists K, move L o K /\
                   (tie K \/ winner o K \/ forall M, move K x M -> notxwins M).
 
-Theorem notxwins_symetries :
-  symetries List List' /\ notxwins List -> notxwins List'.
+Theorem notxwins_symmetries :
+  symmetries List List' /\ notxwins List -> notxwins List'.
 % TODO proof
 
 % play Board
