@@ -1,0 +1,89 @@
+% Add some mention of
+%   finite failure is incorporated.  Seldom used in the definition of
+%   operational semantics (mismatch in pi-calculus is an exception).
+%   Meta-level properties of SOS often are related to negation.  One
+%   might want to proof the no trace reveals a secret (say, in the
+%   spi-calculus).  Proving (bisim P 0) means that P makes no
+%   transitions.  Etc.  Properties of SOS thus, often, involve
+%   negative information.
+
+\documentclass{article}
+\bibliographystyle{alpha}
+\usepackage{url}
+\usepackage[all]{xy}
+\usepackage{amsmath}
+\usepackage{hevea}
+\loadcssfile{http://slimmer.gforge.inria.fr/bedwyr/bd.css}
+
+% XXX unfortunately, hevea doesn't seem to handle
+% hyperref correctly (i.e. it breaks all formulas)
+%\usepackage{hyperref}
+\providecommand{\texorpdfstring}[2]{#1}
+
+\usepackage{fancyvrb}
+\newcommand{\mytilde}{\raise.3ex\hbox{$\scriptstyle\sim$}}
+\RecustomVerbatimEnvironment{Verbatim}{Verbatim}{commandchars=\\\{\}}
+
+\newcommand{\lp}{$\lambda$Prolog}
+\newcommand{\Ll}{$L_\lambda$}
+\newcommand{\qs}{\; . \;}
+
+\title{{\Huge A User's Manual to Bedwyr v1.4}
+   \thanks{Support has been obtained for this work from the following
+           sources: from INRIA (first through the ``\'Equipes
+           Associ{\'e}es'' Slimmer, and the ``ADT'' BATT),
+           and from the NSF Grants CCR-0429572 (that also included
+           support for Slimmer) and OISE-0553462.}
+}
+\author{David Baelde$^1$,
+        Andrew Gacek$^2$,
+        Quentin Heath$^3$, \\
+        Dale Miller$^3$,
+        Gopalan Nadathur$^4$,
+        Alwen Tiu$^5$ \\ \\
+$^1$ITU, Copenhagen\\
+$^2$Rockwell Collins\\
+$^3$INRIA Saclay and LIX/\'Ecole Polytechnique\\
+$^4$University of Minnesota\\
+$^5$Australian National University
+}
+
+\begin{document}
+\maketitle
+\tableofcontents
+\newpage
+
+
+\section{Introduction}
+
+\paragraph{How to read this manual}
+
+\paragraph{Other documentation sources}
+
+\paragraph{Licenses}
+
+\paragraph{Availability}
+
+\paragraph{Credits}
+
+\include{userguide-1.4}
+
+\include{system-description-1.4}
+
+%\include{reference-manual-1.4}
+
+\bibliography{userguide}
+
+\noindent Any paper listed above that was written by one of the
+authors of this guide can be found on their respective home pages.
+\end{document}
+
+% LocalWords:  runtime Bedwyr unary Bedwyr's instan Twelf Wikipedia Bedivere% LocalWords:  Alwen
+% LocalWords:  hoas Pfenning Slimmer's Gforge SVN src contrib OCaml autoconf i.e.
+% LocalWords:  toolchain gzip bzip bedwyr ocamlopt nativecode userguide Abella
+% LocalWords:  ocamldoc Gacek ary forall rclp nabla nat arity syntacticly rcl
+% LocalWords:  toplevel decl flavour coinductive namespace emacs ledit rlwrap
+% LocalWords:  bashrc filenames equivariant un env typeof e.g. Coq Minlog leq neq
+% LocalWords:  maxa reachability bisimulation foundedness pred scopings bisim
+% LocalWords:  predicate's automata lld rru rrd ur dr llu dll bisimilar tac CCS
+% LocalWords:  bisimilarity peterson declaratively progs tt onep

@@ -73,7 +73,7 @@ depend: $(BEDWYR_SRC) parser.mli
 
 # OTHER TARGETS
 
-.PHONY: doc bedwyr.tar
+.PHONY: doc archive bedwyr.tar
 
 ifneq ($(strip $(wildcard ndcore/ocamldoc.dump)),)
 NDCORE_DUMP	= -load ndcore/ocamldoc.dump

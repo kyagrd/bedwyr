@@ -1,5 +1,10 @@
 # DEFINITIONS
 
+PACKAGE_TARNAME = @PACKAGE_TARNAME@
+PACKAGE_VERSION = @PACKAGE_VERSION@
+DIST_NAME       = $(PACKAGE_TARNAME)-$(PACKAGE_VERSION)
+
+TAR	= @TAR@
 LATEX	 = @LATEX@
 PDFLATEX = @PDFLATEX@
 HEVEA	 = @HEVEA@ -noiso
@@ -7,29 +12,25 @@ GZIP	 = gzip -9
 
 # FILES
 
-GUIDE	= userguide-1.3
-TEX	= $(GUIDE).tex
-PS	= $(GUIDE).ps.gz
-PDF	= $(GUIDE).pdf
-HTML	= $(GUIDE).html
-BIB	= userguide.bib
+MANUAL		= manual-1.4
+TEX		= $(MANUAL).tex
+PS		= $(MANUAL).ps.gz
+PDF		= $(MANUAL).pdf
+HTML		= $(MANUAL).html
+BIB		= userguide.bib
+USERGUIDE	= userguide-1.4.tex
+SYSTEM		= system-description-1.4.tex
+#REFERENCE	= reference-manual-1.4.tex
+TEX_INCLUDES	= $(USERGUIDE) $(SYSTEM) $(REFERENCE)
 
 # BUILDING
 
 all: $(PS) $(PDF) $(HTML)
 
-clean:
-	rm -f $(PS) $(PDF) $(HTML)
-	rm -f *.aux *.log *.toc *.blg *.bbl *.dvi *.haux *.htoc
-	rm -f html/ndcore/* html/bedwyr/*
-
-htclean:
-	rm -f *.haux *.htoc *.html
-
 .SUFFIXES: .tex .aux .bbl .dvi .ps .pdf .haux .htoc .html
 
-.tex.aux:
-	latex $*
+.tex.aux: $(TEX_INCLUDES)
+	$(LATEX) $*
 
 .aux.bbl:
 	bibtex $*
@@ -68,6 +69,15 @@ htclean:
 	  echo "Reruning hevea to get cross-references right" ; \
 	  done'
 
+# OTHER TARGETS
+
+.PHONY: archive manual.tar
+
+archive: manual.tar
+
+manual.tar: $(TEX) $(TEX_INCLUDES) $(BIB) Makefile.in
+	$(TAR) -cf $@ --xform 's|^|$(DIST_NAME)/doc/|' $^
+
 show: $(PDF)
 	kpdf $< &
 
@@ -81,7 +91,16 @@ bib: $(BIB)
 BIBREF	= ../../../../../pap/references/master
 ifneq ($(strip $(wildcard $(BIBREF))),)
 $(BIB): $(TEX)
-	sed -e 's|^\\bibliography{userguide}$$|\\bibliography{$(BIBREF)}|' $< | latex --jobname=$(<:.tex=) --
+	sed -e 's|^\\bibliography{userguide}$$|\\bibliography{$(BIBREF)}|' $< | $(LATEX) --jobname=$(<:.tex=) --
 	aux2bib $(<:.tex=.aux) > $@
 	rm -f $(<:.tex=.aux)
 endif
+
+.PHONY: clean htclean
+clean:
+	rm -f $(PS) $(PDF) $(HTML)
+	rm -f *.aux *.log *.toc *.blg *.bbl *.dvi *.haux *.htoc *.out
+	rm -f html/ndcore/* html/bedwyr/*
+
+htclean:
+	rm -f *.haux *.htoc *.html
