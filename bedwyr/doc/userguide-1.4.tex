@@ -1,0 +1,743 @@
+\part{User Guide}
+
+
+% ============================================================================
+\section{Overview}
+
+Some recent theoretical work in proof search has illustrated that it
+is possible to combine the following two computational principles into
+one computational logic:
+\begin{enumerate}
+  \item a symmetric treatment of finite success and finite failure.
+    This allows capturing both aspects of may and must behavior in
+    operational semantics and mixing model checking and logic programming.
+
+  \item direct support for $\lambda$-tree syntax, as in \lp{},
+    via term-level $\lambda$-binders, higher-order pattern
+    unification, and the $\nabla$-quantifier.
+\end{enumerate}
+All these features have a clean proof theory.  The combination of
+these features allow, for example, specifying rather declarative
+approaches to model checking syntactic expressions containing
+bindings.  The Bedwyr system is intended as an implementation of these
+computational logic principles.
+
+\paragraph{Why the name Bedwyr?}
+In the legend of King Arthur and the round table, several knights
+shared in the search for the holy grail.  The name of one of them,
+Parsifal, is used for an INRIA team where Bedwyr is currently
+developed. Bedwyr was another one of those knights.  Wikipedia (using
+the spelling ``Bedivere'') mentions that Bedwyr appears in {\em Monty
+Python and the Holy Grail} where he is ``portrayed as a master of the
+extremely odd logic in the ancient times, whom occasionally blunders."
+Bedwyr is a re-implementation and rethinking of an earlier system
+called Level 0/1 written by Alwen Tiu and described in
+\cite{tiu05eshol}. It was an initial offering from ``Slimmer'', a
+jointly funded effort between INRIA and the University of Minnesota on
+``Sophisticated logic implementations for modeling and mechanical
+reasoning'' from 2005 to 2010. For more information, see
+\urldef{\thisurl}\url{http://slimmer.gforge.inria.fr/}
+\ahrefurl{\thisurl}.
+
+\paragraph{What is the difference between {\em hoas} and $\lambda${\em
+    -tree syntax}?}
+The term ``higher-order abstract syntax'' (hoas) was originally coined
+by Pfenning and Elliott in \cite{pfenning88pldi} and names the general
+practice (that was common then in, say, \lp{}
+\cite{miller87slp}) of using an abstraction in a programming or
+specification language to encode binders in an object-language.  Since
+the choice of ``meta-language'' can vary a great deal, the term
+``hoas'' has come to mean different things to different people.  When
+hoas is used directly within functional programming or constructive
+type systems, syntax with bindings contains functional objects, which
+make rich syntactic manipulations difficult.  Bedwyr, on the other
+hand, follows the {\em $\lambda$-tree} approach \cite{miller00cl} to
+hoas: in particular, Bedwyr's use of $\lambda$-abstraction is meant to
+provide an abstract form of syntax in which only the names of bindings
+are hidden: the rest of the structure of syntactic expressions
+remains.
+
+\paragraph{Is Bedwyr efficient?}
+Some care has been taken to implement the novel logical principles
+that appear in Bedwyr.  In particular, the system makes extensive use
+of the implementation of the suspension calculus \cite{nadathur99jflp}
+and other implementation ideas developed within the Teyjus
+\cite{nadathur99cade} implementation of \lp{} \cite{nadathur88iclp}.
+Aspects of tabled deduction have also been added to the system
+\cite{ramakrishna97cav,pientka05cade}.  We have found that Bedwyr's
+performance is good enough to explore a number of interesting
+examples.  It is not likely, however, that the current implementation
+will support large examples.  For example, the system implements the
+occur-check within logic: this is, of course, necessary for sound
+deduction but it does slow unification a lot.  For example, the append
+program is quadratic in the size of its first argument.  There are a
+number of well-known improvements to unification that make it possible
+to remove many instances of the occur-check (and making append
+linear).  As of this time, such an improvement has not been added to
+Bedwyr.
+
+\paragraph{An open source effort: Can I help?}
+The Bedwyr system was conceived as a prototype that could help
+validate certain proof theory and proof search topic.  In the end,
+this prototype has illustrated the main principles that we hoped that
+it would.  It has also pointed out a number of new topics to be
+explored.  If you are interested in contributing examples, features,
+or performance enhancements, or if you are interested in considering
+the next generation of a system like this, please let an author of
+this guide know: we are looking for contributions.
+
+\paragraph{Background assumed}
+To read this guide, we shall assume that the reader is familiar with
+the implementation of proof search that is found in, say, Prolog,
+\lp{}, or Twelf.  While familiarity with various foundations-oriented
+papers (particularly,
+\cite{mcdowell03tcs,miller05tocl,tiu04phd,baelde08lfmtp,tiu10tocl}) is
+important for understanding fully this system, much can be learned
+from studying the examples provided in the distribution.
+
+
+% ============================================================================
+\section{Get Bedwyr}
+
+Different means of getting Bedwyr are listed on Slimmer's INRIA Gforge
+project site:
+\urldef{\thisurl}\url{http://slimmer.gforge.inria.fr/bedwyr/#download}
+\ahrefurl{\thisurl}.
+You can either download tarballs, get any development version using SVN,
+or use Slimmer's unofficial Apt repository | instructions are provided
+on the project page.
+The development of Bedwyr is meant to be an open source project.
+If you are keen to work on the source code and/or examples, please contact
+one of the ``Project Admins'' of the project (as listed at
+\urldef{\thisurl}\url{https://gforge.inria.fr/projects/slimmer/}
+\ahrefurl{\thisurl}.
+
+\subsection{Distribution layout}
+
+The Bedwyr distribution is organized as follows:
+
+\begin{tabular}{r@{\quad}l}
+  \texttt{src/}      & Source code \\
+  \texttt{doc/}      & Documentation | you're reading it \\
+  \texttt{contrib/}  & Emacs and Vim support \\
+  \texttt{examples/} & Examples | reading them helps
+\end{tabular}
+
+\subsection{Build}
+
+Bedwyr's main build dependency is the OCaml compiler suite.
+You also need some standard tools you may already have, especially
+autoconf and GNU make (part of the GNU toolchain),
+and bash, tar, gzip and bzip2 for the installation.
+
+Then, the procedure is quite simple.
+
+\begin{verbatim}
+ $ autoconf
+ $ ./configure
+ $ make
+\end{verbatim}
+
+You'll get the bedwyr executable in \texttt{src/bedwyr}.
+
+By default, Bedwyr is built using the native-code compiler \texttt{ocamlopt},
+since it is much faster. If you don't have it or don't want it (e.g.
+for easier debugging) use \texttt{./configure --disable-nativecode}.
+
+You can also enable the documentation generation by using
+\texttt{./configure --enable-doc} and \texttt{make doc}. This userguide
+and the ocamldoc documentation will be generated in \texttt{doc/}.
+
+\subsection{Test}
+
+Testing the core library (should be instantaneous):
+\begin{verbatim}
+ $ make -C src/ndcore test
+\end{verbatim}
+Same test, then running {\tt bedwyr} on some examples (may take up to
+one minute):
+\begin{verbatim}
+ $ make test
+\end{verbatim}
+
+
+% ============================================================================
+\section{User interface}
+
+When you run Bedwyr, you specify a file or collection of files for it to
+load; the objects declared and defined in those files will be loaded in
+the corresponding order. You can then use the interactive toplevel to
+ask queries against those definitions, or call meta-commands.
+Those queries and commands can also be specified on the command-line via
+the option \verb.-e. (e.g.
+\texttt{bedwyr -e 'X = 0.' -e '\#typeof X = 1.'}), in which case they are
+processed in the order they are given, after the files and before the
+toplevel.
+
+\subsection{Definition files}
+
+Definition files are usually named with a \verb|.def| extension. You can
+find several of them in the \verb.examples. directory of the Bedwyr
+distribution. They contain definitions, meta-commands, and declarations
+for the types (${\tt Kind}\;id\;{\tt type.}$) and the constants (${\tt
+Type}\;id\;type{\tt .}$) that are not predefined. Definitions are given
+as blocks with a header containing declarations and an optional body
+containing a set of clauses, in which uppercase variables are implicitly
+universally quantified:
+\[\begin{array}{rcl}
+  def\_block    &::=& {\tt Define}\;declarations{\tt .} \\
+                & | & {\tt Define}\;declarations\;{\tt by}\;
+                     definitions{\tt.} \\
+  declarations  &::=& decl\;{\tt,}\;declarations \\
+                & | & decl\\
+  decl          &::=& flavour\;id\;{\tt :}\;type \\
+  flavour       &::=& inductive\;|\;coinductive\;|\\
+  definitions   &::=& clause\;{\tt;}\;definitions \\
+                & | & clause\\
+  clause        &::=& id\;atom*\;{\tt:=}\;formula \\
+                & | & id\;atom* \\
+\end{array}\]
+
+A predicate with an empty definition is always false;
+the head of a bodiless clause is always true.
+A predicate can only depend on predicates defined up to its definition
+block, so multiple predicates in one block is the only way to achieve
+mutual recursion.
+
+The only meta-command that is really intended for definition files is the
+include command:
+\begin{verbatim}#include "another/file.def".\end{verbatim}
+The \verb.#include. can really be seen as the inclusion of another file,
+as Bedwyr doesn't have any namespace or module system.
+
+\subsubsection{Emacs mode}
+
+Assuming Bedwyr is installed in standard Linux system folders, you can
+use the Emacs mode for Bedwyr by adding these two lines to your
+\url{~/.emacs} file:
+\begin{verbatim}
+(load "/usr/share/bedwyr/contrib/emacs/bedwyr.el")
+(setq bedwyr-program "/usr/bin/bedwyr")
+;; Of course you can change both locations to wherever you want.
+\end{verbatim}
+
+Then you should be able to load any \verb:.def: file
+and have syntax highlighting and some rough auto-indenting.
+Also if you do \verb.C-c C-c. it will start Bedwyr
+and load the current file you are working on.
+
+\subsubsection{Vim syntax highlighting}
+
+There is also a basic syntax highlighting file for vim. With a standard
+system installation, the files
+\verb+/usr/share/vim/vimfiles/[ftdetect|syntax]/bedwyr.vim+ should
+suffice; otherwise do the following:
+\begin{itemize}
+  \item copy {\tt contrib/vim/syntax/bedwyr.vim} to
+    your \url{~/.vim/syntax/} directory to make it available
+  \item copy {\tt contrib/vim/ftdetect/bedwyr.vim} to
+    your \url{~/.vim/ftdetect/} directory to have it used automatically
+    for all {\tt *.def} files
+\end{itemize}
+
+\subsection{Toplevel}
+
+The interactive toplevel is automatically loaded once the files have
+been parsed, unless the flag \verb.-I. is passed to Bedwyr. You can
+either query a formula, or run a command. In queries, free and bound
+variables are
+the only objects that can be used without prior declaration, and their
+instantiations in solutions are displayed.
+
+In the following example we load a set of definitions and prove that
+the untyped $\lambda$-term $\lambda x.x\;x$ has no simple type.
+
+\begin{verbatim}
+ $ src/bedwyr examples/lambda.def
+[...welcome message...]
+?= (exists T, wt nil (abs x\ app x x) T) -> false.
+Yes.
+More [y] ?
+No more solutions.
+?=
+\end{verbatim}
+Notice that we had to use the term \verb+(abs x\ app x x)+ instead of
+\verb+(x1\ x1 x1)+: the former encodes the untyped $\lambda$-term
+$\lambda x (x x)$ by mapping
+object-level abstraction to {\tt abs} and object-level application to
+{\tt app}, while the latter is not a legal term in Bedwyr.  (Prior to
+version 1.3, Bedwyr did not use simple typing on its own terms.)
+
+Most of the errors that can stop the reading of a file (parsing or
+typing error, undeclared object, etc) are correctly caught by the
+toplevel, though the line number reported for the error is often not
+useful.
+
+\subsubsection{Line editing}
+
+Bedwyr has no line editing facilities at all. Thus, we recommend using
+\texttt{ledit} or \texttt{rlwrap}, which provides such features. Get one
+of them from your usual package manager or at
+\urldef{\thisurl}\url{http://pauillac.inria.fr/~ddr/ledit/}\ahrefurl{\thisurl}
+or \urldef{\thisurl}\url{http://utopia.knoware.nl/~hlub/uck/rlwrap/}
+\ahrefurl{\thisurl}.
+
+
+Then you can simply run \verb.ledit src/bedwyr.. One can also define
+an alias in his \url{~/.bashrc}, such as the following which also
+makes use of \url{~/.bedwyr_history} to remember history from one session to
+another:\\
+\verb|alias bedwyr="ledit -h |\url{~/.bedwyr_history}%
+\verb| -x /path/to/bedwyr"|.
+
+\subsection{Meta-commands}
+
+\subsubsection{Session management}
+
+Those commands alter the internal set of definitions of Bedwyr:
+\begin{itemize}
+  \item
+    \verb.#include. is meant to be used in \verb;.def; files.
+  \item
+    \verb.#session. is a better \verb.#include. meant for query mode.
+    It accepts any number of filenames as parameters, and this set of files
+    will be remembered as the current \emph{session}.
+    When you pass filenames on Bedwyr's command line,
+    it is equivalent to call \verb.#session. with these definition files.
+  \item
+    \verb.#reload. clears all the definitions,
+    and then reloads all the session's files. It is useful if they have
+    been changed.
+  \item
+    \verb.#reset. clears all the definitions and empties the session.
+\end{itemize}
+
+\subsubsection{Assertions}
+
+Three kinds of assertions can be used in definition files.
+These tests are not executed unless the \verb.-t. flag has been passed
+on Bedwyr's command-line, in which case any assertion failure is fatal.
+\begin{itemize}
+\item
+\verb.#assert F. checks that the formula $F$ has at least one solution.
+\item
+\verb.#assert_not F. checks that $F$ has no solution.
+\item
+\verb.#assert_raise F. checks that the proof-search for $F$ triggers
+a runtime error.
+\end{itemize}
+
+Our examples include a lot of assertions, to make sure that definitions have
+(and keep) the intended meaning. These assertions are also the basis of
+Bedwyr's correctness and performance tests ran using \verb.make test..
+
+\subsubsection{Other commands}
+\begin{itemize}
+  \item Tabling
+    \begin{itemize}
+      \item \verb.#equivariant on. sets an alternative tabling mode
+      \item \verb.#clear_table p. clears the results cached for a
+        predicate
+      \item \verb.#clear_tables. clears all cached results
+    \end{itemize}
+
+  \item Output
+    \begin{itemize}
+      \item \verb.#debug on. adds a lot of output to the proof search
+      \item \verb.#time on. displays computation times between results
+      \item \verb.#env. lists all declared objects with their kind or
+        type
+      \item \verb.#typeof F. type-checks a formula, and also displays
+        the type of its free variables
+      \item \verb.#show_table p. prints the table of a predicate
+      \item \verb+#save_table p "file.def"+ outputs the table of a
+        predicate in a Bedwyr-compatible format
+    \end{itemize}
+
+  \item General purpose
+    \begin{itemize}
+      \item \verb.#help.
+      \item \verb.#exit.
+    \end{itemize}
+\end{itemize}
+
+
+% ============================================================================
+\section{The logic behind Bedwyr}
+\label{logic}
+
+The logic behind Bedwyr, named LINC, is an extension to a higher-order
+version of intuitionistic logic that has been developed over the past
+few years.  The acronym LINC, which stands for ``lambda, induction,
+nabla, and co-induction'', lists the main novel components of the
+logic.  In particular, $\lambda$-terms are supported directly (and,
+hence, the $\lambda$-tree syntax approach to higher-order abstract
+syntax is supported \cite{miller00cl}).  Induction and co-induction
+are also available.  The nabla $\nabla$ quantifier has been added to
+this logic in order to increase the expressiveness of programs using
+$\lambda$-tree syntax in negated situations.  The proof theory of LINC
+is given in \cite{miller05tocl,tiu04phd}.  Since this earlier work on
+LINC, more recent work on the logic $\mathcal{G}$
+\cite{gacek.twolevel,gacek11ic} and with fixed points in linear logic
+\cite{baelde08phd,baelde12tocl} has further improved our understanding
+of using fixed points, induction, co-induction, and
+$\nabla$-quantification.
+
+Below we provide a high-level overview of the logical aspects of Bedwyr.
+More explicit information on this system can be found in
+\cite{tiu05eshol}: n.b., the name ``Level 0/1'' in that paper has now
+been replaced by Bedwyr.
+
+\subsection{Built-in treatment of bindings}
+
+Bedwyr treats $\lambda$-abstractions within terms as primitive as well
+as allowing for variables of function type and quantifiers within
+formulas ($\forall$, $\exists$, $\nabla$).  The system
+implements ``higher-order pattern unification'' (also called
+\Ll-unification) \cite{miller91jlc}.   This kind of unification
+appears to be the weakest extension to first-order unification that
+treats bindings as a primitive.  A number of automated deduction systems
+implement this kind of unification (e.g., Twelf, Teyjus, Coq, and
+Minlog).  Full $\beta$-conversion is implemented by Bedwyr as well.
+
+\begin{figure}
+\begin{verbatim}
+% The predicate a holds for 3, 5, and 2.
+a (s (s (s z))).
+a (s (s (s (s (s z))))).
+a (s (s z)).
+
+% The less-than-or-equal relation
+leq z N.
+leq (s N) (s M) :- leq N M.
+
+% Compute the maximum of a
+maxa N :- a N, pi x\ a x => leq x N.
+\end{verbatim}
+\caption{Computing the maximum of a defined predicate (\lp).}
+\label{maxa-lp}
+\end{figure}
+
+\subsection{Syntax and semantics of definitions}
+
+Some systems implementing aspects of higher-order logic programming,
+such as \lp{}, accept the ``open-world assumption'': any conclusion
+drawn in their logic will hold in any extension of the underlying logic
+programming language.
+For example, consider the \lp{} program in Figure~\ref{maxa-lp} (the
+signature has been left out), where the last clause has an implication
+\verb.=>. in the goal. During proof search, this implication
+causes \lp{} to add a new eigenvariable, say \verb.c., to the runtime
+signature
+and to extend the current program with an atomic fact about it:
+\verb.(a c).. In such a new world, however, the {\tt leq} relation
+does not have any information about this ``non-standard'' number
+{\tt c}.
+Bedwyr on the contrary accepts the ``closed-world assumption'': the
+notion of programs is replaced by {\em definitions} that capture the
+``if-and-only-if'' closure of logic programs. In the corresponding
+(excerpt from a) program in Figure~\ref{maxa-bdw}, Bedwyr takes the
+assumption \verb.(a c). and asks ``Given the assumption that
+\verb.(a c). is true, how could have it been proved?'' The natural
+answer to this is that that assumption could have been proved if
+\verb.c. was either 3 or 5 or 2. Thus, this will cause a case analysis:
+in particular, the query \verb.(maxa N). will cause the following goals
+to be considered:
+\begin{center}
+  \tt(a N)\qquad(leq 3 N)\qquad(leq 5 N)\qquad(leq 2 N)
+\end{center}
+Here we use the numeric symbols `2', `3', etc., as abbreviations of the
+corresponding terms formed using \texttt{z} and \texttt{s}. The usual
+approach to unification and depth-first proof search will now produce
+the proper maximum value. This change allows Bedwyr to give a
+computational interpretation to finite failure and to do deduction that
+encodes model checking.
+
+\begin{figure}
+\begin{verbatim}
+Define a : int -> prop by
+  a (s (s (s z)));
+  a (s (s (s (s (s z)))));
+  a (s (s z)).
+
+Define leq : int -> int -> prop by
+  leq z N;
+  leq (s N) (s M) := leq N M.
+
+Define maxa : int -> prop by
+  maxa N := a N, forall  x, a x -> leq x N.
+\end{verbatim}
+\caption{Computing the maximum of a defined predicate (Bedwyr).}
+\label{maxa-bdw}
+\end{figure}
+
+\bigskip
+There are two orthogonal extensions to higher-order intuitionistic
+logic that have been incorporated into Bedwyr.   We describe them next.
+
+\subsection{Symmetry of finite success and finite failure}
+
+The underlying logic of {\em fixed points} (also known as {\em
+definitions})
+\cite{girard92mail,schroeder-Heister93lics,mcdowell03tcs,momigliano03types}
+contains an inference rule that allows for failure in unification
+(and, hence, in simple proof search) to be turned into a success.
+Thus, simple forms of ``negation-as-failure'' can be naturally
+captured in Bedwyr and the underlying logic.  It is also possible to
+describe both {\em may} and {\em must} behaviors in process calculi.
+For example, not only can one code reachability in process calculus
+but bisimulation is also possible.  One way to view this enhancement
+to proof search is the following: Let $A$ and $B$ be two atomic
+formulas.  Then, finite success is captured by proving the sequent
+$\longrightarrow A$, finite failure is captured by proving the sequent
+$A\longrightarrow$, and simulation is captured by proving the sequent
+$A\longrightarrow B$.
+
+\subsection{The \texorpdfstring{$\nabla$}{nabla} quantifier}
+
+In order to treat specifications using $\lambda$-tree syntax
+properly, it appears that a new quantifier, called $\nabla$, is
+necessary.  If finite success is all that is needed, the $\nabla$ can
+be replaced with the universal quantifier.  When finite failure is
+involved, however, the $\nabla$ quantifier plays an independent role.
+See \cite{miller05tocl,tiu04phd,tiu05concur} for more on this
+quantifier.  It is worth pointing out that we know of no examples
+involving $\nabla$ that do not also involve $\lambda$-tree syntax.
+
+
+% ============================================================================
+\section{Examples of Bedwyr code}
+
+\begin{flushright}
+%% Tell me if I'm violating conventions about quotes,
+%% but I thought it'd be nicer to avoid the split after "than the",
+%% so I moved Mark Twain on its own line to avoid a too long second line.
+%% - David
+Few things are harder to put up with \\
+than the annoyance of a good example. \\ -- Mark Twain
+\end{flushright}
+
+The distribution of Bedwyr comes with several examples of its use.
+These examples can be classified roughly as follows.
+
+\begin{description}
+% TODO check that said examples were translated,
+% remove old ones, and put them in folders according to
+% the following list
+\item[Basic examples] These examples are small and illustrate some
+  simple aspects of the system.
+
+\item[Model checking] Some simple model-checking-style examples are
+  provided.
+
+\item[Games] Bedwyr allows for a simple approach to explore for
+  winning strategies in some simple games, such as tic-tac-toe.
+
+\item[$\lambda$-calculus] Various relations and properties of the
+  $\lambda$-calculus are developed in some definition files.
+
+\item[Simulation and bisimulation] These relationships between
+  processes where an important class of examples for which the theory
+  behind Bedwyr was targeted.  Examples of checking simulation is done
+  for abstract transition systems, value-passing CCS, and the
+  $\pi$-calculus.  The $\pi$-calculus examples are of particular note:
+  all side-conditions for defining the operational semantics and
+  bisimulation are handled directly and declaratively by the logic
+  underlying Bedwyr.  See Section~\ref{pi-examples} below for some more
+  details about the $\pi$-calculus in Bedwyr.
+
+\end{description}
+
+\subsection{Hypothetical reasoning}
+
+For those familiar with \lp{}, a key difference between
+Bedwyr and \lp{} is that the latter allows for ``hypothetical''
+reasoning and such reasoning is central to the way that \lp{} treats
+bindings in syntax.    Bedwyr treats implication and universals in
+goal formulas in a completely different way: via the closed world
+assumption.
+
+Sometimes, when dealing with $\lambda$-tree syntax in Bedwyr, one
+wishes to program operations as one might do in \lp{}.  This is possible
+in the sense that one can write in Bedwyr an interpreter for suitable
+fragments of \lp{}.  This is done, for example, in the {\tt seq.def}
+definition file.  There is a goal-directed proof search procedure for a
+small part of hereditary Harrop formulas (in particular, the minimal
+theory of the fragment based on $\top$, $\wedge$, $\supset$, and
+$\forall$).  This interpreter is prepared to use a logic program that
+is stored as a binary predicate.  For example, in \lp{}, one would write
+type checking for simple types over the untyped $\lambda$-calculus
+encoded using {\tt app} and {\tt abs} as
+\begin{verbatim}
+typeof (app M N) B :- typeof M (arrow A B), typeof N A.
+typeof (abs R) (arrow A B) :- pi x\ typeof x A => typeof (R x) B.
+\end{verbatim}
+The hypothetical reasoning that is involved in typing the object-level
+$\lambda$-binder in the second clause above is not available directly
+in Bedwyr.  One can, however, rewrite these clauses as simply
+``facts'' in Bedwyr:
+\begin{Verbatim}
+Define simple : form -> form -> prop by
+  simple (type_of (app M N) Tb)
+    (type_of M (Ta \mytilde> Tb) && type_of N Ta);
+  simple (type_of (abs R) (Ta \mytilde> Tb))
+    (for_all x\ type_of x Ta --> type_of (R x) Tb).
+
+Define atom : form -> prop by
+  atom (type_of X T).
+\end{Verbatim}
+See \verb+progs_small.def+ for the complete declarations. The first
+definition describes a logic program called {\tt simple} that directly
+encodes the above \lp{} program; the second definition tells the
+interpreter in {\tt seq.def} how to recognize an object-level atomic
+formula.  A call to \texttt{seq atom simple tt (type\_of term Ty)} will
+now attempt to perform simple type checking on {\tt term}.
+Specifically, it should now be possible to prove in Bedwyr the goal
+\begin{verbatim}
+(exists Ty, seq atom simple tt (type_of (abs x\ app x x) Ty))
+  -> false.
+\end{verbatim}
+in other words, the self-application $\lambda x(x x)$ does not have a
+simple type.
+
+This ``two-level approach'' of specification uses Bedwyr as a
+meta-language in which a simple intuitionistic logic is encoded as an
+object logic: computations can then be specified in the object-logic
+in the usual way and the Bedwyr can be used to reason about that specification.
+This general approach has been described in more detail in
+\cite{miller06ijcar,gacek.twolevel}.
+
+\subsection{The \texorpdfstring{$\pi$}{pi}-calculus example in more detail}
+\label{pi-examples}
+
+To illustrate another example and how it
+can be used, consider the implementation of the $\pi$-calculus that is
+contained in the example file \verb+pi/pi.def+.  Of the several
+things defined in that file, the operational semantics for the
+$\pi$-calculus is given using one-step transitions: for a specific
+example, see Figure~\ref{one-step}.  First notice some similarities
+between the syntax of clauses and that used in \lp{}.  In
+particular, the backslash is used to denote the $\lambda$-binder.  One
+of the syntactic difference is that the head and body of clauses are
+separated from each other using the \verb+:=+ instead of the
+\verb+:-+ (turnstile).  The former symbol is used to remind
+the Bedwyr user that programs are used to define ``if and only if''
+completions of specifications (whereas, in \lp{} the \verb+:-+ is the
+more usual ``if'' interpretation).
+
+Beyond the syntactic differences, the operational semantics of \lp{}
+and Bedwyr differ significantly.  If a specification is simply a Horn
+clause program, the two systems coincide. They differ in the operational
+interpretation of implication: in Bedwyr, to prove $A\supset B$, all
+possible ways to prove $A$ are explored and
+for each answer substitution $\theta$ that is found, the goal
+$B\theta$ is attempted (see Section~\ref{psearch}).  Bedwyr also
+contains the $\nabla$-quantifier \cite{miller05tocl}.
+
+\begin{figure}
+\begin{verbatim}
+[...]
+onep (in X M)    (dn X) M;
+one  (out X Y P) (up X Y) P;
+one  (match X X P) A Q := one  P A Q;
+onep (match X X P) A M := onep P A M;
+one  (nu P) A (nu Q)          :=
+  nabla x, one  (P x) A (Q x);
+onep (nu P) A (y\ nu x\Q x y) :=
+  nabla x, onep (P x) A (y\ Q x y);
+one (par P Q) tau (par R T) :=
+  exists X Y M, onep P (dn X) M /\
+    one Q (up X Y) T /\ R = (M Y);
+one (par P Q) tau (par R T) :=
+  exists X Y M, onep Q (dn X) M /\
+    one P (up X Y) R /\ T = (M Y);
+[...]
+\end{verbatim}
+\caption{Some lines in {\tt pi.def} used to define one-step transitions.
+See the example file for the full definition.}
+\label{one-step}
+
+\begin{verbatim}
+Define coinductive bisim : p -> p -> prop by
+  bisim P Q :=
+    (forall A P1, one P A P1 ->
+      exists Q1, one Q A Q1 /\ bisim P1 Q1) /\
+    (forall X M, onep P (dn X) M ->
+      exists N, onep Q (dn X) N /\
+      forall w, bisim (M w) (N w)) /\
+    (forall X M, onep P (up X) M ->
+      exists N, onep Q (up X) N /\
+      nabla w, bisim (M w) (N w)) /\
+    (forall A Q1, one Q A Q1 ->
+      exists P1, one P A P1 /\ bisim P1 Q1) /\
+    (forall X N, onep Q (dn X) N ->
+      exists M, onep P (dn X) M /\
+      forall w, bisim (M w) (N w)) /\
+    (forall X N, onep Q (up X) N ->
+      exists M, onep P (up X) M /\
+      nabla w, bisim (M w) (N w)).
+\end{verbatim}
+\caption{The definition of (open) bisimulation.}
+\label{bisim}
+\end{figure}
+
+Returning to the example in Figure~\ref{one-step}, notice that two
+predicates are defined: {\tt one} and {\tt onep}.  The first one
+relates a process, an action, and a process.  The second one relates a
+process, an abstraction of an action, and an abstraction of a
+process.  The {\tt one} predicate is used to capture ``free
+transitions'' and the ``$\tau$-transition'' while the second is used
+to capture bounded transitions.  See \cite{tiu04fguc,tiu05concur} for
+more details on this encoding strategy for the $\pi$-calculus.
+
+Figure~\ref{bisim} provides all that is necessary to specify (open)
+bisimulation for (finite) $\pi$-calculus.  The keyword {\tt
+coinductive} tells the system that it will be attempting to explore a
+greatest fixed point. That keyword also enables tabling, which avoids redundant
+computations and accept loops as successes (see Section \ref{tabling}).
+The other cases should look natural, at least
+once one understands the $\lambda$-tree approach to representing syntax
+and the use of the $\nabla$-quantifier.  The main thing to point out
+here is that in the specification, no special side conditions need to
+be added to the system: all the familiar side conditions from the
+usual papers on the $\pi$-calculus are treated by the implementation
+of the Bedwyr logic: the user of the system no longer needs to deal
+with them explicitly but implicitly and declaratively (via quantifier
+scope, $\alpha\beta\eta$-conversion, etc).
+
+It is now possible to test some simple examples in the system.  For
+example,
+\begin{verbatim}
+ $ src/bedwyr examples/pi/pi.def
+[...welcome message...]
+?= bisim (in a x\ in a y\ z)
+     (in a x\ nu w\ in a y\ out w w z).
+Yes.
+More [y] ? y
+No more solutions.
+?= bisim (in a x\ nu y\ match x y (out c c z))
+     (in a x\ z).
+Yes.
+More [y] ? y
+No more solutions.
+?= bisim (nu x\ out a x (in c y\ match x y (out c c z)))
+     (nu x\ out a x (in c y\ z)).
+No.
+?=
+\end{verbatim}
+These query prove that
+$a(x).a(y).0$ and $a(x).(\nu w).a(y).w!w.0$ are bisimilar,
+that
+$a(x).(\nu y).[x=y].c!c.0$ and $a(x).0$ are bisimilar, and that
+$(\nu x).a!x.c(y).[x=y].c!c.0$ and
+$(\nu x).a!x.c(y).0$ are not bisimilar.
+
+Several other aspects of the $\pi$-calculus are explored in the examples
+files of the distribution.  For example, the file \verb+pi_modal.def+
+contains a specification of the modal logics for mobility described in
+\cite{milner93tcs}, and the file \verb+corr-assert.def+ specifies the
+checking of ``correspondence assertions'' for the $\pi$-calculus as
+described in \cite{gordon03tcs}.
+% TODO rehabilitate pi_abscon.def
+%The file \verb+pi_abscon.def+ specifies the polyadic $\pi$-calculus
+%following \cite{milner99book}.

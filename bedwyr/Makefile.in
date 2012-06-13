@@ -104,15 +104,12 @@ CONTRIB		= contrib/emacs/bedwyr.el \
 		  $(VIM_CONTRIB:%=contrib/vim/%)
 EXAMPLES	= $(shell find examples -type f '!' -path '*.svn*' \
 		  '!' -name \*~ '!' -name .\*.sw\* '!' -name \*.old)
-USERGUIDE	= userguide-1.3
-TEX_FILES	= $(USERGUIDE).tex
-PS_FILES	= $(USERGUIDE).ps.gz
-PDF_FILES	= $(USERGUIDE).pdf
-HTML_FILES	= $(USERGUIDE).html
-USERGUIDE_FILES	= doc/$(TEX_FILES) doc/userguide.bib doc/Makefile.in
+MANUAL		= manual-1.4
+PS_FILES	= $(MANUAL:%=doc/%).ps.gz
+PDF_FILES	= $(MANUAL:%=doc/%).pdf
+HTML_FILES	= $(MANUAL:%=doc/%).html
 ARCH_FILES	= configure.ac Makefile.in install-sh \
-		  $(DOCS) $(CONTRIB) $(EXAMPLES) \
-		  $(USERGUIDE_FILES)
+		  $(DOCS) $(CONTRIB) $(EXAMPLES)
 
 ndcore = src/ndcore/ndcore.$(cma)
 bedwyr = src/bedwyr
@@ -243,16 +240,16 @@ install_bedwyr_doc: bedwyr_doc
 	@$(INSTALL_DIR) $(PSDIR)
 	@$(INSTALL_DIR) $(PDFDIR)
 	@$(INSTALL_DIR) $(HTMLDIR)
-	@$(INSTALL_DOC) doc/$(PS_FILES) $(PSDIR)
-	@$(INSTALL_DOC) doc/$(PDF_FILES) $(PDFDIR)
-	@$(INSTALL_DOC) doc/$(HTML_FILES) $(HTMLDIR)
+	@$(INSTALL_DOC) $(PS_FILES) $(PSDIR)
+	@$(INSTALL_DOC) $(PDF_FILES) $(PDFDIR)
+	@$(INSTALL_DOC) $(HTML_FILES) $(HTMLDIR)
 	@$(INSTALL_DIR) $(HTMLDIR)/ref
 	@$(INSTALL_DOC) doc/html/bedwyr/style.css doc/html/bedwyr/*.html \
 	  $(HTMLDIR)/ref
 
 # ARCHIVE
 
-.PHONY: dist src/ndcore/ndcore.tar src/bedwyr.tar dist.tar
+.PHONY: dist src/ndcore/ndcore.tar src/bedwyr.tar doc/manual.tar dist.tar
 
 dist: $(DIST_NAME).tar.bz2 $(DIST_NAME).tar.gz
 
@@ -262,10 +259,13 @@ src/ndcore/ndcore.tar:
 src/bedwyr.tar:
 	$(MAKE) -C src archive
 
+doc/manual.tar:
+	$(MAKE) -C doc archive
+
 dist.tar: $(ARCH_FILES)
 	$(TAR) -cf $@ --xform 's|^|$(DIST_NAME)/|' $^
 
-$(DIST_NAME).tar: src/ndcore/ndcore.tar src/bedwyr.tar dist.tar
+$(DIST_NAME).tar: src/ndcore/ndcore.tar src/bedwyr.tar doc/manual.tar dist.tar
 	$(TAR) -cf $@ -T /dev/null
 	for i in $^ ; do \
 	  $(TAR) -Af $@ $$i ; done
