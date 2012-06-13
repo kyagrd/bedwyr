@@ -65,12 +65,6 @@ struct
                      var_fopen_out ; var_fclose_out ]
 end
 
-let string_of_flavour = function
-  | Normal -> "Normal"
-  | Inductive -> "Inductive"
-  | CoInductive -> "CoInductive"
-
-
 let debug = ref false
 let time  = ref false
 
@@ -111,12 +105,34 @@ let open_user_file name =
     )
 
 
-(* types declarations *)
-
-exception Invalid_type_declaration of string * Typing.pos * Type.simple_kind * string
 
 
-let type_kinds : (Term.var,Type.simple_kind) Hashtbl.t =
+
+
+
+module Typing = Input.Typing
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+(* Types declarations *)
+
+exception Invalid_type_declaration of string * Typing.pos * Typing.ki * string
+
+
+let type_kinds : (Term.var,Typing.ki) Hashtbl.t =
   Hashtbl.create 100
 
 let declare_type (p,name) ki =
@@ -124,33 +140,41 @@ let declare_type (p,name) ki =
   if Hashtbl.mem type_kinds ty_var
   then raise (Invalid_type_declaration (name,p,ki,"type already declared"))
   else match ki with
-    | Type.KType ->
+    | Typing.Ki ([],Typing.KType) ->
         Hashtbl.add type_kinds ty_var ki
-    | Type.KRArrow _ ->
+    | _ ->
         raise (Invalid_type_declaration (name,p,ki,"no type operators yet"))
 
 
 (* constants and predicates declarations *)
 
+type flavour = Normal | Inductive | CoInductive
+
 exception Missing_type of string * Typing.pos
-exception Invalid_const_declaration of string * Typing.pos * Type.simple_type * string
+exception Invalid_const_declaration of string * Typing.pos * Typing.ty * string
 exception Invalid_flavour of string * Typing.pos * string * string
-exception Invalid_pred_declaration of string * Typing.pos * Type.simple_type * string
-exception Invalid_bound_declaration of string * Typing.pos * Type.simple_type * string
+exception Invalid_pred_declaration of string * Typing.pos * Typing.ty * string
+exception Invalid_bound_declaration of string * Typing.pos * Typing.ty * string
 
 
-let kind_check ?(expected_kind=Type.KType) ty =
+let string_of_flavour = function
+  | Normal -> "Normal"
+  | Inductive -> "Inductive"
+  | CoInductive -> "CoInductive"
+
+
+let kind_check ?(expected_kind=Typing.ktype) ty =
   let atomic_kind (p,name) =
     let type_var = Term.get_var (Term.atom ~tag:Term.Constant name) in
     try Hashtbl.find type_kinds type_var
     with Not_found ->
       raise (Missing_type (name,p))
   in
-  Typing.kind_check ty expected_kind atomic_kind
+  Typing.kind_check ty expected_kind ~atomic_kind
 
 type object_declaration =
-  | Constant of Type.simple_type
-  | Predicate of (flavour*Term.term option*Table.t option*Type.simple_type)
+  | Constant of Typing.ty
+  | Predicate of (flavour*Term.term option*Table.t option*Typing.ty)
 
 let defs : (Term.var,object_declaration) Hashtbl.t =
     Hashtbl.create 100
@@ -175,7 +199,7 @@ let create_def (new_predicates,global_flavour) (flavour,p,name,ty) =
     then raise (Invalid_pred_declaration (name,p,ty,"name conflict with a predefined predicate"))
     else let (flex,_,_,propositional) = kind_check ty in
     if not (propositional || flex) then
-      raise (Invalid_pred_declaration (name,p,ty,Format.sprintf "target type can only be %s" (Pprint.type_to_string Type.TProp)))
+      raise (Invalid_pred_declaration (name,p,ty,Format.sprintf "target type can only be %s" (Typing.type_to_string Typing.tprop)))
     else begin
       let t = (if flavour=Normal then None else Some (Table.create ())) in
       Hashtbl.add defs head_var (Predicate (flavour, None, t, ty)) ;
@@ -196,7 +220,24 @@ exception Inconsistent_definition of string * Typing.pos * string
 exception Missing_definition of string * Typing.pos option
 
 
-let translate_term ?(pure_args=[]) ?(infer=true) ?(expected_type=Type.TProp) pre_term free_types =
+let translate_term
+      ?(free_args=[])
+      ?(infer=true)
+      ?(expected_type=Typing.tprop)
+      pre_term
+      free_types =
+  let iter_free_types f =
+    (* XXX [QH] yeah, reading-clearing-filling a hashtable is not elegant,
+     * but it is not safe to use Hashtbl.replace *during* the Hashtbl.iter,
+     * I don't want the unifier to leak from Typing,
+     * I don't want to build a new hashtable and to return it
+     * nor to have a hashtable of references (what good is a mutable structure
+     * if we don't mutate it?), so this will do until all the hashtables from System
+     * are replaced with maps (or not) *)
+    let l = Hashtbl.fold (fun v ty l -> (v,ty)::l) free_types [] in
+    Hashtbl.clear free_types ;
+    List.iter (fun (v,ty) -> Hashtbl.add free_types v (f v ty)) l
+  in
   (* return (and create if needed) a typed variable
    * corresponding to the name of a free variable *)
   let typed_free_var (_,name) =
@@ -215,21 +256,9 @@ let translate_term ?(pure_args=[]) ?(infer=true) ?(expected_type=Type.TProp) pre
           t,v
         end
       in
-      let ty = Type.fresh_tyvar () in
+      let ty = Typing.fresh_typaram () in
       Hashtbl.add free_types v ty ;
       t,ty
-  in
-  let normalize_types normed_type =
-    (* XXX [QH] yeah, reading-clearing-filling a hashtable is not elegant,
-     * but it is not safe to use Hashtbl.replace *during* the Hashtbl.iter,
-     * I don't want the unifier to leak from Typing,
-     * I don't want to build a new hashtable and to return it
-     * nor to have a hashtable of references (what good is a mutable structure
-     * if we don't mutate it?), so this will do until all the hashtables from System
-     * are replaced with maps (or not) *)
-    let l = Hashtbl.fold (fun v ty l -> (v,ty)::l) free_types [] in
-    Hashtbl.clear free_types ;
-    List.iter (fun (v,ty) -> Hashtbl.add free_types v (normed_type v ty)) l
   in
   (* return a typed variable corresponding to the name
    * of a constant (predefined or not) or a predicate *)
@@ -243,25 +272,25 @@ let translate_term ?(pure_args=[]) ?(infer=true) ?(expected_type=Type.TProp) pre
     end with Not_found ->
       let ty = match v with
         | v when v = Logic.var_print ->
-            let ty = Type.fresh_tyvar () in
-            Type.TRArrow ([ty],Type.TProp)
+            let ty = Typing.fresh_typaram () in
+            Typing.ty_arrow [ty] Typing.tprop
         | v when v = Logic.var_println ->
-            let ty = Type.fresh_tyvar () in
-            Type.TRArrow ([ty],Type.TProp)
+            let ty = Typing.fresh_typaram () in
+            Typing.ty_arrow [ty] Typing.tprop
         | v when v = Logic.var_printstr ->
-            Type.TRArrow ([Type.TString],Type.TProp)
+            Typing.ty_arrow [Typing.tstring] Typing.tprop
         | v when v = Logic.var_fprint ->
-            let ty = Type.fresh_tyvar () in
-            Type.TRArrow ([Type.TString;ty],Type.TProp)
+            let ty = Typing.fresh_typaram () in
+            Typing.ty_arrow [Typing.tstring;ty] Typing.tprop
         | v when v = Logic.var_fprintln ->
-            let ty = Type.fresh_tyvar () in
-            Type.TRArrow ([Type.TString;ty],Type.TProp)
+            let ty = Typing.fresh_typaram () in
+            Typing.ty_arrow [Typing.tstring;ty] Typing.tprop
         | v when v = Logic.var_fprintstr ->
-            Type.TRArrow ([Type.TString;Type.TString],Type.TProp)
+            Typing.ty_arrow [Typing.tstring;Typing.tstring] Typing.tprop
         | v when v = Logic.var_fopen_out ->
-            Type.TRArrow ([Type.TString],Type.TProp)
+            Typing.ty_arrow [Typing.tstring] Typing.tprop
         | v when v = Logic.var_fclose_out ->
-            Type.TRArrow ([Type.TString],Type.TProp)
+            Typing.ty_arrow [Typing.tstring] Typing.tprop
         | _ ->
             Term.free name ;
             raise (Missing_declaration (name,Some p))
@@ -269,30 +298,33 @@ let translate_term ?(pure_args=[]) ?(infer=true) ?(expected_type=Type.TProp) pre
   in
   (* return a typed variable corresponding to the name
    * of an internal constant *)
+  (* TODO regroup the following code and the one on prover.ml,
+   * so that internal predicates are declared/defined in one single place *)
   let typed_intern_var (p,name) =
     let t = Term.atom ~tag:Term.Constant name in
     let v = Term.get_var t in
     let ty = match v with
       | v when v = Logic.var_not ->
-          Type.TRArrow ([Type.TProp],Type.TProp)
+          Typing.ty_arrow [Typing.tprop] Typing.tprop
       | v when v = Logic.var_ite ->
-          Type.TRArrow ([Type.TProp;Type.TProp;Type.TProp],Type.TProp)
+          Typing.ty_arrow [Typing.tprop;Typing.tprop;Typing.tprop] Typing.tprop
       | v when v = Logic.var_abspred ->
-          let ty1 = Type.fresh_tyvar () in
-          let ty2 = Type.TRArrow ([Type.TRArrow ([Type.fresh_tyvar ()],ty1)],ty1) in
-          Type.TRArrow ([ty1;ty2;ty1],Type.TProp)
+          let ty1 = Typing.fresh_typaram () in
+          let ty2 = Typing.ty_arrow [Typing.fresh_typaram ()] ty1 in
+          let ty3 = Typing.ty_arrow [ty2] ty1 in
+          Typing.ty_arrow [ty1;ty3;ty1] Typing.tprop
       | v when v = Logic.var_distinct ->
-          Type.TRArrow ([Type.TProp],Type.TProp)
+          Typing.ty_arrow [Typing.tprop] Typing.tprop
       | v when v = Logic.var_assert_rigid ->
-          let ty = Type.fresh_tyvar () in
-          Type.TRArrow ([ty],Type.TProp)
+          let ty = Typing.fresh_typaram () in
+          Typing.ty_arrow [ty] Typing.tprop
       | v when v = Logic.var_abort_search ->
-          Type.TProp
+          Typing.tprop
       | v when v = Logic.var_cutpred ->
-          Type.TRArrow ([Type.TProp],Type.TProp)
+          Typing.ty_arrow [Typing.tprop] Typing.tprop
       | v when v = Logic.var_check_eqvt ->
-          let ty = Type.fresh_tyvar () in
-          Type.TRArrow ([ty;ty],Type.TProp)
+          let ty = Typing.fresh_typaram () in
+          Typing.ty_arrow [ty;ty] Typing.tprop
       | _ ->
           Term.free name ;
           raise (Missing_declaration (name,Some p))
@@ -302,10 +334,16 @@ let translate_term ?(pure_args=[]) ?(infer=true) ?(expected_type=Type.TProp) pre
   let bound_var_type (p,name,ty) =
     let _ = kind_check ty in ty
   in
-  Typing.type_check_and_translate pre_term expected_type typed_free_var normalize_types typed_declared_var typed_intern_var bound_var_type infer pure_args
+  Input.type_check_and_translate
+    ~infer
+    ~iter_free_types
+    ~free_args
+    pre_term
+    expected_type
+    (typed_free_var,typed_declared_var,typed_intern_var,bound_var_type)
 
 let translate_query pre_term =
-  let free_types : (Term.var,Type.simple_type) Hashtbl.t =
+  let free_types : (Term.var,Typing.ty) Hashtbl.t =
     Hashtbl.create 10
   in
   let term,_ = translate_term pre_term free_types in term
@@ -384,12 +422,12 @@ let mk_clause p head body =
   (pred, arity, body)
 
 let add_clause new_predicates (p,pre_head,pre_body) =
-  let free_types : (Term.var,Type.simple_type) Hashtbl.t =
+  let free_types : (Term.var,Typing.ty) Hashtbl.t =
     Hashtbl.create 10
   in
-  let pure_args = Typing.pure_args pre_head in
-  let head,_ = translate_term ~pure_args pre_head free_types in
-  let body,_ = translate_term ~pure_args pre_body free_types in
+  let free_args = Input.free_args pre_head in
+  let head,_ = translate_term ~free_args pre_head free_types in
+  let body,_ = translate_term ~free_args pre_body free_types in
   let head,arity,body =
     mk_clause p head body
   in
@@ -469,7 +507,7 @@ let print_env () =
     Hashtbl.iter
       (fun v k -> Format.printf "@,@[%s :@;<1 2>%a@]"
                     (Term.get_var_name v)
-                    Pprint.pp_kind k)
+                    Typing.pp_kind k)
       type_kinds ;
     Format.printf "@]@."
   in
@@ -487,7 +525,7 @@ let print_env () =
     List.iter
       (fun (n,ty) -> Format.printf "@,@[%s :@;<1 2>%a@]"
                      n
-                     (fun ty -> Pprint.pp_type_norm ty) ty)
+                     (fun ty -> Typing.pp_type_norm ty) ty)
       (List.sort (fun (x,_) (y,_) -> compare x y) lc) ;
     Format.printf "@]@."
   in
@@ -502,7 +540,7 @@ let print_env () =
       (fun (n,f,ty) -> Format.printf "@,@[%s%s :@;<1 4>%a@]"
                        (string_of_flavour f)
                        n
-                       (fun ty -> Pprint.pp_type_norm ty) ty)
+                       (fun ty -> Typing.pp_type_norm ty) ty)
       (List.sort (fun (x,_,_) (y,_,_) -> compare x y) lp) ;
     Format.printf "@]@."
   in
@@ -511,10 +549,10 @@ let print_env () =
   print_predicates ()
 
 let get_types pre_term =
-  let free_types : (Term.var,Type.simple_type) Hashtbl.t =
+  let free_types : (Term.var,Typing.ty) Hashtbl.t =
     Hashtbl.create 10
   in
-  let ty = Type.fresh_tyvar () in
+  let ty = Typing.fresh_typaram () in
   let t,ty = translate_term ~infer:false ~expected_type:ty pre_term free_types in
   t,ty,free_types
 
@@ -522,11 +560,11 @@ let print_type_of pre_term =
   let t,ty,free_types = get_types pre_term in
   Format.printf "@[<v 3>@[%a :@;<1 2>%a@]"
     Pprint.pp_term t
-    Pprint.pp_type ty ;
+    Typing.pp_type ty ;
   Hashtbl.iter
     (fun v ty -> Format.printf "@,@[%s :@;<1 2>%a@]"
                    (Term.get_var_name v)
-                   (fun ty -> Pprint.pp_type_norm ty) ty)
+                   (fun ty -> Typing.pp_type_norm ty) ty)
     free_types ;
   Format.printf "@]@."
   (*Pprint.pp_type Format.std_formatter ty*)
