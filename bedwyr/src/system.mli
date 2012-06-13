@@ -169,38 +169,6 @@ No more solutions. v}
       * The file "test.txt" will contain the string "Test printing". *)
   end
 
-(** Describe whether tabling is possible, and if so, how it is used. *)
-type flavour =
-    Normal (** only unfolding can be done *)
-  | Inductive (** tabling is possible, and loop is a failure *)
-  | CoInductive (** tabling is possible, and loop is a success *)
-type command =
-    Exit (** close all files and exit *)
-  | Help (** display a short help message *)
-  | Include of string list (** load a list of files *)
-  | Reset (** clear the current session *)
-  | Reload (** reload the current session *)
-  | Session of string list (** load these files as the current session *)
-  | Debug of string option (** turn debugging on/off (default off) *)
-  | Time of string option (** turn timing on/off (default off) *)
-  | Equivariant of string option (** turn equivariant tabling on/off (default on) *)
-  | Env (** call [print_env] *)
-  | Type_of of Typing.preterm (** call [print_type_of] *)
-  | Show_table of Typing.pos * string (** call [show_table] *)
-  | Clear_tables (** call [clear_tables] *)
-  | Clear_table of Typing.pos * string (** call [clear_table] *)
-  | Save_table of Typing.pos * string * string (** calls [save_table] *)
-  | Assert of Typing.preterm (** check whether a query succeeds *)
-  | Assert_not of Typing.preterm (** check whether a query fails *)
-  | Assert_raise of Typing.preterm (** check whether a query crashes *)
-type input =
-    KKind of (Typing.pos * string) list * Type.simple_kind (** type declaration *)
-  | TType of (Typing.pos * string) list * Type.simple_type (** constant declaration *)
-  | Def of (flavour * Typing.pos * string * Type.simple_type) list *
-      (Typing.pos * Typing.preterm * Typing.preterm) list (** predicate declaration and definition *)
-  | Query of Typing.preterm (** query (interactive mode) *)
-  | Command of command (** meta-command (any mode) *)
-
 (** Simple debug flag, can be set dynamically from the logic program. *)
 val debug : bool ref
 

@@ -32,6 +32,7 @@ module type S = sig
   and ki_base =
     | KType
   val ki_arrow : ki list -> ki -> ki
+  val ktype : ki
 
   val pp_kind : Format.formatter -> ki -> unit
   val kind_to_string : ki ->string
@@ -45,6 +46,12 @@ module type S = sig
     | TVar        of int
     | TParam      of int
   val ty_arrow : ty list -> ty -> ty
+  val tconst : string -> ty
+  val tprop : ty
+  val tstring : ty
+  val tnat : ty
+  val tvar : int -> ty
+  val tparam : int -> ty
   val fresh_tyvar : unit -> ty
   val fresh_typaram : unit -> ty
   val build_abstraction_types : int -> ty list * ty
@@ -99,6 +106,7 @@ module Make (I : INPUT) = struct
   and ki_base =
     | KType
 
+  let ktype = Ki ([],KType)
   let ki_arrow kis = function
     | Ki (kis',ki)        -> Ki (kis@kis',ki)
 
@@ -131,6 +139,12 @@ module Make (I : INPUT) = struct
 
   let ty_arrow tys = function
     | Ty (tys',ty)        -> Ty (tys@tys',ty)
+  let tconst name = Ty ([],TConst name)
+  let tprop = Ty ([],TProp)
+  let tstring = Ty ([],TString)
+  let tnat = Ty ([],TNat)
+  let tvar i = Ty ([],TVar i)
+  let tparam i = Ty ([],TParam i)
 
   let fresh_tyvar =
     let count = ref 0 in
@@ -260,8 +274,6 @@ module Make (I : INPUT) = struct
       | Some unifier -> ty_norm ~unifier ty
     in
     type_to_string ty
-
-  (* type checking *)
 
   exception Hollow_type of string
 

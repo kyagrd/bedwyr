@@ -1,6 +1,6 @@
 open OUnit
 
-module I : Typing.INPUT = struct
+module I = struct
   type pos = unit * unit
   let dummy_pos = (),()
 end

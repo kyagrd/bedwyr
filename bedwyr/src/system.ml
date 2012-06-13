@@ -65,38 +65,11 @@ struct
                      var_fopen_out ; var_fclose_out ]
 end
 
-type flavour = Normal | Inductive | CoInductive
 let string_of_flavour = function
   | Normal -> "Normal"
   | Inductive -> "Inductive"
   | CoInductive -> "CoInductive"
-type command =
-  | Exit
-  | Help
-  | Include             of string list
-  | Reset
-  | Reload
-  | Session             of string list
-  | Debug               of string option
-  | Time                of string option
-  | Equivariant         of string option
-  | Env
-  | Type_of             of Typing.preterm
-  | Show_table          of Typing.pos * string
-  | Clear_tables
-  | Clear_table         of Typing.pos * string
-  | Save_table          of Typing.pos * string * string
-  | Assert              of Typing.preterm
-  | Assert_not          of Typing.preterm
-  | Assert_raise        of Typing.preterm
 
-type input =
-  | KKind   of (Typing.pos * string) list * Type.simple_kind
-  | TType   of (Typing.pos * string) list * Type.simple_type
-  | Def     of (flavour * Typing.pos * string * Type.simple_type) list *
-               (Typing.pos * Typing.preterm * Typing.preterm) list
-  | Query   of Typing.preterm
-  | Command of command
 
 let debug = ref false
 let time  = ref false
@@ -514,7 +487,7 @@ let print_env () =
     List.iter
       (fun (n,ty) -> Format.printf "@,@[%s :@;<1 2>%a@]"
                      n
-                     (Pprint.pp_type_norm None) ty)
+                     (fun ty -> Pprint.pp_type_norm ty) ty)
       (List.sort (fun (x,_) (y,_) -> compare x y) lc) ;
     Format.printf "@]@."
   in
@@ -529,7 +502,7 @@ let print_env () =
       (fun (n,f,ty) -> Format.printf "@,@[%s%s :@;<1 4>%a@]"
                        (string_of_flavour f)
                        n
-                       (Pprint.pp_type_norm None) ty)
+                       (fun ty -> Pprint.pp_type_norm ty) ty)
       (List.sort (fun (x,_,_) (y,_,_) -> compare x y) lp) ;
     Format.printf "@]@."
   in
@@ -553,7 +526,7 @@ let print_type_of pre_term =
   Hashtbl.iter
     (fun v ty -> Format.printf "@,@[%s :@;<1 2>%a@]"
                    (Term.get_var_name v)
-                   (Pprint.pp_type_norm None) ty)
+                   (fun ty -> Pprint.pp_type_norm ty) ty)
     free_types ;
   Format.printf "@]@."
   (*Pprint.pp_type Format.std_formatter ty*)
