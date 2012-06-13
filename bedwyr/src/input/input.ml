@@ -156,6 +156,7 @@ type input =
                (pos * preterm * preterm) list
   | Query   of preterm
   | Command of command
+  | Theorem of (pos * string * preterm)
 
 (* Pre-terms' type checking *)
 

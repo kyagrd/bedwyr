@@ -1,6 +1,6 @@
 (****************************************************************************)
 (* Bedwyr prover                                                            *)
-(* Copyright (C) 2006-2011 Baelde, Tiu, Ziegler, Heath                      *)
+(* Copyright (C) 2006-2012 Baelde, Tiu, Ziegler, Heath                      *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -183,6 +183,7 @@ rule token = parse
   | "by"                { BY }
   | ":="                { DEFEQ }
   | ";"                 { SEMICOLON }
+  | "Theorem"           { THEOREM }
 
   (* common term-keywords (Abella/Bedwyr) *)
   | "prop"              { PROP }
@@ -199,7 +200,6 @@ rule token = parse
 
   (* Abella only meta-keywords *)
   | "Close"             { CLOSE }
-  | "Theorem"           { THEOREM }
   | "Qed"               { QED }
   | "Query"             { QUERY }
   | "Import"            { IMPORT }

@@ -55,6 +55,7 @@ syn region      bedwyrNone      matchgroup=bedwyrKeyword start="\<\(Kind\|Type\)
 syn region      bedwyrDefBlock  matchgroup=bedwyrKeyword start="\<Define\>" matchgroup=bedwyrSymbol end="\." contains=bedwyrPredDeclarations keepend
 syn region      bedwyrPredDeclarations start="." matchgroup=bedwyrKeyword end="\<by\>" contained nextgroup=bedwyrPredDefinitions skipempty contains=@bedwyrCommonErrs,bedwyrParenErr,bedwyrComment,bedwyrFlavour,bedwyrComma,@bedwyrAnnotatedId keepend
 syn region      bedwyrPredDefinitions start="" matchgroup=bedwyrSymbol end="\." contained contains=@bedwyrCommonErrs,bedwyrParenErr,bedwyrComment,bedwyrDefEq,bedwyrSemiColon,@bedwyrFormulae keepend
+syn region      bedwyrTheorem   matchgroup=bedwyrKeyword start="\<Theorem\>" matchgroup=bedwyrSymbol end="\." contains=bedwyrPredDefinitions keepend
 
 syn keyword     bedwyrFlavour   contained inductive coinductive
 syn match       bedwyrComma     contained ","

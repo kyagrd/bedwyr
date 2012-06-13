@@ -1,0 +1,28 @@
+Kind obj        type.
+
+Type a,b,c,d,e  obj.
+
+% a - b - c
+
+Define inductive p : obj -> obj -> prop by
+  p a b ;
+  p b c ;
+  p a c.
+
+Theorem demo_th_1 : p a b -> p a c.
+
+#debug on.
+#show_table p.
+#assert p a b.
+#show_table p.
+#assert p a c.
+#show_table p.
+#assert p a c.
+#debug off.
+
+#exit.
+
+/*
+ * first example:
+ * BC(p a b >> p a c)
+ */
