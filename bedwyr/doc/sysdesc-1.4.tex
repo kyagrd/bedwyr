@@ -4,6 +4,7 @@
 % ============================================================================
 \section{The logic LINC}
 \label{logic}
+% - the logic behind Bedwyr (bindings, definitions, finite success/failure, nabla)
 
 The logic behind Bedwyr, named LINC, is an extension to a higher-order
 version of intuitionistic logic that has been developed over the past
@@ -144,12 +145,12 @@ quantifier.  It is worth pointing out that we know of no examples
 involving $\nabla$ that do not also involve $\lambda$-tree syntax.
 
 
-% ============================================================================
-\section{Unification}
+% % ============================================================================
+% \section{Unification}
 
 
-% ============================================================================
-\section{Typing}
+% % ============================================================================
+% \section{Typing}
 
 
 % ============================================================================
@@ -258,7 +259,7 @@ In its normal state, an infix constant has to be at least of arity 2:
 can even be applied to another term if {\tt **} is of arity 3 or more.
 It is also possible to use the prefix version of an infix constant by
 surrounding it with parentheses, in which case any arity is permitted:
-{\tt (**) x} and {\tt (**) x y z} are both syntacticly legal.
+{\tt (**) x} and {\tt (**) x y z} are both syntactically legal.
 
 A normal application has precedence over the application of an infix
 constant: {\tt w x ** y z} is parenthesized as {\tt (w x) ** (y z)};
@@ -269,24 +270,25 @@ right-associative, to mimic the behavior of {\tt ->}.
 %TODO say something about the distinction formula/term?
 
 
-% ============================================================================
-\section{Syntax of files}
+% % ============================================================================
+% \section{Syntax of files}
 
 
-% ============================================================================
-\section{Meta-commands}
+% % ============================================================================
+% \section{Meta-commands}
 
 
-% ============================================================================
-\section{Command-line options}
+% % ============================================================================
+% \section{Command-line options}
 
 
-% ============================================================================
-\section{Sessions, includes}
+% % ============================================================================
+% \section{Sessions, includes}
 
 
-% ============================================================================
-\section{Logic programming}
+% % ============================================================================
+% \section{Logic programming}
+% % - logic programming (query, trace, operational semantics)
 
 
 % ============================================================================
@@ -550,7 +552,8 @@ but the table for \verb.q. is left blank.
 
 
 % ============================================================================
-\section{Two runtime errors from the interpreter}
+\section{Limitations of the interpreter}
+\subsection{Two runtime errors}
 
 The strategy used by Bedwyr for attempting proofs is not complete.
 That strategy involves using two provers (prover 0 and prover 1),
@@ -561,7 +564,7 @@ resulting from depth-first search certainly reappear in Bedwyr.  We
 mention two additional sources of incompleteness in the proof search
 engine of Bedwyr.
 
-\subsection{\texorpdfstring{\Ll{}}{Llambda} and non-\texorpdfstring{\Ll{}}{Llambda} unification problems}
+\subsubsection{\texorpdfstring{\Ll{}}{Llambda} and non-\texorpdfstring{\Ll{}}{Llambda} unification problems}
 A subset of \lp, called \Ll, was presented in \cite{miller91jlc} where
 it was shown that an implementation of proof search could be written
 in which only a small subset of higher-order unification was required.
@@ -624,7 +627,7 @@ instantiations and $\beta$-reduction will make them ``simple'' is
 employed in such systems as Twelf and the second version of the Teyjus
 implementation of \lp{} \cite{teyjus.website}.
 
-\subsection{Restriction on the occurrences of logic variables}
+\subsubsection{Restriction on the occurrences of logic variables}
 \label{restrict-logic-variables}
 
 As we have already noted, in the current implementation of Bedwyr
@@ -668,13 +671,14 @@ Such reordering of goals is something a future version of Bedwyr might
 attempt to do automatically.
 
 
-% ============================================================================
-\section{Built-ins}
+% % ============================================================================
+% \section{Built-ins}
 
 
-% ============================================================================
-\section{Stratification}
+% % ============================================================================
+% \section{Stratification}
 
 
-% ============================================================================
-\section{Free variables}
+% % ============================================================================
+% \section{Free variables}
+% % - free variables, placeholders (_)

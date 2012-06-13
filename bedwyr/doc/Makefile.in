@@ -1,39 +1,53 @@
+# @configure_input@
+
 # DEFINITIONS
 
-PACKAGE_TARNAME = @PACKAGE_TARNAME@
-PACKAGE_VERSION = @PACKAGE_VERSION@
-DIST_NAME       = $(PACKAGE_TARNAME)-$(PACKAGE_VERSION)
+PACKAGE_TARNAME	= @PACKAGE_TARNAME@
+PACKAGE_VERSION	= @PACKAGE_VERSION@
+DIST_NAME	= $(PACKAGE_TARNAME)-$(PACKAGE_VERSION)
 
+SHELL	= @BASH@
+LATEX	= @LATEX@
+BIBTEX	= @BIBTEX@
+DVIPS	= @DVIPS@ -t a4 -Ppdf -z
+GZIP	= @GZIP@ -4 -f
+PS2PDF	= @PS2PDF@ -sPAPERSIZE=a4
+HEVEA	= @HEVEA@ png.hva
+BIBHVA	= @BIBHVA@
+IMAGEN	= @IMAGEN@ -png
+HACHA	= @HACHA@ -tocbis
 TAR	= @TAR@
-LATEX	 = @LATEX@
-PDFLATEX = @PDFLATEX@
-HEVEA	 = @HEVEA@ -noiso
-GZIP	 = gzip -9
 
 # FILES
 
-MANUAL		= manual-1.4
-TEX		= $(MANUAL).tex
-PS		= $(MANUAL).ps.gz
-PDF		= $(MANUAL).pdf
-HTML		= $(MANUAL).html
-BIB		= userguide.bib
-USERGUIDE	= userguide-1.4.tex
-SYSTEM		= system-description-1.4.tex
-#REFERENCE	= reference-manual-1.4.tex
-TEX_INCLUDES	= $(USERGUIDE) $(SYSTEM) $(REFERENCE)
+QUICKSTART	= quickstart-1.4
+REFMAN		= refman-1.4
+
+TEX_FILES	= $(QUICKSTART).tex $(REFMAN).tex
+DVI_FILES	= $(TEX_FILES:.tex=.dvi)
+PSGZ_FILES	= $(DVI_FILES:.dvi=.ps.gz)
+PDF_FILES	= $(PSGZ_FILES:.ps.gz=.pdf)
+HTML_FILES	= $(QUICKSTART).html $(REFMAN)/index.html
+
+TARGETS		= $(PSGZ) $(PDF) $(HTML)
+
+REFMAN_INCLUDES	=
+BIB_FILE	= userguide.bib
 
 # BUILDING
 
-all: $(PS) $(PDF) $(HTML)
+all: $(TARGETS)
 
-.SUFFIXES: .tex .aux .bbl .dvi .ps .pdf .haux .htoc .html
+$(REFMAN).aux: $(REFMAN_INCLUDES)
+$(REFMAN).bbl: $(BIB_FILE)
 
-.tex.aux: $(TEX_INCLUDES)
-	$(LATEX) $*
+.SUFFIXES: .tex .aux .bbl .dvi .ps .gz .pdf .haux .hbbl .html
+
+.tex.aux:
+	@$(LATEX) $*
 
 .aux.bbl:
-	bibtex $*
+	@$(BIBTEX) $* || true
 
 # This cancels the predefined .tex.dvi rule,
 # which uses tex instead of latex,
@@ -43,31 +57,43 @@ all: $(PS) $(PDF) $(HTML)
 %.dvi: %.tex
 
 .bbl.dvi:
-	$(LATEX) $*
+	@$(LATEX) $*
 	@while ( grep -q "Rerun to get cross-references right" $*.log ) ; do \
 	  echo 'Reruning latex to get cross-references right' ; \
 	  $(LATEX) $* ; \
 	  done
+
 .dvi.ps:
-	dvips $< -o $@
+	@$(DVIPS) $*
+
 %.gz: %
-	$(GZIP) -f $<
+	@$(GZIP) -c $<
 
-.bbl.pdf:
-	$(PDFLATEX) $*
-	@while ( grep -q "Rerun to get cross-references right" $*.log ) ; do \
-	  echo 'Reruning pdflatex to get cross-references right' ; \
-	  $(PDFLATEX) $* ; \
-	  done
+.ps.pdf:
+	@$(PS2PDF) $<
 
-# Finding whether hevea really needs to be re-run is complicated
-# since it doesn't always warn, so I first make sure that latex was
-# run enough times.
-.dvi.html:
-	@echo $(HEVEA) $*
-	@bash -c 'while ( ($(HEVEA) $* 2>&1 | tee >(cat >&3) | grep -q "Rerun me to get cross-references right") 3>&1 ) ; do \
+# The "-fix" option is needed to enforce the creation of $*.haux
+# even if $*.aux is still present frpom a previous latex run
+# (while hevea can use both, bibhva cannot).
+.tex.haux:
+#	echo "\documentclass{article}\begin{document}\end{document}" > $*.image.tex
+	@$(HEVEA) -fix $*
+
+.haux.hbbl:
+	@$(BIBHVA) $*
+
+.hbbl.html:
+#	$(IMAGEN) $*
+#	@echo $(HEVEA) $*
+#	@while ( ($(HEVEA) $* 2>&1 | tee >(cat >&3) | grep -q "Rerun me to get cross-references right") 3>&1 ) ; do \
 	  echo "Reruning hevea to get cross-references right" ; \
-	  done'
+	  done
+	@$(HEVEA) -fix $*
+
+%/index.html: %.html
+	  @mkdir -p $*
+	  @$(HACHA) -o $@ $<
+	  @for i in $**.png ; do mv -vf $$i $*/ ; done
 
 # OTHER TARGETS
 
@@ -75,32 +101,35 @@ all: $(PS) $(PDF) $(HTML)
 
 archive: manual.tar
 
-manual.tar: $(TEX) $(TEX_INCLUDES) $(BIB) Makefile.in
+manual.tar: $(TEX_FILES) $(REFMAN_INCLUDES) $(BIB_FILE) Makefile.in
 	$(TAR) -cf $@ --xform 's|^|$(DIST_NAME)/doc/|' $^
-
-show: $(PDF)
-	kpdf $< &
-
 
 # For this target, the aux file need to mention a bib file
 # in Dale's LIX directory.
 # Only he will be able to do the following command to create the
 # userguide.bib file.
-bib: $(BIB)
+bib: $(BIB_FILE)
 
 BIBREF	= ../../../../../pap/references/master
 ifneq ($(strip $(wildcard $(BIBREF))),)
-$(BIB): $(TEX)
+$(BIB_FILE): $(REFMAN).tex
 	sed -e 's|^\\bibliography{userguide}$$|\\bibliography{$(BIBREF)}|' $< | $(LATEX) --jobname=$(<:.tex=) --
 	aux2bib $(<:.tex=.aux) > $@
 	rm -f $(<:.tex=.aux)
 endif
 
-.PHONY: clean htclean
-clean:
-	rm -f $(PS) $(PDF) $(HTML)
-	rm -f *.aux *.log *.toc *.blg *.bbl *.dvi *.haux *.htoc *.out
-	rm -f html/ndcore/* html/bedwyr/*
+.PHONY: tex_clean hevea_clean clean ocamldoc_clean distclean
+tex_clean:
+	@rm -fv *.aux *.out *.toc *.log *.dvi *.blg *.bbl *.idx *.ind *.ps
 
-htclean:
-	rm -f *.haux *.htoc *.html
+hevea_clean:
+	@rm -fv *.haux *.html *.blg *.hbbl *.image.tex *.htoc *.hidx *.hind *_motif.gif *.css
+
+clean: tex_clean hevea_clean
+
+ocamldoc_clean:
+	@rm -fv html/bedwyr/*
+
+distclean: clean ocamldoc_clean
+	@rm -fv $(TARGETS) *~
+	@rm -fvr $(REFMAN)/
