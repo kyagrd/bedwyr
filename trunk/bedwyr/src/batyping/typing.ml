@@ -61,9 +61,9 @@ module type S = sig
 
   exception Type_kinding_error of pos * ki * ki
   val kind_check :
+    ?atomic_kind:(pos * string -> ki) ->
     ty ->
     ki ->
-    (pos * string -> ki) ->
     bool * bool * bool * bool
 
   type type_unifier
@@ -150,13 +150,13 @@ module Make (I : INPUT) = struct
     let count = ref 0 in
     fun () ->
       count := 1 + !count;
-      (Ty ([],TVar !count))
+      tvar (!count)
 
   let fresh_typaram =
     let count = ref 0 in
     fun () ->
       count := 1 + !count;
-      (Ty ([],TParam !count))
+      tparam (!count)
 
   let build_abstraction_types arity =
     let rec aux tys ty = function
@@ -199,7 +199,7 @@ module Make (I : INPUT) = struct
 
   (* XXX all kind are assumed to be "*" (KType),
    * so no real check is done here *)
-  let kind_check ty expected_kind atomic_kind =
+  let kind_check ?(atomic_kind=(fun _ -> ktype)) ty expected_kind =
     let check_eq ki expected_ki =
       if ki <> expected_ki
       then raise (Type_kinding_error (dummy_pos,expected_ki,ki))
@@ -219,15 +219,15 @@ module Make (I : INPUT) = struct
             check_eq (atomic_kind (dummy_pos,name)) ki ;
             (false,h,false,ho)
         | TProp ->
-            check_eq (Ki ([],KType)) ki ;
+            check_eq ktype ki ;
             (false,h,true,ho)
         | TString | TNat ->
-            check_eq (Ki ([],KType)) ki ;
+            check_eq ktype ki ;
             (false,h,false,ho)
         | TVar _ ->
             (* TODO have a table of kinds of type variables
              * TODO also choose whether a variable can be propositional *)
-            check_eq (Ki ([],KType)) ki ;
+            check_eq ktype ki ;
             (false,h,false,ho)
         | TParam _ ->
             (* XXX either ensure the input type is normalised,
@@ -279,7 +279,7 @@ module Make (I : INPUT) = struct
 
   let check_ground name ty =
     let _,hollow,_,_ =
-      kind_check (ty_norm ty) (Ki ([],KType)) (fun _ -> (Ki ([],KType)))
+      kind_check (ty_norm ty) ktype
     in
     if hollow then raise (Hollow_type name)
 

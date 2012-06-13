@@ -31,8 +31,6 @@ module I = struct
 end
 module Typing = Typing.Make (I)
 
-(* XXX open Typing*)
-
 type preterm = rawpreterm
 and rawpreterm =
   | QString of pos * string
@@ -84,8 +82,6 @@ let set_pos p = function
 
 (* Pre-terms creation *)
 
-let change_pos (p1,_) t (_,p2) = set_pos (p1,p2) t
-
 let pre_qstring p s = QString (p,s)
 let pre_nat p i = assert (i>=0) ; Nat (p,i)
 let pre_freeid p s = FreeID (p,s)
@@ -111,6 +107,22 @@ let pre_lambda p vars t = match vars,t with
 let pre_app p hd args = if args = [] then hd else match hd with
   | App (_,hd,args') -> App (p,hd,args'@args)
   | _ -> App (p,hd,args)
+
+(* Pre-terms manipulation *)
+
+let change_pos (p1,_) t (_,p2) = set_pos (p1,p2) t
+
+let free_args pre_term =
+  let in_arg accum = function
+    | FreeID (_,s) -> s::accum
+    | _ -> accum
+  in
+  let rec in_app = function
+    | App (_,phd,pargs) ->
+        List.rev_append (in_app phd) (List.fold_left in_arg [] pargs)
+    | _ -> []
+  in
+  in_app pre_term
 
 
 (* Input AST (.def file or REPL) *)
@@ -150,19 +162,13 @@ type input =
 exception Term_typing_error of pos * Typing.ty * Typing.ty * Typing.type_unifier
 exception Var_typing_error of string option * pos * Typing.ty
 
-let pure_args pre_term =
-  let in_arg accum = function
-    | FreeID (_,s) -> s::accum
-    | _ -> accum
-  in
-  let rec in_app = function
-    | App (_,phd,pargs) ->
-        List.rev_append (in_app phd) (List.fold_left in_arg [] pargs)
-    | _ -> []
-  in
-  in_app pre_term
-
-let type_check_and_translate pre_term expected_type typed_free_var normalize_types typed_declared_var typed_intern_var bound_var_type infer pure_args =
+let type_check_and_translate
+      ?(infer=false)
+      ?(iter_free_types=ignore)
+      ?(free_args=[])
+      pre_term
+      expected_type
+      (typed_free_var,typed_declared_var,typed_intern_var,bound_var_type) =
   let find_db s bvars =
     let rec aux n = function
       | [] -> None
@@ -240,9 +246,8 @@ let type_check_and_translate pre_term expected_type typed_free_var normalize_typ
           List.iter
             (fun (p,_,ty) ->
                let ty = Typing.ty_norm ~unifier:u ty in
-               let (_,_,higher_order,propositional) =
-                 (* TODO replace this dummy atomic_kind by a no-op one *)
-                 Typing.kind_check ty Typing.ktype (fun _ -> Typing.ktype)
+               let (_,_,propositional,higher_order) =
+                 Typing.kind_check ty Typing.ktype
                in
                if higher_order || propositional
                then raise (Var_typing_error (None,p,ty)))
@@ -274,14 +279,13 @@ let type_check_and_translate pre_term expected_type typed_free_var normalize_typ
           raise (Term_typing_error (p,ty1,ty2,unifier))
   in
   let term,unifier = aux pre_term expected_type [] !Typing.global_unifier in
-  normalize_types
+  iter_free_types
     (fun v ty ->
        let ty = Typing.ty_norm ~unifier:unifier ty in
        let n = Term.get_var_name v in
-       if not (List.mem n pure_args) then begin
-         let (_,_,higher_order,propositional) =
-           (* TODO replace this dummy atomic_kind by a no-op one *)
-           Typing.kind_check ty Typing.ktype (fun _ -> Typing.ktype)
+       if not (List.mem n free_args) then begin
+         let (_,_,propositional,higher_order) =
+           Typing.kind_check ty Typing.ktype
          in
          if infer && (higher_order || propositional)
          then raise (Var_typing_error (Some n,get_pos pre_term,ty))
