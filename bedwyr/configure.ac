@@ -54,7 +54,7 @@ AC_PATH_PROG(GZIP,gzip,no)
 if test "$GZIP" = no ; then
 	AC_MSG_WARN(Cannot find gzip.)
 else
-	DIST_SUFFIXES="tar.gz"
+	DIST_SUFFIXES="$DIST_SUFFIXES tar.gz"
 fi
 
 AC_PATH_PROG(BZIP2,bzip2,no)
@@ -70,54 +70,54 @@ fi
 ##############################################################################
 
 if test "$enable_doc" != "no" ; then
-        AC_PATH_PROGS(OCAMLDOC,ocamldoc.opt ocamldoc,no)
-        if test "$OCAMLDOC" = no ; then
-                AC_MSG_ERROR(Cannot find ocamldoc.)
-        fi
+	AC_PATH_PROGS(OCAMLDOC,ocamldoc.opt ocamldoc,no)
+	if test "$OCAMLDOC" = no ; then
+		AC_MSG_ERROR(Cannot find ocamldoc.)
+	fi
 
-        AC_PATH_PROG(LATEX,latex,no)
-        if test "$LATEX" = no ; then
-                AC_MSG_ERROR(Cannot find latex.)
-        fi
+	AC_PATH_PROG(LATEX,latex,no)
+	if test "$LATEX" = no ; then
+		AC_MSG_ERROR(Cannot find latex.)
+	fi
 
-        AC_PATH_PROG(BIBTEX,bibtex,no)
-        if test "$BIBTEX" = no ; then
-                AC_MSG_ERROR(Cannot find bibtex.)
-        fi
+	AC_PATH_PROG(BIBTEX,bibtex,no)
+	if test "$BIBTEX" = no ; then
+		AC_MSG_ERROR(Cannot find bibtex.)
+	fi
 
-        AC_PATH_PROG(DVIPS,dvips,no)
-        if test "$DVIPS" = no ; then
-                AC_MSG_ERROR(Cannot find dvips.)
-        fi
+	AC_PATH_PROG(DVIPS,dvips,no)
+	if test "$DVIPS" = no ; then
+		AC_MSG_ERROR(Cannot find dvips.)
+	fi
 
-        AC_PATH_PROG(PS2PDF,ps2pdf,no)
-        if test "$PS2PDF" = no ; then
-                AC_MSG_ERROR(Cannot find ps2pdf.)
-        fi
+	AC_PATH_PROG(PS2PDF,ps2pdf,no)
+	if test "$PS2PDF" = no ; then
+		AC_MSG_ERROR(Cannot find ps2pdf.)
+	fi
 
-        AC_PATH_PROG(HEVEA,hevea,no)
-        if test "$HEVEA" = no ; then
-                AC_MSG_ERROR(Cannot find hevea.)
-        fi
+	AC_PATH_PROG(HEVEA,hevea,no)
+	if test "$HEVEA" = no ; then
+		AC_MSG_ERROR(Cannot find hevea.)
+	fi
 
-        AC_PATH_PROG(BIBHVA,bibhva,no)
-        if test "$BIBHVA" = no ; then
-                AC_MSG_ERROR(Cannot find bibhva.)
-        fi
+	AC_PATH_PROG(BIBHVA,bibhva,no)
+	if test "$BIBHVA" = no ; then
+		AC_MSG_ERROR(Cannot find bibhva.)
+	fi
 
-        AC_PATH_PROG(IMAGEN,imagen,no)
-        if test "$IMAGEN" = no ; then
-                AC_MSG_ERROR(Cannot find imagen.)
-        fi
+	AC_PATH_PROG(IMAGEN,imagen,no)
+	if test "$IMAGEN" = no ; then
+		AC_MSG_ERROR(Cannot find imagen.)
+	fi
 
-        AC_PATH_PROG(HACHA,hacha,no)
-        if test "$HACHA" = no ; then
-                AC_MSG_ERROR(Cannot find hacha.)
-        fi
+	AC_PATH_PROG(HACHA,hacha,no)
+	if test "$HACHA" = no ; then
+		AC_MSG_ERROR(Cannot find hacha.)
+	fi
 fi
 
 #
-# OCaml stuff (only $OCAMLBUILD is actually used)
+# OCaml stuff (only $OCAMLBUILD and $OCAMLDEBUG is actually used)
 #
 ##############################################################################
 
@@ -141,14 +141,31 @@ if test "$OCAMLBUILD" = no ; then
 	AC_MSG_ERROR(Cannot find ocamlbuild.)
 fi
 
+if test "$enable_debug" = "yes" ; then
+	AC_PATH_PROGS(OCAMLDEBUG,ocamldebug.opt ocamldebug,no)
+	if test "$OCAMLDEBUG" = no ; then
+		AC_MSG_ERROR(Cannot find ocamldebug.)
+	fi
+
+	BYTE_SUFFIX="d.byte"
+	NATIVE_SUFFIX="p.native"
+	BYTE_LIBS="d.cma"
+	NATIVE_LIBS="p.a p.cmxa"
+else
+	BYTE_SUFFIX="byte"
+	NATIVE_SUFFIX="native"
+	BYTE_LIBS="cma"
+	NATIVE_LIBS="a cmxa"
+fi
+
 if test "$enable_nativecode" = "no" ; then
 	if test "$enable_bytecode" = "no" ; then
 		AC_MSG_ERROR(You must either enable native or bytecode compilation.)
 	else
-		LIB_SUFFIXES="cma"
-		BIN_SUFFIXES="byte"
+		LIB_SUFFIXES="$BYTE_LIBS"
+		BIN_SUFFIXES="$BYTE_SUFFIX"
 	fi
-	TEST_SUFFIX="byte"
+	TEST_SUFFIX="$BYTE_SUFFIX"
 else
 	AC_PATH_PROGS(OCAMLOPT,ocamlopt.opt ocamlopt,no)
 	if test "$OCAMLOPT" = no ; then
@@ -156,21 +173,13 @@ else
 	fi
 
 	if test "$enable_bytecode" = "no" ; then
-		LIB_SUFFIXES="a cmxa"
-		BIN_SUFFIXES="native"
+		LIB_SUFFIXES="$NATIVE_LIBS"
+		BIN_SUFFIXES="$NATIVE_SUFFIX"
 	else
-		LIB_SUFFIXES="cma a cmxa"
-		BIN_SUFFIXES="byte native"
+		LIB_SUFFIXES="$BYTE_LIBS $NATIVE_LIBS"
+		BIN_SUFFIXES="$BYTE_SUFFIX $NATIVE_SUFFIX"
 	fi
-	TEST_SUFFIX="native"
-fi
-
-if test "$enable_debug" = "yes" ; then
-    OCAMLCFLAGS="-g"
-    OCAMLLFLAGS="-g"
-else
-    OCAMLCFLAGS=""
-    OCAMLLFLAGS=""
+	TEST_SUFFIX="$NATIVE_SUFFIX"
 fi
 
 #

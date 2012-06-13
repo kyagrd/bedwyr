@@ -1,4 +1,5 @@
 # Makefile.in designed for ndcore/bedwyr
+# @configure_input@
 #
 # $(make TARGET=$TARGET) compiles
 # $(make TARGET=$TARGET install) installs
@@ -28,8 +29,8 @@ TEST_SUFFIX	= @TEST_SUFFIX@
 SHELL		= @BASH@
 TAR		= "@TAR@" -p
 FIND		= "@FIND@"
-GZIP		= "@GZIP@" -4
-BZIP2		= "@BZIP2@" -9
+GZIP		= "@GZIP@" -4 -f
+BZIP2		= "@BZIP2@" -9 -f
 OCAMLBUILD	= "@OCAMLBUILD@" -classic-display
 
 prefix		= @prefix@
@@ -151,7 +152,7 @@ $(bedwyr_bins): src/Makefile
 	@./$< $@
 
 config.status: configure
-	./$< --no-create --disable-doc --disable-nativecode
+	./$< --no-create --disable-doc --disable-nativecode --enable-debug
 
 configure: configure.ac
 	autoconf
@@ -202,6 +203,15 @@ test_bedwyr: $(bedwyr_prefix).$(TEST_SUFFIX)
 	  if _build/$< -t -I examples/$$i ; then echo "All done." ; \
 	  else echo "Error." ; exit 1 ; fi ; \
 	  done
+
+ifeq (@OCAMLDEBUG@,)
+debug:
+	@echo 'Debug information generation disabled,'
+	@echo 'run "./configure --enable-debug" to enable it.'
+else
+debug: $(bedwyr_prefix).$(TEST_SUFFIX)
+	"@OCAMLDEBUG@" _build/$<
+endif
 
 # DOC
 
@@ -310,9 +320,9 @@ $(DIST_NAME).tar: src/ndcore/ndcore.tar src/bedwyr.tar doc/manual.tar dist.tar
 	  $(TAR) -Af $@ $$i ; done
 
 %.bz2: %
-	$(BZIP2) -f -k $<
+	$(BZIP2) -k $<
 %.gz: %
-	$(GZIP) -f -c $< > $@
+	$(GZIP) -c $< > $@
 
 # OTHER TARGETS
 
@@ -343,6 +353,7 @@ help:
 	@echo ' clean          remove compiled files'
 
 distclean: clean
+	$(MAKE) -C doc distclean
 	@$(FIND) . -name '*~' -exec rm -vf \{\} \;
 	@rm -vf *.bz2 *.gz *.tar
 	@rm -vf config.status config.log
