@@ -145,7 +145,16 @@ $(ndcore_libs): src/ndcore/Makefile
 
 $(bedwyr_bins): src/Makefile
 
-%.byte %.native %.cma %.cmxa %.a:
+%.byte:
+	@$(OCAMLBUILD) $@
+
+%.native:
+	@$(OCAMLBUILD) $@
+
+%.cma:
+	@$(OCAMLBUILD) $@
+
+%.cmxa %.a:
 	@$(OCAMLBUILD) $@
 
 %: config.status %.in
