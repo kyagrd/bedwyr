@@ -104,28 +104,7 @@ let open_user_file name =
           fout
     )
 
-
-
-
-
-
-
-module Typing = Input.Typing
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+open Input
 
 (* Types declarations *)
 
@@ -187,6 +166,11 @@ let declare_const (p,name) ty =
   Hashtbl.add defs const_var (Constant ty)
 
 let create_def (new_predicates,global_flavour) (flavour,p,name,ty) =
+  let flavour = match flavour with
+    | Input.Normal -> Normal
+    | Input.Inductive -> Inductive
+    | Input.CoInductive -> CoInductive
+  in
   let global_flavour = match global_flavour,flavour with
     | Normal,_ -> flavour
     | _,Normal -> global_flavour
@@ -197,7 +181,7 @@ let create_def (new_predicates,global_flavour) (flavour,p,name,ty) =
     let head_var = Term.get_var (Term.atom ~tag:Term.Constant name) in
     if Hashtbl.mem defs head_var || List.mem head_var Logic.predefined
     then raise (Invalid_pred_declaration (name,p,ty,"name conflict with a predefined predicate"))
-    else let (flex,_,_,propositional) = kind_check ty in
+    else let (flex,_,propositional,_) = kind_check ty in
     if not (propositional || flex) then
       raise (Invalid_pred_declaration (name,p,ty,Format.sprintf "target type can only be %s" (Typing.type_to_string Typing.tprop)))
     else begin
