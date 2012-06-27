@@ -1,3 +1,21 @@
+(****************************************************************************)
+(* An implementation of Higher-Order Pattern Unification                    *)
+(* Copyright (C) 2006-2012 Nadathur, Linnell, Baelde, Gacek, Heath          *)
+(*                                                                          *)
+(* This program is free software; you can redistribute it and/or modify     *)
+(* it under the terms of the GNU General Public License as published by     *)
+(* the Free Software Foundation; either version 2 of the License, or        *)
+(* (at your option) any later version.                                      *)
+(*                                                                          *)
+(* This program is distributed in the hope that it will be useful,          *)
+(* but WITHOUT ANY WARRANTY; without even the implied warranty of           *)
+(* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            *)
+(* GNU General Public License for more details.                             *)
+(*                                                                          *)
+(* You should have received a copy of the GNU General Public License        *)
+(* along with this code; if not, write to the Free Software Foundation,     *)
+(* Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA             *)
+(****************************************************************************)
 
 open OUnit
 open Term
@@ -41,8 +59,16 @@ let fresh ~ts ~lts ~name ~tag = fresh ~ts ~lts ~name tag
 let var nm ts = fresh ~tag:Logic ~name:nm ~ts:ts ~lts:0
 let const nm ts = fresh ~tag:Constant ~name:nm ~ts:ts ~lts:0
 
+let add index terms =
+  let add,_,_ = Index.access ~allow_eigenvar:true index terms in
+  add
+
+let find index terms =
+  let _,found,_ = Index.access ~allow_eigenvar:true index terms in
+  found
+
 let test =
-  "Tests" >:::
+  "NdCore" >:::
   [
     "Norm" >:::
     [
@@ -60,7 +86,7 @@ let test =
         let t = (2 // db 2) ^^ [a; b] in
         let t = Norm.hnorm t in
           assert_equal a t) ;
-      
+
       "[(x\\ y\\ y) a b]" >::
       (fun () ->
         let a = const "a" 1 in
@@ -68,27 +94,27 @@ let test =
         let t = (2 // db 1) ^^ [a; b] in
         let t = Norm.hnorm t in
           assert_equal b t) ;
-      
+
       "[(x\\ y\\ z\\ x)]" >::
       (fun () ->
         let t = (3 // db 3) in
         let t = Norm.hnorm t in
           assert_equal (3 // db 3) t) ;
-      
+
       "[(x\\ y\\ z\\ x) a]" >::
       (fun () ->
         let a = const "a" 1 in
         let t = (3 // db 3) ^^ [a] in
         let t = Norm.hnorm t in
           assert_equal (2 // a) t) ;
-      
+
       "[(x\\ x (x\\ x)) (x\\y\\ x y)]" >::
       (fun () ->
         let t = 1 // (db 1 ^^ [1 // db 1]) in
         let t = t ^^ [ 2 // (db 2 ^^ [db 1]) ] in
         let t = Norm.hnorm t in
           assert_equal (1 // ((1 // db 1) ^^ [db 1]))  t) ;
-      
+
       "[(x\\ x (x\\ x)) (x\\y\\ x y) c]" >::
       (fun () ->
         let c = const "c" 1 in
@@ -103,7 +129,7 @@ let test =
         let t = 1 // (c ^^ [db 1]) in
         let t = Norm.hnorm t in
           assert_equal (1 // (c ^^ [db 1])) t) ;
-      
+
       (* This is a normalization pb which appeared to be causing
        * a failure in an unification test below. *)
       "[x\\y\\((a\\b\\ a b) x y)]" >::
@@ -492,16 +518,16 @@ let test =
        let t3 = ((d 1) ^^ [ d 3 ; (d 1) ^^ [ d 4 ; d 4 ] ]) in
        let t4 = ((d 1) ^^ [ d 3 ; d 2 ]) in
        let i0 = Index.empty in
-       let i1 = Index.add i0 [t1] 10 in
-       let i2 = Index.add i1 [t2] 20 in
-       let i3 = Index.add i2 [t3] 30 in
-         assert (None = Index.find i3 [t4]) ;
-         let i4 = Index.add i3 [t4] 40 in
-           assert (Some 40 = Index.find i4 [t4]) ;
-           assert (Some 20 = Index.find i2 [t2]) ;
-           assert (Some 20 = Index.find i4 [t2]) ;
-           let i5 = Index.add i4 [t4] 42 in
-             assert (Some 42 = Index.find i5 [t4])) ;
+       let i1 = add i0 [t1] 10 in
+       let i2 = add i1 [t2] 20 in
+       let i3 = add i2 [t3] 30 in
+       assert (None = find i3 [t4]) ;
+       let i4 = add i3 [t4] 40 in
+       assert (Some 40 = find i4 [t4]) ;
+       assert (Some 20 = find i2 [t2]) ;
+       assert (Some 20 = find i4 [t2]) ;
+       let i5 = add i4 [t4] 42 in
+       assert (Some 42 = find i5 [t4])) ;
 
     "With eigenvariables" >::
     (fun () ->
@@ -510,10 +536,10 @@ let test =
        let z = fresh ~tag:Eigen ~name:"z" ~lts:0 ~ts:0 in
        let t1 = (db 1) ^^ [ x ; y ; y ] in
        let t2 = (db 1) ^^ [ y ; y ; y ] in
-       let index = Index.add (Index.add Index.empty [t1] 1) [t2] 2 in
-         assert (Some 1 = Index.find index [(db 1) ^^ [ y ; z ; z ]]) ;
-         assert (Some 2 = Index.find index [(db 1) ^^ [ x ; x ; x ]]) ;
-         assert (None = Index.find index [(db 1) ^^ [ x ; z ; x ]]))
+       let index = add (add Index.empty [t1] 1) [t2] 2 in
+       assert (Some 1 = find index [(db 1) ^^ [ y ; z ; z ]]) ;
+       assert (Some 2 = find index [(db 1) ^^ [ x ; x ; x ]]) ;
+       assert (None = find index [(db 1) ^^ [ x ; z ; x ]]))
 
     ]
   ]

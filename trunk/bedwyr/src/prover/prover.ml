@@ -230,15 +230,19 @@ let rec prove temperatures depth ~success ~failure ~level ~timestamp ~local g =
     let flavour,body,theorem,table,_ = get_def ~check_arity:arity d in
     (* first step, first sub-step: look at the table
      * (whether the atom is frozen or not is irrelevent at this point) *)
-    let status =
+    let table_add,status =
       match table with
-        | None -> OffTopic
+        | None -> ignore,OffTopic
         | Some table ->
-            try match Table.find table args with
-              | Some {contents=c} -> Known c
-              | None -> Unknown
+            try
+              let add,found,_ =
+                Table.access ~allow_eigenvar:(level=One) table args
+              in
+              match found with
+                | Some {contents=c} -> add,Known c
+                | None -> add,Unknown
             with
-              | Index.Cannot_table -> OffTopic
+              | Index.Cannot_table -> ignore,OffTopic
     in
     match status with
       | OffTopic ->
@@ -341,13 +345,18 @@ let rec prove temperatures depth ~success ~failure ~level ~timestamp ~local g =
                                 pressure
                                 Pprint.pp_term (app d args);
                             let k () = fc k pressure copies in
-                            match begin
-                              try match Table.find table args with
-                                | Some {contents=c} -> Known c
-                                | None -> Unknown
+                            let table_add,status =
+                              try
+                                let add,found,_ =
+                                  Table.access ~allow_eigenvar:(level=One) table args
+                                in
+                                match found with
+                                  | Some {contents=c} -> add,Known c
+                                  | None -> add,Unknown
                               with
-                                | Index.Cannot_table -> OffTopic
-                            end with
+                                | Index.Cannot_table -> ignore,OffTopic
+                            in
+                            match status with
                               | OffTopic -> k ()
                               | Known Table.Proved ->
                                   if !debug || depth<=debug_max_depth then
@@ -355,18 +364,19 @@ let rec prove temperatures depth ~success ~failure ~level ~timestamp ~local g =
                                       "Goal (%a) already proved!@."
                                       Pprint.pp_term (app d args);
                                   k ()
-                              | Known Table.Disproved -> failwith "did we just prove false?"
+                              | Known Table.Disproved ->
+                                  failwith "did our theorem just prove false?"
                               | Known (Table.Working _) -> assert false
                               | Unknown
                               | Known Table.Unset ->
                                   let status = ref Table.Proved in
                                   (* XXX allow_eigenvar? *)
-                                  begin try Table.add ~allow_eigenvar:(level=One) table args status
+                                  begin try table_add status
                                   with Index.Cannot_table -> assert false end ;
                                   if !debug || depth<=debug_max_depth then
                                     eprintf
                                       "Goal (%a) proved using forward chaining@."
-                                      Pprint.pp_term (app d args);
+                                      Pprint.pp_term (app d args) ;
                                   aux args k pressure
                       and aux args k = function
                         | pressure when pressure < !saturation_pressure ->
@@ -416,13 +426,9 @@ let rec prove temperatures depth ~success ~failure ~level ~timestamp ~local g =
               failure ()
             in
             if try
-              Table.add ~allow_eigenvar:(level=One) table args status ;
+              table_add status ;
               true
-            with
-              (* XXX can Table.add raise Index.Cannot_table
-               * if Table.find didn't?
-               * if not, replace this by an "assert false" *)
-              | Index.Cannot_table -> false
+            with Index.Cannot_table -> false
             then begin
               Stack.push (status,disprovable) disprovable_stack ;
               prove temperatures (depth+1) ~level ~local ~timestamp

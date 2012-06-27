@@ -44,15 +44,12 @@ val empty  : 'a t
 (** Eigen variable in level 0, or logic variable. *)
 exception Cannot_table
 
-(** {6 Update} *)
+(** {6 Access} *)
 
-(**)
-val add    : ?allow_eigenvar:bool -> 'a t -> Term.term list -> 'a -> 'a t
-
-(** {6 Find} *)
-
-(**)
-val find   : 'a t -> Term.term list -> 'a option
+(** Take an index and some arguments,
+  * and returns [update], [found] and [remove]. *)
+val access : allow_eigenvar:bool -> 'a t -> Term.term list ->
+  ('a -> 'a t) * 'a option * (unit -> 'a t)
 
 (** {6 Fold} *)
 

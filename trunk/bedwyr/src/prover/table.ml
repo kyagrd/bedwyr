@@ -22,10 +22,12 @@ type t = tag ref Index.t ref
 
 let create () = ref Index.empty
 
-let add ~allow_eigenvar table args tag =
-  table := Index.add ~allow_eigenvar !table args tag
-
-let find table args = Index.find !table args
+let access ~allow_eigenvar table args =
+  let update,found,_ = Index.access ~allow_eigenvar !table args in
+  let update tag = table := update tag in
+  (*let delete () = table := delete () in*)
+  let delete () = update (ref Unset) in
+  update,found,delete
 
 
 let nabla_abstract t =
