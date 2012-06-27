@@ -91,8 +91,10 @@ let do_open_file g =
           | QString name ->
               begin try
                 ignore (open_user_file name) ; true
-              with
-                | Sys_error e -> Printf.eprintf "fopen_out: failed opening file %s\n %s \n" name e ; false
+              with Sys_error e ->
+                Printf.eprintf
+                  "fopen_out: failed opening file %S\n %s \n" name e ;
+                false
               end
           | _ -> assert false
         end
@@ -105,8 +107,10 @@ let do_close_file g =
           | QString name ->
               begin try
                 close_user_file name ; true
-              with
-                | Sys_error e ->  Printf.eprintf "fclose_out: failed closing file %s\n %s \n" name e ; false
+              with Sys_error e ->
+                Printf.eprintf
+                  "fclose_out: failed closing file %S\n %s \n" name e ;
+                false
               end
           | _ -> assert false
         end
@@ -487,7 +491,7 @@ let rec prove temperatures depth ~success ~failure ~level ~timestamp ~local g =
         prove_atom g [] (v,temperature,temperatures)
 
     (* Solving an equality *)
-    | Eq (t1,t2) ->
+    | Binop (Eq,t1,t2) ->
         let state = save_state () in
         let failure () = restore_state state ; failure () in
         if unify level (Norm.hnorm t1) (Norm.hnorm t2) then
@@ -496,7 +500,7 @@ let rec prove temperatures depth ~success ~failure ~level ~timestamp ~local g =
           failure ()
 
     (* Proving a conjunction *)
-    | And (t1,t2) ->
+    | Binop (And,t1,t2) ->
         let rec conj ts failure = function
           | [] -> success ts failure
           | goal::goals ->
@@ -509,7 +513,7 @@ let rec prove temperatures depth ~success ~failure ~level ~timestamp ~local g =
         conj timestamp failure [Norm.hnorm t1;Norm.hnorm t2]
 
     (* Proving a disjunction *)
-    | Or (t1,t2) ->
+    | Binop (Or,t1,t2) ->
         let rec alt = function
           | [] -> failure ()
           | g::goals ->
@@ -521,7 +525,7 @@ let rec prove temperatures depth ~success ~failure ~level ~timestamp ~local g =
         alt [Norm.hnorm t1;Norm.hnorm t2]
 
     (* Level 1: Implication *)
-    | Arrow (a,b) ->
+    | Binop (Arrow,a,b) ->
         assert_level_one level ;
         let a = Norm.deep_norm a in
         let b = Norm.deep_norm b in

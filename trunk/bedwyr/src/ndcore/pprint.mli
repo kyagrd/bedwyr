@@ -42,7 +42,7 @@ val term_to_string_full_debug :
   * and generic names generation. *)
 val term_to_string : ?bound:string list -> Term.term -> string
 
-(** For use with [Format.printf]. Lise [term_to_string]. *)
+(** For use with [Format.printf]. Like [term_to_string]. *)
 val pp_term : Format.formatter -> Term.term -> unit
 
 (** Output to stdout. Like [term_to_string]. *)

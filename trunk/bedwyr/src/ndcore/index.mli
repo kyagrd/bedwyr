@@ -48,7 +48,11 @@ exception Cannot_table
 
 (** Take an index and some arguments,
   * and returns [update], [found] and [remove]. *)
-val access : allow_eigenvar:bool -> 'a t -> Term.term list ->
+val access :
+  allow_universal:bool ->
+  allow_existential:bool ->
+  switch_vars:bool ->
+  'a t -> Term.term list ->
   ('a -> 'a t) * 'a option * (unit -> 'a t)
 
 (** {6 Fold} *)

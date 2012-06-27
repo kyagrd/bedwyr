@@ -34,6 +34,18 @@ let string_of_binder = function
   | Exists -> "exists"
   | Nabla -> "nabla"
 
+let string_of_binop = function
+  | Eq -> "="
+  | And -> "/\\"
+  | Or -> "\\/"
+  | Arrow -> "->"
+
+let priorities = function
+  | Eq -> 5,4,5
+  | And -> 3,3,3
+  | Or -> 2,2,2
+  | Arrow -> 2,1,1
+
 (* [assoc], [infix], [set_infix], [is_infix], [get_assoc] and [priority]
  * are commented out until we add real support for
  * runtime-defined syntactic behaviours,
@@ -106,46 +118,22 @@ let print_full ~generic ~bound chan term =
       | DB i ->
           fprintf chan "%s"
             (get_nth bound (i-1) ("db(" ^ (string_of_int i) ^ ")"))
-      | QString s -> fprintf chan "\"%s\"" s
+      | QString s -> fprintf chan "%S" s
       | Nat i -> fprintf chan "%d" i
       | True -> fprintf chan "true"
       | False -> fprintf chan "false"
-      | Eq (t1,t2) ->
-          let op_priority = 4 in
+      | Binop (b,t1,t2) ->
+          let pr_left,pr_op,pr_right = priorities b in
           let print =
-            if op_priority >= pr then
-              fprintf chan "@[%a@ =@ %a@]"
+            if pr_op >= pr then
+              fprintf chan "@[%a@ %s@ %a@]"
             else
-              fprintf chan "@[<1>(%a@ =@ %a)@]"
+              fprintf chan "@[<1>(%a@ %s@ %a)@]"
           in
-          print (pp ~bound (op_priority+1)) t1 (pp ~bound (op_priority+1)) t2
-      | And (t1,t2) ->
-          let op_priority = 3 in
-          let print =
-            if op_priority >= pr then
-              fprintf chan "@[%a@ /\\@ %a@]"
-            else
-              fprintf chan "@[<1>(%a@ /\\@ %a)@]"
-          in
-          print (pp ~bound (op_priority)) t1 (pp ~bound (op_priority)) t2
-      | Or (t1,t2) ->
-          let op_priority = 2 in
-          let print =
-            if op_priority >= pr then
-              fprintf chan "@[%a@ \\/@ %a@]"
-            else
-              fprintf chan "@[<1>(%a@ \\/@ %a)@]"
-          in
-          print (pp ~bound (op_priority)) t1 (pp ~bound (op_priority)) t2
-      | Arrow (t1,t2) ->
-          let op_priority = 1 in
-          let print =
-            if op_priority >= pr then
-              fprintf chan "@[%a@ ->@ %a@]"
-            else
-              fprintf chan "@[<1>(%a@ ->@ %a)@]"
-          in
-          print (pp ~bound (op_priority)) t1 (pp ~bound (op_priority+1)) t2
+          print
+            (pp ~bound pr_left) t1
+            (string_of_binop b)
+            (pp ~bound pr_right) t2
       | Binder (b,i,t) ->
           assert (i>0) ;
           (* Get [i] more dummy names for the new bound variables.

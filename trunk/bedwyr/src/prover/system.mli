@@ -200,11 +200,13 @@ exception Missing_type of string * Input.pos
 exception Invalid_const_declaration of string * Input.pos *
             Typing.ty * string
 exception Invalid_flavour of string * Input.pos *
-            string * string
+            flavour * flavour
 exception Invalid_pred_declaration of string * Input.pos *
             Typing.ty * string
 exception Invalid_bound_declaration of string * Input.pos *
             Typing.ty * string
+
+val string_of_flavour : flavour -> string
 
 val declare_const : Input.pos * string -> Typing.ty -> unit
 

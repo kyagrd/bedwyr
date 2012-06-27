@@ -27,7 +27,7 @@ let welcome_msg =
 This software is under GNU Public License.
 Copyright (C) 2005-2012 Slimmer project.
 
-For a little help, type #help.
+For a little help, type \"#help.\"
 
 "
     Config.package_name
@@ -103,7 +103,7 @@ let position_range (start,curr) =
      * but character information is *)
     Printf.sprintf "At %s:\n" (position (start,curr))
   else
-    Printf.sprintf "In file \"%s\", %s:\n" name (position (start,curr))
+    Printf.sprintf "In file %S, %s:\n" name (position (start,curr))
 
 let position_lex lexbuf =
   let start = lexbuf.Lexing.lex_start_p in
@@ -159,18 +159,18 @@ let rec process ?(interactive=false) parse lexbuf =
       (* I/O *)
       | End_of_file -> raise End_of_file
       | Lexer.Illegal_string c ->
-          Format.printf "%sIllegal string starting with '%s' in input.@."
+          Format.printf "%sIllegal string starting with %C in input.@."
             (position_lex lexbuf)
-            (Char.escaped c) ;
+            c ;
           interactive_or_exit ()
       | Lexer.Illegal_name (n1,n2) ->
-          Format.printf "%s%s is an illegal token, did you mean \"%s %s\"?@."
+          Format.printf "%s%S is an illegal token, did you mean %S?@."
             (position_lex lexbuf)
             (Lexing.lexeme lexbuf)
-            n1 n2 ;
+            (String.concat " " [n1;n2]) ;
           interactive_or_exit ()
       | Lexer.Unknown_command n ->
-          Format.printf "%sUnknown command %s, use #help for a short list.@."
+          Format.printf "%sUnknown command %S, use \"#help.\" for a short list.@."
             (position_lex lexbuf)
             n ;
           interactive_or_exit ()
@@ -207,8 +207,8 @@ let rec process ?(interactive=false) parse lexbuf =
             "%sCannot declare predicate %s of flavour %s: %s was used in the same definition block.@."
             (position_range p)
             n
-            gf
-            f ;
+            (System.string_of_flavour gf)
+            (System.string_of_flavour f) ;
           exit 1
       | System.Invalid_pred_declaration (n,p,ty,s) ->
           Format.printf

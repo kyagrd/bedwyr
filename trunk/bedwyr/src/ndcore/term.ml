@@ -31,6 +31,7 @@ type var = {
 }
 
 type binder = Forall | Exists | Nabla
+type binop = Eq | And | Or | Arrow
 
 (* TODO ? phantom type for annotating term with what's inside
  * [ `Var ] term, etc... *)
@@ -43,10 +44,7 @@ and rawterm =
   | NB     of int (* Nabla variables *)
   | True
   | False
-  | Eq     of term * term
-  | And    of term * term
-  | Or     of term * term
-  | Arrow  of term * term
+  | Binop  of binop * term * term
   | Binder of binder * int * term
   | Lam    of int * term
   | App    of term * term list
@@ -74,10 +72,11 @@ let db n = DB n
 let nabla n = NB n
 let op_true = True
 let op_false = False
-let op_eq a b = Eq (a,b)
-let op_and a b = And (a,b)
-let op_or a b = Or (a,b)
-let op_arrow a b = Arrow (a,b)
+let op_binop b t1 t2 = Binop (b,t1,t2)
+let op_eq = op_binop Eq
+let op_and = op_binop And
+let op_or = op_binop Or
+let op_arrow = op_binop Arrow
 
 (* Add [n] times quantifier [b] *)
 let binder b n t =
@@ -123,11 +122,8 @@ let rec eq t1 t2 =
     | _, Ptr {contents=T t2} -> eq t1 t2
     | Ptr {contents=T t1}, _ -> eq t1 t2
     (* Propagation *)
-    | Eq (t1,t1'), Eq (t2,t2')
-    | And (t1,t1'), And (t2,t2')
-    | Or (t1,t1'), Or (t2,t2')
-    | Arrow (t1,t1'), Arrow (t2,t2') ->
-        eq t1 t2 && eq t1' t2'
+    | Binop (b1,t1,t1'), Binop (b2,t2,t2') ->
+        b1 = b2 && eq t1 t2 && eq t1' t2'
     | Binder (b1,n1,t1), Binder (b2,n2,t2) ->
         b1 = b2 && n1 = n2 && eq t1 t2
     | App (h1,l1), App (h2,l2) ->
@@ -168,11 +164,8 @@ let eqvt t1 t2 =
       | _, Ptr {contents=T t2} -> aux s1 t2
       | Ptr {contents=T t1}, _ -> aux t1 s2
       (* Propagation *)
-      | Eq (t1,t1'), Eq (t2,t2')
-      | And (t1,t1'), And (t2,t2')
-      | Or (t1,t1'), Or (t2,t2')
-      | Arrow (t1,t1'), Arrow (t2,t2') ->
-          aux t1 t2 && aux t1' t2'
+      | Binop (b1,t1,t1'), Binop (b2,t2,t2') ->
+          b1 = b2 && aux t1 t2 && aux t1' t2'
       | Binder (b1,n1,t1), Binder (b2,n2,t2) ->
           b1 = b2 && n1 = n2 && aux t1 t2
       | App (h1,l1), App (h2,l2) ->
@@ -340,7 +333,7 @@ let atom ?tag name =
   then fresh ~name:"_" Logic ~ts:0 ~lts:0
   else get_var_by_name ~ts:0 ~lts:0 ~tag name
 
-(* @return the naming hint attached to the variable 
+(* @return the naming hint attached to the variable
  * @raise Not_found if no hint is found
  * (should not happen for a variable defined by the parser) *)
 let get_var_name v = Hint.find v
@@ -449,10 +442,7 @@ let copy_eigen () =
                     x
           end
       | Var v -> tm
-      | Eq (t1,t2) -> Eq (cp t1,cp t2)
-      | And (t1,t2) -> And (cp t1,cp t2)
-      | Or (t1,t2) -> Or (cp t1,cp t2)
-      | Arrow (t1,t2) -> Arrow (cp t1,cp t2)
+      | Binop (b,t1,t2) -> Binop (b,cp t1,cp t2)
       | Binder (b,l,t) -> Binder (b,l,cp t)
       | App (a,l) -> App (cp a, List.map cp l)
       | Lam (l,b) -> Lam (l,cp b)
@@ -466,10 +456,7 @@ let copy_eigen () =
 let rec simple_copy tm =
   match tm with
     | QString _ | Nat _ | DB _ | NB _ | True | False | Var _ | Ptr {contents=V _} -> tm
-    | Eq (t1,t2) -> Eq (simple_copy t1,simple_copy t2)
-    | And (t1,t2) -> And (simple_copy t1,simple_copy t2)
-    | Or (t1,t2) -> Or (simple_copy t1,simple_copy t2)
-    | Arrow (t1,t2) -> Arrow (simple_copy t1,simple_copy t2)
+    | Binop (b,t1,t2) -> Binop (b,simple_copy t1,simple_copy t2)
     | Binder (b,n,t) -> Binder (b,n,simple_copy t)
     | App (a,l) -> App (simple_copy a, List.map simple_copy l)
     | Lam (n,b) -> Lam (n,simple_copy b)
@@ -482,10 +469,7 @@ let shared_copy tm =
   let rec cp t =
     match t with
       | QString _ | Nat _ | DB _ | NB _ | True | False | Var _ | Ptr {contents=V _} -> t
-      | Eq (t1,t2) -> Eq (cp t1,cp t2)
-      | And (t1,t2) -> And (cp t1,cp t2)
-      | Or (t1,t2) -> Or (cp t1,cp t2)
-      | Arrow (t1,t2) -> Arrow (cp t1,cp t2)
+      | Binop (b,t1,t2) -> Binop (b,cp t1,cp t2)
       | Binder (b,n,t) -> Binder (b,n,cp t)
       | App (a,l) -> App (cp a, List.map cp l)
       | Lam (n,b) -> Lam (n,cp b)
@@ -516,10 +500,7 @@ let pre_abstract target t =
           | Nat _
           | True
           | False -> t
-          | Eq (t1,t2) -> Eq (aux n t1,aux n t2)
-          | And (t1,t2) -> And (aux n t1,aux n t2)
-          | Or (t1,t2) -> Or (aux n t1,aux n t2)
-          | Arrow (t1,t2) -> Arrow (aux n t1,aux n t2)
+          | Binop (b,t1,t2) -> Binop (b,aux n t1,aux n t2)
           | Binder (b,m,t) -> Binder (b,m,aux (n+m) t)
           | App (h,ts) ->
               App ((aux n h), (List.map (aux n) ts))
@@ -539,10 +520,7 @@ let pre_abstract target t =
           | Nat _
           | True
           | False -> t
-          | Eq (t1,t2) -> Eq (aux n t1,aux n t2)
-          | And (t1,t2) -> And (aux n t1,aux n t2)
-          | Or (t1,t2) -> Or (aux n t1,aux n t2)
-          | Arrow (t1,t2) -> Arrow (aux n t1,aux n t2)
+          | Binop (b,t1,t2) -> Binop (b,aux n t1,aux n t2)
           | Binder (b,m,t) -> Binder (b,m,aux (n+m) t)
           | App (h,ts) ->
               App ((aux n h), (List.map (aux n) ts))
@@ -576,10 +554,7 @@ let abstract_flex target t =
           | Nat _
           | True
           | False -> t
-          | Eq (t1,t2) -> Eq (aux n t1,aux n t2)
-          | And (t1,t2) -> And (aux n t1,aux n t2)
-          | Or (t1,t2) -> Or (aux n t1,aux n t2)
-          | Arrow (t1,t2) -> Arrow (aux n t1,aux n t2)
+          | Binop (b,t1,t2) -> Binop (b,aux n t1,aux n t2)
           | Binder (b,m,t) -> Binder (b,m,aux (n+m) t)
           | App (h,ts) ->
               begin match observe h with
@@ -604,10 +579,7 @@ let get_vars test ts =
     | QString _ | Nat _ | DB _ | NB _ | True | False -> l
     | Var v ->
         if test v && not (List.mem_assq v l) then ((v,t)::l) else l
-    | Eq (t1,t2)
-    | And (t1,t2)
-    | Or (t1,t2)
-    | Arrow (t1,t2) -> fv (fv l t1) t2
+    | Binop (_,t1,t2) -> fv (fv l t1) t2
     | Binder (b,_,t) -> fv l t
     | App (h,ts) -> List.fold_left fv (fv l h) ts
     | Lam (_,t) -> fv l t
@@ -627,10 +599,7 @@ let get_nablas x =
   let rec nb l t = match observe t with
     | QString _ | Nat _ | Var _ | DB _ | True | False -> l
     | NB i -> if List.mem i l then l else i::l
-    | Eq (t1,t2)
-    | And (t1,t2)
-    | Or (t1,t2)
-    | Arrow (t1,t2) -> nb (nb l t1) t2
+    | Binop (_,t1,t2) -> nb (nb l t1) t2
     | Binder (_,_,t) -> nb l t
     | App (hd,tl) -> List.fold_left nb (nb l hd) tl
     | Lam (_,t) -> nb l t
