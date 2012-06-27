@@ -24,9 +24,8 @@ type t
 
 val create : unit -> t
 
-val add : allow_eigenvar:bool -> t -> Term.term list -> tag ref -> unit
-
-val find : t -> Term.term list -> tag ref option
+val access : allow_eigenvar:bool -> t -> Term.term list ->
+  (tag ref -> unit) * tag ref option * (unit -> unit)
 
 (** Abstract nabla variables in a term.
   * If equivariant tabling is used then use only nabla variables appearing in
