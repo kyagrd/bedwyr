@@ -53,7 +53,7 @@ let fresh = fresh instantiatable
 (* Transforming a term to represent substitutions under abstractions *)
 let rec lift t n = match observe t with
   | True | False
-  | Eq _ | And _ | Or _ | Arrow _ | Binder _ ->
+  | Binop _ | Binder _ ->
       fat t
   | QString _ | Nat _ | Var _ -> t
   | DB i -> db (i+n)
@@ -71,7 +71,7 @@ let rec unique_var v = function
   | t::rargs  ->
       begin match observe t with
         | True | False
-        | Eq _ | And _ | Or _ | Arrow _ | Binder _ ->
+        | Binop _ | Binder _ ->
             fat t
         | Var v' when v=v' -> false
         | _ -> unique_var v rargs
@@ -83,7 +83,7 @@ let rec unique_bv n l = match l with
   | t::rargs ->
       begin match observe t with
         | True | False
-        | Eq _ | And _ | Or _ | Arrow _ | Binder _ ->
+        | Binop _ | Binder _ ->
             fat t
         | DB j when n = j -> false
         | _ -> unique_bv n rargs
@@ -94,7 +94,7 @@ let rec unique_nb n l = match l with
   | t::tl ->
       begin match observe t with
         | True | False
-        | Eq _ | And _ | Or _ | Arrow _ | Binder _ ->
+        | Binop _ | Binder _ ->
             fat t
         | NB j when j=n -> false
         | _ -> unique_nb n tl
@@ -109,7 +109,7 @@ let rec check_flex_args l fts flts =
     | t::q ->
         begin match observe t with
           | True | False
-          | Eq _ | And _ | Or _ | Arrow _ | Binder _ ->
+          | Binop _ | Binder _ ->
               fat t
           | Var v when constant v.tag && v.ts>fts && unique_var v q ->
               check_flex_args q fts flts
@@ -129,7 +129,7 @@ let can_bind v t =
   let rec aux n t =
     match observe t with
       | True | False
-      | Eq _ | And _ | Or _ | Arrow _ | Binder _ ->
+      | Binop _ | Binder _ ->
           fat t
       | QString _ | Nat _ -> true
       | Var v' ->
@@ -152,7 +152,7 @@ let rec bvindex i l n = match l with
   | t::q ->
       begin match observe t with
         | True | False
-        | Eq _ | And _ | Or _ | Arrow _ | Binder _ ->
+        | Binop _ | Binder _ ->
             fat t
         | DB j when i=j -> n
         | _ -> bvindex i q (n-1)
@@ -163,7 +163,7 @@ let rec nbindex i l n = match l with
   | t::q ->
       begin match observe t with
         | True | False
-        | Eq _ | And _ | Or _ | Arrow _ | Binder _ ->
+        | Binop _ | Binder _ ->
             fat t
         | NB j when i=j -> n
         | _ -> nbindex i q (n-1)
@@ -178,7 +178,7 @@ let rec cindex c l n = match l with
   | t::q ->
       begin match observe t with
         | True | False
-        | Eq _ | And _ | Or _ | Arrow _ | Binder _ ->
+        | Binop _ | Binder _ ->
             fat t
         | Var c' when c = c' -> n
         | _ -> cindex c q (n-1)
@@ -254,7 +254,7 @@ let raise_and_invert v1 v2 a1 a2 lev =
     | t::tl ->
         begin match observe t with
           | True | False
-          | Eq _ | And _ | Or _ | Arrow _ | Binder _ ->
+          | Binop _ | Binder _ ->
               fat t
           | DB _ -> raise_var tl (n-1)
           | NB j ->
@@ -289,7 +289,7 @@ let raise_and_invert v1 v2 a1 a2 lev =
     | t::q,n ->
         begin match observe t with
           | True | False
-          | Eq _ | And _ | Or _ | Arrow _ | Binder _ ->
+          | Binop _ | Binder _ ->
               fat t
           | DB i ->
               let pruned,inds1,inds2 = prune q (n-1) in
@@ -343,7 +343,7 @@ let raise_and_invert v1 v2 a1 a2 lev =
     | a::q,n ->
         begin match observe a with
           | True | False
-          | Eq _ | And _ | Or _ | Arrow _ | Binder _ ->
+          | Binop _ | Binder _ ->
               fat a
           | DB i ->
               let pruned,inds1,inds2 = prune_and_raise q (n-1) in
@@ -414,7 +414,7 @@ let rec prune_same_var l1 l2 j bl = match l1,l2 with
   | [],t::q ->
       begin match observe t with
         | True | False
-        | Eq _ | And _ | Or _ | Arrow _ | Binder _ ->
+        | Binop _ | Binder _ ->
             fat t
         | DB i when i=j ->
             (db bl)::(prune_same_var [] q (j-1) (bl-1))
@@ -423,10 +423,10 @@ let rec prune_same_var l1 l2 j bl = match l1,l2 with
   | t1::a1,t2::a2 ->
       begin match observe t1,observe t2 with
         | True,_ | False,_
-        | Eq _,_ | And _,_ | Or _,_ | Arrow _,_ | Binder _,_ ->
+        | Binop _,_ | Binder _,_ ->
             fat t1
         | _,True | _,False
-        | _,Eq _ | _,And _ | _,Or _ | _,Arrow _ | _,Binder _ ->
+        | _,Binop _ | _,Binder _ ->
             fat t2
         | QString s1,QString s2 when s1=s2 ->
             (db bl)::(prune_same_var a1 a2 j (bl-1))
@@ -466,7 +466,7 @@ let makesubst h1 t2 a1 =
   (* Check that h1 is a variable, get its timestamps *)
   let v1,ts1,lts1 = match observe h1 with
     | True | False
-    | Eq _ | And _ | Or _ | Arrow _ | Binder _ ->
+    | Binop _ | Binder _ ->
         fat h1
     | Var v -> assert (v.tag=instantiatable) ; v,v.ts,v.lts
     | _ -> assert false
@@ -483,7 +483,7 @@ let makesubst h1 t2 a1 =
   let rec nested_subst c lev =
     match observe c with
       | True | False
-      | Eq _ | And _ | Or _ | Arrow _ | Binder _ ->
+      | Binop _ | Binder _ ->
           fat c
       | QString _ | Nat _ -> c
       | Var v when constant v.tag ->
@@ -519,7 +519,7 @@ let makesubst h1 t2 a1 =
       | App (h2,a2) ->
           begin match observe h2 with
             | True | False
-            | Eq _ | And _ | Or _ | Arrow _ | Binder _ ->
+            | Binop _ | Binder _ ->
                 fat h2
             | Var {tag=tag} when constant tag ->
                 app
@@ -576,7 +576,7 @@ let makesubst h1 t2 a1 =
   let rec toplevel_subst t2 lev =
     match observe t2 with
       | True | False
-      | Eq _ | And _ | Or _ | Arrow _ | Binder _ ->
+      | Binop _ | Binder _ ->
           fat t2
       | Lam (n,t2) -> toplevel_subst t2 (lev+n)
       | Var v2 when variable v2.tag ->
@@ -595,7 +595,7 @@ let makesubst h1 t2 a1 =
       | App (h2,a2) ->
           begin match observe h2 with
             | True | False
-            | Eq _ | And _ | Or _ | Arrow _ | Binder _ ->
+            | Binop _ | Binder _ ->
                 fat h2
             | QString _ | Nat _ ->
                 let a2 = List.map Norm.hnorm a2 in
@@ -662,7 +662,7 @@ and unify_const_term cst t2 = if eq cst t2 then () else
     | Var {tag=t} when not (variable t || constant t) ->
         failwith "logic variable on the left"
     | True | False
-    | Eq _ | And _ | Or _ | Arrow _ | Binder _ ->
+    | Binop _ | Binder _ ->
         fat t2
     | _ -> raise (ConstClash (cst,t2))
 
@@ -682,7 +682,7 @@ and unify_bv_term n1 t1 t2 = match observe t2 with
   | Var {tag=t} when not (variable t || constant t) ->
       failwith "logic variable on the left"
   | True | False
-  | Eq _ | And _ | Or _ | Arrow _ | Binder _ ->
+  | Binop _ | Binder _ ->
       fat t2
   | _ -> assert false
 
@@ -698,7 +698,7 @@ and unify_nv_term n1 t1 t2 = match observe t2 with
   | Var {tag=t} when not (variable t || constant t) ->
       failwith "logic variable on the left"
   | True | False
-  | Eq _ | And _ | Or _ | Arrow _ | Binder _ ->
+  | Binop _ | Binder _ ->
       fat t2
   | _ -> assert false
 
@@ -802,11 +802,9 @@ and unify_app_term h1 a1 t1 t2 = match observe h1,observe t2 with
   | Var {tag=t}, _ when not (variable t || constant t) ->
       failwith "logic variable on the left"
   | True,_ | False,_
-  | Eq _,_ | And _,_ | Or _,_ | Arrow _,_ | Binder _,_ ->
-      fat t1
+  | Binop _,_ | Binder _,_ -> fat t1
   | _,True | _,False
-  | _,Eq _ | _,And _ | _,Or _ | _,Arrow _ | _,Binder _ ->
-      fat t2
+  | _,Binop _ | _,Binder _ -> fat t2
   | _ -> raise (ConstClash (h1,t2))
 
 (* The main unification procedure.
@@ -827,11 +825,9 @@ and unify t1 t2 = match observe t1,observe t2 with
   | App (h1,a1),_                 -> unify_app_term h1 a1 t1 t2
   | _,App (h2,a2)                 -> unify_app_term h2 a2 t2 t1
   | True,_ | False,_
-  | Eq _,_ | And _,_ | Or _,_
-  | Arrow _,_ | Binder _,_   -> fat t1
+  | Binop _,_ | Binder _,_        -> fat t1
   | _,True | _,False
-  | _,Eq _ | _,And _ | _,Or _
-  | _,Arrow _ | _,Binder _   -> fat t2
+  | _,Binop _ | _,Binder _        -> fat t2
   | QString _,_ | Nat _,_         -> unify_const_term t1 t2
   | _,QString _ | _,Nat _         -> unify_const_term t2 t1
   | Var {tag=t},_ when constant t -> unify_const_term t1 t2

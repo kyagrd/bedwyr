@@ -38,8 +38,8 @@ let make_env n args =
 (* Head normalization function.*)
 let rec hnorm term =
   match Term.observe term with
-    | Term.QString _ | Term.Nat _ | Term.Var _ | Term.DB _ | Term.NB _ | Term.True | Term.False
-    | Term.Eq _ | Term.And _ | Term.Or _ | Term.Arrow _ | Term.Binder _ -> term
+    | Term.QString _ | Term.Nat _ | Term.Var _ | Term.DB _ | Term.NB _
+    | Term.True | Term.False | Term.Binop _ | Term.Binder _ -> term
     | Term.Lam (n,t) -> Term.lambda n (hnorm t)
     | Term.App (t,args) ->
         let t = hnorm t in
@@ -54,7 +54,8 @@ let rec hnorm term =
         let t = hnorm t in
         let susp x = Term.susp x ol nl e in
         begin match Term.observe t with
-          | Term.QString _ | Term.Nat _ | Term.Var _ | Term.NB _ | Term.True | Term.False -> t
+          | Term.QString _ | Term.Nat _ | Term.Var _ | Term.NB _
+          | Term.True | Term.False -> t
           | Term.DB i ->
               if i > ol then
                 (* The index points to something outside the suspension *)
@@ -65,11 +66,8 @@ let rec hnorm term =
                   | Term.Dum l -> Term.db (nl - l)
                   | Term.Binding (t,l) -> hnorm (Term.susp t 0 (nl-l) [])
                 end
-          | Term.Eq (t1,t2) -> Term.op_eq (susp t1) (susp t2)
-          | Term.And (t1,t2) -> Term.op_and (susp t1) (susp t2)
-          | Term.Or (t1,t2) -> Term.op_or (susp t1) (susp t2)
-          | Term.Arrow (t1,t2) -> Term.op_arrow (susp t1) (susp t2)
-          | Term.Binder (b,n,t) -> 
+          | Term.Binop (b,t1,t2) -> Term.op_binop b (susp t1) (susp t2)
+          | Term.Binder (b,n,t) ->
               Term.binder b n (hnorm (Term.susp t (ol+n) (nl+n)
                                            (add_dummies e n nl)))
           | Term.Lam (n,t) ->
@@ -85,18 +83,21 @@ let rec hnorm term =
 let rec deep_norm t =
   let t = hnorm t in
   match Term.observe t with
-    | Term.QString _ | Term.Nat _ | Term.Var _ | Term.DB _ | Term.NB _ | Term.True | Term.False -> t
-    | Term.Eq (t1,t2) -> Term.op_eq (deep_norm t1) (deep_norm t2)
-    | Term.And (t1,t2) -> Term.op_and (deep_norm t1) (deep_norm t2)
-    | Term.Or (t1,t2) -> Term.op_or (deep_norm t1) (deep_norm t2)
-    | Term.Arrow (t1,t2) -> Term.op_arrow (deep_norm t1) (deep_norm t2)
+    | Term.QString _ | Term.Nat _ | Term.Var _ | Term.DB _ | Term.NB _
+    | Term.True | Term.False -> t
+    | Term.Binop (b,t1,t2) -> Term.op_binop b (deep_norm t1) (deep_norm t2)
     | Term.Binder (b,n,t) -> Term.binder b n (deep_norm t)
     | Term.Lam (n,t) -> Term.lambda n (deep_norm t)
     | Term.App (a,b) ->
         begin match Term.observe a with
-          | Term.QString _ | Term.Nat _ | Term.Var _ | Term.DB _ | Term.NB _ | Term.True | Term.False ->
+          | Term.QString _ | Term.Nat _ | Term.Var _ | Term.DB _ | Term.NB _
+          | Term.True | Term.False ->
               Term.app a (List.map deep_norm b)
-          (* XXX is the outer deep_norm really usefull? *)
-          | _ -> deep_norm (Term.app (deep_norm a) (List.map deep_norm b))
+          (* XXX Was this outer deep_norm really useful?
+           * I had the feeling it adds the possibility of infinite loops
+           * (it actually did on badly-typed terms, such as
+           * "App (((p2 db(1)) -> (p2 a)),H)")…
+          | _ -> deep_norm (Term.app (deep_norm a) (List.map deep_norm b)) *)
+          | _ -> Term.app (deep_norm a) (List.map deep_norm b)
         end
     | Term.Ptr _ | Term.Susp _ -> assert false

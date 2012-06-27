@@ -96,13 +96,12 @@ let get_user_file name =
 let open_user_file name =
   try
     Hashtbl.find user_files name
-  with
-  | Not_found ->
-    (
+  with Not_found ->
+    begin
       let fout = open_out_gen [Open_wronly;Open_creat;Open_excl] 0o600 name in
-          ignore (Hashtbl.add user_files name fout) ;
-          fout
-    )
+      ignore (Hashtbl.add user_files name fout) ;
+      fout
+    end
 
 open Input
 
@@ -131,7 +130,7 @@ type flavour = Normal | Inductive | CoInductive
 
 exception Missing_type of string * Typing.pos
 exception Invalid_const_declaration of string * Typing.pos * Typing.ty * string
-exception Invalid_flavour of string * Typing.pos * string * string
+exception Invalid_flavour of string * Typing.pos * flavour * flavour
 exception Invalid_pred_declaration of string * Typing.pos * Typing.ty * string
 exception Invalid_bound_declaration of string * Typing.pos * Typing.ty * string
 
@@ -180,7 +179,7 @@ let create_def (new_predicates,global_flavour) (flavour,p,name,ty) =
     | _,Normal -> global_flavour
     | _ when global_flavour=flavour -> flavour
     | _ -> raise (Invalid_flavour
-                    (name,p,string_of_flavour global_flavour,string_of_flavour flavour))
+                    (name,p,global_flavour,flavour))
   in
   let new_predicate =
     let head_var = Term.get_var (Term.atom ~tag:Term.Constant name) in
@@ -504,7 +503,7 @@ let mk_theorem_clauses (p,n) theorem =
       | theorem::oldl ->
           let theorem = Norm.hnorm theorem in
           begin match Term.observe theorem with
-            | Term.Arrow (body,head) ->
+            | Term.Binop (Term.Arrow,body,head) ->
                 let head = Norm.deep_norm head in
                 let body = Norm.deep_norm body in
                 let pred,params = split head in
@@ -512,7 +511,7 @@ let mk_theorem_clauses (p,n) theorem =
             | Term.Binder (Term.Forall,n,t) ->
                 let t = Term.lambda n t in
                 aux newl ((Term.app t (vars n))::oldl)
-            | Term.And (t1,t2) ->
+            | Term.Binop (Term.And,t1,t2) ->
                 aux newl (t1::t2::oldl)
             (* TODO allow atomic facts,
              * ie auto-translate "p X" to "true -> p X" *)

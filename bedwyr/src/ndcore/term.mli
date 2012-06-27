@@ -32,6 +32,8 @@ type var = private {
 
 (** Quantifier: [forall], [exists] or [nabla]. *)
 type binder = Forall | Exists | Nabla
+(** Binary operator: [=], [/\], [\/] or [=>]. *)
+type binop = Eq | And | Or | Arrow
 type term
 
 (** Reference on a term. Enables sharing. *)
@@ -53,10 +55,7 @@ type rawterm =
   | NB of int (** local timestamp of the nabla variable *)
   | True
   | False
-  | Eq of term * term
-  | And of term * term
-  | Or of term * term
-  | Arrow of term * term
+  | Binop of binop * term * term
   | Binder of binder * int * term (** n-ary quantification (the abstraction is implicit) *)
   | Lam of int * term (** n-ary abstraction *)
   | App of term * term list
@@ -77,6 +76,7 @@ val db : int -> term
 val nabla : int -> term
 val op_true : term
 val op_false : term
+val op_binop : binop -> term -> term -> term
 val op_eq : term -> term -> term
 val op_and : term -> term -> term
 val op_or : term -> term -> term
@@ -154,7 +154,7 @@ val restore_namespace : namespace -> unit
 (* XXX do we still infer the tag or not? *)
 val atom : ?tag:tag -> string -> term
 
-(** @return the naming hint attached to the variable 
+(** @return the naming hint attached to the variable
   * @raise Not_found if no hint is found
   * (should not happen for a variable defined by the parser) *)
 val get_var_name : var -> string
