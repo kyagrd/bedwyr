@@ -32,7 +32,7 @@ type var = private {
 
 (** Quantifier: [forall], [exists] or [nabla]. *)
 type binder = Forall | Exists | Nabla
-(** Binary operator: [=], [/\], [\/] or [=>]. *)
+(** Binary operator: [ = ], [ /\ ], [ \/ ] or [ => ] *)
 type binop = Eq | And | Or | Arrow
 type term
 

@@ -1,34 +1,33 @@
+##############################################################################
+#  Bedwyr prover                                                             #
+#  Copyright (C) 2012 Quentin Heath                                          #
+#                                                                            #
+#  This program is free software; you can redistribute it and/or modify      #
+#  it under the terms of the GNU General Public License as published by      #
+#  the Free Software Foundation; either version 2 of the License, or         #
+#  (at your option) any later version.                                       #
+#                                                                            #
+#  This program is distributed in the hope that it will be useful,           #
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of            #
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the             #
+#  GNU General Public License for more details.                              #
+#                                                                            #
+#  You should have received a copy of the GNU General Public License         #
+#  along with this code; if not, write to the Free Software Foundation,      #
+#  Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA              #
+##############################################################################
+
 AC_INIT([Bedwyr],[1.3-rc2],[https://gforge.inria.fr/tracker/?atid=1543&group_id=367],[bedwyr],[http://slimmer.gforge.inria.fr/bedwyr/])
 AC_PREREQ(2.60)
 AC_CONFIG_SRCDIR([src/bedwyr.ml])
 AC_PROG_INSTALL
 
-REVISION=$((((svn info 2>&- || git svn info 2>&-) || git describe --tags --dirty 2>&- 1>&3) | grep Revision | sed -e "s/Revision: //") 3>&1 | tr -d '\n')
+REVISION=$((((svn info 2>&- || git svn info 2>&-) || git describe --tags --dirty 2>&- 1>&3) | sed -n -e 's/Revision: //p') 3>&1 | tr -d '\n')
 
 #
 # Additional options
 #
 ##############################################################################
-
-AC_ARG_ENABLE([doc],
-   AC_HELP_STRING(
-      [--enable-doc],
-      [build the complete documentation (default)]))
-
-AC_ARG_ENABLE([bytecode],
-   AC_HELP_STRING(
-      [--enable-bytecode],
-      [compile in bytecode (default)]))
-
-AC_ARG_ENABLE([nativecode],
-   AC_HELP_STRING(
-      [--enable-nativecode],
-      [compile in native code (default)]))
-
-AC_ARG_ENABLE([debug],
-   AC_HELP_STRING(
-      [--enable-debug],
-      [compile with debugging information (disabled by default)]))
 
 #
 # Common build stuff
@@ -54,14 +53,14 @@ AC_PATH_PROG(GZIP,gzip,no)
 if test "$GZIP" = no ; then
 	AC_MSG_WARN(Cannot find gzip.)
 else
-	DIST_SUFFIXES="$DIST_SUFFIXES tar.gz"
+	ARCH_SUFFIXES="$ARCH_SUFFIXES tgz"
 fi
 
 AC_PATH_PROG(BZIP2,bzip2,no)
 if test "$BZIP2" = no ; then
 	AC_MSG_WARN(Cannot find bzip2.)
 else
-	DIST_SUFFIXES="$DIST_SUFFIXES tar.bz2"
+	ARCH_SUFFIXES="$ARCH_SUFFIXES tbz"
 fi
 
 #
@@ -69,10 +68,20 @@ fi
 #
 ##############################################################################
 
-if test "$enable_doc" != "no" ; then
+AC_MSG_CHECKING(if the documentation should be build)
+AC_ARG_ENABLE([doc],
+	AC_HELP_STRING([--enable-doc],[build the complete documentation]),
+	[AC_MSG_RESULT($enable_doc)],
+	[AC_MSG_RESULT(no)])
+if test "$enable_doc" = "yes" ; then
 	AC_PATH_PROGS(OCAMLDOC,ocamldoc.opt ocamldoc,no)
 	if test "$OCAMLDOC" = no ; then
 		AC_MSG_ERROR(Cannot find ocamldoc.)
+	fi
+
+	AC_PATH_PROG(FIG2DEV,fig2dev,no)
+	if test "$FIG2DEV" = no ; then
+		AC_MSG_ERROR(Cannot find fig2dev.)
 	fi
 
 	AC_PATH_PROG(LATEX,latex,no)
@@ -141,6 +150,11 @@ if test "$OCAMLBUILD" = no ; then
 	AC_MSG_ERROR(Cannot find ocamlbuild.)
 fi
 
+AC_MSG_CHECKING(if debugging information should be added)
+AC_ARG_ENABLE([debug],
+	AC_HELP_STRING([--enable-debug],[add debugging/profiling information]),
+	[AC_MSG_RESULT($enable_debug)],
+	[AC_MSG_RESULT(no)])
 if test "$enable_debug" = "yes" ; then
 	AC_PATH_PROGS(OCAMLDEBUG,ocamldebug.opt ocamldebug,no)
 	if test "$OCAMLDEBUG" = no ; then
@@ -158,15 +172,17 @@ else
 	NATIVE_LIBS="a cmxa"
 fi
 
-if test "$enable_nativecode" = "no" ; then
-	if test "$enable_bytecode" = "no" ; then
-		AC_MSG_ERROR(You must either enable native or bytecode compilation.)
-	else
-		LIB_SUFFIXES="$BYTE_LIBS"
-		BIN_SUFFIXES="$BYTE_SUFFIX"
-	fi
-	TEST_SUFFIX="$BYTE_SUFFIX"
-else
+AC_MSG_CHECKING(if native code should be generated)
+AC_ARG_ENABLE([nativecode],
+	AC_HELP_STRING([--enable-nativecode],[output native code]),
+	[AC_MSG_RESULT($enable_nativecode)],
+	[AC_MSG_RESULT(no)])
+AC_MSG_CHECKING(if bytecode should be generated)
+AC_ARG_ENABLE([bytecode],
+	AC_HELP_STRING([--enable-bytecode],[output bytecode (default)]),
+	[AC_MSG_RESULT($enable_bytecode)],
+	[AC_MSG_RESULT(yes)])
+if test "$enable_nativecode" = "yes" ; then
 	AC_PATH_PROGS(OCAMLOPT,ocamlopt.opt ocamlopt,no)
 	if test "$OCAMLOPT" = no ; then
 		AC_MSG_ERROR(Cannot find a native code compiler.)
@@ -176,30 +192,65 @@ else
 		LIB_SUFFIXES="$NATIVE_LIBS"
 		BIN_SUFFIXES="$NATIVE_SUFFIX"
 	else
+		AC_PATH_PROGS(OCAMLC,ocamlc.opt ocamlc,no)
+		if test "$OCAMLC" = no ; then
+			AC_MSG_ERROR(Cannot find a bytecode compiler.)
+		fi
 		LIB_SUFFIXES="$BYTE_LIBS $NATIVE_LIBS"
 		BIN_SUFFIXES="$BYTE_SUFFIX $NATIVE_SUFFIX"
 	fi
-	TEST_SUFFIX="$NATIVE_SUFFIX"
+	BEST_SUFFIX="$NATIVE_SUFFIX"
+	OCAML_VERSION=$("$OCAMLOPT" -version)
+else
+	if test "$enable_bytecode" = "no" ; then
+		AC_MSG_ERROR(You must either enable native or bytecode compilation.)
+	else
+		AC_PATH_PROGS(OCAMLC,ocamlc.opt ocamlc,no)
+		if test "$OCAMLC" = no ; then
+			AC_MSG_ERROR(Cannot find a bytecode compiler.)
+		fi
+		LIB_SUFFIXES="$BYTE_LIBS"
+		BIN_SUFFIXES="$BYTE_SUFFIX"
+	fi
+	BEST_SUFFIX="$BYTE_SUFFIX"
+	OCAML_VERSION=$("$OCAMLC" -version)
 fi
+
+#
+# Misc
+#
+##############################################################################
+
+AC_CONFIG_FILES([Makefile.include],[chmod a-w Makefile.include])
+AC_CONFIG_FILES([src/config.ml],[chmod a-w src/config.ml])
+AC_CONFIG_FILES([src/ndcore/META],[chmod a-w src/ndcore/META])
+AC_CONFIG_FILES([doc/Makefile],[chmod a-w doc/Makefile])
+AC_CONFIG_FILES([doc/bedwyr.1],[chmod a-w doc/bedwyr.1])
+
+EXAMPLES_FILES=$($FIND examples -type f '!' -path '*.svn*' \
+                 '!' -name '*~' '!' -name '.*.sw*' '!' -name '*.old' \
+                 -exec echo -n -e ' \\\n\t'"{}" \;)
+BUILD_DATE=$(date -u +%F)
+OCAML_FILES=$(for i in $($FIND src -type f '!' -path '*.svn*' \
+              '!' -name '*~' '!' -name '.*.sw*') ; do \
+              bash -c "grep ' $i ' <<<' $ac_config_files ' -qv" && echo -n -e ' \\\n\t'"$i" ; done)
 
 #
 # Regular ./configure stuff
 #
 ##############################################################################
 
-AC_SUBST(DIST_SUFFIXES)
+AC_SUBST(ARCH_SUFFIXES)
 AC_SUBST(LIB_SUFFIXES)
 AC_SUBST(BIN_SUFFIXES)
-AC_SUBST(TEST_SUFFIX)
+AC_SUBST(BEST_SUFFIX)
 AC_SUBST(REVISION)
+AC_SUBST(OCAML_VERSION)
+AC_SUBST(BUILD_DATE)
 AC_SUBST(INSTALL)
 AC_SUBST(INSTALL_DATA)
 AC_SUBST(INSTALL_PROGRAM)
+AC_SUBST(EXAMPLES_FILES)
+AC_SUBST(OCAML_FILES)
 
-AC_CONFIG_FILES([Makefile],[chmod a-w Makefile])
-AC_CONFIG_FILES([src/Makefile],[chmod a-w src/Makefile])
-AC_CONFIG_FILES([src/config.ml],[chmod a-w src/config.ml])
-AC_CONFIG_FILES([src/ndcore/Makefile],[chmod a-w src/ndcore/Makefile])
-AC_CONFIG_FILES([src/ndcore/META],[chmod a-w src/ndcore/META])
-AC_CONFIG_FILES([doc/Makefile],[chmod a-w doc/Makefile])
 AC_OUTPUT
