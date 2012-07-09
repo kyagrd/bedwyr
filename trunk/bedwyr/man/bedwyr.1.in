@@ -22,7 +22,7 @@
 .TH @PACKAGE_TARNAME@ 1 2012/06/27 "@PACKAGE_NAME@ v@PACKAGE_VERSION@" "Slimmer project"
 .\"
 .SH NAME
-@PACKAGE_TARNAME@ \- The not\-so\-sound logician
+@PACKAGE_TARNAME@ - The not-so-sound logician
 .\"
 .\"
 .SH SYNOPSIS
@@ -31,12 +31,16 @@
 .P
 .B @PACKAGE_TARNAME@
 [ \fIfilename\fR | \fIoption\fR ] *
+.P
+.B @PACKAGE_TARNAME@.byte
+.P
+.B @PACKAGE_TARNAME@.native
 .\"
 .\"
 .SH DESCRIPTION
-@PACKAGE_NAME@ is a theorem prover for the Level\-0/1 fragment of the Linc logic.
+@PACKAGE_NAME@ is a theorem prover for the Level-0/1 fragment of the Linc logic.
 .P
-It is based on Alwen Tiu's Level\-0/1, and Nadathur & Linell's LLambda
+It is based on Alwen Tiu's Level-0/1, and Nadathur & Linell's LLambda
 library, both written in SML. The OCaml translation has been done by
 Baelde & Ziegler and further development by Baelde & Gacek. It is
 currently under work by Heath. The system also benefited from the wisdom
@@ -48,6 +52,10 @@ in an Automated Prover" (Alwen Tiu and Gopalan Nadathur and Dale Miller):
 .P
 Webpage:
 .B http://slimmer.gforge.inria.fr/bedwyr/
+.P
+When invoked as \fB@PACKAGE_TARNAME@\fR, the faster of the available binaries
+is used (i.e. the native code version, \fB@PACKAGE_TARNAME@.native\fR, if
+available; otherwise the bytecode version, \fB@PACKAGE_TARNAME@.byte\fR).
 .\"
 .\"
 .SH OPTIONS
@@ -68,14 +76,14 @@ after all the input files a read but before entering the interactive loop.
 Enable backward chaining and set its limit (the so-called
 \fIfreezing point\fR) to \fIn\fR.
 Setting the freezing point to 0 (the default value) disables backward chaining,
-setting it to -1 allows infinite chaining (usually not a smart idea).
+setting it to \-1 allows infinite chaining (usually not a smart idea).
 The value 1 should be a good compromise.
 .TP
 \fB\-\-saturation\fR \fIn\fR
 Enable forward chaining and set its limit (the so-called
 \fIsaturation point\fR) to \fIn\fR.
 Setting the saturation point to 0 (the default value) disables forward chaining,
-setting it to -1 allows infinite chaining and therefore actual saturation
+setting it to \-1 allows infinite chaining and therefore actual saturation
 of the table wrt the theorem.
 .TP
 \fB\-help\fR, \fB\-\-help\fR
@@ -95,9 +103,9 @@ The predefined types are \fInat\fR, \fIstring\fR and obviously \fIprop\fR.
 .TP
 \fBType \fIz\fB int.
 .TP
-\fBType \fIs\fB int -> int.
+\fBType \fIs\fB int \-> int.
 .TP
-\fBType \fIblah\fB (int -> prop) -> object.
+\fBType \fIblah\fB (int \-> prop) \-> object.
 No polymorphism is available yet, but all proper types
 (even higher order ones) are allowed.
 
@@ -108,7 +116,7 @@ any quoted string of type \fBstring\fR.
 .\"
 .SS Predicate declaration and definition
 .TP
-\fBDefinition \fIp1\fB : int -> prop, \fIp2\fB : prop by \fIp1 (s (s N)) := p1 N\fB ; \fIp2\fB ; \fIp1 z\fB.
+\fBDefinition \fIp1\fB : int \-> prop, \fIp2\fB : prop by \fIp1 (s (s N)) := p1 N\fB ; \fIp2\fB ; \fIp1 z\fB.
 The header of a definition block gives the declarations of the predicates
 with mandatory type annotations ending with \fBprop\fR.
 
@@ -116,13 +124,13 @@ The body of a definition block gives discretionary clauses for those predicates,
 and only those.
 Here, \fIp1\fR is true on even integers and \fIp2\fR is equal to \fItrue\fR.
 .TP
-\fBDefinition \fIp3\fB : object -> nat -> prop, \fIp4\fB : prop by \fIp3 (blah p1) 42\fB.
+\fBDefinition \fIp3\fB : object \-> nat \-> prop, \fIp4\fB : prop by \fIp3 (blah p1) 42\fB.
 The head of a bodyless clause is always true.
 A predicate without any clauses us always false.
 .\"
 .SS Theorems
 .TP
-\fBTheorem \fImy_theorem\fB : \fIforall Y, body X Y -> head X.\fR
+\fBTheorem \fImy_theorem\fB : \fIforall Y, body X Y \-> head X.\fR
 A theorem is a valid Abella theorem with some restrictions on its body
 (neither implication nor universal quantification).
 .\"
@@ -131,10 +139,10 @@ A theorem is a valid Abella theorem with some restrictions on its body
 .TP
 \fB?= \fIform\fB.\fR
 The formula \fIform\fR entered at the prompt is solved,
-meaning that @PACKAGE_NAME@ searchs for substitutions of free variables
+meaning that @PACKAGE_NAME@ searches for substitutions of free variables
 satisfying the formula and offers to display them one by one.
 .TP
-\fB@PACKAGE_TARNAME@\fR -e "\fIform\fB.\fR"
+\fB@PACKAGE_TARNAME@\fR \-e "\fIform\fB.\fR"
 Formulae given via this option are dealt with in the exact same way.
 .\"
 .\"

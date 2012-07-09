@@ -1,0 +1,30 @@
+Source: @PACKAGE_TARNAME@
+Section: math
+Priority: optional
+Maintainer: Quentin Heath <quentin.heath@inria.fr>
+Build-Depends: ocaml (>= 3.10.0), hevea (>= 1.10),
+ texlive-latex-base (>= 2009-11), texlive-latex-extra (>= 2009-10),
+ debhelper (>= 7.0.50~), fakeroot, lintian, devscripts,
+ ghostscript, transfig, autoconf (>= 2.60)
+Standards-Version: 3.9.1
+Homepage: @PACKAGE_URL@
+Vcs-Svn: svn://scm.gforge.inria.fr/svn/slimmer
+Vcs-Browser: https://gforge.inria.fr/scm/viewvc.php/?root=slimmer
+
+Package: @PACKAGE_TARNAME@
+Architecture: any
+Depends: ${misc:Depends}, ${shlibs:Depends}, ocaml-base-@OCAML_VERSION@
+Recommends: rlwrap
+Description: the not-so-sound-logician
+ Bedwyr is a generalization of logic programming
+ that allows model checking directly on syntactic expression
+ possibly containing bindings.
+ .
+ This system, written in OCaml, is a direct implementation of
+ two recent advances in the theory of proof search:
+ a symmetric treatment of finite success and finite failure
+ (which allows capturing both aspects of may and must behavior
+ in operational semantics and mixing model checking and logic
+ programming), and direct support for lambda-tree syntax,
+ as in lambdaProlog, via term-level lambda-binders,
+ higher-order pattern unification, and the nabla-quantifier.

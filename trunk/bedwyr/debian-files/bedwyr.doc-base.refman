@@ -1,0 +1,17 @@
+Document: bedwyr-refman
+Title: A Reference Manual for Bedwyr
+Author: Slimmer project
+Abstract: This document provides a user's guide,
+ a collection of examples and a system description
+ of the Bedwyr system for model checking over syntactic expressions.
+Section: Science/Mathematics
+
+Format: HTML
+Index: @htmldir@/refman/index.html
+Files: @htmldir@/refman/*.html
+
+Format: PDF
+Files: @pdfdir@/refman.pdf.gz
+
+Format: PostScript
+Files: @psdir@/refman.ps.gz

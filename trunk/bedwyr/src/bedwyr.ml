@@ -32,7 +32,7 @@ For a little help, type \"#help.\"
 "
     Config.package_name
     Config.package_version
-    (if Config.build=Config.package_version || Config.build="" then ""
+    (if Config.build="v"^Config.package_version || Config.build="" then ""
      else " (revision " ^ Config.build ^ ")")
 
 (* TODO split into usage_msg and info_msg,
@@ -353,7 +353,7 @@ let rec process ?(interactive=false) parse lexbuf =
           s ;
         exit 1
     | e ->
-        Format.printf "%sUnknown error: %s@."
+        Format.printf "%sUnknown OCaml error: %s@."
           (position_lex lexbuf)
           (Printexc.to_string e) ;
         exit 1

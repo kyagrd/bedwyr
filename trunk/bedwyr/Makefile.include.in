@@ -25,7 +25,10 @@
 
 PACKAGE_TARNAME	= @PACKAGE_TARNAME@
 PACKAGE_VERSION	= @PACKAGE_VERSION@
-DIST_NAME      	= $(PACKAGE_TARNAME)-$(PACKAGE_VERSION)
+DIST_NAME	= $(PACKAGE_TARNAME)-$(PACKAGE_VERSION)
+DEBIAN_VERSION	= $(subst -,~,$(subst -p,+p,$(PACKAGE_VERSION)))
+DEB_DIST_NAME	= $(PACKAGE_TARNAME)-$(DEBIAN_VERSION)
+DEB_NAME	= $(PACKAGE_TARNAME)_$(DEBIAN_VERSION)
 # $(TARGET_NAME) is needed since we have one project/tarball
 # but several programs/packages
 ifeq ($(TARGET),)
@@ -37,16 +40,10 @@ ARCH_SUFFIXES	= @ARCH_SUFFIXES@
 LIB_SUFFIXES	= @LIB_SUFFIXES@
 BIN_SUFFIXES	= @BIN_SUFFIXES@
 BEST_SUFFIX	= @BEST_SUFFIX@
+DEBEMAIL	?=@DEBEMAIL@
+DEBFULLNAME	?=@DEBFULLNAME@
 
-SHELL		= @BASH@
-TAR		= @TAR@ -p
-FIND		= @FIND@
-GZIP		= @GZIP@ -4 -f
-BZIP2		= @BZIP2@ -9 -f
-OCAMLBUILD	= @OCAMLBUILD@ -classic-display -X debian
-OCAMLDEBUG	= @OCAMLDEBUG@
-OCAMLC		= @OCAMLC@
-OCAMLDOC	= @OCAMLDOC@
+### FOLDERS
 
 prefix		= @prefix@
 exec_prefix	= @exec_prefix@
@@ -94,21 +91,38 @@ MANDIR		= $(DESTDIR)$(mandir)
 
 VIMFILES	= $(DATAROOTDIR)/vim/vimfiles
 
+### PROGRAMS
+
+SHELL		= @BASH@
+TAR		= @TAR@ -p
+FIND		= @FIND@
+GZIP		= @GZIP@ -4 -f
+BZIP2		= @BZIP2@ -9 -f
+OCAMLBUILD	= @OCAMLBUILD@ -classic-display -Xs debian,$(DEB_DIST_NAME)
+OCAMLDEBUG	= @OCAMLDEBUG@
+OCAMLC		= @OCAMLC@
+OCAMLDOC	= @OCAMLDOC@
+
 INSTALL		= @INSTALL@
 INSTALL_OPTS	= -v
 INSTALL_DIR	= @INSTALL_PROGRAM@ $(INSTALL_OPTS) -d
 INSTALL_BIN	= @INSTALL_PROGRAM@ $(INSTALL_OPTS) -p
 INSTALL_DATA	= @INSTALL_DATA@ $(INSTALL_OPTS) -p
 
+DEBUILD		= @DEBUILD@ -eDEBIAN_FILES -eDOC_BASE_FILES --lintian-opts -Ivi
+DCH		= @DCH@ -d -D unstable
+
 ### SOURCE FILES
 
+ac_config_files	= @ac_config_files@
 OCAML_FILES	= @OCAML_FILES@
 NDCORE_FILES	= README.ndcore
 BEDWYR_FILES	= COPYING ChangeLog README TODO
-MAN_FILES	= $(wildcard doc/*.1.in)
-VIM_CONTRIB	= ftdetect/bedwyr.vim ftplugin/bedwyr.vim \
-		  indent/bedwyr.vim syntax/bedwyr.vim
+MAN_FILES	= $(wildcard man/*.in)
+VIM_CONTRIB	= @VIM_CONTRIB@
 EMACS_CONTRIB	= bedwyr.el
 CONTRIB_FILES	= $(addprefix contrib/emacs/,$(EMACS_CONTRIB)) \
 		  $(addprefix contrib/vim/,$(VIM_CONTRIB))
 EXAMPLES_FILES	= @EXAMPLES_FILES@
+DEBIAN_FILES_IN	= @DEBIAN_FILES_IN@
+DOCBASE_FILES	= @DOCBASE_FILES@
