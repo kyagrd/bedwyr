@@ -74,10 +74,15 @@ else
 endif
 MANPAGES	= $(MAN_FILES:.in=.gz)
 
+
 DIST_FILES	= $(BUILT_FILES) \
 		  $(NDCORE_FILES) $(BEDWYR_FILES) \
 		  $(MANPAGES) $(CONTRIB_FILES) $(EXAMPLES_FILES) \
 		  $(NDCORE_ODOCS) $(BEDWYR_ODOCS_DIR)/index.html
+
+# Other files
+
+DEB_FILES	= $(DEBIAN_FILES_IN:.in=)
 
 ### BUILDING
 
@@ -110,7 +115,7 @@ $(BEDWYR_BINS): src/config.ml
 	@./$< $@
 
 config.status: configure Makefile
-	./$< --no-create
+	./$< --no-create $(CONFIGURE_OPTS)
 
 configure: configure.ac
 	autoconf
@@ -118,7 +123,7 @@ configure: configure.ac
 ### TESTING
 
 bedwyr: $(bedwyr_prefix).$(BEST_SUFFIX)
-	@ln -svf _build/$< $@
+	@ln -svf bedwyr.$(BEST_SUFFIX) $@
 
 .PHONY: run test test_ndcore test_batyping test_input test_prover test_bedwyr
 
@@ -166,12 +171,12 @@ test_bedwyr: bedwyr
 	  else echo "Error." ; exit 1 ; fi ; \
 	  done
 
-ifeq ($(OCAMLDEBUG),"")
+ifeq ($(OCAMLDEBUG),)
   debug:
 	@echo 'Debug information generation disabled,'
 	@echo 'add "--enable-debug" to your ./configure options.'
 else
-  ifeq ($(OCAMLC),"")
+  ifeq ($(OCAMLC),)
   debug:
 	@echo 'Bytecode generation disabled,'
 	@echo 'add "--enable-bytecode" to your ./configure options.'
@@ -185,7 +190,7 @@ endif
 
 .PHONY: doc ndcore_doc bedwyr_doc bedwyr_src_doc bedwyr_ref bedwyr_man
 
-ifeq ($(OCAMLDOC),"")
+ifeq ($(OCAMLDOC),)
   doc:
 	@echo 'Documentation generation disabled,'
 	@echo 'add "--enable-doc" to your ./configure options.'
@@ -226,7 +231,7 @@ else
   install: install_$(TARGET)
 endif
 
-ifneq ($(OCAMLDOC),"")
+ifneq ($(OCAMLDOC),)
   install_ndcore: install_ndcore_doc
   install_bedwyr: install_bedwyr_doc
 endif
@@ -243,7 +248,9 @@ install_ndcore_files: $(NDCORE_FILES:=.gz)
 
 install_ndcore_doc: $(NDCORE_ODOCS)
 	@$(INSTALL_DIR) $(DOCDIR)
-	@for i in $^ ; do $(INSTALL_DATA) _build/$$i $(DOCDIR) ; done
+	@for i in $^ ; do $(GZIP) _build/$$i ; \
+	  $(INSTALL_DATA) _build/$$i.gz $(DOCDIR) ; \
+	  done
 
 install_bedwyr: install_bedwyr_bin install_bedwyr_files \
   install_bedwyr_man install_bedwyr_contrib install_bedwyr_examples
@@ -251,6 +258,7 @@ install_bedwyr: install_bedwyr_bin install_bedwyr_files \
 install_bedwyr_bin: $(BEDWYR_BINS)
 	@$(INSTALL_DIR) $(BINDIR)
 	@for i in $^ ; do $(INSTALL_BIN) _build/$$i $(BINDIR) ; done
+	@ln -svf bedwyr.$(BEST_SUFFIX) $(BINDIR)/bedwyr
 
 install_bedwyr_files: $(BEDWYR_FILES:=.gz)
 	@$(INSTALL_DIR) $(DOCDIR)
@@ -259,6 +267,8 @@ install_bedwyr_files: $(BEDWYR_FILES:=.gz)
 install_bedwyr_man: $(MANPAGES)
 	@$(INSTALL_DIR) $(MANDIR)/man1
 	@for i in $^ ; do $(INSTALL_DATA) $$i $(MANDIR)/man1 ; done
+	@for i in $(addsuffix .1.gz,$(addprefix bedwyr.,$(BIN_SUFFIXES))) ; \
+	  do ln -svf bedwyr.1.gz $(MANDIR)/man1/$$i ; done
 
 install_bedwyr_contrib:
 	@$(INSTALL_DIR) $(DATADIR)
@@ -274,6 +284,14 @@ install_bedwyr_examples:
 	  $(INSTALL_DATA) -D $$i $(DATADIR)/$$i ; done
 
 install_bedwyr_doc: install_bedwyr_odocs install_bedwyr_refman
+	@for i in $(DOC_BASE_FILES) ; do \
+	  cp -pvf ../debian-files/$$i debian/$$i ; done
+	@for i in $(DEBIAN_FILES) $(DOC_BASE_FILES) ; do \
+	  sed -i \
+	  -e 's|@htmldir[@]|$(htmldir)|g' \
+	  -e 's|@pdfdir[@]|$(pdfdir)|g' \
+	  -e 's|@psdir[@]|$(psdir)|g' \
+	  debian/$$i ; done
 
 install_bedwyr_odocs: $(BEDWYR_ODOCS_DIR)/index.html
 	@$(INSTALL_DIR) $(DOCDIR)/libref
@@ -313,6 +331,27 @@ $(DIST_NAME).tar: archive.tar doc/archive.tar
 .tar.tgz:
 	@$(GZIP) -c $< > $@
 
+deb: $(DIST_NAME).tgz $(addprefix debian-files/,$(DEB_FILES))
+	@rm -rvf $(DEB_DIST_NAME)
+	@$(TAR) -xf $<
+	@cp -pvf $< $(DEB_NAME).orig.tar.gz
+	@mv -v $(DIST_NAME) $(DEB_DIST_NAME)
+	@DEBIAN_FILES="$(DEB_FILES)" DOC_BASE_FILES="$(DOCBASE_FILES)"\
+	  CONFIGURE_OPTS="--enable-deb" $(MAKE) -C $(DEB_DIST_NAME) deb_pkg
+	
+ifeq (0,$(MAKELEVEL))
+  deb_pkg:
+	@echo 'Use the "deb" target to ensure the necessary files exist.'
+else
+  deb_pkg:
+	@mkdir -vp debian/source
+	@for i in $(DEBIAN_FILES) ; do \
+	  cp -pvf ../debian-files/$$i debian/$$i ; done
+	@DEBEMAIL="$(DEBEMAIL)" DEBFULLNAME="$(DEBFULLNAME)" $(DCH)
+	@$(DEBUILD)
+endif
+
+
 ### OTHER TARGETS
 
 .PHONY: help mostlyclean clean distclean
@@ -339,16 +378,16 @@ help:
 
 mostlyclean:
 	@$(OCAMLBUILD) -clean
+	@rm -vf bedwyr
 
 clean: mostlyclean doc/Makefile
 	@$(MAKE) -C doc clean
 	@$(FIND) . -name '*~' -exec rm -vf \{\} \;
 	@rm -vf *.bz2 *.gz *.tar *.tbz *.tgz *.odocl
+	@rm -vf *.build *.changes *.dsc *.deb
+	@rm -rvf $(DEB_DIST_NAME)
 
 distclean: clean doc/Makefile
-	@rm -vf Makefile.include \
-	  src/config.ml \
-	  $(ndcore_dir)/META \
-	  doc/Makefile doc/*.1
+	@rm -vf $(ac_config_files)
 	@rm -vf config.status config.log configure
 	@rm -rvf autom4te.cache

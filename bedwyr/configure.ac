@@ -20,9 +20,6 @@
 AC_INIT([Bedwyr],[1.4-dev1],[https://gforge.inria.fr/tracker/?atid=1543&group_id=367],[bedwyr],[http://slimmer.gforge.inria.fr/bedwyr/])
 AC_PREREQ(2.60)
 AC_CONFIG_SRCDIR([src/bedwyr.ml])
-AC_PROG_INSTALL
-
-REVISION=$((((svn info 2>&- || git svn info 2>&-) || git describe --tags --dirty 2>&- 1>&3) | sed -n -e 's/Revision: //p') 3>&1 | tr -d '\n')
 
 #
 # Additional options
@@ -30,12 +27,45 @@ REVISION=$((((svn info 2>&- || git svn info 2>&-) || git describe --tags --dirty
 ##############################################################################
 
 AC_MSG_CHECKING(if a Debian package should be built)
-AC_ARG_WITH([deb],
-	([--with-deb],[build deb and debsrc packages]),
-	[AC_MSG_RESULT($with_deb)],
+AC_ARG_ENABLE([deb],
+	([--enable-deb],[build deb and debsrc packages]),
+	[AC_MSG_RESULT($enable_deb)],
 	[AC_MSG_RESULT(no)])
-if test "$with_deb" = "yes" ; then
-	AC_MSG_ERROR(Not available yet.)
+if test "$enable_deb" = "yes" ; then
+	AC_PATH_PROG(DPKG_BUILDPACKAGE,dpkg-buildpackage,no)
+	if test "$DPKG_BUILDPACKAGE" = no ; then
+		AC_MSG_ERROR(Cannot find dpkg-buildpackage. Install dpkg-dev.)
+	fi
+
+	AC_PATH_PROG(DEBUILD,debuild,no)
+	if test "$DEBUILD" = no ; then
+		AC_MSG_ERROR(Cannot find debuild. Install devscripts.)
+	fi
+
+	AC_PATH_PROG(DCH,dch,no)
+	if test "$DCH" = no ; then
+		AC_MSG_ERROR(Cannot find dch. Install devscripts.)
+	fi
+
+	AC_PATH_PROG(LINTIAN,lintian,no)
+	if test "$LINTIAN" = no ; then
+		AC_MSG_WARN(Cannot find lintian.)
+	fi
+
+	AC_PATH_PROG(FAKEROOT,fakeroot,no)
+	if test "$FAKEROOT" = no ; then
+		AC_MSG_ERROR(Cannot find fakeroot.)
+	fi
+
+	AC_PATH_PROG(DH,dh,no)
+	if test "$DH" = no ; then
+		AC_MSG_ERROR(Cannot find dh. Install debhelper.)
+	fi
+
+	AC_PATH_PROG(GPG,gpg,no)
+	if test "$GPG" = no ; then
+		AC_MSG_ERROR(Cannot find gpg. Install gnupg.)
+	fi
 fi
 
 #
@@ -90,7 +120,7 @@ if test "$enable_doc" = "yes" ; then
 
 	AC_PATH_PROG(FIG2DEV,fig2dev,no)
 	if test "$FIG2DEV" = no ; then
-		AC_MSG_ERROR(Cannot find fig2dev.)
+		AC_MSG_ERROR(Cannot find fig2dev. Install transfig.)
 	fi
 
 	AC_PATH_PROG(LATEX,latex,no)
@@ -110,7 +140,7 @@ if test "$enable_doc" = "yes" ; then
 
 	AC_PATH_PROG(PS2PDF,ps2pdf,no)
 	if test "$PS2PDF" = no ; then
-		AC_MSG_ERROR(Cannot find ps2pdf.)
+		AC_MSG_ERROR(Cannot find ps2pdf. Install ghostscript.)
 	fi
 
 	AC_PATH_PROG(HEVEA,hevea,no)
@@ -212,7 +242,7 @@ if test "$enable_nativecode" = "yes" ; then
 	OCAML_VERSION=$("$OCAMLOPT" -version)
 else
 	if test "$enable_bytecode" = "no" ; then
-		AC_MSG_ERROR(You must either enable native or bytecode compilation.)
+		AC_MSG_WARN(You should enable at least native or bytecode compilation.)
 	else
 		AC_PATH_PROGS(OCAMLC,ocamlc.opt ocamlc,no)
 		if test "$OCAMLC" = no ; then
@@ -220,9 +250,9 @@ else
 		fi
 		LIB_SUFFIXES="$BYTE_LIBS"
 		BIN_SUFFIXES="$BYTE_SUFFIX"
+		BEST_SUFFIX="$BYTE_SUFFIX"
+		OCAML_VERSION=$("$OCAMLC" -version)
 	fi
-	BEST_SUFFIX="$BYTE_SUFFIX"
-	OCAML_VERSION=$("$OCAMLC" -version)
 fi
 
 #
@@ -230,19 +260,39 @@ fi
 #
 ##############################################################################
 
+AC_PROG_INSTALL
+
+REVISION=$((((svn info 2>&- || git svn info 2>&-) || git describe --tags --dirty 2>&- 1>&3) | sed -n -e 's/Revision: //p') 3>&1 | tr -d '\n')
+BUILD_DATE_F=$(date -u +%F)
+DEBEMAIL="parsifal@lix.polytechnique.fr"
+DEBFULLNAME="Parsifal"
+
 AC_CONFIG_FILES([Makefile.include],[chmod a-w Makefile.include])
 AC_CONFIG_FILES([src/config.ml],[chmod a-w src/config.ml])
 AC_CONFIG_FILES([src/ndcore/META],[chmod a-w src/ndcore/META])
 AC_CONFIG_FILES([doc/Makefile],[chmod a-w doc/Makefile])
-AC_CONFIG_FILES([doc/bedwyr.1],[chmod a-w doc/bedwyr.1])
+AC_CONFIG_FILES([man/bedwyr.1],[chmod a-w man/bedwyr.1])
+AC_CONFIG_FILES([debian-files/control],[chmod a-w debian-files/control])
+AC_CONFIG_FILES([debian-files/copyright],[chmod a-w debian-files/copyright])
 
-EXAMPLES_FILES=$($FIND examples -type f '!' -path '*.svn*' \
-                 '!' -name '*~' '!' -name '.*.sw*' '!' -name '*.old' \
-                 -exec echo -n -e ' \\\n\t'"{}" \;)
-BUILD_DATE=$(date -u +%F)
 OCAML_FILES=$(for i in $($FIND src -type f '!' -path '*.svn*' \
               '!' -name '*~' '!' -name '.*.sw*') ; do \
-              bash -c "grep ' $i ' <<<' $ac_config_files ' -qv" && echo -n -e ' \\\n\t'"$i" ; done)
+              bash -c "grep ' $i ' <<<' $ac_config_files ' -qv" && \
+              echo -n -e ' \\\n\t'"$i" ; done)
+VIM_CONTRIB=$($FIND contrib/vim -type f '!' -path '*.svn*' \
+              '!' -name '*~' '!' -name '.*.sw*' \
+              -printf ' \\\n\t%P')
+EXAMPLES_FILES=$($FIND examples -type f '!' -path '*.svn*' \
+                 '!' -name '*~' '!' -name '.*.sw*' '!' -name '*.old' \
+                 -printf ' \\\n\t%p')
+DEBIAN_FILES_IN=$([[ -d debian-files ]] && \
+                  $FIND debian-files -type f '!' -path '*.svn*' \
+                  '!' -name '*~' '!' -name '.*.sw*' \
+                  '!' -name '*.doc-base*' -printf ' \\\n\t%P')
+DOCBASE_FILES=$([[ -d debian-files ]] && \
+                $FIND debian-files -type f '!' -path '*.svn*' \
+                '!' -name '*~' '!' -name '.*.sw*' \
+                -name '*.doc-base*' -printf ' \\\n\t%P')
 
 #
 # Regular ./configure stuff
@@ -253,13 +303,22 @@ AC_SUBST(ARCH_SUFFIXES)
 AC_SUBST(LIB_SUFFIXES)
 AC_SUBST(BIN_SUFFIXES)
 AC_SUBST(BEST_SUFFIX)
-AC_SUBST(REVISION)
 AC_SUBST(OCAML_VERSION)
-AC_SUBST(BUILD_DATE)
+
 AC_SUBST(INSTALL)
 AC_SUBST(INSTALL_DATA)
 AC_SUBST(INSTALL_PROGRAM)
-AC_SUBST(EXAMPLES_FILES)
+
+AC_SUBST(REVISION)
+AC_SUBST(BUILD_DATE_F)
+AC_SUBST(DEBEMAIL)
+AC_SUBST(DEBFULLNAME)
+
+AC_SUBST(ac_config_files)
 AC_SUBST(OCAML_FILES)
+AC_SUBST(VIM_CONTRIB)
+AC_SUBST(EXAMPLES_FILES)
+AC_SUBST(DEBIAN_FILES_IN)
+AC_SUBST(DOCBASE_FILES)
 
 AC_OUTPUT

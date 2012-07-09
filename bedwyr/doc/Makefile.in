@@ -82,12 +82,13 @@ DVI_FILES	= $(TEX_FILES:.tex=.dvi)
 PS_FILES	= $(DVI_FILES:.dvi=.ps)
 PSGZ_FILES	= $(PS_FILES:=.gz)
 PDF_FILES	= $(PS_FILES:.ps=.pdf)
+PDFGZ_FILES	= $(PDF_FILES:=.gz)
 HTML_FILES	= $(QUICKSTART).html $(REFMAN)/index.html
 
 ARCH_FILES	= $(TEX_FILES) $(TEX_INCLUDES) $(BIB_FILES) \
 		  $(PIC_FILES) Makefile.in
 
-TARGETS		= $(PSGZ_FILES) $(PDF_FILES) $(HTML_FILES)
+TARGETS		= $(PSGZ_FILES) $(PDFGZ_FILES) $(HTML_FILES)
 
 ### BUILDING
 
@@ -119,11 +120,11 @@ all: $(TARGETS)
 .dvi.ps:
 	@$(DVIPS) $*
 
-%.gz: %
-	@$(GZIP) -c $< > $@
-
 .ps.pdf:
 	@$(PS2PDF) $<
+
+%.gz: %
+	@$(GZIP) -c $< > $@
 
 # "-fix" enforces the creation of $*.haux even if $*.aux is still present
 # from a previous latex run (while hevea can use both, bibhva cannot)
@@ -145,13 +146,13 @@ all: $(TARGETS)
 
 .PHONY: install
 
-install: install_psgz install_pdf install_html
+install: install_psgz install_pdfgz install_html
 
 install_psgz: $(PSGZ_FILES)
 	@$(INSTALL_DIR) $(PSDIR)
 	@for i in $^ ; do $(INSTALL_DATA) $$i $(PSDIR) ; done
-	
-install_pdf: $(PDF_FILES)
+
+install_pdfgz: $(PDFGZ_FILES)
 	@$(INSTALL_DIR) $(PDFDIR)
 	@for i in $^ ; do $(INSTALL_DATA) $$i $(PDFDIR) ; done
 

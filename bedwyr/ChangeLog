@@ -2,11 +2,13 @@
 =========
   Bedwyr-with-round-tables
 Changes:
-  - partial port of the build system to ocamlbuild
+  - port of the build system (bin and odoc) to ocamlbuild
+  - zipper-based indexing with get-and-set functionality
 New:
   - simple theorems are used to improve tabling
-    - forward chaining for filling
-    - backward chaining for accessing
+    - forward chaining for filling (#saturation, --saturation)
+    - backward chaining for accessing(#freezing, --freezing)
+  - *.deb generation handled by the Makefile
 
 1.3 (2012-02-29)
 ================
@@ -76,7 +78,7 @@ New:
 Features:
   - completed documentation
   - lots of examples
-  - usability enhancements: session management, multiline comments
+  - usability enhancements: session management, single-line comments
   - assertions for testing
   - new representation of nabla variables avoiding raising
   - major bugfixes in tabling
