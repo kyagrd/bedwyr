@@ -114,6 +114,7 @@ let change_pos (p1,_) t (_,p2) = set_pos (p1,p2) t
 
 let free_args pre_term =
   let in_arg accum = function
+    | FreeID (_,"_") -> accum
     | FreeID (_,s) -> s::accum
     | _ -> accum
   in
