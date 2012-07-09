@@ -69,7 +69,7 @@ With the vanilla archive, the single command
 will build bedwyr with default options (no documentation, byte code only).
 You can customize the process with configure options:
   $ autoconf
-  $ ./configure [--enable-doc] [--disable-bytecode] [--enable-nativecode]
+  $ ./configure [--enable-doc] [--disable-bytecode] [--enable-nativecode] [...]
   $ make
 Use the `./configure --help` and `make help` for more details.
 
@@ -85,9 +85,10 @@ and type "#help." for a little help.
 
 See doc/quickstart.(ps.gz|pdf|html) for more information on how to use bedwyr
 and doc/refman/index.html for a complete system description.
-Those files need the "--enable-doc" configure option and are built by the
+Those files need the "--enable-doc" configure option (which add some programs
+-- latex, hevea and Co. -- to the list of dependencies) and are built by the
   $ make doc
-command, which add some dependencies (latex, hevea and Co.).
+command.
 
 
  6. Installation
@@ -96,7 +97,7 @@ command, which add some dependencies (latex, hevea and Co.).
 If for some reason you don't want to use bedwyr fresh out of the tarball,
 and you won't or can't use one of the provided packages,
 you can use the `make install` facility.
-It makes good use of the standard $DESTDIR variable, which is a prefix
+It makes good use of the standard $DESTDIR variable, which is a absolute prefix
 added to all installation paths. You can install all the files in a temporary
 copy of the file hierarchy by typing
   $ make DESTDIR=~/tmpdir install

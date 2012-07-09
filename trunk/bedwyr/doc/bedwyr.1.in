@@ -30,7 +30,7 @@
 \fB\-\-help\fR
 .P
 .B @PACKAGE_TARNAME@
-[ \fIfilename\fR | \fIoption\fR ]
+[ \fIfilename\fR | \fIoption\fR ] *
 .\"
 .\"
 .SH DESCRIPTION
@@ -98,10 +98,11 @@ The predefined types are \fInat\fR, \fIstring\fR and obviously \fIprop\fR.
 \fBType \fIs\fB int -> int.
 .TP
 \fBType \fIblah\fB (int -> prop) -> object.
-No polymorphism is available, but any type (including \fIprop\fR) is allowed.
+No polymorphism is available yet, but all proper types
+(even higher order ones) are allowed.
 
 Apart from \fItrue\fR and \fIfalse\fR,
-there are no actual predefined constants, but some "on-the-fly" constants:
+there are no actual predefined constants, but some runtime-defined constants:
 \fI0\fR, \fI1\fR, ... of type \fBnat\fR and
 any quoted string of type \fBstring\fR.
 .\"
@@ -111,15 +112,17 @@ any quoted string of type \fBstring\fR.
 The header of a definition block gives the declarations of the predicates
 with mandatory type annotations ending with \fBprop\fR.
 
-The body of a block gives discretionary clauses for those predicates
-and no others.
-Here, \fIp1\fB is true on even integers and \fIp2\fB is equal to \fItrue\fR.
+The body of a definition block gives discretionary clauses for those predicates,
+and only those.
+Here, \fIp1\fR is true on even integers and \fIp2\fR is equal to \fItrue\fR.
 .TP
-\fBDefinition \fIp3\fB : object -> nat -> prop by \fIp3 (blah p1) 42\fB.
+\fBDefinition \fIp3\fB : object -> nat -> prop, \fIp4\fB : prop by \fIp3 (blah p1) 42\fB.
+The head of a bodyless clause is always true.
+A predicate without any clauses us always false.
 .\"
 .SS Theorems
 .TP
-\fBTheorem \fImy_theorem\fB : \fIforall Y, body X Y -> p1.\fR
+\fBTheorem \fImy_theorem\fB : \fIforall Y, body X Y -> head X.\fR
 A theorem is a valid Abella theorem with some restrictions on its body
 (neither implication nor universal quantification).
 .\"
@@ -127,16 +130,16 @@ A theorem is a valid Abella theorem with some restrictions on its body
 .SH INTERACTIVE QUERIES
 .TP
 \fB?= \fIform\fB.\fR
-The formula \fIform\fR is solved, meaning that @PACKAGE_NAME@ searchs for
-substitutions of free variables satisfying the formula
-and offers to display them one by one.
+The formula \fIform\fR entered at the prompt is solved,
+meaning that @PACKAGE_NAME@ searchs for substitutions of free variables
+satisfying the formula and offers to display them one by one.
 .TP
 \fB@PACKAGE_TARNAME@\fR -e "\fIform\fB.\fR"
-The same queries can be given on the command-line via the \fB-e\fR option.
+Formulae given via this option are dealt with in the exact same way.
 .\"
 .\"
 .SH META-COMMANDS
-Those can be given in a file and in the interactive toplevel.
+Those can be given both in a file and to the interactive toplevel.
 .TP
 .B #help.
 This command should give a starting point.
@@ -147,9 +150,3 @@ And this one, an ending point.
 .\"
 .SH OUTPUT
 The only non-interactive output is given by \fB#save_table \fIpred\fB "\fInewfile.def\fB".\fR.
-.\"
-.\"
-.SH AUTHOR
-This manual page was written by the following persons:
-.HP
-Quentin Heath <quentin.heath@inria.fr>

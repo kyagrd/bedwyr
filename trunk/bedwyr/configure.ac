@@ -17,7 +17,7 @@
 #  Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA              #
 ##############################################################################
 
-AC_INIT([Bedwyr],[1.3-rc2],[https://gforge.inria.fr/tracker/?atid=1543&group_id=367],[bedwyr],[http://slimmer.gforge.inria.fr/bedwyr/])
+AC_INIT([Bedwyr],[1.4-dev1],[https://gforge.inria.fr/tracker/?atid=1543&group_id=367],[bedwyr],[http://slimmer.gforge.inria.fr/bedwyr/])
 AC_PREREQ(2.60)
 AC_CONFIG_SRCDIR([src/bedwyr.ml])
 AC_PROG_INSTALL
@@ -28,6 +28,15 @@ REVISION=$((((svn info 2>&- || git svn info 2>&-) || git describe --tags --dirty
 # Additional options
 #
 ##############################################################################
+
+AC_MSG_CHECKING(if a Debian package should be built)
+AC_ARG_WITH([deb],
+	([--with-deb],[build deb and debsrc packages]),
+	[AC_MSG_RESULT($with_deb)],
+	[AC_MSG_RESULT(no)])
+if test "$with_deb" = "yes" ; then
+	AC_MSG_ERROR(Not available yet.)
+fi
 
 #
 # Common build stuff
@@ -68,7 +77,7 @@ fi
 #
 ##############################################################################
 
-AC_MSG_CHECKING(if the documentation should be build)
+AC_MSG_CHECKING(if the documentation should be built)
 AC_ARG_ENABLE([doc],
 	AC_HELP_STRING([--enable-doc],[build the complete documentation]),
 	[AC_MSG_RESULT($enable_doc)],

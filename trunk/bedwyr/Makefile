@@ -36,10 +36,6 @@ TEST_EXAMPLES	= list.def internal/scoping.def internal/checks.def \
 		  tictactoe.def \
 		  pi/pi_trace.def pi/corr-assert.def pi/pi_modal.def \
 		  pi/pi_asserts.def
-MANUAL		= manual-1.4
-PS_FILES	= $(MANUAL:%=doc/%).ps.gz
-PDF_FILES	= $(MANUAL:%=doc/%).pdf
-HTML_FILES	= $(MANUAL:%=doc/%).html
 
 ## ?? ##
 
@@ -60,7 +56,8 @@ BEDWYR_ARCH	= $(addprefix $(DIST_NAME).,$(ARCH_SUFFIXES))
 # Released files
 
 NDCORE_LIBS	= $(addprefix $(ndcore_dir)/ndcore.,$(LIB_SUFFIXES))
-NDCORE_MODULES	= $(basename $(wildcard $(ndcore_dir)/*.ml))
+NDCORE_MLS	= $(filter-out $(ndcore_dir)/test.ml,$(wildcard $(ndcore_dir)/*.ml))
+NDCORE_MODULES	= $(basename $(NDCORE_MLS))
 NDCORE_CMIS	= $(addsuffix .cmi,$(NDCORE_MODULES))
 NDCORE_LIB_FLS	= $(NDCORE_LIBS) $(ndcore_dir)/META $(NDCORE_CMIS)
 BEDWYR_BINS	= $(addprefix $(bedwyr_prefix).,$(BIN_SUFFIXES))
@@ -78,14 +75,13 @@ endif
 MANPAGES	= $(MAN_FILES:.in=.gz)
 
 DIST_FILES	= $(BUILT_FILES) \
-		  $(NDCORE_LIB_FLS) $(BEDWYR_FILES) \
+		  $(NDCORE_FILES) $(BEDWYR_FILES) \
 		  $(MANPAGES) $(CONTRIB_FILES) $(EXAMPLES_FILES) \
 		  $(NDCORE_ODOCS) $(BEDWYR_ODOCS_DIR)/index.html
 
 ### BUILDING
 
 build: $(BUILT_FILES) bedwyr
-	@echo  $(BUILT_FILES)
 
 $(BEDWYR_BINS): src/config.ml
 
@@ -219,7 +215,7 @@ src.odocl:
 	  sed -e "s|^|src/$$i/|" src/$$i/$$i.mllib ; \
 	  done >> $@
 
-bedwyr_refman:
+bedwyr_refman: doc/Makefile
 	@make -C doc
 
 ### INSTALL
@@ -268,13 +264,14 @@ install_bedwyr_contrib:
 	@$(INSTALL_DIR) $(DATADIR)
 	@for i in $(CONTRIB_FILES) ; do \
 	  $(INSTALL_DATA) -D $$i $(DATADIR)/$$i ; done
+	@$(INSTALL_DIR) $(VIMFILES)
 	@for i in $(VIM_CONTRIB) ; do \
 	  $(INSTALL_DATA) -D contrib/vim/$$i $(VIMFILES)/$$i ; done
 
 install_bedwyr_examples:
-	@$(INSTALL_DIR) $(DATAROOTDIR)/$(TARGET_NAME)
+	@$(INSTALL_DIR) $(DATADIR)
 	@for i in $(EXAMPLES_FILES) ; do \
-	  $(INSTALL_DATA) -D $$i $(DATAROOTDIR)/$(TARGET_NAME)/$$i ; done
+	  $(INSTALL_DATA) -D $$i $(DATADIR)/$$i ; done
 
 install_bedwyr_doc: install_bedwyr_odocs install_bedwyr_refman
 
@@ -283,7 +280,7 @@ install_bedwyr_odocs: $(BEDWYR_ODOCS_DIR)/index.html
 	@$(INSTALL_DATA) _build/$(BEDWYR_ODOCS_DIR)/*.html \
 	  _build/$(BEDWYR_ODOCS_DIR)/style.css $(DOCDIR)/libref
 
-install_bedwyr_refman:
+install_bedwyr_refman: doc/Makefile
 	@make -C doc install
 
 ### ARCHIVES
