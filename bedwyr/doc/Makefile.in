@@ -89,7 +89,6 @@ ARCH_FILES	= $(TEX_FILES) $(TEX_INCLUDES) $(BIB_FILES) \
 
 TARGETS		= $(PSGZ_FILES) $(PDF_FILES) $(HTML_FILES)
 
-
 ### BUILDING
 
 all: $(TARGETS)
@@ -164,7 +163,7 @@ install_html_quickstart: $(QUICKSTART).html
 
 install_html_refman: $(REFMAN)/index.html
 	@$(INSTALL_DIR) $(HTMLDIR)/$(REFMAN)
-	@for i in $(wildcard $(REFMAN)/*) ; do\
+	@for i in $(REFMAN)/* ; do\
 	  $(INSTALL_DATA) $$i $(HTMLDIR)/$(REFMAN) ; done
 
 ### ARCHIVES
