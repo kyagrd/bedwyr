@@ -12,4 +12,4 @@ override_dh_auto_configure:
 	dh_auto_configure -- --no-create --enable-doc --enable-nativecode
 
 override_dh_installchangelogs:
-	dh_installchangelogs -X ChangeLog
+	dh_installchangelogs -k

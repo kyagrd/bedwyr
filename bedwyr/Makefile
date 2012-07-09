@@ -58,7 +58,9 @@ BEDWYR_ARCH	= $(addprefix $(DIST_NAME).,$(ARCH_SUFFIXES))
 NDCORE_LIBS	= $(addprefix $(ndcore_dir)/ndcore.,$(LIB_SUFFIXES))
 NDCORE_MLS	= $(filter-out $(ndcore_dir)/test.ml,$(wildcard $(ndcore_dir)/*.ml))
 NDCORE_MODULES	= $(basename $(NDCORE_MLS))
-NDCORE_CMIS	= $(addsuffix .cmi,$(NDCORE_MODULES))
+ifneq ($(BEST_SUFFIX),)
+  NDCORE_CMIS	= $(addsuffix .cmi,$(NDCORE_MODULES))
+endif
 NDCORE_LIB_FLS	= $(NDCORE_LIBS) $(ndcore_dir)/META $(NDCORE_CMIS)
 BEDWYR_BINS	= $(addprefix $(bedwyr_prefix).,$(BIN_SUFFIXES))
 ifeq ($(TARGET),ndcore)
@@ -110,6 +112,11 @@ $(BEDWYR_BINS): src/config.ml
 
 %.odoc:
 	@$(OCAMLBUILD) $@
+
+%.exe:
+	@$(OCAMLBUILD) -just-plugin
+	@$(OCAMLBUILD) -ocamlopt $(MINGW32_OCAMLOPT) $*.native
+	@mv -vi _build/$*.native _build/$*.exe
 
 %:: config.status %.in
 	@./$< $@
@@ -307,8 +314,7 @@ install_bedwyr_refman: doc/Makefile
 .SUFFIXES: .tar .tbz .tgz
 #.PHONY: dist $(ndcore_dir)/ndcore.tar src/bedwyr.tar doc/manual.tar dist.tar
 
-# TODO add the ebuild/deb generation here
-dist: archive
+dist: archive deb
 
 archive: $(BEDWYR_ARCH)
 
@@ -361,15 +367,14 @@ help:
 	@echo
 	@echo '   check out "./configure --help" for more reading'
 	@echo
-	@echo ' build (default)'
-	@echo ' test           runs all sorts of tests'
+	@echo ' build          default: build "bedwyr.($(BIN_SUFFIXES))"'
+	@echo ' test           run all sorts of tests'
 	@echo ' doc            build all sorts of doc'
-	@echo ' install        install files wrt to $$DESTDIR'
+	@echo ' install        install files wrt to $$DESTDIR and'
 	@echo '                the parameters given to ./configure'
 	@echo
 	@echo ' dist           build archives and packages'
-	@echo ' archive        build archives "$(DIST_NAME).*"'
-	@echo '                ($(ARCH_SUFFIXES))'
+	@echo ' archive        build archives "$(DIST_NAME).($(ARCH_SUFFIXES))'
 	@echo
 	@echo ' help           display this message'
 	@echo ' mostlyclean    remove compiled files'

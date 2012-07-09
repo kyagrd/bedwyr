@@ -17,7 +17,7 @@
 #  Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA              #
 ##############################################################################
 
-AC_INIT([Bedwyr],[1.4-dev1],[https://gforge.inria.fr/tracker/?atid=1543&group_id=367],[bedwyr],[http://slimmer.gforge.inria.fr/bedwyr/])
+AC_INIT([Bedwyr],[1.4-alpha1],[https://gforge.inria.fr/tracker/?atid=1543&group_id=367],[bedwyr],[http://slimmer.gforge.inria.fr/bedwyr/])
 AC_PREREQ(2.60)
 AC_CONFIG_SRCDIR([src/bedwyr.ml])
 
@@ -165,29 +165,9 @@ if test "$enable_doc" = "yes" ; then
 fi
 
 #
-# OCaml stuff (only $OCAMLBUILD and $OCAMLDEBUG is actually used)
+# OCaml stuff (only $OCAMLBUILD and $OCAMLDEBUG are actually used)
 #
 ##############################################################################
-
-AC_PATH_PROGS(OCAMLDEP,ocamldep.opt ocamldep,no)
-if test "$OCAMLDEP" = no ; then
-	AC_MSG_ERROR(Cannot find ocamldep.)
-fi
-
-AC_PATH_PROGS(OCAMLLEX,ocamllex.opt ocamllex,no)
-if test "$OCAMLLEX" = no ; then
-	AC_MSG_ERROR(Cannot find ocamllex.)
-fi
-
-AC_PATH_PROGS(OCAMLYACC,ocamlyacc.opt ocamlyacc,no)
-if test "$OCAMLYACC" = no ; then
-	AC_MSG_ERROR(Cannot find ocamlyacc.)
-fi
-
-AC_PATH_PROGS(OCAMLBUILD,ocamlbuild.opt ocamlbuild.native ocamlbuild ocamlbuild.byte,no)
-if test "$OCAMLBUILD" = no ; then
-	AC_MSG_ERROR(Cannot find ocamlbuild.)
-fi
 
 AC_MSG_CHECKING(if debugging information should be added)
 AC_ARG_ENABLE([debug],
@@ -195,11 +175,6 @@ AC_ARG_ENABLE([debug],
 	[AC_MSG_RESULT($enable_debug)],
 	[AC_MSG_RESULT(no)])
 if test "$enable_debug" = "yes" ; then
-	AC_PATH_PROGS(OCAMLDEBUG,ocamldebug.opt ocamldebug,no)
-	if test "$OCAMLDEBUG" = no ; then
-		AC_MSG_ERROR(Cannot find ocamldebug.)
-	fi
-
 	BYTE_SUFFIX="d.byte"
 	NATIVE_SUFFIX="p.native"
 	BYTE_LIBS="d.cma"
@@ -211,47 +186,79 @@ else
 	NATIVE_LIBS="a cmxa"
 fi
 
-AC_MSG_CHECKING(if native code should be generated)
-AC_ARG_ENABLE([nativecode],
-	AC_HELP_STRING([--enable-nativecode],[output native code]),
-	[AC_MSG_RESULT($enable_nativecode)],
-	[AC_MSG_RESULT(no)])
 AC_MSG_CHECKING(if bytecode should be generated)
 AC_ARG_ENABLE([bytecode],
 	AC_HELP_STRING([--enable-bytecode],[output bytecode (default)]),
 	[AC_MSG_RESULT($enable_bytecode)],
 	[AC_MSG_RESULT(yes)])
+if test "$enable_bytecode" != "no" ; then
+	AC_PATH_PROGS(OCAMLC,ocamlc.opt ocamlc,no)
+	if test "$OCAMLC" = no ; then
+		AC_MSG_ERROR(Cannot find a bytecode compiler.)
+	fi
+	LIB_SUFFIXES="$LIB_SUFFIXES $BYTE_LIBS"
+	BIN_SUFFIXES="$BIN_SUFFIXES $BYTE_SUFFIX"
+	BEST_SUFFIX="$BYTE_SUFFIX"
+	OCAML_VERSION=$("$OCAMLC" -version)
+fi
+
+AC_MSG_CHECKING(if native code should be generated)
+AC_ARG_ENABLE([nativecode],
+	AC_HELP_STRING([--enable-nativecode],[output native code]),
+	[AC_MSG_RESULT($enable_nativecode)],
+	[AC_MSG_RESULT(no)])
 if test "$enable_nativecode" = "yes" ; then
 	AC_PATH_PROGS(OCAMLOPT,ocamlopt.opt ocamlopt,no)
 	if test "$OCAMLOPT" = no ; then
 		AC_MSG_ERROR(Cannot find a native code compiler.)
 	fi
-
-	if test "$enable_bytecode" = "no" ; then
-		LIB_SUFFIXES="$NATIVE_LIBS"
-		BIN_SUFFIXES="$NATIVE_SUFFIX"
-	else
-		AC_PATH_PROGS(OCAMLC,ocamlc.opt ocamlc,no)
-		if test "$OCAMLC" = no ; then
-			AC_MSG_ERROR(Cannot find a bytecode compiler.)
-		fi
-		LIB_SUFFIXES="$BYTE_LIBS $NATIVE_LIBS"
-		BIN_SUFFIXES="$BYTE_SUFFIX $NATIVE_SUFFIX"
-	fi
+	LIB_SUFFIXES="$LIB_SUFFIXES $NATIVE_LIBS"
+	BIN_SUFFIXES="$BIN_SUFFIXES $NATIVE_SUFFIX"
 	BEST_SUFFIX="$NATIVE_SUFFIX"
 	OCAML_VERSION=$("$OCAMLOPT" -version)
+fi
+
+AC_MSG_CHECKING(if native win32 code should be generated)
+AC_ARG_ENABLE([win32],
+	AC_HELP_STRING([--enable-win32],[output native win32 code]),
+	[AC_MSG_RESULT($enable_win32)],
+	[AC_MSG_RESULT(no)])
+if test "$enable_win32" = "yes" ; then
+	AC_PATH_PROGS(MINGW32_OCAMLOPT,i586-mingw32msvc-ocamlopt,no)
+	if test "$MINGW32_OCAMLOPT" = no ; then
+		AC_MSG_ERROR(Cannot find a native win32 code compiler. Install mingw32-ocaml.)
+	fi
+	BIN_SUFFIXES="$BIN_SUFFIXES exe"
+fi
+
+if test "$BIN_SUFFIXES" = "" ; then
+	AC_MSG_WARN(You may want to enable at least one type of compilation.)
 else
-	if test "$enable_bytecode" = "no" ; then
-		AC_MSG_WARN(You should enable at least native or bytecode compilation.)
-	else
-		AC_PATH_PROGS(OCAMLC,ocamlc.opt ocamlc,no)
-		if test "$OCAMLC" = no ; then
-			AC_MSG_ERROR(Cannot find a bytecode compiler.)
+	if test "$enable_debug" = "yes" ; then
+		AC_PATH_PROGS(OCAMLDEBUG,ocamldebug.opt ocamldebug,no)
+		if test "$OCAMLDEBUG" = no ; then
+			AC_MSG_ERROR(Cannot find ocamldebug.)
 		fi
-		LIB_SUFFIXES="$BYTE_LIBS"
-		BIN_SUFFIXES="$BYTE_SUFFIX"
-		BEST_SUFFIX="$BYTE_SUFFIX"
-		OCAML_VERSION=$("$OCAMLC" -version)
+	fi
+
+	AC_PATH_PROGS(OCAMLDEP,ocamldep.opt ocamldep,no)
+	if test "$OCAMLDEP" = no ; then
+		AC_MSG_ERROR(Cannot find ocamldep.)
+	fi
+
+	AC_PATH_PROGS(OCAMLLEX,ocamllex.opt ocamllex,no)
+	if test "$OCAMLLEX" = no ; then
+		AC_MSG_ERROR(Cannot find ocamllex.)
+	fi
+
+	AC_PATH_PROGS(OCAMLYACC,ocamlyacc.opt ocamlyacc,no)
+	if test "$OCAMLYACC" = no ; then
+		AC_MSG_ERROR(Cannot find ocamlyacc.)
+	fi
+
+	AC_PATH_PROGS(OCAMLBUILD,ocamlbuild.opt ocamlbuild.native ocamlbuild ocamlbuild.byte,no)
+	if test "$OCAMLBUILD" = no ; then
+		AC_MSG_ERROR(Cannot find ocamlbuild.)
 	fi
 fi
 
