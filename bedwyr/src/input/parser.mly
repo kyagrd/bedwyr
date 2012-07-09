@@ -27,25 +27,35 @@
 
 %}
 
-%token SIG MODULE ACCUMSIG ACCUM END
-%token KIND TYPE COMMA RARROW CLAUSEEQ DOT
-%token IMP BSLASH LPAREN RPAREN CONS
-%token KKIND TTYPE DEFINE INDUCTIVE COINDUCTIVE COLON BY DEFEQ SEMICOLON
-%token THEOREM
-%token PROP STRING NAT EQ AND OR FORALL EXISTS NABLA TRUE FALSE
-%token CLOSE QED QUERY IMPORT SPECIFICATION SSPLIT
-%token SET SHOW QUIT
-%token IND COIND INTROS CASE SEARCH APPLY BACKCHAIN UNFOLD ASSERT_T
-%token SPLIT SPLITSTAR LEFT RIGHT PERMUTE
-%token INST CUT MONOTONE
-%token UNDO SKIP ABORT CLEAR ABBREV UNABBREV
-%token TO WITH ON AS KEEP
-%token LBRACK RBRACK TURN STAR AT PLUS HASH
+/* Punctuation */
+%token COLON DEFEQ SEMICOLON COMMA DOT LPAREN RPAREN
+
+/* Bedwyr meta-commands */
 %token EXIT HELP INCLUDE RESET RELOAD SESSION
 %token DEBUG TIME EQUIVARIANT FREEZING SATURATION
 %token ENV TYPEOF SHOW_TABLE CLEAR_TABLES CLEAR_TABLE SAVE_TABLE
 %token ASSERT ASSERT_NOT ASSERT_RAISE
+/* Bedwyr keywords */
+%token KKIND TTYPE DEFINE THEOREM
+%token INDUCTIVE COINDUCTIVE BY
 %token UNDERSCORE
+/* Bedwyr primitives */
+%token TYPE PROP STRING NAT FORALL EXISTS NABLA TRUE FALSE
+%token RARROW EQ AND OR BSLASH
+
+/* Abella keywords, including tactics, apart from "exists" */
+%token CLOSE QED QUERY IMPORT SPECIFICATION SSPLIT SET SHOW QUIT
+%token TO WITH ON AS KEEP
+%token IND_T COIND_T INTROS_T CASE_T SEARCH_T APPLY_T BACKCHAIN_T UNFOLD_T
+%token ASSERT_T SPLIT_T SPLITSTAR_T LEFT_T RIGHT_T PERMUTE_T INST_T CUT_T
+%token MONOTONE_T UNDO_T SKIP_T ABORT_T CLEAR_T ABBREV_T UNABBREV_T
+/* Abella primitives */
+%token TURN LBRACK RBRACK
+
+/* Teyjus keywords */
+%token SIG MODULE ACCUMSIG ACCUM END KIND
+/* Teyjus primitives */
+%token CLAUSEEQ IMP CONS
 
 %token <int> NUM
 %token <string> UPPER_ID LOWER_ID INFIX_ID INTERN_ID
@@ -227,29 +237,28 @@ upper_id:
 
 lower_id:
   | LOWER_ID                            { $1 }
-  | IND                                 { "induction" }
-  | COIND                               { "coinduction" }
-  | INTROS                              { "intros" }
-  | CASE                                { "case" }
-  | SEARCH                              { "search" }
-  | APPLY                               { "apply" }
-  | BACKCHAIN                           { "backchain" }
-  | UNFOLD                              { "unfold" }
+  | IND_T                               { "induction" }
+  | COIND_T                             { "coinduction" }
+  | INTROS_T                            { "intros" }
+  | CASE_T                              { "case" }
+  | SEARCH_T                            { "search" }
+  | APPLY_T                             { "apply" }
+  | BACKCHAIN_T                         { "backchain" }
+  | UNFOLD_T                            { "unfold" }
   | ASSERT_T                            { "assert" }
-  | SPLIT                               { "split" }
-  | SPLITSTAR                           { "split*" }
-  | LEFT                                { "left" }
-  | RIGHT                               { "right" }
-  | PERMUTE                             { "permute" }
-  | INST                                { "inst" }
-  | CUT                                 { "cut" }
-  | MONOTONE                            { "monotone" }
-  | UNDO                                { "undo" }
-  | SKIP                                { "skip" }
-  | ABORT                               { "abort" }
-  | CLEAR                               { "clear" }
-  | ABBREV                              { "abbrev" }
-  | UNABBREV                            { "unabbrev" }
+  | SPLIT_T                             { "split" }
+  | LEFT_T                              { "left" }
+  | RIGHT_T                             { "right" }
+  | PERMUTE_T                           { "permute" }
+  | INST_T                              { "inst" }
+  | CUT_T                               { "cut" }
+  | MONOTONE_T                          { "monotone" }
+  | UNDO_T                              { "undo" }
+  | SKIP_T                              { "skip" }
+  | ABORT_T                             { "abort" }
+  | CLEAR_T                             { "clear" }
+  | ABBREV_T                            { "abbrev" }
+  | UNABBREV_T                          { "unabbrev" }
 
 /* shortcuts for other id types */
 bound_id:
