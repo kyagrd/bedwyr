@@ -308,15 +308,13 @@ let restore_namespace s = symbols := s
 (* Get the unique variable attached to that name, preserving sharing.
  * The variable is created if it does not exist. *)
 let get_var_by_name ~tag ~ts ~lts name =
-  try
-    NS.find name !symbols
-  with
-    | Not_found ->
-        assert (name <> "") ;
-        let lts = 0 in
-        let t = fresh tag ~ts ~lts ~name in
-        symbols := NS.add name t !symbols ;
-        t
+  try NS.find name !symbols
+  with Not_found ->
+    assert (name <> "") ;
+    let lts = 0 in
+    let t = fresh tag ~ts ~lts ~name in
+    symbols := NS.add name t !symbols ;
+    t
 
 (* Same as [get_var_by_name] but infers the tag from the name and sets both
  * levels to 0. *)
@@ -330,32 +328,42 @@ let atom ?tag name =
         end
   in
   if name = "_"
-  then fresh ~name:"_" Logic ~ts:0 ~lts:0
+  then fresh Logic ~ts:0 ~lts:0
   else get_var_by_name ~ts:0 ~lts:0 ~tag name
 
-(* @return the naming hint attached to the variable
- * @raise Not_found if no hint is found
- * (should not happen for a variable defined by the parser) *)
-let get_var_name v = Hint.find v
+(* @return the naming hint attached to the variable,
+ * or a default hint if there is none *)
+let get_var_name v =
+  try Hint.find v
+  with Not_found -> "_"
 
 (* @return the naming hint attached to the variable,
  * or a default hint if there is none *)
 let get_hint v =
-  let v = get_var v in
-  try
-    Hint.find v
-  with
-    | Not_found ->
-        begin match v.tag with
-          | Logic -> "H"
-          | Eigen -> "h"
-          | Constant -> "c"
-        end
+  try Hint.find v
+  with Not_found ->
+    begin match v.tag with
+      | Logic -> "H"
+      | Eigen -> "h"
+      | Constant -> "c"
+    end
+
+(* @return the name of the variable,
+ * or a naming hint attached to it *)
+let get_var_unique_name v =
+  let prefix = get_hint v in
+  let rec lookup suffix =
+    let name = if suffix < 0 then prefix else prefix ^ string_of_int suffix in
+    if NS.mem name !symbols
+    then lookup (suffix+1)
+    else name
+  in
+  lookup (-1)
 
 (* Find an unique name for [v] (based on a naming hint if there is one)
  * and registers it in the symbols table. *)
-let get_name var =
-  let var = deref var in
+let get_name t =
+  let t = deref t in
   let existing_name =
     NS.fold
       (fun key value x ->
@@ -366,26 +374,17 @@ let get_name var =
           * the initial value representing Y would be [eq] to 1,
           * and could thus take the name 1, depending on the order in which the
           * table is traversed. *)
-         if value = var then Some key else x)
+         if value = t then Some key else x)
       !symbols
       None
   in
   match existing_name with
     | Some n -> n
     | None ->
-        let prefix = get_hint var in
-        let rec lookup suffix =
-          let name =
-            if suffix < 0 then prefix else prefix ^ string_of_int suffix
-          in
-          if NS.mem name !symbols then
-            lookup (suffix+1)
-          else begin
-            symbols := NS.add name var !symbols ;
-            name
-          end
-        in
-        lookup (-1)
+        let v = get_var t in
+        let name = get_var_unique_name v in
+        symbols := NS.add name t !symbols ;
+        name
 
 let dummy = let n = -1 in Ptr(ref(V { id=n;ts=n;lts=n;tag=Constant }))
 

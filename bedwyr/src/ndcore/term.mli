@@ -154,14 +154,8 @@ val restore_namespace : namespace -> unit
 (* XXX do we still infer the tag or not? *)
 val atom : ?tag:tag -> string -> term
 
-(** @return the naming hint attached to the variable
-  * @raise Not_found if no hint is found
-  * (should not happen for a variable defined by the parser) *)
+(** @return a generic name for the variable (neither unique nor real) *)
 val get_var_name : var -> string
-
-(** @return the naming hint attached to the variable,
-  * or a default hint if there is none *)
-val get_hint : term -> string
 
 (** Find an unique name for [v] (based on a naming hint if there is one)
   * and registers it in the symbols table. *)
