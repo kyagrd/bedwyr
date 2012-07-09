@@ -106,17 +106,17 @@ type command =
   | Saturation of int
   (** [#saturation 42.] set the saturation pressure to a non-negative value or -1 (default 0) *)
   | Env
-  (** [#env.] call {!Input.print_env} *)
+  (** [#env.] call {!System.print_env} *)
   | Type_of of preterm
-  (** [#type_of.] call {!Input.print_type_of} *)
+  (** [#type_of.] call {!System.print_type_of} *)
   | Show_table of pos * string
-  (** [#show_table.] call {!Input.show_table} *)
+  (** [#show_table.] call {!System.show_table} *)
   | Clear_tables
-  (** [#clear_tables.] call {!Input.clear_tables} *)
+  (** [#clear_tables.] call {!System.clear_tables} *)
   | Clear_table of pos * string
-  (** [#clear_table.] call {!Input.clear_table} *)
+  (** [#clear_table.] call {!System.clear_table} *)
   | Save_table of pos * string * string
-  (** [#save_table.] call {!Input.save_table} *)
+  (** [#save_table.] call {!System.save_table} *)
   | Assert of preterm
   (** [#assert.] check whether a query succeeds *)
   | Assert_not of preterm

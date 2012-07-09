@@ -1,0 +1,155 @@
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.\"  Bedwyr prover                                                             "
+.\"  Copyright (C) 2012 Quentin Heath                                          "
+.\"                                                                            "
+.\"  This program is free software; you can redistribute it and/or modify      "
+.\"  it under the terms of the GNU General Public License as published by      "
+.\"  the Free Software Foundation; either version 2 of the License, or         "
+.\"  (at your option) any later version.                                       "
+.\"                                                                            "
+.\"  This program is distributed in the hope that it will be useful,           "
+.\"  but WITHOUT ANY WARRANTY; without even the implied warranty of            "
+.\"  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the             "
+.\"  GNU General Public License for more details.                              "
+.\"                                                                            "
+.\"  You should have received a copy of the GNU General Public License         "
+.\"  along with this code; if not, write to the Free Software Foundation,      "
+.\"  Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA              "
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.\"
+.\" @configure_input@
+.\"
+.TH @PACKAGE_TARNAME@ 1 2012/06/27 "@PACKAGE_NAME@ v@PACKAGE_VERSION@" "Slimmer project"
+.\"
+.SH NAME
+@PACKAGE_TARNAME@ \- The not\-so\-sound logician
+.\"
+.\"
+.SH SYNOPSIS
+.B @PACKAGE_TARNAME@
+\fB\-\-help\fR
+.P
+.B @PACKAGE_TARNAME@
+[ \fIfilename\fR | \fIoption\fR ]
+.\"
+.\"
+.SH DESCRIPTION
+@PACKAGE_NAME@ is a theorem prover for the Level\-0/1 fragment of the Linc logic.
+.P
+It is based on Alwen Tiu's Level\-0/1, and Nadathur & Linell's LLambda
+library, both written in SML. The OCaml translation has been done by
+Baelde & Ziegler and further development by Baelde & Gacek. It is
+currently under work by Heath. The system also benefited from the wisdom
+of Miller, Nadathur and Pientka.
+.P
+For background on the system, see "Mixing Finite Success and Finite Failure
+in an Automated Prover" (Alwen Tiu and Gopalan Nadathur and Dale Miller):
+.B http://www.lix.polytechnique.fr/Labo/Dale.Miller/papers/eshol05sub.pdf
+.P
+Webpage:
+.B http://slimmer.gforge.inria.fr/bedwyr/
+.\"
+.\"
+.SH OPTIONS
+.TP
+.B \-I
+Do not enter interactive mode.
+.TP
+.B \-t
+Run tests in definition files.
+Those are the queries given by \fB#assert\fR\fI ...\fR\fB.\fR.
+.TP
+\fB\-e\fR \fIquery\fR
+Execute \fIquery\fR.
+Such queries are executed in the order they are given on the command-line,
+after all the input files a read but before entering the interactive loop.
+.TP
+\fB\-\-freezing\fR \fIn\fR
+Enable backward chaining and set its limit (the so-called
+\fIfreezing point\fR) to \fIn\fR.
+Setting the freezing point to 0 (the default value) disables backward chaining,
+setting it to -1 allows infinite chaining (usually not a smart idea).
+The value 1 should be a good compromise.
+.TP
+\fB\-\-saturation\fR \fIn\fR
+Enable forward chaining and set its limit (the so-called
+\fIsaturation point\fR) to \fIn\fR.
+Setting the saturation point to 0 (the default value) disables forward chaining,
+setting it to -1 allows infinite chaining and therefore actual saturation
+of the table wrt the theorem.
+.TP
+\fB\-help\fR, \fB\-\-help\fR
+The usual OCaml Arg module option.
+.\"
+.\"
+.SH INPUT FILES
+.\"
+.SS Type declaration
+.TP
+\fBKind \fIint,object\fB type.
+This is the only kind of types allowed for now.
+
+The predefined types are \fInat\fR, \fIstring\fR and obviously \fIprop\fR.
+.\"
+.SS Constant declaration
+.TP
+\fBType \fIz\fB int.
+.TP
+\fBType \fIs\fB int -> int.
+.TP
+\fBType \fIblah\fB (int -> prop) -> object.
+No polymorphism is available, but any type (including \fIprop\fR) is allowed.
+
+Apart from \fItrue\fR and \fIfalse\fR,
+there are no actual predefined constants, but some "on-the-fly" constants:
+\fI0\fR, \fI1\fR, ... of type \fBnat\fR and
+any quoted string of type \fBstring\fR.
+.\"
+.SS Predicate declaration and definition
+.TP
+\fBDefinition \fIp1\fB : int -> prop, \fIp2\fB : prop by \fIp1 (s (s N)) := p1 N\fB ; \fIp2\fB ; \fIp1 z\fB.
+The header of a definition block gives the declarations of the predicates
+with mandatory type annotations ending with \fBprop\fR.
+
+The body of a block gives discretionary clauses for those predicates
+and no others.
+Here, \fIp1\fB is true on even integers and \fIp2\fB is equal to \fItrue\fR.
+.TP
+\fBDefinition \fIp3\fB : object -> nat -> prop by \fIp3 (blah p1) 42\fB.
+.\"
+.SS Theorems
+.TP
+\fBTheorem \fImy_theorem\fB : \fIforall Y, body X Y -> p1.\fR
+A theorem is a valid Abella theorem with some restrictions on its body
+(neither implication nor universal quantification).
+.\"
+.\"
+.SH INTERACTIVE QUERIES
+.TP
+\fB?= \fIform\fB.\fR
+The formula \fIform\fR is solved, meaning that @PACKAGE_NAME@ searchs for
+substitutions of free variables satisfying the formula
+and offers to display them one by one.
+.TP
+\fB@PACKAGE_TARNAME@\fR -e "\fIform\fB.\fR"
+The same queries can be given on the command-line via the \fB-e\fR option.
+.\"
+.\"
+.SH META-COMMANDS
+Those can be given in a file and in the interactive toplevel.
+.TP
+.B #help.
+This command should give a starting point.
+.TP
+.B #exit.
+And this one, an ending point.
+.\"
+.\"
+.SH OUTPUT
+The only non-interactive output is given by \fB#save_table \fIpred\fB "\fInewfile.def\fB".\fR.
+.\"
+.\"
+.SH AUTHOR
+This manual page was written by the following persons:
+.HP
+Quentin Heath <quentin.heath@inria.fr>

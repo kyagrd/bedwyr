@@ -32,17 +32,27 @@ For a little help, type \"#help.\"
 "
     Config.package_name
     Config.package_version
-    (if Config.build="" then ""
+    (if Config.build=Config.package_version || Config.build="" then ""
      else " (revision " ^ Config.build ^ ")")
 
-
+(* TODO split into usage_msg and info_msg,
+ * add support, both external (Abella version supported, etc)
+ * and internal (oUnit version, ndcore version, etc). *)
 let usage_msg =
-  Config.package_name ^ " prover.
+  Printf.sprintf
+    "%s prover version %s (%s).
+Built with OCaml %s on the %s.
 This software is under GNU Public License.
 Copyright (c) 2005-2012 Slimmer project.
 
 Usage: bedwyr [filename | option]*
 "
+    Config.package_name
+    Config.package_version
+    (if Config.build="" then "unknown revision"
+     else "revision " ^ Config.build ^ "")
+    Config.ocaml_version
+    Config.build_date
 
 let help_msg =
   "Useful commands in query mode:
@@ -70,15 +80,19 @@ let queries     = ref []
 let inclfiles   = ref []
 
 let _ =
-  Arg.parse [
-      "-I", Arg.Clear interactive,
-      "Do not enter interactive mode." ;
-
-      "-t", Arg.Set test, "Run tests in definition files." ;
-
-      "-e", Arg.String (fun s -> queries := s::!queries),
-      "Execute query."
-    ]
+  Arg.parse
+    (Arg.align
+       [ "-I", Arg.Clear interactive,
+           " Do not enter interactive mode" ;
+         "-t", Arg.Set test,
+           " Run tests in definition files" ;
+         "-e", Arg.String (fun s -> queries := s::!queries),
+           "<s> Execute query" ;
+         "--freezing", Arg.Set_int Prover.freezing_point,
+           "<n> Enable backward chaining and set its limit" ;
+         "--saturation", Arg.Set_int Prover.saturation_pressure,
+           "<n> Enable forward chaining and set its limit"
+       ])
     (fun f -> session := f::!session)
     usage_msg ;
   session := List.rev (!session)

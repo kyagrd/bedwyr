@@ -1,0 +1,114 @@
+##############################################################################
+#  Bedwyr prover                                                             #
+#  Copyright (C) 2012 Quentin Heath                                          #
+#                                                                            #
+#  This program is free software; you can redistribute it and/or modify      #
+#  it under the terms of the GNU General Public License as published by      #
+#  the Free Software Foundation; either version 2 of the License, or         #
+#  (at your option) any later version.                                       #
+#                                                                            #
+#  This program is distributed in the hope that it will be useful,           #
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of            #
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the             #
+#  GNU General Public License for more details.                              #
+#                                                                            #
+#  You should have received a copy of the GNU General Public License         #
+#  along with this code; if not, write to the Free Software Foundation,      #
+#  Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA              #
+##############################################################################
+
+# @configure_input@
+#
+# dynamic part of Makefile
+
+### DEFINITIONS
+
+PACKAGE_TARNAME	= @PACKAGE_TARNAME@
+PACKAGE_VERSION	= @PACKAGE_VERSION@
+DIST_NAME      	= $(PACKAGE_TARNAME)-$(PACKAGE_VERSION)
+# $(TARGET_NAME) is needed since we have one project/tarball
+# but several programs/packages
+ifeq ($(TARGET),)
+  TARGET_NAME	= $(PACKAGE_TARNAME)
+else
+  TARGET_NAME	= $(TARGET)
+endif
+ARCH_SUFFIXES	= @ARCH_SUFFIXES@
+LIB_SUFFIXES	= @LIB_SUFFIXES@
+BIN_SUFFIXES	= @BIN_SUFFIXES@
+BEST_SUFFIX	= @BEST_SUFFIX@
+
+SHELL		= @BASH@
+TAR		= @TAR@ -p
+FIND		= @FIND@
+GZIP		= @GZIP@ -4 -f
+BZIP2		= @BZIP2@ -9 -f
+OCAMLBUILD	= @OCAMLBUILD@ -classic-display
+OCAMLDEBUG	= @OCAMLDEBUG@
+OCAMLC		= @OCAMLC@
+OCAMLDOC	= @OCAMLDOC@
+
+prefix		= @prefix@
+exec_prefix	= @exec_prefix@
+bindir		= @bindir@
+#sbindir	= @sbindir@
+#libexecdir	= @libexecdir@
+datarootdir	= @datarootdir@
+datadir		= @datadir@
+#sysconfdir	= @sysconfdir@
+#sharedstatedir	= @sharedstatedir@
+#localstatedir	= @localstatedir@
+#includedir	= @includedir@
+#oldincludedir	= @oldincludedir@
+docdir		= $(patsubst %$(PACKAGE_TARNAME),%$(TARGET_NAME),@docdir@)
+#infodir	= @infodir@
+htmldir		= @htmldir@
+#dvidir		= @dvidir@
+pdfdir		= @pdfdir@
+psdir		= @psdir@
+libdir		= @libdir@
+#localedir	= @localedir@
+mandir		= @mandir@
+
+PREFIX		= $(DESTDIR)$(prefix)
+EXEC_PREFIX	= $(DESTDIR)$(exec_prefix)
+BINDIR		= $(DESTDIR)$(bindir)
+#SBINDIR	= $(DESTDIR)$(sbindir)
+#LIBEXECDIR	= $(DESTDIR)$(libexecdir)
+DATAROOTDIR	= $(DESTDIR)$(datarootdir)
+DATADIR		= $(DESTDIR)$(datadir)/$(TARGET_NAME)
+#SYSCONFDIR	= $(DESTDIR)$(sysconfdir)
+#SHAREDSTATEDIR	= $(DESTDIR)$(sharedstatedir)
+#LOCALSTATEDIR	= $(DESTDIR)$(localstatedir)
+#INCLUDEDIR	= $(DESTDIR)$(includedir)
+#OLDINCLUDEDIR	= $(DESTDIR)$(oldincludedir)
+DOCDIR		= $(DESTDIR)$(docdir)
+#INFODIR	= $(DESTDIR)$(infodir)
+HTMLDIR		= $(DESTDIR)$(htmldir)
+#DVIDIR		= $(DESTDIR)$(dvidir)
+PDFDIR		= $(DESTDIR)$(pdfdir)
+PSDIR		= $(DESTDIR)$(psdir)
+LIBDIR		= $(DESTDIR)$(libdir)/ocaml/slimmer
+#LOCALEDIR	= $(DESTDIR)$(localedir)
+MANDIR		= $(DESTDIR)$(mandir)
+
+VIMFILES	= $(DATAROOTDIR)/vim/vimfiles
+
+INSTALL		= @INSTALL@
+INSTALL_OPTS	= -v
+INSTALL_DIR	= @INSTALL_PROGRAM@ $(INSTALL_OPTS) -d
+INSTALL_BIN	= @INSTALL_PROGRAM@ $(INSTALL_OPTS) -p
+INSTALL_DATA	= @INSTALL_DATA@ $(INSTALL_OPTS) -p
+
+### SOURCE FILES
+
+OCAML_FILES	= @OCAML_FILES@
+NDCORE_FILES	= README.ndcore
+BEDWYR_FILES	= COPYING ChangeLog README TODO
+MAN_FILES	= $(wildcard doc/*.1.in)
+VIM_CONTRIB	= ftdetect/bedwyr.vim ftplugin/bedwyr.vim \
+		  indent/bedwyr.vim syntax/bedwyr.vim
+EMACS_CONTRIB	= bedwyr.el
+CONTRIB_FILES	= $(addprefix contrib/emacs/,$(EMACS_CONTRIB)) \
+		  $(addprefix contrib/vim/,$(VIM_CONTRIB))
+EXAMPLES_FILES	= @EXAMPLES_FILES@
