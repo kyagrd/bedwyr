@@ -7,11 +7,11 @@ Abstract: This document provides a user's guide,
 Section: Science/Mathematics
 
 Format: HTML
-Index: @htmldir@/refman/index.html
-Files: @htmldir@/refman/*.html
+Index: /usr/share/doc/bedwyr/refman/index.html
+Files: /usr/share/doc/bedwyr/refman/*.html
 
 Format: PDF
-Files: @pdfdir@/refman.pdf.gz
+Files: /usr/share/doc/bedwyr/refman.pdf.gz
 
 Format: PostScript
-Files: @psdir@/refman.ps.gz
+Files: /usr/share/doc/bedwyr/refman.ps.gz

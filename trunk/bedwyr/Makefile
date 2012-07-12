@@ -84,7 +84,7 @@ DIST_FILES	= $(BUILT_FILES) \
 
 # Other files
 
-DEB_FILES	= $(DEBIAN_FILES_IN:.in=)
+DEBIAN_FILES	= $(DEBIAN_FILES_IN:.in=)
 
 ### BUILDING
 
@@ -291,14 +291,6 @@ install_bedwyr_examples:
 	  $(INSTALL_DATA) -D $$i $(DATADIR)/$$i ; done
 
 install_bedwyr_doc: install_bedwyr_odocs install_bedwyr_refman
-	@for i in $(DOC_BASE_FILES) ; do \
-	  cp -pvf ../debian-files/$$i debian/$$i ; done
-	@for i in $(DEBIAN_FILES) $(DOC_BASE_FILES) ; do \
-	  sed -i \
-	  -e 's|@htmldir[@]|$(htmldir)|g' \
-	  -e 's|@pdfdir[@]|$(pdfdir)|g' \
-	  -e 's|@psdir[@]|$(psdir)|g' \
-	  debian/$$i ; done
 
 install_bedwyr_odocs: $(BEDWYR_ODOCS_DIR)/index.html
 	@$(INSTALL_DIR) $(DOCDIR)/libref
@@ -337,22 +329,22 @@ $(DIST_NAME).tar: archive.tar doc/archive.tar
 .tar.tgz:
 	@$(GZIP) -c $< > $@
 
-deb: $(DIST_NAME).tgz $(addprefix debian-files/,$(DEB_FILES))
-	@rm -rvf $(DEB_DIST_NAME)
-	@$(TAR) -xf $<
+deb: orig_files debian_files
+	@CONFIGURE_OPTS="--enable-deb" $(MAKE) -C $(DEB_DIST_NAME) deb_pkg
+
+orig_files: $(DIST_NAME).tgz
+	@$(TAR) -xf $< --xform 's|^$(DIST_NAME)/|$(DEB_DIST_NAME)/|'
 	@cp -pvf $< $(DEB_NAME).orig.tar.gz
-	@mv -v $(DIST_NAME) $(DEB_DIST_NAME)
-	@DEBIAN_FILES="$(DEB_FILES)" DOC_BASE_FILES="$(DOCBASE_FILES)"\
-	  CONFIGURE_OPTS="--enable-deb" $(MAKE) -C $(DEB_DIST_NAME) deb_pkg
-	
+
+debian_files: $(addprefix debian-files/,$(DEBIAN_FILES))
+	@$(TAR) -cvf - $^ --xform 's|^debian-files/|$(DEB_DIST_NAME)/debian/|' \
+	  | $(TAR) -xpvf -
+
 ifeq (0,$(MAKELEVEL))
   deb_pkg:
 	@echo 'Use the "deb" target to ensure the necessary files exist.'
 else
   deb_pkg:
-	@mkdir -vp debian/source
-	@for i in $(DEBIAN_FILES) ; do \
-	  cp -pvf ../debian-files/$$i debian/$$i ; done
 	@DEBEMAIL="$(DEBEMAIL)" DEBFULLNAME="$(DEBFULLNAME)" $(DCH)
 	@$(DEBUILD)
 endif
