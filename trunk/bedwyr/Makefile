@@ -88,6 +88,8 @@ DEBIAN_FILES	= $(DEBIAN_FILES_IN:.in=)
 
 ### BUILDING
 
+.PHONY: build
+
 build: $(BUILT_FILES) bedwyr
 
 $(BEDWYR_BINS): src/config.ml
@@ -132,7 +134,7 @@ configure: configure.ac
 bedwyr: $(bedwyr_prefix).$(BEST_SUFFIX)
 	@ln -svf bedwyr.$(BEST_SUFFIX) $@
 
-.PHONY: run test test_ndcore test_batyping test_input test_prover test_bedwyr
+.PHONY: test test_ndcore test_batyping test_input test_prover test_bedwyr debug
 
 ifeq ($(TARGET),)
 test:
@@ -232,6 +234,12 @@ bedwyr_refman: doc/Makefile
 
 ### INSTALL
 
+.PHONY: install \
+  install_ndcore install_ndcore_doc install_ndcore_lib install_ndcore_files \
+  install_bedwyr install_bedwyr_doc install_bedwyr_bin install_bedwyr_files \
+  install_bedwyr_man install_bedwyr_contrib install_bedwyr_examples \
+  install_bedwyr_odocs install_bedwyr_refman
+
 ifeq ($(TARGET),)
   install: install_ndcore install_bedwyr
 else
@@ -302,9 +310,8 @@ install_bedwyr_refman: doc/Makefile
 
 ### ARCHIVES
 
-.PHONY: dist archive
+.PHONY: dist archive deb orig_files debian_files deb_pkg
 .SUFFIXES: .tar .tbz .tgz
-#.PHONY: dist $(ndcore_dir)/ndcore.tar src/bedwyr.tar doc/manual.tar dist.tar
 
 dist: archive deb
 

@@ -28,23 +28,14 @@ module type S = sig
   type pos
   val dummy_pos : pos
 
-  type ki = Ki of ki list * ki_base
-  and ki_base =
-    | KType
+  type ki
   val ki_arrow : ki list -> ki -> ki
   val ktype : ki
 
   val pp_kind : Format.formatter -> ki -> unit
   val kind_to_string : ki ->string
 
-  type ty = Ty of ty list * ty_base
-  and ty_base =
-    | TConst      of string
-    | TProp
-    | TString
-    | TNat
-    | TVar        of int
-    | TParam      of int
+  type ty
   val ty_arrow : ty list -> ty -> ty
   val tconst : string -> ty
   val tprop : ty
@@ -131,12 +122,12 @@ module Make (I : INPUT) = struct
 
   type ty = Ty of ty list * ty_base
   and ty_base =
-    | TConst      of string
+    | TConst      of string       (* user-defined base type *)
     | TProp
     | TString
     | TNat
-    | TVar        of int
-    | TParam      of int
+    | TVar        of int          (* type variables (for polymorphism) *)
+    | TParam      of int          (* type parameters (for type inference) *)
 
   let ty_arrow tys = function
     | Ty (tys',ty)        -> Ty (tys@tys',ty)
@@ -249,11 +240,7 @@ module Make (I : INPUT) = struct
   let clear () =
     global_unifier := Unifier.empty
 
-  let ty_norm ?unifier ty =
-    let u = match unifier with
-      | None -> !global_unifier
-      | Some u -> u
-    in
+  let ty_norm ?(unifier=(!global_unifier)) ty =
     let rec aux = function
       | Ty (tys,ty_base) ->
           aux_base (List.map aux tys) ty_base
@@ -261,23 +248,17 @@ module Make (I : INPUT) = struct
       | TConst _ | TProp | TString | TNat | TVar _ ->
           Ty (tys,ty_base)
       | TParam i ->
-          try ty_arrow tys (aux (Unifier.find i u))
+          try ty_arrow tys (aux (Unifier.find i unifier))
           with Not_found -> Ty (tys,ty_base)
     in
     aux ty
 
   let pp_type_norm ?unifier chan ty =
-    let ty = match unifier with
-      | None -> ty_norm ty
-      | Some unifier -> ty_norm ~unifier ty
-    in
+    let ty = ty_norm ?unifier ty in
     pp_type chan ty
 
   let type_to_string_norm ?unifier ty =
-    let ty = match unifier with
-      | None -> ty_norm ty
-      | Some unifier -> ty_norm ~unifier ty
-    in
+    let ty = ty_norm ?unifier ty in
     type_to_string ty
 
   exception Hollow_type of string
