@@ -17,7 +17,7 @@
 #  Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA              #
 ##############################################################################
 
-AC_INIT([Bedwyr],[1.4-alpha1],[https://gforge.inria.fr/tracker/?atid=1543&group_id=367],[bedwyr],[http://slimmer.gforge.inria.fr/bedwyr/])
+AC_INIT([Bedwyr],[1.4-alpha2],[https://gforge.inria.fr/tracker/?atid=1543&group_id=367],[bedwyr],[http://slimmer.gforge.inria.fr/bedwyr/])
 AC_PREREQ(2.60)
 AC_CONFIG_SRCDIR([src/bedwyr.ml])
 
@@ -295,11 +295,7 @@ EXAMPLES_FILES=$($FIND examples -type f '!' -path '*.svn*' \
 DEBIAN_FILES_IN=$([[ -d debian-files ]] && \
                   $FIND debian-files -type f '!' -path '*.svn*' \
                   '!' -name '*~' '!' -name '.*.sw*' \
-                  '!' -name '*.doc-base*' -printf ' \\\n\t%P')
-DOCBASE_FILES=$([[ -d debian-files ]] && \
-                $FIND debian-files -type f '!' -path '*.svn*' \
-                '!' -name '*~' '!' -name '.*.sw*' \
-                -name '*.doc-base*' -printf ' \\\n\t%P')
+                  -printf ' \\\n\t%P')
 
 #
 # Regular ./configure stuff
@@ -326,6 +322,5 @@ AC_SUBST(OCAML_FILES)
 AC_SUBST(VIM_CONTRIB)
 AC_SUBST(EXAMPLES_FILES)
 AC_SUBST(DEBIAN_FILES_IN)
-AC_SUBST(DOCBASE_FILES)
 
 AC_OUTPUT
