@@ -118,7 +118,7 @@ let declare_type (p,name) ki =
   if Hashtbl.mem type_kinds ty_var
   then raise (Invalid_type_declaration (name,p,ki,"type already declared"))
   else match ki with
-    | Typing.Ki ([],Typing.KType) ->
+    | ki when ki = Typing.ktype ->
         Hashtbl.add type_kinds ty_var ki
     | _ ->
         raise (Invalid_type_declaration (name,p,ki,"no type operators yet"))
@@ -145,8 +145,7 @@ let kind_check ?(expected_kind=Typing.ktype) ty =
   let atomic_kind (p,name) =
     let type_var = Term.get_var (Term.atom ~tag:Term.Constant name) in
     try Hashtbl.find type_kinds type_var
-    with Not_found ->
-      raise (Missing_type (name,p))
+    with Not_found -> raise (Missing_type (name,p))
   in
   Typing.kind_check ty expected_kind ~atomic_kind
 

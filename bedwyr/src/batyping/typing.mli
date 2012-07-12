@@ -36,9 +36,7 @@ module type S = sig
   (** {6 Kinds} *)
 
   (** Kind allowing type operators. *)
-  type ki = Ki of ki list * ki_base
-  and ki_base =
-    | KType     (** kind of proper types ({e *}) *)
+  type ki
   val ki_arrow : ki list -> ki -> ki
   val ktype : ki
 
@@ -49,20 +47,17 @@ module type S = sig
   (** {6 Types} *)
 
   (** Simple types (including some predefined ones). *)
-  type ty = Ty of ty list * ty_base
-  and ty_base =
-    | TConst      of string       (** user-defined base type *)
-    | TProp
-    | TString
-    | TNat
-    | TVar        of int          (** type variables (for polymorphism) *)
-    | TParam      of int          (** type parameters (for type inference) *)
+  type ty
+  (** Type composition. *)
   val ty_arrow : ty list -> ty -> ty
+  (** User-defined base type. *)
   val tconst : string -> ty
   val tprop : ty
   val tstring : ty
   val tnat : ty
+  (** Type variables (for polymorphism). *)
   val tvar : int -> ty
+  (** Type parameters (for type inference). *)
   val tparam : int -> ty
   val fresh_tyvar : unit -> ty
   val fresh_typaram : unit -> ty
@@ -83,7 +78,7 @@ module type S = sig
     * so it always succeeds (except when given a non-existing type).
     *
     * @param atomic_kind function returning the kind of an atomic type
-    * @returns [(flex,hollow,propositional,higher_order)]
+    * @return [(flex,hollow,propositional,higher_order)]
     * (describing whether the type is an unresolved type parameter,
     * contains unresolved type parameters, ends with [TProp]
     * or contains [TProp]) *)
