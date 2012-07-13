@@ -9,7 +9,8 @@ export DH_OPTIONS=-v
 
 override_dh_auto_configure:
 	autoconf
-	dh_auto_configure -- --no-create --enable-doc --enable-nativecode
+	dh_auto_configure -- --no-create \
+	  --enable-doc --enable-nativecode --with-vimfiles
 
 override_dh_installchangelogs:
 	dh_installchangelogs -k

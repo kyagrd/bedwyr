@@ -46,7 +46,7 @@ src_docdir	= src.docdir
 # Archived files
 
 ARCH_FILES	= $(OCAML_FILES) \
-		  $(NDCORE_FILES) $(BEDWYR_FILES) \
+		  $(NDCORE_FILES) $(BEDWYR_FILES) COPYING \
 		  $(MAN_FILES) $(CONTRIB_FILES) $(EXAMPLES_FILES) \
 		  configure.ac Makefile Makefile.include.in \
 		  myocamlbuild.ml _tags install-sh
@@ -75,12 +75,6 @@ else
   endif
 endif
 MANPAGES	= $(MAN_FILES:.in=.gz)
-
-
-DIST_FILES	= $(BUILT_FILES) \
-		  $(NDCORE_FILES) $(BEDWYR_FILES) \
-		  $(MANPAGES) $(CONTRIB_FILES) $(EXAMPLES_FILES) \
-		  $(NDCORE_ODOCS) $(BEDWYR_ODOCS_DIR)/index.html
 
 # Other files
 
@@ -122,6 +116,9 @@ $(BEDWYR_BINS): src/config.ml
 
 %:: config.status %.in
 	@./$< $@
+	@sed -i \
+	  -e 's|+datadir+|$(datadir)|' \
+	  $@
 
 config.status: configure Makefile
 	./$< --no-create $(CONFIGURE_OPTS)
@@ -132,7 +129,7 @@ configure: configure.ac
 ### TESTING
 
 bedwyr: $(bedwyr_prefix).$(BEST_SUFFIX)
-	@ln -svf bedwyr.$(BEST_SUFFIX) $@
+	@ln -svf _build/$< $@
 
 .PHONY: test test_ndcore test_batyping test_input test_prover test_bedwyr debug
 
@@ -289,9 +286,11 @@ install_bedwyr_contrib:
 	@$(INSTALL_DIR) $(DATADIR)
 	@for i in $(CONTRIB_FILES) ; do \
 	  $(INSTALL_DATA) -D $$i $(DATADIR)/$$i ; done
+ifneq ($(VIMFILES),$(DESTDIR))
 	@$(INSTALL_DIR) $(VIMFILES)
 	@for i in $(VIM_CONTRIB) ; do \
 	  $(INSTALL_DATA) -D contrib/vim/$$i $(VIMFILES)/$$i ; done
+endif
 
 install_bedwyr_examples:
 	@$(INSTALL_DIR) $(DATADIR)
@@ -366,14 +365,15 @@ help:
 	@echo
 	@echo '   check out "./configure --help" for more reading'
 	@echo
-	@echo ' build          default: build "bedwyr.($(BIN_SUFFIXES))"'
+	@echo ' build          default: build binaries (bedwyr.($(BIN_SUFFIXES)))'
 	@echo ' test           run all sorts of tests'
 	@echo ' doc            build all sorts of doc'
 	@echo ' install        install files wrt to $$DESTDIR and'
 	@echo '                the parameters given to ./configure'
 	@echo
 	@echo ' dist           build archives and packages'
-	@echo ' archive        build archives "$(DIST_NAME).($(ARCH_SUFFIXES))'
+	@echo ' archive        build archives ($(DIST_NAME).($(ARCH_SUFFIXES)))'
+	@echo ' deb            build debian package ($(DEB_NAME)-1_*.deb)'
 	@echo
 	@echo ' help           display this message'
 	@echo ' mostlyclean    remove compiled files'
@@ -387,7 +387,7 @@ mostlyclean:
 clean: mostlyclean doc/Makefile
 	@$(MAKE) -C doc clean
 	@$(FIND) . -name '*~' -exec rm -vf \{\} \;
-	@rm -vf *.bz2 *.gz *.tar *.tbz *.tgz *.odocl
+	@rm -vf *.bz2 *.gz *.tar *.tbz *.tgz *.odocl $(MANPAGES)
 	@rm -vf *.build *.changes *.dsc *.deb
 	@rm -rvf $(DEB_DIST_NAME)
 
