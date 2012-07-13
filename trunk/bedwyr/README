@@ -25,7 +25,7 @@ of Miller, Nadathur and Pientka.
 
 For background on the system, see "Mixing Finite Success and Finite Failure
 in an Automated Prover" (Alwen Tiu and Gopalan Nadathur and Dale Miller):
-http://www.lix.polytechnique.fr/Labo/Dale.Miller/papers/eshol05sub.pdf
+http://www.lix.polytechnique.fr/Labo/Dale.Miller/papers/eshol05.pdf
 
 Webpage: http://slimmer.gforge.inria.fr/bedwyr/
 
@@ -34,8 +34,9 @@ Webpage: http://slimmer.gforge.inria.fr/bedwyr/
 ------------
 
 This is free software, licensed under GPL version 2.
-A copy of this license can be found in COPYING
-or in /usr/share/common-licenses/GPL-2.
+A copy of this license can be found in COPYING or,
+depending on your distribution,
+/usr/share/common-licenses/GPL-2 or /usr/portage/licenses/GPL-2.
 
 
  3. Obtaining Bedwyr

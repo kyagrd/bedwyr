@@ -22,53 +22,6 @@ AC_PREREQ(2.60)
 AC_CONFIG_SRCDIR([src/bedwyr.ml])
 
 #
-# Additional options
-#
-##############################################################################
-
-AC_MSG_CHECKING(if a Debian package should be built)
-AC_ARG_ENABLE([deb],
-	([--enable-deb],[build deb and debsrc packages]),
-	[AC_MSG_RESULT($enable_deb)],
-	[AC_MSG_RESULT(no)])
-if test "$enable_deb" = "yes" ; then
-	AC_PATH_PROG(DPKG_BUILDPACKAGE,dpkg-buildpackage,no)
-	if test "$DPKG_BUILDPACKAGE" = no ; then
-		AC_MSG_ERROR(Cannot find dpkg-buildpackage. Install dpkg-dev.)
-	fi
-
-	AC_PATH_PROG(DEBUILD,debuild,no)
-	if test "$DEBUILD" = no ; then
-		AC_MSG_ERROR(Cannot find debuild. Install devscripts.)
-	fi
-
-	AC_PATH_PROG(DCH,dch,no)
-	if test "$DCH" = no ; then
-		AC_MSG_ERROR(Cannot find dch. Install devscripts.)
-	fi
-
-	AC_PATH_PROG(LINTIAN,lintian,no)
-	if test "$LINTIAN" = no ; then
-		AC_MSG_WARN(Cannot find lintian.)
-	fi
-
-	AC_PATH_PROG(FAKEROOT,fakeroot,no)
-	if test "$FAKEROOT" = no ; then
-		AC_MSG_ERROR(Cannot find fakeroot.)
-	fi
-
-	AC_PATH_PROG(DH,dh,no)
-	if test "$DH" = no ; then
-		AC_MSG_ERROR(Cannot find dh. Install debhelper.)
-	fi
-
-	AC_PATH_PROG(GPG,gpg,no)
-	if test "$GPG" = no ; then
-		AC_MSG_ERROR(Cannot find gpg. Install gnupg.)
-	fi
-fi
-
-#
 # Common build stuff
 #
 ##############################################################################
@@ -103,69 +56,7 @@ else
 fi
 
 #
-# Documentation stuff
-#
-##############################################################################
-
-AC_MSG_CHECKING(if the documentation should be built)
-AC_ARG_ENABLE([doc],
-	AC_HELP_STRING([--enable-doc],[build the complete documentation]),
-	[AC_MSG_RESULT($enable_doc)],
-	[AC_MSG_RESULT(no)])
-if test "$enable_doc" = "yes" ; then
-	AC_PATH_PROGS(OCAMLDOC,ocamldoc.opt ocamldoc,no)
-	if test "$OCAMLDOC" = no ; then
-		AC_MSG_ERROR(Cannot find ocamldoc.)
-	fi
-
-	AC_PATH_PROG(FIG2DEV,fig2dev,no)
-	if test "$FIG2DEV" = no ; then
-		AC_MSG_ERROR(Cannot find fig2dev. Install transfig.)
-	fi
-
-	AC_PATH_PROG(LATEX,latex,no)
-	if test "$LATEX" = no ; then
-		AC_MSG_ERROR(Cannot find latex.)
-	fi
-
-	AC_PATH_PROG(BIBTEX,bibtex,no)
-	if test "$BIBTEX" = no ; then
-		AC_MSG_ERROR(Cannot find bibtex.)
-	fi
-
-	AC_PATH_PROG(DVIPS,dvips,no)
-	if test "$DVIPS" = no ; then
-		AC_MSG_ERROR(Cannot find dvips.)
-	fi
-
-	AC_PATH_PROG(PS2PDF,ps2pdf,no)
-	if test "$PS2PDF" = no ; then
-		AC_MSG_ERROR(Cannot find ps2pdf. Install ghostscript.)
-	fi
-
-	AC_PATH_PROG(HEVEA,hevea,no)
-	if test "$HEVEA" = no ; then
-		AC_MSG_ERROR(Cannot find hevea.)
-	fi
-
-	AC_PATH_PROG(BIBHVA,bibhva,no)
-	if test "$BIBHVA" = no ; then
-		AC_MSG_ERROR(Cannot find bibhva.)
-	fi
-
-	AC_PATH_PROG(IMAGEN,imagen,no)
-	if test "$IMAGEN" = no ; then
-		AC_MSG_ERROR(Cannot find imagen.)
-	fi
-
-	AC_PATH_PROG(HACHA,hacha,no)
-	if test "$HACHA" = no ; then
-		AC_MSG_ERROR(Cannot find hacha.)
-	fi
-fi
-
-#
-# OCaml stuff (only $OCAMLBUILD and $OCAMLDEBUG are actually used)
+# OCaml stuff (only $OCAML[C|DEBUG|BUILD] and $MINGW32_* are actually used)
 #
 ##############################################################################
 
@@ -263,11 +154,129 @@ else
 fi
 
 #
-# Misc
+# Documentation stuff
 #
 ##############################################################################
 
+AC_MSG_CHECKING(if the documentation should be built)
+AC_ARG_ENABLE([doc],
+	AC_HELP_STRING([--enable-doc],[build the complete documentation]),
+	[AC_MSG_RESULT($enable_doc)],
+	[AC_MSG_RESULT(no)])
+if test "$enable_doc" = "yes" ; then
+	AC_PATH_PROGS(OCAMLDOC,ocamldoc.opt ocamldoc,no)
+	if test "$OCAMLDOC" = no ; then
+		AC_MSG_ERROR(Cannot find ocamldoc.)
+	fi
+
+	AC_PATH_PROG(FIG2DEV,fig2dev,no)
+	if test "$FIG2DEV" = no ; then
+		AC_MSG_ERROR(Cannot find fig2dev. Install transfig.)
+	fi
+
+	AC_PATH_PROG(LATEX,latex,no)
+	if test "$LATEX" = no ; then
+		AC_MSG_ERROR(Cannot find latex.)
+	fi
+
+	AC_PATH_PROG(BIBTEX,bibtex,no)
+	if test "$BIBTEX" = no ; then
+		AC_MSG_ERROR(Cannot find bibtex.)
+	fi
+
+	AC_PATH_PROG(DVIPS,dvips,no)
+	if test "$DVIPS" = no ; then
+		AC_MSG_ERROR(Cannot find dvips.)
+	fi
+
+	AC_PATH_PROG(PS2PDF,ps2pdf,no)
+	if test "$PS2PDF" = no ; then
+		AC_MSG_ERROR(Cannot find ps2pdf. Install ghostscript.)
+	fi
+
+	AC_PATH_PROG(HEVEA,hevea,no)
+	if test "$HEVEA" = no ; then
+		AC_MSG_ERROR(Cannot find hevea.)
+	fi
+
+	AC_PATH_PROG(BIBHVA,bibhva,no)
+	if test "$BIBHVA" = no ; then
+		AC_MSG_ERROR(Cannot find bibhva.)
+	fi
+
+	AC_PATH_PROG(IMAGEN,imagen,no)
+	if test "$IMAGEN" = no ; then
+		AC_MSG_ERROR(Cannot find imagen.)
+	fi
+
+	AC_PATH_PROG(HACHA,hacha,no)
+	if test "$HACHA" = no ; then
+		AC_MSG_ERROR(Cannot find hacha.)
+	fi
+fi
+
+#
+# Installation-related options
+#
+##############################################################################
+
+AC_MSG_CHECKING(if vim files should be installed)
+AC_ARG_WITH([vimfiles],
+	([--with-vimfiles],[install vim files]),
+	[AC_MSG_RESULT($with_vimfiles)],
+	[AC_MSG_RESULT(no)])
+if test "$with_vimfiles" = "yes" ; then
+	VIMFILES='${datarootdir}/vim/vimfiles'
+fi
+
 AC_PROG_INSTALL
+
+AC_MSG_CHECKING(if a Debian package should be built)
+AC_ARG_ENABLE([deb],
+	([--enable-deb],[build deb and debsrc packages]),
+	[AC_MSG_RESULT($enable_deb)],
+	[AC_MSG_RESULT(no)])
+if test "$enable_deb" = "yes" ; then
+	AC_PATH_PROG(DPKG_BUILDPACKAGE,dpkg-buildpackage,no)
+	if test "$DPKG_BUILDPACKAGE" = no ; then
+		AC_MSG_ERROR(Cannot find dpkg-buildpackage. Install dpkg-dev.)
+	fi
+
+	AC_PATH_PROG(DCH,dch,no)
+	if test "$DCH" = no ; then
+		AC_MSG_ERROR(Cannot find dch. Install devscripts.)
+	fi
+
+	AC_PATH_PROG(DEBUILD,debuild,no)
+	if test "$DEBUILD" = no ; then
+		AC_MSG_ERROR(Cannot find debuild. Install devscripts.)
+	fi
+
+	AC_PATH_PROG(LINTIAN,lintian,no)
+	if test "$LINTIAN" = no ; then
+		AC_MSG_WARN(Cannot find lintian.)
+	fi
+
+	AC_PATH_PROG(FAKEROOT,fakeroot,no)
+	if test "$FAKEROOT" = no ; then
+		AC_MSG_ERROR(Cannot find fakeroot.)
+	fi
+
+	AC_PATH_PROG(DH,dh,no)
+	if test "$DH" = no ; then
+		AC_MSG_ERROR(Cannot find dh. Install debhelper.)
+	fi
+
+	AC_PATH_PROG(GPG,gpg,no)
+	if test "$GPG" = no ; then
+		AC_MSG_ERROR(Cannot find gpg. Install gnupg.)
+	fi
+fi
+
+#
+# Misc
+#
+##############################################################################
 
 REVISION=$((((svn info 2>&- || git svn info 2>&-) || git describe --tags --dirty 2>&- 1>&3) | sed -n -e 's/Revision: //p') 3>&1 | tr -d '\n')
 BUILD_DATE_F=$(date -u +%F)
@@ -312,6 +321,7 @@ AC_SUBST(INSTALL)
 AC_SUBST(INSTALL_DATA)
 AC_SUBST(INSTALL_PROGRAM)
 
+AC_SUBST(VIMFILES)
 AC_SUBST(REVISION)
 AC_SUBST(BUILD_DATE_F)
 AC_SUBST(DEBEMAIL)

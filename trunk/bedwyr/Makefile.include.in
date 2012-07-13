@@ -89,7 +89,7 @@ LIBDIR		= $(DESTDIR)$(libdir)/ocaml/slimmer
 #LOCALEDIR	= $(DESTDIR)$(localedir)
 MANDIR		= $(DESTDIR)$(mandir)
 
-VIMFILES	= $(DATAROOTDIR)/vim/vimfiles
+VIMFILES	= $(DESTDIR)@VIMFILES@
 
 ### PROGRAMS
 
@@ -98,11 +98,12 @@ TAR		= @TAR@ -p
 FIND		= @FIND@
 GZIP		= @GZIP@ -4 -f
 BZIP2		= @BZIP2@ -9 -f
-OCAMLDOC	= @OCAMLDOC@
 OCAMLC		= @OCAMLC@
 MINGW32_OCAMLOPT= @MINGW32_OCAMLOPT@
 OCAMLDEBUG	= @OCAMLDEBUG@
-OCAMLBUILD	= @OCAMLBUILD@ -classic-display -Xs debian,$(DEB_DIST_NAME) -yaccflag -v
+OCAMLBUILD	= @OCAMLBUILD@ -classic-display -Xs debian,$(DEB_DIST_NAME) \
+		  -yaccflag -v
+OCAMLDOC	= @OCAMLDOC@
 
 INSTALL		= @INSTALL@
 INSTALL_OPTS	= -v
@@ -118,7 +119,7 @@ DEBUILD		= @DEBUILD@ --lintian-opts -Ivi
 ac_config_files	= @ac_config_files@
 OCAML_FILES	= @OCAML_FILES@
 NDCORE_FILES	= README.ndcore
-BEDWYR_FILES	= COPYING ChangeLog README TODO
+BEDWYR_FILES	= ChangeLog README TODO
 MAN_FILES	= $(wildcard man/*.in)
 VIM_CONTRIB	= @VIM_CONTRIB@
 EMACS_CONTRIB	= bedwyr.el
