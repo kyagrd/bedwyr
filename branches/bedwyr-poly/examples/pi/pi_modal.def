@@ -1,0 +1,161 @@
+% A specification of Modal Logic for pi-calculus.
+% Based on the paper
+%  "Modal logics for mobile processes", by R. Milner, J. Parrow and D. Walker
+%  Theoretical Computer Science 114 (1993).
+%
+% This definition file implements the specification of MPW modal logic
+% described in the paper:
+%  Alwen Tiu. Model checking for pi-calculus using proof search.
+%  Available online from http://rsise.anu.edu.au/~tiu
+%
+% Dependency: this file needs the pi.def (definition of late transition
+% system for pi-calculus)
+
+% Assume the formulas in the modal logic are in negation normal form.
+%
+%
+% The types of the logical constants:
+%
+% Formulas of MPW logic are given type form.
+% Propositional connectives:
+%  land : form -> form -> form  (conjunction)
+%  lor : form -> form -> form   (disjunction)
+%  top : form  (true)
+%  bot : form (false)
+%
+% The prefix 'dia' indicates the 'diamond' modality and 'box' indicates
+% the box modality.
+% 'Free' modalities:
+%   boxMatch : name -> name -> form -> form. (match modality, e.g., [x = y] A)
+%   diaMatch : name -> name -> form -> form. (diamond, e.g., <x=y> A)
+%   boxAct, diaAct : action -> form -> form. (free actions)
+%   boxOut, diaOut : name -> (name -> form) -> form. (bound output)
+%   boxIn, diaIn   : name -> (name -> form) -> form. (bound input)
+%   boxInL, diaInL : name -> (name -> form) -> form. ('late' bound input)
+%   boxInE, diaInE : name -> (name -> form) -> form. ('early' bound input)
+
+#include "pi.def".
+
+Kind form                type.
+Type top, bot            form.
+Type land, lor           form -> form -> form.
+Type boxMatch, diaMatch  name -> name -> form -> form.
+Type boxAct, diaAct      a -> form -> form.
+Type boxOut, diaOut,
+     boxIn, diaIn,
+     boxInL, diaInL,
+     boxInE, diaInE      name -> (name -> form) -> form.
+
+% A "lazy" but incomplete encoding.
+
+Define sat : p -> form -> prop by
+  sat P top;
+  sat P (land A B) := sat P A /\ sat P B;
+  sat P (lor A B) := sat P A \/ sat P B;
+  sat P (boxMatch X Y A) := (X = Y) -> sat P A;
+  sat P (diaMatch X Y A) := (X = Y) /\ sat P A;
+  sat P (boxAct X A) :=
+     forall P1, one P X P1 -> sat P1 A;
+  sat P (diaAct X A) :=
+     exists P1, one P X P1 /\ sat P1 A;
+  sat P (boxOut X A) :=
+     forall Q, onep P (up X) Q -> nabla y, sat (Q y) (A y);
+  sat P (diaOut X A) :=
+     exists Q, onep P (up X) Q /\ nabla y, sat (Q y) (A y);
+  sat P (boxIn X A) :=
+     forall Q, onep P (dn X) Q -> forall y, sat (Q y) (A y);
+  sat P (diaIn X A) :=
+     exists Q, onep P (dn X) Q /\ exists y, sat (Q y) (A y);
+  sat P (boxInL X A) :=
+     forall Q, onep P (dn X) Q -> exists y, sat (Q y) (A y);
+  sat P (diaInL X A) :=
+     exists Q, onep P (dn X) Q /\ forall y, sat (Q y) (A y);
+  sat P (boxInE X A) :=
+     exists y, forall Q, onep P (dn X) Q -> sat (Q y) (A y);
+  sat P (diaInE X A) :=
+     forall y, exists Q, onep P (dn X) Q /\ sat (Q y) (A y).
+
+
+% A complete encoding: using explicit list of names.
+
+Kind list       type.
+Type cons       _ -> list -> list.
+Type nil        list.
+
+Define member : name -> list -> prop by
+  member X (cons Y L) := (X = Y) \/ member X L.
+
+Define lsat : list -> p -> form -> prop by
+  lsat L P top;
+  lsat L P (land A B) := lsat L P A /\ lsat L P B;
+  lsat L P (lor  A B) := lsat L P A \/ lsat L P B;
+  lsat L P (boxMatch X Y A) := (X = Y) -> lsat L P A;
+  lsat L P (diaMatch X Y A) := (X = Y) /\ lsat L P A;
+  lsat L P (boxAct X A) := forall P1, one P X P1 -> lsat L P1 A;
+  lsat L P (diaAct X A) := exists P1, one P X P1 /\ lsat L P1 A;
+  lsat L P (boxOut X A) :=
+    forall Q, onep P (up X) Q -> nabla y, lsat (cons y L) (Q y) (A y);
+  lsat L P (diaOut X A) :=
+    exists Q, onep P (up X) Q /\ nabla y, lsat (cons y L) (Q y) (A y);
+  lsat L P (boxIn X A) :=
+    forall Q, onep P (dn X) Q ->
+      nabla w, forall y, (member y (cons w L) -> lsat (cons w L) (Q y) (A y));
+  lsat L P (diaIn X A) :=
+    exists Q, onep P (dn X) Q /\
+      nabla w, exists y, (member y (cons w L) /\ lsat (cons w L) (Q y) (A y));
+  lsat L P (boxInL X A) :=
+    forall Q, onep P (dn X) Q ->
+      nabla w, exists y, (member y (cons w L) /\ lsat (cons w L) (Q y) (A y));
+  lsat L P (diaInL X A) :=
+    exists Q, onep P (dn X) Q /\
+      nabla w, forall y, (member y (cons w L) -> lsat (cons w L) (Q y) (A y));
+  lsat L P (boxInE X A) :=
+    nabla w, exists y,
+      (member y (cons w L) /\
+         forall Q, onep P (dn X) Q -> lsat (cons w L) (Q y) (A y));
+  lsat L P (diaInE X A) :=
+    nabla w, forall y, member y (cons w L) ->
+      exists Q, onep P (dn X) Q /\ lsat (cons w L) (Q y) (A y).
+
+
+% Some examples ===============================================================
+
+% Encoding the judgment x(y).0 |= <x(u)>[x = u] false.
+Define assert : nat -> form -> prop by
+  % This judgment should be provable in MPW logic
+  assert  1 (diaIn x (u\ (boxMatch x u bot)));
+  % The 'excluded middle' on names
+  assert  2
+    (diaInL x (y\ diaInL x (u\ lor (diaMatch y u top) (boxMatch y u bot))));
+  % Process 3 and 4 are strongly bisimilar, hence should satisfy
+  % the same set of assertions.
+  % <x(y)>^L (<tau><tau> true ; <tau> true).
+  assert  3 (diaInL x (y\ lor (diaAct tau (diaAct tau top))
+                            (diaAct tau top))).
+
+Define process : nat -> p -> prop by
+  process 1 (in x (y\ z));
+  process 2 (in x (y\ in x u\ z));
+  process 3 (in x u\ (plus (taup (taup z)) (taup z)));
+  process 4 (in x u\ nu y\ ((plus (taup (taup z))
+                           (plus (taup z)
+                                 (taup (match u y (taup z))))))).
+
+
+% Counterexample to the completeness of sat:
+Define test : nat -> prop by
+  % This will generate an exception
+  test 1 := process 1 P /\ assert 1 A /\ sat P A;
+  % However, lsat is complete
+  test 2 := process 1 P /\ assert 1 A /\ lsat (cons x nil) P A;
+  % The excluded middle example is not provable using sat,
+  % but is provable using lsat.
+  test 3 := process 2 P /\ assert 2 A /\ sat P A;
+  test 4 := process 2 P /\ assert 2 A /\ lsat (cons x nil) P A;
+  test 5 := process 3 P /\ process 4 Q /\ assert 3 A /\ sat P A /\ sat Q A.
+
+#assert_raise test 1.
+#assert test 2.
+#assert_not test 3.
+#assert test 4.
+#assert test 5.

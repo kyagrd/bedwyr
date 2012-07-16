@@ -1,0 +1,41 @@
+% Simple order relation of Peano's integers
+
+Type    z       nat.
+Type    s       nat -> nat.
+
+Define a : nat -> prop by
+  a (s (s (s z)));
+  a (s (s (s (s (s z)))));
+  a (s (s z)).
+
+Define leq : nat -> nat -> prop by
+  leq z N;
+  leq (s N) (s M) := leq N M.
+
+% Now decide the maximum of a given predicate.  In the first-order
+% setting we could write just:
+%    maxa N := a N, forall x, a x -> leq x N.
+% but it seems that Bedwyr allows for predicates to be arguments.
+
+Define max : (nat -> prop) -> nat -> prop by
+  max A N := A N /\ forall x, A x -> leq x N.
+
+#assert (max a X /\ X = (s (s (s (s (s z)))))).
+
+% Compute the minimum maximal of the predictes (b I).
+% The following program should not work in the current version of
+% Bedwyr, because max isn't suitable for the left prover as it already
+% contains an implication.
+
+Define minmax : (nat -> nat -> prop) -> nat -> prop by
+  minmax B N := max (B I) N /\ forall j m, max (B j) m -> (j = I \/ leq N M).
+
+Define b : nat -> nat -> prop by
+  b z (s (s (s z)));
+  b z (s (s (s (s (s z)))));
+  b z (s (s z));
+  b (s z) (s (s (s z)));
+  b (s z) (s (s (s (s z))));
+  b (s z) (s (s z)).
+
+#assert_raise (minmax b N).

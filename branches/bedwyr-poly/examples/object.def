@@ -1,0 +1,42 @@
+% Reasoning about an object logic. See the following paper:
+% A Proof Theory for Generic Judgments: An extended abstract,
+% by Dale Miller and Alwen Tiu. Proceedings of LICS 2003,
+% edited by Phokion Kolaitis. Ottawa, July 2003, pp. 118-127
+
+Kind    form,
+        name    type.
+
+Type    t,f     form.
+Type    &&,--> form -> form -> form.
+Type    for_all,
+        for_some (name -> form) -> form.
+Type    q       name -> name -> name -> form.
+Type    pair    name -> name -> name.
+
+% Additional definition clauses
+Define atom : form -> prop by
+  atom (q X Y Z).
+Define prog : form -> prop by
+  prog (for_all x\ for_all y\ q x x y);
+  prog (for_all x\ for_all y\ q x y x);
+  prog (for_all x\ for_all y\ q y x x).
+
+% Interpreter for an object-level logic
+Define
+  pv : form -> prop,
+  bc : form -> form -> prop
+by
+  pv t;
+  pv (G && G') := pv G /\ pv G';
+  pv (for_all G) := nabla x, pv (G x);
+  pv (for_some G) := exists x, pv (G x);
+  pv A := atom A /\ exists D, prog D /\ bc D A;
+
+  bc A A := atom A;
+  bc (G --> D) A := bc D A /\ pv G;
+  bc (for_all D) A := exists t, bc (D t) A.
+
+% Tests
+
+#assert forall x y z,
+  pv (for_all u\ for_all v\ q (pair u x) (pair v y) (pair v z)) -> y = z.

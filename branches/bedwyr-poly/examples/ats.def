@@ -1,0 +1,139 @@
+%% Abstract Transition Systems (ats)
+%% Some experiments encoding ats into Bedwyr.
+
+Kind trans      type.
+Type p,q,r,s,t,u,v,w,x,y nat.
+Type a,b,c,d    trans.
+
+% Display all the one-step transitions of the ats
+Define display : (nat -> trans -> nat -> prop) -> prop by
+  display One := One P A Q /\ println (One P A Q) /\ false.
+
+% Determine if transition system is determinate or not.
+Define determinate : (nat -> trans -> nat -> prop) -> prop by
+  determinate One :=  forall P A Q R, One P A Q ->  One P A R -> Q = R.
+
+Define coinductive sim : (nat -> trans -> nat -> prop) ->
+                         nat -> nat -> prop by
+  sim One P Q :=
+   forall P1 A, One P A P1 -> exists Q1, One Q A Q1 /\ sim One P1 Q1.
+
+Define coinductive bisim : (nat -> trans -> nat -> prop) ->
+                           nat -> nat -> prop by
+  bisim One P Q :=
+    (forall P1 A, One P A P1 -> exists Q1, One Q A Q1 /\ bisim One P1 Q1) /\
+    (forall Q1 A, One Q A Q1 -> exists P1, One P A P1 /\ bisim One P1 Q1).
+
+%% ATS 0:  a.b
+
+Define one0 : nat -> trans -> nat -> prop by
+  one0 p a q;
+  one0 q b r.
+
+#assert (sim one0 p p /\ sim one0 q q /\ sim one0 r r).
+%#assert_not (sim one0 p q \/ sim one0 q p \/
+%             sim one0 p r \/ sim one0 r p \/
+%             sim one0 q r \/ sim one0 r q).
+
+%% ATS 1: a.b + a.c vs a.(b+c)
+Define one1 : nat -> trans -> nat -> prop by
+  one1 p a q;
+  one1 p a r;
+  one1 q b s;
+  one1 r c t;
+  one1 u a v;
+  one1 v b w;
+  one1 v c x.
+
+#assert (sim one1 p u).
+%#assert (sim one1 u p).
+
+%% ATS 2:
+Define one2 : nat -> trans -> nat -> prop by
+  one2 p a q;
+  one2 p a t;
+  one2 q a p;
+  one2 s a s.
+
+#assert (sim one2 s s /\ sim one2 q s /\ sim one2 p s /\ sim one2 s p).
+#assert_not (sim one2 s t /\ bisim one2 p s).
+
+%% ATS 3:  (a.b + a.c) vs a.(b + c)
+Define one3 : nat -> trans -> nat -> prop by
+  one3 p a q;
+  one3 p a s;
+  one3 q b t;
+  one3 s c u;
+  one3 v a w;
+  one3 w b x;
+  one3 w c y.
+
+#assert (sim one3 p v /\ sim one3 s w).
+#assert_not (sim one3 v p \/ sim one3 w s).
+
+%% ATS 4: (a.b.c + a.b.d) vs a.(b.c + b.d)
+Define one4 : nat -> trans -> nat -> prop by
+  one4  0 a  1;
+  one4  0 a  2;
+  one4  1 b  3;
+  one4  3 c  4;
+  one4  2 b  5;
+  one4  5 d  6;
+  one4  7 a  8;
+  one4  8 b  9;
+  one4  8 b 10;
+  one4  9 c 11;
+  one4 10 d 12.
+
+#assert (sim one4 12 6 /\ sim one4 10 5).
+#assert_not (sim one4 10 3 \/ sim one4 7 0).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% Before tabling and loop detection was introduced into Bedwyr, we
+%% could try to detect loops ourselves using the following code.  This is not
+%% needed any more but might be useful as a programming example.
+
+Kind list,obj   type.
+Type nil        list.
+Type cons       obj -> list -> list.
+
+Kind bool       type.
+Type ff,tt      bool.
+
+Type pr         nat -> nat -> obj.
+
+% Membership in a list.
+% This predicate always succeeds with a boolean value.
+Define member : obj -> list -> bool -> prop by
+  member X nil        ff;
+  member X (cons Y L) Bool := (X = Y -> false) /\ member X L Bool;
+  member X (cons X L) tt.
+
+% Co-induction with History checking.  Simply check that goal appears
+% before.  If so, succeed.  Here, pr is for pairing.
+
+Define cyclic : ((nat -> nat -> prop) -> nat -> nat -> prop) ->
+                list -> nat -> nat -> prop by
+  cyclic R History P Q :=
+   member (pr P Q) History Bool /\
+   (Bool = tt \/ % A cycle observed so succeed - coinduction
+    (Bool = ff /\ (R (cyclic R (cons (pr P Q) History)) P Q))).
+
+Define cycsim : (nat -> trans -> nat -> prop) -> nat -> nat -> prop by
+  cycsim One P Q :=
+   cyclic
+     (S\ P\ Q\ (forall P1 A, One P A P1 -> exists Q1, One Q A Q1 /\ S P1 Q1))
+     nil P Q.
+
+Define cycbisim : (nat -> trans -> nat -> prop) -> nat -> nat -> prop by
+  cycbisim One P Q :=
+   cyclic
+     (S\ P\ Q\
+        ((forall P1 A, One P A P1 -> exists Q1, One Q A Q1 /\ S P1 Q1) /\
+         (forall Q1 A, One Q A Q1 -> exists P1, One P A P1 /\ S P1 Q1)))
+     nil P Q.
+
+Define one5 : nat -> trans -> nat -> prop by
+  one5 p a p.
+#assert (cycsim one5 p p).

@@ -1,0 +1,39 @@
+bedwyr (1.4~alpha1-1) unstable; urgency=low
+
+  * new upstream release
+  * single package (ndcore.deb merged into bedwyr.deb)
+  * package built from within the Makefile
+
+ -- Quentin Heath <quentin.heath@inria.fr>  Mon, 09 Jul 2012 00:21:29 +0200
+
+bedwyr (1.3~rc2-1) stable; urgency=low
+
+  * New upstream release
+
+ -- Quentin Heath <quentin.heath@inria.fr>  Wed, 29 Feb 2012 19:26:12 +0100
+
+bedwyr (1.3~rc1-1) stable; urgency=low
+
+  * New upstream release
+
+ -- Quentin Heath <quentin.heath@inria.fr>  Wed, 29 Feb 2012 18:06:14 +0100
+
+bedwyr (1.3~beta10-1) stable; urgency=low
+
+  * New upstream release
+
+ -- Quentin Heath <quentin.heath@inria.fr>  Fri, 24 Feb 2012 15:30:03 +0100
+
+bedwyr (1.3~beta8-1) stable; urgency=low
+
+  * New upstream release
+  * Split docs into ndcore.docs + bedwyr.docs
+  * Add missing upstream authors
+
+ -- Quentin Heath <quentin.heath@inria.fr>  Tue, 14 Feb 2012 17:49:31 +0100
+
+bedwyr (1.3~beta6-1) stable; urgency=low
+
+  * Initial release.
+
+ -- Quentin Heath <quentin.heath@inria.fr>  Wed, 01 Feb 2012 05:28:34 +0100

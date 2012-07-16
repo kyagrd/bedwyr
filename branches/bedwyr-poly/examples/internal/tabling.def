@@ -1,0 +1,118 @@
+Kind obj        type.
+
+Type a,b,c,
+     d,e,f      obj.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% First example
+% simple backward chaining
+% with no external predicates in the theorems
+%
+% p1:
+%   c - d
+%  /
+% a - b
+%  \
+%   e _ f
+
+%Define inductive p1 : obj -> prop by
+%  p1 a := printstr "This is a computation intensive request to (p1 a).\n";
+%  p1 b := printstr "This is a computation intensive request to (p1 b).\n";
+%  p1 c := printstr "This is a computation intensive request to (p1 c).\n";
+%  p1 d := printstr "This is a computation intensive request to (p1 d).\n";
+%  p1 e := printstr "This is a computation intensive request to (p1 e).\n";
+%  p1 f := printstr "This is a computation intensive request to (p1 f).\n".
+%
+%Define print_p1 : prop by
+%  print_p1 := printstr "
+%%   c - d
+%%  /
+%% a - b
+%%  \\
+%%   e _ f\n\n".
+%
+%Theorem p1_th1 : p1 a -> p1 b.
+%Theorem p1_th2 : p1 a -> p1 c.
+%Theorem p1_th3 : p1 c -> p1 d.
+%Theorem p1_th4 : p1 a -> p1 e.
+%Theorem p1_th5 : p1 e -> p1 f.
+%
+%#assert print_p1.
+%#debug on.
+%
+%#freezing 42.
+%#assert p1 a.
+%#show_table p1.
+%#assert p1 a.
+%#assert p1 b.
+%#show_table p1.
+%#assert p1 d.
+%#show_table p1.
+%#freezing 1.
+%#assert p1 f.
+%#show_table p1.
+%
+%#freezing 0.
+%#debug off.
+%#clear_table p1.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Second example
+% simple forward chaining
+% with no external predicates in the theorems
+
+%#assert print_p1.
+%#debug on.
+%
+%#assert p1 c.
+%#saturation 1.
+%#assert p1 e.
+%#assert p1 d.
+%
+%#saturation 0.
+%#debug off.
+%#clear_table p1.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Third example
+% simple backward chaining
+% with eigen variables
+%
+% p2:
+%   b
+%    \
+% c - a
+%    /
+%   d
+
+Define inductive p2 : obj -> prop by
+  p2 a := printstr "This is a computation intensive request to (p2 a).\n";
+  p2 b := printstr "This is a computation intensive request to (p2 b).\n";
+  p2 c := printstr "This is a computation intensive request to (p2 c).\n";
+  p2 d := printstr "This is a computation intensive request to (p2 d).\n".
+
+Define print_p2 : prop by
+  print_p2 := printstr "
+%   b
+%    \\
+% c - a
+%    /
+%   d\n\n".
+
+Theorem p2_th1 : (true -> p2 b) /\
+                 (forall X, true -> p2 c).
+Theorem p2_th2 : p2 d.
+
+#assert print_p2.
+#debug on.
+
+#freezing 1.
+#assert p2 b.
+#assert p2 c.
+#assert p2 d.
+
+#freezing 0.
+#debug off.
+#clear_table p2.
+
+#exit.

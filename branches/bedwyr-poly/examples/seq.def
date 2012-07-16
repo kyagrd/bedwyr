@@ -1,0 +1,70 @@
+%% A simple interpreter for the minimal logic of hereditary Harrop
+%% formulas.
+
+%% To use this intrepreter, you need to
+%%   #include "seq.def".
+%%
+%% Then you need to pick a name of a binary predicate to use to store
+%% clauses: first argument is the head and the second is the body.
+%%
+%% Then, declare a predicate [atom] of type (form -> prop),
+%% and for every predicate, say, q, of the object-logic, insert the
+%% clause
+%%     atom (q X1 ... Xn).
+%%
+%% Finally, call the goal
+%%     prv Atom Prog Goal.
+%% in order to attempt the proof of the Goal from the logic program
+%% encoded in Prog where atoms are charaterized by the predicate Atom.
+
+% Object logic is freely generated from
+%   tt, &&, <-- , --> , for_all, for_some
+
+% Notice that the interpreter does not use lists: conjunctions can be
+% used instead.  The empty list is true (tt).
+
+Kind    form,
+        name    type.
+
+Type    tt      form.
+Type    &&,
+        -->,
+        <--     form -> form -> form.
+Type    for_all,
+        for_some (name -> form) -> form.
+
+Define
+% ?- seq Prog List Goal.
+% Attempts to prove the Goal from the assumptions in List and
+% the logic programming clauses described by Prog.
+  seq : (form -> prop) ->
+        (form -> form -> prop) ->
+        form -> form -> prop,
+  bc : (form -> prop) ->
+       (form -> form -> prop) ->
+       form -> form -> form -> prop
+by
+% Do right rules first.
+  seq Atom Prog L tt;
+  seq Atom Prog L (B && C)  := seq Atom Prog L B /\ seq Atom Prog L C;
+  seq Atom Prog L (G <-- D)   := seq Atom Prog (D && L) G;
+  seq Atom Prog L (D --> G)   := seq Atom Prog (D && L) G;
+  seq Atom Prog L (for_all B) := nabla x, seq Atom Prog L (B x);
+  seq Atom Prog L (for_some B) := exists x, seq Atom Prog L (B x);
+% Pick a formula on which to backchain.
+  seq Atom Prog L A := Atom A /\ (bc Atom Prog L L A \/ (Prog A Body /\ seq Atom Prog L Body));
+
+
+% Backchaining is done in a focused fashion.
+  bc Atom Prog L A A := Atom A;
+  bc Atom Prog L (X && Y)  A := bc Atom Prog L X A \/ bc Atom Prog L Y A;
+  bc Atom Prog L (D <-- G)   A := bc Atom Prog L D A /\ seq Atom Prog L G;
+  bc Atom Prog L (G --> D)   A := bc Atom Prog L D A /\ seq Atom Prog L G;
+  bc Atom Prog L (for_all D) A := exists t, bc Atom Prog L (D t) A.
+
+Define
+  prv : (form -> prop) ->
+        (form -> form -> prop) ->
+        form -> prop
+by
+  prv Atom Prog B := seq Atom Prog tt B.

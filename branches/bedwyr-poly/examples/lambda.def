@@ -1,0 +1,77 @@
+% Simple lambda calculus examples.
+
+Kind    name,
+        ty,
+        env,
+        term    type.
+
+Type    a,b     name.
+
+Type    t,tt,
+        t1,t2   ty.
+Type    arrow   ty -> ty -> ty.
+
+Type    nil     env.
+Type    bind    name -> ty -> env -> env.
+
+Type    var     name -> term.
+Type    app     term -> term -> term.
+Type    abs     (term -> term) -> term.
+
+% Typing environment ==========================================================
+
+Define ty : env -> name -> ty -> prop by
+  ty (bind A T E) A T;
+  ty (bind A B E) X T := ty E X T.
+
+% Adding a (A = X -> false) guard to the second clause would avoid
+% unnecessary searches, but would make the definition invalid in Level 0.
+
+% Simply typed lambda-calculus ================================================
+
+Define wt : env -> term -> ty -> prop by
+  wt E (var A) T            := ty E A T;
+  wt E (app X Y) T          := wt E X (arrow H T) /\ wt E Y H;
+  wt E (abs F) (arrow Tx T) := nabla x, wt (bind x Tx E) (F (var x)) T.
+
+% Play with a few examples ====================================================
+
+#assert (forall T, wt (bind a t nil) (var a) T -> T = t).
+
+#assert (wt (bind a t (bind b (arrow t tt) nil))
+            (app (var b) (var a)) T).
+#assert (forall T, wt (bind a t (bind b (arrow t tt) nil))
+                  (app (var b) (var a)) T -> T = tt).
+
+#assert (forall T Ta Tb,
+           wt (bind a Ta (bind b Tb nil))
+              (app (abs x\ (app (var a) (var b))) (var a))
+              T
+           -> exists A B, Ta = arrow A B).
+
+#assert_not (exists T, wt nil (abs x\ app x x) T).
+#assert ((exists T, wt nil (abs x\ app x x) T) -> false).
+
+#assert_not (forall x y, ty (bind x t1 (bind y t2 nil)) y t1 -> false).
+#assert     (nabla x y,  ty (bind x t1 (bind y t2 nil)) y t1 -> false).
+
+% If we had written the wt predicate using a forall instead of the nabla then:
+% (1) it would have been on Level 1 instead of 0;
+% (2) it would have been wrong, as shown by the last assert_not.
+
+% =============================================================================
+% The following is just an attempt to think about more complex problems,
+% such as proving subject reduction in a natural way..
+
+% In the eval predicate, it could be more natural to use forall instead of nabla,
+% since it allows to substitue anything: from (eval (abs F) (abs F')) we
+% get (eval (F M) (F' M)). But what we really want is
+% eval M M' -> eval (abs F) (abs F') => eval (F M) (F M').
+% The advantage of using nabla is that it will interact well
+% with the nabla used in wt, and make the induction proof easy.
+
+Define eval : term -> term -> prop by
+  eval (app M N) (app MM NN) := eval M MM /\ eval N NN;
+  eval (abs F) (abs FF)      := nabla x, eval (F x) (FF x);
+  eval (app M X) N           := eval M (abs F) /\ eval (F X) N;
+  eval M M.

@@ -1,0 +1,16 @@
+Document: bedwyr-quickstart
+Title: Bedwyr Quickstart
+Author: Slimmer project
+Abstract: This manual provides the information needed
+ for a quick start with the Bedwyr system.
+Section: Science/Mathematics
+
+Format: HTML
+Index: /usr/share/doc/bedwyr/quickstart.html
+Files: /usr/share/doc/bedwyr/quickstart.html
+
+Format: PDF
+Files: /usr/share/doc/bedwyr/quickstart.pdf.gz
+
+Format: PostScript
+Files: /usr/share/doc/bedwyr/quickstart.ps.gz

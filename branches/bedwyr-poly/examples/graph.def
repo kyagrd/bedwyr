@@ -1,0 +1,60 @@
+% This example highlights some simple benefits of tabling.
+
+% Nodes for the graph
+
+Define node : nat -> prop by
+  node 1;
+  node 2;
+  node 3;
+  node 4;
+  node 5;
+  node 6.
+
+% Directed predicates
+
+%       3
+%      / \
+% 1 - 2   5 - 6
+%      \ /
+%       4
+Define arrow : nat -> nat -> prop by
+  arrow 1 2;
+  arrow 2 3;
+  arrow 2 4;
+  arrow 3 5;
+  arrow 4 5;
+  arrow 5 6.
+
+Define path : nat -> nat -> prop by
+  path X Y := arrow X Y;
+  path X Y := arrow X Z /\ path Z Y.
+
+% Undirected predicates
+
+Define edge : nat -> nat -> prop by
+  edge X Y := arrow X Y \/ arrow Y X.
+
+% Without tabling, a closed request, such as "edgepath 1 6",
+% will return the same solution ("Yes") infinity many times.
+% However, currently, "edgepath 1 Y" cannot be tabled.
+Define inductive edgepath : nat -> nat -> prop by
+  edgepath X Y := edge X Y;
+  edgepath X Y := edge X Z /\ edgepath Z Y.
+
+Define print_arrow : nat -> nat -> prop by print_arrow X Y := print X /\ printstr " to " /\ println Y.
+
+% Queries to try
+
+Define allpaths : prop by
+  allpaths := path X Y /\ print_arrow X Y /\ false.
+
+% Because we don't table terms with logic variables,
+% this currently doesn't terminate.
+Define alledgepaths : prop by
+  alledgepaths := edgepath X Y /\ print_arrow X Y /\ false.
+
+Define connected : prop by
+  connected := forall X Y, node X -> node Y -> edgepath X Y.
+
+Define disconnected : prop by
+  disconnected := exists X Y, node X /\ node Y /\ (edgepath X Y -> false).

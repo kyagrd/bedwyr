@@ -1,0 +1,27 @@
+% Example from Section 5.2.1 (Tabling) of the Userguide.
+
+Kind state,trans type.
+Type p0,p1,p2,
+     q0,q1,q2   state.
+Type a,b        trans.
+
+Define next : state -> trans -> state -> prop by
+  next p0 a p1;
+  next p0 a p2;
+  next p1 b p0;
+  next p1 a p2;
+  next p2 a p2;
+  next p2 b p0;
+  next q0 a q1;
+  next q1 a q1;
+  next q1 b q2;
+  next q2 a q1.
+
+Define coinductive bisim : state -> state -> prop by
+  bisim P Q :=
+    (forall P1 A, next P A P1 ->
+                     exists Q1, next Q A Q1 /\ bisim P1 Q1) /\
+    (forall Q1 A, next Q A Q1 ->
+                     exists P1, next P A P1 /\ bisim P1 Q1).
+
+#assert (bisim p0 q0).

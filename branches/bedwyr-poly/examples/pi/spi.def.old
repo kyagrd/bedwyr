@@ -1,0 +1,267 @@
+% A simple example of trace analysis in spi-calculus
+% Alwen Tiu, 19 Oct 2006
+
+% This example contains an implementation of the operational semantics
+% for the finite fragment of spi-calculus (without recursion), and a simple
+% trace analysis on spi-processes to check whether the processes reveals
+% a certain message.
+% This implementation uses the definition of the operational semantics
+% by Abadi and Gordon. See the following paper for details
+%
+%   Martin Abadi and Andrew Gordon. "A calculus for cryptographic protocols:
+%   The spi calculus". Information and Computation 148, 1 - 70 (1999)
+%
+%
+% Process constructors:
+% par : proc -> proc -> proc.
+% nu  : (tm -> proc) -> proc.
+% match : (tm -> tm) -> proc -> proc.
+% in : tm -> (tm -> proc) -> proc.
+% out : tm -> tm -> proc -> proc.
+% nil : proc.
+% case : tm -> tm -> (tm -> proc) -> proc.
+%   e.g., [case L of {x}_k in Px] is translated to (case L k (x\Px)).
+% let : tm -> (tm -> tm -> proc) -> proc.
+%   e.g., [let (x,y) = M in Pxy] becomes (let M (x\y\Pxy).
+% nat : tm -> proc -> (tm -> proc) -> proc.
+%   e.g., [case M of 0:P suc(x):Qx] becomes (nat M P (x\Qx)).
+%
+% agents:
+% abs : (tm -> proc) -> agent.
+% con : tm -> proc -> agent.
+% new : (tm -> agent) -> agent.
+%
+% Terms:
+% en : tm -> tm -> tm.  (encryption)
+%   e.g., {M}_k is encoded as (en M k).
+% pr : tm -> tm -> tm.  (pairing)
+% 0 : tm.
+% suc : tm -> tm.
+% plus constant terms representing names: e.g., a, b, c, ..
+%
+% For simplicity, in this implementation we use only the encryption
+% constructor and pairing; natural numbers constructors are not implemented.
+% But it is easy to add them.
+%
+% Actions:
+% tau : action.
+% act : tm -> action.
+%
+% Transitions:
+% red : proc -> proc -> o.
+% one : proc -> action -> proc -> o.     (free-action transitions)
+% oneAbs : proc -> action -> agent -> o. (abstractions)
+% oneCon : proc -> action -> agent -> o. (concretions)
+% appAbs : agent -> agent -> proc -> o.
+% appCon : agent -> agent -> proc -> o.
+% norm1 : proc -> agent -> agent -> o.
+% norm2 : agent -> proc -> agent -> o.
+
+%% Operational semantics ======================================================
+red (match X X P) P.
+red (let (pr M N) P) R := R = (P M N).
+%red (nat 0 P Q) P.
+%red (nat (suc X) P Q) R := R = (Q X).
+red (case (en M K) K P) R := R = (P M).
+
+appAbs (abs M) (con X Q) R := R = (par (M X) Q).
+appAbs (abs M) (new A) (nu R) := nabla x, appAbs (abs M) (A x) (R x).
+
+appCon (con X Q) (abs M) R := R = (par Q (M X)).
+appCon (new A) (abs M) (nu R) := nabla x, appCon (A x) (abs M) (R x).
+
+one (par P Q) tau R := exists x, oneAbs P x F /\ oneCon Q x C /\ appAbs F C R.
+one (par P Q) tau R := exists x, oneCon P x C /\ oneAbs Q x F /\ appCon C F R.
+one (nu P) tau (nu R) := nabla x, one (P x) tau (R x).
+one P tau R := red P Q /\ one Q tau R.
+
+oneAbs (in X A) (act X) (abs A).
+oneAbs P X (abs M) := red P Q /\ oneAbs Q X (abs M).
+oneAbs (par P Q) X (abs x\(par (R x) Q)) := oneAbs P X (abs R).
+oneAbs (par P Q) X (abs x\(par P (R x))) := oneAbs Q X (abs R).
+oneAbs (nu P) A (abs x\(nu (R x))) := nabla y, oneAbs (P y) A (abs x\(R x y)).
+
+mergeRight (con X P) Q (con X (par P Q)).
+mergeRight (new C) Q (new R) := nabla x, mergeRight (C x) Q (R x).
+
+mergeLeft (con X P) Q (con X (par Q P)).
+mergeLeft (new C) Q (new R) := nabla x, mergeLeft (C x) Q (R x).
+
+oneCon (out X M P) (act X) (con M P).
+oneCon P X C := red P Q /\ oneCon Q X C.
+oneCon (par P Q) X R := oneCon P X C /\ mergeRight C Q R.
+oneCon (par P Q) X R := oneCon Q X C /\ mergeLeft C P R.
+oneCon (nu P) X (new R) := nabla y, oneCon (P y) X (R y).
+
+%% End of operational semantics ==============================================
+
+member X (cons X L).
+member X (cons Y L) := member X L.
+
+remove X (cons X L) L.
+remove X (cons Y L) (cons Y L1) := remove X L L1.
+
+append nil L L.
+append (cons X L) P (cons X Q) := append L P Q.
+
+%% The predicate entails takes as arguments
+%  L : the "environment", i.e., a list of messages known to the "attacker"
+%  M : a message.
+%  The meaning of entails L M is that M can be constructed from the environment L.
+
+
+entails L M := member M L.
+entails L (pr R T) := entails L R /\ entails L T.
+entails L (en M K) :=
+    entails L K /\ entails L M.
+entails L M :=
+   remove (pr P R) L L1 /\
+   entails (cons P (cons R L1)) M.
+entails L M :=
+   remove (en P K) L L1 /\
+   entails L1 K /\
+   append L1 (cons P (cons K nil)) L2 /\
+   entails L2 M.
+
+
+%% Concrete Traces:
+% The language of concrete traces is like that of processes, except that we have
+% "early input" prefix, instead of the late input prefix.
+% e_in : tm -> tm -> process
+% taup : process -> process (tau prefix)
+
+%% The predicate reveals takes the following arguments:
+%  E : environment  (input)
+%  M : a message (input)
+%  T : a concrete trace  (output)
+%
+% The predicate checks whether the process P, in the environment E,
+% reveals the message M at some point in its execution.
+% The trace T gives the trace that leads to this revelation.
+
+% NOTE:
+% - Currently, we assume that the bound output makes use of at most one
+%   fresh name. But it should be easy to extend to arbitrary number of fresh names.
+% - The ordering of the reveals clause affects termination for some cases.
+%   Should put bound input as the last case, since it creates logic variables.
+
+reveals E P M 0 :=
+  print "Calling entails .." /\ print (entails E M) /\
+  entails E M.
+reveals E P M Trace :=
+   print "Calling one with process:" /\
+   print P /\
+   one P tau Q /\
+   print "Now checking: " /\ print Q /\
+   reveals E Q M Trace1 /\
+   Trace = (taup Trace1).
+reveals E P M Trace :=
+   print "Calling oneCon with process: " /\
+   print P /\
+   oneCon P (act A) (con R Q) /\
+   print "Now checking : " /\ print (con R Q) /\
+   reveals (cons R E) Q M Trace1 /\
+   Trace = out A R Trace1.
+% bound ouput with one fresh name
+reveals E P M Trace :=
+   print "Calling oneCon with process:" /\
+   print P /\
+   oneCon P (act A) (new x\ con (R x) (Q x)) /\
+   print "Now checking: " /\ print (new x\ con (R x) (Q x)) /\
+   (nabla x, reveals (cons (R x) E) (Q x) M (T x)) /\
+   Trace = (nu x\ out A (R x) (T x)).
+reveals E P M Trace :=
+   print "Calling oneAbs with process:" /\
+   print P /\
+   oneAbs P (act A) (abs Q) /\
+   print "Now checking: " /\ print Q /\
+   exists y,
+     reveals E (Q y) M Trace1 /\
+     entails E y /\ %% IMPORTANT: we allow only messages that can be generated from the current knowledge
+     print "y is instantiated to: " /\ print y /\
+     Trace = (e_in A y Trace1).
+
+
+%% Examples ==================================================================
+
+% In the following examples, assume that m is a secret message (i.e., the
+% attacker does not know it initially).
+% We want to check if each process has a trace that leads to the leakage
+% of this secret message.
+
+
+% Initial knowledge of the attacker: it knows the name c.
+initial (cons c nil).
+
+% This process never reveals m.
+example 1 (nu k\ out c (en m k) 0).
+test1 := initial E /\ example 1 P /\ forall T, reveals E P m T => false.
+
+% This process outputs an encrypted message, along with the encryption key.
+% Of course the secret message m is revealed.
+example 2 (nu k\ out c (pr (en m k) k) 0).
+test2 T := initial E /\ example 2 P /\ reveals E P m T.
+
+% This process outputs an encrypted message and then outputs the key.
+% The message m is revealed.
+example 3 (nu k\ out c (en m k) (out c k 0)).
+test3 T := initial E /\ example 3 P /\ reveals E P m T.
+
+% This process outputs an encrypted message, and reveals the key
+% only if it accepts an input c. The message is revealed.
+% The trace will have an early input of value c.
+example 4 (nu k\ out c (en m k) (in c (x\ match x c (out c k 0)))).
+test4 T := initial E /\ example 4 P /\ reveals E P m T.
+
+% Similar to example 4, the only difference now is that the input x
+% is matched to m. Since the attacker does not know m yet (at the point
+% of input), the secret m is not revealed.
+example 5 (nu k\ out c (en m k) (in c (x\ match x m (out c k 0)))).
+test5 := initial E /\ example 5 P /\ forall T,reveals E P m T => false.
+
+% This process outputs an encrypted message and then output the key
+% but encrypted with c. Since the attacker knows c, it can decipher k
+% and then decipher m.
+example 6 (nu k\ out c (en m k) (out c (en k c) 0)).
+test6 T := initial E /\ example 6 P /\ reveals E P m T.
+
+% This process outputs an encrypted message, and accepts two inputs.
+% It will then send out the key if the two inputs are identical.
+example 7 (nu k\ out c (en m k) (in c (x\ in c (y\ match x y (out c k 0))))).
+test7 T := initial E /\ example 7 P /\ reveals E P m T.
+
+% This process accepts an input x, creates an fresh name k, output the message (en x k),
+% and then output the message m encrypted with the key (en c k).
+% The trace that leads to the leakage of the message m must begin
+% with an input of value c (i.e., x = c).
+example 8 (in c (x\ nu k\ out c (en x k) (out c (en m (en c k)) 0))).
+test8 T := initial E /\ example 8 P /\ reveals E P m T.
+
+% This process sends an encrypted message, but then acts as a decryption oracle.
+% Of course, an attack would be just to send back the original message
+% and have it decrypted.
+example 9 (nu k\ out c (en m k) (in c (y\ case y k (u\ out c u 0)))).
+test9 T := initial E /\ example 9 P /\ reveals E P m T.
+
+% We have two processes (proc1 and proc2) put in parallel composition.
+% Proc1 sends an encrypted messages, with key k, to proc2.
+% Proc2 then sends a fresh key l to proc1, using the secret channel k (hence
+% unobservable). But proc1 then sends out l on a public channel c.
+% So our attacker has access to l. Proc2 then sends m encrypted with l
+% on a public channel.
+% The attack will first get the output (en m k) from proc1, feed this
+% into proc2, and then let the two processes interact. After this
+% it will get the secret key l from proc1 and decode whatever it is that
+% is output by proc2.
+%
+% NOTE: possible non-termination here. It depends on the ordering of reveals clauses.
+%       This is because in the bound input step, the reveals clause try to
+%       guess which message must be passed to proc2.
+proc1 (k\ out c (en m k) (in k (y\ out c y 0))).
+proc2 (k\ in c (x\ case x k (m\ nu l\ out k l (out c (en m l) 0)))).
+
+example 10 P := proc1 R /\ proc2 T /\ P = (nu k\ par (R k) (T k)).
+test10 T := initial E /\ example 10 P /\ reveals E P m T.
+
+
+

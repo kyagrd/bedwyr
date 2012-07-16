@@ -1,0 +1,45 @@
+#include "../ccs_vp.def".
+#time on.
+pdef s0 (in insert x\ (proc (s1 x))) := true.
+pdef (s1 X0) (sum (out delete X0 (proc s0)) (in insert x\ (proc (s2 X0 x)))) := true.
+pdef (s2 X0 X1) (sum (out delete X1 (proc (s1 X0))) (in insert x\ (proc (s3 X0 X1 x)))) := true.
+pdef (s3 X0 X1 X2) (sum (out delete X2 (proc (s2 X0 X1))) (in insert x\ (proc (s4 X0 X1 X2 x)))) := true.
+pdef (s4 X0 X1 X2 X3) (sum (out delete X3 (proc (s3 X0 X1 X2))) (in insert x\ (proc (s5 X0 X1 X2 X3 x)))) := true.
+pdef (s5 X0 X1 X2 X3 X4) (sum (out delete X4 (proc (s4 X0 X1 X2 X3))) (in insert x\ (proc (s6 X0 X1 X2 X3 X4 x)))) := true.
+pdef (s6 X0 X1 X2 X3 X4 X5) (sum (out delete X5 (proc (s5 X0 X1 X2 X3 X4))) (in insert x\ (proc (s7 X0 X1 X2 X3 X4 X5 x)))) := true.
+pdef (s7 X0 X1 X2 X3 X4 X5 X6) (sum (out delete X6 (proc (s6 X0 X1 X2 X3 X4 X5))) (in insert x\ (proc (s8 X0 X1 X2 X3 X4 X5 X6 x)))) := true.
+pdef (s8 X0 X1 X2 X3 X4 X5 X6 X7) (sum (out delete X7 (proc (s7 X0 X1 X2 X3 X4 X5 X6))) (in insert x\ (proc (s9 X0 X1 X2 X3 X4 X5 X6 X7 x)))) := true.
+pdef (s9 X0 X1 X2 X3 X4 X5 X6 X7 X8) (sum (out delete X8 (proc (s8 X0 X1 X2 X3 X4 X5 X6 X7))) (in insert x\ (proc (s10 X0 X1 X2 X3 X4 X5 X6 X7 X8 x)))) := true.
+pdef (s10 X0 X1 X2 X3 X4 X5 X6 X7 X8 X9) (sum (out delete X9 (proc (s9 X0 X1 X2 X3 X4 X5 X6 X7 X8))) (in insert x\ (proc (s11 X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 x)))) := true.
+pdef (s11 X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10) (sum (out delete X10 (proc (s10 X0 X1 X2 X3 X4 X5 X6 X7 X8 X9))) (in insert x\ (proc (s12 X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 x)))) := true.
+pdef (s12 X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11) (sum (out delete X11 (proc (s11 X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10))) (in insert x\ (proc (s13 X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 x)))) := true.
+pdef (s13 X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12) (sum (out delete X12 (proc (s12 X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11))) (in insert x\ (proc (s14 X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 x)))) := true.
+pdef (s14 X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13) (sum (out delete X13 (proc (s13 X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12))) (in insert x\ (proc (s15 X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13 x)))) := true.
+pdef (s15 X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13 X14) (sum (out delete X14 (proc (s14 X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13))) (in insert x\ (proc (s16 X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13 X14 x)))) := true.
+pdef (s16 X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13 X14 X15) (sum (out delete X15 (proc (s15 X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13 X14))) (in insert x\ (proc (s17 X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13 X14 X15 x)))) := true.
+pdef (s17 X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13 X14 X15 X16) (sum (out delete X16 (proc (s16 X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13 X14 X15))) (in insert x\ (proc (s18 X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13 X14 X15 X16 x)))) := true.
+pdef (s18 X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13 X14 X15 X16 X17) (sum (out delete X17 (proc (s17 X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13 X14 X15 X16))) (in insert x\ (proc (s19 X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13 X14 X15 X16 X17 x)))) := true.
+pdef (s19 X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13 X14 X15 X16 X17 X18) (sum (out delete X18 (proc (s18 X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13 X14 X15 X16 X17))) (in insert x\ (proc (s20 X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13 X14 X15 X16 X17 X18 x)))) := true.
+pdef (s20 X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13 X14 X15 X16 X17 X18 X19) (out delete X19 (proc (s19 X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13 X14 X15 X16 X17 X18))) := true.
+
+pdef q0 (in insert x\ (proc (q1 x))) := true.
+pdef (q1 X0) (sum (out delete X0 (proc q0)) (in insert x\ (proc (q2 X0 x)))) := true.
+pdef (q2 X0 X1) (sum (out delete X0 (proc (q1 X1))) (in insert x\ (proc (q3 X0 X1 x)))) := true.
+pdef (q3 X0 X1 X2) (sum (out delete X0 (proc (q2 X1 X2))) (in insert x\ (proc (q4 X0 X1 X2 x)))) := true.
+pdef (q4 X0 X1 X2 X3) (sum (out delete X0 (proc (q3 X1 X2 X3))) (in insert x\ (proc (q5 X0 X1 X2 X3 x)))) := true.
+pdef (q5 X0 X1 X2 X3 X4) (sum (out delete X0 (proc (q4 X1 X2 X3 X4))) (in insert x\ (proc (q6 X0 X1 X2 X3 X4 x)))) := true.
+pdef (q6 X0 X1 X2 X3 X4 X5) (sum (out delete X0 (proc (q5 X1 X2 X3 X4 X5))) (in insert x\ (proc (q7 X0 X1 X2 X3 X4 X5 x)))) := true.
+pdef (q7 X0 X1 X2 X3 X4 X5 X6) (sum (out delete X0 (proc (q6 X1 X2 X3 X4 X5 X6))) (in insert x\ (proc (q8 X0 X1 X2 X3 X4 X5 X6 x)))) := true.
+pdef (q8 X0 X1 X2 X3 X4 X5 X6 X7) (sum (out delete X0 (proc (q7 X1 X2 X3 X4 X5 X6 X7))) (in insert x\ (proc (q9 X0 X1 X2 X3 X4 X5 X6 X7 x)))) := true.
+pdef (q9 X0 X1 X2 X3 X4 X5 X6 X7 X8) (sum (out delete X0 (proc (q8 X1 X2 X3 X4 X5 X6 X7 X8))) (in insert x\ (proc (q10 X0 X1 X2 X3 X4 X5 X6 X7 X8 x)))) := true.
+pdef (q10 X0 X1 X2 X3 X4 X5 X6 X7 X8 X9) (sum (out delete X0 (proc (q9 X1 X2 X3 X4 X5 X6 X7 X8 X9))) (in insert x\ (proc (q11 X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 x)))) := true.
+pdef (q11 X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10) (sum (out delete X0 (proc (q10 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10))) (in insert x\ (proc (q12 X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 x)))) := true.
+pdef (q12 X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11) (sum (out delete X0 (proc (q11 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11))) (in insert x\ (proc (q13 X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 x)))) := true.
+pdef (q13 X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12) (sum (out delete X0 (proc (q12 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12))) (in insert x\ (proc (q14 X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 x)))) := true.
+pdef (q14 X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13) (sum (out delete X0 (proc (q13 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13))) (in insert x\ (proc (q15 X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13 x)))) := true.
+pdef (q15 X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13 X14) (sum (out delete X0 (proc (q14 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13 X14))) (in insert x\ (proc (q16 X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13 X14 x)))) := true.
+pdef (q16 X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13 X14 X15) (sum (out delete X0 (proc (q15 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13 X14 X15))) (in insert x\ (proc (q17 X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13 X14 X15 x)))) := true.
+pdef (q17 X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13 X14 X15 X16) (sum (out delete X0 (proc (q16 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13 X14 X15 X16))) (in insert x\ (proc (q18 X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13 X14 X15 X16 x)))) := true.
+pdef (q18 X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13 X14 X15 X16 X17) (sum (out delete X0 (proc (q17 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13 X14 X15 X16 X17))) (in insert x\ (proc (q19 X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13 X14 X15 X16 X17 x)))) := true.
+pdef (q19 X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13 X14 X15 X16 X17 X18) (sum (out delete X0 (proc (q18 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13 X14 X15 X16 X17 X18))) (in insert x\ (proc (q20 X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13 X14 X15 X16 X17 X18 x)))) := true.
+pdef (q20 X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13 X14 X15 X16 X17 X18 X19) (out delete X0 (proc (q19 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13 X14 X15 X16 X17 X18 X19))) := true.

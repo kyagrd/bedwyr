@@ -1,0 +1,84 @@
+1.4 (dev)
+=========
+  Bedwyr-with-round-tables
+Changes:
+  - port of the build system (bin and odoc) to ocamlbuild
+  - zipper-based indexing with get-and-set functionality
+New:
+  - simple theorems are used to improve tabling
+    - forward chaining for filling (#saturation, --saturation)
+    - backward chaining for accessing(#freezing, --freezing)
+  - *.deb generation handled by the Makefile
+
+1.3 (2012-02-29)
+================
+  Bedwyr-with-types
+Fix:
+  - 2 implication bugs : #13229 + timestamp problem (rev 740)
+  - no more multiple input with multiple #include
+Changes:
+  - syntax closer to Abella's :
+    - /\ for conjunction instead of ',' or &
+    - \/ for disjunction instead of ';'
+    - -> instead of =>
+    - "forall X Y," instead of "pi X\ pi Y\"
+    - "exists X Y," instead of "sigma X\ sigma Y\"
+    - "nabla X Y," instead of "nabla X\ nabla Y\"
+    - clauses grouped in definition blocks, only one block per predicate,
+      no "inductive" and "coinductive" in the same block
+    - type annotations for predicates and bound variables
+    - Abella's keywords (e.g. Teyjus' keywords) forbidden
+  - more names allowed (including names for infix constants)
+  - C-style multiline nested comments
+  - multiline quoted strings with escaped characters
+  - parser less permissive: no more formula-as-term
+  - more error output
+  - ndcore in a distinct OCaml lib
+  - updated userguide and README
+New:
+  - types
+    - objects simply typed (no polymorphism, except for some predefined
+      predicates like 'print')
+    - input type-checked, declarations mandatory for types (except for nat,
+      string and prop), constants and predicates (except for predefined
+      predicates)
+    - typing commands (#env, #typeof, but no more #type)
+    - deprecated 'parse' predicate removed
+  - equivariant tabling
+  - I/O predefined predicates (print, fprint, etc)
+  - undocumented experimental internal non-logical side-effecting
+    predicates (_not, _abstract, _abort, etc)
+  - table export (#save_table)
+  - .deb and .ebuild publicly available
+
+1.2 (2010-04-17)
+================
+Fix:
+ - priority of conjunction and disjunction in the syntax
+ - detect potential hole in unification when some left unifications
+   make the level-based representation of raising inadequate
+New:
+ - underscore (_) is allowed for dummy logic variables
+ - several new examples
+ - pretty printing (indentation and better name generation)
+ - slight extension of unification (simple case beyond llambda)
+
+1.1 (2007-02-15)
+================
+Fix:
+  - indexing
+Changes:
+  - handling of some error related to tabling
+New:
+  - some examples
+
+1.0 (2006-11-01)
+================
+  Initial stable release (Bedwyr, the not-so-sound logician)
+Features:
+  - completed documentation
+  - lots of examples
+  - usability enhancements: session management, single-line comments
+  - assertions for testing
+  - new representation of nabla variables avoiding raising
+  - major bugfixes in tabling

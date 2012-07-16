@@ -1,0 +1,32 @@
+#include "pi.def".
+
+% A simple illustration of how to encode traces
+% and to check if two processes satisfy all the same traces.
+
+Kind trace      type.
+Type done       trace.
+Type tr         a -> trace -> trace.
+Type trp        (name -> a) -> (name -> trace) -> trace.
+
+Define trace : p -> trace -> prop by
+  trace P done;
+  trace P (tr  Act Trace) := one  P Act P' /\ trace P' Trace;
+  trace P (trp Act Trace) := onep P Act P' /\ nabla x, trace (P' x) (Trace x).
+
+Define trace_eq : p -> p -> prop by
+  trace_eq P Q := (forall T, trace P T -> trace Q T) /\
+                  (forall T, trace Q T -> trace P T).
+
+Define separating_trace : p -> p -> trace -> prop by
+  separating_trace P Q T := trace P T /\ (trace Q T -> false).
+
+% ?= example 5 P /\ example 6 Q /\ separating_trace P Q T.
+% Solution found:
+%  P = nu (x1\ par (in x (x2\ z)) (out x x1 z))
+%  Q = nu (x1\ plus (in x (x2\ out x x1 z)) (out x x1 (in x (x2\ z))))
+%  T = tr tau done
+% More [y] ?
+% No more solutions.
+% ?=
+
+#assert (example 5 P /\ example 6 Q /\ separating_trace P Q T).

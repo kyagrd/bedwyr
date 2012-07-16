@@ -1,0 +1,118 @@
+%% mute.def
+%% by Tom Chothia (CWI) and Peng Wu (LIX/Ecole Polytechnique)
+%% January 2007
+
+% MUTE is a peer-to-peer anonymous file sharing system.  See
+%             http://mute-net.sourceforge.net/
+% In the paper "Analysing the MUTE Anonymous File-Sharing System Using
+% the Pi-calculus" by Tom Chothia (FORTE 2006), an attack on the MUTE
+% system was demonstrated by first modeling the system in the
+% pi-calculus and then probing the model by hand.  In the Bedwyr
+% definition file below, Chothia and Peng use the pi-calculus
+% specification in Bedwyr to find a "separating trace" that
+% shows that there are ways to distinguish between an "innocent" node
+% and a "guilty" node.
+
+% 1. Preliminaries ============================================================
+% Include the specification of the pi-calculus, extend it a bit
+% and define the notion of trace.
+
+#include "pi/pi.def".
+
+Type chi,cho,fail  name.
+
+Kind trace      type.
+Type done       trace.
+Type tr         a -> trace -> trace.
+Type trp        a -> (name -> trace) -> trace.
+
+% Allow agent-style definitions as a controled recursion
+% These are the models of the [i]nnocent and [g]uilty nodes.
+Type i,g        p.
+Define def : p -> p -> prop by
+  def i (nu a\ nu loop\
+        (par (out cho a z)
+        (par (out loop null z)
+             (bang (in loop x\ in chi y\ par (match y a (out fail null z))
+                                             (out loop null z))))));
+  def g (nu a\ nu loop\
+        (par (out cho a z)
+        (par (out loop null z)
+             (bang (in loop x\ in chi y\ out loop null z))))).
+
+% Traces of actions
+Define trace : p -> trace -> prop by
+  trace P done;
+  trace P (tr  Act      Trace) := one def P Act P' /\ trace P' Trace;
+  trace P (trp (up X _) Trace) := onep def P (up X) P' /\
+                                nabla x, trace (P' x) (Trace x);
+  trace P (trp (dn X Y) Trace) := onep def P (dn X) P' /\ trace (P' Y) (Trace Y).
+
+% 2. Find a separating trace (non-logical approach) ===========================
+% The goal is to find T such that (trace i T) but not (trace g T).
+% Here is a first attempt at finding it.
+
+Define peng : trace -> prop by peng _.
+Define separating_trace : p -> p -> trace -> prop by
+  separating_trace P Q T := trace P T /\ peng T /\ (trace Q T -> false).
+
+% This approach is natural, except for the special "non-logical" operator "peng"
+% that is used. This operator changes Bedwyr's notion of logic
+% variables into eigenvariables.  There is a logical motivation behind
+% this operator: In Bedwyr (as in Prolog), if one asks a query G from a
+% definition (program) and one gets the answer substitution theta, then
+% not only is (G theta) provable but so is the universal closure of (G
+% theta).  Thus, if (G theta) has logic variable left in it, those logic
+% variables can be converted to eigenvariables and the result is still
+% provable.  While this "meta-level" observation about the nature of
+% provability in not problematic, the direct incorporation of it into
+% the "object-logic" via an operator (here, called peng) is not sound
+% in general.  Thus, the operator is classified as "non-logical" and is
+% not available in the main trunk of the Bedwyr system.
+% Without the "peng" operator, this predicate causes a runtime error because
+% the logic variables left in T after the clause (trace P T) are used on the
+% left of the implication (trace Q T -> false). This is not allowed in Bedwyr
+% as it requires more complex proof-search strategies.
+
+% In a version of Bedwyr hacked to provide "peng",
+% the following query will uncover such a trace.
+%
+% ?= separating_trace i g T.
+%
+% Due to the use of the "bang" operator (replication) in the script,
+% there are an infinite number of possible answers.
+
+% 3. Finding a separating trace (meta-reasonning way) =========================
+% The "peng" operator implemented meta-reasoning in the logic itself.
+% Here is another approach which handles meta-reasoning outside of the logic.
+% In particular it will run on the standard Bedwyr.
+
+% The following predicate never succeeds, but produces an output which
+% can be analyzed in order to find a separating trace.
+% Every success at finding a trace of P is followed by the output of a line
+% "(left ...)", which will be followed by one or more lines "(right ...)" if
+% that trace is successfully refined into a trace of Q.
+% If a line "(left T)" is found in the output followed immediately by another
+% "(left ..)" line, it means that T cannot be achieved by Q: it is a separating
+% trace.
+% Run the following:
+%   src/bedwyr examples/mute.def -e "separate i g." | examples/mute.pl
+
+Define separate : p -> p -> prop by
+  separate P Q :=
+  exists T,
+    trace P T /\ printstr "left " /\ println T /\ trace Q T /\ printstr "right " /\ println T /\ false.
+
+% A. Type check ===============================================================
+% Add a few valid names.
+Define picheck' : form -> form -> prop by
+  picheck' A B := picheck A B;
+  picheck' (name cho) tt;
+  picheck' (name chi) tt;
+  picheck' (name fail) tt;
+  picheck' (name null) tt.
+
+% Type-check defined processes.
+Define tc : prop by
+  tc := forall N P, def N P -> printstr "Checking " /\ println N /\ prv atom picheck' (proc P).
+#assert tc.

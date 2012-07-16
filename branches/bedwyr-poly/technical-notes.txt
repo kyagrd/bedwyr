@@ -1,0 +1,63 @@
+Some technical notes
+====================
+Alwen Tiu, 02 September 2011.
+
+These notes are to give an overview of the modifications I made to a
+branch of Bedwyr that I created in the process of implementing the
+bisimulation checker SPEC.  This should be viewed as a temporary
+documentation to facilitate the merging of this branch into the main
+trunk of Bedwyr. It should be eventually integrated into the existing
+documentation structure for the project.
+
+II. Tabling
+
+- Equivariant-tabling:
+  I have modified the tabling mechanism to allow matching of a table
+  entry modulo renaming of nabla variables. This mechanism is enabled
+  by default, but can be turned on or off using the following command:
+
+  #equivariant [on/off].
+
+
+- Outputing entries of a table:
+  I have added a facility to output the entries of a table:
+
+  #save_table <predicate> <filename>:
+  This will save the table for a predicate to a definition file. A
+  proved entry will become the argument of a predicate called
+  'proved'.  Similarly, an unproved entry will be the argument of an
+  'unproved' predicate.
+
+  In outputing an entry, the nabla variables (i.e., those of the forms
+  (NB i) ) will be explicitly quantified with the nabla quantifier.
+  If the equivariant tabling option is on, then we only quantify the
+  nabla variables that are present in the entry.  If the equivariant
+  tabling option is off, then we need to also explicitly include
+  vacuous nabla's.  Currently, the tabling mechanism does not keep an
+  explicit nabla-context (i.e., there is no explicit representation of
+  a generic judgment; nabla-context is implicit), so what I've tried
+  is to guess the number of nabla variables in the context by looking
+  at the maximum index of the nabla variables in the entry. If the
+  maximum index is n, then we produce n nabla quantifiers.
+
+  For non-equivariant tabling, this use of maximum index may cause us
+  to miss some vacuous nablas that appear inner most in a proved atomic
+  goal.  For example, if a query like (nabla x\ nabla y\ p x)
+  succeeds, then the table will only display (nabla x\ p x), because
+  the vacuous y is forgotten in the table.  This behavior is strictly
+  speaking unsound. For example, if p is defined as
+
+   p X := sigma Y\ (X = Y => false).
+
+  That is, p X is true if there exists a term distinct from X.
+  Assuming that the types are vacuous, then (nabla x\ p x) is not
+  provable in Linc, but (nabla x\ nabla y\ p x) is.  Suppose the
+  latter were proved by Bedwyr (currently it's impossible because we
+  can't yet handle logic variables on the left), then the table will
+  instead display (nabla x\ p x) as provable, which is wrong.
+
+  This unsoundness may never arise in the goals tabled by Bedwyr,
+  because to produce this behavior, it seems that we need unification
+  of logic variables on the left, which is not handled in Bedwyr
+  anyway. But it'd be good if this can be fixed, if we want to be
+  faithful to the Linc logic.

@@ -1,0 +1,31 @@
+##############################################################################
+#  Bedwyr prover                                                             #
+#  Copyright (C) 2012 Quentin Heath                                          #
+#                                                                            #
+#  This program is free software; you can redistribute it and/or modify      #
+#  it under the terms of the GNU General Public License as published by      #
+#  the Free Software Foundation; either version 2 of the License, or         #
+#  (at your option) any later version.                                       #
+#                                                                            #
+#  This program is distributed in the hope that it will be useful,           #
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of            #
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the             #
+#  GNU General Public License for more details.                              #
+#                                                                            #
+#  You should have received a copy of the GNU General Public License         #
+#  along with this code; if not, write to the Free Software Foundation,      #
+#  Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA              #
+##############################################################################
+
+<src>: include
+# remove the following "include"s when using external libs
+<src/oUnit> or <src/ndcore> or <src/batyping> or <src/input> or <src/prover>: include
+
+<**/test.{native,p.native,byte,d.byte}>: use_unix,use_oUnit
+
+<src/ndcore/*.{native,byte}>: use_ndcore
+<src/batyping/*.{native,byte}>: use_batyping
+<src/input/*.{native,byte}>: use_batyping,use_input
+<src/prover/*.{native,byte}>: use_batyping,use_input,use_prover
+
+<src/bedwyr.{native,p.native,byte,d.byte}>: use_unix,use_ndcore,use_batyping,use_input,use_prover

@@ -1,0 +1,162 @@
+Kind    list,
+        cell,
+        row,
+        board   type.
+
+Type    nil'    list.
+Type    b,o,x   cell.
+Type    c       cell -> list -> list.
+Type    row     cell -> cell -> cell -> row.
+Type    board   row -> row -> row -> board.
+
+% convert Internal External
+% Allows us to convert between internal and external formats.
+% The external format is simple to read and write, but the internal
+% format is better for recursion.
+Define convert : list -> board -> prop by
+  convert (c A (c B (c C (c D (c E (c F (c G (c H (c I nil')))))))))
+          (board (row A B C) (row D E F) (row G H I)).
+
+% Useful for theorems.
+% The extended version of this theorem, with the horizontal flip,
+% the half turn and the anticlockwise turn enabled,
+% adds too much complexity for backward chaining
+% (for the third and fourth asserts).
+Define symmetries : list -> list -> prop by
+  % vertical flip
+  symmetries
+    (c A (c B (c C (c D (c E (c F (c G (c H (c I nil')))))))))
+    (c C (c B (c A (c F (c E (c D (c I (c H (c G nil')))))))));
+% % horizontal flip
+% symmetries
+%   (c A (c B (c C (c D (c E (c F (c G (c H (c I nil')))))))))
+%   (c G (c H (c I (c D (c E (c F (c A (c B (c C nil')))))))));
+% % anticlockwise turn
+% symmetries
+%   (c A (c B (c C (c D (c E (c F (c G (c H (c I nil')))))))))
+%   (c C (c F (c I (c B (c E (c H (c A (c D (c G nil')))))))));
+% % half turn
+% symmetries
+%   (c A (c B (c C (c D (c E (c F (c G (c H (c I nil')))))))))
+%   (c I (c H (c G (c F (c E (c D (c C (c B (c A nil')))))))));
+  % clockwise turn
+  symmetries
+    (c A (c B (c C (c D (c E (c F (c G (c H (c I nil')))))))))
+    (c G (c D (c A (c H (c E (c B (c I (c F (c C nil'))))))))).
+
+% winner Player Board
+% True if Player has won on the Board
+Define winner : cell -> list -> prop by
+  winner W (c W (c W (c W (c A (c B (c C (c D (c E (c F nil')))))))));
+  winner W (c A (c B (c C (c W (c W (c W (c D (c E (c F nil')))))))));
+  winner W (c A (c B (c C (c D (c E (c F (c W (c W (c W nil')))))))));
+  winner W (c W (c A (c B (c W (c C (c D (c W (c E (c F nil')))))))));
+  winner W (c A (c W (c B (c C (c W (c D (c E (c W (c F nil')))))))));
+  winner W (c A (c B (c W (c C (c D (c W (c E (c F (c W nil')))))))));
+  winner W (c W (c A (c B (c C (c W (c D (c E (c F (c W nil')))))))));
+  winner W (c A (c B (c W (c C (c W (c D (c W (c E (c F nil'))))))))).
+
+Theorem winner_symmetries :
+  symmetries List List' /\ winner W List -> winner W List'.
+% TODO proof
+
+% nowinner Board
+% True if nobody has won on the Board yet
+Define nowinner : list -> prop by
+  nowinner B := forall X, winner X B -> X = b.
+
+% move Board Player Board'
+% True if Board' is the same as Board except for one move by Player.
+Define move : list -> cell -> list -> prop by
+  move (c b L) W (c W L);
+  move (c X L) W (c X K) := move L W K.
+
+% somemove Board
+% True if there is a possible move on the Board
+Define somemove : list -> prop by
+  somemove L := exists K, move L o K.
+
+% nomoves Board
+% True if there are no possible moves on the Board.
+Define nomoves : list -> prop by
+  nomoves L := somemove L -> false.
+
+% tie Board
+% True if the Board is a tie.
+Define tie : list -> prop by
+  tie L := nomoves L /\ nowinner L.
+
+% xwins Board
+% True if x has a winning strategy for Board, assuming o plays first.
+Define xwins : list -> prop by
+  xwins L := winner x L;
+  xwins L := forall K, move L o K -> (nowinner K /\ exists M, move K x M /\ xwins M).
+
+% owins Board
+% True if o has a winning strategy for Board, assuming o plays first.
+Define inductive owins : list -> prop by
+  owins L := winner o L;
+  owins L := nowinner L /\ exists K, move L o K /\
+               (winner o K \/ somemove K /\ forall M, move K x M -> owins M).
+
+% These definitions are not stratified, but might be nice.
+% Note: they would require that move L o K checks that x has not won,
+%       and vice-versa.
+% xwins L := forall K, move L o K  -> owins K => false.
+% owins L := forall K, move L x K  -> xwins K => false.
+
+% notxwins Board
+% True if x does not have a winning strategy for Board, assuming o plays first.
+% It would be nice to use (forall L, xwins L -> false), but xwins is level 1.
+Define coinductive notxwins : list -> prop by
+  notxwins L := tie L;
+  notxwins L := winner o L;
+  notxwins L := nowinner L /\ exists K, move L o K /\
+                  (tie K \/ winner o K \/ forall M, move K x M -> notxwins M).
+
+Theorem notxwins_symmetries :
+  symmetries List List' /\ notxwins List -> notxwins List'.
+% TODO proof
+
+% play Board
+% This predicate lets you play tic-tac-toe against the computer.
+% Given a board, the computer attempts to make a move in a winning
+% strategy. If this is not possible, it attempts to make a move in a
+% non-losing strategy. If this is not possible, it just makes some move.
+Define play_to_win : list -> list -> prop by
+  play_to_win L K := winner o K \/ somemove K /\ forall M, move K x M -> owins M.
+
+Define play_to_tie : list -> list -> prop by
+  play_to_tie L K := tie K \/ forall M, move K x M -> notxwins M.
+
+Define play : board -> prop by
+  play L' := convert L L' /\ nowinner L /\ exists K,
+      ((move L o K /\ play_to_win L K /\ printstr "Playing to win...\n") \/
+       (move L o K /\ play_to_tie L K /\ printstr "Playing to tie...\n") \/
+       (move L o K /\ printstr "Playing to lose...\n")) /\
+      convert K K' /\ println K'.
+
+#assert (convert Board (board (row x x x) (row b b b) (row b b b)) /\
+         xwins Board).
+
+#assert (convert Board (board (row x x b) (row b b b) (row b b b)) /\
+         xwins Board).
+
+#assert (convert Board (board (row x b o) (row b b b) (row b b b)) /\
+         notxwins Board).
+% Performance in byte-mode (@heath)
+% Whatever the freezing point is, backward chaining isn't beneficial.
+%   0.50 (v1.4, fp=0)
+%   0.55 (v1.4, fp=1)
+%   0.72 (v1.4, fp=2)
+%   1.03 (v1.4, fp=3)
+
+#assert (convert Board (board (row b b b) (row b b b) (row b b b)) /\
+         notxwins Board).
+% Performance in byte-mode (@heath)
+% A performance gain is sensible until fp = 2, and then is compensated by
+% the additional computations.
+%   1.14 (v1.4, fp=0)
+%   1.13 (v1.4, fp=1)
+%   0.62 (v1.4, fp=2)
+%   2.17 (v1.4, fp=3)

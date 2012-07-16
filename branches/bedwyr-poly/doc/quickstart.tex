@@ -1,0 +1,59 @@
+\documentclass[a4paper]{article} % defaults to letter
+
+% xypic is simply a wrapper for xy,
+% but is preferred since it is understood by hevea
+\usepackage[all]{xypic}
+
+% we want Type 1 fonts instead of CM/Type 3 (vectorial vs bitmap),
+% plus math fonts
+\usepackage{ae,aecompl}
+\usepackage{amsfonts}
+
+% all sorts of links: internal, external, multi-line...
+\usepackage[
+% linkbordercolor={1 0 0}, % default: red
+% citebordercolor={0 1 0}, % default: green
+% filebordercolor={1 0 1}, % default: magenta
+% urlbordercolor={0 1 1},  % default: cyan
+  pdftitle={Bedwyr QuickStart 1.4}
+]{hyperref}
+\usepackage{breakurl}
+
+% hevea commands, to be ignored by latex
+\usepackage{hevea}
+\loadcssfile{http://slimmer.gforge.inria.fr/bedwyr/bd.css}
+
+\bibliographystyle{alpha}
+
+% draw a nice tilde in the Verbatim environment
+\usepackage{fancyvrb}
+\newcommand{\mytilde}{\raise.3ex\hbox{$\scriptstyle\sim$}}
+\RecustomVerbatimEnvironment{Verbatim}{Verbatim}{commandchars=\\\{\}}
+
+\newcommand{\lp}{$\lambda$Prolog}
+\newcommand{\Ll}{$L_\lambda$}
+\newcommand{\qs}{\; . \;}
+
+\title{{\Huge A Quick-Start Guide to Bedwyr v1.4}}
+\author{Quentin Heath\\INRIA Saclay and LIX/\'Ecole Polytechnique}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+intro (what-who-where-how, quick start)
+\end{abstract}
+
+% ============================================================================
+\section{Overview}
+
+% ============================================================================
+\section{Input format}
+
+% ============================================================================
+\section{Sample files}
+
+% ============================================================================
+\section{REPL demo}
+
+\end{document}

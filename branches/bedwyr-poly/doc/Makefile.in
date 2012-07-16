@@ -1,0 +1,197 @@
+##############################################################################
+#  Bedwyr prover                                                             #
+#  Copyright (C) 2012 Quentin Heath                                          #
+#                                                                            #
+#  This program is free software; you can redistribute it and/or modify      #
+#  it under the terms of the GNU General Public License as published by      #
+#  the Free Software Foundation; either version 2 of the License, or         #
+#  (at your option) any later version.                                       #
+#                                                                            #
+#  This program is distributed in the hope that it will be useful,           #
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of            #
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the             #
+#  GNU General Public License for more details.                              #
+#                                                                            #
+#  You should have received a copy of the GNU General Public License         #
+#  along with this code; if not, write to the Free Software Foundation,      #
+#  Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA              #
+##############################################################################
+
+# @configure_input@
+
+### DEFINITIONS
+
+PACKAGE_TARNAME	= @PACKAGE_TARNAME@
+PACKAGE_VERSION	= @PACKAGE_VERSION@
+DIST_NAME	= $(PACKAGE_TARNAME)-$(PACKAGE_VERSION)
+ifeq ($(TARGET),)
+  TARGET_NAME	= $(PACKAGE_TARNAME)
+else
+  TARGET_NAME	= $(TARGET)
+endif
+
+SHELL	= @BASH@
+FIG2DEV	= @FIG2DEV@
+LATEX	= @LATEX@
+BIBTEX	= @BIBTEX@
+DVIPS	= @DVIPS@
+#DVIPS	= @DVIPS@ -t a4 -Ppdf -z
+PS2PDF	= @PS2PDF@
+#PS2PDF	= @PS2PDF@ -sPAPERSIZE=a4
+HEVEA	= @HEVEA@ png.hva
+BIBHVA	= @BIBHVA@
+IMAGEN	= @IMAGEN@ -png
+HACHA	= @HACHA@ -tocbis
+TAR	= @TAR@
+FIND	= @FIND@
+GZIP	= @GZIP@ -4 -f
+
+prefix		= @prefix@
+datarootdir	= @datarootdir@
+docdir		= $(patsubst %$(PACKAGE_TARNAME),%$(TARGET_NAME),@docdir@)
+htmldir		= @htmldir@
+pdfdir		= @pdfdir@
+psdir		= @psdir@
+
+HTMLDIR		= $(DESTDIR)$(htmldir)
+PDFDIR		= $(DESTDIR)$(pdfdir)
+PSDIR		= $(DESTDIR)$(psdir)
+
+INSTALL		= @INSTALL@
+INSTALL_OPTS	= -v
+INSTALL_DIR	= @INSTALL_PROGRAM@ $(INSTALL_OPTS) -d
+INSTALL_DATA	= @INSTALL_DATA@ $(INSTALL_OPTS) -p
+
+### FILES
+
+FIGDIR	= ./figures
+
+QUICKSTART	= quickstart
+REFMAN		= refman
+
+TEX_FILES	= $(QUICKSTART).tex $(REFMAN).tex
+TEX_INCLUDES	= $(wildcard include/*.tex)
+BIB_FILES	= $(wildcard *.bib)
+FIG_FILES	= $(wildcard $(FIGDIR)/*.fig )
+PSTEX		= $(FIG_FILES:.fig=.pstex)
+PSTEX_T		= $(FIG_FILES:.fig=.pstex_t)
+PIC_FILES	= $(FIG_FILES) \
+		  $(wildcard $(FIGDIR)/*.ps ) \
+		  $(wildcard $(FIGDIR)/*.eps)
+DVI_FILES	= $(TEX_FILES:.tex=.dvi)
+PS_FILES	= $(DVI_FILES:.dvi=.ps)
+PSGZ_FILES	= $(PS_FILES:=.gz)
+PDF_FILES	= $(PS_FILES:.ps=.pdf)
+PDFGZ_FILES	= $(PDF_FILES:=.gz)
+HTML_FILES	= $(QUICKSTART).html $(REFMAN)/index.html
+
+ARCH_FILES	= $(TEX_FILES) $(TEX_INCLUDES) $(BIB_FILES) \
+		  $(PIC_FILES) Makefile.in
+
+TARGETS		= $(PSGZ_FILES) $(PDFGZ_FILES) $(HTML_FILES)
+
+### BUILDING
+
+all: $(TARGETS)
+
+.SUFFIXES: .fig .pstex .pstex_t .tex .aux .bbl .dvi .ps .gz .pdf .haux .hbbl .html
+
+.fig.pstex:
+	@$(FIG2DEV) -L pstex $< $@
+
+.pstex.pstex_t:
+	@$(FIG2DEV) -L pstex_t -p $< $*.fig $@
+
+.tex.aux: $(TEX_INCLUDES)
+	@$(LATEX) $*
+
+# "|| true" avoid failure when there is no bib
+.aux.bbl: $(BIB_FILES)
+	@$(BIBTEX) $* || true
+
+%.dvi: %.tex
+
+.bbl.dvi:
+	@$(LATEX) $*
+	@while ( grep -q "Rerun to get cross-references right" $*.log ) ; do \
+	  $(LATEX) $* ; \
+	  done
+
+.dvi.ps:
+	@$(DVIPS) $*
+
+.ps.pdf:
+	@$(PS2PDF) $<
+
+%.gz: %
+	@$(GZIP) -c $< > $@
+
+# "-fix" enforces the creation of $*.haux even if $*.aux is still present
+# from a previous latex run (while hevea can use both, bibhva cannot)
+.tex.haux:
+	@$(HEVEA) -fix $*
+
+.haux.hbbl:
+	@$(BIBHVA) $*
+
+.hbbl.html:
+	@$(HEVEA) -fix $*
+
+%/index.html: %.html
+	@mkdir -p $*
+	@$(HACHA) -o $@ $<
+	@for i in $(wildcard $**.png) ; do mv -vf $$i $*/ ; done
+
+### INSTALL
+
+.PHONY: install
+
+install: install_psgz install_pdfgz install_html
+
+install_psgz: $(PSGZ_FILES)
+	@$(INSTALL_DIR) $(PSDIR)
+	@for i in $^ ; do $(INSTALL_DATA) $$i $(PSDIR) ; done
+
+install_pdfgz: $(PDFGZ_FILES)
+	@$(INSTALL_DIR) $(PDFDIR)
+	@for i in $^ ; do $(INSTALL_DATA) $$i $(PDFDIR) ; done
+
+install_html: install_html_quickstart install_html_refman
+
+install_html_quickstart: $(QUICKSTART).html
+	@$(INSTALL_DIR) $(HTMLDIR)
+	@$(INSTALL_DATA) $< $(HTMLDIR)
+
+install_html_refman: $(REFMAN)/index.html
+	@$(INSTALL_DIR) $(HTMLDIR)/$(REFMAN)
+	@for i in $(REFMAN)/* ; do\
+	  $(INSTALL_DATA) $$i $(HTMLDIR)/$(REFMAN) ; done
+
+### ARCHIVES
+
+.PHONY: archive
+
+archive: archive.tar
+
+archive.tar: $(ARCH_FILES)
+	@$(TAR) -cf $@ --xform 's|^|$(DIST_NAME)/doc/|' $^
+
+### OTHER TARGETS
+
+.PHONY: clean_tex clean_hevea clean distclean
+
+clean_tex:
+	@find . \( -name \*.aux -o -name \*.bbl -o -name \*.blg \
+	  -o -name \*.log -o -name \*.idx -o -name \*.ilg -o -name \*.ind \
+	  -o -name \*.out -o -name \*.nav -o -name \*.snm -o -name \*.lox \
+	  -o -name \*.toc -o -name \*.lot -o -name \*.lof -o -name \*.vrb \) \
+	  -exec rm -vf {} \;
+
+clean_hevea:
+	@rm -fv *.haux *.html *.blg *.hbbl *.image.tex \
+	  *.htoc *.hidx *.hind *_motif.gif *.css
+	@rm -rvf $(REFMAN)
+
+clean: clean_tex clean_hevea
+	@$(FIND) . -name '*~' -exec rm -vf \{\} \;
+	@rm -vf *.dvi *.ps *.gz *.pdf *.tar

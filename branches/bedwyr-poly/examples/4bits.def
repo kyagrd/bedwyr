@@ -1,0 +1,177 @@
+%% 4 Bit Adder
+
+%% This is an implementation of a 4 bit adder. We use proof search to do
+%% case exhaustion (ie. model checking) in order to show that this adder
+%% is equivilent to regular addition.
+
+Kind int type.
+Type z  int.
+Type s  int -> int.
+
+%% Gates and adders
+
+% and a b (a and b)
+Define and : nat -> nat -> nat -> prop by
+  and 0 0 0;
+  and 0 1 0;
+  and 1 0 0;
+  and 1 1 1.
+
+% xor a b (a xor b)
+Define xor : nat -> nat -> nat -> prop by
+  xor 0 0 0;
+  xor 0 1 1;
+  xor 1 0 1;
+  xor 1 1 0.
+
+% half a b sum carry-out
+% A one bit half adder
+Define half : nat -> nat -> nat -> nat -> prop by
+  half A B S Co := and A B Co /\ xor A B S.
+
+% full carry-in a b sum carry-out
+% A one bit full adder
+Define full : nat -> nat -> nat -> nat -> nat -> prop by
+  full Ci A B S Co :=
+    half A B T1 T2 /\ 
+    half Ci T1 S T3 /\ 
+    xor T2 T3 Co.
+
+% fourbit a[3..0] b[3..0] sum[4..0]
+% A four bit adder. This is exactly like binary addition is done by hand,
+%
+%   C3 C2 C1 C0      <-- carry
+%      A3 A2 A1 A0   <-- a
+% +    B3 B2 B1 B0   <-- b
+% ----------------
+%   S4 S3 S2 S1 S0   <-- sum
+%
+Define fourbit : nat -> nat -> nat -> nat ->
+                 nat -> nat -> nat -> nat ->
+                 nat -> nat -> nat -> nat -> nat ->
+                 prop by
+  fourbit A3 A2 A1 A0 B3 B2 B1 B0 S4 S3 S2 S1 S0 :=
+    half A0 B0 S0 C0 /\ 
+    full C0 A1 B1 S1 C1 /\ 
+    full C1 A2 B2 S2 C2 /\ 
+    full C2 A3 B3 S3 S4.
+
+%% Conversions and basic math
+
+% dec2bin decimal b[4..0]
+% Convert between deciaml and binary
+Define dec2bin : nat -> nat -> nat -> nat -> nat -> nat -> prop by
+  dec2bin 0  0 0 0 0 0;
+  dec2bin 1  0 0 0 0 1;
+  dec2bin 2  0 0 0 1 0;
+  dec2bin 3  0 0 0 1 1;
+  dec2bin 4  0 0 1 0 0;
+  dec2bin 5  0 0 1 0 1;
+  dec2bin 6  0 0 1 1 0;
+  dec2bin 7  0 0 1 1 1;
+  dec2bin 8  0 1 0 0 0;
+  dec2bin 9  0 1 0 0 1;
+  dec2bin 10 0 1 0 1 0;
+  dec2bin 11 0 1 0 1 1;
+  dec2bin 12 0 1 1 0 0;
+  dec2bin 13 0 1 1 0 1;
+  dec2bin 14 0 1 1 1 0;
+  dec2bin 15 0 1 1 1 1;
+  dec2bin 16 1 0 0 0 0;
+  dec2bin 17 1 0 0 0 1;
+  dec2bin 18 1 0 0 1 0;
+  dec2bin 19 1 0 0 1 1;
+  dec2bin 20 1 0 1 0 0;
+  dec2bin 21 1 0 1 0 1;
+  dec2bin 22 1 0 1 1 0;
+  dec2bin 23 1 0 1 1 1;
+  dec2bin 24 1 1 0 0 0;
+  dec2bin 25 1 1 0 0 1;
+  dec2bin 26 1 1 0 1 0;
+  dec2bin 27 1 1 0 1 1;
+  dec2bin 28 1 1 1 0 0;
+  dec2bin 29 1 1 1 0 1;
+  dec2bin 30 1 1 1 1 0;
+  dec2bin 31 1 1 1 1 1.
+
+% dec2unary decimal unary
+% Convert between decimal and unary
+Define dec2unary : nat -> int -> prop by
+  dec2unary 0 z;
+  dec2unary 1 (s z);
+  dec2unary 2 (s (s z));
+  dec2unary 3 (s (s (s z)));
+  dec2unary 4 (s (s (s (s z))));
+  dec2unary 5 (s (s (s (s (s z)))));
+  dec2unary 6 (s (s (s (s (s (s z))))));
+  dec2unary 7 (s (s (s (s (s (s (s z)))))));
+  dec2unary 8 (s (s (s (s (s (s (s (s z))))))));
+  dec2unary 9 (s (s (s (s (s (s (s (s (s z)))))))));
+  dec2unary 10 (s (s (s (s (s (s (s (s (s (s z))))))))));
+  dec2unary 11 (s (s (s (s (s (s (s (s (s (s (s z)))))))))));
+  dec2unary 12 (s (s (s (s (s (s (s (s (s (s (s (s z))))))))))));
+  dec2unary 13 (s (s (s (s (s (s (s (s (s (s (s (s (s z)))))))))))));
+  dec2unary 14 (s (s (s (s (s (s (s (s (s (s (s (s (s (s z))))))))))))));
+  dec2unary 15 (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s z)))))))))))))));
+  dec2unary 16 (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s z))))))))))))))));
+  dec2unary 17 (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s z)))))))))))))))));
+  dec2unary 18 (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s z))))))))))))))))));
+  dec2unary 19 (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s z)))))))))))))))))));
+  dec2unary 20 (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s z))))))))))))))))))));
+  dec2unary 21 (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s z)))))))))))))))))))));
+  dec2unary 22 (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s z))))))))))))))))))))));
+  dec2unary 23 (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s z)))))))))))))))))))))));
+  dec2unary 24 (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s z))))))))))))))))))))))));
+  dec2unary 25 (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s z)))))))))))))))))))))))));
+  dec2unary 26 (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s z))))))))))))))))))))))))));
+  dec2unary 27 (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s z)))))))))))))))))))))))))));
+  dec2unary 28 (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s z))))))))))))))))))))))))))));
+  dec2unary 29 (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s z)))))))))))))))))))))))))))));
+  dec2unary 30 (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s z))))))))))))))))))))))))))))));
+  dec2unary 31 (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s z))))))))))))))))))))))))))))))).
+
+% unaryadd a b (a+b)
+% Addition on unary numbers
+Define unaryadd : int -> int -> int -> prop by
+  unaryadd z B B;
+  unaryadd (s A) B (s S) := unaryadd A B S.
+
+% decadd a b (a+b)
+% Decimal math is not builtin so we convert to unary and use unary addition
+Define decadd : nat -> nat -> nat -> prop by
+  decadd A B S :=
+    dec2unary A Au /\ 
+    dec2unary B Bu /\ 
+    unaryadd Au Bu Su /\ 
+    dec2unary S Su.
+
+%% The final adder and tests for it
+
+% decfourbit a b (a+b)
+% Convert decimals a and b to binary, use the 4 bit adder to add them,
+% and convert the result back to decimal. Note that a and b will be four
+% bits, so their fifth bit must be zero, but their sum may be five bits.
+Define decfourbit : nat -> nat -> nat -> prop by
+  decfourbit A B S :=
+    dec2bin A 0 A3 A2 A1 A0 /\ 
+    dec2bin B 0 B3 B2 B1 B0 /\ 
+    fourbit A3 A2 A1 A0 B3 B2 B1 B0 S4 S3 S2 S1 S0 /\ 
+    dec2bin S S4 S3 S2 S1 S0.
+
+% We restrict the domain in order to speed up the prover
+Define domain : nat -> prop by
+  domain X := X = 0 \/ X = 1 \/ X = 2 \/ X = 3 \/ X = 4 \/ X = 5 \/ X = 6 \/ X = 7 \/ X = 8 \/ X = 9 \/ X = 10 \/ X = 11 \/ X = 12 \/ X = 13 \/ X = 14 \/ X = 15.
+
+Define printsum : nat -> nat -> nat -> prop by
+  printsum A B S :=
+    print A /\ printstr " + " /\ print B /\ printstr " = " /\ println S.
+
+% Test that our fourbit adder is sound and complete relative to addition on
+% the integers 0 through 15
+Define test : prop by
+  test := forall a b sum,
+    (domain a /\ domain b) ->
+    ((decadd a b sum -> decfourbit a b sum /\ printsum a b sum) /\
+     (decfourbit a b sum -> decadd a b sum /\ printsum a b sum)).
+
+#assert test.

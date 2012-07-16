@@ -1,0 +1,157 @@
+% Checking correspondence assertions for pi-processes
+%
+% We extends the language of finite pi calculus with assertions of the
+% form "begin L P" and "end L P", where L is a message.
+% The process (begin L P) (likewise, (end L P)) makes a transition
+% labelled with (begin L) and then behaves like P.
+%
+% Correspondence assertion is a statement about the traces of a process:
+%   A trace s is a correspondence if and only if every (end L) has
+%   a corresponding (begin L) earlier in the trace. A process P is
+%   safe if and only if for all traces s originating from P, s is
+%   a correspondence.
+% See the following paper for the precise definitions:
+%   [Gordon & Jeffrey]
+%    Andrew Gordon and Alan Jeffrey. Typing Correspondence Assertions for
+%    Communication Protocols.
+%
+% In this example we *do not* implement the type system for correspondence
+% assertions in the above paper. Rather, we generate all the traces
+% produced by a process and check that each trace is safe. Hence ours
+% is more like a model checking approach to the correspondence assertions
+% problem.
+
+
+% Operational semantics for finite pi-calculus with assertions.
+
+Kind obj        type.
+Type c          obj.    % Names
+
+Kind a          type.   % Actions
+Type tau        a.
+Type dn,up      obj -> obj -> a.
+Type bgn,nd     obj -> a.
+
+Kind p       type.   % Processes
+Type in   	obj -> (obj -> p) -> p.
+Type out  	obj -> obj -> p -> p.
+Type begin,$end obj -> p -> p.
+Type taup 	p -> p.
+Type match      obj -> obj -> p -> p.
+%  Type    plus, par   p -> p -> p.
+Type par        p -> p -> p.
+Type nu         (obj -> p) -> p.
+%  Type    bang    p -> p.
+Type stop,z     p.
+
+
+% bound input
+Define
+  one : p -> a -> p -> prop,
+  onep : p -> (obj -> a) -> (obj -> p) -> prop
+by
+  onep (in X M) (dn X) M;
+
+  % free output
+  one  (out X Y P) (up X Y) P;
+
+  % tau
+  one  (taup P) tau P;
+
+  % assertions
+  one (begin L P) (bgn L) P;
+  one ($end L P) (nd L) P;
+  % match prefix
+  one  (match X X P) A Q := one P A Q;
+  onep (match X X P) A M := onep P A M;
+  % par
+  one  (par P Q) A (par P1 Q) := one P A P1;
+  one  (par P Q) A (par P Q1) := one Q A Q1;
+  onep (par P Q) A (x\par (M x) Q) := onep P A M;
+  onep (par P Q) A (x\par P (N x)) := onep Q A N;
+
+  % restriction
+  one  (nu x\P x) A (nu x\Q x)      := nabla x, one  (P x) A (Q x);
+  onep (nu x\P x) A (y\ nu x\Q x y) := nabla x, onep (P x) A (y\ Q x y);
+
+  % open
+  onep (nu x\M x) (up X) N := nabla y, one (M y) (up X y) (N y);
+  onep (nu x\M x) bgn N := nabla y, one (M y) (bgn y) (N y);
+  onep (nu x\M x) nd N := nabla y, one (M y) (nd y) (N y);
+  % close
+  one (par P Q) tau (nu y\ par (M y) (N y)) :=
+    exists X, onep P (dn X) M /\ onep Q (up X) N;
+  one (par P Q) tau (nu y\ par (M y) (N y)) :=
+    exists X, onep P (up X) M /\ onep Q (dn X) N;
+
+  % comm
+  one (par P Q) tau (par R T) :=
+    exists X Y M, onep P (dn X) M /\ one Q (up X Y) T /\ R = (M Y);
+  one (par P Q) tau (par R T) :=
+    exists X Y M, onep Q (dn X) M /\ one P (up X Y) R /\ T = (M Y).
+
+% traces
+
+Define trace : p -> p -> prop by
+  trace P stop;
+  trace P (begin L T) :=
+    one P (bgn L) Q /\ trace Q T;
+  trace P ($end L T) :=
+    one P (nd L) Q /\ trace Q T;
+  trace P T :=
+    one P tau Q /\ trace Q T;
+  trace P T :=
+    one P (up X Y) Q /\ trace Q T;
+  trace P T :=
+    onep P (dn X) Q /\ exists y, trace (Q y) T;
+  trace P (nu x\ T x) :=
+    onep P (up X) Q /\ nabla x, trace (Q x) (T x);
+  trace P (nu x\ begin x (T x)) :=
+    onep P bgn Q /\
+    nabla x, trace (Q x) (T x);
+  trace P (nu x\ $end x (T x)) :=
+    onep P nd Q /\
+    nabla x, trace (Q x) (T x).
+
+
+Kind list       type.
+Type cons       obj -> list -> list.
+Type nil        list.
+Define remove : obj -> list -> list -> prop by
+  remove X (cons X L) L;
+  remove X (cons Y L) R := remove X L R.
+
+% Check whether a trace is a correspondence. The list L is the accumulated
+% "begin" assertions. Use tabling to speed up proof search.
+Define inductive iscorr : list -> p -> prop by
+  iscorr L stop;
+  iscorr L (begin M T) := iscorr (cons M L) T;
+  iscorr L ($end M T) := remove M L L1 /\ iscorr L1 T;
+  iscorr L (nu x\(T x)) := nabla x, iscorr L (T x).
+
+
+Define safe : p -> prop by
+  safe P :=
+   forall T, (trace P T /\ printstr "  Checking trace: " /\ println T)  ->  iscorr nil T.
+
+Define sender : (obj -> p) -> prop by
+  sender (c\ (nu m\ nu ack\ out c m (out c ack (in ack y\ $end m z)))).
+Define rcver : (obj -> p) -> prop by
+  rcver  (c\ in c m\ in c ack\ begin m (out ack m z)).
+
+Define example : nat -> p -> prop by
+  % Example 0: unsafe;
+  example 0 (nu x\ par (begin x z) ($end x z));
+  % Example 1: safe. Channel c is restricted
+  example 1 (nu c\ par (P c) (Q c)) := sender P /\ rcver Q;
+  % Example 2: unsafe
+  example 2 (par P Q) := sender M /\ rcver N /\ P = M c /\ Q = N c;
+  % Example 3: safe
+  example 3 (nu c\ par (S c) (par (R c) (R c))) :=
+    sender S /\ rcver R.
+#assert_not (example 0 P /\ safe P).
+#assert (example 1 P /\ safe P).
+#assert_not (example 2 P /\ safe P).
+#assert (example 3 P /\ safe P).
+
+% TODO implement more complicated examples from [Gordon & Jeffrey].

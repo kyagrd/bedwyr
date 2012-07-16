@@ -1,0 +1,21 @@
+% To  use these predicates, insert this in the file you are debugging.
+%     #include "debug.def".
+
+% To trace a predicate, say the pred or three arguments, then one can
+% add as the first line of it's definition
+%  pred A B C := announce (pred A B C).
+
+% XXX 'announce' is weakly polymorphic (because this is the only
+% polymorpism bedwyr-1.3-beta8 realy has), therefore forbidden,
+% whereas 'print' is strongly polymorphic (which is a feature
+% hardcoded like a bug).
+%Define announce : _ -> prop by
+%  announce G := print G /\ false.
+
+% To trace when a goal is entered, succeeds, and fails, the wrap the
+% following spy command around it.
+
+Define spy : prop -> prop by
+  spy G :=
+    (printstr ">Entering " /\ println G /\ G /\ printstr ">Success  " /\ println G) \/
+    (printstr ">Leaving  " /\ println G /\ false).

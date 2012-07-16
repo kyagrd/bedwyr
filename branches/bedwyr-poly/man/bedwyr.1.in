@@ -1,0 +1,229 @@
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.\"  Bedwyr prover                                                           "
+.\"  Copyright (C) 2012 Quentin Heath                                        "
+.\"                                                                          "
+.\"  This program is free software; you can redistribute it and/or modify    "
+.\"  it under the terms of the GNU General Public License as published by    "
+.\"  the Free Software Foundation; either version 2 of the License, or       "
+.\"  (at your option) any later version.                                     "
+.\"                                                                          "
+.\"  This program is distributed in the hope that it will be useful,         "
+.\"  but WITHOUT ANY WARRANTY; without even the implied warranty of          "
+.\"  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the           "
+.\"  GNU General Public License for more details.                            "
+.\"                                                                          "
+.\"  You should have received a copy of the GNU General Public License       "
+.\"  along with this code; if not, write to the Free Software Foundation,    "
+.\"  Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA            "
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.\"
+.\" @configure_input@
+.\"
+.Dd July 13, 2012
+.Os @PACKAGE_NAME@ v@PACKAGE_VERSION@
+.Dt BEDWYR 1 URM
+.\"
+.\"
+.Sh NAME
+.Nm @PACKAGE_TARNAME@
+.Nd the not-so-sound logician
+.\"
+.\"
+.Sh SYNOPSIS
+.Nm
+.Op Fl I
+.Op Fl t
+.Op Fl e Ar query
+.Op Fl \-freezing Ar fp
+.Op Fl \-saturation Ar sp
+.Op Fl help | Fl \-help
+.Ar
+.Pp
+.Nm @PACKAGE_TARNAME@.byte
+.Ar ...
+.Pp
+.Nm @PACKAGE_TARNAME@.native
+.Ar ...
+.\"
+.\"
+.Sh DESCRIPTION
+@PACKAGE_NAME@ is a theorem prover for the Level-0/1 fragment of the
+Linc logic.
+.Pp
+It is based on
+.An Alwen Tiu Ns 's
+Level-0/1, and
+.An Nadathur & Linell Ns 's
+LLambda library, both written in SML. The OCaml translation has been done by
+.An Baelde & Ziegler
+and further development by
+.An Baelde & Gacek .
+It is currently under work by
+.An Heath .
+The system also benefited from the wisdom
+of Miller, Nadathur and Pientka.
+.Pp
+For background on the system, see
+.Rs
+.%T Mixing Finite Success and Finite Failure in an Automated Prover
+.%A Alwen Tiu
+.%A Gopalan Nadathur
+.%A Dale Miller
+.%O http://www.lix.polytechnique.fr/Labo/Dale.Miller/papers/eshol05.pdf
+.Re
+.Pp
+Webpage:
+.Pa http://slimmer.gforge.inria.fr/bedwyr/ .
+.Pp
+When invoked as
+.Nm @PACKAGE_TARNAME@ ,
+the faster of the available binaries is used (i.e. the native code version,
+.Nm @PACKAGE_TARNAME@.native ,
+if available; otherwise the bytecode version,
+.Nm @PACKAGE_TARNAME@.byte ) .
+.\"
+.\"
+.Sh OPTIONS
+.Bl -tag
+.It Fl I
+Do not enter interactive mode.
+.It Fl t
+Run tests in definition files.
+Those are the queries given by
+.Ic #assert Ar form Ns Ic \&.
+(see
+.Sx META-COMMANDS ) .
+.It Fl e Ar query
+Execute
+.Ar query
+(see
+.Sx INTERACTIVE QUERIES ) .
+Such queries are executed in the order they are given on the command-line,
+after all the input files a read but before entering the interactive loop.
+.It Fl \-freezing Ar fp
+Enable backward chaining and set its limit (the so-called
+.Ar freezing-point )
+to
+.Ar fp .
+Setting it to 0 (the default value) disables backward chaining,
+setting it to \-1 allows infinite chaining (usually not a smart idea).
+The value 1 should be a good compromise.
+.It Fl \-saturation Ar sp
+Enable forward chaining and set its limit (the so-called
+.Ar saturation-point )
+to
+.Ar sp .
+Setting it to 0 (the default value) disables forward chaining,
+setting it to \-1 allows infinite chaining and therefore actual saturation
+of the table wrt the theorem.
+.It Fl help , \-help
+Display the version number and the list of command-line options.
+.El
+.\"
+.\"
+.Sh INPUT FILES
+A definition file can contain any meta-command (see
+.Sx META-COMMANDS ) ,
+in addition to any of the following commands.
+.\"
+.Ss Type declaration
+.Bl -tag
+.It Ic Kind Ar int,object Ic type.
+This is the only kind of types allowed for now.
+.Pp
+The predefined types are
+.Ar nat , string
+and obviously
+.Ar prop .
+.El
+.\"
+.Ss Constant declaration
+.Bl -tag
+.It Ic Type Ar z Ic int.
+.It Ic Type Ar s Ic int \-> int.
+.It Ic Type Ar min,max Ic (int \-> prop) \-> int.
+No polymorphism is available yet, but all proper types
+(even higher order ones) are allowed.
+.Pp
+Apart from
+.Ar true
+and
+.Ar false ,
+there are no actual predefined constants, but some runtime-defined constants:
+.Ar 0 , 1 , ...
+of type
+.Ic nat ,
+and any quoted string of type
+.Ar string .
+.El
+.\"
+.Ss Predicate declaration and definition
+.Bl -tag
+.It Ic Definition Ao Ar declarations Ac Ns Ic \&.
+.It Ic Definition Ao Ar declarations Ac Ic by Ao Ar definitions Ac Ns Ic \&.
+The header of a definition block gives the declarations of the predicates
+with mandatory type annotations ending with
+.Ic prop
+(for instance
+.Ic Ar p1 Ic \&: int \-> prop, Ar p2 Ic \&: prop ) .
+.Pp
+The body of a definition block gives discretionary clauses
+for those predicates, and only those (for instance
+.Ic Ar p1 (s (s N)) := p1 N Ic \&; Ar p2 Ic \&; Ar p1 z ) .
+Here,
+.Ar p1
+is true on even integers and
+.Ar p2
+is equal to
+.Ar true .
+.Pp
+The head of a bodyless clause is always true.
+A predicate without any clauses us always false.
+.El
+.\"
+.Ss Theorems
+.Bl -tag
+.It Ic Theorem Ar thm Ic \&: Ar forall Y, body X Y \-> head X Ns Ic \&.
+A theorem is a valid Abella theorem with some restrictions on its body
+(neither implication nor universal quantification).
+.El
+.\"
+.\"
+.Sh INTERACTIVE QUERIES
+.Bl -tag
+.It Ic ?= Ar query Ns Ic \&.
+The query entered at the prompt can either be a meta-command,
+in which case it is executed, or a formula, in which case it is solved
+(meaning that
+.Nm
+searches for all substitutions of free variables satisfying
+.Ar query
+and offers to display them one by one).
+.It Nm Fl e Qo Ar query Qc Ns Ic \&.
+Queries given via this option are dealt with in the exact same way.
+.\"
+.\"
+.Sh META-COMMANDS
+Those can be given both in a file and to the interactive toplevel.
+.Bl -tag
+.It Ic #help.
+This command should give a starting point.
+.It Ic #exit.
+And this one, an ending point.
+.El.
+.\"
+.\"
+.Sh OUTPUT
+The only non-interactive output is given by
+.Ic #save_table Ar pred Qo Ar newfile.def Qc Ns Ic \&. .
+.\"
+.\"
+.Sh FILES
+Sample input files can be found in
+.Pa +datadir+/@PACKAGE_TARNAME@/examples/ .
+Most of them have assertions that can be checked with the command-line option
+.Fl t .
+.\"
+.\"
+.Sh SEE ALSO
+.Xr abella 1
