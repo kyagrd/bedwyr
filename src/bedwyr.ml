@@ -154,12 +154,16 @@ let rec process ?(interactive=false) parse lexbuf =
           List.iter
             (fun s -> System.declare_const s t)
             l
+      (* [AT]: temporary hack: disable ground checking. Why is this check 
+         needed anyway? *)
       | Input.Def (decls,defs) ->
           let new_predicates = System.declare_preds decls in
-          System.add_clauses new_predicates defs ;
-          List.iter
-            (fun (v,ty) -> Input.Typing.check_ground (Term.get_var_name v) ty)
-            new_predicates
+          System.add_clauses new_predicates defs ;          
+          (* List.iter
+           *   (fun (v,ty) -> Input.Typing.check_ground (Term.get_var_name v) ty)
+           *   new_predicates  *)
+          ()
+
       | Input.Query t ->
           do_cleanup
             (fun pre_query ->

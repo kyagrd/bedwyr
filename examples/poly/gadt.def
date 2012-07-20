@@ -1,0 +1,31 @@
+% An example from Kaustuv. 
+
+Kind nt    type.
+Type z      nt.
+Type s      nt -> nt.
+
+Kind bool   type.
+Type tt,ff  bool.
+
+Kind exp type -> type.
+Type nat_exp  nt  -> exp nt.  
+                              
+Type bool_exp bool -> exp bool.
+Type if_exp   exp bool -> exp nt -> exp nt -> exp nt.
+
+
+Define eval : (exp A) -> A -> prop by
+   eval (nat_exp N) N ; 
+   eval (bool_exp B) B ;
+   eval (if_exp I T E) V := (eval I tt /\ eval T V) \/ (eval I ff /\ eval E V).
+
+
+% These are just to test the parser and the kind/type checking. 
+
+Kind list   type -> type.
+Type nil    list A.
+Type cons   A -> list A -> list A.
+
+Kind map    type -> type -> type.
+Type empty  map K D.
+Type add    K -> D -> map K D -> map K D.

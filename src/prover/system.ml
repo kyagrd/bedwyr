@@ -117,11 +117,12 @@ let declare_type (p,name) ki =
   let ty_var = Term.get_var (Term.atom ~tag:Term.Constant name) in
   if Hashtbl.mem type_kinds ty_var
   then raise (Invalid_type_declaration (name,p,ki,"type already declared"))
-  else match ki with
-    | ki when ki = Typing.ktype ->
-        Hashtbl.add type_kinds ty_var ki
-    | _ ->
-        raise (Invalid_type_declaration (name,p,ki,"no type operators yet"))
+  else Hashtbl.add type_kinds ty_var ki 
+    (* match ki with *)
+    (* | ki when ki = Typing.ktype -> *)
+    (*     Hashtbl.add type_kinds ty_var ki *)
+    (* | _ -> *)
+    (*     raise (Invalid_type_declaration (name,p,ki,"no type operators yet")) *)
 
 
 (* constants and predicates declarations *)
@@ -140,13 +141,17 @@ let string_of_flavour = function
   | Inductive -> "Inductive"
   | CoInductive -> "CoInductive"
 
-
-let kind_check ?(expected_kind=Typing.ktype) ty =
-  let atomic_kind (p,name) =
+let atomic_kind (p,name) =
     let type_var = Term.get_var (Term.atom ~tag:Term.Constant name) in
     try Hashtbl.find type_kinds type_var
     with Not_found -> raise (Missing_type (name,p))
-  in
+
+let kind_check ?(expected_kind=Typing.ktype) ty =
+  (* let atomic_kind (p,name) = *)
+  (*    let type_var = Term.get_var (Term.atom ~tag:Term.Constant name) in *)
+  (*    try Hashtbl.find type_kinds type_var *)
+  (*    with Not_found -> raise (Missing_type (name,p)) *)
+  (* in *)
   Typing.kind_check ty expected_kind ~atomic_kind
 
 type object_declaration =
@@ -336,7 +341,7 @@ let translate_term
     ~free_args
     pre_term
     expected_type
-    (typed_free_var,typed_declared_var,typed_intern_var,bound_var_type)
+    (typed_free_var,typed_declared_var,typed_intern_var,bound_var_type,atomic_kind)
 
 let translate_query pre_term =
   let free_types : (Term.var,Typing.ty) Hashtbl.t =
