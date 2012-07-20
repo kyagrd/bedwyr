@@ -172,7 +172,7 @@ let type_check_and_translate
       ?(free_args=[])
       pre_term
       expected_type
-      (typed_free_var,typed_declared_var,typed_intern_var,bound_var_type) =
+      (typed_free_var,typed_declared_var,typed_intern_var,bound_var_type,atomic_kind) =
   let find_db s bvars =
     let rec aux n = function
       | [] -> None
@@ -192,7 +192,7 @@ let type_check_and_translate
           Term.nat i,u
       | FreeID (p,s) ->
           begin match find_db s bvars with
-            | Some (t,ty) ->
+            | Some (t,ty) ->		
                 let u = Typing.unify_constraint u exty ty in
                 t,u
             | None ->
@@ -203,11 +203,13 @@ let type_check_and_translate
       | PredConstID (p,s) ->
           begin match find_db s bvars with
             | Some (t,ty) ->
-                let u = Typing.unify_constraint u exty ty in
+                let ty' = Typing.fresh_inst ty in 
+                let u = Typing.unify_constraint u exty ty' in
                 t,u
             | None ->
                 let t,ty = typed_declared_var (p,s) in
-                let u = Typing.unify_constraint u exty ty in
+                let ty' = Typing.fresh_inst ty in 
+                let u = Typing.unify_constraint u exty ty' in
                 t,u
           end
       | InternID (p,s) ->
@@ -251,7 +253,7 @@ let type_check_and_translate
             (fun (p,_,ty) ->
                let ty = Typing.ty_norm ~unifier:u ty in
                let (_,_,propositional,higher_order) =
-                 Typing.kind_check ty Typing.ktype
+                  Typing.kind_check ty Typing.ktype ~atomic_kind
                in
                if higher_order || propositional
                then raise (Var_typing_error (None,p,ty)))
@@ -289,7 +291,7 @@ let type_check_and_translate
        let n = Term.get_var_name v in
        if not (List.mem n free_args) then begin
          let (_,_,propositional,higher_order) =
-           Typing.kind_check ty Typing.ktype
+           Typing.kind_check ty Typing.ktype ~atomic_kind
          in
          if infer && (higher_order || propositional)
          then raise (Var_typing_error (Some n,get_pos pre_term,ty))

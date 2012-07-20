@@ -183,5 +183,7 @@ val type_check_and_translate :
   ((pos * string -> Term.term * Typing.ty) *
    (pos * string -> Term.term * Typing.ty) *
    (pos * string -> Term.term * Typing.ty) *
-   (pos * string * Typing.ty -> Typing.ty)) ->
+   (pos * string * Typing.ty -> Typing.ty) *
+   (pos * string -> Typing.ki)
+   ) ->
   Term.term * Typing.ty
