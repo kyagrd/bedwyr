@@ -69,6 +69,9 @@ val pre_app : pos -> preterm -> preterm list -> preterm
 val change_pos :
   pos -> preterm -> pos -> preterm
 
+(** Find the name of the predicate constant in an atomic formula *)
+val pred_name : preterm -> string option
+
 (** Find which arguments of an application are free variables. *)
 val free_args : preterm -> string list
 
@@ -175,6 +178,7 @@ exception Var_typing_error of string option * pos * Typing.ty
   * @raise Var_typing_error if a free variable of type [prop] is found
   * @raise Term_typing_error if the pre-tem isn't well typed *)
 val type_check_and_translate :
+  ?phead_name:string option ->
   ?infer:bool ->
   ?iter_free_types:((Term.var -> Typing.ty -> Typing.ty) -> unit) ->
   ?free_args:string list ->
