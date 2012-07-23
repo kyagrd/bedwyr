@@ -112,6 +112,11 @@ let pre_app p hd args = if args = [] then hd else match hd with
 
 let change_pos (p1,_) t (_,p2) = set_pos (p1,p2) t
 
+let pred_name pre_term = 
+  match pre_term with
+ | App(_,PredConstID(_,name),pargs) -> Some name
+ | _ -> None
+
 let free_args pre_term =
   let in_arg accum = function
     | FreeID (_,"_") -> accum
@@ -167,6 +172,7 @@ exception Term_typing_error of pos * Typing.ty * Typing.ty * Typing.type_unifier
 exception Var_typing_error of string option * pos * Typing.ty
 
 let type_check_and_translate
+      ?(phead_name=None)
       ?(infer=false)
       ?(iter_free_types=ignore)
       ?(free_args=[])
@@ -203,12 +209,23 @@ let type_check_and_translate
       | PredConstID (p,s) ->
           begin match find_db s bvars with
             | Some (t,ty) ->
-                let ty' = Typing.fresh_inst ty in 
+                let ty' = 
+                  (* prevents polymorphism when checking using a predicate symbol *
+		   * in the body of its definition. This is determined from       *
+                   * the phead_name parameter                                     *)
+		  match phead_name with 
+                  | Some nm when nm = s -> ty  
+		  | _ -> Typing.fresh_inst ty
+		in 
                 let u = Typing.unify_constraint u exty ty' in
                 t,u
             | None ->
                 let t,ty = typed_declared_var (p,s) in
-                let ty' = Typing.fresh_inst ty in 
+                let ty' = 
+		  match phead_name with 
+                  | Some nm when nm = s -> ty 
+		  | _ -> Typing.fresh_inst ty
+		in 
                 let u = Typing.unify_constraint u exty ty' in
                 t,u
           end
