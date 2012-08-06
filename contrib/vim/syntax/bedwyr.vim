@@ -65,7 +65,7 @@ syn keyword     bedwyrColon     :
 
 syn cluster     bedwyrFormulae  contains=bedwyrQString,bedwyrNat,bedwyrFreeId,bedwyrBoolean,bedwyrQuantifier,bedwyrBinder,bedwyrConnective,@bedwyrAnnotatedId,bedwyrFormulaeEncl
 syn cluster     bedwyrAnnotatedId contains=bedwyrColon,@bedwyrTypes
-syn cluster     bedwyrTypes     contains=bedwyrType,bedwyrDeclId,bedwyrInternId,bedwyrUnderscore,bedwyrInfixId,bedwyrTypesEncl
+syn cluster     bedwyrTypes     contains=bedwyrType,bedwyrFreeId,bedwyrDeclId,bedwyrInternId,bedwyrUnderscore,bedwyrInfixId,bedwyrTypesEncl
 
 syn region      bedwyrTypesEncl contained transparent matchgroup=bedwyrKeyword start="(" matchgroup=bedwyrKeyword end=")" contains=@bedwyrCommonErrs,bedwyrComment,@bedwyrTypes
 syn region      bedwyrFormulaeEncl contained transparent matchgroup=bedwyrKeyword start="(" matchgroup=bedwyrKeyword end=")" contains=@bedwyrCommonErrs,bedwyrComment,@bedwyrFormulae

@@ -112,11 +112,6 @@ let pre_app p hd args = if args = [] then hd else match hd with
 
 let change_pos (p1,_) t (_,p2) = set_pos (p1,p2) t
 
-let pred_name pre_term = 
-  match pre_term with
- | App(_,PredConstID(_,name),pargs) -> Some name
- | _ -> None
-
 let free_args pre_term =
   let in_arg accum = function
     | FreeID (_,"_") -> accum
@@ -172,7 +167,6 @@ exception Term_typing_error of pos * Typing.ty * Typing.ty * Typing.type_unifier
 exception Var_typing_error of string option * pos * Typing.ty
 
 let type_check_and_translate
-      ?(phead_name=None)
       ?(infer=false)
       ?(iter_free_types=ignore)
       ?(free_args=[])
@@ -209,24 +203,13 @@ let type_check_and_translate
       | PredConstID (p,s) ->
           begin match find_db s bvars with
             | Some (t,ty) ->
-                let ty' = 
-                  (* prevents polymorphism when checking using a predicate symbol *
-		   * in the body of its definition. This is determined from       *
-                   * the phead_name parameter                                     *)
-		  match phead_name with 
-                  | Some nm when nm = s -> ty  
-		  | _ -> Typing.fresh_inst ty
-		in 
-                let u = Typing.unify_constraint u exty ty' in
+                let ty = Typing.fresh_tyinst ty in
+                let u = Typing.unify_constraint u exty ty in
                 t,u
             | None ->
                 let t,ty = typed_declared_var (p,s) in
-                let ty' = 
-		  match phead_name with 
-                  | Some nm when nm = s -> ty 
-		  | _ -> Typing.fresh_inst ty
-		in 
-                let u = Typing.unify_constraint u exty ty' in
+                let ty = Typing.fresh_tyinst ty in
+                let u = Typing.unify_constraint u exty ty in
                 t,u
           end
       | InternID (p,s) ->
@@ -270,7 +253,7 @@ let type_check_and_translate
             (fun (p,_,ty) ->
                let ty = Typing.ty_norm ~unifier:u ty in
                let (_,_,propositional,higher_order) =
-                  Typing.kind_check ty Typing.ktype ~atomic_kind
+                  Typing.kind_check ~p ty ~atomic_kind
                in
                if higher_order || propositional
                then raise (Var_typing_error (None,p,ty)))
@@ -308,7 +291,7 @@ let type_check_and_translate
        let n = Term.get_var_name v in
        if not (List.mem n free_args) then begin
          let (_,_,propositional,higher_order) =
-           Typing.kind_check ty Typing.ktype ~atomic_kind
+           Typing.kind_check ty ~atomic_kind
          in
          if infer && (higher_order || propositional)
          then raise (Var_typing_error (Some n,get_pos pre_term,ty))
