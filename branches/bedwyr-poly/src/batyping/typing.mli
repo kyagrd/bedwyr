@@ -51,8 +51,7 @@ module type S = sig
   (** Type composition. *)
   val ty_arrow : ty list -> ty -> ty
   (** User-defined base type. *)
-  val tconst : string -> ty
-  val tfunc : string -> ty list -> ty
+  val tconst : string -> ty list -> ty
   val tprop : ty
   val tstring : ty
   val tnat : ty
@@ -61,8 +60,13 @@ module type S = sig
   (** Type parameters (for type inference). *)
   val tparam : int -> ty
   val fresh_tyvar : unit -> ty
+  (** Map type names to parametric types (ie type variables).
+    * XXX take care of this param/var naming inconsistency *)
+  val get_tyvar : string -> ty
   val fresh_typaram : unit -> ty
-  val get_typaram : string -> ty
+  (** Create a fresh instance of a polymorphic type.
+    * All type variables are replaced with fresh type parameters. *)
+  val fresh_tyinst : ty -> ty
   val build_abstraction_types : int -> ty list * ty
 
   (** Print a type. *)
@@ -72,22 +76,20 @@ module type S = sig
   (** {6 Kind checking} *)
 
   (** Kind checking error. *)
-  exception Type_kinding_error of pos * ki * ki
+  exception Type_kinding_error of string * pos option * ki * ki
 
-  (** [kind_check ty expected_kind] checks that type [ty]
-    * and all its subtypes are of the kind [expected_kind] (usually [TKind]).
-    * In the current implementation, types are simple types,
-    * so it always succeeds (except when given a non-existing type).
+  (** [kind_check ty atomic_kind] checks that type [ty] and all its subtypes
+    * are of the kind [TKind].
     *
-    * @param atomic_kind function returning the kind of an atomic type
-    * @return [(flex,hollow,propositional,higher_order)]
-    * (describing whether the type is an unresolved type parameter,
+    * @param atomic_kind function returning the kind of a type constructor
+    * @return [(flex_head,hollow,propositional,higher_order)]
+    * (describing whether the type has an unresolved type parameter as target,
     * contains unresolved type parameters, ends with [TProp]
-    * or contains [TProp]) *)
+    * or contains [TProp] somewhere else than as target) *)
   val kind_check :
-    ?atomic_kind:(pos * string -> ki) ->
+    ?p:pos ->
     ty ->
-    ki ->
+    atomic_kind:(pos * string -> ki) ->
     bool * bool * bool * bool
 
   (** {6 Type unifying} *)
@@ -119,7 +121,11 @@ module type S = sig
   exception Hollow_type of string
 
   (** Check whether a type was completely inferred. *)
-  val check_ground : string -> ty -> unit
+  val check_ground :
+    string ->
+    ty ->
+    atomic_kind:(pos * string -> ki) ->
+    unit
 
   (** Type unification impossible. *)
   exception Type_unification_error of ty * ty * type_unifier
@@ -127,7 +133,6 @@ module type S = sig
   (** Refines the provided unifier accordingly to a pair of types.
     * TODO Does this unification procedure have a name?*)
   val unify_constraint : type_unifier -> ty -> ty -> type_unifier
-  val fresh_inst : ty -> ty
 end
 
 (** Functor building an implementation of the typing structure
