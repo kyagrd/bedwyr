@@ -11,24 +11,24 @@ Kind foo,bar typê "skiped garbage."/* skiped garbage. */.
 % Illegal string starting with '\195' in input.
 
 Kind fo<,bar type.
-%In file "examples/internal/input_errors.def", line 13, byte 6-8:
+%In file "examples/internal/input_errors.def", line 13, bytes 6-8:
 % "fo<" is an illegal token, did you mean "fo <"?
 
 #typeoff X -> true.
-%In file "examples/internal/input_errors.def", line 17, byte 1-8:
+%In file "examples/internal/input_errors.def", line 17, bytes 1-8:
 % Unknown command "typeoff", use "#help." for a short list.
 
 %% I/O - Parser
 
 Kind foo,bar typ.
-%In file "examples/internal/input_errors.def", line 23, byte 14-16:
-% Unexpected input while parsing a type declaration.
+%In file "examples/internal/input_errors.def", line 23, bytes 14-16:
+% Unexpected input while parsing a definition file.
 
 %%% Declarations %%%
 
 Kind bar type.
 Kind foo,bar type -> type -> type.
-%In file "examples/internal/input_errors.def", line 30, byte 10-12:
+%In file "examples/internal/input_errors.def", line 30, bytes 10-12:
 % Cannot declare type bar of kind * -> * -> *: type already declared.
 
 Type a baz.
@@ -41,31 +41,32 @@ Type a,b,c nat.
 % Cannot declare constant b of type nat: name conflict.
 
 Type _cut bar.
-%In file "examples/internal/input_errors.def", line 43, byte 6-9:
-% Unexpected input while parsing a constant declaration.
+%In file "examples/internal/input_errors.def", line 43, bytes 6-9:
+% Unexpected input while parsing a definition file.
 
 Type print bar.
-%In file "examples/internal/input_errors.def", line 47, byte 6-10:
-% Cannot declare constant print of type bar: name conflict with a predefined predicate.
+%In file "examples/internal/input_errors.def", line 47, bytes 6-10:
+% Cannot declare constant print of type bar:
+% name conflict with a predefined predicate.
 
 Define
   inductive   p2 : prop,
   coinductive p3 : prop.
-%In file "examples/internal/input_errors.def", line 53, byte 15-16:
+%In file "examples/internal/input_errors.def", line 54, bytes 15-16:
 % Cannot declare predicate p3 of flavour CoInductive:
 % Inductive was used in the same definition block.
 
 Define p1 : prop, a : prop, p3 : prop.
-%In file "examples/internal/input_errors.def", line 58, byte 19:
+%In file "examples/internal/input_errors.def", line 59, byte 19:
 % Cannot declare predicate a of type prop: name conflict.
 
 Define print : prop.
-%In file "examples/internal/input_errors.def", line 62, byte 8-12:
+%In file "examples/internal/input_errors.def", line 63, bytes 8-12:
 % Cannot declare predicate print of type prop:
 % name conflict with a predefined predicate.
 
 Define p3 : prop -> bar.
-%In file "examples/internal/input_errors.def", line 67, byte 8-9:
+%In file "examples/internal/input_errors.def", line 68, bytes 8-9:
 % Cannot declare predicate p3 of type prop -> bar:
 % target type can only be prop.
 
@@ -73,57 +74,57 @@ Define p3 : prop -> bar.
 
 Define p3 : prop by
   p3 := p4.
-%In file "examples/internal/input_errors.def", line 75, byte 9-10:
+%In file "examples/internal/input_errors.def", line 76, bytes 9-10:
 % Undeclared object p4.
 
 Define p4 : prop by
   p4 /\ true := true.
-%In file "examples/internal/input_errors.def", line 80, byte 3-20:
+%In file "examples/internal/input_errors.def", line 81, bytes 3-20:
 % Inconsistent extension of definition for some predicate:
 % head term structure incorrect.
 
 Type c prop.
 Define p5 : prop by
   c := true.
-%In file "examples/internal/input_errors.def", line 87, byte 3-11:
+%In file "examples/internal/input_errors.def", line 88, bytes 3-11:
 % Inconsistent extension of definition for c: object declared as a constant.
 
 Define p6 : prop by
   p5 := true.
-%In file "examples/internal/input_errors.def", line 92, byte 3-12:
+%In file "examples/internal/input_errors.def", line 93, bytes 3-12:
 % Inconsistent extension of definition for p5:
 % predicate not declared in this block.
 
 Theorem thm1 : true -> p6 /\ true.
-%In file "examples/internal/input_errors.def", line 97, byte 9-12:
+%In file "examples/internal/input_errors.def", line 98, bytes 9-12:
 % Inconsistent theorem specification for some predicate:
 % head term structure incorrect.
 
 Theorem thm2 : true -> c.
-%In file "examples/internal/input_errors.def", line 102, byte 9-12:
+%In file "examples/internal/input_errors.def", line 103, bytes 9-12:
 % Inconsistent theorem specification for c:
 % target object declared as a constant.
 
 %%% Kind/type checking %%%
 
 Type d foo.
-%In file "examples/internal/input_errors.def", line 109, byte 11:
+%In file "examples/internal/input_errors.def", line 110, byte 11:
 % Kinding error: this type has kind * -> * -> * but is used as *.
 
 Define p7 : prop by
   p7 := a.
-%In file "examples/internal/input_errors.def", line 114, byte 9:
+%In file "examples/internal/input_errors.def", line 115, byte 9:
 % Typing error: this term has type nat but is used as prop.
 
 Define p8 : _, p9 : _ by
   p8 := true.
-%In file "examples/internal/input_errors.def", line 119, byte 13:
+%In file "examples/internal/input_errors.def", line 120, byte 13:
 % Typing error: type incompletely inferred for p9.
 
 #show_table p8.
-%In file "examples/internal/input_errors.def", line 123, byte 13-14:
+%In file "examples/internal/input_errors.def", line 124, bytes 13-14:
 % No table (p8 is neither inductive nor coinductive).
 
 Close.
-%In file "examples/internal/input_errors.def", line 127, byte 1-5:
-% Error: Abella command only
+%In file "examples/internal/input_errors.def", line 128, bytes 1-5:
+% Error: Abella command only.

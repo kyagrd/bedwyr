@@ -19,7 +19,7 @@
 .\"
 .\" @configure_input@
 .\"
-.Dd July 15, 2012
+.Dd July 31, 2012
 .Os @PACKAGE_NAME@ v@PACKAGE_VERSION@
 .Dt BEDWYR 1 URM
 .\"
@@ -134,11 +134,15 @@ Display the version number and the list of command-line options.
 .Ex -std
 .Bl -tag
 .It Ar 1
-Undefined error
+Input error (base syntax error, type error)
 .It Ar 2
-Input (parser/typing) error
+Definition error (wrong declaration, wrong definition or misuse)
 .It Ar 3
-Failed assertion
+Core error (LLambda violation)
+.It Ar 4
+Solver error (Level 0/1 violation)
+.It Ar 5
+Generic error (failed assertion, undefined error)
 .El
 .\"
 .\"
@@ -222,6 +226,7 @@ searches for all substitutions of free variables satisfying
 and offers to display them one by one).
 .It Nm Fl e Qo Ar query Qc Ns Ic \&.
 Queries given via this option are dealt with in the exact same way.
+.El
 .\"
 .\"
 .Sh META-COMMANDS
@@ -231,7 +236,7 @@ Those can be given both in a file and to the interactive toplevel.
 This command should give a starting point.
 .It Ic #exit.
 And this one, an ending point.
-.El.
+.El
 .\"
 .\"
 .Sh OUTPUT
