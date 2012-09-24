@@ -79,7 +79,7 @@ let session     = ref []
 let queries     = ref []
 let inclfiles   = ref []
 let good_input  = ref true
-let strict_file = ref false
+let strict_mode = ref false
 
 let _ =
   Arg.parse
@@ -88,6 +88,8 @@ let _ =
            " Do not enter interactive mode" ;
          "-t", Arg.Set test,
            " Run tests in definition files" ;
+         "--strict", Arg.Set strict_mode,
+           " Quit at the first non-interactive error" ;
          "-e", Arg.String (fun s -> queries := s::!queries),
            "<s> Execute query" ;
          "--freezing", Arg.Set_int Prover.freezing_point,
@@ -108,7 +110,7 @@ let position_range (start,curr) =
     if l1 < l2 then
       Printf.sprintf "line %d, byte %d - line %d, byte %d" l1 c1 l2 c2
     else if c1 < c2  then
-      Printf.sprintf "line %d, byte %d-%d" l2 c1 c2
+      Printf.sprintf "line %d, bytes %d-%d" l2 c1 c2
     else
       Printf.sprintf "line %d, byte %d" l2 c2
   in
@@ -141,7 +143,7 @@ let rec process ?(interactive=false) parse lexbuf =
   let bedwyr_error _ = basic_error (fun () -> exit 1) in
   let input_error _ =
     basic_error (fun () ->
-                   if !strict_file then exit 2
+                   if !strict_mode then exit 2
                    else good_input := false)
 
   in
@@ -330,7 +332,7 @@ let rec process ?(interactive=false) parse lexbuf =
             s
       | e ->
           eprintf ~k:bedwyr_error
-            "Unknown OCaml error:@ %s"
+            "Unexpected error:@ %s"
             (Printexc.to_string e)
     end ;
     if interactive then flush stdout
