@@ -51,11 +51,6 @@
                             with Not_found -> c)
   let addString s = Buffer.add_string strbuf s
 
-  (* == Comments ==================================================== *)
-
-  (* keep track of the token parsed just before the comment *)
-  let prev_token = ref None
-
   (* == Token tables ================================================ *)
 
   let command_table = Hashtbl.create 20
@@ -260,7 +255,7 @@ let in_qstring = [^'\\' '"' '\n']+
 
 rule token = parse
   (* Multi-line and single-line comments *)
-  | "/*"                        { comment 0 lexbuf }
+  | "/*"                        { comment 0 None token lexbuf }
   | '%' [^'\n']* '\n'           { incrline lexbuf; token lexbuf }
   | '%' [^'\n']*                { token lexbuf }
 
@@ -298,26 +293,22 @@ rule token = parse
 
   (* Upper-case prefix names *)
   | upper_name as n             { get_upper n }
-  | (upper_name as n) "/*"      { prev_token := Some (get_upper n) ;
-                                  comment 0 lexbuf }
+  | (upper_name as n) "/*"      { comment 0 (Some (get_upper n)) token lexbuf }
 
   (* Lower-case prefix names *)
   | lower_name as n             { get_lower n }
-  | (lower_name as n) "/*"      { prev_token := Some (get_lower n) ;
-                                  comment 0 lexbuf }
+  | (lower_name as n) "/*"      { comment 0 (Some (get_lower n)) token lexbuf }
 
   (* Internal prefix names *)
   | intern_name as n            { get_intern n }
-  | (intern_name as n) "/*"     { prev_token := Some (get_intern n) ;
-                                  comment 0 lexbuf }
+  | (intern_name as n) "/*"     { comment 0 (Some (get_intern n)) token lexbuf }
 
   (* Infix-case names *)
   | infix_name as n             { get_infix n }
 
   (* Placeholder *)
   | '_'                         { UNDERSCORE }
-  | "_/*"                       { prev_token := Some (UNDERSCORE) ;
-                                  comment 0 lexbuf }
+  | "_/*"                       { comment 0 (Some UNDERSCORE) token lexbuf }
 
   (* Ambiguous names *)
   | ((safe_char* safe_char_noslash) as n1) (infix_name as n2)
@@ -335,19 +326,26 @@ rule token = parse
 
 and invalid = parse
   | '.'                 { DOT }
+  | "/*"                { comment 0 None invalid lexbuf }
+  | '%' [^'\n']* '\n'   { incrline lexbuf; invalid lexbuf }
+  | '%' [^'\n']*        { invalid lexbuf }
+  | '\n'                { incrline lexbuf; invalid lexbuf }
+  | '"'                 { Buffer.clear strbuf ;
+                          strstart := lexbuf.lex_start_p ;
+                          qstring lexbuf }
   | _                   { invalid lexbuf }
 
-and comment level = parse
-  | in_comment          { comment level lexbuf }
-  | "/*"                { comment (level + 1) lexbuf }
+and comment level prev_token k = parse
+  | in_comment          { comment level prev_token k lexbuf }
+  | "/*"                { comment (level + 1) prev_token k lexbuf }
   | "*/"                { if level = 0 then
-                            match !prev_token with
-                              | None -> token lexbuf
-                              | Some t -> prev_token := None ; t
+                            match prev_token with
+                              | None -> k lexbuf
+                              | Some t -> t
                           else
-                            comment (level - 1) lexbuf }
+                            comment (level - 1) prev_token k lexbuf }
   | '\n'                { incrline lexbuf ;
-                          comment level lexbuf }
+                          comment level prev_token k lexbuf }
   | eof                 { failwith "comment not closed at end of file" }
 
 and qstring = parse

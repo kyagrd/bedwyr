@@ -6,7 +6,7 @@
 
 %%% I/O - Lexer %%%
 
-Kind foo,bar typê.
+Kind foo,bar typê "skiped garbage."/* skiped garbage. */.
 %In file "examples/internal/input_errors.def", line 9, byte 17:
 % Illegal string starting with '\195' in input.
 
