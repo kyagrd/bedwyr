@@ -314,15 +314,14 @@ rule token = parse
   | ((safe_char* safe_char_noslash) as n1) (infix_name as n2)
   | (safe_char+ as n1) ((infix_special_nostar infix_special*) as n2)
   | (infix_name as n1) (safe_char+ as n2)
-                                { raise (Input.Illegal_name (n1,n2)) }
+                                { raise (Input.Illegal_token (n1,n2)) }
 
   | number as n                 { NUM (int_of_string n) }
 
   (* misc *)
-  | '\x04'              (* ctrl-D *)
-  | eof                 { EOF }
+  | eof                         { EOF }
 
-  | _ as c              { raise (Input.Illegal_string c) }
+  | _ as c                      { raise (Input.Illegal_string c) }
 
 and invalid = parse
   | '.'                 { DOT }
@@ -333,6 +332,7 @@ and invalid = parse
   | '"'                 { Buffer.clear strbuf ;
                           strstart := lexbuf.lex_start_p ;
                           qstring lexbuf }
+  | eof                 { EOF }
   | _                   { invalid lexbuf }
 
 and comment level prev_token k = parse
@@ -346,7 +346,7 @@ and comment level prev_token k = parse
                             comment (level - 1) prev_token k lexbuf }
   | '\n'                { incrline lexbuf ;
                           comment level prev_token k lexbuf }
-  | eof                 { failwith "comment not closed at end of file" }
+  | eof                 { failwith "comment not closed at end of input" }
 
 and qstring = parse
   | "\\\n"              { incrline lexbuf ;
@@ -360,4 +360,4 @@ and qstring = parse
   | '\n'                { addChar '\n' ;
                           incrline lexbuf ;
                           qstring lexbuf }
-  | eof                 { failwith "string not closed at end of file" }
+  | eof                 { failwith "string not closed at end of input" }

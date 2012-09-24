@@ -35,12 +35,12 @@ exception Illegal_string of char
   * This happens to be forbidden for compatibility reasons;
   * a separating sequence (spaces, tabs, carriage returns, line feeds),
   * a comment or a quoted string is needed betweent wo such names. *)
-exception Illegal_name of string * string
+exception Illegal_token of string * string
 (** The hash character was misused, or a meta-command was misspelled. *)
 exception Unknown_command of string
 
 (** Wrapper around some [Parsing.Parse_error]. *)
-exception Syntax_error of pos * string
+exception Parse_error of pos * string * string
 
 module Typing : Typing.S with type pos = pos
 

@@ -131,28 +131,32 @@ let do_cleanup f x clean =
   try f x ; clean () with e -> clean () ; raise e
 
 let rec process ?(interactive=false) parse lexbuf =
-  let basic_error k =
-    if interactive then begin
-      Lexing.flush_input lexbuf ;
-      lexbuf.Lexing.lex_curr_p <- {
-        lexbuf.Lexing.lex_curr_p with
-            Lexing.pos_bol = 0 ;
-            Lexing.pos_lnum = 1 }
-    end else k ()
+  let flush_input () =
+    Lexing.flush_input lexbuf ;
+    lexbuf.Lexing.lex_curr_p <- {
+      lexbuf.Lexing.lex_curr_p with
+          Lexing.pos_bol = 0 ;
+          Lexing.pos_lnum = 1 }
   in
-  let bedwyr_error _ = basic_error (fun () -> exit 1) in
-  let input_error _ =
-    basic_error (fun () ->
-                   if !strict_mode then exit 2
-                   else good_input := false)
-
+  let basic_error
+        ?(interactive_fun=flush_input)
+        ?(non_interactive_fun=ignore)
+        error_code =
+    if interactive then interactive_fun ()
+    else if !strict_mode then exit error_code
+    else begin
+      good_input := false ;
+      non_interactive_fun ()
+    end
   in
-  let lexer_error _ =
-    input_error () ;
-    Parser.input_error Lexer.invalid lexbuf
-  in
-  let solver_error _ = basic_error (fun () -> exit 3) in
-  let eprintf ?(k=input_error) ?(p=position_lex lexbuf) f =
+  let skip_input () = Parser.skip_input Lexer.invalid lexbuf in
+  let lexer_error _ = basic_error 1 ~non_interactive_fun:skip_input in
+  let parser_error _ = basic_error 1 in
+  let def_error _ = basic_error 2 in
+  let ndcore_error _ = basic_error 3 in
+  let solver_error _ = basic_error 4 in
+  let bedwyr_error _ = basic_error 5 in
+  let eprintf k ?(p=position_lex lexbuf) f =
     Format.kfprintf
       k
       (if interactive then Format.std_formatter else Format.err_formatter)
@@ -190,53 +194,53 @@ let rec process ?(interactive=false) parse lexbuf =
       (* I/O - Lexer *)
       | End_of_file -> raise End_of_file
       | Input.Illegal_string c ->
-          eprintf ~k:lexer_error
+          eprintf lexer_error
             "Illegal string starting with %C in input."
             c
-      | Input.Illegal_name (n1,n2) ->
-          eprintf ~k:lexer_error
+      | Input.Illegal_token (n1,n2) ->
+          eprintf lexer_error
             "%S is an illegal token, did you mean %S?"
             (Lexing.lexeme lexbuf)
             (String.concat " " [n1;n2])
       | Input.Unknown_command n ->
-          eprintf ~k:lexer_error
+          eprintf lexer_error
             "Unknown command %S, use \"#help.\" for a short list."
             n
 
       (* I/O - Parser *)
       | Parsing.Parse_error ->
-          eprintf
-            "Syntax error."
-      | Input.Syntax_error (p,s) ->
-          eprintf ~p
-            "Unexpected input while parsing@ %s."
-            s
+          eprintf lexer_error
+            "Unexpected input."
+      | Input.Parse_error (p,s1,s2) ->
+          eprintf parser_error ~p
+            "%s while parsing@ %s."
+            s1 s2
 
       (* Declarations *)
       | System.Invalid_type_declaration (n,p,ki,s) ->
-          eprintf ~p
+          eprintf def_error ~p
             "Cannot declare type %s of kind %a:@ %s."
             n
             Input.Typing.pp_kind ki
             s
       | System.Missing_type (n,_) ->
-          eprintf
+          eprintf def_error
             "Undeclared type %s."
             n
       | System.Invalid_const_declaration (n,p,ty,s) ->
-          eprintf ~p
+          eprintf def_error ~p
             "Cannot declare constant %s of type %a:@ %s."
             n
             Input.Typing.pp_type ty
             s
       | System.Invalid_flavour (n,p,gf,f) ->
-          eprintf ~p
+          eprintf def_error ~p
             "Cannot declare predicate %s of flavour %s:@ %s was used in the same definition block."
             n
             (System.string_of_flavour f)
             (System.string_of_flavour gf)
       | System.Invalid_pred_declaration (n,p,ty,s) ->
-          eprintf ~p
+          eprintf def_error ~p
             "Cannot declare predicate %s of type %a:@ %s."
             n
             Input.Typing.pp_type ty
@@ -244,100 +248,102 @@ let rec process ?(interactive=false) parse lexbuf =
 
       (* Definitions and theorems *)
       | System.Missing_declaration (n,p) ->
-          eprintf ?p
+          eprintf def_error ?p
             "Undeclared object %s."
             n
       | System.Inconsistent_definition (n,p,s) ->
-          eprintf ~p
+          eprintf def_error ~p
             "Inconsistent extension of definition for %s:@ %s."
             n
             s
       | System.Inconsistent_theorem (n,p,s) ->
-          eprintf ~p
+          eprintf def_error ~p
             "Inconsistent theorem specification for %s:@ %s."
             n
             s
 
       (* Kind/type checking *)
       | Input.Typing.Type_kinding_error (_,ki1,ki2) ->
-          eprintf
+          eprintf def_error
             "Kinding error: this type has kind %a but is used as %a."
             Input.Typing.pp_kind ki2
             Input.Typing.pp_kind ki1
       | Input.Term_typing_error (p,ty1,ty2,unifier) ->
-          eprintf ~p
+          eprintf def_error ~p
             "Typing error: this term has type %a but is used as %a."
             (Input.Typing.pp_type_norm ~unifier) ty2
             (Input.Typing.pp_type_norm ~unifier) ty1
       | Input.Var_typing_error (n,p,ty) ->
           begin match n with
             | Some n ->
-                eprintf ~p
+                eprintf def_error ~p
                   "Typing error: cannot give free variable %s the type %a.@." n
                   Input.Typing.pp_type ty
             | None ->
-                eprintf ~p
+                eprintf def_error ~p
                   "Typing error: cannot quantify over type %a.@."
                   Input.Typing.pp_type ty
           end
       | Input.Typing.Hollow_type n ->
-          eprintf
+          eprintf def_error
             "Typing error: type incompletely inferred for %s."
             n
 
       (* Using predicates *)
       | System.Missing_definition (n,p) ->
-          eprintf ?p
+          eprintf def_error ?p
             "Undefined predicate (%s was declared as a constant)."
             n
       | System.Missing_table (n,p) ->
-          eprintf ?p
+          eprintf def_error ?p
             "No table (%s is neither inductive nor coinductive)."
             n
 
-      (* Solving *)
-      | Assertion_failed ->
-          eprintf ~k:solver_error
-            "Assertion failed."
-      | Prover.Level_inconsistency ->
-          eprintf ~k:solver_error
-            "This formula cannot be handled by the left prover!"
+      (* Core *)
       | Unify.NotLLambda t ->
-          eprintf ~k:solver_error
+          eprintf ndcore_error
             "Not LLambda unification encountered:@ %a."
             Pprint.pp_term t
       | Unify.Left_logic ->
-          eprintf ~k:solver_error
+          eprintf ndcore_error
             "Logic variable on the left."
       | Unify.Formula_as_Term t ->
-          eprintf ~k:solver_error
+          eprintf ndcore_error
             "Formula encounterd by the unifier:@ %a."
             Pprint.pp_term t
 
+      (* Solving *)
+      | Prover.Level_inconsistency ->
+          eprintf solver_error
+            "This formula cannot be handled by the left prover!"
+
       (* Misc Bedwyr errors *)
+      | Assertion_failed ->
+          eprintf solver_error
+            "Assertion failed."
       | System.Interrupt ->
-          eprintf ~k:bedwyr_error
+          eprintf bedwyr_error
             "User interruption."
       | Prover.Abort_search ->
-          eprintf ~k:bedwyr_error
+          eprintf bedwyr_error
             "Proof search aborted!"
       | Invalid_command ->
-          eprintf ~k:bedwyr_error
+          eprintf bedwyr_error
             "Invalid command, or wrong arguments."
-
-      (* Unhandled errors *)
-      | Failure s ->
-          eprintf ~k:bedwyr_error
-            "Error:@ %s"
-            s
-      | e ->
-          eprintf ~k:bedwyr_error
-            "Unexpected error:@ %s"
-            (Printexc.to_string e)
     end ;
     if interactive then flush stdout
   done with
-    | End_of_file -> ()
+    | End_of_file ->
+        if interactive then Format.printf "@."
+    (* Unhandled errors *)
+    | Failure s ->
+        eprintf bedwyr_error
+          "Error:@ %s"
+          s
+    | e ->
+        eprintf bedwyr_error
+          "Unexpected error:@ %s"
+          (Printexc.to_string e)
 
 and input_from_file file =
   let cwd = Sys.getcwd () in
