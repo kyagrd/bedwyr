@@ -68,40 +68,6 @@ end
 let debug = ref false
 let time  = ref false
 
-(* list of open files *)
-let user_files : (string, out_channel) Hashtbl.t =
-  Hashtbl.create 50
-
-let reset_user_files () = Hashtbl.clear user_files
-
-let close_all_files () =
-  Hashtbl.iter
-    (fun n c ->
-       try close_out c with | Sys_error e -> () )
-    user_files ;
-  reset_user_files ()
-
-let close_user_file name =
-  try
-    let f = Hashtbl.find user_files name in
-    close_out f ;
-    Hashtbl.remove user_files name
-  with
-    | Sys_error _ -> Hashtbl.remove user_files name
-    | _ -> ()
-
-let get_user_file name =
-  Hashtbl.find user_files name
-
-let open_user_file name =
-  try
-    Hashtbl.find user_files name
-  with Not_found ->
-    begin
-      let fout = open_out_gen [Open_wronly;Open_creat;Open_excl] 0o600 name in
-      ignore (Hashtbl.add user_files name fout) ;
-      fout
-    end
 
 open Input
 
@@ -626,9 +592,6 @@ let clear_table (p,head_tm) =
 
 (* I/O *)
 
-exception File_error of string * string
-
-
 let print_env () =
   let print_types () =
     Format.printf "@[<v 3>*** Types ***" ;
@@ -681,7 +644,9 @@ let get_types pre_term =
     Hashtbl.create 10
   in
   let ty = Typing.fresh_typaram () in
-  let t,ty = translate_term ~infer:false ~expected_type:ty pre_term free_types in
+  let t,ty =
+    translate_term ~infer:false ~expected_type:ty pre_term free_types
+  in
   t,ty,free_types
 
 let print_type_of pre_term =
@@ -703,15 +668,13 @@ let show_def (p,head_tm) =
 let show_table (p,head_tm) =
   get_table p head_tm (fun table _ -> Table.print head_tm table) ignore
 
-let save_table (p,head_tm) file =
-  try
-    let fout = open_out_gen [Open_wronly;Open_creat;Open_excl] 0o600 file in
-    try
-      get_table p head_tm
-        (fun table ty -> Table.fprint fout head_tm table ty ; close_out fout)
-        (fun () -> close_out fout)
-    with Sys_error e -> raise (File_error ("close",e))
-  with Sys_error e -> raise (File_error ("write in",e))
+let save_table (p,head_tm) name file =
+  let fout = IO.open_out file in
+  get_table p head_tm
+    (fun table ty ->
+       Table.fprint fout head_tm table ty ;
+       IO.close_out name fout)
+    (fun () -> IO.close_out name fout)
 
 
 (* Misc *)

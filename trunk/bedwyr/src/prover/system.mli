@@ -22,45 +22,45 @@
 
 (** Predefined and internal predicates. *)
 module Logic :
-  sig
-    (** {6 Non-logical extensions ({e EXPERIMENTAL})} *)
+sig
+  (** {6 Non-logical extensions ({e EXPERIMENTAL})} *)
 
-    (** {[_not : prop -> prop]} Standard negation-as-failure, as in prolog. *)
-    val var_not : Term.var
+  (** {[_not : prop -> prop]} Standard negation-as-failure, as in prolog. *)
+  val var_not : Term.var
 
-    (** {[_if : prop -> prop -> prop -> prop]} If-Then-Else:
-      * [_if P Q R] is basically equivalent to [(P /\ Q) \/ (not(P) /\ R)].
-      * The slight difference is that the second disjunct
-      * will not be tried if P is successful. *)
-    val var_ite : Term.var
+  (** {[_if : prop -> prop -> prop -> prop]} If-Then-Else:
+    * [_if P Q R] is basically equivalent to [(P /\ Q) \/ (not(P) /\ R)].
+    * The slight difference is that the second disjunct
+    * will not be tried if P is successful. *)
+  val var_ite : Term.var
 
-    (** {[_abstract : 'a -> (('b -> 'a) -> 'a) -> 'a -> prop]}
-      * [_abstract T Abs T'] assumes the logic variables in T are of type 'b,
-      * abstracts them, applies the constructor Abs to each abstraction,
-      * and unifies the result with T'.
-      *
-      * Example query:
-      * {v ?= _abstract (pr X Y) abs T.
+  (** {[_abstract : A -> ((B -> A) -> A) -> A -> prop]}
+    * [_abstract T Abs T'] assumes the logic variables in T are of type B,
+    * abstracts them, applies the constructor Abs to each abstraction,
+    * and unifies the result with T'.
+    *
+    * Example query:
+    * {v ?= _abstract (pr X Y) abs T.
 Solution found:
- X = X
- Y = Y
- T = (abs (x1\ abs (x2\ pr x1 x2)))
+X = X
+Y = Y
+T = (abs (x1\ abs (x2\ pr x1 x2)))
 More [y] ? y
 No more solutions. v}
-      *
-      * {e WARNING}: Because [_abstract] can abstract any logic variables,
-      * and because while the input files are type-checked,
-      * the underlying abstract machine of bedwyr is untyped,
-      * the abstraction produced by [_abstract] may not always respect
-      * the type of the constructor Lam.
-      *
-      * For example, consider the above example.
-      * If [pr] is of type [alpha -> beta -> gamma],
-      * for some distinct types [alpha] and [beta],
-      * then the above query will still succeed despite the fact that
-      * [abs] is applied to terms of types [alpha -> gamma]
-      * and [beta -> gamma]:
-      * {v ?= #typeof pr.
+    *
+    * {e WARNING}: Because [_abstract] can abstract any logic variables,
+    * and because while the input files are type-checked,
+    * the underlying abstract machine of bedwyr is untyped,
+    * the abstraction produced by [_abstract] may not always respect
+    * the type of the constructor Lam.
+    *
+    * For example, consider the above example.
+    * If [pr] is of type [alpha -> beta -> gamma],
+    * for some distinct types [alpha] and [beta],
+    * then the above query will still succeed despite the fact that
+    * [abs] is applied to terms of types [alpha -> gamma]
+    * and [beta -> gamma]:
+    * {v ?= #typeof pr.
 pr : alpha -> beta -> gamma
 ?= #typeof abs.
 abs : (beta -> gamma) -> gamma
@@ -70,17 +70,17 @@ _abstract : ?4 -> ((?5 -> ?4) -> ?4) -> ?4 -> prop
 At line 4, characters 30-31:
 Typing error: this expression has type beta but is used as
 alpha. v}
-      *
-      * Hence type checking does not guarantee runtime type soundness
-      * ("well typed programs don't go wrong").
-      * A solution to this would be to make the bedwyr engine aware
-      * of the type constraints,
-      * so that it only abstracts variables of the correct types. *)
-    val var_abspred : Term.var
+    *
+    * Hence type checking does not guarantee runtime type soundness
+    * ("well typed programs don't go wrong").
+    * A solution to this would be to make the bedwyr engine aware
+    * of the type constraints,
+    * so that it only abstracts variables of the correct types. *)
+  val var_abspred : Term.var
 
-    (** {[_distinct : prop -> prop]} Calling [_distinct P]
-      * directs bedwyr to produce only distinct answer substitutions:
-      * {v ?= true \/ true.
+  (** {[_distinct : prop -> prop]} Calling [_distinct P]
+    * directs bedwyr to produce only distinct answer substitutions:
+    * {v ?= true \/ true.
 Yes.
 More [y] ?
 Yes.
@@ -91,29 +91,29 @@ Yes.
 More [y] ?
 No more solutions.
 ?= v} *)
-    val var_distinct : Term.var
+  val var_distinct : Term.var
 
-    (** {[_rigid : 'a -> prop]} This is a meta-level assertion predicate.
-      * [_rigid X] will throw an assertion
-      * (hence causes the prover to abort) if [X] is not a ground term. *)
-    val var_assert_rigid : Term.var
+  (** {[_rigid : A -> prop]} This is a meta-level assertion predicate.
+    * [_rigid X] will throw an assertion
+    * (hence causes the prover to abort) if [X] is not a ground term. *)
+  val var_assert_rigid : Term.var
 
-    (** {[_abort : prop]} This predicate aborts the proof search
-      * and returns to the toplevel query (if in interactive mode). *)
-    val var_abort_search : Term.var
+  (** {[_abort : prop]} This predicate aborts the proof search
+    * and returns to the toplevel query (if in interactive mode). *)
+  val var_abort_search : Term.var
 
-    (** {[_cut : prop -> prop]} Applying the predicate [_cut]
-      * to a query removes the backtracking for that query.
-      * That is, a query such as [cut P] will produce the first solution
-      * (if any) to [P], and terminates. *)
-    val var_cutpred : Term.var
+  (** {[_cut : prop -> prop]} Applying the predicate [_cut]
+    * to a query removes the backtracking for that query.
+    * That is, a query such as [cut P] will produce the first solution
+    * (if any) to [P], and terminates. *)
+  val var_cutpred : Term.var
 
-    (** {[_eqvt : 'a -> 'a -> prop]}
-      * This predicate checks that its arguments are
-      * syntatically equivalent modulo renaming of nabla variables.
-      *
-      * For example:
-      * {v ?= forall f, nabla x y, _eqvt (f x y) (f y x).
+  (** {[_eqvt : A -> A -> prop]}
+    * This predicate checks that its arguments are
+    * syntatically equivalent modulo renaming of nabla variables.
+    *
+    * For example:
+    * {v ?= forall f, nabla x y, _eqvt (f x y) (f y x).
 Yes.
 More [y] ? y
 No more solutions.
@@ -123,38 +123,40 @@ More [y] ? y
 No more solutions.
 ?= forall f, nabla x y, _eqvt (f x x) (f x y).
 No. v} *)
-    val var_check_eqvt : Term.var
+  val var_check_eqvt : Term.var
 
-    (** {6 I/O extensions} *)
+  (** {6 I/O extensions} *)
 
-    (** {[print : 'a -> prop]} Print a term and returns [true]. *)
-    val var_print : Term.var
+  (** {[print : A -> prop]} Print a term and returns [true]. *)
+  val var_print : Term.var
 
-    (** {[println : 'a -> prop]} [print] +  '\n'. *)
-    val var_println : Term.var
+  (** {[println : A -> prop]} [print] +  '\n'. *)
+  val var_println : Term.var
 
-    (** {[printstr : 'a -> prop]} Print a string without quotation marks. *)
-    val var_printstr : Term.var
+  (** {[printstr : A -> prop]} Print a string (an actual [Term.QString])
+    * unescaped (without quotation marks).
+    * Fails if the argument is an unbound variable or a constant. *)
+  val var_printstr : Term.var
 
-    (** {[fprint : string -> 'a -> prop]} Print a term in the file
-      * specified in the first argument and returns [true].
-      * Fails if the file was not opened yet. *)
-    val var_fprint : Term.var
+  (** {[fprint : string -> A -> prop]} Print a term in the file
+    * specified in the first argument and returns [true].
+    * Fails if the file was not opened yet. *)
+  val var_fprint : Term.var
 
-    (** {[fprintln : string -> 'a -> prop]} [println] in a file. *)
-    val var_fprintln : Term.var
+  (** {[fprintln : string -> A -> prop]} [println] in a file. *)
+  val var_fprintln : Term.var
 
-    (** {[var_fprintstr : string -> 'a -> prop]} [printstr] in a file. *)
-    val var_fprintstr : Term.var
+  (** {[var_fprintstr : string -> A -> prop]} [printstr] in a file. *)
+  val var_fprintstr : Term.var
 
-    (** {[fopen_out : string -> prop]} Open a file for writing. *)
-    val var_fopen_out : Term.var
+  (** {[fopen_out : string -> prop]} Open a file for writing. *)
+  val var_fopen_out : Term.var
 
-    (** {[fclose_out : string -> prop]} Close an open file. *)
-    val var_fclose_out : Term.var
+  (** {[fclose_out : string -> prop]} Close an open file. *)
+  val var_fclose_out : Term.var
 
-    (** Example:
-      * {v ?= fopen_out "test.txt".
+  (** Example:
+    * {v ?= fopen_out "test.txt".
 Yes.
 More [y] ? y
 No more solutions.
@@ -166,8 +168,8 @@ No more solutions.
 Yes.
 More [y] ? y
 No more solutions. v}
-      * The file "test.txt" will contain the string "Test printing". *)
-  end
+    * The file "test.txt" will contain the string "Test printing". *)
+end
 
 (** Simple debug flag, can be set dynamically from the logic program. *)
 val debug : bool ref
@@ -175,10 +177,6 @@ val debug : bool ref
 (** Enables the display of computation times. *)
 val time : bool ref
 
-val close_all_files : unit -> unit
-val close_user_file : string -> unit
-val get_user_file : string -> out_channel
-val open_user_file : string -> out_channel
 
 open Input
 
@@ -270,10 +268,7 @@ val clear_table : Input.pos * Term.term -> unit
 
 (** {6 I/O} *)
 
-(** Wrapper around some [Sys_error]. *)
-exception File_error of string * string
-
-(** Display the inferred type of every declared object. *)
+(** Display all type and objects declarations. *)
 val print_env : unit -> unit
 
 (** Perform type checking on a pre-term and display the inferred type.
@@ -292,7 +287,7 @@ val show_table : Input.pos * Term.term -> unit
 (** Save the content of a table to a file.
   * The proved and disproved entries are stored as arguments
   * to the predicates [proved] and [disproved], respectively. *)
-val save_table : Input.pos * Term.term -> string -> unit
+val save_table : Input.pos * Term.term -> string -> string -> unit
 
 (** {6 Misc} *)
 

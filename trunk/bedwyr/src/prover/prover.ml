@@ -82,56 +82,6 @@ let mark_not_disprovable_until ?(included=false) d =
 
 type 'a answer = Known of 'a | Unknown | OffTopic
 
-let do_open_file g =
-  match g with
-    | [n] ->
-        begin match observe n with
-          | QString name ->
-              begin try
-                ignore (open_user_file name) ; true
-              with Sys_error e ->
-                Printf.eprintf
-                  "fopen_out: failed opening file %S\n %s \n" name e ;
-                false
-              end
-          | _ -> assert false
-        end
-    | _ -> false
-
-let do_close_file g =
-  match g with
-    | [n] ->
-        begin match observe n with
-          | QString name ->
-              begin try
-                close_user_file name ; true
-              with Sys_error e ->
-                Printf.eprintf
-                  "fclose_out: failed closing file %S\n %s \n" name e ;
-                false
-              end
-          | _ -> assert false
-        end
-    | _ -> false
-
-let do_fprint print_fun goals =
-  begin match goals with
-    | h::l ->
-        begin match observe h with
-          | QString name ->
-              begin try
-                let f = get_user_file name in
-                let fmt = formatter_of_out_channel f in
-                List.iter (print_fun fmt) l ;
-                true
-              with
-                | Not_found -> false
-              end
-          | _ -> assert false
-        end
-    | _ -> false
-  end
-
 
 (* Attempt to prove the goal [(nabla x_1..x_local . g)(S)] by
  * destructively instantiating it,
@@ -695,51 +645,60 @@ let rec prove temperatures depth ~success ~failure ~level ~timestamp ~local g =
 
           (* Output *)
           | Var v when v == Logic.var_print ->
-              List.iter (fun t -> printf "%a%!" Pprint.pp_term t) goals ;
-              success timestamp failure
+              let print_fun t = printf "%a%!" Pprint.pp_term t ; true in
+              if IO.print print_fun goals
+              then success timestamp failure
+              else failure ()
 
           | Var v when v == Logic.var_println ->
-              List.iter (fun t -> printf "%a@." Pprint.pp_term t) goals ;
-              success timestamp failure
+              let print_fun t = printf "%a@." Pprint.pp_term t ; true in
+              if IO.print print_fun goals
+              then success timestamp failure
+              else failure ()
 
           | Var v when v == Logic.var_printstr ->
-              List.iter (fun t -> match observe t with
-                           | QString s -> printf "%s%!" s
-                           | _ -> failwith "an actual quoted string is needed by printstr")
-                goals ;
-              success timestamp failure
+              let print_fun t = match observe t with
+                | QString s -> printf "%s%!" s ; true
+                | _ -> false
+              in
+              if IO.print print_fun goals
+              then success timestamp failure
+              else failure ()
 
           | Var v when v == Logic.var_fprint ->
               let print_fun fmt t =
-                fprintf fmt "%a%!" Pprint.pp_term t
+                fprintf fmt "%a%!" Pprint.pp_term t ; true
               in
-              if do_fprint print_fun goals then success timestamp failure
+              if IO.fprint print_fun goals
+              then success timestamp failure
               else failure ()
 
           | Var v when v == Logic.var_fprintln ->
               let print_fun fmt t =
-                fprintf fmt "%a@." Pprint.pp_term t
+                fprintf fmt "%a@." Pprint.pp_term t ; true
               in
-              if do_fprint print_fun goals then success timestamp failure
+              if IO.fprint print_fun goals
+              then success timestamp failure
               else failure ()
 
           | Var v when v == Logic.var_fprintstr ->
               let print_fun fmt t = match observe t with
-                | QString s -> fprintf fmt "%s%!" s
-                | _ -> failwith "an actual quoted string is needed by fprintstr"
+                | QString s -> fprintf fmt "%s%!" s ; true
+                | _ -> false
               in
-              if do_fprint print_fun goals then success timestamp failure
+              if IO.fprint print_fun goals
+              then success timestamp failure
               else failure ()
 
           (* Opening file for output *)
           | Var v when v == Logic.var_fopen_out ->
               assert_level_one level ;
-              if (do_open_file goals) then success timestamp failure
+              if (IO.open_user_file goals) then success timestamp failure
               else failure ()
 
           | Var v when v == Logic.var_fclose_out ->
               assert_level_one level ;
-              if (do_close_file goals) then success timestamp failure
+              if (IO.close_user_file goals) then success timestamp failure
               else failure ()
 
           (* Check for definitions *)
