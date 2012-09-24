@@ -1,0 +1,6 @@
+usr/share/doc/bedwyr/*.odoc.*
+usr/share/doc/bedwyr/libref
+usr/share/doc/bedwyr/refman
+usr/share/doc/bedwyr/*.html
+usr/share/doc/bedwyr/*.pdf.*
+usr/share/doc/bedwyr/*.ps.*
