@@ -15,7 +15,8 @@ Package: @PACKAGE_TARNAME@
 Architecture: any
 Depends: ${misc:Depends}, ${shlibs:Depends}, ocaml-base-@OCAML_VERSION@
 Recommends: rlwrap
-Description: the not-so-sound-logician
+Suggests: @PACKAGE_TARNAME@-doc
+Description: the not-so-sound logician
  Bedwyr is a generalization of logic programming
  that allows model checking directly on syntactic expression
  possibly containing bindings.
@@ -28,3 +29,17 @@ Description: the not-so-sound-logician
  programming), and direct support for lambda-tree syntax,
  as in lambdaProlog, via term-level lambda-binders,
  higher-order pattern unification, and the nabla-quantifier.
+
+Package: @PACKAGE_TARNAME@-doc
+Architecture: all
+Depends: ${misc:Depends}
+Recommends: @PACKAGE_TARNAME@
+Enhances: @PACKAGE_TARNAME@
+Description: the not-so-sound documentation
+ Bedwyr is a generalization of logic programming
+ that allows model checking directly on syntactic expression
+ possibly containing bindings.
+ .
+ This package contains documentation for Bedwyr (both a quickstart guide
+ and a reference manual) in html, ps and pdf format, as well as the
+ source code documentation in html and ocamldoc-dump format.
