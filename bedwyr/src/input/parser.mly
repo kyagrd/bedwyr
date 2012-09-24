@@ -25,6 +25,8 @@
     else
       (Parsing.rhs_start_pos i, Parsing.rhs_end_pos i)
 
+  let synt_err ?(i=0) s = raise (Input.Syntax_error (pos i,s))
+
 %}
 
 /* Punctuation */
@@ -79,7 +81,8 @@
 
 /* Higher */
 
-%start input_def input_query
+%start input_error input_def input_query
+%type <unit> input_error
 %type <Input.input> input_def
 %type <Input.input> input_query
 
@@ -87,17 +90,25 @@
 
 /* commands */
 
+input_error:
+  | DOT                                 { () }
+
 input_def:
   | top_command                         { $1 }
   | meta_command                        { $1 }
+  | error                               { synt_err "a definition file" }
 
 input_query:
   | formula DOT                         { Input.Query $1 }
   | meta_command                        { $1 }
+  | error                               { synt_err "the toplevel" }
 
 top_command:
   | KKIND type_clist ki DOT             { Input.KKind ($2,$3) }
+  | KKIND error DOT                     { synt_err ~i:2 "a type declaration" }
   | TTYPE const_clist ty DOT            { Input.TType ($2,$3) }
+  | TTYPE error DOT                     { synt_err ~i:2
+                                            "a constant declaration" }
   | DEFINE decls BY defs DOT            { Input.Def ($2,$4) }
   | DEFINE decls DOT                    { Input.Def ($2,[]) }
   | THEOREM theorem DOT                 { Input.Theorem $2 }
@@ -166,7 +177,8 @@ decls:
   | decl COMMA decls                    { $1::$3 }
 
 decl:
-  | flavour apred_id                    { let p,name,ty = $2 in ($1,p,name,ty) }
+  | flavour apred_id                    { let p,n,ty = $2 in ($1,p,n,ty) }
+  | error                               { synt_err "a predicate declaration" }
 
 flavour:
   |                                     { Input.Normal      }
@@ -180,6 +192,7 @@ defs:
 def:
   | formula                             { pos 0,$1,Input.pre_true (pos 0) }
   | formula DEFEQ formula               { pos 0,$1,$3 }
+  | error                               { synt_err "a predicate definition" }
 
 theorem:
   | lower_id COLON formula              { pos 1,$1,$3 }

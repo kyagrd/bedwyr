@@ -548,10 +548,7 @@ let rec prove temperatures depth ~success ~failure ~level ~timestamp ~local g =
           let var v =
             match observe v with
               | Var v when v.tag = Eigen -> v
-              | _ -> assert false
-              (* XXX should probably be
-               * "raise (Unify.NotLLambda v)",
-               * but can we find an example of failure? *)
+              | _ -> raise (Unify.NotLLambda v)
           in
           fun () ->
             (* This is called when some left solution has been
@@ -560,8 +557,6 @@ let rec prove temperatures depth ~success ~failure ~level ~timestamp ~local g =
             let rec unicity = function
               | [] -> ()
               | (va,a)::tl ->
-                  (* TODO this doesn't need to be checked in that order,
-                   * so make it tail-rec *)
                   if List.exists (fun (_,b) -> a=b) tl then
                     raise (Unify.NotLLambda va) ;
                   unicity tl

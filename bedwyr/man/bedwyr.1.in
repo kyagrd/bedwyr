@@ -121,6 +121,18 @@ Display the version number and the list of command-line options.
 .El
 .\"
 .\"
+.Sh EXIT STATUS
+.Ex -std
+.Bl -tag
+.It Ar 1
+Undefined error
+.It Ar 2
+Input (parser/typing) error
+.It Ar 3
+Failed assertion
+.El
+.\"
+.\"
 .Sh INPUT FILES
 A definition file can contain any meta-command (see
 .Sx META-COMMANDS ) ,
@@ -226,4 +238,6 @@ Most of them have assertions that can be checked with the command-line option
 .\"
 .\"
 .Sh SEE ALSO
-.Xr abella 1
+.Xr abella 1 ,
+.Xr tac 1 ,
+.Xr teyjus 1

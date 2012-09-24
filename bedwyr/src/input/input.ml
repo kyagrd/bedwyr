@@ -25,6 +25,12 @@ and pos' = pos
 let dummy_pos = Lexing.dummy_pos,Lexing.dummy_pos
 let dummy_pos' = dummy_pos
 
+exception Illegal_string of char
+exception Illegal_name of string * string
+exception Unknown_command of string
+
+exception Syntax_error of pos * string
+
 module I = struct
   type pos = pos'
   let dummy_pos = dummy_pos'
