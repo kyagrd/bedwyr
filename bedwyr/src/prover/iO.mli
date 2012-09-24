@@ -40,7 +40,7 @@ val print :
   * the name of the file (an actual [Term.QString]).
   * Fails if the name is an unbound variable or a constant,
   * or if the file was already open.
-  * @raise [File_error] if the file exists or cannot be created *)
+  * @raise File_error if the file exists or cannot be created *)
 val open_user_file : Term.term list -> bool
 
 (** Write in a file. The list should contain exactly two terms,
@@ -54,7 +54,7 @@ val fprint :
   * the name of the file (an actual [Term.QString]).
   * Fails if the name is an unbound variable or a constant,
   * or if the file was not open.
-  * @raise [File_error] if the file cannot be closed *)
+  * @raise File_error if the file cannot be closed *)
 val close_user_file : Term.term list -> bool
 
 (** Close all open files.

@@ -17,7 +17,26 @@
 #  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.               #
 ##############################################################################
 
-AC_INIT([Bedwyr],[1.4-alpha3],[https://gforge.inria.fr/tracker/?atid=1543&group_id=367],[bedwyr],[http://slimmer.gforge.inria.fr/bedwyr/])
+m4_define([M4_VERSION_MAJOR],1)
+m4_define([M4_VERSION_MINOR],4)
+m4_define([M4_VERSION_PATCH],0)
+m4_define([M4_VERSION_BUILD],0)
+m4_define([M4_VERSION_DEV],alpha4)
+m4_define([M4_VERSION1],[M4_VERSION_MAJOR.M4_VERSION_MINOR])
+m4_define([M4_VERSION2],m4_if(M4_VERSION_PATCH,0,
+          [M4_VERSION1],[M4_VERSION1.M4_VERSION_PATCH]))
+m4_define([M4_VERSION3],m4_if(M4_VERSION_BUILD,0,
+          [M4_VERSION2],[M4_VERSION2.M4_VERSION_BUILD]))
+m4_define([M4_VERSION],m4_if(M4_VERSION_DEV,,
+          [M4_VERSION3],[M4_VERSION3-M4_VERSION_DEV]))
+AC_INIT([Bedwyr],[M4_VERSION],
+        [https://gforge.inria.fr/tracker/?atid=1543&group_id=367],
+        [bedwyr],[http://slimmer.gforge.inria.fr/bedwyr/])
+VERSION_MAJOR=M4_VERSION_MAJOR
+VERSION_MINOR=M4_VERSION_MINOR
+VERSION_PATCH=M4_VERSION_PATCH
+VERSION_BUILD=M4_VERSION_BUILD
+VERSION_DEV=M4_VERSION_DEV
 AC_PREREQ(2.60)
 AC_CONFIG_SRCDIR([src/bedwyr.ml])
 
@@ -124,7 +143,7 @@ if test "$enable_win32" = "yes" ; then
 
 	AC_PATH_PROGS(MINGW32_WINDRES,i586-mingw32msvc-windres i386-mingw32msvc-windres,no)
 	if test "$MINGW32_WINDRES" = no ; then
-		AC_MSG_ERROR(Cannot find a native win32 code compiler. Install mingw32-ocaml.)
+		AC_MSG_ERROR(Cannot find windres. Install mingw32-binutils.)
 	fi
 fi
 
@@ -302,7 +321,7 @@ MAINTAINER_EMAIL="parsifal@lix.polytechnique.fr"
 MAINTAINER_FULLNAME="Parsifal"
 PROJECT_NAME=Slimmer
 PROJECT_TARNAME=slimmer
-ICON=dutch-wick-0.2.ico
+ICON=dutch-wick-0.3.ico
 
 AC_CONFIG_FILES([Makefile.include],[chmod a-w Makefile.include])
 AC_CONFIG_FILES([src/config.ml],[chmod a-w src/config.ml])
@@ -312,8 +331,7 @@ AC_CONFIG_FILES([man/bedwyr.1],[chmod a-w man/bedwyr.1])
 AC_CONFIG_FILES([debian-files/control],[chmod a-w debian-files/control])
 AC_CONFIG_FILES([debian-files/copyright],[chmod a-w debian-files/copyright])
 AC_CONFIG_FILES([nsis-files/bedwyr.nsi],[chmod a-w nsis-files/bedwyr.nsi])
-AC_CONFIG_FILES([nsis-files/icon.rc],[chmod a-w nsis-files/icon.rc])
-AC_CONFIG_FILES([nsis-files/versioninfo.rc],[chmod a-w nsis-files/versioninfo.rc])
+AC_CONFIG_FILES([nsis-files/bedwyr.rc],[chmod a-w nsis-files/bedwyr.rc])
 
 OCAML_FILES=$(for i in $($FIND src -type f '!' -path '*.svn*' \
               '!' -name '*~' '!' -name '.*.sw*') ; do \
@@ -334,6 +352,12 @@ DEBIAN_FILES_IN=$([[ -d debian-files ]] && \
 # Regular ./configure stuff
 #
 ##############################################################################
+
+AC_SUBST(VERSION_MAJOR)
+AC_SUBST(VERSION_MINOR)
+AC_SUBST(VERSION_PATCH)
+AC_SUBST(VERSION_BUILD)
+AC_SUBST(VERSION_DEV)
 
 AC_SUBST(ARCH_SUFFIXES)
 AC_SUBST(LIB_SUFFIXES)

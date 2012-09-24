@@ -365,6 +365,7 @@ endif
 nsi: nsis_orig_files nsis_files
 	@CONFIGURE_OPTS="$(CONFIGURE_OPTS) --enable-nsi --enable-win32 --enable-doc" \
 	  $(MAKE) -C nsi-build nsi_pkg
+	@cp -pvf nsi-build/$(DIST_NAME)-installer.exe .
 
 nsis_orig_files: $(DIST_NAME).tgz
 	@$(TAR) -xf $< --xform 's|^$(DIST_NAME)/|nsi-build/|'
@@ -379,10 +380,9 @@ ifeq (0,$(MAKELEVEL))
 else
   nsi_pkg: build doc
 	@mv _build/$(src_docdir)/index.html _build/$(src_docdir)/index.htm
-	@find _build/$(src_docdir)/ \
+	@find _build/$(src_docdir)/ -type f\
 	  -exec sed -i -e 's|\<index.html\>|index.htm|' {} \;
 	@$(MAKENSIS) nsis-files/bedwyr.nsi
-	@cp -pvf nsi-build/$(DIST_NAME)-installer.exe
 endif
 
 

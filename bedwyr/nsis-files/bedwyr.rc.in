@@ -1,0 +1,40 @@
+/*
+ * @configure_input@
+ *
+ * ICON and VERSIONINFO are merged,
+ * since ocamlopt appears to only use the first resource given with -cclib
+ */
+
+1 ICON "@ICON@"
+
+#include <winresrc.h>
+
+#define VERSION_NUMBER @VERSION_MAJOR@,@VERSION_MINOR@,@VERSION_PATCH@,@VERSION_BUILD@
+
+VS_VERSION_INFO VERSIONINFO
+FILETYPE       VFT_APP
+FILEOS         VOS__WINDOWS32
+PRODUCTVERSION VERSION_NUMBER
+FILEVERSION    VERSION_NUMBER
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "080904b0"
+    BEGIN
+      VALUE "CompanyName",      "@PROJECT_NAME@"
+      VALUE "ProductName",      "@PACKAGE_NAME@"
+      VALUE "ProductVersion",   "@PACKAGE_VERSION@"
+      VALUE "InternalName",     "@PACKAGE_TARNAME@"
+      VALUE "OriginalFilename", "@PACKAGE_TARNAME@.exe"
+      VALUE "FileVersion",      "@REVISION@"
+      VALUE "FileDescription",  "@PACKAGE_NAME@ prover"
+      VALUE "LegalCopyright",   "Copyright © 2005-2012 Slimmer project"
+      VALUE "Comments",         "@PACKAGE_NAME@ prover compiled for Windows"
+    END
+  END
+
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x0809, 1200
+  END
+END
