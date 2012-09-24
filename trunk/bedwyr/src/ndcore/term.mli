@@ -13,9 +13,9 @@
 (* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            *)
 (* GNU General Public License for more details.                             *)
 (*                                                                          *)
-(* You should have received a copy of the GNU General Public License        *)
-(* along with this code; if not, write to the Free Software Foundation,     *)
-(* Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA             *)
+(* You should have received a copy of the GNU General Public License along  *)
+(* with this program; if not, write to the Free Software Foundation, Inc.,  *)
+(* 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.              *)
 (****************************************************************************)
 
 (** Representation of higher-order terms. *)
@@ -32,6 +32,7 @@ type var = private {
 
 (** Quantifier: [forall], [exists] or [nabla]. *)
 type binder = Forall | Exists | Nabla
+
 (** Binary operator: [ = ], [ /\ ], [ \/ ] or [ => ] *)
 type binop = Eq | And | Or | Arrow
 type term
@@ -49,23 +50,30 @@ type env = envitem list
   * Doesn't use the constructor [Ptr]. *)
 type rawterm =
   | QString of string
-  | Nat of int
-  | Var of var
-  | DB of int (** De Bruijn index of the variable (starting with 1) *)
-  | NB of int (** local timestamp of the nabla variable *)
+  | Nat     of int
+  | Var     of var
+  | DB      of int
+    (** De Bruijn index of the variable (starting with 1) *)
+  | NB      of int
+    (** local timestamp of the nabla variable *)
   | True
   | False
-  | Binop of binop * term * term
-  | Binder of binder * int * term (** n-ary quantification (the abstraction is implicit) *)
-  | Lam of int * term (** n-ary abstraction *)
-  | App of term * term list
-  | Susp of term * int * int * env
-  | Ptr of ptr
+  | Binop   of binop * term * term
+  | Binder  of binder * int * term
+    (** n-ary quantification (the n abstractions are implicit) *)
+  | Lam     of int * term
+    (** n-ary abstraction *)
+  | App     of term * term list
+  | Susp    of term * int * int * env
+  | Ptr     of ptr
+    (** implementation artifact, never to be used directly *)
 
 (** {6 Creating terms} *)
 
 (** Access to a term. *)
 val observe : term -> rawterm
+(** A variable of type [rawterm] will never have [Ptr] in head position,
+  * so [Ptr _ -> assert false] can be used safely or omitted freely. *)
 
 (** Access to a non-variable term. *)
 val deref : term -> term
@@ -96,12 +104,15 @@ val susp : term -> int -> int -> env -> term
 
 (** {6 Term equalities} *)
 
+(** Raised when deconstructing a head-normal or full-normal term,
+  * whenever the top-level symbol is a [Susp],
+  * or an [App] with a [Lam], an [App] or a [Susp] as head. *)
 exception NonNormalTerm
 
 (** Fast observational equality; no normalization is peformed. *)
 val eq : term -> term -> bool
 
-(** Equivariant checking. *)
+(** Equivariant checking on deep-normalized terms. *)
 val eqvt : term -> term -> bool
 
 (** {6 Creating and extracting variables} *)
@@ -183,28 +194,31 @@ val free    : string -> unit
   * When [passive] is passed to the copier,
   * it only propagates what's been copied when active,
   * but doesn't copy newly encountered variables.
-  * Input terms should be normalized. *)
+  * Input terms should be deep-normalized. *)
 val copy_eigen : unit -> (?passive:bool -> term -> term)
 
 (** Copy a term.
-  * No sharing is maintained, except possibly on pointers to variables. *)
+  * No sharing is maintained, except possibly on pointers to variables.
+  * Input terms should be deep-normalized. *)
 val simple_copy : term -> term
 
-(** Copy a term maintaining shared structures. *)
+(** Copy a term maintaining shared structures.
+  * Input terms should be deep-normalized. *)
 val shared_copy : term -> term
 
 (** {6 Abstracting} *)
 
 (** [abstract var t] builds the abstraction of [t] over [var],
   * which may be either a variable or a nabla index.
-  * This function is not destructive and hence breaks the sharing. *)
+  * This function is not destructive and hence breaks the sharing.
+  * Input terms should be deep-normalized. *)
 val abstract : term -> term -> term
 
 (** [quantify b var t] builds the [b]-quantification of [t] over [var].
-  * See [abstract]. *)
+  * Similar to [abstract]. *)
 val quantify : binder -> term -> term -> term
 
-(** [abstract_flex var t] is similar to abstract var t,
+(** [abstract_flex var t] is similar to [abstract var t],
   * but will abstract flexible subterms headed by var. *)
 val abstract_flex : term -> term -> term
 
@@ -230,11 +244,25 @@ val get_nablas : term -> int list
 
 (** Infix (some of them) shortcuts. *)
 module Notations :
-  sig
-    val ( %= ) : term -> term -> bool           (** Equality *)
-    val ( !! ) : term -> rawterm                (** Observation *)
-    val ( // ) : int -> term -> term            (** Abstraction *)
-    val ( ^^ ) : term -> term list -> term      (** Application *)
+sig
+  val ( %= ) : term -> term -> bool
+    (** equality *)
+  val ( %% ) : term -> term -> bool
+    (** equaivariance *)
+  val ( !! ) : term -> rawterm
+    (** observation *)
+  val ( &/ ) : int -> term -> term
+    (** existential quantification *)
+  val ( &// ) : term -> term -> term
+    (** existential binding *)
+  val ( @/ ) : int -> term -> term
+    (** universal quantification *)
+  val ( @// ) : term -> term -> term
+    (** universal binding *)
+  val ( // ) : int -> term -> term
+    (** abstraction *)
+  val ( ^^ ) : term -> term list -> term
+    (** application *)
   end
 
 (** Generate a fresh (constant) variable.

@@ -12,9 +12,9 @@
 (* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            *)
 (* GNU General Public License for more details.                             *)
 (*                                                                          *)
-(* You should have received a copy of the GNU General Public License        *)
-(* along with this code; if not, write to the Free Software Foundation,     *)
-(* Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA             *)
+(* You should have received a copy of the GNU General Public License along  *)
+(* with this program; if not, write to the Free Software Foundation, Inc.,  *)
+(* 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.              *)
 (****************************************************************************)
 
 exception Level_inconsistency
@@ -55,8 +55,7 @@ let unify lvl a b =
   try
     (if lvl = Zero then Left.pattern_unify else Right.pattern_unify) a b ;
     true
-  with
-    | Unify.Error _ -> false
+  with Unify.Error _ -> false
 
 (* Tabling provides a way to cut some parts of the search,
  * but we should take care not to mistake shortcuts and disproving. *)
@@ -582,6 +581,7 @@ let rec prove temperatures depth ~success ~failure ~level ~timestamp ~local g =
           List.map
             (fun (ts,sigma) ->
                let unsig = apply_subst sigma in
+               let g = Norm.deep_norm g in
                let newg = shared_copy g in
                undo_subst unsig ;
                (ts, newg))
@@ -751,10 +751,12 @@ let rec prove temperatures depth ~success ~failure ~level ~timestamp ~local g =
               prove_atom hd goals (v,temperature,temperatures)
 
           (* Invalid goal *)
+          | Lam _ | App _ | Susp _ -> raise NonNormalTerm
           | _ -> invalid_goal ()
         end
 
     (* Failure *)
+    | Susp _ -> raise NonNormalTerm
     | _ -> invalid_goal ()
 
 (* Wrap prove with sanity checks. *)
