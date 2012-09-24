@@ -20,6 +20,9 @@
 # @configure_input@
 #
 # NSI input for makensis (from the Nullsoft Scriptable Install System)
+# option -NOCD required
+
+!include "nsis-files/EnvVarUpdate.nsh"
 
 ### Variables
 
@@ -65,8 +68,7 @@ InstProgressFlags smooth colored
 SectionGroup "!Bedwyr binaries"
   Section "x86 native code (required)"
     SectionIn 1 2 3 RO
-    SetOutPath "$INSTDIR"
-    File _build\src\bedwyr.exe
+    ${EnvVarUpdate} $0 "PATH" "A" "HKLM" "$INSTDIR"
     WriteRegStr HKLM "${SOFTWARE_KEY}" "InstallDir" "$INSTDIR"
     WriteRegStr HKLM "${SOFTWARE_KEY}" "Version" "${PACKAGE_VERSION}"
     WriteRegStr   HKLM "${UNINSTALL_KEY}" "DisplayName" "${PACKAGE_NAME}"
@@ -81,6 +83,8 @@ SectionGroup "!Bedwyr binaries"
     WriteRegStr   HKLM "${UNINSTALL_KEY}" "URLInfoAbout" "http://slimmer.gforge.inria.fr/bedwyr/"
     WriteRegDWORD HKLM "${UNINSTALL_KEY}" "NoModify" 1
     WriteRegDWORD HKLM "${UNINSTALL_KEY}" "NoRepair" 1
+    SetOutPath "$INSTDIR"
+    File _build\src\bedwyr.exe
     WriteUninstaller "$INSTDIR\uninstall.exe"
   SectionEnd
   Section "bytecode (for OCaml ${OCAML_VERSION})"
@@ -156,11 +160,6 @@ SectionGroupEnd
 
 Section "Uninstall"
   SetShellVarContext all
-  Delete "$INSTDIR\bedwyr.exe"
-  Delete "$INSTDIR\bedwyr.byte"
-  Delete "$INSTDIR\uninstall.exe"
-  DeleteRegKey HKLM "${SOFTWARE_KEY}"
-  DeleteRegKey HKLM "${UNINSTALL_KEY}"
 
   RMDir /r "$INSTDIR\Examples"
 
@@ -181,5 +180,12 @@ Section "Uninstall"
   RMDir "$INSTDIR\Doc\libref"
   RMDir "$INSTDIR\Doc"
 
+  Delete "$INSTDIR\bedwyr.exe"
+  Delete "$INSTDIR\bedwyr.byte"
+  Delete "$INSTDIR\uninstall.exe"
   RMDir "$INSTDIR"
+
+  DeleteRegKey HKLM "${UNINSTALL_KEY}"
+  DeleteRegKey HKLM "${SOFTWARE_KEY}"
+  ${un.EnvVarUpdate} $0 "PATH" "R" "HKLM" "$INSTDIR"
 SectionEnd
