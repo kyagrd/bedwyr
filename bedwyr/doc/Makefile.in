@@ -12,9 +12,9 @@
 #  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the             #
 #  GNU General Public License for more details.                              #
 #                                                                            #
-#  You should have received a copy of the GNU General Public License         #
-#  along with this code; if not, write to the Free Software Foundation,      #
-#  Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA              #
+#  You should have received a copy of the GNU General Public License along   #
+#  with this program; if not, write to the Free Software Foundation, Inc.,   #
+#  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.               #
 ##############################################################################
 
 # @configure_input@
@@ -34,10 +34,8 @@ SHELL	= @BASH@
 FIG2DEV	= @FIG2DEV@
 LATEX	= @LATEX@
 BIBTEX	= @BIBTEX@
-DVIPS	= @DVIPS@
-#DVIPS	= @DVIPS@ -t a4 -Ppdf -z
+DVIPS	= @DVIPS@ -Ppdf -z
 PS2PDF	= @PS2PDF@
-#PS2PDF	= @PS2PDF@ -sPAPERSIZE=a4
 HEVEA	= @HEVEA@ png.hva
 BIBHVA	= @BIBHVA@
 IMAGEN	= @IMAGEN@ -png
@@ -88,7 +86,7 @@ HTML_FILES	= $(QUICKSTART).html $(REFMAN)/index.html
 ARCH_FILES	= $(TEX_FILES) $(TEX_INCLUDES) $(BIB_FILES) \
 		  $(PIC_FILES) Makefile.in
 
-TARGETS		= $(PSGZ_FILES) $(PDFGZ_FILES) $(HTML_FILES)
+TARGETS		= $(PSGZ_FILES) $(PDF_FILES) $(PDFGZ_FILES) $(HTML_FILES)
 
 ### BUILDING
 

@@ -1,0 +1,185 @@
+##############################################################################
+#  Bedwyr prover                                                             #
+#  Copyright (C) 2012 Quentin Heath                                          #
+#                                                                            #
+#  This program is free software; you can redistribute it and/or modify      #
+#  it under the terms of the GNU General Public License as published by      #
+#  the Free Software Foundation; either version 2 of the License, or         #
+#  (at your option) any later version.                                       #
+#                                                                            #
+#  This program is distributed in the hope that it will be useful,           #
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of            #
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the             #
+#  GNU General Public License for more details.                              #
+#                                                                            #
+#  You should have received a copy of the GNU General Public License along   #
+#  with this program; if not, write to the Free Software Foundation, Inc.,   #
+#  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.               #
+##############################################################################
+
+# @configure_input@
+#
+# NSI input for makensis (from the Nullsoft Scriptable Install System)
+
+### Variables
+
+!define PROJECT_NAME    "@PROJECT_NAME@"
+!define PACKAGE_NAME    "@PACKAGE_NAME@"
+!define PACKAGE_TARNAME "@PACKAGE_TARNAME@"
+!define PACKAGE_VERSION "@PACKAGE_VERSION@"
+!define OCAML_VERSION   "@OCAML_VERSION@"
+!define PROJECT_PACKAGE "${PROJECT_NAME}\${PACKAGE_NAME}"
+!define UNINSTALL_KEY   "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PACKAGE_NAME}"
+!define SOFTWARE_KEY    "Software\${PROJECT_PACKAGE}"
+!define INSTALL_DIR     "$PROGRAMFILES32\${PROJECT_PACKAGE}"
+!define START_MENU_DIR  "$SMPROGRAMS\${PROJECT_PACKAGE}"
+
+### General commands
+
+Name "${PACKAGE_NAME} version ${PACKAGE_VERSION}"
+OutFile "${PACKAGE_TARNAME}-${PACKAGE_VERSION}-installer.exe"
+InstallDir "${INSTALL_DIR}"
+InstallDirRegKey HKLM "${SOFTWARE_KEY}" "InstallDir"
+;RequestExecutionLevel user
+LicenseData "COPYING.txt"
+
+Page license
+Page components
+Page directory
+Page instfiles
+UninstPage uninstConfirm
+UninstPage instfiles
+
+InstType "Full"
+InstType "Standard"
+InstType "Minimal"
+
+Function .onInit
+  SetCurInstType 1
+FunctionEnd
+
+InstProgressFlags smooth colored
+
+### Stuff to install
+
+SectionGroup "!Bedwyr binaries"
+  Section "x86 native code (required)"
+    SectionIn 1 2 3 RO
+    SetOutPath "$INSTDIR"
+    File _build\src\bedwyr.exe
+    WriteRegStr HKLM "${SOFTWARE_KEY}" "InstallDir" "$INSTDIR"
+    WriteRegStr HKLM "${SOFTWARE_KEY}" "Version" "${PACKAGE_VERSION}"
+    WriteRegStr   HKLM "${UNINSTALL_KEY}" "DisplayName" "${PACKAGE_NAME}"
+    WriteRegStr   HKLM "${UNINSTALL_KEY}" "UninstallString" "$\"$INSTDIR\uninstall.exe$\""
+    WriteRegStr   HKLM "${UNINSTALL_KEY}" "DisplayVersion" "${PACKAGE_VERSION}"
+    WriteRegStr   HKLM "${UNINSTALL_KEY}" "Comments" "the not-so-sound logician"
+    WriteRegStr   HKLM "${UNINSTALL_KEY}" "Publisher" "${PROJECT_NAME} project"
+    WriteRegStr   HKLM "${UNINSTALL_KEY}" "QuietUninstallString" "$\"$INSTDIR\uninstall.exe$\" /S"
+    WriteRegStr   HKLM "${UNINSTALL_KEY}" "InstallLocation" "$INSTDIR"
+    WriteRegStr   HKLM "${UNINSTALL_KEY}" "HelpLink" "http://slimmer.gforge.inria.fr/bedwyr/doc/quickstart.html"
+    WriteRegStr   HKLM "${UNINSTALL_KEY}" "URLUpdateInfo" "http://slimmer.gforge.inria.fr/bedwyr/#download"
+    WriteRegStr   HKLM "${UNINSTALL_KEY}" "URLInfoAbout" "http://slimmer.gforge.inria.fr/bedwyr/"
+    WriteRegDWORD HKLM "${UNINSTALL_KEY}" "NoModify" 1
+    WriteRegDWORD HKLM "${UNINSTALL_KEY}" "NoRepair" 1
+    WriteUninstaller "$INSTDIR\uninstall.exe"
+  SectionEnd
+  Section "bytecode (for OCaml ${OCAML_VERSION})"
+    SectionIn 1
+    SetOutPath "$INSTDIR"
+    File _build\src\bedwyr.byte
+  SectionEnd
+SectionGroupEnd
+
+Section "!Examples"
+  SectionIn 1 2
+  SetOutPath "$INSTDIR\Examples"
+  File /r examples\*
+SectionEnd
+
+Section "Start Menu Shortcuts"
+  SectionIn 1 2
+  SetShellVarContext all
+  CreateDirectory "${START_MENU_DIR}"
+  CreateShortCut "${START_MENU_DIR}\Uninstall.lnk" "$INSTDIR\uninstall.exe" "" "$INSTDIR\uninstall.exe" 0
+  CreateShortCut "${START_MENU_DIR}\${PACKAGE_NAME}.lnk" "$INSTDIR\bedwyr.exe" "" "$INSTDIR\bedwyr.exe" 0
+  CreateShortCut "${START_MENU_DIR}\${PACKAGE_NAME} - bytecode.lnk" "$INSTDIR\bedwyr.byte" "" "$INSTDIR\bedwyr.exe" 0
+SectionEnd
+
+SectionGroup "Contrib files"
+  Section "Emacs files"
+    SectionIn 1
+    SetOutPath "$INSTDIR\Contrib\Emacs"
+    File /r contrib\emacs
+  SectionEnd
+  Section "Vim files"
+    SectionIn 1
+    SetOutPath "$INSTDIR\Contrib\Vim"
+    File /r contrib\vim
+  SectionEnd
+SectionGroupEnd
+
+SectionGroup "Documentation"
+  SectionGroup "Quickstart guide"
+    Section "HTML"
+      SectionIn 1
+      SetOutPath "$INSTDIR\Doc"
+      File doc\quickstart.html
+    SectionEnd
+    Section "PDF"
+      SectionIn 1 2
+      SetOutPath "$INSTDIR\Doc"
+      File doc\quickstart.pdf
+    SectionEnd
+  SectionGroupEnd
+  SectionGroup "Reference manual"
+    Section "HTML"
+      SectionIn 1
+      SetOutPath "$INSTDIR\Doc\refman"
+      File doc\refman\*
+    SectionEnd
+    Section "PDF"
+      SectionIn 1 2
+      SetOutPath "$INSTDIR\Doc"
+      File doc\refman.pdf
+    SectionEnd
+  SectionGroupEnd
+  SectionGroup "Library reference"
+    Section "HTML"
+      SectionIn 1
+      SetOutPath "$INSTDIR\Doc\libref"
+      File _build\src.docdir\*
+    SectionEnd
+  SectionGroupEnd
+SectionGroupEnd
+
+### Uninstaller
+
+Section "Uninstall"
+  SetShellVarContext all
+  Delete "$INSTDIR\bedwyr.exe"
+  Delete "$INSTDIR\bedwyr.byte"
+  Delete "$INSTDIR\uninstall.exe"
+  DeleteRegKey HKLM "${SOFTWARE_KEY}"
+  DeleteRegKey HKLM "${UNINSTALL_KEY}"
+
+  RMDir /r "$INSTDIR\Examples"
+
+  Delete "${START_MENU_DIR}\Uninstall.lnk"
+  Delete "${START_MENU_DIR}\${PACKAGE_NAME}.lnk"
+  Delete "${START_MENU_DIR}\${PACKAGE_NAME} - bytecode.lnk"
+  RMDir "${START_MENU_DIR}"
+
+  RMDir /r "$INSTDIR\Contrib\Emacs"
+  RMDir /r "$INSTDIR\Contrib\Vim"
+  RMDir "$INSTDIR\Contrib"
+
+  Delete "$INSTDIR\Doc\quickstart.*"
+  Delete "$INSTDIR\Doc\refman\*"
+  Delete "$INSTDIR\Doc\refman.*"
+  Delete "$INSTDIR\Doc\libref\*"
+  RMDir "$INSTDIR\Doc\refman"
+  RMDir "$INSTDIR\Doc\libref"
+  RMDir "$INSTDIR\Doc"
+
+  RMDir "$INSTDIR"
+SectionEnd

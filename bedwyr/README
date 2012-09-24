@@ -52,15 +52,17 @@ or
 (the password is the username).
 
 The project is also available for Debian
-(http://slimmer.gforge.inria.fr/releases/debian/ squeeze main)
-and Gentoo (public overlay 'dawan').
-The package contains ndcore as a library in addition to the complete program.
+(http://slimmer.gforge.inria.fr/releases/debian/ squeeze main),
+Gentoo (public user overlay 'dawan') and Windows.
+The Linux packages contains ndcore as a library,
+in addition to the complete program.
 
 
  4. Building Bedwyr
 --------------------
 
-For proper compilation and installation, the following packages are required:
+For proper compilation and installation, a Linux environment
+and the following packages are required:
 - OCaml (3.10 or later)
 - autotools (at least autoconf-2.60) and GNU make
 - bash, tar, gzip, bzip2 and some other standard tools
@@ -72,7 +74,7 @@ You can customize the process with configure options:
   $ autoconf
   $ ./configure [--enable-doc] [--disable-bytecode] [--enable-nativecode] [...]
   $ make
-Use the `./configure --help` and `make help` for more details.
+Use the `./configure --help` and `make help` commands for more details.
 
 Then pick an example in examples/ and run
   $ ./bedwyr examples/<file>.def
@@ -84,8 +86,9 @@ and type "#help." for a little help.
  5. Documentation
 ------------------
 
-See doc/quickstart.(ps.gz|pdf|html) for more information on how to use bedwyr
-and doc/refman/index.html for a complete system description.
+See doc/quickstart.(ps.gz|pdf|html) for more information on how to use bedwyr,
+doc/refman/index.html for a complete system description,
+and _build/src_docdir/index.html for the source code documentation.
 Those files need the "--enable-doc" configure option (which add some programs
 -- latex, hevea and Co. -- to the list of dependencies) and are built by the
   $ make doc
