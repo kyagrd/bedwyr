@@ -308,10 +308,6 @@ let rec process ?(interactive=false) parse lexbuf =
           eprintf ndcore_error
             "Logic variable encountered on the left:@ %a."
             Pprint.pp_term t
-      | Unify.Formula_as_Term t ->
-          eprintf ndcore_error
-            "Formula encounterd by the unifier:@ %a."
-            Pprint.pp_term t
 
       (* Solving *)
       | Prover.Level_inconsistency ->

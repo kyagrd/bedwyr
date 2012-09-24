@@ -13,9 +13,9 @@
 (* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            *)
 (* GNU General Public License for more details.                             *)
 (*                                                                          *)
-(* You should have received a copy of the GNU General Public License        *)
-(* along with this code; if not, write to the Free Software Foundation,     *)
-(* Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA             *)
+(* You should have received a copy of the GNU General Public License along  *)
+(* with this program; if not, write to the Free Software Foundation, Inc.,  *)
+(* 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.              *)
 (****************************************************************************)
 
 (* Representation of higher-order terms. *)
@@ -33,23 +33,22 @@ type var = {
 type binder = Forall | Exists | Nabla
 type binop = Eq | And | Or | Arrow
 
-(* TODO ? phantom type for annotating term with what's inside
- * [ `Var ] term, etc... *)
 type term = rawterm
 and rawterm =
   | QString of string
-  | Nat    of int
-  | Var    of var (* Only when "observing" the term *)
-  | DB     of int
-  | NB     of int (* Nabla variables *)
+  | Nat     of int
+  | Var     of var (* Only when "observing" the term *)
+  | DB      of int
+  | NB      of int (* Nabla variables *)
   | True
   | False
-  | Binop  of binop * term * term
-  | Binder of binder * int * term
-  | Lam    of int * term
-  | App    of term * term list
-  | Susp   of term * int * int * env
-  | Ptr    of ptr
+  | Binop   of binop * term * term
+  | Binder  of binder * int * term
+  | Lam     of int * term
+  | App     of term * term list
+  | Susp    of term * int * int * env
+  | Ptr     of ptr (* Reference on a term; enables sharing.
+                    * Only when not "observing" the term. *)
 and ptr = in_ptr ref
 and in_ptr = V of var | T of term
 and env = envitem list
@@ -58,7 +57,7 @@ and envitem = Dum of int | Binding of term * int
 (* Creating terms *)
 
 let rec observe = function
-  | Ptr {contents=T d} -> observe d
+  | Ptr {contents=T t} -> observe t
   | Ptr {contents=V v} -> Var v
   | t -> t
 
@@ -101,7 +100,7 @@ let lambda n t =
     aux n t
 
 let app a b = if b = [] then a else match observe a with
-  | App(a,c) -> App (a,c @ b)
+  | App (a,c) -> App (a,c @ b)
   | _ -> App (a,b)
 
 let susp t ol nl e = Susp (t,ol,nl,e)
@@ -113,27 +112,23 @@ exception NonNormalTerm
 (* Fast observational equality; no normalization is peformed. *)
 let rec eq t1 t2 =
   match t1,t2 with
-    (* Compare leafs *)
-    | _,_ when t1=t2 -> true
-    | DB i1, DB i2
-    | NB i1, NB i2 -> i1=i2
+    (* Compare leafs (1) *)
     | Ptr {contents=V v1}, Ptr {contents=V v2} -> v1==v2
     (* Ignore Ptr. It's an implementation artifact *)
     | _, Ptr {contents=T t2} -> eq t1 t2
     | Ptr {contents=T t1}, _ -> eq t1 t2
     (* Propagation *)
-    | Binop (b1,t1,t1'), Binop (b2,t2,t2') ->
-        b1 = b2 && eq t1 t2 && eq t1' t2'
+    | Binop (b1,x1,y1), Binop (b2,x2,y2) ->
+        b1 = b2 && eq x1 x2 && eq y1 y2
     | Binder (b1,n1,t1), Binder (b2,n2,t2) ->
         b1 = b2 && n1 = n2 && eq t1 t2
+    | Lam (n1,t1), Lam (n2,t2) ->
+        n1 = n2 && eq t1 t2
     | App (h1,l1), App (h2,l2) ->
         List.length l1 = List.length l2 &&
         List.fold_left2
           (fun test t1 t2 -> test && eq t1 t2)
           true (h1::l1) (h2::l2)
-    | Lam (n1,t1), Lam (n2,t2) ->
-        n1 = n2 && eq t1 t2
-    | Var _, _ | _, Var _ -> assert false
     | Susp (t,ol,nl,e), Susp (tt,oll,nll,ee) ->
         ol = oll && nl = nll && eq t tt &&
           List.fold_left2
@@ -143,41 +138,37 @@ let rec eq t1 t2 =
                  | Binding (t,i), Binding (tt,j) when i=j && eq t tt -> true
                  | _ -> false)
             true e ee
-    | _ -> false
+    (* Compare leafs (2) *)
+    | _,_ -> t1=t2
 
 (* Equivariant checking *)
 let eqvt t1 t2 =
   let bindings = ref [] in
-  let rec aux s1 s2 =
-    match s1,s2 with
-      | _,_ when t1=t2 -> true
-      | DB i1, DB i2 -> i1=i2
-      | NB i1, NB i2 ->
-          let bd = try Some (List.find (fun (x,y) -> x=i1) !bindings)
-          with Not_found -> None
-          in
-          begin match bd with
-            | Some (x,y) -> (y = i2)
-            | None -> (bindings := (i1,i2)::!bindings ; true)
-          end
-      | Ptr {contents=V v1}, Ptr {contents=V v2} -> v1==v2
-      | _, Ptr {contents=T t2} -> aux s1 t2
-      | Ptr {contents=T t1}, _ -> aux t1 s2
-      (* Propagation *)
-      | Binop (b1,t1,t1'), Binop (b2,t2,t2') ->
-          b1 = b2 && aux t1 t2 && aux t1' t2'
-      | Binder (b1,n1,t1), Binder (b2,n2,t2) ->
-          b1 = b2 && n1 = n2 && aux t1 t2
-      | App (h1,l1), App (h2,l2) ->
-          List.length l1 = List.length l2 &&
-          List.fold_left2
-            (fun test t1 t2 -> test && aux t1 t2)
-            true (h1::l1) (h2::l2)
-      | Lam (n1,t1), Lam (n2,t2) ->
-          n1 = n2 && aux t1 t2
-      | Var _, _ | _, Var _ -> assert false
-      | Susp _, _ -> raise NonNormalTerm
-      | _ -> false
+  let rec aux t1 t2 = match t1,t2 with
+    | NB i1, NB i2 ->
+        begin try List.assoc i1 !bindings = i2
+        with Not_found -> (bindings := (i1,i2)::!bindings ; true)
+        end
+    (* Compare leafs (1) *)
+    | Ptr {contents=V v1}, Ptr {contents=V v2} -> v1==v2
+    (* Ignore Ptr. It's an implementation artifact *)
+    | _, Ptr {contents=T t2} -> aux t1 t2
+    | Ptr {contents=T t1}, _ -> aux t1 t2
+    (* Propagation *)
+    | Binop (b1,x1,y1), Binop (b2,x2,y2) ->
+        b1 = b2 && aux x1 x2 && aux y1 y2
+    | Binder (b1,n1,t1), Binder (b2,n2,t2) ->
+        b1 = b2 && n1 = n2 && aux t1 t2
+    | Lam (n1,t1), Lam (n2,t2) ->
+        n1 = n2 && aux t1 t2
+    | App (h1,l1), App (h2,l2) ->
+        List.length l1 = List.length l2 &&
+        List.fold_left2
+          (fun test t1 t2 -> test && aux t1 t2)
+          true (h1::l1) (h2::l2)
+    | Susp _, _ | _,Susp _ -> raise NonNormalTerm
+    (* Compare leafs (2) *)
+    | _,_ -> t1=t2
   in
   aux t1 t2
 
@@ -425,146 +416,138 @@ let free n =
 
 (* [copy_eigen ()] instantiates a copier, that copies terms,
  * preserving sharing inside the set of copied terms.
- * Input terms should be normalized. *)
+ * Input terms should be deep-normalized. *)
 let copy_eigen () =
   let tbl = Hashtbl.create 100 in
   fun ?(passive=false) tm ->
-    let rec cp tm = match observe tm with
-      | Var v when v.tag = Eigen ->
-          begin try Hashtbl.find tbl v with
-            | Not_found ->
-                if passive then tm else
-                  let v' = { v with id = fresh_id () } in
-                  let x = Ptr (ref (V v')) in
-                    begin try Hint.add v' (Hint.find v) with _ -> () end ;
-                    Hashtbl.add tbl v x ;
-                    x
-          end
-      | Var v -> tm
-      | Binop (b,t1,t2) -> Binop (b,cp t1,cp t2)
-      | Binder (b,l,t) -> Binder (b,l,cp t)
-      | App (a,l) -> App (cp a, List.map cp l)
-      | Lam (l,b) -> Lam (l,cp b)
-      | QString _ | Nat _ | DB _ | NB _ | True | False as x -> x
-      | Susp _ | Ptr _ -> assert false
+    let rec cp t =
+      let t = deref t in
+      match observe t with
+        | Var v when v.tag = Eigen ->
+            begin try Hashtbl.find tbl v
+            with Not_found ->
+              if passive then t else
+                let v' = { v with id = fresh_id () } in
+                let x = Ptr (ref (V v')) in
+                begin try Hint.add v' (Hint.find v) with _ -> () end ;
+                Hashtbl.add tbl v x ;
+                x
+            end
+        | Binop (b,t1,t2) -> op_binop b (cp t1) (cp t2)
+        | Binder (b,n,t) -> binder b n (cp t)
+        | Lam (n,t) -> lambda n (cp t)
+        | App (a,l) -> app (cp a) (List.map cp l)
+        | Susp _ -> raise NonNormalTerm
+        | _ -> t
     in
     cp tm
 
 (* copying a term: No sharing is maintained, except possibly on
-   pointers to variables. *)
-let rec simple_copy tm =
-  match tm with
-    | QString _ | Nat _ | DB _ | NB _ | True | False | Var _ | Ptr {contents=V _} -> tm
-    | Binop (b,t1,t2) -> Binop (b,simple_copy t1,simple_copy t2)
-    | Binder (b,n,t) -> Binder (b,n,simple_copy t)
-    | App (a,l) -> App (simple_copy a, List.map simple_copy l)
-    | Lam (n,b) -> Lam (n,simple_copy b)
-    | Ptr {contents=T t} -> simple_copy t
-    | Susp _ -> assert false
+   pointers to variables.
+ * Input terms should be deep-normalized. *)
+let rec simple_copy t = match t with
+  | Binop (b,t1,t2) -> op_binop b (simple_copy t1) (simple_copy t2)
+  | Binder (b,n,t) -> binder b n (simple_copy t)
+  | Lam (n,t) -> lambda n (simple_copy t)
+  | App (a,l) -> app (simple_copy a) (List.map simple_copy l)
+  | Ptr {contents=T t} -> simple_copy t
+  | Susp _ -> raise NonNormalTerm
+  | Var _ -> assert false
+  | _ -> t
 
-(* copying a term maintaining shared structures *)
-let shared_copy tm =
+(* copying a term maintaining shared structures.
+ * Input terms should be deep-normalized. *)
+let shared_copy t =
   let tbl = Hashtbl.create 100 in
-  let rec cp t =
-    match t with
-      | QString _ | Nat _ | DB _ | NB _ | True | False | Var _ | Ptr {contents=V _} -> t
-      | Binop (b,t1,t2) -> Binop (b,cp t1,cp t2)
-      | Binder (b,n,t) -> Binder (b,n,cp t)
-      | App (a,l) -> App (cp a, List.map cp l)
-      | Lam (n,b) -> Lam (n,cp b)
-      | Ptr ({contents=T s} as x) ->
-          begin try Hashtbl.find tbl x  with
-            | Not_found ->
-                let v = Ptr {contents=T (cp s)} in
-                Hashtbl.add tbl x v ;
-                v
-          end
-      | Susp _ -> assert false
+  let rec cp t = match t with
+    | Binop (b,t1,t2) -> op_binop b (cp t1) (cp t2)
+    | Binder (b,n,t) -> binder b n (cp t)
+    | Lam (n,t) -> lambda n (cp t)
+    | App (a,l) -> app (cp a) (List.map cp l)
+    | Ptr ({contents=T s} as x) ->
+        begin try Hashtbl.find tbl x
+        with Not_found ->
+          let v = Ptr (ref (T (cp s))) in
+          Hashtbl.add tbl x v ;
+          v
+        end
+    | Susp _ -> raise NonNormalTerm
+    | Var _ -> assert false
+    | _ -> t
   in
-   cp tm
+  cp t
 
 (* Abstracting *)
 
 (* [pre_abstract var t] computes the abstraction of [t] over [var],
  * which may be either a variable or a nabla index.
- * This function is not destructive and hence breaks the sharing. *)
+ * This function is not destructive and hence breaks the sharing.
+ * Expects a deep-normalized term. *)
 let pre_abstract target t =
   match observe target with
     | Var target ->
         (* Recursively raise dB indices and abstract over [target]. *)
         let rec aux n t = match t with
-          | NB i -> t
-          | DB i -> if i>=n then DB (i+1) else t
-          | QString _
-          | Nat _
-          | True
-          | False -> t
-          | Binop (b,t1,t2) -> Binop (b,aux n t1,aux n t2)
-          | Binder (b,m,t) -> Binder (b,m,aux (n+m) t)
-          | App (h,ts) ->
-              App ((aux n h), (List.map (aux n) ts))
-          | Lam (m,s) -> Lam (m, aux (n+m) s)
-          | Ptr {contents=T t} -> Ptr {contents=T (aux n t)}
-          | Ptr {contents=V v} -> if v==target then DB n else t
-          | Var _ -> assert false
+          | DB i when i>=n -> db (i+1)
+          | Binop (b,t1,t2) -> op_binop b (aux n t1) (aux n t2)
+          | Binder (b,m,t) -> binder b m (aux (n+m) t)
+          | Lam (m,t) -> lambda m (aux (n+m) t)
+          | App (h,ts) -> app (aux n h) (List.map (aux n) ts)
+          | Ptr {contents=T t} -> Ptr (ref (T (aux n t)))
+          | Ptr {contents=V v} when v==target -> db n
           | Susp _ -> raise NonNormalTerm
+          | Var _ -> assert false
+          | _ -> t
         in
         aux 1 t
     | NB target ->
         (* Recursively raise dB indices and abstract over [target]. *)
         let rec aux n t = match t with
-          | NB i -> if i=target then DB n else t
-          | DB i -> if i>=n then DB (i+1) else t
-          | QString _
-          | Nat _
-          | True
-          | False -> t
-          | Binop (b,t1,t2) -> Binop (b,aux n t1,aux n t2)
-          | Binder (b,m,t) -> Binder (b,m,aux (n+m) t)
-          | App (h,ts) ->
-              App ((aux n h), (List.map (aux n) ts))
-          | Lam (m,s) -> Lam (m, aux (n+m) s)
+          | DB i when i>=n -> db (i+1)
+          | NB i when i=target -> db n
+          | Binop (b,t1,t2) -> op_binop b (aux n t1) (aux n t2)
+          | Binder (b,m,t) -> binder b m (aux (n+m) t)
+          | Lam (m,t) -> lambda m (aux (n+m) t)
+          | App (h,ts) -> app (aux n h) (List.map (aux n) ts)
           | Ptr {contents=T t} -> Ptr {contents=T (aux n t)}
-          | Ptr {contents=V v} -> t
-          | Var _ -> assert false
           | Susp _ -> raise NonNormalTerm
+          | Var _ -> assert false
+          | _ -> t
         in
         aux 1 t
     | _ -> assert false
 
-(* [abstract var t] builds the abstraction computed by [pre_abstract var t]. *)
+(* [abstract var t] builds the abstraction
+ * computed by [pre_abstract var t]. *)
 let abstract target t =
   lambda 1 (pre_abstract target t)
 
-(* [quantify b var t] builds the b-quantification computed by [pre_abstract var t]. *)
+(* [quantify b var t] builds the b-quantification
+ * computed by [pre_abstract var t]. *)
 let quantify b target t =
   binder b 1 (pre_abstract target t)
 
-(* [abstract_flex var t] similar to abstract var t, but
+(* [abstract_flex var t] is similar to [abstract var t], but
  * will abstract flexible subterms headed by var. *)
 let abstract_flex target t =
   match observe target with
     | Var target ->
         (* Recursively raise dB indices and abstract over [target]. *)
         let rec aux n t = match t with
-          | NB i -> t
-          | DB i -> if i>=n then DB (i+1) else t
-          | QString _
-          | Nat _
-          | True
-          | False -> t
-          | Binop (b,t1,t2) -> Binop (b,aux n t1,aux n t2)
-          | Binder (b,m,t) -> Binder (b,m,aux (n+m) t)
+          | DB i when i>=n -> db (i+1)
+          | Binop (b,t1,t2) -> op_binop b (aux n t1) (aux n t2)
+          | Binder (b,m,t) -> binder b m (aux (n+m) t)
+          | Lam (m,t) -> lambda m (aux (n+m) t)
           | App (h,ts) ->
               begin match observe h with
                 | Var v when v==target -> DB n
-                | _ -> App ((aux n h), (List.map (aux n) ts))
+                | _ -> app (aux n h) (List.map (aux n) ts)
               end
-          | Lam (m,s) -> Lam (m, aux (n+m) s)
-          | Ptr {contents=T t} -> Ptr {contents=T (aux n t)}
-          | Ptr {contents=V v} -> if v==target then DB n else t
-          | Var _ -> assert false
+          | Ptr {contents=T t} -> Ptr (ref (T (aux n t)))
+          | Ptr {contents=V v} when v==target -> db n
           | Susp _ -> raise NonNormalTerm
+          | Var _ -> assert false
+          | _ -> t
         in
         lambda 1 (aux 1 t)
     | _ -> assert false
@@ -572,19 +555,19 @@ let abstract_flex target t =
 (* Extract variable terms *)
 
 (* [get_vars test ts] computes the list of variables [v] occuring in
- * the list of normalized terms [ts] and which satisfy [test v]. *)
+ * the list of normalized terms [ts] and which satisfy [test v].
+ * The returned list will be reversed. *)
 let get_vars test ts =
   let rec fv l t = match observe t with
-    | QString _ | Nat _ | DB _ | NB _ | True | False -> l
-    | Var v ->
-        if test v && not (List.mem_assq v l) then ((v,t)::l) else l
+    | Var v when test v && not (List.mem_assq v l) -> ((v,t)::l)
     | Binop (_,t1,t2) -> fv (fv l t1) t2
     | Binder (b,_,t) -> fv l t
-    | App (h,ts) -> List.fold_left fv (fv l h) ts
     | Lam (_,t) -> fv l t
-    | Susp _ | Ptr _ -> assert false
+    | App (h,ts) -> List.fold_left fv (fv l h) ts
+    | Susp _ -> raise NonNormalTerm
+    | _ -> l
   in
-  List.map snd (List.fold_left fv [] ts)
+  List.rev_map snd (List.fold_left fv [] ts)
 
 (* Logic variables of [ts], assuming that they are normalized. *)
 let logic_vars = get_vars (fun v -> v.tag = Logic)
@@ -596,13 +579,13 @@ let eigen_vars = get_vars (fun v -> v.tag = Eigen)
  * the normalized term [x]. *)
 let get_nablas x =
   let rec nb l t = match observe t with
-    | QString _ | Nat _ | Var _ | DB _ | True | False -> l
-    | NB i -> if List.mem i l then l else i::l
+    | NB i when not (List.mem i l) -> i::l
     | Binop (_,t1,t2) -> nb (nb l t1) t2
     | Binder (_,_,t) -> nb l t
     | App (hd,tl) -> List.fold_left nb (nb l hd) tl
     | Lam (_,t) -> nb l t
-    | Susp _ | Ptr _ -> assert false
+    | Susp _ -> raise NonNormalTerm
+    | _ -> l
   in
   nb [] x
 
@@ -611,7 +594,12 @@ let get_nablas x =
 module Notations =
 struct
   let (%=) = eq
+  let (%%) = eqvt
   let (!!) = observe
+  let (&/) = binder Exists
+  let (&//) = quantify Exists
+  let (@/) = binder Forall
+  let (@//) = quantify Forall
   let (//) = lambda
   let (^^) = app
 end

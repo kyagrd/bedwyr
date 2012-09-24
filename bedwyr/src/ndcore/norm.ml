@@ -12,9 +12,9 @@
 (* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            *)
 (* GNU General Public License for more details.                             *)
 (*                                                                          *)
-(* You should have received a copy of the GNU General Public License        *)
-(* along with this code; if not, write to the Free Software Foundation,     *)
-(* Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA             *)
+(* You should have received a copy of the GNU General Public License along  *)
+(* with this program; if not, write to the Free Software Foundation, Inc.,  *)
+(* 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.              *)
 (****************************************************************************)
 
 (* Term (beta-)normalization *)
@@ -33,13 +33,12 @@ let make_env n args =
   let rec aux n args e = match n,args with
     | 0,_ | _,[] -> e,n,args
     | _,hd::tl -> aux (n-1) tl (Term.Binding(hd, 0)::e)
-  in aux n args []
+  in
+  aux n args []
 
 (* Head normalization function.*)
-let rec hnorm term =
-  match Term.observe term with
-    | Term.QString _ | Term.Nat _ | Term.Var _ | Term.DB _ | Term.NB _
-    | Term.True | Term.False | Term.Binop _ | Term.Binder _ -> term
+let rec hnorm t =
+  match Term.observe t with
     | Term.Lam (n,t) -> Term.lambda n (hnorm t)
     | Term.App (t,args) ->
         let t = hnorm t in
@@ -54,8 +53,6 @@ let rec hnorm term =
         let t = hnorm t in
         let susp x = Term.susp x ol nl e in
         begin match Term.observe t with
-          | Term.QString _ | Term.Nat _ | Term.Var _ | Term.NB _
-          | Term.True | Term.False -> t
           | Term.DB i ->
               if i > ol then
                 (* The index points to something outside the suspension *)
@@ -75,29 +72,24 @@ let rec hnorm term =
                                       (add_dummies e n nl)))
           | Term.App (t,args) ->
               hnorm (Term.app (susp t) (List.map susp args))
-          | Term.Ptr _ | Term.Susp _ -> assert false
+          | Term.Susp _ -> raise Term.NonNormalTerm
+          | _ -> t
         end
-    | Term.Ptr _ -> assert false
+    | _ -> t
 
 (* Full normalization function.*)
 let rec deep_norm t =
   let t = hnorm t in
   match Term.observe t with
-    | Term.QString _ | Term.Nat _ | Term.Var _ | Term.DB _ | Term.NB _
-    | Term.True | Term.False -> t
     | Term.Binop (b,t1,t2) -> Term.op_binop b (deep_norm t1) (deep_norm t2)
     | Term.Binder (b,n,t) -> Term.binder b n (deep_norm t)
     | Term.Lam (n,t) -> Term.lambda n (deep_norm t)
     | Term.App (a,b) ->
         begin match Term.observe a with
-          | Term.QString _ | Term.Nat _ | Term.Var _ | Term.DB _ | Term.NB _
-          | Term.True | Term.False ->
-              Term.app a (List.map deep_norm b)
-          (* XXX Was this outer deep_norm really useful?
-           * I had the feeling it adds the possibility of infinite loops
-           * (it actually did on badly-typed terms, such as
-           * "App (((p2 db(1)) -> (p2 a)),H)")…
-          | _ -> deep_norm (Term.app (deep_norm a) (List.map deep_norm b)) *)
-          | _ -> Term.app (deep_norm a) (List.map deep_norm b)
+          | Term.Binop _ | Term.Binder _ ->
+              Term.app (deep_norm a) (List.map deep_norm b)
+          | Term.Lam _ | Term.App _ | Term.Susp _ -> raise Term.NonNormalTerm
+          | _ -> Term.app a (List.map deep_norm b)
         end
-    | Term.Ptr _ | Term.Susp _ -> assert false
+    | Term.Susp _ -> raise Term.NonNormalTerm
+    | _ -> t
