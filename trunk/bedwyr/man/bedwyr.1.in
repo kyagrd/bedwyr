@@ -191,11 +191,11 @@ The header of a definition block gives the declarations of the predicates
 with mandatory type annotations ending with
 .Ic prop
 (for instance
-.Ic Ar p1 Ic \&: int \-> prop, Ar p2 Ic \&: prop ) .
+.Ar p1 Ic \&: int \-> prop, Ar p2 Ic \&: prop ) .
 .Pp
 The body of a definition block gives discretionary clauses
 for those predicates, and only those (for instance
-.Ic Ar p1 (s (s N)) := p1 N Ic \&; Ar p2 Ic \&; Ar p1 z ) .
+.Ar p1 (s (s N)) := p1 N Ic \&; Ar p2 Ic \&; Ar p1 z ) .
 Here,
 .Ar p1
 is true on all even church integers and

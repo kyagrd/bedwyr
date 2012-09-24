@@ -12,9 +12,9 @@
 #  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the             #
 #  GNU General Public License for more details.                              #
 #                                                                            #
-#  You should have received a copy of the GNU General Public License         #
-#  along with this code; if not, write to the Free Software Foundation,      #
-#  Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA              #
+#  You should have received a copy of the GNU General Public License along   #
+#  with this program; if not, write to the Free Software Foundation, Inc.,   #
+#  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.               #
 ##############################################################################
 
 # $(make TARGET=$TARGET) compiles
@@ -42,6 +42,7 @@ TEST_EXAMPLES	= list.def internal/scoping.def internal/checks.def \
 ndcore_dir	= src/ndcore
 bedwyr_prefix	= src/bedwyr
 src_docdir	= src.docdir
+l_cclib		= -lflags -cclib,
 
 # Archived files
 
@@ -79,6 +80,8 @@ MANPAGES	= $(MAN_FILES:.in=.gz)
 # Other files
 
 DEBIAN_FILES	= $(DEBIAN_FILES_IN:.in=)
+RC_FILES	= $(filter %.rc,$(NSIS_FILES))
+COFF_FILES	= $(RC_FILES:.rc=.o)
 
 ### BUILDING
 
@@ -109,12 +112,15 @@ $(BEDWYR_BINS): src/config.ml
 %.odoc:
 	@$(OCAMLBUILD) $@
 
-%.exe:
+%.exe: $(COFF_FILES)
 	@$(OCAMLBUILD) -just-plugin
-	@$(OCAMLBUILD) -ocamlopt $(MINGW32_OCAMLOPT) $*.native
-	@mv -vi _build/$*.native _build/$*.exe
+	$(OCAMLBUILDWIN32) $(addprefix $(l_cclib)../,$(COFF_FILES)) $*.native
+	@mv -vi _build/$*.native _build/$@
 
-%:: config.status %.in
+%.o: %.rc
+	@$(MINGW32_WINDRES) $< $@
+
+%:: config.status %.in Makefile
 	@./$< $@
 	@sed -i \
 	  -e 's|+datadir+|$(datadir)|' \
@@ -134,7 +140,7 @@ bedwyr: $(bedwyr_prefix).$(BEST_SUFFIX)
 .PHONY: test test_ndcore test_batyping test_input test_prover test_bedwyr debug
 
 ifeq ($(TARGET),)
-test:
+  test:
 	@$(MAKE) test_ndcore
 	@echo
 	@$(MAKE) test_batyping
@@ -145,7 +151,7 @@ test:
 	@echo
 	@$(MAKE) test_bedwyr
 else
-test:
+  test:
 	@$(MAKE) test_$(TARGET)
 endif
 
@@ -312,7 +318,7 @@ install_bedwyr_refman: doc/Makefile
 .PHONY: dist archive deb orig_files debian_files deb_pkg
 .SUFFIXES: .tar .tbz .tgz
 
-dist: archive deb
+dist: archive deb nsi
 
 archive: $(BEDWYR_ARCH)
 
@@ -336,7 +342,8 @@ $(DIST_NAME).tar: archive.tar doc/archive.tar
 	@$(GZIP) -c $< > $@
 
 deb: orig_files debian_files
-	@CONFIGURE_OPTS="--enable-deb" $(MAKE) -C $(DEB_DIST_NAME) deb_pkg
+	@CONFIGURE_OPTS="$(CONFIGURE_OPTS) --enable-deb" \
+	  $(MAKE) -C $(DEB_DIST_NAME) deb_pkg
 
 orig_files: $(DIST_NAME).tgz
 	@$(TAR) -xf $< --xform 's|^$(DIST_NAME)/|$(DEB_DIST_NAME)/|'
@@ -353,6 +360,29 @@ else
   deb_pkg:
 	@DEBEMAIL="$(DEBEMAIL)" DEBFULLNAME="$(DEBFULLNAME)" $(DCH)
 	@$(DEBUILD)
+endif
+
+nsi: nsis_orig_files nsis_files
+	@CONFIGURE_OPTS="$(CONFIGURE_OPTS) --enable-nsi --enable-win32 --enable-doc" \
+	  $(MAKE) -C nsi-build nsi_pkg
+
+nsis_orig_files: $(DIST_NAME).tgz
+	@$(TAR) -xf $< --xform 's|^$(DIST_NAME)/|nsi-build/|'
+
+nsis_files: $(NSIS_FILES)
+	@$(TAR) -cvf - $^ --xform 's|^|nsi-build/|' | $(TAR) -xpvf -
+	@sed -e 's|$$|\r|' COPYING > nsi-build/COPYING.txt
+
+ifeq (0,$(MAKELEVEL))
+  nsi_pkg:
+	@echo 'Use the "nsi" target to ensure the necessary files exist.'
+else
+  nsi_pkg: build doc
+	@mv _build/$(src_docdir)/index.html _build/$(src_docdir)/index.htm
+	@find _build/$(src_docdir)/ \
+	  -exec sed -i -e 's|\<index.html\>|index.htm|' {} \;
+	@$(MAKENSIS) nsis-files/bedwyr.nsi
+	@cp -pvf nsi-build/$(DIST_NAME)-installer.exe
 endif
 
 
@@ -374,6 +404,7 @@ help:
 	@echo ' dist           build archives and packages'
 	@echo ' archive        build archives ($(DIST_NAME).($(ARCH_SUFFIXES)))'
 	@echo ' deb            build debian package ($(DEB_NAME)-1_*.deb)'
+	@echo ' nsi            build windows installer ($(DIST_NAME)-installer.exe)'
 	@echo
 	@echo ' help           display this message'
 	@echo ' mostlyclean    remove compiled files'
@@ -381,15 +412,16 @@ help:
 	@echo ' distclean      also remove configure-generated files'
 
 mostlyclean:
+	@[[ -x _build/sanitize.sh ]] && _build/sanitize.sh || true
 	@$(OCAMLBUILD) -clean
-	@rm -vf bedwyr
+	@rm -vf nsis-files/*.o bedwyr
 
 clean: mostlyclean doc/Makefile
 	@$(MAKE) -C doc clean
 	@$(FIND) . -name '*~' -exec rm -vf \{\} \;
 	@rm -vf *.bz2 *.gz *.tar *.tbz *.tgz *.odocl $(MANPAGES)
 	@rm -vf *.build *.changes *.dsc *.deb
-	@rm -rvf $(DEB_DIST_NAME)
+	@rm -rvf $(DEB_DIST_NAME) nsi-build
 
 distclean: clean doc/Makefile
 	@rm -vf $(ac_config_files)

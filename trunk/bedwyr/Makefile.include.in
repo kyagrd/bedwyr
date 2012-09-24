@@ -12,9 +12,9 @@
 #  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the             #
 #  GNU General Public License for more details.                              #
 #                                                                            #
-#  You should have received a copy of the GNU General Public License         #
-#  along with this code; if not, write to the Free Software Foundation,      #
-#  Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA              #
+#  You should have received a copy of the GNU General Public License along   #
+#  with this program; if not, write to the Free Software Foundation, Inc.,   #
+#  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.               #
 ##############################################################################
 
 # @configure_input@
@@ -40,8 +40,9 @@ ARCH_SUFFIXES	= @ARCH_SUFFIXES@
 LIB_SUFFIXES	= @LIB_SUFFIXES@
 BIN_SUFFIXES	= @BIN_SUFFIXES@
 BEST_SUFFIX	= @BEST_SUFFIX@
-DEBEMAIL	?=@DEBEMAIL@
-DEBFULLNAME	?=@DEBFULLNAME@
+DEBEMAIL	?=@MAINTAINER_EMAIL@
+DEBFULLNAME	?=@MAINTAINER_FULLNAME@
+ICON		= @ICON@
 
 ### FOLDERS
 
@@ -59,20 +60,20 @@ datadir		= @datadir@
 #oldincludedir	= @oldincludedir@
 docdir		= $(patsubst %$(PACKAGE_TARNAME),%$(TARGET_NAME),@docdir@)
 #infodir	= @infodir@
-htmldir		= @htmldir@
+#htmldir	= @htmldir@
 #dvidir		= @dvidir@
-pdfdir		= @pdfdir@
-psdir		= @psdir@
+#pdfdir		= @pdfdir@
+#psdir		= @psdir@
 libdir		= @libdir@
 #localedir	= @localedir@
 mandir		= @mandir@
 
-PREFIX		= $(DESTDIR)$(prefix)
-EXEC_PREFIX	= $(DESTDIR)$(exec_prefix)
+#PREFIX		= $(DESTDIR)$(prefix)
+#EXEC_PREFIX	= $(DESTDIR)$(exec_prefix)
 BINDIR		= $(DESTDIR)$(bindir)
 #SBINDIR	= $(DESTDIR)$(sbindir)
 #LIBEXECDIR	= $(DESTDIR)$(libexecdir)
-DATAROOTDIR	= $(DESTDIR)$(datarootdir)
+#DATAROOTDIR	= $(DESTDIR)$(datarootdir)
 DATADIR		= $(DESTDIR)$(datadir)/$(TARGET_NAME)
 #SYSCONFDIR	= $(DESTDIR)$(sysconfdir)
 #SHAREDSTATEDIR	= $(DESTDIR)$(sharedstatedir)
@@ -81,11 +82,11 @@ DATADIR		= $(DESTDIR)$(datadir)/$(TARGET_NAME)
 #OLDINCLUDEDIR	= $(DESTDIR)$(oldincludedir)
 DOCDIR		= $(DESTDIR)$(docdir)
 #INFODIR	= $(DESTDIR)$(infodir)
-HTMLDIR		= $(DESTDIR)$(htmldir)
+#HTMLDIR	= $(DESTDIR)$(htmldir)
 #DVIDIR		= $(DESTDIR)$(dvidir)
-PDFDIR		= $(DESTDIR)$(pdfdir)
-PSDIR		= $(DESTDIR)$(psdir)
-LIBDIR		= $(DESTDIR)$(libdir)/ocaml/slimmer
+#PDFDIR		= $(DESTDIR)$(pdfdir)
+#PSDIR		= $(DESTDIR)$(psdir)
+LIBDIR		= $(DESTDIR)$(libdir)/ocaml/@PROJECT_TARNAME@
 #LOCALEDIR	= $(DESTDIR)$(localedir)
 MANDIR		= $(DESTDIR)$(mandir)
 
@@ -99,10 +100,11 @@ FIND		= @FIND@
 GZIP		= @GZIP@ -4 -f
 BZIP2		= @BZIP2@ -9 -f
 OCAMLC		= @OCAMLC@
-MINGW32_OCAMLOPT= @MINGW32_OCAMLOPT@
 OCAMLDEBUG	= @OCAMLDEBUG@
-OCAMLBUILD	= @OCAMLBUILD@ -classic-display -Xs debian,$(DEB_DIST_NAME) \
-		  -yaccflag -v
+OCAMLBUILD	= @OCAMLBUILD@ -classic-display -yaccflag -v \
+		  -Xs debian,$(DEB_DIST_NAME),nsis-files
+OCAMLBUILDWIN32	= $(OCAMLBUILD) -ocamlopt @MINGW32_OCAMLOPT@
+MINGW32_WINDRES	= @MINGW32_WINDRES@
 OCAMLDOC	= @OCAMLDOC@
 
 INSTALL		= @INSTALL@
@@ -113,6 +115,7 @@ INSTALL_DATA	= @INSTALL_DATA@ $(INSTALL_OPTS) -p
 
 DCH		= @DCH@ -d -D unstable
 DEBUILD		= @DEBUILD@ --lintian-opts -Ivi
+MAKENSIS	= @MAKENSIS@ -V4 -NOCD
 
 ### SOURCE FILES
 
@@ -127,3 +130,7 @@ CONTRIB_FILES	= $(addprefix contrib/emacs/,$(EMACS_CONTRIB)) \
 		  $(addprefix contrib/vim/,$(VIM_CONTRIB))
 EXAMPLES_FILES	= @EXAMPLES_FILES@
 DEBIAN_FILES_IN	= @DEBIAN_FILES_IN@
+NSIS_FILES	= \
+  nsis-files/bedwyr.nsi \
+  nsis-files/icon.rc nsis-files/versioninfo.rc \
+  nsis-files/$(ICON)

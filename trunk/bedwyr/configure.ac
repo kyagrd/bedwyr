@@ -12,12 +12,12 @@
 #  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the             #
 #  GNU General Public License for more details.                              #
 #                                                                            #
-#  You should have received a copy of the GNU General Public License         #
-#  along with this code; if not, write to the Free Software Foundation,      #
-#  Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA              #
+#  You should have received a copy of the GNU General Public License along   #
+#  with this program; if not, write to the Free Software Foundation, Inc.,   #
+#  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.               #
 ##############################################################################
 
-AC_INIT([Bedwyr],[1.4-alpha2],[https://gforge.inria.fr/tracker/?atid=1543&group_id=367],[bedwyr],[http://slimmer.gforge.inria.fr/bedwyr/])
+AC_INIT([Bedwyr],[1.4-alpha3],[https://gforge.inria.fr/tracker/?atid=1543&group_id=367],[bedwyr],[http://slimmer.gforge.inria.fr/bedwyr/])
 AC_PREREQ(2.60)
 AC_CONFIG_SRCDIR([src/bedwyr.ml])
 
@@ -66,15 +66,15 @@ AC_ARG_ENABLE([debug],
 	[AC_MSG_RESULT($enable_debug)],
 	[AC_MSG_RESULT(no)])
 if test "$enable_debug" = "yes" ; then
-	BYTE_SUFFIX="d.byte"
-	NATIVE_SUFFIX="p.native"
-	BYTE_LIBS="d.cma"
-	NATIVE_LIBS="p.a p.cmxa"
+	BYTE_BIN_SUFFIX="d.byte"
+	NATIVE_BIN_SUFFIX="p.native"
+	BYTE_LIBS_SUFFIX="d.cma"
+	NATIVE_LIBS_SUFFIX="p.a p.cmxa"
 else
-	BYTE_SUFFIX="byte"
-	NATIVE_SUFFIX="native"
-	BYTE_LIBS="cma"
-	NATIVE_LIBS="a cmxa"
+	BYTE_BIN_SUFFIX="byte"
+	NATIVE_BIN_SUFFIX="native"
+	BYTE_LIBS_SUFFIX="cma"
+	NATIVE_LIBS_SUFFIX="a cmxa"
 fi
 
 AC_MSG_CHECKING(if bytecode should be generated)
@@ -87,9 +87,9 @@ if test "$enable_bytecode" != "no" ; then
 	if test "$OCAMLC" = no ; then
 		AC_MSG_ERROR(Cannot find a bytecode compiler.)
 	fi
-	LIB_SUFFIXES="$LIB_SUFFIXES $BYTE_LIBS"
-	BIN_SUFFIXES="$BIN_SUFFIXES $BYTE_SUFFIX"
-	BEST_SUFFIX="$BYTE_SUFFIX"
+	LIB_SUFFIXES="$LIB_SUFFIXES $BYTE_LIBS_SUFFIX"
+	BIN_SUFFIXES="$BIN_SUFFIXES $BYTE_BIN_SUFFIX"
+	BEST_SUFFIX="$BYTE_BIN_SUFFIX"
 	OCAML_VERSION=$("$OCAMLC" -version)
 fi
 
@@ -103,9 +103,9 @@ if test "$enable_nativecode" = "yes" ; then
 	if test "$OCAMLOPT" = no ; then
 		AC_MSG_ERROR(Cannot find a native code compiler.)
 	fi
-	LIB_SUFFIXES="$LIB_SUFFIXES $NATIVE_LIBS"
-	BIN_SUFFIXES="$BIN_SUFFIXES $NATIVE_SUFFIX"
-	BEST_SUFFIX="$NATIVE_SUFFIX"
+	LIB_SUFFIXES="$LIB_SUFFIXES $NATIVE_LIBS_SUFFIX"
+	BIN_SUFFIXES="$BIN_SUFFIXES $NATIVE_BIN_SUFFIX"
+	BEST_SUFFIX="$NATIVE_BIN_SUFFIX"
 	OCAML_VERSION=$("$OCAMLOPT" -version)
 fi
 
@@ -115,11 +115,17 @@ AC_ARG_ENABLE([win32],
 	[AC_MSG_RESULT($enable_win32)],
 	[AC_MSG_RESULT(no)])
 if test "$enable_win32" = "yes" ; then
-	AC_PATH_PROGS(MINGW32_OCAMLOPT,i586-mingw32msvc-ocamlopt,no)
+	AC_PATH_PROGS(MINGW32_OCAMLOPT,i586-mingw32msvc-ocamlopt i386-mingw32msvc-ocamlopt,no)
 	if test "$MINGW32_OCAMLOPT" = no ; then
 		AC_MSG_ERROR(Cannot find a native win32 code compiler. Install mingw32-ocaml.)
 	fi
 	BIN_SUFFIXES="$BIN_SUFFIXES exe"
+	OCAML_VERSION=$("$MINGW32_OCAMLOPT" -version)
+
+	AC_PATH_PROGS(MINGW32_WINDRES,i586-mingw32msvc-windres i386-mingw32msvc-windres,no)
+	if test "$MINGW32_WINDRES" = no ; then
+		AC_MSG_ERROR(Cannot find a native win32 code compiler. Install mingw32-ocaml.)
+	fi
 fi
 
 if test "$BIN_SUFFIXES" = "" ; then
@@ -194,12 +200,12 @@ if test "$enable_doc" = "yes" ; then
 		AC_MSG_ERROR(Cannot find ps2pdf. Install ghostscript.)
 	fi
 
-	AC_PATH_PROG(HEVEA,hevea,no)
+	AC_PATH_PROGS(HEVEA,hevea.opt hevea,no)
 	if test "$HEVEA" = no ; then
 		AC_MSG_ERROR(Cannot find hevea.)
 	fi
 
-	AC_PATH_PROG(BIBHVA,bibhva,no)
+	AC_PATH_PROGS(BIBHVA,bibhva.opt bibhva,no)
 	if test "$BIBHVA" = no ; then
 		AC_MSG_ERROR(Cannot find bibhva.)
 	fi
@@ -209,7 +215,7 @@ if test "$enable_doc" = "yes" ; then
 		AC_MSG_ERROR(Cannot find imagen.)
 	fi
 
-	AC_PATH_PROG(HACHA,hacha,no)
+	AC_PATH_PROGS(HACHA,hacha.opt hacha,no)
 	if test "$HACHA" = no ; then
 		AC_MSG_ERROR(Cannot find hacha.)
 	fi
@@ -222,7 +228,7 @@ fi
 
 AC_MSG_CHECKING(if vim files should be installed)
 AC_ARG_WITH([vimfiles],
-	([--with-vimfiles],[install vim files]),
+	AC_HELP_STRING([--with-vimfiles],[install vim files]),
 	[AC_MSG_RESULT($with_vimfiles)],
 	[AC_MSG_RESULT(no)])
 if test "$with_vimfiles" = "yes" ; then
@@ -233,7 +239,7 @@ AC_PROG_INSTALL
 
 AC_MSG_CHECKING(if a Debian package should be built)
 AC_ARG_ENABLE([deb],
-	([--enable-deb],[build deb and debsrc packages]),
+	AC_HELP_STRING([--enable-deb],[build deb and debsrc packages]),
 	[AC_MSG_RESULT($enable_deb)],
 	[AC_MSG_RESULT(no)])
 if test "$enable_deb" = "yes" ; then
@@ -273,6 +279,18 @@ if test "$enable_deb" = "yes" ; then
 	fi
 fi
 
+AC_MSG_CHECKING(if a Windows installer should be built)
+AC_ARG_ENABLE([nsi],
+	AC_HELP_STRING([--enable-nsi],[build a Nullsoft installer for Windows]),
+	[AC_MSG_RESULT($enable_nsi)],
+	[AC_MSG_RESULT(no)])
+if test "$enable_nsi" = "yes" ; then
+	AC_PATH_PROG(MAKENSIS,makensis,no)
+	if test "$MAKENSIS" = no ; then
+		AC_MSG_ERROR(Cannot find makensis. Install nsis.)
+	fi
+fi
+
 #
 # Misc
 #
@@ -280,8 +298,11 @@ fi
 
 REVISION=$((((svn info 2>&- || git svn info 2>&-) || git describe --tags --dirty 2>&- 1>&3) | sed -n -e 's/Revision: //p') 3>&1 | tr -d '\n')
 BUILD_DATE_F=$(date -u +%F)
-DEBEMAIL="parsifal@lix.polytechnique.fr"
-DEBFULLNAME="Parsifal"
+MAINTAINER_EMAIL="parsifal@lix.polytechnique.fr"
+MAINTAINER_FULLNAME="Parsifal"
+PROJECT_NAME=Slimmer
+PROJECT_TARNAME=slimmer
+ICON=dutch-wick-0.2.ico
 
 AC_CONFIG_FILES([Makefile.include],[chmod a-w Makefile.include])
 AC_CONFIG_FILES([src/config.ml],[chmod a-w src/config.ml])
@@ -290,6 +311,9 @@ AC_CONFIG_FILES([doc/Makefile],[chmod a-w doc/Makefile])
 AC_CONFIG_FILES([man/bedwyr.1],[chmod a-w man/bedwyr.1])
 AC_CONFIG_FILES([debian-files/control],[chmod a-w debian-files/control])
 AC_CONFIG_FILES([debian-files/copyright],[chmod a-w debian-files/copyright])
+AC_CONFIG_FILES([nsis-files/bedwyr.nsi],[chmod a-w nsis-files/bedwyr.nsi])
+AC_CONFIG_FILES([nsis-files/icon.rc],[chmod a-w nsis-files/icon.rc])
+AC_CONFIG_FILES([nsis-files/versioninfo.rc],[chmod a-w nsis-files/versioninfo.rc])
 
 OCAML_FILES=$(for i in $($FIND src -type f '!' -path '*.svn*' \
               '!' -name '*~' '!' -name '.*.sw*') ; do \
@@ -324,8 +348,11 @@ AC_SUBST(INSTALL_PROGRAM)
 AC_SUBST(VIMFILES)
 AC_SUBST(REVISION)
 AC_SUBST(BUILD_DATE_F)
-AC_SUBST(DEBEMAIL)
-AC_SUBST(DEBFULLNAME)
+AC_SUBST(MAINTAINER_EMAIL)
+AC_SUBST(MAINTAINER_FULLNAME)
+AC_SUBST(PROJECT_NAME)
+AC_SUBST(PROJECT_TARNAME)
+AC_SUBST(ICON)
 
 AC_SUBST(ac_config_files)
 AC_SUBST(OCAML_FILES)
