@@ -31,7 +31,7 @@ exception Error      of error
 exception NotLLambda of Term.term
 
 (** Logic variable on the left. *)
-exception Left_logic
+exception Left_logic of Term.term
 
 (** Formula encountered by the unifier. *)
 exception Formula_as_Term of Term.term

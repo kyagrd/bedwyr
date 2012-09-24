@@ -126,6 +126,8 @@ type command =
   (** [#env.] call {!System.print_env} *)
   | Type_of of preterm
   (** [#type_of.] call {!System.print_type_of} *)
+  | Show_def of pos * string
+  (** [#show_def.] call {!System.show_def} *)
   | Show_table of pos * string
   (** [#show_table.] call {!System.show_table} *)
   | Clear_tables

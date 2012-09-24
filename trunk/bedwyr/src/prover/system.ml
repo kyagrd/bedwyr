@@ -599,6 +599,14 @@ let remove_def head_tm =
   let head_var = Term.get_var head_tm in
   Hashtbl.remove defs head_var
 
+let get_body pos head_tm success failure =
+  let _,(_,body,_,_,ty) = get_name_pred ~pos head_tm failure in
+  let body = match body with
+    | None -> Term.op_false
+    | Some b -> b
+  in
+  success body ty
+
 let get_table pos head_tm success failure =
   let name,(_,_,_,table,ty) = get_name_pred ~pos head_tm failure in
   match table with
@@ -685,6 +693,10 @@ let print_type_of pre_term =
     free_types ;
   Format.printf "@]@."
 
+let show_def (p,head_tm) =
+  get_body p head_tm
+    (fun body _ -> Format.printf "%a@." Pprint.pp_term body) ignore
+
 let show_table (p,head_tm) =
   get_table p head_tm (fun table _ -> Table.print head_tm table) ignore
 
@@ -703,9 +715,12 @@ let save_table (p,head_tm) file =
 
 (* Misc *)
 
+exception Interrupt
+exception Abort_search
+
+
 (* Handle user interruptions *)
 let interrupt = ref false
-exception Interrupt
 let _ =
   Sys.set_signal Sys.sigint (Sys.Signal_handle (fun _ -> interrupt := true))
 let check_interrupt () =

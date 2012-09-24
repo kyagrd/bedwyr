@@ -156,9 +156,9 @@ let rec process ?(interactive=false) parse lexbuf =
   let ndcore_error _ = basic_error 3 in
   let solver_error _ = basic_error 4 in
   let bedwyr_error _ = basic_error 5 in
+  let critical_error _ = basic_error 5 ~non_interactive_fun:(fun () -> exit 5) in
   let eprintf k ?(p=position_lex lexbuf) f =
-    Format.kfprintf
-      k
+    Format.kfprintf k
       (if interactive then Format.std_formatter else Format.err_formatter)
       ("@[<hov>%s@;<1 1>@[" ^^ f ^^ "@]@]@.")
       (position_range p)
@@ -304,9 +304,10 @@ let rec process ?(interactive=false) parse lexbuf =
           eprintf ndcore_error
             "Not LLambda unification encountered:@ %a."
             Pprint.pp_term t
-      | Unify.Left_logic ->
+      | Unify.Left_logic t ->
           eprintf ndcore_error
-            "Logic variable on the left."
+            "Logic variable encountered on the left:@ %a."
+            Pprint.pp_term t
       | Unify.Formula_as_Term t ->
           eprintf ndcore_error
             "Formula encounterd by the unifier:@ %a."
@@ -324,7 +325,7 @@ let rec process ?(interactive=false) parse lexbuf =
       | System.Interrupt ->
           eprintf bedwyr_error
             "User interruption."
-      | Prover.Abort_search ->
+      | System.Abort_search ->
           eprintf bedwyr_error
             "Proof search aborted!"
       | Invalid_command ->
@@ -337,11 +338,11 @@ let rec process ?(interactive=false) parse lexbuf =
         if interactive then Format.printf "@."
     (* Unhandled errors *)
     | Failure s ->
-        eprintf bedwyr_error
+        eprintf critical_error
           "Error:@ %s"
           s
     | e ->
-        eprintf bedwyr_error
+        eprintf critical_error
           "Unexpected error:@ %s"
           (Printexc.to_string e)
 
@@ -403,6 +404,8 @@ and command c reset =
     | Input.Saturation pressure -> Prover.saturation_pressure := pressure
     | Input.Env -> System.print_env ()
     | Input.Type_of pre_term -> System.print_type_of pre_term
+    | Input.Show_def (p,name) ->
+        System.show_def (p,Term.atom ~tag:Term.Constant name)
     | Input.Show_table (p,name) ->
         System.show_table (p,Term.atom ~tag:Term.Constant name)
     | Input.Clear_tables -> System.clear_tables ()

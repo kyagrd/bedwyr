@@ -53,7 +53,7 @@
 
   (* == Token tables ================================================ *)
 
-  let command_table = Hashtbl.create 20
+  let command_table = Hashtbl.create 21
   let _ = List.iter (fun (k,t) -> Hashtbl.add command_table k t)
             [ (* Bedwyr meta-commands *)
               "exit",           EXIT;
@@ -69,6 +69,7 @@
               "saturation",     SATURATION;
               "env",            ENV;
               "typeof",         TYPEOF;
+              "show_def",       SHOW_DEF;
               "show_table",     SHOW_TABLE;
               "clear_tables",   CLEAR_TABLES;
               "clear_table",    CLEAR_TABLE;
