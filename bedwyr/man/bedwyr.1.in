@@ -12,14 +12,14 @@
 .\"  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the           "
 .\"  GNU General Public License for more details.                            "
 .\"                                                                          "
-.\"  You should have received a copy of the GNU General Public License       "
-.\"  along with this code; if not, write to the Free Software Foundation,    "
-.\"  Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA            "
+.\"  You should have received a copy of the GNU General Public License along "
+.\"  with this program; if not, write to the Free Software Foundation, Inc., "
+.\"  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.             "
 .\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 .\"
 .\" @configure_input@
 .\"
-.Dd July 31, 2012
+.Dd August 23, 2012
 .Os @PACKAGE_NAME@ v@PACKAGE_VERSION@
 .Dt BEDWYR 1 URM
 .\"
@@ -78,7 +78,7 @@ Webpage:
 .Pp
 When invoked as
 .Nm @PACKAGE_TARNAME@ ,
-the faster of the available binaries is used (i.e. the native code version,
+the fastest of the available binaries is used (i.e. the native code version,
 .Nm @PACKAGE_TARNAME@.native ,
 if available; otherwise the bytecode version,
 .Nm @PACKAGE_TARNAME@.byte ) .
@@ -97,16 +97,17 @@ Those are the queries given by
 .It Fl \-strict
 Quit at the first non-interactive error. If not set,
 .Nm
-won't exit on non-interactive input errors (status
-.Ar 2 ,
+won't exit on non-interactive errors (except for critical errors of status
+.Ar 5 ,
 see
 .Sx EXIT STATUS )
-but will exit at the end of the non-interactive stage.
+but will exit at the end of the non-interactive stage
+with the exit status of the first non-interactive error.
 .It Fl e Ar query
 Execute
 .Ar query
 (see
-.Sx INTERACTIVE QUERIES ) .
+.Sx TOPLEVEL QUERIES ) .
 Such queries are executed in the order they are given on the command-line,
 after all the input files a read but before entering the interactive loop.
 .It Fl \-freezing Ar fp
@@ -136,7 +137,7 @@ Display the version number and the list of command-line options.
 .It Ar 1
 Input error (base syntax error, type error)
 .It Ar 2
-Definition error (wrong declaration, wrong definition or misuse)
+Definition error (wrong declaration, wrong definition or object misuse)
 .It Ar 3
 Core error (LLambda violation)
 .It Ar 4
@@ -197,13 +198,13 @@ for those predicates, and only those (for instance
 .Ic Ar p1 (s (s N)) := p1 N Ic \&; Ar p2 Ic \&; Ar p1 z ) .
 Here,
 .Ar p1
-is true on even integers and
+is true on all even church integers and
 .Ar p2
 is equal to
 .Ar true .
 .Pp
 The head of a bodyless clause is always true.
-A predicate without any clauses us always false.
+A predicate without any clauses is always false.
 .El
 .\"
 .Ss Theorems
@@ -214,12 +215,11 @@ A theorem is a valid Abella theorem with some restrictions on its body
 .El
 .\"
 .\"
-.Sh INTERACTIVE QUERIES
+.Sh TOPLEVEL QUERIES
 .Bl -tag
 .It Ic ?= Ar query Ns Ic \&.
 The query entered at the prompt can either be a meta-command,
-in which case it is executed, or a formula, in which case it is solved
-(meaning that
+which is executed, or a formula, which is solved (meaning that
 .Nm
 searches for all substitutions of free variables satisfying
 .Ar query
@@ -230,7 +230,7 @@ Queries given via this option are dealt with in the exact same way.
 .\"
 .\"
 .Sh META-COMMANDS
-Those can be given both in a file and to the interactive toplevel.
+Those can be given both in a file and to the toplevel.
 .Bl -tag
 .It Ic #help.
 This command should give a starting point.
