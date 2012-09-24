@@ -12,9 +12,9 @@
 (* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            *)
 (* GNU General Public License for more details.                             *)
 (*                                                                          *)
-(* You should have received a copy of the GNU General Public License        *)
-(* along with this code; if not, write to the Free Software Foundation,     *)
-(* Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA             *)
+(* You should have received a copy of the GNU General Public License along  *)
+(* with this program; if not, write to the Free Software Foundation, Inc.,  *)
+(* 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.              *)
 (****************************************************************************)
 
 exception Invalid_command
@@ -78,7 +78,7 @@ let test        = ref false
 let session     = ref []
 let queries     = ref []
 let inclfiles   = ref []
-let good_input  = ref true
+let exit_status = ref None
 let strict_mode = ref false
 
 let _ =
@@ -145,7 +145,7 @@ let rec process ?(interactive=false) parse lexbuf =
     if interactive then interactive_fun ()
     else if !strict_mode then exit error_code
     else begin
-      good_input := false ;
+      if !exit_status = None then exit_status := Some error_code ;
       non_interactive_fun ()
     end
   in
@@ -186,7 +186,7 @@ let rec process ?(interactive=false) parse lexbuf =
           do_cleanup
             (fun pre_query ->
                let query = System.translate_query pre_query in
-               if !good_input then Prover.toplevel_prove query)
+               if !exit_status = None then Prover.toplevel_prove query)
             t
             reset
       | Input.Command c -> command c reset
@@ -349,12 +349,12 @@ let rec process ?(interactive=false) parse lexbuf =
 and input_from_file file =
   let cwd = Sys.getcwd () in
   let lexbuf = Lexing.from_channel (open_in file) in
-    Sys.chdir (Filename.dirname file) ;
-    lexbuf.Lexing.lex_curr_p <- {
-        lexbuf.Lexing.lex_curr_p with
-          Lexing.pos_fname = file } ;
-    input_defs lexbuf ;
-    Sys.chdir cwd
+  Sys.chdir (Filename.dirname file) ;
+  lexbuf.Lexing.lex_curr_p <- {
+      lexbuf.Lexing.lex_curr_p with
+        Lexing.pos_fname = file } ;
+  input_defs lexbuf ;
+  Sys.chdir cwd
 and input_defs lexbuf =
   process Parser.input_def lexbuf
 and input_queries ?(interactive=false) lexbuf =
@@ -382,8 +382,12 @@ and include_file fname =
 
 and command c reset =
   let aux = function
-    | Input.Exit -> System.close_all_files () ;
-                    if !good_input then exit 0 else exit 2
+    | Input.Exit ->
+        System.close_all_files () ;
+        begin match !exit_status with
+          | None -> exit 0
+          | Some error_code -> exit error_code
+        end
     | Input.Help -> Format.printf "%s" help_msg
 
     (* Session management *)
@@ -420,7 +424,7 @@ and command c reset =
     | Input.Assert pre_query ->
         if !test then
           let query = System.translate_query pre_query in
-          if !good_input then begin
+          if !exit_status = None then begin
             Format.eprintf "@[<hv 2>Checking that@ %a@,...@]@."
               Pprint.pp_term query ;
             Prover.prove ~level:Prover.One ~local:0 ~timestamp:0 query
@@ -430,7 +434,7 @@ and command c reset =
     | Input.Assert_not pre_query ->
         if !test then
           let query = System.translate_query pre_query in
-          if !good_input then begin
+          if !exit_status = None then begin
             Format.eprintf "@[<hv 2>Checking that@ %a@ is false...@]@."
               Pprint.pp_term query ;
             Prover.prove ~level:Prover.One ~local:0 ~timestamp:0 query
@@ -439,7 +443,7 @@ and command c reset =
     | Input.Assert_raise pre_query ->
         if !test then
           let query = System.translate_query pre_query in
-          if !good_input then begin
+          if !exit_status = None then begin
             Format.eprintf "@[<hv 2>Checking that@ %a@ causes an error...@]@."
               Pprint.pp_term query ;
             if
@@ -461,8 +465,10 @@ let _ =
   List.iter
     (fun s -> input_queries (Lexing.from_string s))
     (List.rev !queries) ;
-  if not !good_input then exit 2
-  else if !interactive then begin
-    Format.printf "%s%!" welcome_msg ;
-    input_queries ~interactive:true (Lexing.from_channel stdin)
-  end
+  match !exit_status with
+    | None ->
+        if !interactive then begin
+          Format.printf "%s%!" welcome_msg ;
+          input_queries ~interactive:true (Lexing.from_channel stdin)
+        end
+    | Some error_code -> exit error_code
