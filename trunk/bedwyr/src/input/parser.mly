@@ -92,6 +92,7 @@
 
 input_error:
   | DOT                                 { () }
+  | QSTRING input_error                 { () }
 
 input_def:
   | top_command                         { $1 }
