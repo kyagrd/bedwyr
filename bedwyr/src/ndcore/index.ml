@@ -12,9 +12,9 @@
 (* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            *)
 (* GNU General Public License for more details.                             *)
 (*                                                                          *)
-(* You should have received a copy of the GNU General Public License        *)
-(* along with this code; if not, write to the Free Software Foundation,     *)
-(* Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA             *)
+(* You should have received a copy of the GNU General Public License along  *)
+(* with this program; if not, write to the Free Software Foundation, Inc.,  *)
+(* 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.              *)
 (****************************************************************************)
 
 (* Option to turn on/off equivariant indexing. *)
@@ -185,8 +185,6 @@ let create_node
     match Term.observe term with
       | Term.QString s -> QString s,bindings
       | Term.Nat s -> Nat s,bindings
-      | Term.DB i -> DB i, bindings
-      | Term.NB i -> NB i, bindings
       | Term.Var ({Term.tag=Term.Eigen} as var)
           when (not switch_vars) & allow_universal ->
           let i,bindings = add bindings var in
@@ -206,6 +204,8 @@ let create_node
           when switch_vars & allow_existential ->
           let i,bindings = add bindings var in
           EVar i, bindings
+      | Term.DB i -> DB i, bindings
+      | Term.NB i -> NB i, bindings
       | Term.True -> True, bindings
       | Term.False -> False, bindings
       | Term.Binop (b,t1,t2) ->
@@ -222,13 +222,14 @@ let create_node
           let terms = h::terms in
           let patterns,bindings =
             List.fold_left
-              (fun (pats,b) t ->
-                 let (p,b) = compile b t in
-                 (p::pats,b))
+              (fun (pats,bds) t ->
+                 let (p,bds) = compile bds t in
+                 (p::pats,bds))
               ([],bindings)
               terms
           in
           App (List.length terms, List.rev patterns),bindings
+      | Term.Susp _ -> raise Term.NonNormalTerm
       | _ -> raise Cannot_table
   in
   let patterns,bindings =
@@ -241,7 +242,7 @@ let create_node
   in
   patterns,Leaf (new_leaf bindings data)
 
-(* [superficial_match] expects a head-normalized term. *)
+(* Expects a head-normalized term. *)
 let superficial_match ~switch_vars patterns terms =
   let sub (pat,term) =
     match pat, Term.observe term with
@@ -265,7 +266,7 @@ let superficial_match ~switch_vars patterns terms =
   in
   List.for_all sub (List.map2 (fun a b -> a,b) patterns terms)
 
-(* [superficial_sort] sorts patterns directly contained in a list
+(* Sorts patterns directly contained in a list
  * according to their top-level symbol.
  * It uses hardcoded rankings for terms, binary operators
  * (the same that in Pprint, but hardcoded once more) and quantifiers.
@@ -330,63 +331,12 @@ let superficial_sort nodes =
   in
   List.sort multicomp nodes
 
-(* [rename] Renaming nabla variables in a term according to the order of
- *   traversal in the tree representation of the (normal form of the) term.
- *   This is a cheap way to force equivariant matching in tables.
- * Added by Tiu, 03 March 2011. *)
-
-let rec rename term bindings n =
-  let term = Norm.hnorm term in
-  match Term.observe term with
-    | Term.QString _ | Term.Nat _ | Term.DB _
-    | Term.Var _ | Term.True | Term.False ->
-        term, bindings, n
-    | Term.NB i ->
-        begin try
-          let j = List.assoc i bindings in
-          Term.nabla j, bindings, n
-        with Not_found -> Term.nabla (n+1), (i,n+1)::bindings, n+1
-        end
-    | Term.Binop (b,t1,t2) ->
-        let t1,bindings,n = rename t1 bindings n in
-        let t2,bindings,n = rename t2 bindings n in
-        Term.op_binop b t1 t2,bindings,n
-    | Term.Binder (b,i,t) ->
-        let t,bindings,n = rename t bindings n in
-        Term.binder b i t,bindings,n
-    | Term.Lam (i,t) ->
-        let t,bindings,n = rename t bindings n in
-        (Term.lambda i t),bindings,n
-    | Term.App (h,terms) ->
-        let newh,bds,n'= rename h bindings n in
-        let newterms,bds,n'=
-          List.fold_left
-            (fun (ts,bd,idx) t ->
-               let t',bd',idx' = rename t bd idx
-               in (t'::ts,bd',idx'))
-            ([],bds,n')
-            terms
-        in
-        (Term.app newh (List.rev newterms)),bds,n'
-    | _ -> raise Cannot_table
-
-let nb_rename terms =
-  let newterms,_,_ =
-    List.fold_left
-      (fun (ts,bd,idx) t ->
-         let t',bd',idx' = rename t bd idx
-         in (t'::ts,bd',idx'))
-      ([],[],0)
-      terms
-  in List.rev newterms
-
 
 (* == ACCESS =============================================================== *)
 
-(* TODO Some of these are tailrec, some waste this effort..
- *      Everything can be done tailrec using a zipper. *)
+(* TODO Some of these are tailrec, some waste this effort... *)
 
-(* Expects hnorm-ed terms. *)
+(* Expects head-normalized terms. *)
 let access
       ~allow_universal ~allow_existential ~switch_vars
       zindex terms =
@@ -544,7 +494,7 @@ let access
   assert (not allow_existential) ;
   assert (not (allow_universal=switch_vars)) ;
   let terms =
-    if !eqvt_index then (nb_rename terms) else (List.map Norm.hnorm terms)
+    if !eqvt_index then (Norm.nb_rename terms) else (List.map Norm.hnorm terms)
   in
   let update,found =
     access ~allow_universal ~allow_existential ~switch_vars zindex terms
@@ -689,7 +639,7 @@ struct
 
 end
 
-let iter (index,_) f =
+let iter x f =
   let rec iter_node mz (Node (patterns,index)) =
     iter_index (MZ.refine mz patterns) index
   and iter_index mz = function
@@ -710,4 +660,5 @@ let iter (index,_) f =
     | Refine,nodes -> List.iter (iter_node mz) (superficial_sort nodes)
     | _ -> assert false
   in
+  let index,_ = z_top x in
   iter_index MZ.empty index
