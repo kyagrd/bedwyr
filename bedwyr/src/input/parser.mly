@@ -39,7 +39,7 @@
 /* Bedwyr meta-commands */
 %token EXIT HELP INCLUDE RESET RELOAD SESSION
 %token DEBUG TIME EQUIVARIANT FREEZING SATURATION
-%token ENV TYPEOF SHOW_TABLE CLEAR_TABLES CLEAR_TABLE SAVE_TABLE
+%token ENV TYPEOF SHOW_DEF SHOW_TABLE CLEAR_TABLES CLEAR_TABLE SAVE_TABLE
 %token ASSERT ASSERT_NOT ASSERT_RAISE
 /* Bedwyr keywords */
 %token KKIND TTYPE DEFINE THEOREM
@@ -138,6 +138,7 @@ meta_command:
   | SATURATION opt_nat DOT              { Input.Command (Input.Saturation $2) }
   | ENV DOT                             { Input.Command (Input.Env) }
   | TYPEOF formula DOT                  { Input.Command (Input.Type_of $2) }
+  | SHOW_DEF lower_id DOT               { Input.Command (Input.Show_def (pos 2,$2)) }
   | SHOW_TABLE lower_id DOT             { Input.Command (Input.Show_table (pos 2,$2)) }
   | CLEAR_TABLES DOT                    { Input.Command (Input.Clear_tables) }
   | CLEAR_TABLE lower_id DOT            { Input.Command (Input.Clear_table (pos 2,$2)) }

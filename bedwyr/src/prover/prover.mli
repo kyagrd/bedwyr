@@ -19,14 +19,12 @@
 
 (** Bedwyr's engine. *)
 
+(** Raised when a Level-1 operator or predicate is used in level 0. *)
 exception Level_inconsistency
 
 (** Raised when a instantiatable variable (eigen in level 0, logic in level 1)
   * is detected in a goal that is supposed to be ground. *)
 exception Variable_leakage
-
-(** Raised when aborting search. *)
-exception Abort_search
 
 (** Internal design of the prover has two levels, Zero and One. *)
 type level =

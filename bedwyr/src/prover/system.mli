@@ -280,6 +280,9 @@ val print_env : unit -> unit
   * even if the term is well typed and of type [prop]. *)
 val print_type_of : Input.preterm -> unit
 
+(** Display the body of a definition. *)
+val show_def : Input.pos * Term.term -> unit
+
 (** Display the content of a table. *)
 val show_table : Input.pos * Term.term -> unit
 
@@ -290,7 +293,11 @@ val save_table : Input.pos * Term.term -> string -> unit
 
 (** {6 Misc} *)
 
+(** User interruption. *)
 exception Interrupt
+
+(** Raised when aborting search. *)
+exception Abort_search
 
 (** @return [true] if a user interruption was detected since the last call to
   * [check_interrupt], [false] otherwise. *)

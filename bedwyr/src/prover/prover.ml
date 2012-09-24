@@ -20,7 +20,6 @@
 exception Level_inconsistency
 
 exception Variable_leakage
-exception Abort_search
 
 open Format
 open System

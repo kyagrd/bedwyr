@@ -150,6 +150,7 @@ type command =
   | Saturation          of int
   | Env
   | Type_of             of preterm
+  | Show_def            of pos * string
   | Show_table          of pos * string
   | Clear_tables
   | Clear_table         of pos * string
@@ -182,7 +183,7 @@ let type_check_and_translate
   let find_db s bvars =
     let rec aux n = function
       | [] -> None
-      | (p,name,ty)::_ when name=s -> Some (Term.db n,ty)
+      | (_,name,ty)::_ when name=s -> Some (Term.db n,ty)
       | _::bvars -> aux (n+1) bvars
     in
     aux 1 bvars

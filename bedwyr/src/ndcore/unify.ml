@@ -24,12 +24,12 @@ type error =
 
 exception Error of error
 exception NotLLambda of Term.term
-exception Left_logic
+exception Left_logic of Term.term
 exception Formula_as_Term of Term.term
 
 let fat x = raise (Formula_as_Term x)
 let not_ll x = raise (NotLLambda x)
-let llogic () = raise Left_logic
+let llogic x = raise (Left_logic x)
 let raise e = raise (Error e)
 
 module type Param =
@@ -512,8 +512,8 @@ let makesubst h1 t2 a1 =
           let (changed,a1',a2') = raise_and_invert v1 v2 a1 [] lev in
             if changed || not (lts1 >= v2.lts && (isLeft || ts1 >= v2.ts)) then
               let h'= fresh ~lts:(min lts1 v2.lts) ~ts:(min ts1 v2.ts) in
-                bind c (app h' a2') ;
-                app h' a1'
+              bind c (app h' a2') ;
+              app h' a1'
             else
               app c a1'
       | Lam (n,t) ->
@@ -541,23 +541,23 @@ let makesubst h1 t2 a1 =
                 let changed,a1',a2' = raise_and_invert v1 v2 a1 a2 lev in
                   if changed then
                     let h' = fresh ~lts:(min lts1 v2.lts) ~ts:(min ts1 ts2) in
-                      bind h2
-                        (lambda (List.length a2) (app h' a2')) ;
-                      app h' a1'
+                    bind h2
+                      (lambda (List.length a2) (app h' a2')) ;
+                    app h' a1'
                   else
                     if not (lts1 >= lts2 && (isLeft || ts1 >= ts2)) then
                       let h' = fresh ~lts:(min lts1 v2.lts) ~ts:ts1 in
-                        bind h2 h' ;
-                        app h' a1'
+                      bind h2 h' ;
+                      app h' a1'
                     else
                       app h2 a1'
-            | Var _ -> llogic ()
+            | Var _ -> llogic h2
             | Ptr _
             | Susp _
             | App _
             | Lam _ -> assert false
           end
-      | Var _ -> llogic ()
+      | Var _ -> llogic c
       | _ -> assert false
   in
 
@@ -647,10 +647,8 @@ let makesubst h1 t2 a1 =
  * unification fails or if there are unequal numbers of arguments; the
  * latter will not arise if type checking has been done. *)
 let rec unify_list l1 l2 =
-  try
-    List.iter2 (fun a1 a2 -> unify (Norm.hnorm a1) (Norm.hnorm a2)) l1 l2
-  with
-    | Invalid_argument _ -> raise TypesMismatch
+  try List.iter2 (fun a1 a2 -> unify (Norm.hnorm a1) (Norm.hnorm a2)) l1 l2
+  with Invalid_argument _ -> raise TypesMismatch
 
 (* [unify_const_term cst t2] unify [cst=t2], assuming that [cst] is a constant.
  * Fail if [t2] is a variable or an application.
@@ -660,9 +658,9 @@ and unify_const_term cst t2 = if eq cst t2 then () else
   match observe t2 with
     | Lam (n,t2) ->
         let a1 = lift_args [] n in
-          unify_app_term cst a1 (app cst a1) t2
+        unify_app_term cst a1 (app cst a1) t2
     | Var {tag=t} when not (variable t || constant t) ->
-        llogic ()
+        llogic t2
     | True | False
     | Binop _ | Binder _ ->
         fat t2
@@ -680,9 +678,9 @@ and unify_bv_term n1 t1 t2 = match observe t2 with
   | Lam (n,t2)  ->
       let t1' = lift t1 n in
       let a1 = lift_args [] n in
-        unify_app_term t1' a1 (app t1' a1) t2
+      unify_app_term t1' a1 (app t1' a1) t2
   | Var {tag=t} when not (variable t || constant t) ->
-      llogic ()
+      llogic t2
   | True | False
   | Binop _ | Binder _ ->
       fat t2
@@ -696,9 +694,9 @@ and unify_nv_term n1 t1 t2 = match observe t2 with
       raise (ConstClash (t1,t2))
   | Lam (n,t2) ->
       let a1 = lift_args [] n in
-        unify_app_term t1 a1 (app t1 a1) t2
+      unify_app_term t1 a1 (app t1 a1) t2
   | Var {tag=t} when not (variable t || constant t) ->
-      llogic ()
+      llogic t2
   | True | False
   | Binop _ | Binder _ ->
       fat t2
@@ -726,7 +724,7 @@ and unify_app_term h1 a1 t1 t2 = match observe h1,observe t2 with
         | Var {tag=tag} when variable tag ->
             bind h2 (makesubst h2 t1 a2)
         | Var {tag=t} ->
-            llogic ()
+            llogic h2
         | _ -> assert false
       end
   | Nat i, App (h2,a2) ->
@@ -745,7 +743,7 @@ and unify_app_term h1 a1 t1 t2 = match observe h1,observe t2 with
         | Var {tag=tag} when variable tag ->
             bind h2 (makesubst h2 t1 a2)
         | Var {tag=t} ->
-            llogic ()
+            llogic h2
         | _ -> assert false
       end
   | Var {tag=tag}, App (h2,a2) when constant tag ->
@@ -762,7 +760,7 @@ and unify_app_term h1 a1 t1 t2 = match observe h1,observe t2 with
         | Var {tag=tag} when variable tag ->
             bind h2 (makesubst h2 t1 a2)
         | Var {tag=t} ->
-            llogic ()
+            llogic h2
         | _ -> assert false
       end
   | NB n1, App (h2,a2) ->
@@ -776,7 +774,7 @@ and unify_app_term h1 a1 t1 t2 = match observe h1,observe t2 with
             else if variable v.tag then
               bind h2 (makesubst h2 t1 a2)
             else
-              llogic ()
+              llogic h2
         | _ -> assert false
       end
   | DB n1, App (h2,a2) ->
@@ -790,7 +788,7 @@ and unify_app_term h1 a1 t1 t2 = match observe h1,observe t2 with
             else if variable v.tag then
               bind h2 (makesubst h2 t1 a2)
             else
-              llogic ()
+              llogic h2
         | _ -> assert false
       end
   | _, Lam (n,t2) ->
@@ -800,9 +798,10 @@ and unify_app_term h1 a1 t1 t2 = match observe h1,observe t2 with
         unify_app_term h1' a1' t1' t2
   | Ptr  _, _ | _, Ptr  _
   | Susp _, _ | _, Susp _ -> assert false
-  | _, Var {tag=t}
+  | _, Var {tag=t} when not (variable t || constant t) ->
+      llogic h1
   | Var {tag=t}, _ when not (variable t || constant t) ->
-      llogic ()
+      llogic t2
   | True,_ | False,_
   | Binop _,_ | Binder _,_ -> fat t1
   | _,True | _,False
@@ -843,7 +842,9 @@ and unify t1 t2 = match observe t1,observe t2 with
         unify (lambda (n1-n2) t1) t2
       else
         unify t1 (lambda (n2-n1) t2)
-  | _ -> llogic ()
+  | Var _,_ -> llogic t1
+  | _,Var _ -> llogic t2
+  | _ -> assert false
 
 let pattern_unify t1 t2 = unify (Norm.hnorm t1) (Norm.hnorm t2)
 
