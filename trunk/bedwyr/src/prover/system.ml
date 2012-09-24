@@ -117,11 +117,7 @@ let declare_type (p,name) ki =
   let ty_var = Term.get_var (Term.atom ~tag:Term.Constant name) in
   if Hashtbl.mem type_kinds ty_var
   then raise (Invalid_type_declaration (name,p,ki,"type already declared"))
-  else match ki with
-    | ki when ki = Typing.ktype ->
-        Hashtbl.add type_kinds ty_var ki
-    | _ ->
-        raise (Invalid_type_declaration (name,p,ki,"no type operators yet"))
+  else Hashtbl.add type_kinds ty_var ki
 
 
 (* constants and predicates declarations *)
@@ -132,7 +128,6 @@ exception Missing_type of string * Typing.pos
 exception Invalid_const_declaration of string * Typing.pos * Typing.ty * string
 exception Invalid_flavour of string * Typing.pos * flavour * flavour
 exception Invalid_pred_declaration of string * Typing.pos * Typing.ty * string
-exception Invalid_bound_declaration of string * Typing.pos * Typing.ty * string
 
 
 let string_of_flavour = function
@@ -151,7 +146,8 @@ let kind_check ?(expected_kind=Typing.ktype) ty =
 
 type object_declaration =
   | Constant of Typing.ty
-  | Predicate of (flavour*Term.term option*Term.term option*Table.t option*Typing.ty)
+  | Predicate of
+      (flavour*Term.term option*Term.term option*Table.t option*Typing.ty)
 
 let defs : (Term.var,object_declaration) Hashtbl.t =
     Hashtbl.create 100
@@ -477,7 +473,7 @@ let add_clauses new_predicates clauses =
 exception Inconsistent_theorem of string * Input.pos * string
 
 
-let mk_theorem_clauses (p,n) theorem =
+let mk_theorem_clauses (p,_) theorem =
   (* Check whether the theorem has the right structure. *)
   let clean_theorem theorem =
     let vars =
@@ -493,7 +489,8 @@ let mk_theorem_clauses (p,n) theorem =
     let split head = match Term.observe head with
       | Term.Var ({Term.tag=Term.Constant}) -> head,[]
       | Term.App (pred,params) -> pred,params
-      | _ -> raise (Inconsistent_theorem (n,p,"head term structure incorrect"))
+      | _ -> raise (Inconsistent_theorem
+                      ("some predicate",p,"head term structure incorrect"))
     in
     (* [newl] is a list of deep-normed theorem clauses
      * [oldl] is a list of theorems built with theorem clauses, /\ and -> *)

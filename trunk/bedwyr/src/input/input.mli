@@ -25,6 +25,23 @@ type pos = Lexing.position * Lexing.position
 (** Dummy position for post-parsing errors. *)
 val dummy_pos : pos
 
+(** No valid token could be parsed from the input.
+  * It might contain a valid prefix, though,
+  * and in particular the provided byte could be a valid character,
+  * but it often is the first byte of a multibyte unicode character. *)
+exception Illegal_string of char
+(** Some characters that are only allowed in prefix names
+  * were used next to some that are only allowed in infix names.
+  * This happens to be forbidden for compatibility reasons;
+  * a separating sequence (spaces, tabs, carriage returns, line feeds),
+  * a comment or a quoted string is needed betweent wo such names. *)
+exception Illegal_name of string * string
+(** The hash character was misused, or a meta-command was misspelled. *)
+exception Unknown_command of string
+
+(** Wrapper around some [Parsing.Parse_error]. *)
+exception Syntax_error of pos * string
+
 module Typing : Typing.S with type pos = pos
 
 (** Pre-term with type and position information,

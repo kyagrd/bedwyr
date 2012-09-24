@@ -203,8 +203,6 @@ exception Invalid_flavour of string * Input.pos *
             flavour * flavour
 exception Invalid_pred_declaration of string * Input.pos *
             Typing.ty * string
-exception Invalid_bound_declaration of string * Input.pos *
-            Typing.ty * string
 
 val string_of_flavour : flavour -> string
 

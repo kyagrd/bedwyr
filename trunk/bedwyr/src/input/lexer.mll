@@ -21,10 +21,6 @@
   open Parser
   open Lexing
 
-  exception Illegal_string of char
-  exception Illegal_name of string * string
-  exception Unknown_command of string
-
   (* XXX incrline = new_line in OCaml >= 3.11.0 *)
   let incrline lexbuf =
     lexbuf.lex_curr_p <- {
@@ -88,7 +84,7 @@
             ]
   let get_command n =
     try Hashtbl.find command_table n
-    with Not_found -> raise (Unknown_command n)
+    with Not_found -> raise (Input.Unknown_command n)
 
   (* Upper-case tokens *)
   let ub_keyword_t = Hashtbl.create 4
@@ -327,7 +323,7 @@ rule token = parse
   | ((safe_char* safe_char_noslash) as n1) (infix_name as n2)
   | (safe_char+ as n1) ((infix_special_nostar infix_special*) as n2)
   | (infix_name as n1) (safe_char+ as n2)
-                                { raise (Illegal_name (n1,n2)) }
+                                { raise (Input.Illegal_name (n1,n2)) }
 
   | number as n                 { NUM (int_of_string n) }
 
@@ -335,7 +331,11 @@ rule token = parse
   | '\x04'              (* ctrl-D *)
   | eof                 { EOF }
 
-  | _ as c              { raise (Illegal_string c) }
+  | _ as c              { raise (Input.Illegal_string c) }
+
+and invalid = parse
+  | '.'                 { DOT }
+  | _                   { invalid lexbuf }
 
 and comment level = parse
   | in_comment          { comment level lexbuf }

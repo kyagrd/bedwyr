@@ -30,6 +30,9 @@ exception Error      of error
 (** Not a pattern. *)
 exception NotLLambda of Term.term
 
+(** Logic variable on the left. *)
+exception Left_logic
+
 (** Formula encountered by the unifier. *)
 exception Formula_as_Term of Term.term
 

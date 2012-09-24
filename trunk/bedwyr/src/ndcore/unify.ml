@@ -24,10 +24,12 @@ type error =
 
 exception Error of error
 exception NotLLambda of Term.term
+exception Left_logic
 exception Formula_as_Term of Term.term
 
 let fat x = raise (Formula_as_Term x)
 let not_ll x = raise (NotLLambda x)
+let llogic () = raise Left_logic
 let raise e = raise (Error e)
 
 module type Param =
@@ -549,13 +551,13 @@ let makesubst h1 t2 a1 =
                         app h' a1'
                     else
                       app h2 a1'
-            | Var _ -> failwith "logic variable on the left"
+            | Var _ -> llogic ()
             | Ptr _
             | Susp _
             | App _
             | Lam _ -> assert false
           end
-      | Var _ -> failwith "logic variable on the left"
+      | Var _ -> llogic ()
       | _ -> assert false
   in
 
@@ -660,7 +662,7 @@ and unify_const_term cst t2 = if eq cst t2 then () else
         let a1 = lift_args [] n in
           unify_app_term cst a1 (app cst a1) t2
     | Var {tag=t} when not (variable t || constant t) ->
-        failwith "logic variable on the left"
+        llogic ()
     | True | False
     | Binop _ | Binder _ ->
         fat t2
@@ -680,7 +682,7 @@ and unify_bv_term n1 t1 t2 = match observe t2 with
       let a1 = lift_args [] n in
         unify_app_term t1' a1 (app t1' a1) t2
   | Var {tag=t} when not (variable t || constant t) ->
-      failwith "logic variable on the left"
+      llogic ()
   | True | False
   | Binop _ | Binder _ ->
       fat t2
@@ -696,7 +698,7 @@ and unify_nv_term n1 t1 t2 = match observe t2 with
       let a1 = lift_args [] n in
         unify_app_term t1 a1 (app t1 a1) t2
   | Var {tag=t} when not (variable t || constant t) ->
-      failwith "logic variable on the left"
+      llogic ()
   | True | False
   | Binop _ | Binder _ ->
       fat t2
@@ -724,7 +726,7 @@ and unify_app_term h1 a1 t1 t2 = match observe h1,observe t2 with
         | Var {tag=tag} when variable tag ->
             bind h2 (makesubst h2 t1 a2)
         | Var {tag=t} ->
-            failwith "logic variable on the left"
+            llogic ()
         | _ -> assert false
       end
   | Nat i, App (h2,a2) ->
@@ -743,7 +745,7 @@ and unify_app_term h1 a1 t1 t2 = match observe h1,observe t2 with
         | Var {tag=tag} when variable tag ->
             bind h2 (makesubst h2 t1 a2)
         | Var {tag=t} ->
-            failwith "logic variable on the left"
+            llogic ()
         | _ -> assert false
       end
   | Var {tag=tag}, App (h2,a2) when constant tag ->
@@ -760,7 +762,7 @@ and unify_app_term h1 a1 t1 t2 = match observe h1,observe t2 with
         | Var {tag=tag} when variable tag ->
             bind h2 (makesubst h2 t1 a2)
         | Var {tag=t} ->
-            failwith "logic variable on the left"
+            llogic ()
         | _ -> assert false
       end
   | NB n1, App (h2,a2) ->
@@ -774,7 +776,7 @@ and unify_app_term h1 a1 t1 t2 = match observe h1,observe t2 with
             else if variable v.tag then
               bind h2 (makesubst h2 t1 a2)
             else
-              failwith "logic variable on the left"
+              llogic ()
         | _ -> assert false
       end
   | DB n1, App (h2,a2) ->
@@ -788,7 +790,7 @@ and unify_app_term h1 a1 t1 t2 = match observe h1,observe t2 with
             else if variable v.tag then
               bind h2 (makesubst h2 t1 a2)
             else
-              failwith "logic variable on the left"
+              llogic ()
         | _ -> assert false
       end
   | _, Lam (n,t2) ->
@@ -800,7 +802,7 @@ and unify_app_term h1 a1 t1 t2 = match observe h1,observe t2 with
   | Susp _, _ | _, Susp _ -> assert false
   | _, Var {tag=t}
   | Var {tag=t}, _ when not (variable t || constant t) ->
-      failwith "logic variable on the left"
+      llogic ()
   | True,_ | False,_
   | Binop _,_ | Binder _,_ -> fat t1
   | _,True | _,False
@@ -841,7 +843,7 @@ and unify t1 t2 = match observe t1,observe t2 with
         unify (lambda (n1-n2) t1) t2
       else
         unify t1 (lambda (n2-n1) t2)
-  | _ -> failwith "logic variable on the left"
+  | _ -> llogic ()
 
 let pattern_unify t1 t2 = unify (Norm.hnorm t1) (Norm.hnorm t2)
 
