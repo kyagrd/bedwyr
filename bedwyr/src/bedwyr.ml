@@ -167,7 +167,7 @@ let rec process ?(interactive=false) parse lexbuf =
     let reset =
       let s = Term.save_state () in
       let ns = Term.save_namespace () in
-        fun () -> Term.restore_state s ; Term.restore_namespace ns
+      fun () -> Term.restore_state s ; Term.restore_namespace ns
     in
     if interactive then Format.printf "?= %!" ;
     begin try match (parse Lexer.token lexbuf) with
@@ -324,16 +324,19 @@ let rec process ?(interactive=false) parse lexbuf =
       | System.Abort_search ->
           eprintf bedwyr_error
             "Proof search aborted!"
-      | System.File_error (n,e) ->
+      | IO.File_error (s1,n,s2) ->
           eprintf bedwyr_error
-            "Couldn't %s file@ %s."
-            n
-            e
+            "Couldn't %s file@ %S:@ %s."
+            s1 n s2
       | Invalid_command ->
           eprintf bedwyr_error
             "Invalid command, or wrong arguments."
     end ;
-    if interactive then flush stdout
+    if interactive then flush stdout ;
+    begin match !exit_status with
+      | None -> ()
+      | Some error_code -> exit error_code
+    end
   done with
     | End_of_file ->
         if interactive then Format.printf "@."
@@ -349,15 +352,14 @@ let rec process ?(interactive=false) parse lexbuf =
 
 and input_from_file file =
   let cwd = Sys.getcwd () in
-  begin try
-    let lexbuf = Lexing.from_channel (open_in file) in
-    Sys.chdir (Filename.dirname file) ;
-    lexbuf.Lexing.lex_curr_p <- {
-        lexbuf.Lexing.lex_curr_p with
-          Lexing.pos_fname = file } ;
-    input_defs lexbuf
-  with Sys_error e -> raise (System.File_error ("read from",e))
-  end ;
+  let channel = IO.open_in file in
+  let lexbuf = Lexing.from_channel channel in
+  Sys.chdir (Filename.dirname file) ;
+  lexbuf.Lexing.lex_curr_p <- {
+      lexbuf.Lexing.lex_curr_p with
+        Lexing.pos_fname = file } ;
+  input_defs lexbuf ;
+  IO.close_in file channel ;
   Sys.chdir cwd
 and input_defs lexbuf =
   process Parser.input_def lexbuf
@@ -387,7 +389,7 @@ and include_file fname =
 and command c reset =
   let aux = function
     | Input.Exit ->
-        System.close_all_files () ;
+        IO.close_user_files () ;
         begin match !exit_status with
           | None -> exit 0
           | Some error_code -> exit error_code
@@ -422,7 +424,7 @@ and command c reset =
     (* save the content of a table to a file. An exception is thrown if
      * file already exists. *)
     | Input.Save_table (p,name,file) ->
-        System.save_table (p,Term.atom ~tag:Term.Constant name) file
+        System.save_table (p,Term.atom ~tag:Term.Constant name) name file
 
     (* Testing commands *)
     | Input.Assert pre_query ->
