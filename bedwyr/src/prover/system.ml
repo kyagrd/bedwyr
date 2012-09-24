@@ -12,9 +12,9 @@
 (* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            *)
 (* GNU General Public License for more details.                             *)
 (*                                                                          *)
-(* You should have received a copy of the GNU General Public License        *)
-(* along with this code; if not, write to the Free Software Foundation,     *)
-(* Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA             *)
+(* You should have received a copy of the GNU General Public License along  *)
+(* with this program; if not, write to the Free Software Foundation, Inc.,  *)
+(* 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.              *)
 (****************************************************************************)
 
 module Logic =
@@ -626,6 +626,9 @@ let clear_table (p,head_tm) =
 
 (* I/O *)
 
+exception File_error of string * string
+
+
 let print_env () =
   let print_types () =
     Format.printf "@[<v 3>*** Types ***" ;
@@ -707,10 +710,8 @@ let save_table (p,head_tm) file =
       get_table p head_tm
         (fun table ty -> Table.fprint fout head_tm table ty ; close_out fout)
         (fun () -> close_out fout)
-    with Sys_error e ->
-      Format.printf "Couldn't close file (%s).@." e
-  with Sys_error e ->
-    Format.printf "Couldn't open file for writing (%s).@." e
+    with Sys_error e -> raise (File_error ("close",e))
+  with Sys_error e -> raise (File_error ("write in",e))
 
 
 (* Misc *)

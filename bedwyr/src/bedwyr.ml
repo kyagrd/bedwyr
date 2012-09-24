@@ -24,7 +24,7 @@ let welcome_msg =
   Printf.sprintf
     "%s %s%s welcomes you.
 
-This software is under GNU Public License.
+This software is under GNU Public License version 2.
 Copyright (C) 2005-2012 Slimmer project.
 
 For a little help, type \"#help.\"
@@ -328,6 +328,11 @@ let rec process ?(interactive=false) parse lexbuf =
       | System.Abort_search ->
           eprintf bedwyr_error
             "Proof search aborted!"
+      | System.File_error (n,e) ->
+          eprintf bedwyr_error
+            "Couldn't %s file@ %s."
+            n
+            e
       | Invalid_command ->
           eprintf bedwyr_error
             "Invalid command, or wrong arguments."
@@ -348,12 +353,15 @@ let rec process ?(interactive=false) parse lexbuf =
 
 and input_from_file file =
   let cwd = Sys.getcwd () in
-  let lexbuf = Lexing.from_channel (open_in file) in
-  Sys.chdir (Filename.dirname file) ;
-  lexbuf.Lexing.lex_curr_p <- {
-      lexbuf.Lexing.lex_curr_p with
-        Lexing.pos_fname = file } ;
-  input_defs lexbuf ;
+  begin try
+    let lexbuf = Lexing.from_channel (open_in file) in
+    Sys.chdir (Filename.dirname file) ;
+    lexbuf.Lexing.lex_curr_p <- {
+        lexbuf.Lexing.lex_curr_p with
+          Lexing.pos_fname = file } ;
+    input_defs lexbuf
+  with Sys_error e -> raise (System.File_error ("read from",e))
+  end ;
   Sys.chdir cwd
 and input_defs lexbuf =
   process Parser.input_def lexbuf
