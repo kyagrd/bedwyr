@@ -19,7 +19,7 @@
 .\"
 .\" @configure_input@
 .\"
-.Dd July 13, 2012
+.Dd July 15, 2012
 .Os @PACKAGE_NAME@ v@PACKAGE_VERSION@
 .Dt BEDWYR 1 URM
 .\"
@@ -33,6 +33,7 @@
 .Nm
 .Op Fl I
 .Op Fl t
+.Op Fl \-strict
 .Op Fl e Ar query
 .Op Fl \-freezing Ar fp
 .Op Fl \-saturation Ar sp
@@ -93,6 +94,14 @@ Those are the queries given by
 .Ic #assert Ar form Ns Ic \&.
 (see
 .Sx META-COMMANDS ) .
+.It Fl \-strict
+Quit at the first non-interactive error. If not set,
+.Nm
+won't exit on non-interactive input errors (status
+.Ar 2 ,
+see
+.Sx EXIT STATUS )
+but will exit at the end of the non-interactive stage.
 .It Fl e Ar query
 Execute
 .Ar query
