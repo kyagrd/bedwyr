@@ -228,6 +228,7 @@ val declare_preds :
 (** {6 Clauses and queries construction} *)
 
 exception Missing_declaration of string * Input.pos option
+exception Stratification_error of string * Input.pos
 
 (** Translate a pre-term, with typing and position information,
   * into a term, with variable sharing.

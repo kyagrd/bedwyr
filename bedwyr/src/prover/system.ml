@@ -185,9 +185,11 @@ let get_pred head_var fail_const fail_missing =
 (* Clauses and queries construction *)
 
 exception Missing_declaration of string * Input.pos option
+exception Stratification_error of string * Input.pos
 
 
 let translate_term
+      ?stratum
       ?(free_args=[])
       ?(infer=true)
       ?(expected_type=Typing.tprop)
@@ -232,14 +234,16 @@ let translate_term
   in
   (* return a typed variable corresponding to the name
    * of a constant (predefined or not) or a predicate *)
-  let typed_declared_obj (p,name) =
+  let typed_declared_obj ?stratum (p,name) =
     let t = Term.atom ~tag:Term.Constant name in
     let v = Term.get_var t in
-    try begin
-      match Hashtbl.find decls v with
-        | Constant ty -> t,ty
-        | Predicate {ty=ty} -> t,ty
-    end with Not_found ->
+    try match Hashtbl.find decls v with
+      | Constant ty -> t,ty
+      | Predicate {stratum=stratum';ty=ty} ->
+          if stratum=(Some stratum') then
+            raise (Stratification_error (name,p))
+          else t,ty
+    with Not_found ->
       let ty = match v with
         | v when v = Logic.var_print ->
             let ty = Typing.fresh_typaram () in
@@ -305,6 +309,7 @@ let translate_term
     let _ = kind_check ty in ty
   in
   Input.type_check_and_translate
+    ?stratum
     ~infer
     ~iter_free_types
     ~free_args
@@ -409,10 +414,9 @@ let add_def_clause stratum (p,pre_head,pre_body) =
     Hashtbl.create 10
   in
   let free_args = Input.free_args pre_head in
-  (* TODO give stratum to translate_term
-   * XXX what about theorems?*)
-  let head,_ = translate_term ~free_args pre_head free_types in
-  let body,_ = translate_term ~free_args pre_body free_types in
+  (* XXX what about stratum in theorems? *)
+  let head,_ = translate_term ~stratum ~free_args pre_head free_types in
+  let body,_ = translate_term ~stratum ~free_args pre_body free_types in
   let pred,arity,body =
     mk_def_clause p head body
   in
@@ -427,7 +431,7 @@ let add_def_clause stratum (p,pre_head,pre_body) =
   in
   if stratum<>stratum' then
     raise (Inconsistent_definition
-             (name,p,"predicate defined in anoter block"))
+             (name,p,"predicate defined in anoter stratification block"))
   else let def =
     match Term.observe definition with
       | Term.Lam (a,b) when arity=a ->

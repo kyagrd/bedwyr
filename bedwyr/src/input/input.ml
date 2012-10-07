@@ -55,19 +55,19 @@ and rawpreterm =
   | App    of pos * preterm * preterm list
 
 let get_pos = function
-  | QString (p,_) -> p
-  | Nat (p,_) -> p
-  | FreeBoundID (p,_) -> p
-  | PredConstBoundID (p,_) -> p
-  | InternID (p,_) -> p
-  | True p -> p
-  | False p -> p
-  | Eq (p,_,_) -> p
-  | And (p,_,_) -> p
-  | Or (p,_,_) -> p
-  | Arrow (p,_,_) -> p
-  | Binder (p,_,_,_) -> p
-  | Lam (p,_,_) -> p
+  | QString (p,_)
+  | Nat (p,_)
+  | FreeBoundID (p,_)
+  | PredConstBoundID (p,_)
+  | InternID (p,_)
+  | True p
+  | False p
+  | Eq (p,_,_)
+  | And (p,_,_)
+  | Or (p,_,_)
+  | Arrow (p,_,_)
+  | Binder (p,_,_,_)
+  | Lam (p,_,_)
   | App (p,_,_) -> p
 
 let set_pos p = function
@@ -173,6 +173,7 @@ exception Term_typing_error of pos * Typing.ty * Typing.ty * Typing.type_unifier
 exception Var_typing_error of string option * pos * Typing.ty
 
 let type_check_and_translate
+      ?stratum
       ?(infer=false)
       ?(iter_free_types=ignore)
       ?(free_args=[])
@@ -187,13 +188,13 @@ let type_check_and_translate
     in
     aux 1 bvars
   in
-  let rec aux pt exty bvars u =
+  let rec aux ~negative pt exty bvars u =
     let p = get_pos pt in
     try match pt with
-      | QString (p,s) ->
+      | QString (_,s) ->
           let u = Typing.unify_constraint u exty Typing.tstring in
           Term.qstring s,u
-      | Nat (p,i) ->
+      | Nat (_,i) ->
           let u = Typing.unify_constraint u exty Typing.tnat in
           Term.nat i,u
       | FreeBoundID (p,s) ->
@@ -212,7 +213,8 @@ let type_check_and_translate
                 let u = Typing.unify_constraint u exty ty in
                 t,u
             | None -> (* declared object *)
-                let t,ty = typed_declared_obj (p,s) in
+                let stratum = (if negative then stratum else None) in
+                let t,ty = typed_declared_obj ?stratum (p,s) in
                 let u = Typing.unify_constraint u exty ty in
                 t,u
           end
@@ -220,39 +222,39 @@ let type_check_and_translate
           let t,ty = typed_intern_pred (p,s) in
           let u = Typing.unify_constraint u exty ty in
           t,u
-      | True p ->
+      | True _ ->
           let u = Typing.unify_constraint u exty Typing.tprop in
           Term.op_true,u
-      | False p ->
+      | False _ ->
           let u = Typing.unify_constraint u exty Typing.tprop in
           Term.op_false,u
-      | Eq (p,pt1,pt2) ->
+      | Eq (_,pt1,pt2) ->
           let ty = Typing.fresh_typaram () in
           let u = Typing.unify_constraint u exty Typing.tprop in
-          let t1,u = aux pt1 ty bvars u in
-          let t2,u = aux pt2 ty bvars u in
+          let t1,u = aux ~negative pt1 ty bvars u in
+          let t2,u = aux ~negative pt2 ty bvars u in
           Term.op_eq t1 t2,u
-      | And (p,pt1,pt2) ->
+      | And (_,pt1,pt2) ->
           let u = Typing.unify_constraint u exty Typing.tprop in
-          let t1,u = aux pt1 Typing.tprop bvars u in
-          let t2,u = aux pt2 Typing.tprop bvars u in
+          let t1,u = aux ~negative pt1 Typing.tprop bvars u in
+          let t2,u = aux ~negative pt2 Typing.tprop bvars u in
           Term.op_and t1 t2,u
-      | Or (p,pt1,pt2) ->
+      | Or (_,pt1,pt2) ->
           let u = Typing.unify_constraint u exty Typing.tprop in
-          let t1,u = aux pt1 Typing.tprop bvars u in
-          let t2,u = aux pt2 Typing.tprop bvars u in
+          let t1,u = aux ~negative pt1 Typing.tprop bvars u in
+          let t2,u = aux ~negative pt2 Typing.tprop bvars u in
           Term.op_or t1 t2,u
-      | Arrow (p,pt1,pt2) ->
+      | Arrow (_,pt1,pt2) ->
           let u = Typing.unify_constraint u exty Typing.tprop in
-          let t1,u = aux pt1 Typing.tprop bvars u in
-          let t2,u = aux pt2 Typing.tprop bvars u in
+          let t1,u = aux ~negative:(not negative) pt1 Typing.tprop bvars u in
+          let t2,u = aux ~negative pt2 Typing.tprop bvars u in
           Term.op_arrow t1 t2,u
-      | Binder (p,b,vars,pt) ->
+      | Binder (_,b,vars,pt) ->
           let arity = List.length vars in
           let bvars = List.rev_append vars bvars in
           let _ = List.map bound_var_type vars in
           let u = Typing.unify_constraint u exty Typing.tprop in
-          let t,u = aux pt Typing.tprop bvars u in
+          let t,u = aux ~negative pt Typing.tprop bvars u in
           List.iter
             (fun (p,_,ty) ->
                let ty = Typing.ty_norm ~unifier:u ty in
@@ -263,32 +265,33 @@ let type_check_and_translate
                then raise (Var_typing_error (None,p,ty)))
             vars ;
           Term.binder b arity t,u
-      | Lam (p,vars,pt) ->
+      | Lam (_,vars,pt) ->
           let arity = List.length vars in
           let bvars = List.rev_append vars bvars in
           let tys = List.map bound_var_type vars in
           let ty = Typing.fresh_typaram () in
           let u = Typing.unify_constraint u exty (Typing.ty_arrow tys ty) in
-          let t,u = aux pt ty bvars u in
+          let t,u = aux ~negative pt ty bvars u in
           Term.lambda arity t,u
-      | App (p,phd,pargs) ->
+      | App (_,phd,pargs) ->
           let arity = List.length pargs in
           let tys,ty = Typing.build_abstraction_types arity in
           let u = Typing.unify_constraint u exty ty in
-          let hd,u = aux phd (Typing.ty_arrow tys ty) bvars u in
+          let hd,u = aux ~negative phd (Typing.ty_arrow tys ty) bvars u in
           let u,args = List.fold_left2
                          (fun (u,args) pt ty ->
-                            let t,u = aux pt ty bvars u in u,t::args)
+                            let t,u = aux ~negative pt ty bvars u in u,t::args)
                          (u,[])
                          pargs
                          tys
           in
           Term.app hd (List.rev args),u
-    with
-      | Typing.Type_unification_error (ty1,ty2,unifier) ->
-          raise (Term_typing_error (p,ty1,ty2,unifier))
+    with Typing.Type_unification_error (ty1,ty2,unifier) ->
+      raise (Term_typing_error (p,ty1,ty2,unifier))
   in
-  let term,unifier = aux pre_term expected_type [] !Typing.global_unifier in
+  let term,unifier =
+    aux ~negative:false pre_term expected_type [] !Typing.global_unifier
+  in
   iter_free_types
     (fun v ty ->
        let ty = Typing.ty_norm ~unifier:unifier ty in

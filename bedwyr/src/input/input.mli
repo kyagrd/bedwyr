@@ -201,6 +201,7 @@ exception Var_typing_error of string option * pos * Typing.ty
   * [fv], [dv], [iv] and [bv] are functions returning the type (and,
   * depending on the case, the corresponding term) of a free, declared,
   * intern or bound variable.
+  * @param stratum stratum of the predicate this term defines
   * @param infer whether the result of the inference is to be kept in the
   * global type unifier or not
   * @param iter_free_types function that maps a provided action
@@ -213,13 +214,14 @@ exception Var_typing_error of string option * pos * Typing.ty
   * @raise Var_typing_error if a free variable of type [prop] is found
   * @raise Term_typing_error if the pre-tem isn't well typed *)
 val type_check_and_translate :
+  ?stratum:int ->
   ?infer:bool ->
   ?iter_free_types:((Term.var -> Typing.ty -> Typing.ty) -> unit) ->
   ?free_args:string list ->
   preterm ->
   Typing.ty ->
   ((pos * string -> Term.term * Typing.ty) *
-   (pos * string -> Term.term * Typing.ty) *
+   (?stratum:int -> pos * string -> Term.term * Typing.ty) *
    (pos * string -> Term.term * Typing.ty) *
    (pos * string * Typing.ty -> Typing.ty)) ->
   Term.term * Typing.ty

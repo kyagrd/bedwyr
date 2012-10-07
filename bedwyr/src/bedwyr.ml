@@ -259,6 +259,10 @@ let rec process ?(interactive=false) parse lexbuf =
           eprintf def_error ?p
             "Undeclared object %s."
             n
+      | System.Stratification_error (n,p) ->
+          eprintf def_error ~p
+            "Inconsistent stratification:@ %s is forbidden here."
+            n
       | System.Inconsistent_definition (n,p,s) ->
           eprintf def_error ~p
             "Inconsistent extension of definition for %s:@ %s."
