@@ -21,7 +21,7 @@ m4_define([M4_VERSION_MAJOR],1)
 m4_define([M4_VERSION_MINOR],4)
 m4_define([M4_VERSION_PATCH],0)
 m4_define([M4_VERSION_BUILD],0)
-m4_define([M4_VERSION_DEV],alpha4)
+m4_define([M4_VERSION_DEV],alpha5)
 m4_define([M4_VERSION1],[M4_VERSION_MAJOR.M4_VERSION_MINOR])
 m4_define([M4_VERSION2],m4_if(M4_VERSION_PATCH,0,
           [M4_VERSION1],[M4_VERSION1.M4_VERSION_PATCH]))
@@ -79,6 +79,7 @@ fi
 #
 ##############################################################################
 
+WIN32_BIN_SUFFIX="exe"
 AC_MSG_CHECKING(if debugging information should be added)
 AC_ARG_ENABLE([debug],
 	AC_HELP_STRING([--enable-debug],[add debugging/profiling information]),
@@ -96,6 +97,30 @@ else
 	NATIVE_LIBS_SUFFIX="a cmxa"
 fi
 
+AC_MSG_CHECKING(if native win32 code should be generated)
+AC_ARG_ENABLE([win32],
+	AC_HELP_STRING([--enable-win32],[output native win32 code]),
+	[AC_MSG_RESULT($enable_win32)],
+	[AC_MSG_RESULT(no)])
+if test "$enable_win32" = "yes" ; then
+	AC_PATH_PROGS(MINGW32_OCAMLOPT,
+                      i686-w64-mingw32-ocamlopt.opt i686-w64-mingw32-ocamlopt \
+                      i586-mingw32msvc-ocamlopt.opt i586-mingw32msvc-ocamlopt,
+                      no)
+	if test "$MINGW32_OCAMLOPT" = no ; then
+		AC_MSG_ERROR(Cannot find a native win32 code compiler. Install mingw32-ocaml.)
+	fi
+	BIN_SUFFIXES="$BIN_SUFFIXES $WIN32_BIN_SUFFIX"
+	BEST_SUFFIX="$WIN32_BIN_SUFFIX"
+	OCAML_VERSION=$("$MINGW32_OCAMLOPT" -version)
+	OCAML_WHERE=$("$MINGW32_OCAMLOPT" -where)
+
+	AC_PATH_PROGS(MINGW32_WINDRES,i586-mingw32msvc-windres i386-mingw32msvc-windres,no)
+	if test "$MINGW32_WINDRES" = no ; then
+		AC_MSG_ERROR(Cannot find windres. Install mingw32-binutils.)
+	fi
+fi
+
 AC_MSG_CHECKING(if bytecode should be generated)
 AC_ARG_ENABLE([bytecode],
 	AC_HELP_STRING([--enable-bytecode],[output bytecode (default)]),
@@ -110,6 +135,7 @@ if test "$enable_bytecode" != "no" ; then
 	BIN_SUFFIXES="$BIN_SUFFIXES $BYTE_BIN_SUFFIX"
 	BEST_SUFFIX="$BYTE_BIN_SUFFIX"
 	OCAML_VERSION=$("$OCAMLC" -version)
+	OCAML_WHERE=$("$OCAMLC" -where)
 fi
 
 AC_MSG_CHECKING(if native code should be generated)
@@ -126,28 +152,10 @@ if test "$enable_nativecode" = "yes" ; then
 	BIN_SUFFIXES="$BIN_SUFFIXES $NATIVE_BIN_SUFFIX"
 	BEST_SUFFIX="$NATIVE_BIN_SUFFIX"
 	OCAML_VERSION=$("$OCAMLOPT" -version)
+	OCAML_WHERE=$("$OCAMLOPT" -where)
 fi
 
-AC_MSG_CHECKING(if native win32 code should be generated)
-AC_ARG_ENABLE([win32],
-	AC_HELP_STRING([--enable-win32],[output native win32 code]),
-	[AC_MSG_RESULT($enable_win32)],
-	[AC_MSG_RESULT(no)])
-if test "$enable_win32" = "yes" ; then
-	AC_PATH_PROGS(MINGW32_OCAMLOPT,i586-mingw32msvc-ocamlopt i386-mingw32msvc-ocamlopt,no)
-	if test "$MINGW32_OCAMLOPT" = no ; then
-		AC_MSG_ERROR(Cannot find a native win32 code compiler. Install mingw32-ocaml.)
-	fi
-	BIN_SUFFIXES="$BIN_SUFFIXES exe"
-	OCAML_VERSION=$("$MINGW32_OCAMLOPT" -version)
-
-	AC_PATH_PROGS(MINGW32_WINDRES,i586-mingw32msvc-windres i386-mingw32msvc-windres,no)
-	if test "$MINGW32_WINDRES" = no ; then
-		AC_MSG_ERROR(Cannot find windres. Install mingw32-binutils.)
-	fi
-fi
-
-if test "$BIN_SUFFIXES" = "" ; then
+if test "$BEST_SUFFIX" = "" ; then
 	AC_MSG_WARN(You may want to enable at least one type of compilation.)
 else
 	if test "$enable_debug" = "yes" ; then
@@ -364,6 +372,7 @@ AC_SUBST(LIB_SUFFIXES)
 AC_SUBST(BIN_SUFFIXES)
 AC_SUBST(BEST_SUFFIX)
 AC_SUBST(OCAML_VERSION)
+AC_SUBST(OCAML_WHERE)
 
 AC_SUBST(INSTALL)
 AC_SUBST(INSTALL_DATA)

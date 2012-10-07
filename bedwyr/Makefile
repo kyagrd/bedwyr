@@ -114,7 +114,7 @@ $(BEDWYR_BINS): src/config.ml
 
 %.exe: $(COFF_FILES)
 	@$(OCAMLBUILD) -just-plugin
-	$(OCAMLBUILDWIN32) $(addprefix $(l_cclib)../,$(COFF_FILES)) $*.native
+	@$(OCAMLBUILDWIN32) $(addprefix $(l_cclib)../,$(COFF_FILES)) $*.native
 	@mv -vi _build/$*.native _build/$@
 
 %.o: %.rc
@@ -200,7 +200,7 @@ endif
 
 ### DOC
 
-.PHONY: doc ndcore_doc bedwyr_doc bedwyr_src_doc bedwyr_ref bedwyr_man
+.PHONY: doc ndcore_doc ndcore_src_doc bedwyr_doc bedwyr_man bedwyr_src_doc bedwyr_refman
 
 ifeq ($(OCAMLDOC),)
   doc:
@@ -363,7 +363,7 @@ else
 endif
 
 nsi: nsis_orig_files nsis_files
-	@CONFIGURE_OPTS="$(CONFIGURE_OPTS) --enable-nsi --enable-win32 --enable-doc" \
+	@CONFIGURE_OPTS="$(CONFIGURE_OPTS) --enable-nsi --enable-bytecode --enable-win32 --enable-doc" \
 	  $(MAKE) -C nsi-build nsi_pkg
 	@cp -pvf nsi-build/$(DIST_NAME)-installer.exe .
 
@@ -408,7 +408,7 @@ help:
 	@echo
 	@echo ' help           display this message'
 	@echo ' mostlyclean    remove compiled files'
-	@echo ' clean          also remove Make-generated and backup files'
+	@echo ' clean          also remove make-generated and backup files'
 	@echo ' distclean      also remove configure-generated files'
 
 mostlyclean:
@@ -420,7 +420,7 @@ clean: mostlyclean doc/Makefile
 	@$(MAKE) -C doc clean
 	@$(FIND) . -name '*~' -exec rm -vf \{\} \;
 	@rm -vf *.bz2 *.gz *.tar *.tbz *.tgz *.odocl $(MANPAGES)
-	@rm -vf *.build *.changes *.dsc *.deb
+	@rm -vf *.build *.changes *.dsc *.deb *-installer.exe
 	@rm -rvf $(DEB_DIST_NAME) nsi-build
 
 distclean: clean doc/Makefile

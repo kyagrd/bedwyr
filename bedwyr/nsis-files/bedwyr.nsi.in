@@ -72,8 +72,9 @@ SectionGroup "!Bedwyr binaries"
     WriteRegStr HKLM "${SOFTWARE_KEY}" "InstallDir" "$INSTDIR"
     WriteRegStr HKLM "${SOFTWARE_KEY}" "Version" "${PACKAGE_VERSION}"
     WriteRegStr   HKLM "${UNINSTALL_KEY}" "DisplayName" "${PACKAGE_NAME}"
-    WriteRegStr   HKLM "${UNINSTALL_KEY}" "UninstallString" "$\"$INSTDIR\uninstall.exe$\""
     WriteRegStr   HKLM "${UNINSTALL_KEY}" "DisplayVersion" "${PACKAGE_VERSION}"
+    WriteRegStr   HKLM "${UNINSTALL_KEY}" "DisplayIcon" "$INSTDIR\bedwyr.exe,0"
+    WriteRegStr   HKLM "${UNINSTALL_KEY}" "UninstallString" "$\"$INSTDIR\uninstall.exe$\""
     WriteRegStr   HKLM "${UNINSTALL_KEY}" "Comments" "the not-so-sound logician"
     WriteRegStr   HKLM "${UNINSTALL_KEY}" "Publisher" "${PROJECT_NAME} project"
     WriteRegStr   HKLM "${UNINSTALL_KEY}" "QuietUninstallString" "$\"$INSTDIR\uninstall.exe$\" /S"
@@ -106,6 +107,7 @@ Section "Start Menu Shortcuts"
   CreateDirectory "${START_MENU_DIR}"
   CreateShortCut "${START_MENU_DIR}\Uninstall.lnk" "$INSTDIR\uninstall.exe" "" "$INSTDIR\uninstall.exe" 0
   CreateShortCut "${START_MENU_DIR}\${PACKAGE_NAME}.lnk" "$INSTDIR\bedwyr.exe" "" "$INSTDIR\bedwyr.exe" 0
+  IfFileExists "$INSTDIR\bedwyr.byte" 0 +2
   CreateShortCut "${START_MENU_DIR}\${PACKAGE_NAME} - bytecode.lnk" "$INSTDIR\bedwyr.byte" "" "$INSTDIR\bedwyr.exe" 0
 SectionEnd
 
@@ -167,6 +169,7 @@ Section "Uninstall"
   Delete "${START_MENU_DIR}\${PACKAGE_NAME}.lnk"
   Delete "${START_MENU_DIR}\${PACKAGE_NAME} - bytecode.lnk"
   RMDir "${START_MENU_DIR}"
+  RMDir "$SMPROGRAMS\${PROJECT_NAME}"
 
   RMDir /r "$INSTDIR\Contrib\Emacs"
   RMDir /r "$INSTDIR\Contrib\Vim"
@@ -184,6 +187,7 @@ Section "Uninstall"
   Delete "$INSTDIR\bedwyr.byte"
   Delete "$INSTDIR\uninstall.exe"
   RMDir "$INSTDIR"
+  RMDir "$PROGRAMFILES32\${PROJECT_NAME}"
 
   DeleteRegKey HKLM "${UNINSTALL_KEY}"
   DeleteRegKey HKLM "${SOFTWARE_KEY}"
