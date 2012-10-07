@@ -1,0 +1,3 @@
+# the doc is tied to the binaries (common sources, same build system),
+# so the debs have to share the same debsrc and thus the same section
+bedwyr-doc: wrong-section-according-to-package-name bedwyr-doc => doc
