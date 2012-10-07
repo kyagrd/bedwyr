@@ -17,6 +17,8 @@
 (* 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.              *)
 (****************************************************************************)
 
+(** I/O utilities. *)
+
 (** Wrapper around some [Sys_error]. *)
 exception File_error of string * string * string
 
@@ -30,7 +32,7 @@ val open_out : string -> out_channel
 
 val close_out : string -> out_channel -> unit
 
-(** {6 stdout and file term output} *)
+(** {6 Term output (stdout and file)} *)
 
 (** Write on the standard output. The list should contain exactly one term. *)
 val print :
@@ -58,5 +60,5 @@ val fprint :
 val close_user_file : Term.term list -> bool
 
 (** Close all open files.
-  * Raises no exception if on system errors. *)
+  * Raises no exception on system errors. *)
 val close_user_files : unit -> unit

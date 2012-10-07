@@ -29,36 +29,35 @@ let user_files : (string,out_channel) Hashtbl.t =
 let open_in name =
   try open_in name
   with Sys_error e ->
-    let msg = Str.replace_first (Str.regexp (name ^ ": ")) "" e in
+    let msg = Str.replace_first (Str.regexp (Str.quote (name ^ ": "))) "" e in
     raise (File_error ("read from",name,msg))
 
 let close_in name f =
   try close_in f
   with Sys_error e ->
-    let msg = Str.replace_first (Str.regexp (name ^ ": ")) "" e in
+    let msg = Str.replace_first (Str.regexp (Str.quote (name ^ ": "))) "" e in
     raise (File_error ("close",name,msg))
 
 let open_out name =
   try open_out_gen [Open_wronly;Open_creat;Open_excl] 0o600 name
   with Sys_error e ->
-    let msg = Str.replace_first (Str.regexp (name ^ ": ")) "" e in
+    let msg = Str.replace_first (Str.regexp (Str.quote (name ^ ": "))) "" e in
     raise (File_error ("create",name,msg))
 
 let close_out name f =
   try close_out f
   with Sys_error e ->
-    let msg = Str.replace_first (Str.regexp (name ^ ": ")) "" e in
+    let msg = Str.replace_first (Str.regexp (Str.quote (name ^ ": "))) "" e in
     raise (File_error ("close",name,msg))
-
-(* stdout and file term output *)
 
 let get_user_file name =
   try Some (Hashtbl.find user_files name)
   with Not_found -> None
 
+(* Term output (stdout and file) *)
+
 let print print_fun goals = match goals with
-  | [f] ->
-      print_fun f
+  | [f] -> print_fun f
   | _ -> assert false
 
 let open_user_file goals =
