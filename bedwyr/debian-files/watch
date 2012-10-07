@@ -1,3 +1,2 @@
-# Unfortunately, there is no easy way to gat the last version
-# or even a list of versions from <https://gforge.inria.fr/frs/?group_id=367>,
-# hence this empty file.
+version=3
+opts=uversionmangle=s/-p/+p/;s/-/~/ https://gforge.inria.fr/frs/?group_id=367 /frs/download\.php/.*/bedwyr-(.*)\.tbz

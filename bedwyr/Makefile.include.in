@@ -40,9 +40,9 @@ ARCH_SUFFIXES	= @ARCH_SUFFIXES@
 LIB_SUFFIXES	= @LIB_SUFFIXES@
 BIN_SUFFIXES	= @BIN_SUFFIXES@
 BEST_SUFFIX	= @BEST_SUFFIX@
-DEBEMAIL	?=@MAINTAINER_EMAIL@
-DEBFULLNAME	?=@MAINTAINER_FULLNAME@
-ICON		= @ICON@
+DEBEMAIL	?=@UPSTREAM_EMAIL@
+DEBFULLNAME	?=@UPSTREAM_FULLNAME@
+ICONS		= @PROGRAM_ICON@ @FILE_ICON@
 
 ### FOLDERS
 
@@ -74,7 +74,8 @@ BINDIR		= $(DESTDIR)$(bindir)
 #SBINDIR	= $(DESTDIR)$(sbindir)
 #LIBEXECDIR	= $(DESTDIR)$(libexecdir)
 #DATAROOTDIR	= $(DESTDIR)$(datarootdir)
-DATADIR		= $(DESTDIR)$(datadir)/$(TARGET_NAME)
+REAL_DATADIR	= $(datadir)/$(TARGET_NAME)
+DATADIR		= $(DESTDIR)$(REAL_DATADIR)
 #SYSCONFDIR	= $(DESTDIR)$(sysconfdir)
 #SHAREDSTATEDIR	= $(DESTDIR)$(sharedstatedir)
 #LOCALSTATEDIR	= $(DESTDIR)$(localstatedir)
@@ -130,7 +131,20 @@ EMACS_CONTRIB	= bedwyr.el
 CONTRIB_FILES	= $(addprefix contrib/emacs/,$(EMACS_CONTRIB)) \
 		  $(addprefix contrib/vim/,$(VIM_CONTRIB))
 EXAMPLES_FILES	= @EXAMPLES_FILES@
-DEBIAN_FILES_IN	= @DEBIAN_FILES_IN@
+DEBIAN_FILES	=  \
+  control \
+  copyright \
+  changelog \
+  rules \
+  bedwyr.install \
+  bedwyr-doc.install \
+  bedwyr-doc.doc-base.quickstart \
+  bedwyr-doc.doc-base.libref \
+  bedwyr-doc.doc-base.refman \
+  bedwyr-doc.lintian-overrides \
+  watch \
+  compat \
+  source/format
 NSIS_FILES	= \
-  nsis-files/bedwyr.nsi nsis-files/EnvVarUpdate.nsh \
-  nsis-files/bedwyr.rc nsis-files/$(ICON)
+  bedwyr.nsi EnvVarUpdate.nsh FileAssociation.nsh \
+  bedwyr.rc $(ICONS)

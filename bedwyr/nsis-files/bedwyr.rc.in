@@ -5,7 +5,8 @@
  * since ocamlopt appears to only use the first resource given with -cclib
  */
 
-1 ICON "@ICON@"
+0       ICON    "@PROGRAM_ICON@"
+1       ICON    "@FILE_ICON@"
 
 #include <winresrc.h>
 

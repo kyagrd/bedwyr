@@ -21,7 +21,7 @@ m4_define([M4_VERSION_MAJOR],1)
 m4_define([M4_VERSION_MINOR],4)
 m4_define([M4_VERSION_PATCH],0)
 m4_define([M4_VERSION_BUILD],0)
-m4_define([M4_VERSION_DEV],alpha5)
+m4_define([M4_VERSION_DEV],alpha6)
 m4_define([M4_VERSION1],[M4_VERSION_MAJOR.M4_VERSION_MINOR])
 m4_define([M4_VERSION2],m4_if(M4_VERSION_PATCH,0,
           [M4_VERSION1],[M4_VERSION1.M4_VERSION_PATCH]))
@@ -115,7 +115,10 @@ if test "$enable_win32" = "yes" ; then
 	OCAML_VERSION=$("$MINGW32_OCAMLOPT" -version)
 	OCAML_WHERE=$("$MINGW32_OCAMLOPT" -where)
 
-	AC_PATH_PROGS(MINGW32_WINDRES,i586-mingw32msvc-windres i386-mingw32msvc-windres,no)
+	AC_PATH_PROGS(MINGW32_WINDRES,
+                      i686-w64-mingw32-windres.opt i686-w64-mingw32-windres \
+                      i586-mingw32msvc-windres.opt i586-mingw32msvc-windres,
+                      no)
 	if test "$MINGW32_WINDRES" = no ; then
 		AC_MSG_ERROR(Cannot find windres. Install mingw32-binutils.)
 	fi
@@ -325,11 +328,12 @@ fi
 
 REVISION=$((((svn info 2>&- || git svn info 2>&-) || git describe --tags --dirty 2>&- 1>&3) | sed -n -e 's/Revision: //p') 3>&1 | tr -d '\n')
 BUILD_DATE_F=$(date -u +%F)
-MAINTAINER_EMAIL="parsifal@lix.polytechnique.fr"
-MAINTAINER_FULLNAME="Parsifal"
+UPSTREAM_EMAIL="parsifal@lix.polytechnique.fr"
+UPSTREAM_FULLNAME="Parsifal"
 PROJECT_NAME=Slimmer
 PROJECT_TARNAME=slimmer
-ICON=dutch-wick-0.3.ico
+PROGRAM_ICON=dutch-wick-0.3.ico
+FILE_ICON=dutch-wick-0.3-file.ico
 
 AC_CONFIG_FILES([Makefile.include],[chmod a-w Makefile.include])
 AC_CONFIG_FILES([src/config.ml],[chmod a-w src/config.ml])
@@ -351,10 +355,6 @@ VIM_CONTRIB=$($FIND contrib/vim -type f '!' -path '*.svn*' \
 EXAMPLES_FILES=$($FIND examples -type f '!' -path '*.svn*' \
                  '!' -name '*~' '!' -name '.*.sw*' '!' -name '*.old' \
                  -printf ' \\\n\t%p')
-DEBIAN_FILES_IN=$([[ -d debian-files ]] && \
-                  $FIND debian-files -type f '!' -path '*.svn*' \
-                  '!' -name '*~' '!' -name '.*.sw*' \
-                  -printf ' \\\n\t%P')
 
 #
 # Regular ./configure stuff
@@ -381,16 +381,16 @@ AC_SUBST(INSTALL_PROGRAM)
 AC_SUBST(VIMFILES)
 AC_SUBST(REVISION)
 AC_SUBST(BUILD_DATE_F)
-AC_SUBST(MAINTAINER_EMAIL)
-AC_SUBST(MAINTAINER_FULLNAME)
+AC_SUBST(UPSTREAM_EMAIL)
+AC_SUBST(UPSTREAM_FULLNAME)
 AC_SUBST(PROJECT_NAME)
 AC_SUBST(PROJECT_TARNAME)
-AC_SUBST(ICON)
+AC_SUBST(PROGRAM_ICON)
+AC_SUBST(FILE_ICON)
 
 AC_SUBST(ac_config_files)
 AC_SUBST(OCAML_FILES)
 AC_SUBST(VIM_CONTRIB)
 AC_SUBST(EXAMPLES_FILES)
-AC_SUBST(DEBIAN_FILES_IN)
 
 AC_OUTPUT

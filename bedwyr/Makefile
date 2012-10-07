@@ -79,9 +79,8 @@ MANPAGES	= $(MAN_FILES:.in=.gz)
 
 # Other files
 
-DEBIAN_FILES	= $(DEBIAN_FILES_IN:.in=)
-RC_FILES	= $(filter %.rc,$(NSIS_FILES))
-COFF_FILES	= $(RC_FILES:.rc=.o)
+NSIS_RC_FILES	= $(addprefix nsis-files/,$(filter %.rc,$(NSIS_FILES)))
+COFF_FILES	= $(NSIS_RC_FILES:.rc=.o)
 
 ### BUILDING
 
@@ -293,9 +292,9 @@ install_bedwyr_contrib:
 	@for i in $(CONTRIB_FILES) ; do \
 	  $(INSTALL_DATA) -D $$i $(DATADIR)/$$i ; done
 ifneq ($(VIMFILES),$(DESTDIR))
-	@$(INSTALL_DIR) $(VIMFILES)
 	@for i in $(VIM_CONTRIB) ; do \
-	  $(INSTALL_DATA) -D contrib/vim/$$i $(VIMFILES)/$$i ; done
+	  $(INSTALL_DIR) $(dir $(VIMFILES)/$$i) ; \
+	  ln -svf $(REAL_DATADIR)/contrib/vim/$$i $(VIMFILES)/$$i ; done
 endif
 
 install_bedwyr_examples:
@@ -370,7 +369,7 @@ nsi: nsis_orig_files nsis_files
 nsis_orig_files: $(DIST_NAME).tgz
 	@$(TAR) -xf $< --xform 's|^$(DIST_NAME)/|nsi-build/|'
 
-nsis_files: $(NSIS_FILES)
+nsis_files: $(addprefix nsis-files/,$(NSIS_FILES))
 	@$(TAR) -cvf - $^ --xform 's|^|nsi-build/|' | $(TAR) -xpvf -
 	@sed -e 's|$$|\r|' COPYING > nsi-build/COPYING.txt
 
@@ -380,7 +379,7 @@ ifeq (0,$(MAKELEVEL))
 else
   nsi_pkg: build doc
 	@mv _build/$(src_docdir)/index.html _build/$(src_docdir)/index.htm
-	@find _build/$(src_docdir)/ -type f\
+	@find _build/$(src_docdir)/ -type f \
 	  -exec sed -i -e 's|\<index.html\>|index.htm|' {} \;
 	@$(MAKENSIS) nsis-files/bedwyr.nsi
 endif
