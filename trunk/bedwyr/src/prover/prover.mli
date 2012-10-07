@@ -12,15 +12,18 @@
 (* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            *)
 (* GNU General Public License for more details.                             *)
 (*                                                                          *)
-(* You should have received a copy of the GNU General Public License        *)
-(* along with this code; if not, write to the Free Software Foundation,     *)
-(* Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA             *)
+(* You should have received a copy of the GNU General Public License along  *)
+(* with this program; if not, write to the Free Software Foundation, Inc.,  *)
+(* 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.              *)
 (****************************************************************************)
 
 (** Bedwyr's engine. *)
 
 (** Raised when a Level-1 operator or predicate is used in level 0. *)
 exception Level_inconsistency
+
+(** Logic variable on the left. *)
+exception Left_logic of Term.term
 
 (** Raised when a instantiatable variable (eigen in level 0, logic in level 1)
   * is detected in a goal that is supposed to be ground. *)
@@ -31,10 +34,12 @@ type level =
   | Zero (** Logic vars are forbidden and eigen vars can be instantiated. *)
   | One (** Logic vars are instantiated and eigen vars are constants. *)
 
-(** Maximum number of theorem unfolding in backward chaining (-1: no limit). *)
+(** Maximum number of steps (theorem unfoldings) in backward chaining
+  * (default: 0, no limit: -1). *)
 val freezing_point : int ref
 
-(** Maximum number of steps in forward chaining (-1: no limit). *)
+(** Maximum number of steps (theorem applications) in forward chaining
+  * (default: 0, no limit: -1). *)
 val saturation_pressure : int ref
 
 (** Attempt to prove the goal [(nabla x_1..x_local . g)(S)] by
@@ -50,6 +55,6 @@ val prove :
   failure:(unit -> 'a) ->
   level:level -> timestamp:int -> local:int -> Term.term -> 'a
 
-(** Run the REPL, call [prove] on the queries,
+(** Run the toplevel, call [prove] on the queries,
   * and offer to print the solutions one by one. *)
 val toplevel_prove : Term.term -> unit

@@ -30,8 +30,8 @@ exception Error      of error
 (** Not a pattern. *)
 exception NotLLambda of Term.term
 
-(** Logic variable on the left. *)
-exception Left_logic of Term.term
+(** Variable neither instantiable, constant-like nor [Constant]. *)
+exception IllegalVariable of Term.term
 
 module type Param =
 sig

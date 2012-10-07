@@ -12,15 +12,18 @@
 (* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            *)
 (* GNU General Public License for more details.                             *)
 (*                                                                          *)
-(* You should have received a copy of the GNU General Public License        *)
-(* along with this code; if not, write to the Free Software Foundation,     *)
-(* Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA             *)
+(* You should have received a copy of the GNU General Public License along  *)
+(* with this program; if not, write to the Free Software Foundation, Inc.,  *)
+(* 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.              *)
 (****************************************************************************)
 
 (** Goals tabling. *)
 
 type tag = Proved | Working of bool ref | Disproved | Unset
 type t
+
+(** Turn on/off equivariant tabling. *)
+val set_eqvt : bool -> unit
 
 val create : unit -> t
 
@@ -31,7 +34,8 @@ val access : allow_eigenvar:bool -> t -> Term.term list ->
   * If equivariant tabling is used then use only nabla variables appearing in
   * the term. Otherwise, add vacuous nabla's as neccessary. *)
 val nabla_abstract : Term.term -> Term.term
-(** The maximum index of the nabla variables in the term determines the number
+(** {e FIXME}
+  * The maximum index of the nabla variables in the term determines the number
   * of nabla's needed to be added (in case of non-equivariant tabling).
   * For non-equivariant tabling, this use of maximum index will cause us
   * to miss vacuous nablas that appear inner most in a proved atomic goal.
@@ -67,4 +71,4 @@ val fprint : out_channel -> Term.term -> t -> Input.Typing.ty -> unit
 val reset : t -> unit
 
 (** Apply a function to each element of the table. *)
-val iter_fun : t -> (Term.term -> tag -> unit) -> unit
+val iter : t -> (Term.term -> tag -> unit) -> unit

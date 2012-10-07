@@ -128,7 +128,7 @@ meta_command:
   | EXIT DOT                            { Input.Command (Input.Exit) }
   | HELP DOT                            { Input.Command (Input.Help) }
   | INCLUDE string_args DOT             { Input.Command (Input.Include $2) }
-  | RESET DOT                           { Input.Command (Input.Reset) }
+  | RESET DOT                           { Input.Command (Input.Session []) }
   | RELOAD DOT                          { Input.Command (Input.Reload) }
   | SESSION string_args DOT             { Input.Command (Input.Session $2) }
   | DEBUG opt_bool DOT                  { Input.Command (Input.Debug $2) }

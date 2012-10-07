@@ -12,9 +12,9 @@
 (* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            *)
 (* GNU General Public License for more details.                             *)
 (*                                                                          *)
-(* You should have received a copy of the GNU General Public License        *)
-(* along with this code; if not, write to the Free Software Foundation,     *)
-(* Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA             *)
+(* You should have received a copy of the GNU General Public License along  *)
+(* with this program; if not, write to the Free Software Foundation, Inc.,  *)
+(* 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.              *)
 (****************************************************************************)
 
 (** Pre-terms and pre-AST, translation to terms and checking. *)
@@ -30,12 +30,14 @@ val dummy_pos : pos
   * and in particular the provided byte could be a valid character,
   * but it often is the first byte of a multibyte unicode character. *)
 exception Illegal_string of char
+
 (** Some characters that are only allowed in prefix names
   * were used next to some that are only allowed in infix names.
   * This happens to be forbidden for compatibility reasons;
   * a separating sequence (spaces, tabs, carriage returns, line feeds),
-  * a comment or a quoted string is needed betweent wo such names. *)
+  * a comment or a quoted string is needed between two such names. *)
 exception Illegal_token of string * string
+
 (** The hash character was misused, or a meta-command was misspelled. *)
 exception Unknown_command of string
 
@@ -50,34 +52,52 @@ type preterm
 
 (** {6 Pre-terms creation} *)
 
+(** Quoted string. *)
 val pre_qstring : pos -> string -> preterm
 
+(** (Non-negative) natural number. *)
 val pre_nat : pos -> int -> preterm
 
+(** Free variable or bound variable id. *)
 val pre_freeid : pos -> string -> preterm
 
+(** Declared object (predicate or constant) or bound variable id. *)
 val pre_predconstid : pos -> string -> preterm
 
+(** Internal predicate id. *)
 val pre_internid : pos -> string -> preterm
+(** It is not possible to define such a predicate;
+  * those are predefined and usually experimental. *)
 
+(** True. *)
 val pre_true : pos -> preterm
 
+(** False. *)
 val pre_false : pos -> preterm
 
+(** Term equality. *)
 val pre_eq : pos -> preterm -> preterm -> preterm
 
+(** Formula binary conjunction. *)
 val pre_and : pos -> preterm -> preterm -> preterm
 
+(** Formula binary disjunction. *)
 val pre_or : pos -> preterm -> preterm -> preterm
 
+(** Formula implication. *)
 val pre_arrow : pos -> preterm -> preterm -> preterm
 
+(** Quantification. *)
 val pre_binder :
   pos ->
   Term.binder -> (pos * string * Typing.ty) list -> preterm -> preterm
+(** The type [Term.binder] is used here, since the structure
+  * is that of a [Term.term], and this module depends on [Term] either way. *)
 
+(** Abstraction. *)
 val pre_lambda : pos -> (pos * string * Typing.ty) list -> preterm -> preterm
 
+(** Application. *)
 val pre_app : pos -> preterm -> preterm list -> preterm
 
 (** {6 Pre-terms manipulation} *)
@@ -89,7 +109,7 @@ val change_pos :
 (** Find which arguments of an application are free variables. *)
 val free_args : preterm -> string list
 
-(** {6 Input AST ({e .def} file or REPL)} *)
+(** {6 Input AST ({e .def} file or toplevel)} *)
 
 (** Flavouring keyword, prefixing a predicate declaration. *)
 type flavour =
@@ -97,7 +117,7 @@ type flavour =
   | Inductive (** {b inductive} *)
   | CoInductive (** {b coinductive} *)
 
-(** "Hash-command" (meta-commands, mostly designed for the REPL
+(** "Hash-command" (meta-commands, mostly designed for the toplevel
   * but also available in input files). *)
 type command =
     Exit
@@ -106,8 +126,6 @@ type command =
   (** [#help.] display a short help message *)
   | Include of string list
   (** [#include "f1.def" "f2.def".] load a list of files *)
-  | Reset
-  (** [#reset.] clear the current session *)
   | Reload
   (** [#reload.] reload the current session *)
   | Session of string list
@@ -143,7 +161,7 @@ type command =
   | Assert_raise of preterm
   (** [#assert_raise.] check whether a query crashes *)
 
-(** Top AST for any input (file or REPL). *)
+(** Global AST for any input (file or toplevel). *)
 type input =
     KKind of (pos * string) list * Typing.ki
   (** type declaration *)
@@ -175,6 +193,7 @@ exception Var_typing_error of string option * pos * Typing.ty
   * or raises an exception to indicate nonunifiability
   * or to signal a case outside of the authorized types.
   *
+  * {e FIXME}
   * Whether it succeeds or not, a lot of fresh type variables are created
   * that aren't needed after this stage, and nothing is done to clean up
   * the global type unifier at present, so this function has a memory leak.
@@ -184,8 +203,8 @@ exception Var_typing_error of string option * pos * Typing.ty
   * intern or bound variable.
   * @param infer whether the result of the inference is to be kept in the
   * global type unifier or not
-  * @param iter_free_types function that maps a provided action on a set of types
-  * once the type unification is done
+  * @param iter_free_types function that maps a provided action
+  * on a set of types once the type unification is done
   * (and before the corresponding unifier is lost, if [infer] is false)
   * @param free_args names of the free variables used as argument of a top-level
   * (wrt a definition) application, ie which will be abstracted on,

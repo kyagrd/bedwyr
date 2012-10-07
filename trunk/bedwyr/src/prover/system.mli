@@ -42,9 +42,9 @@ sig
     * Example query:
     * {v ?= _abstract (pr X Y) abs T.
 Solution found:
-X = X
+T = (abs (x1\ abs (x2\ pr x2 x1)))
 Y = Y
-T = (abs (x1\ abs (x2\ pr x1 x2)))
+X = X
 More [y] ? y
 No more solutions. v}
     *
@@ -66,10 +66,9 @@ pr : alpha -> beta -> gamma
 abs : (beta -> gamma) -> gamma
 ?= #typeof _abstract.
 _abstract : ?4 -> ((?5 -> ?4) -> ?4) -> ?4 -> prop
-?= #typeof abs (x1\ abs (x2\ pr x1 x2)).
+?= #typeof abs (x1\ abs (x2\ pr x2 x1)).
 At line 4, characters 30-31:
-Typing error: this expression has type beta but is used as
-alpha. v}
+  Typing error: this expression has type beta but is used as alpha. v}
     *
     * Hence type checking does not guarantee runtime type soundness
     * ("well typed programs don't go wrong").
@@ -127,19 +126,19 @@ No. v} *)
 
   (** {6 I/O extensions} *)
 
-  (** {[print : A -> prop]} Print a term and returns [true]. *)
+  (** {[print : A -> prop]} Print a term and succeeds (see {!IO.print}). *)
   val var_print : Term.var
 
   (** {[println : A -> prop]} [print] +  '\n'. *)
   val var_println : Term.var
 
   (** {[printstr : A -> prop]} Print a string (an actual [Term.QString])
-    * unescaped (without quotation marks).
+    * unescaped, without quotation marks.
     * Fails if the argument is an unbound variable or a constant. *)
   val var_printstr : Term.var
 
   (** {[fprint : string -> A -> prop]} Print a term in the file
-    * specified in the first argument and returns [true].
+    * specified in the first argument and succeeds (see {!IO.fprint}).
     * Fails if the file was not opened yet. *)
   val var_fprint : Term.var
 
@@ -149,10 +148,12 @@ No. v} *)
   (** {[var_fprintstr : string -> A -> prop]} [printstr] in a file. *)
   val var_fprintstr : Term.var
 
-  (** {[fopen_out : string -> prop]} Open a file for writing. *)
+  (** {[fopen_out : string -> prop]} Open a file for writing
+    * (see {!IO.open_user_file}). *)
   val var_fopen_out : Term.var
 
-  (** {[fclose_out : string -> prop]} Close an open file. *)
+  (** {[fclose_out : string -> prop]} Close an open file
+    * (see {!IO.close_user_file}). *)
   val var_fclose_out : Term.var
 
   (** Example:
@@ -177,46 +178,56 @@ val debug : bool ref
 (** Enables the display of computation times. *)
 val time : bool ref
 
-
-open Input
-
 (** {6 Type declarations} *)
 
-exception Invalid_type_declaration of string * Input.pos *
-            Typing.ki * string
-val declare_type : Input.pos * string -> Typing.ki -> unit
+exception Invalid_type_declaration of
+  string * Input.pos * Input.Typing.ki * string
+exception Missing_type of
+  string * Input.pos
+val declare_type : Input.pos * string -> Input.Typing.ki -> unit
 
 (** {6 Constants and predicates declarations} *)
 
+(** Tabling information: the table itself,
+  * and some theorems for forward/backward chaining. *)
+type tabling_info = { mutable theorem : Term.term ; table : Table.t }
+
 (** Describe whether tabling is possible, and if so, how it is used. *)
-type flavour =
-    Normal (** only unfolding can be done *)
-  | Inductive (** tabling is possible, and loop is a failure *)
-  | CoInductive (** tabling is possible, and loop is a success *)
+type flavour = private
+  | Normal
+    (** only unfolding can be done *)
+  | Inductive of tabling_info
+    (** tabling is possible, and loop is (conditionally) a failure *)
+  | CoInductive of tabling_info
+    (** tabling is possible, and loop is (conditionally) a success *)
 
-exception Missing_type of string * Input.pos
-exception Invalid_const_declaration of string * Input.pos *
-            Typing.ty * string
-exception Invalid_flavour of string * Input.pos *
-            flavour * flavour
-exception Invalid_pred_declaration of string * Input.pos *
-            Typing.ty * string
+(** Predicate: tabling information if the flavours allows it,
+  * stratum of the definition block,
+  * definition and type. *)
+type predicate = private
+    { flavour           : flavour ;
+      stratum           : int ;
+      mutable definition: Term.term ;
+      ty                : Input.Typing.ty }
 
-val string_of_flavour : flavour -> string
+exception Invalid_const_declaration of
+  string * Input.pos * Input.Typing.ty * string
+exception Invalid_flavour of
+  string * Input.pos * Input.flavour * Input.flavour
+exception Invalid_pred_declaration of
+  string * Input.pos * Input.Typing.ty * string
 
-val declare_const : Input.pos * string -> Typing.ty -> unit
+val declare_const : Input.pos * string -> Input.Typing.ty -> unit
 
 (** Declare predicates.
   * @return the list of variables and types
   *  corresponding to those predicates *)
 val declare_preds :
-  (Input.flavour * Input.pos * string * Typing.ty) list ->
-  (Term.var * Typing.ty) list
+  (Input.flavour * Input.pos * string * Input.Typing.ty) list -> int
 
-(** {6 Typechecking, predicates definitions} *)
+(** {6 Clauses and queries construction} *)
 
 exception Missing_declaration of string * Input.pos option
-exception Inconsistent_definition of string * Input.pos * string
 
 (** Translate a pre-term, with typing and position information,
   * into a term, with variable sharing.
@@ -226,13 +237,15 @@ exception Inconsistent_definition of string * Input.pos * string
   * an exception is raised and the global type unifier isn't updated. *)
 val translate_query : Input.preterm -> Term.term
 
+(** {6 Predicates definitions} *)
+
+exception Inconsistent_definition of string * Input.pos * string
+
 (** For each [(p,h,b)] of [c],
-  * [add_clauses l c] adds the clause [h := b] to a definition,
-  * as long as the var of the corresponding predicate is in the list [l]. *)
+  * [add_clauses s c] adds the clause [h := b] to a definition,
+  * as long as the var of the corresponding predicate has stratum [s]. *)
 val add_clauses :
-  (Term.var * Typing.ty) list ->
-  (Input.pos * Input.preterm * Input.preterm) list ->
-  unit
+  int -> (Input.pos * Input.preterm * Input.preterm) list -> unit
 
 (** {6 Theorem definitions} *)
 
@@ -241,24 +254,18 @@ exception Inconsistent_theorem of string * Input.pos * string
 (** If possible, add the theorem to the tabling extended rules. *)
 val add_theorem : (Input.pos * string * Input.preterm) -> unit
 
-(** {6 Using predicates} *)
+(** {6 Predicates accessors} *)
 
 exception Missing_definition of string * Input.pos option
 exception Missing_table of string * Input.pos option
 
-(** Remove all definitions. *)
-val reset_decls : unit -> unit
-
-(** Get a definition.
-  * @param check_arity the expected arity of the predicate
-  * @raise Missing_declaration if [head_tm] is not an existing predicate
-  *)
-val get_def :
-  check_arity:int ->
-  Term.term -> flavour * Term.term * Term.term * Table.t option * Typing.ty
-
 (** Remove a definition. *)
 val remove_def : Term.term -> unit
+
+(** Get a predicate's tabling information and definition.
+  * @raise Missing_declaration if [head_tm] is not an existing predicate
+  *)
+val get_flav_def : Term.term -> flavour * Term.term
 
 (** Remove all tables. *)
 val clear_tables : unit -> unit
@@ -272,11 +279,12 @@ val clear_table : Input.pos * Term.term -> unit
 val print_env : unit -> unit
 
 (** Perform type checking on a pre-term and display the inferred type.
-  * The goal of this is to use the REPL to check the validity of a term
+  * This can be used from the REPL to check the validity of a term
   * without messing with the future inference,
   * so the global type unifier is left unchanged
   * even if the term is well typed and of type [prop]. *)
 val print_type_of : Input.preterm -> unit
+(* TODO rewrite this comment once the new type system is merged *)
 
 (** Display the body of a definition. *)
 val show_def : Input.pos * Term.term -> unit
@@ -296,6 +304,9 @@ exception Interrupt
 
 (** Raised when aborting search. *)
 exception Abort_search
+
+(** Remove all definitions. *)
+val reset_decls : unit -> unit
 
 (** @return [true] if a user interruption was detected since the last call to
   * [check_interrupt], [false] otherwise. *)

@@ -24,10 +24,10 @@ type error =
 
 exception Error of error
 exception NotLLambda of Term.term
-exception Left_logic of Term.term
+exception IllegalVariable of Term.term
 
 let not_ll x = raise (NotLLambda x)
-let llogic x = raise (Left_logic x)
+let illegal_variable x = raise (IllegalVariable x)
 let non_normal () = raise Term.NonNormalTerm
 let raise e = raise (Error e)
 
@@ -64,7 +64,7 @@ let rec lift_args l n = match l,n with
 (* [check_flex_args l fts flts] checks that a list of terms meets the LLambda
  * requirements for the arguments of a flex term whose timestamp and
  * local timestamp are [fts] and [flts].
- * @raise NotLLambda if the list doesn't satisfy the requirements. *)
+ * @raise NotLLambda if the list doesn't satisfy the requirements *)
 let rec check_flex_args l fts flts =
   (* Check whether a var doesn't appears in a list of terms *)
   let rec unique_var v = function
@@ -425,7 +425,7 @@ let makesubst h1 t2 a1 =
               app h' a1'
             else
               app c a1'
-      | Var {tag=tag} when not (constant tag) -> llogic c
+      | Var {tag=tag} when not (constant tag) -> illegal_variable c
       (* If [h1] can't depend on [c], [c] must belong to the argument list. *)
       | Var v when not (v.ts <= ts1 && v.lts <= lts1) ->
           begin match cindex v a1 n with
@@ -469,7 +469,7 @@ let makesubst h1 t2 a1 =
                   app h' a1'
                 end else
                   app h2 a1'
-            | Var {tag=tag} when not (constant tag) -> llogic h2
+            | Var {tag=tag} when not (constant tag) -> illegal_variable h2
             | Lam _ | App _ | Susp _ -> non_normal ()
             | _ ->
                 app
@@ -510,7 +510,7 @@ let makesubst h1 t2 a1 =
       | Var v2 when not (constant v2.tag) && a1=[] ->
           lambda lev t2 (* [n] is 0 *)
          XXX shouldn't it rather be the following?
-      | Var {tag=tag} when not (constant tag) -> llogic h2
+      | Var {tag=tag} when not (constant tag) -> illegal_variable h2
       *)
       | App (h2,a2) ->
           begin match observe h2 with
@@ -597,10 +597,10 @@ and unify_nv_term n1 t1 t2 = match observe t2 with
  * [t2] should be head-normalized, different from an instantiable variable. *)
 and unify_app_term h1 a1 t1 t2 = match observe h1,observe t2 with
   | Var {tag=tag},_ when variable tag -> bind h1 (makesubst h1 t2 a1)
-  | Var {tag=tag},_ when not (constant tag) -> llogic h1
+  | Var {tag=tag},_ when not (constant tag) -> illegal_variable h1
   | Lam _,_ | App _,_ | Susp _,_ -> non_normal ()
   | _,Var {tag=tag} when variable tag -> assert false
-  | _,Var {tag=tag} when not (constant tag) -> llogic t2
+  | _,Var {tag=tag} when not (constant tag) -> illegal_variable t2
   | _,Lam (n,t2) ->
       let h1' = lift h1 n in
       let a1' = lift_args a1 n in
@@ -609,7 +609,7 @@ and unify_app_term h1 a1 t1 t2 = match observe h1,observe t2 with
   | h1',App (h2,a2) ->
       begin match h1',observe h2 with
         | _,Var {tag=tag} when variable tag -> bind h2 (makesubst h2 t1 a2)
-        | _,Var {tag=tag} when not (constant tag) -> llogic h2
+        | _,Var {tag=tag} when not (constant tag) -> illegal_variable h2
         | _,Lam _ | _,App _ | _,Susp _ -> non_normal ()
         | Binop (b1,x1,y1),Binop (b2,x2,y2) when b1=b2 ->
             unify_list (x1::y1::a1) (x2::y2::a2)
@@ -638,8 +638,8 @@ and unify_app_term h1 a1 t1 t2 = match observe h1,observe t2 with
 and unify t1 t2 = match observe t1,observe t2 with
   | Var {tag=tag},_ when variable tag           -> bind t1 (makesubst t1 t2 [])
   | _,Var {tag=tag} when variable tag           -> bind t2 (makesubst t2 t1 [])
-  | Var {tag=tag},_ when not (constant tag)     -> llogic t1
-  | _,Var {tag=tag} when not (constant tag)     -> llogic t2
+  | Var {tag=tag},_ when not (constant tag)     -> illegal_variable t1
+  | _,Var {tag=tag} when not (constant tag)     -> illegal_variable t2
   | App (h1,a1),_                 -> unify_app_term h1 a1 t1 t2
   | _,App (h2,a2)                 -> unify_app_term h2 a2 t2 t1
   | QString _,_ | Nat _,_ | Var _,_
