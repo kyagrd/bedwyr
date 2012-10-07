@@ -363,16 +363,13 @@ let rec process ?(interactive=false) parse lexbuf =
           (Printexc.to_string e)
 
 and input_from_file file =
-  let cwd = Sys.getcwd () in
   let channel = IO.open_in file in
   let lexbuf = Lexing.from_channel channel in
-  Sys.chdir (Filename.dirname file) ;
   lexbuf.Lexing.lex_curr_p <- {
       lexbuf.Lexing.lex_curr_p with
         Lexing.pos_fname = file } ;
   input_defs lexbuf ;
-  IO.close_in file channel ;
-  Sys.chdir cwd
+  IO.close_in file channel
 and input_defs lexbuf =
   process Parser.input_def lexbuf
 and input_queries ?(interactive=false) lexbuf =
@@ -385,9 +382,21 @@ and load_session () =
   List.iter include_file !session
 
 and include_file fname =
-  if not (List.mem fname !inclfiles) then begin
-    input_from_file fname;
-    inclfiles := fname :: !inclfiles
+  let cwd = Sys.getcwd () in
+  let fname =
+    if (Filename.is_relative fname) then
+      Filename.concat cwd fname
+    else
+      fname
+  in
+  if (List.mem fname !inclfiles) then
+    Format.eprintf "File %S already included, skipping.@." fname
+  else begin
+    Format.eprintf "Now including %S.@." fname ;
+    inclfiles := fname :: !inclfiles ;
+    Sys.chdir (Filename.dirname fname) ;
+    input_from_file (Filename.basename fname);
+    Sys.chdir cwd
   end
 
 and command c reset =
