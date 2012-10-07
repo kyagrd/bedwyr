@@ -12,13 +12,15 @@
 (* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            *)
 (* GNU General Public License for more details.                             *)
 (*                                                                          *)
-(* You should have received a copy of the GNU General Public License        *)
-(* along with this code; if not, write to the Free Software Foundation,     *)
-(* Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA             *)
+(* You should have received a copy of the GNU General Public License along  *)
+(* with this program; if not, write to the Free Software Foundation, Inc.,  *)
+(* 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.              *)
 (****************************************************************************)
 
 type tag = Proved | Working of bool ref | Disproved | Unset
 type t = tag ref Index.t ref
+
+let set_eqvt b = Index.eqvt_index := b
 
 let create () = ref Index.empty
 
@@ -36,12 +38,18 @@ let access ~allow_eigenvar table args =
   update,found,delete
 
 
+(* TODO factorize this with nb_rename *)
+(* FIXME the display depends on the current value of Index.eqvt_index,
+ * while it should depend its value when the goal *was* tabled... *)
 let nabla_abstract t =
   let t = Norm.deep_norm t in
-  let l = Term.get_nablas t in
-  let max = List.fold_left (fun a b -> if (a < b) then b else a) 0 l in
-  let rec make_list = function 0 -> [] | n -> n::make_list (n-1) in
-  let bindings = if !Index.eqvt_index then l else make_list max in
+  let bindings =
+    let l = Term.get_nablas t in
+    if !Index.eqvt_index then l else
+      let max = List.fold_left (fun a b -> if (a < b) then b else a) 0 l in
+      let rec make_list = function 0 -> [] | n -> n::make_list (n-1) in
+      make_list max
+  in
   List.fold_left
     (fun s i -> (Term.quantify Term.Nabla (Term.nabla i) s)) t bindings
 
@@ -87,6 +95,6 @@ let fprint fout head table ty =
 
 let reset x = x := Index.empty
 
-let iter_fun table f =
+let iter table f =
   Index.iter !table (fun t tag -> f t !tag)
 

@@ -12,9 +12,9 @@
 (* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            *)
 (* GNU General Public License for more details.                             *)
 (*                                                                          *)
-(* You should have received a copy of the GNU General Public License        *)
-(* along with this code; if not, write to the Free Software Foundation,     *)
-(* Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA             *)
+(* You should have received a copy of the GNU General Public License along  *)
+(* with this program; if not, write to the Free Software Foundation, Inc.,  *)
+(* 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.              *)
 (****************************************************************************)
 
 (* Kinds, types, unifying and pretty-printing. *)
@@ -55,7 +55,7 @@ module type S = sig
     ?atomic_kind:(pos * string -> ki) ->
     ty ->
     ki ->
-    bool * bool * bool * bool
+    int * bool * bool * bool * bool
 
   type type_unifier
   val iter : (int -> ty -> unit) -> type_unifier -> unit
@@ -68,7 +68,6 @@ module type S = sig
     ?unifier:type_unifier -> ty -> string
 
   exception Hollow_type of string
-  val check_ground : string -> ty -> unit
   exception Type_unification_error of ty * ty * type_unifier
   val unify_constraint : type_unifier -> ty -> ty -> type_unifier
 end
@@ -198,33 +197,33 @@ module Make (I : INPUT) = struct
     in
     let rec aux ty ki =
       let Ty (tys,ty_base) = ty in
-      let (f,h,p,ho) = (* flex, hollow, propositional, higher order *)
+      let (a,f,h,p,ho) = (* flex, hollow, propositional, higher order *)
         List.fold_left
-          (fun (_,h,_,ho) ty ->
-             let (_,h',p',ho') = aux ty ki in
-             (false,h || h',false,ho || p' || ho'))
-          (true,false,false,false) tys
+          (fun (a,_,h,_,ho) ty ->
+             let (_,_,h',p',ho') = aux ty ki in
+             (a+1,false,h || h',false,ho || p' || ho'))
+          (0,true,false,false,false) tys
       in
       match ty_base with
         | TConst name ->
             (* XXX real position of the type? *)
             check_eq (atomic_kind (dummy_pos,name)) ki ;
-            (false,h,false,ho)
+            (a,false,h,false,ho)
         | TProp ->
             check_eq ktype ki ;
-            (false,h,true,ho)
+            (a,false,h,true,ho)
         | TString | TNat ->
             check_eq ktype ki ;
-            (false,h,false,ho)
+            (a,false,h,false,ho)
         | TVar _ ->
             (* TODO have a table of kinds of type variables
              * TODO also choose whether a variable can be propositional *)
             check_eq ktype ki ;
-            (false,h,false,ho)
+            (a,false,h,false,ho)
         | TParam _ ->
             (* XXX either ensure the input type is normalised,
              * or resolve the parameters here *)
-            (f,true,false,ho)
+            (a,f,true,false,ho)
     in
     aux ty expected_kind
 
@@ -262,12 +261,6 @@ module Make (I : INPUT) = struct
     type_to_string ty
 
   exception Hollow_type of string
-
-  let check_ground name ty =
-    let _,hollow,_,_ =
-      kind_check (ty_norm ty) ktype
-    in
-    if hollow then raise (Hollow_type name)
 
   let occurs unifier i ty =
     let rec aux = function

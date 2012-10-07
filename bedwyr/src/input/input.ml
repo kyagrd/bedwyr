@@ -12,9 +12,9 @@
 (* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            *)
 (* GNU General Public License for more details.                             *)
 (*                                                                          *)
-(* You should have received a copy of the GNU General Public License        *)
-(* along with this code; if not, write to the Free Software Foundation,     *)
-(* Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA             *)
+(* You should have received a copy of the GNU General Public License along  *)
+(* with this program; if not, write to the Free Software Foundation, Inc.,  *)
+(* 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.              *)
 (****************************************************************************)
 
 (* Pre-terms and pre-AST, translation to terms and checking. *)
@@ -41,8 +41,8 @@ type preterm = rawpreterm
 and rawpreterm =
   | QString of pos * string
   | Nat    of pos * int
-  | FreeID of pos * string
-  | PredConstID of pos * string
+  | FreeBoundID of pos * string
+  | PredConstBoundID of pos * string
   | InternID of pos * string
   | True   of pos
   | False  of pos
@@ -57,8 +57,8 @@ and rawpreterm =
 let get_pos = function
   | QString (p,_) -> p
   | Nat (p,_) -> p
-  | FreeID (p,_) -> p
-  | PredConstID (p,_) -> p
+  | FreeBoundID (p,_) -> p
+  | PredConstBoundID (p,_) -> p
   | InternID (p,_) -> p
   | True p -> p
   | False p -> p
@@ -73,8 +73,8 @@ let get_pos = function
 let set_pos p = function
   | QString (_,s) -> QString (p,s)
   | Nat (_,s) -> Nat (p,s)
-  | FreeID (_,s) -> FreeID (p,s)
-  | PredConstID (_,s) -> PredConstID (p,s)
+  | FreeBoundID (_,s) -> FreeBoundID (p,s)
+  | PredConstBoundID (_,s) -> PredConstBoundID (p,s)
   | InternID (_,s) -> InternID (p,s)
   | True _ -> True p
   | False _ -> False p
@@ -90,8 +90,8 @@ let set_pos p = function
 
 let pre_qstring p s = QString (p,s)
 let pre_nat p i = assert (i>=0) ; Nat (p,i)
-let pre_freeid p s = FreeID (p,s)
-let pre_predconstid p s = PredConstID (p,s)
+let pre_freeid p s = FreeBoundID (p,s)
+let pre_predconstid p s = PredConstBoundID (p,s)
 let pre_internid p s = InternID (p,s)
 let pre_true p = True p
 let pre_false p = False p
@@ -120,8 +120,8 @@ let change_pos (p1,_) t (_,p2) = set_pos (p1,p2) t
 
 let free_args pre_term =
   let in_arg accum = function
-    | FreeID (_,"_") -> accum
-    | FreeID (_,s) -> s::accum
+    | FreeBoundID (_,"_") -> accum
+    | FreeBoundID (_,s) -> s::accum
     | _ -> accum
   in
   let rec in_app = function
@@ -132,7 +132,7 @@ let free_args pre_term =
   in_app pre_term
 
 
-(* Input AST (.def file or REPL) *)
+(* Input AST (.def file or toplevel) *)
 
 type flavour = Normal | Inductive | CoInductive
 
@@ -140,7 +140,6 @@ type command =
   | Exit
   | Help
   | Include             of string list
-  | Reset
   | Reload
   | Session             of string list
   | Debug               of string option
@@ -179,7 +178,7 @@ let type_check_and_translate
       ?(free_args=[])
       pre_term
       expected_type
-      (typed_free_var,typed_declared_var,typed_intern_var,bound_var_type) =
+      (typed_free_var,typed_declared_obj,typed_intern_pred,bound_var_type) =
   let find_db s bvars =
     let rec aux n = function
       | [] -> None
@@ -197,28 +196,28 @@ let type_check_and_translate
       | Nat (p,i) ->
           let u = Typing.unify_constraint u exty Typing.tnat in
           Term.nat i,u
-      | FreeID (p,s) ->
+      | FreeBoundID (p,s) ->
           begin match find_db s bvars with
-            | Some (t,ty) ->
+            | Some (t,ty) -> (* (upper-case) bound variable *)
                 let u = Typing.unify_constraint u exty ty in
                 t,u
-            | None ->
+            | None -> (* free variable *)
                 let t,ty = typed_free_var (p,s) in
                 let u = Typing.unify_constraint u exty ty in
                 t,u
           end
-      | PredConstID (p,s) ->
+      | PredConstBoundID (p,s) ->
           begin match find_db s bvars with
-            | Some (t,ty) ->
+            | Some (t,ty) -> (* (lower-case) bound variable *)
                 let u = Typing.unify_constraint u exty ty in
                 t,u
-            | None ->
-                let t,ty = typed_declared_var (p,s) in
+            | None -> (* declared object *)
+                let t,ty = typed_declared_obj (p,s) in
                 let u = Typing.unify_constraint u exty ty in
                 t,u
           end
       | InternID (p,s) ->
-          let t,ty = typed_intern_var (p,s) in
+          let t,ty = typed_intern_pred (p,s) in
           let u = Typing.unify_constraint u exty ty in
           t,u
       | True p ->
@@ -257,7 +256,7 @@ let type_check_and_translate
           List.iter
             (fun (p,_,ty) ->
                let ty = Typing.ty_norm ~unifier:u ty in
-               let (_,_,propositional,higher_order) =
+               let (_,_,_,propositional,higher_order) =
                  Typing.kind_check ty Typing.ktype
                in
                if higher_order || propositional
@@ -295,7 +294,7 @@ let type_check_and_translate
        let ty = Typing.ty_norm ~unifier:unifier ty in
        let n = Term.get_var_name v in
        if not (List.mem n free_args) then begin
-         let (_,_,propositional,higher_order) =
+         let (_,_,_,propositional,higher_order) =
            Typing.kind_check ty Typing.ktype
          in
          if infer && (higher_order || propositional)

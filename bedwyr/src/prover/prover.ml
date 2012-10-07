@@ -19,6 +19,8 @@
 
 exception Level_inconsistency
 
+exception Left_logic of Term.term
+
 exception Variable_leakage
 
 open Format
@@ -55,7 +57,9 @@ let unify lvl a b =
   try
     (if lvl = Zero then Left.pattern_unify else Right.pattern_unify) a b ;
     true
-  with Unify.Error _ -> false
+  with
+    | Unify.Error _ -> false
+    | Unify.IllegalVariable t -> raise (Left_logic t)
 
 (* Tabling provides a way to cut some parts of the search,
  * but we should take care not to mistake shortcuts and disproving. *)
@@ -80,7 +84,10 @@ let mark_not_disprovable_until ?(included=false) d =
       disprovable_stack
   with Found -> ()
 
-type 'a answer = Known of 'a | Unknown | OffTopic
+type 'a answer =
+  | Known of 'a * Term.term * Table.t
+  | Unknown of Term.term * Table.t
+  | OffTopic
 
 
 (* Attempt to prove the goal [(nabla x_1..x_local . g)(S)] by
@@ -178,37 +185,36 @@ let rec prove temperatures depth ~success ~failure ~level ~timestamp ~local g =
       eprintf "[%s] Proving %a...@."
         (match temperature with Frozen t -> string_of_int t | _ -> "+")
         Pprint.pp_term g ;
-    let arity = List.length args in
-    let flavour,body,theorem,table,_ = get_def ~check_arity:arity d in
+    let flavour,definition = get_flav_def d in
     (* first step, first sub-step: look at the table
      * (whether the atom is frozen or not is irrelevent at this point) *)
     let table_add,status =
-      match table with
-        | None -> ignore,OffTopic
-        | Some table ->
+      match flavour with
+        | Normal -> ignore,OffTopic
+        | Inductive {theorem=theorem;table=table}
+        | CoInductive {theorem=theorem;table=table} ->
             try
               let add,found,_ =
                 Table.access ~allow_eigenvar:(level=One) table args
               in
               match found with
-                | Some {contents=c} -> add,Known c
-                | None -> add,Unknown
-            with
-              | Index.Cannot_table -> ignore,OffTopic
+                | Some {contents=c} -> add,Known (c,theorem,table)
+                | None -> add,Unknown (theorem,table)
+            with Index.Cannot_table -> ignore,OffTopic
     in
     match status with
       | OffTopic ->
-          prove temperatures (depth+1) ~level ~timestamp ~local ~success ~failure
-            (app body args)
-      | Known Table.Proved ->
+          prove temperatures (depth+1)
+            ~level ~timestamp ~local ~success ~failure (app definition args)
+      | Known (Table.Proved,_,_) ->
           if !debug || depth<=debug_max_depth then
             eprintf "Goal (%a) proved using table@." Pprint.pp_term g;
           success timestamp failure
-      | Known Table.Disproved ->
+      | Known (Table.Disproved,_,_) ->
           if !debug || depth<=debug_max_depth then
             eprintf "Known disproved@." ;
           failure ()
-      | Known (Table.Working disprovable) ->
+      | Known (Table.Working disprovable,_,_) ->
           begin match temperature with
             | Frozen t ->
                 (* Unfortunately, a theorem is not a clause
@@ -222,21 +228,22 @@ let rec prove temperatures depth ~success ~failure ~level ~timestamp ~local g =
                 mark_not_disprovable_until ~included:true disprovable ;
                 failure ()
             | Unfrozen ->
-                if flavour = CoInductive then
-                  success timestamp failure
-                else begin
-                  (* XXX Why exactly are the intermediate atoms not disproved? *)
-                  mark_not_disprovable_until disprovable ;
-                  failure ()
+                begin match flavour with
+                  | Inductive _ ->
+                      (* XXX Why exactly are the intermediate atoms
+                       * not disproved? *)
+                      mark_not_disprovable_until disprovable ;
+                      failure ()
+                  | _ ->
+                      success timestamp failure
                 end
           end
-      | Unknown
-      | Known Table.Unset ->
+      | Unknown (theorem,table)
+      | Known (Table.Unset,theorem,table) ->
           (* This handles the cases where nothing is in the table,
            * or Unset has been left, in which case the [Table.add]
            * will overwrite it. *)
           let prove body success failure temperatures =
-            let table = match table with Some t -> t | None -> assert false in
             let disprovable = ref true in
             let status = ref (Table.Working disprovable) in
             let s0 = save_state () in
@@ -250,7 +257,9 @@ let rec prove temperatures depth ~success ~failure ~level ~timestamp ~local g =
                * cleanup handlers, which are just jumps to
                * previous states.
                * It is actually quite useful in examples/graph-alt.def. *)
-              let k () = success ts (fun () -> restore_state s0 ; failure ()) in
+              let k () =
+                success ts (fun () -> restore_state s0 ; failure ())
+              in
               (* XXX Here be the Forward-Chaining XXX *)
               let saturate =
                 match temperature with
@@ -262,6 +271,7 @@ let rec prove temperatures depth ~success ~failure ~level ~timestamp ~local g =
                   | Unfrozen ->
                       (* [theorem] corresponds to the fact
                        * "forall X, theorem X -> p X" *)
+                      let arity = List.length args in
                       let vars =
                         let rec aux l = function
                           | n when n <= 0 -> l
@@ -303,24 +313,24 @@ let rec prove temperatures depth ~success ~failure ~level ~timestamp ~local g =
                                   Table.access ~allow_eigenvar:(level=One) table args
                                 in
                                 match found with
-                                  | Some {contents=c} -> add,Known c
-                                  | None -> add,Unknown
-                              with
-                                | Index.Cannot_table -> ignore,OffTopic
+                                  | Some {contents=c} -> add,Known (c,theorem,table)
+                                  | None -> add,Unknown (theorem,table)
+                              with Index.Cannot_table -> ignore,OffTopic
                             in
                             match status with
                               | OffTopic -> k ()
-                              | Known Table.Proved ->
+                              | Known (Table.Proved,_,_) ->
                                   if !debug || depth<=debug_max_depth then
                                     eprintf
                                       "Goal (%a) already proved!@."
                                       Pprint.pp_term (app d args);
                                   k ()
-                              | Known Table.Disproved ->
+                              | Known (Table.Disproved,_,_) ->
                                   failwith "did our theorem just prove false?"
-                              | Known (Table.Working _) -> assert false
-                              | Unknown
-                              | Known Table.Unset ->
+                              | Known (Table.Working disprovable,_,_) ->
+                                  assert false
+                              | Unknown (theorem,table)
+                              | Known (Table.Unset,theorem,table) ->
                                   let status = ref Table.Proved in
                                   (* XXX allow_eigenvar? *)
                                   begin try table_add status
@@ -329,33 +339,30 @@ let rec prove temperatures depth ~success ~failure ~level ~timestamp ~local g =
                                     eprintf
                                       "Goal (%a) proved using forward chaining@."
                                       Pprint.pp_term (app d args) ;
-                                  aux args k pressure
-                      and aux args k = function
-                        | pressure when pressure < !saturation_pressure ->
-                            (* TODO replace this DFS by a BFS
-                             * (or at least try whether it's more efficient
-                             * memory-wise) *)
-                            let failure () =
-                              let copies = make_copies !substs in
-                              substs := [] ;
-                              fc k ((pressure+1)) copies
-                            in
-                            (* XXX for now we don't backward-chain during forward chaining;
-                             * we must also use [args] at least once
-                             * to improve performance *)
-                            prove ((v,Frozen 0)::temperatures) (depth+1) ~local ~timestamp
-                              ~level:Zero ~success:store_subst ~failure th_body
-                        | pressure when !saturation_pressure < 0 ->
-                            let failure () =
-                              let copies = make_copies !substs in
-                              substs := [] ;
-                              fc k pressure copies
-                            in
-                            prove ((v,Frozen 0)::temperatures) (depth+1) ~local ~timestamp
-                              ~level:Zero ~success:store_subst ~failure th_body
-                        | _ -> k ()
+                                  fc_step k pressure args
+                      and fc_step k pressure args =
+                        if pressure<>(!saturation_pressure) then begin
+                          (* TODO replace this DFS by a BFS
+                           * (or at least try whether it's more efficient
+                           * memory-wise) *)
+                          let pressure =
+                            if pressure < !saturation_pressure
+                            then pressure+1
+                            else pressure
+                          in
+                          let failure () =
+                            let copies = make_copies !substs in
+                            substs := [] ;
+                            fc k pressure copies
+                          in
+                          (* XXX for now we don't backward-chain during forward chaining;
+                           * we must also use [args] at least once
+                           * to improve performance *)
+                          prove ((v,Frozen 0)::temperatures) (depth+1) ~local ~timestamp
+                            ~level:Zero ~success:store_subst ~failure th_body
+                        end else k ()
                       in
-                      fun k -> aux args k 0
+                      fun k -> fc_step k 0 args
               in
               (* XXX There was the Forward-Chaining XXX *)
               saturate k
@@ -414,7 +421,7 @@ let rec prove temperatures depth ~success ~failure ~level ~timestamp ~local g =
                      success timestamp failure),
                   (* second step: unfreeze the atom,
                    * unfold the definition *)
-                  (fun () -> prove body success failure temperatures)
+                  (fun () -> prove definition success failure temperatures)
           in
           if temp > 0 then
             prove theorem success failure ((v,Frozen (temp-1))::temperatures)

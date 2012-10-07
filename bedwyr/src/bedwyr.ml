@@ -99,7 +99,8 @@ let _ =
        ])
     (fun f -> session := f::!session)
     usage_msg ;
-  session := List.rev (!session)
+  session := List.rev (!session) ;
+  queries := List.rev (!queries)
 
 let position_range (start,curr) =
   let position (start,curr) =
@@ -129,6 +130,11 @@ let position_lex lexbuf =
 
 let do_cleanup f x clean =
   try f x ; clean () with e -> clean () ; raise e
+
+let bool_of_flag = function
+  | None | Some "on" | Some "true" -> true
+  | Some "off" | Some "false" -> false
+  | _ -> raise Invalid_command
 
 let rec process ?(interactive=false) parse lexbuf =
   let flush_input () =
@@ -176,11 +182,8 @@ let rec process ?(interactive=false) parse lexbuf =
       | Input.TType (l, t) ->
           List.iter (fun s -> System.declare_const s t) l
       | Input.Def (decls,defs) ->
-          let new_predicates = System.declare_preds decls in
-          System.add_clauses new_predicates defs ;
-          List.iter
-            (fun (v,ty) -> Input.Typing.check_ground (Term.get_var_name v) ty)
-            new_predicates
+          let stratum = System.declare_preds decls in
+          System.add_clauses stratum defs
       | Input.Theorem thm -> System.add_theorem thm
       | Input.Query t ->
           do_cleanup
@@ -234,11 +237,16 @@ let rec process ?(interactive=false) parse lexbuf =
             Input.Typing.pp_type ty
             s
       | System.Invalid_flavour (n,p,gf,f) ->
+          let string_of_flavour = function
+            | Input.Normal -> "Normal"
+            | Input.Inductive -> "Inductive"
+            | Input.CoInductive -> "CoInductive"
+          in
           eprintf def_error ~p
-            "Cannot declare predicate %s of flavour %s:@ %s was used in the same definition block."
+            "Cannot declare predicate %s of flavour %s:@ this definition block is %s."
             n
-            (System.string_of_flavour f)
-            (System.string_of_flavour gf)
+            (string_of_flavour f)
+            (string_of_flavour gf)
       | System.Invalid_pred_declaration (n,p,ty,s) ->
           eprintf def_error ~p
             "Cannot declare predicate %s of type %a:@ %s."
@@ -277,11 +285,11 @@ let rec process ?(interactive=false) parse lexbuf =
           begin match n with
             | Some n ->
                 eprintf def_error ~p
-                  "Typing error: cannot give free variable %s the type %a.@." n
+                  "Typing error: cannot give free variable %s the type %a." n
                   Input.Typing.pp_type ty
             | None ->
                 eprintf def_error ~p
-                  "Typing error: cannot quantify over type %a.@."
+                  "Typing error: cannot quantify over type %a."
                   Input.Typing.pp_type ty
           end
       | Input.Typing.Hollow_type n ->
@@ -304,15 +312,15 @@ let rec process ?(interactive=false) parse lexbuf =
           eprintf ndcore_error
             "Not LLambda unification encountered:@ %a."
             Pprint.pp_term t
-      | Unify.Left_logic t ->
-          eprintf ndcore_error
-            "Logic variable encountered on the left:@ %a."
-            Pprint.pp_term t
 
       (* Solving *)
       | Prover.Level_inconsistency ->
           eprintf solver_error
             "This formula cannot be handled by the left prover!"
+      | Prover.Left_logic t ->
+          eprintf ndcore_error
+            "Logic variable encountered on the left:@ %a."
+            Pprint.pp_term t
 
       (* Misc Bedwyr errors *)
       | Assertion_failed ->
@@ -372,14 +380,6 @@ and load_session () =
   inclfiles := [] ;
   List.iter include_file !session
 
-and toggle_flag flag value =
-  flag :=
-    begin match value with
-      | None | Some "on" | Some "true" -> true
-      | Some "off" | Some "false" -> false
-      | _ -> raise Invalid_command
-    end
-
 and include_file fname =
   if not (List.mem fname !inclfiles) then begin
     input_from_file fname;
@@ -398,18 +398,17 @@ and command c reset =
 
     (* Session management *)
     | Input.Include l -> List.iter include_file l
-    | Input.Reset -> session := [] ; load_session ()
     | Input.Reload -> load_session ()
     | Input.Session l -> session := l ; load_session ()
 
     (* Turn debugging on/off. *)
-    | Input.Debug value -> toggle_flag System.debug value
+    | Input.Debug value -> System.debug := (bool_of_flag value)
 
     (* Turn timing on/off. *)
-    | Input.Time value -> toggle_flag System.time value
+    | Input.Time value -> System.time := (bool_of_flag value)
 
     (* Tabling-related commands *)
-    | Input.Equivariant value -> toggle_flag Index.eqvt_index value
+    | Input.Equivariant value -> Table.set_eqvt (bool_of_flag value)
     | Input.Freezing temp -> Prover.freezing_point := temp
     | Input.Saturation pressure -> Prover.saturation_pressure := pressure
     | Input.Env -> System.print_env ()
@@ -452,25 +451,22 @@ and command c reset =
           if !exit_status = None then begin
             Format.eprintf "@[<hv 2>Checking that@ %a@ causes an error...@]@."
               Pprint.pp_term query ;
-            if
-              try
-                Prover.prove ~level:Prover.One ~local:0 ~timestamp:0 query
-                  ~success:(fun _ _ -> true) ~failure:(fun _ -> true)
-              with _ -> false
+            if try
+              Prover.prove ~level:Prover.One ~local:0 ~timestamp:0 query
+                ~success:(fun _ _ -> true) ~failure:(fun _ -> true)
+            with _ -> false
             then raise Assertion_failed
           end
   in
   let reset = match c with
-    | Input.Include _ | Input.Reset | Input.Reload | Input.Session _ -> ignore
+    | Input.Include _ | Input.Reload | Input.Session _ -> ignore
     | _ -> reset
   in
   do_cleanup aux c reset
 
 let _ =
   load_session () ;
-  List.iter
-    (fun s -> input_queries (Lexing.from_string s))
-    (List.rev !queries) ;
+  List.iter (fun s -> input_queries (Lexing.from_string s)) !queries ;
   match !exit_status with
     | None ->
         if !interactive then begin

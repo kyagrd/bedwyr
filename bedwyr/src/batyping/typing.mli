@@ -12,12 +12,12 @@
 (* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            *)
 (* GNU General Public License for more details.                             *)
 (*                                                                          *)
-(* You should have received a copy of the GNU General Public License        *)
-(* along with this code; if not, write to the Free Software Foundation,     *)
-(* Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA             *)
+(* You should have received a copy of the GNU General Public License along  *)
+(* with this program; if not, write to the Free Software Foundation, Inc.,  *)
+(* 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.              *)
 (****************************************************************************)
 
-(** Kinds, types, checking and pretty-printing. *)
+(** Kinds, types; checking and pretty-printing. *)
 
 (** Input signature of the functor {!Typing.Make}. *)
 module type INPUT = sig
@@ -35,7 +35,7 @@ module type S = sig
 
   (** {6 Kinds} *)
 
-  (** Kind allowing type operators. *)
+  (** Kind (of type operators). *)
   type ki
   val ki_arrow : ki list -> ki -> ki
   val ktype : ki
@@ -48,15 +48,19 @@ module type S = sig
 
   (** Simple types (including some predefined ones). *)
   type ty
+
   (** Type composition. *)
   val ty_arrow : ty list -> ty -> ty
+
   (** User-defined base type. *)
   val tconst : string -> ty
   val tprop : ty
   val tstring : ty
   val tnat : ty
+
   (** Type variables (for polymorphism). *)
   val tvar : int -> ty
+
   (** Type parameters (for type inference). *)
   val tparam : int -> ty
   val fresh_tyvar : unit -> ty
@@ -78,7 +82,7 @@ module type S = sig
     * so it always succeeds (except when given a non-existing type).
     *
     * @param atomic_kind function returning the kind of an atomic type
-    * @return [(flex,hollow,propositional,higher_order)]
+    * @return [(arity,flex,hollow,propositional,higher_order)]
     * (describing whether the type is an unresolved type parameter,
     * contains unresolved type parameters, ends with [TProp]
     * or contains [TProp]) *)
@@ -86,7 +90,7 @@ module type S = sig
     ?atomic_kind:(pos * string -> ki) ->
     ty ->
     ki ->
-    bool * bool * bool * bool
+    int * bool * bool * bool * bool
 
   (** {6 Type unifying} *)
 
@@ -116,17 +120,14 @@ module type S = sig
   (** Type incompletely inferred. *)
   exception Hollow_type of string
 
-  (** Check whether a type was completely inferred. *)
-  val check_ground : string -> ty -> unit
-
   (** Type unification impossible. *)
   exception Type_unification_error of ty * ty * type_unifier
 
-  (** Refines the provided unifier accordingly to a pair of types.
-    * TODO Does this unification procedure have a name?*)
+  (** Refines the provided unifier accordingly to a pair of types. *)
   val unify_constraint : type_unifier -> ty -> ty -> type_unifier
+  (* TODO Does this unification procedure have a name?*)
 end
 
-(** Functor building an implementation of the typing structure
+(** Functor building an implementation of the typing structure,
   * given a position type. *)
 module Make (I : INPUT) : S with type pos = I.pos
