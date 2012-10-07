@@ -18,3 +18,8 @@ override_dh_auto_build:
 
 override_dh_installchangelogs:
 	dh_installchangelogs -k
+
+override_dh_fixperms:
+	dh_fixperms
+	chmod +x debian/bedwyr/usr/share/bedwyr/examples/mute.pl
+	chmod +x debian/bedwyr/usr/share/bedwyr/examples/ccs_vp/timing/sq
