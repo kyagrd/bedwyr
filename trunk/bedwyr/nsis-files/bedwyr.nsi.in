@@ -23,7 +23,9 @@
 # option -NOCD required
 
 !include "nsis-files/EnvVarUpdate.nsh"
+!include "nsis-files/FileAssociation.nsh"
 
+########################################################################
 ### Variables
 
 !define PROJECT_NAME    "@PROJECT_NAME@"
@@ -36,7 +38,11 @@
 !define SOFTWARE_KEY    "Software\${PROJECT_PACKAGE}"
 !define INSTALL_DIR     "$PROGRAMFILES32\${PROJECT_PACKAGE}"
 !define START_MENU_DIR  "$SMPROGRAMS\${PROJECT_PACKAGE}"
+!define HKCR_EXTENSION  ".def"
+!define HKCR_FILECLASS  "Bedwyr.Definitions.1.3"
+!define HKCR_DESC       "Bedwyr Definitions"
 
+########################################################################
 ### General commands
 
 Name "${PACKAGE_NAME} version ${PACKAGE_VERSION}"
@@ -57,12 +63,52 @@ InstType "Full"
 InstType "Standard"
 InstType "Minimal"
 
-Function .onInit
-  SetCurInstType 1
-FunctionEnd
-
 InstProgressFlags smooth colored
 
+########################################################################
+### Uninstall a previous version
+
+Function .onInit
+  SetCurInstType 1
+
+  ReadRegStr $R0 HKLM "${UNINSTALL_KEY}" "UninstallString"
+  ReadRegStr $R1 HKLM "${UNINSTALL_KEY}" "DisplayVersion"
+  ReadRegStr $R2 HKLM "${SOFTWARE_KEY}" "InstallDir"
+  StrCmp $R0 "" onInitdone
+
+  MessageBox MB_OKCANCEL|MB_ICONEXCLAMATION \
+    "${PACKAGE_NAME} version $R1 is already installed.$\n$\n \
+    Click `OK` to replace it, or `Cancel` to cancel the installation of \
+    ${PACKAGE_NAME} version ${PACKAGE_VERSION}." \
+    /SD IDCANCEL IDOK onInitUninst
+  Abort
+
+;Run the uninstaller
+onInitUninst:
+  ClearErrors
+  ExecWait '$R0 _?=$R2' ; '_?=...': do not copy the uninstaller to a temp file,
+                        ; so that $R0 doesn't return as soon as its copy
+                        ; starts running. Also prevents it to be uninstalled.
+  IfErrors no_remove_uninstaller onInitdone
+  no_remove_uninstaller:
+  messageBox MB_OK|MB_ICONSTOP \
+    "An error prevented the previous version to be uninstalled. \
+    Contact support and ask politely what the heck is going on."
+  Abort
+
+onInitdone:
+FunctionEnd
+
+########################################################################
+### Congratulation
+
+Function .onInstSuccess
+  MessageBox MB_OK|MB_ICONINFORMATION \
+    "${PACKAGE_NAME} was successfully installed. \
+    Find the examples in '$INSTDIR\Examples' and the doc in '$INSTDIR\Doc'."
+FunctionEnd
+
+########################################################################
 ### Stuff to install
 
 SectionGroup "!Bedwyr binaries"
@@ -74,16 +120,25 @@ SectionGroup "!Bedwyr binaries"
     WriteRegStr   HKLM "${UNINSTALL_KEY}" "DisplayName" "${PACKAGE_NAME}"
     WriteRegStr   HKLM "${UNINSTALL_KEY}" "DisplayVersion" "${PACKAGE_VERSION}"
     WriteRegStr   HKLM "${UNINSTALL_KEY}" "DisplayIcon" "$INSTDIR\bedwyr.exe,0"
-    WriteRegStr   HKLM "${UNINSTALL_KEY}" "UninstallString" "$\"$INSTDIR\uninstall.exe$\""
-    WriteRegStr   HKLM "${UNINSTALL_KEY}" "Comments" "the not-so-sound logician"
+    WriteRegStr   HKLM "${UNINSTALL_KEY}" \
+      "UninstallString" "$\"$INSTDIR\uninstall.exe$\""
+    WriteRegStr   HKLM "${UNINSTALL_KEY}" \
+      "Comments" "the not-so-sound logician"
     WriteRegStr   HKLM "${UNINSTALL_KEY}" "Publisher" "${PROJECT_NAME} project"
-    WriteRegStr   HKLM "${UNINSTALL_KEY}" "QuietUninstallString" "$\"$INSTDIR\uninstall.exe$\" /S"
+    WriteRegStr   HKLM "${UNINSTALL_KEY}" \
+      "QuietUninstallString" "$\"$INSTDIR\uninstall.exe$\" /S"
     WriteRegStr   HKLM "${UNINSTALL_KEY}" "InstallLocation" "$INSTDIR"
-    WriteRegStr   HKLM "${UNINSTALL_KEY}" "HelpLink" "http://slimmer.gforge.inria.fr/bedwyr/doc/quickstart.html"
-    WriteRegStr   HKLM "${UNINSTALL_KEY}" "URLUpdateInfo" "http://slimmer.gforge.inria.fr/bedwyr/#download"
-    WriteRegStr   HKLM "${UNINSTALL_KEY}" "URLInfoAbout" "http://slimmer.gforge.inria.fr/bedwyr/"
+    WriteRegStr   HKLM "${UNINSTALL_KEY}" \
+      "HelpLink" "http://slimmer.gforge.inria.fr/bedwyr/doc/quickstart.html"
+    WriteRegStr   HKLM "${UNINSTALL_KEY}" \
+      "URLUpdateInfo" "http://slimmer.gforge.inria.fr/bedwyr/#download"
+    WriteRegStr   HKLM "${UNINSTALL_KEY}" \
+      "URLInfoAbout" "http://slimmer.gforge.inria.fr/bedwyr/"
     WriteRegDWORD HKLM "${UNINSTALL_KEY}" "NoModify" 1
     WriteRegDWORD HKLM "${UNINSTALL_KEY}" "NoRepair" 1
+    ${RegisterExtension} \
+      "${HKCR_EXTENSION}" "${HKCR_FILECLASS}" "${HKCR_DESC}" \
+      "$INSTDIR\bedwyr.exe" "1" "${PACKAGE_NAME}"
     SetOutPath "$INSTDIR"
     File _build\src\bedwyr.exe
     WriteUninstaller "$INSTDIR\uninstall.exe"
@@ -101,15 +156,32 @@ Section "!Examples"
   File /r examples\*
 SectionEnd
 
-Section "Start Menu Shortcuts"
-  SectionIn 1 2
-  SetShellVarContext all
-  CreateDirectory "${START_MENU_DIR}"
-  CreateShortCut "${START_MENU_DIR}\Uninstall.lnk" "$INSTDIR\uninstall.exe" "" "$INSTDIR\uninstall.exe" 0
-  CreateShortCut "${START_MENU_DIR}\${PACKAGE_NAME}.lnk" "$INSTDIR\bedwyr.exe" "" "$INSTDIR\bedwyr.exe" 0
-  IfFileExists "$INSTDIR\bedwyr.byte" 0 +2
-  CreateShortCut "${START_MENU_DIR}\${PACKAGE_NAME} - bytecode.lnk" "$INSTDIR\bedwyr.byte" "" "$INSTDIR\bedwyr.exe" 0
-SectionEnd
+SectionGroup "Start Menu Shortcuts"
+  Section "Programs"
+    SectionIn 1 2
+    SetShellVarContext all
+    CreateDirectory "${START_MENU_DIR}"
+    SetOutPath "$INSTDIR\"
+    CreateShortCut "${START_MENU_DIR}\Uninstall.lnk" \
+      "$INSTDIR\uninstall.exe" "" "$INSTDIR\uninstall.exe" 0
+    CreateShortCut "${START_MENU_DIR}\${PACKAGE_NAME}.lnk" \
+      "$INSTDIR\bedwyr.exe" "" "$INSTDIR\bedwyr.exe" 0
+    IfFileExists "$INSTDIR\bedwyr.byte" 0 +2
+    CreateShortCut "${START_MENU_DIR}\${PACKAGE_NAME} - bytecode.lnk" \
+      "$INSTDIR\bedwyr.byte" "" "$INSTDIR\bedwyr.exe" 0
+  SectionEnd
+  Section "Files"
+    SectionIn 1
+    SetShellVarContext all
+    CreateDirectory "${START_MENU_DIR}"
+    SetOutPath "$INSTDIR\Doc"
+    CreateShortCut "${START_MENU_DIR}\Doc.lnk" \
+      "$INSTDIR\Doc" "" "$INSTDIR\bedwyr.exe" 1
+    SetOutPath "$INSTDIR\Examples"
+    CreateShortCut "${START_MENU_DIR}\Examples.lnk" \
+      "$INSTDIR\Examples" "" "$INSTDIR\bedwyr.exe" 1
+  SectionEnd
+SectionGroupEnd
 
 SectionGroup "Contrib files"
   Section "Emacs files"
@@ -158,11 +230,13 @@ SectionGroup "Documentation"
   SectionGroupEnd
 SectionGroupEnd
 
+########################################################################
 ### Uninstaller
 
 Section "Uninstall"
   SetShellVarContext all
 
+  Delete "${START_MENU_DIR}\Examples.lnk"
   RMDir /r "$INSTDIR\Examples"
 
   Delete "${START_MENU_DIR}\Uninstall.lnk"
@@ -175,6 +249,7 @@ Section "Uninstall"
   RMDir /r "$INSTDIR\Contrib\Vim"
   RMDir "$INSTDIR\Contrib"
 
+  Delete "${START_MENU_DIR}\Doc.lnk"
   Delete "$INSTDIR\Doc\quickstart.*"
   Delete "$INSTDIR\Doc\refman\*"
   Delete "$INSTDIR\Doc\refman.*"
@@ -189,6 +264,8 @@ Section "Uninstall"
   RMDir "$INSTDIR"
   RMDir "$PROGRAMFILES32\${PROJECT_NAME}"
 
+  ${UnRegisterExtension} \
+    "${HKCR_EXTENSION}" "${HKCR_FILECLASS}"
   DeleteRegKey HKLM "${UNINSTALL_KEY}"
   DeleteRegKey HKLM "${SOFTWARE_KEY}"
   ${un.EnvVarUpdate} $0 "PATH" "R" "HKLM" "$INSTDIR"
