@@ -26,6 +26,7 @@ let dummy_pos = Lexing.dummy_pos,Lexing.dummy_pos
 let dummy_pos' = dummy_pos
 
 exception Illegal_string of char
+exception Illegal_string_comment
 exception Illegal_token of string * string
 exception Unknown_command of string
 
