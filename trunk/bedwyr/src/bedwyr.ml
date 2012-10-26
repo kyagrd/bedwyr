@@ -200,6 +200,9 @@ let rec process ?(interactive=false) parse lexbuf =
           eprintf lexer_error
             "Illegal string starting with %C in input."
             c
+      | Input.Illegal_string_comment ->
+          eprintf lexer_error
+            "Unmatched comment delimiter in string."
       | Input.Illegal_token (n1,n2) ->
           eprintf lexer_error
             "%S is an illegal token, did you mean %S?"

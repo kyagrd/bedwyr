@@ -252,7 +252,7 @@ let intern_name = '_' safe_char+
 let blank = ' ' | '\t' | '\r'
 
 let in_comment = '/' | '*' | [^'/' '*' '\n']+
-let in_qstring = [^'\\' '"' '\n']+
+let in_qstring = [^'\\' '"' '\n' '/' '*']+
 
 rule token = parse
   (* Multi-line and single-line comments *)
@@ -352,6 +352,7 @@ and comment level prev_token k = parse
 and qstring = parse
   | "\\\n"              { incrline lexbuf ;
                           qstring lexbuf }
+  | "\/*" | "\*/"       { raise Input.Illegal_string_comment }
   | '\\' (_ as c)       { addEscapedChar c ;
                           qstring lexbuf }
   | in_qstring as s     { addString s ;
@@ -360,5 +361,8 @@ and qstring = parse
                           QSTRING (pos,Buffer.contents strbuf) }
   | '\n'                { addChar '\n' ;
                           incrline lexbuf ;
+                          qstring lexbuf }
+  | "/*" | "*/"         { raise Input.Illegal_string_comment }
+  | (('/' | '*') as c)  { addChar c ;
                           qstring lexbuf }
   | eof                 { failwith "string not closed at end of input" }

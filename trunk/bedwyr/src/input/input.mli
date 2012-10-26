@@ -31,6 +31,12 @@ val dummy_pos : pos
   * but it often is the first byte of a multibyte unicode character. *)
 exception Illegal_string of char
 
+(** A "/*" or a "*/" was found in a quoted string.
+  * In order to allow commenting a block of valid code without breaking the whole file,
+  * those must be escaped (for instance "/\*" and "*\/").
+  * Note that "\*"^"/" and "\/"^"*" still raise this exception. *)
+exception Illegal_string_comment
+
 (** Some characters that are only allowed in prefix names
   * were used next to some that are only allowed in infix names.
   * This happens to be forbidden for compatibility reasons;
