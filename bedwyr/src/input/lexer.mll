@@ -83,19 +83,19 @@
     with Not_found -> raise (Input.Unknown_command n)
 
   (* Upper-case tokens *)
-  let ub_keyword_t = Hashtbl.create 4
+  let ub_keyword_t = Hashtbl.create 5
   let _ = List.iter (fun (k,t) -> Hashtbl.add ub_keyword_t k t)
             [ (* Bedwyr upper-case keywords *)
               "Kind",           KKIND;
               "Type",           TTYPE;
               "Define",         DEFINE;
-              "Theorem",        THEOREM
+              "Theorem",        THEOREM;
+              "Qed",            QED
             ]
-  let ua_keyword_t = Hashtbl.create 9
+  let ua_keyword_t = Hashtbl.create 8
   let _ = List.iter (fun (k,t) -> Hashtbl.add ua_keyword_t k t)
             [ (* Abella upper-case keywords *)
               "Close",          CLOSE;
-              "Qed",            QED;
               "Query",          QUERY;
               "Import",         IMPORT;
               "Specification",  SPECIFICATION;
@@ -236,12 +236,12 @@ let lchar = ['a'-'z']
 
 (* special symbols *)
 let prefix_special       = ['?' '`' '\'' '$']
+let tail_special_noslash = ['_' '@' '#' '!'] | digit
 let infix_special_nostar = ['-' '^' '<' '>' '=' '~' '+' '&' ':' '|']
 let infix_special        = infix_special_nostar | '*'
-let tail_special_noslash = ['_' '@' '#' '!']
 
 let safe_char_noslash =
-  uchar | lchar | digit |  prefix_special | tail_special_noslash
+  uchar | lchar |  prefix_special | tail_special_noslash
 let safe_char = safe_char_noslash | '/'
 
 let upper_name  = uchar safe_char*
@@ -324,6 +324,16 @@ rule token = parse
 
   | _ as c                      { raise (Input.Illegal_string c) }
 
+and proof = parse
+  | '\n'                { incrline lexbuf; proof lexbuf }
+  | "Qed"               { QED }
+  | '.'                 { DOT }
+  | eof                 { EOF }
+  | upper_name
+  | lower_name
+  | intern_name
+  | _                   { proof lexbuf }
+
 and invalid = parse
   | '.'                 { DOT }
   | "/*"                { comment 0 None invalid lexbuf }
@@ -352,7 +362,7 @@ and comment level prev_token k = parse
 and qstring = parse
   | "\\\n"              { incrline lexbuf ;
                           qstring lexbuf }
-  | "\/*" | "\*/"       { raise Input.Illegal_string_comment }
+  | "\\/*" | "\\*/"     { raise Input.Illegal_string_comment }
   | '\\' (_ as c)       { addEscapedChar c ;
                           qstring lexbuf }
   | in_qstring as s     { addString s ;

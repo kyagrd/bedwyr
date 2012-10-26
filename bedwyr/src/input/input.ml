@@ -135,6 +135,8 @@ let free_args pre_term =
 
 (* Input AST (.def file or toplevel) *)
 
+exception Qed_error of pos
+
 type flavour = Normal | Inductive | CoInductive
 
 type command =
@@ -167,6 +169,7 @@ type input =
   | Query   of preterm
   | Command of command
   | Theorem of (pos * string * preterm)
+  | Qed     of (pos)
 
 (* Pre-terms' type checking *)
 

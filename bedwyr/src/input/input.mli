@@ -117,6 +117,10 @@ val free_args : preterm -> string list
 
 (** {6 Input AST ({e .def} file or toplevel)} *)
 
+(** "Qed" command used outside of proof mode.
+  * It should be the first command to appear after a "Theorem". *)
+exception Qed_error of pos
+
 (** Flavouring keyword, prefixing a predicate declaration. *)
 type flavour =
     Normal (** no keyword *)
@@ -182,6 +186,8 @@ type input =
   (** meta-command (any mode) *)
   | Theorem of (pos * string * preterm)
   (** theorem (imported from Abella) *)
+  | Qed of (pos)
+  (** end of proof (imported from Abella, ignored by Bedwyr) *)
 
 (** {6 Pre-terms' type checking} *)
 

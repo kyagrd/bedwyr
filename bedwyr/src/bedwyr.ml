@@ -155,7 +155,7 @@ let rec process ?(interactive=false) parse lexbuf =
       non_interactive_fun ()
     end
   in
-  let skip_input () = Parser.skip_input Lexer.invalid lexbuf in
+  let skip_input () = Parser.skip_invalid Lexer.invalid lexbuf in
   let lexer_error _ = basic_error 1 ~non_interactive_fun:skip_input in
   let parser_error _ = basic_error 1 in
   let def_error _ = basic_error 2 in
@@ -184,7 +184,10 @@ let rec process ?(interactive=false) parse lexbuf =
       | Input.Def (decls,defs) ->
           let stratum = System.declare_preds decls in
           System.add_clauses stratum defs
-      | Input.Theorem thm -> System.add_theorem thm
+      | Input.Theorem thm ->
+          System.add_theorem thm ;
+          Parser.skip_proof Lexer.proof lexbuf
+      | Input.Qed p -> raise (Input.Qed_error p)
       | Input.Query t ->
           do_cleanup
             (fun pre_query ->
@@ -221,6 +224,9 @@ let rec process ?(interactive=false) parse lexbuf =
           eprintf parser_error ~p
             "%s while parsing@ %s."
             s1 s2
+      | Input.Qed_error p ->
+          eprintf parser_error ~p
+            "\"Qed\" command used while not in proof mode."
 
       (* Declarations *)
       | System.Invalid_type_declaration (n,p,ki,s) ->
