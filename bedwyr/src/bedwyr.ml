@@ -449,8 +449,8 @@ and command c reset =
 
     (* Testing commands *)
     | Input.Assert pre_query ->
+        let query = System.translate_query pre_query in
         if !test then
-          let query = System.translate_query pre_query in
           if !exit_status = None then begin
             Format.eprintf "@[<hv 2>Checking that@ %a@,...@]@."
               Pprint.pp_term query ;
@@ -459,8 +459,8 @@ and command c reset =
               ~failure:(fun () -> raise Assertion_failed)
           end
     | Input.Assert_not pre_query ->
+        let query = System.translate_query pre_query in
         if !test then
-          let query = System.translate_query pre_query in
           if !exit_status = None then begin
             Format.eprintf "@[<hv 2>Checking that@ %a@ is false...@]@."
               Pprint.pp_term query ;
@@ -468,8 +468,8 @@ and command c reset =
               ~success:(fun _ _ -> raise Assertion_failed) ~failure:ignore
           end
     | Input.Assert_raise pre_query ->
+        let query = System.translate_query pre_query in
         if !test then
-          let query = System.translate_query pre_query in
           if !exit_status = None then begin
             Format.eprintf "@[<hv 2>Checking that@ %a@ causes an error...@]@."
               Pprint.pp_term query ;
