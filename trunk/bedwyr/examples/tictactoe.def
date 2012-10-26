@@ -58,7 +58,8 @@ Define winner : cell -> list -> prop by
 
 Theorem winner_symmetries :
   symmetries List List' /\ winner W List -> winner W List'.
-% TODO proof
+ .% TODO proof
+Qed.
 
 % nowinner Board
 % True if nobody has won on the Board yet
@@ -116,7 +117,8 @@ Define coinductive notxwins : list -> prop by
 
 Theorem notxwins_symmetries :
   symmetries List List' /\ notxwins List -> notxwins List'.
-% TODO proof
+ .% TODO proof
+Qed.
 
 % play Board
 % This predicate lets you play tic-tac-toe against the computer.

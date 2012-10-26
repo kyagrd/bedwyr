@@ -42,7 +42,7 @@
 %token ENV TYPEOF SHOW_DEF SHOW_TABLE CLEAR_TABLES CLEAR_TABLE SAVE_TABLE
 %token ASSERT ASSERT_NOT ASSERT_RAISE
 /* Bedwyr keywords */
-%token KKIND TTYPE DEFINE THEOREM
+%token KKIND TTYPE DEFINE THEOREM QED
 %token INDUCTIVE COINDUCTIVE BY
 %token UNDERSCORE
 /* Bedwyr primitives */
@@ -50,7 +50,7 @@
 %token RARROW EQ AND OR BSLASH
 
 /* Abella keywords, including tactics, apart from "exists" */
-%token CLOSE QED QUERY IMPORT SPECIFICATION SSPLIT SET SHOW QUIT
+%token CLOSE QUERY IMPORT SPECIFICATION SSPLIT SET SHOW QUIT
 %token TO WITH ON AS KEEP
 %token IND_T COIND_T INTROS_T CASE_T SEARCH_T APPLY_T BACKCHAIN_T UNFOLD_T
 %token ASSERT_T SPLIT_T SPLITSTAR_T LEFT_T RIGHT_T PERMUTE_T INST_T CUT_T
@@ -85,8 +85,9 @@
 
 /* Higher */
 
-%start skip_input input_def input_query
-%type <unit> skip_input
+%start skip_invalid skip_proof input_def input_query
+%type <unit> skip_invalid
+%type <unit> skip_proof
 %type <Input.input> input_def
 %type <Input.input> input_query
 
@@ -94,10 +95,15 @@
 
 /* commands */
 
-skip_input:
+skip_invalid:
   | DOT                                 { () }
   | EOF                                 { () }
-  | QSTRING skip_input                  { () }
+  | QSTRING skip_invalid                { () }
+
+skip_proof:
+  | DOT skip_proof                      { $2 }
+  | QED DOT                             { () }
+  | EOF                                 { eof_error "an Abella proof" }
 
 input_def:
   | top_command                         { $1 }
@@ -117,8 +123,8 @@ top_command:
   | DEFINE decls BY defs DOT            { Input.Def ($2,$4) }
   | DEFINE decls DOT                    { Input.Def ($2,[]) }
   | THEOREM theorem DOT                 { Input.Theorem $2 }
+  | QED DOT                             { Input.Qed (pos 0) }
   | CLOSE                               { failwith "Abella command only." }
-  | QED                                 { failwith "Abella command only." }
   | QUERY                               { failwith "Abella command only." }
   | IMPORT                              { failwith "Abella command only." }
   | SPECIFICATION                       { failwith "Abella command only." }

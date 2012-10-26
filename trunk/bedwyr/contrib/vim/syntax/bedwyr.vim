@@ -34,6 +34,8 @@ syn match       bedwyrMetaCommendErr "#[a-z_]*"
 syn match       bedwyrPointErr  "\."
 syn match       bedwyrDefineErr "\<Define\>"
 syn match       bedwyrByErr     "\<by\>"
+syn match       bedwyrThmErr    "\<Theorem\>"
+syn match       bedwyrQedErr    "\<Qed\>"
 syn match       bedwyrSemiColonErr ";"
 syn match       bedwyrDefEqErr  "\<:=\>"
 "syn keyword     bedwyrFormulaErr true false forall exists nabla \\ = /\\ \\/
@@ -41,7 +43,7 @@ syn match       bedwyrFormulaErr "\(\<\(true\|false\|forall\|exists\|nabla\)\>\)
 syn match       bedwyrParenErr  "(\|)"
 syn keyword     bedwyrImpErr    =>
 
-syn cluster     bedwyrCommonErrs contains=bedwyrCommentErr,bedwyrMetaCommendErr,bedwyrPointErr,bedwyrDefineErr,bedwyrByErr,bedwyrSemiColonErr,bedwyrDefEqErr,bedwyrFormulaErr,bedwyrImpErr
+syn cluster     bedwyrCommonErrs contains=bedwyrCommentErr,bedwyrMetaCommendErr,bedwyrPointErr,bedwyrDefineErr,bedwyrByErr,bedwyrThmErr,bedwyrQedErr,bedwyrSemiColonErr,bedwyrDefEqErr,bedwyrFormulaErr,bedwyrImpErr
 
 syn match       bedwyrComment   "%.*" contains=bedwyrTodo extend
 syn region      bedwyrComment   start="/\*" end="\*/" contains=bedwyrComment,bedwyrTodo extend
@@ -53,9 +55,12 @@ syn region      bedwyrNone      matchgroup=bedwyrMetaCommand start="#[a-z_]*\>" 
 syn region      bedwyrNone      matchgroup=bedwyrKeyword start="\<\(Kind\|Type\)\>" matchgroup=bedwyrSymbol end="\." contains=@bedwyrCommonErrs,bedwyrParenErr,bedwyrComment,bedwyrComma,@bedwyrTypes
 
 syn region      bedwyrDefBlock  matchgroup=bedwyrKeyword start="\<Define\>" matchgroup=bedwyrSymbol end="\." contains=bedwyrPredDeclarations keepend
-syn region      bedwyrPredDeclarations start="." matchgroup=bedwyrKeyword end="\<by\>" contained nextgroup=bedwyrPredDefinitions skipempty contains=@bedwyrCommonErrs,bedwyrParenErr,bedwyrComment,bedwyrFlavour,bedwyrComma,@bedwyrAnnotatedId keepend
-syn region      bedwyrPredDefinitions start="" matchgroup=bedwyrSymbol end="\." contained contains=@bedwyrCommonErrs,bedwyrParenErr,bedwyrComment,bedwyrDefEq,bedwyrSemiColon,@bedwyrFormulae keepend
-syn region      bedwyrTheorem   matchgroup=bedwyrKeyword start="\<Theorem\>" matchgroup=bedwyrSymbol end="\." contains=bedwyrPredDefinitions keepend
+syn region      bedwyrPredDeclarations start="." matchgroup=bedwyrKeyword end="\<by\>" contained nextgroup=bedwyrPredDefinitions skipempty contains=@bedwyrCommonErrs,bedwyrParenErr,bedwyrComment,bedwyrFlavour,bedwyrComma,@bedwyrAnnotatedId
+syn region      bedwyrPredDefinitions start="." matchgroup=bedwyrSymbol end="\." contained contains=@bedwyrCommonErrs,bedwyrParenErr,bedwyrComment,bedwyrDefEq,bedwyrSemiColon,@bedwyrFormulae
+
+syn region      bedwyrLemma     matchgroup=bedwyrKeyword start="\<Theorem\>" matchgroup=bedwyrSymbol end="\." contains=bedwyrTheorem
+syn region      bedwyrTheorem   start="." matchgroup=bedwyrSymbol end="\." contained nextgroup=bedwyrProof contains=bedwyrPredDefinitions keepend
+syn region      bedwyrProof     start="." matchgroup=bedwyrKeyword end="Qed" contained
 
 syn keyword     bedwyrFlavour   contained inductive coinductive
 syn match       bedwyrComma     contained ","
@@ -104,6 +109,8 @@ if version >= 508 || !exists("did_bedwyr_syntax_inits")
   HiLink        bedwyrPointErr  Error
   HiLink        bedwyrDefineErr Error
   HiLink        bedwyrByErr     Error
+  HiLink        bedwyrThmErr    Error
+  HiLink        bedwyrQedErr    Error
   HiLink        bedwyrSemiColonErr Error
   HiLink        bedwyrDefEqErr  Error
   HiLink        bedwyrFormulaErr Error
@@ -111,6 +118,7 @@ if version >= 508 || !exists("did_bedwyr_syntax_inits")
   HiLink        bedwyrImpErr    Error
 
   HiLink        bedwyrComment   Comment
+  HiLink        bedwyrProof     bedwyrComment
 
   HiLink        bedwyrTodo      Todo
 
