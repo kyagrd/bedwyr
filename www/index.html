@@ -4,197 +4,198 @@
   <head>
     <title>SLIMMER</title>
     <link href="slimmer.css" rel="stylesheet" type="text/css"/>
-</head>
+  </head>
 
-<body>
-<h1 align=center>SLIMMER: <br/>
-Sophisticated Logic Implementations for Modeling and Mechanical Reasoning</h1>
+  <body>
+    <h1 align=center>SLIMMER: <br/>
+      Sophisticated Logic Implementations for Modeling and
+      Mechanical Reasoning</h1>
 
-<h5 align=center>
-<b>Contents:</b>
-<a href="#description">description</a> /
-<a href="#people">people</a> /
-<a href="#funding">funding</a> /
-<a href="#code">code</a> /
-<a href="#publications">publications</a> /
-<a href="#links">links</a> /
-</h5>
-
-
-<h2><a name="description">Description</a></h2>
-
-<p>
-The SLIMMER project has been focused on developing and
-implementing formal frameworks for the specification of various kinds
-of computational systems and for formally reasoning about properties
-of these specifications.
-Target specification languages are those that typically involve
-high-levels of abstraction and symbolic computation.
-When symbolic computations require bindings within linguistic
-expressions, the <em>lambda-tree syntax</em> approach to
-<em>higher-order abstract syntax</em> is used.
-The project is also focusing on the relational style of specifications
-that are commonly used to specify <em>structured operational
-semantics</em> and <em>typing judgments.</em>
-System building within this project have typically involved the
-implementation of <em>higher-order pattern unification</em> and of
-backtracking proof search engines (as is found in, for example, 
-<a href="http://www.lix.polytechnique.fr/Labo/Dale.Miller/lProlog/">&lambda;Prolog</a>).
-</p>
-
-<p>
-One use of the systems that we are building is the mechanization of
-metatheory and its use in reasoning about programming and
-specification languages.  Such system have been used to address the <a
-href="https://alliance.seas.upenn.edu/~plclub/cgi-bin/poplmark/index.php?title=The_POPLmark_Challenge">POPLmark
-Challenge</a>.  An approach to mechanizing metatheory that is related
-to the perspective we take here can be found in the 2002 ACM ToCL
-paper by McDowell and Miller (see reference <a
-href="#publications">below</a>
-and the following <a
-href="http://www.lix.polytechnique.fr/Labo/Dale.Miller/mcdowell/index.html">description</a>
-of that work).
-</p>
-
-<h2><a name="people">People</a></h2>
-<p>The principle teams between the six years of funding for Slimmer
-(2005/2010) were the following two teams.</p>
-<ul>
-<li> From the INRIA project-team <a
-href="http://www.lix.polytechnique.fr/Labo/Dale.Miller/parsifal/">Parsifal</a>:
-<a href="http://www.lix.polytechnique.fr/~dbaelde/">David Baelde</a>, 
-<a href="http://www.lix.polytechnique.fr/Labo/Dale.Miller/">Dale Miller</a>,
-<a href="http://www.math.upenn.edu/~vnigam/">Vivek Nigam</a>,
-<a href="http://www.pps.jussieu.fr/~saurin/">Alexis Saurin</a>.
-</li>
-
-<li> From the University of Minnesota <a href="http://teyjus.cs.umn.edu/">Teyjus</a>
-team: 
-<a href="http://www-users.cs.umn.edu/~agacek/">Andrew Gacek</a>, 
-<a href="http://www-users.cs.umn.edu/~gopalan/">Gopalan Nadathur</a>, 
-<a href="http://www-users.cs.umn.edu/~snow/">Zach Snow</a>, and 
-<a href="http://www-users.cs.umn.edu/~xqi/">Xiaochu Qi</a>.
-</li> 
-</ul>
-
-<p>
-Two other teams have been added in the final years of this project in
-order to help shape the next steps to take at the end of the funded
-period. 
-</p>
-
-<ul>
-<li>From the Australian National University: <a
-href="http://users.cecs.anu.edu.au/~tiu/">Alwen Tiu</a>.</li> 
-
-<li>
-From the Universidade Federal de Minas Gerais, Brazil: <a target=_top 
-href="http://www.mat.ufmg.br/~elaine/">Elaine Pimentel</a>. 
-</li>
-
-<li>
-From Hofstra University: <a
-href="http://cs.hofstra.edu/~cscccl/">Chuck Liang</a>.</li>  
-</li>
-</ul>
-
-<h2><a name="funding">Funding</a></h2>
-
-<p class="body">
-Financial support for the project has been obtained from INRIA via its
-``Equipes Associ&eacute;es'' program.  Matching funds have been
-contributed by the National Science Foundation (CISE Directorate and
-the Office of International Science and Engineering, Grant
-No. 0429572).  The opinions, findings, and conclusions or
-recommendations expressed in this material are those of the project
-participants and do not necessarily reflect the views of INRIA or the
-National Science Foundation.
-</p>
+    <h5 align=center>
+      <b>Contents:</b>
+      <a href="#description">description</a> /
+      <a href="#people">people</a> /
+      <a href="#funding">funding</a> /
+      <a href="#code">code</a> /
+      <a href="#publications">publications</a> /
+      <a href="#links">links</a> /
+    </h5>
 
 
-<h2><a name="code">Code</a></h2>
+    <h2><a name="description">Description</a></h2>
 
-<ul>
-<li>
-The <a href="http://abella.cs.umn.edu/">Abella</a> system was released
-in February 2008. This is an interactive theorem prover for proving
-properties of specifications written in the second-order hereditary
-Harrop formula logic. The meta-reasoning is based on an extension of
-the Alwen Tiu's LG-omega logic. The details of this extended logic are
-available in this
-<a href="http://www.lix.polytechnique.fr/Labo/Dale.Miller/papers/lfmtp08.pdf">
-paper</a>. Abella is written in OCaml by
-Andrew Gacek and uses the higher-order pattern unification code of
-Gopalan Nadathur and Natalie Linnell.
-</li>
+    <p>
+    The SLIMMER project has been focused on developing and
+    implementing formal frameworks for the specification of various kinds
+    of computational systems and for formally reasoning about properties
+    of these specifications.
+    Target specification languages are those that typically involve
+    high-levels of abstraction and symbolic computation.
+    When symbolic computations require bindings within linguistic
+    expressions, the <em>lambda-tree syntax</em> approach to
+    <em>higher-order abstract syntax</em> is used.
+    The project is also focusing on the relational style of specifications
+    that are commonly used to specify <em>structured operational
+    semantics</em> and <em>typing judgments.</em>
+    System building within this project have typically involved the
+    implementation of <em>higher-order pattern unification</em> and of
+    backtracking proof search engines (as is found in, for example, <a
+    href="http://www.lix.polytechnique.fr/Labo/Dale.Miller/lProlog/">&lambda;Prolog</a>).
+    </p>
 
-<li>
-Version 1.1 of <a href="bedwyr/">Bedwyr</a> was released in February
-2007 (following the initial release of Version 1.0 in November 2006).
-This open source system is hosted on INRIA's GForge system under the
-<a href="http://gforge.inria.fr/scm/?group_id=367">Slimmer project</a>.
-This OCaml system was developed by David Baelde and Andrew Gacek with
-help from Axelle Ziegler and code for pattern unification code
-extracted from the Teyjus system.  <a href="bedwyr/">Read more</a>.
-</li>
+    <p>
+    One use of the systems that we are building is the mechanization of
+    metatheory and its use in reasoning about programming and
+    specification languages.  Such system have been used to address the <a
+    href="http://www.seas.upenn.edu/~plclub/poplmark/">POPLmark
+    Challenge</a>.  An approach to mechanizing metatheory that is related
+    to the perspective we take here can be found in the 2002 ACM ToCL
+    paper by McDowell and Miller (see reference <a
+    href="#publications">below</a>
+    and the following <a
+    href="http://www.lix.polytechnique.fr/Labo/Dale.Miller/mcdowell/index.html">description</a>
+    of that work).
+    </p>
 
-<li>
-Version 0.9.2 of the <a href="tac/">Tac system</a> was released in January
-2010.  This open source system is hosted on INRIA's GForge system under the
-<a href="https://gforge.inria.fr/scm/?group_id=367">Slimmer project</a> as
-well.  This OCaml system was developed by David Baelde, Zach Snow, and
-Alexandre Viel. <a href="tac/">Read more</a>.
-</li>
+    <h2><a name="people">People</a></h2>
+    <p>The principle teams between the six years of funding for Slimmer
+    (2005/2010) were the following two teams.</p>
+    <ul>
+      <li> From the INRIA project-team
+      <a href="http://team.inria.fr/parsifal/">Parsifal</a>:
+      <a href="http://www.lsv.ens-cachan.fr/~baelde/">David Baelde</a>,
+      <a href="http://www.lix.polytechnique.fr/Labo/Dale.Miller/">Dale Miller</a>,
+      <a href="http://www.math.upenn.edu/~vnigam/">Vivek Nigam</a>,
+      <a href="http://www.pps.univ-paris-diderot.fr/~saurin/">Alexis Saurin</a>.
+      </li>
 
-<li>
-Gopalan Nadathur and Natalie Linnell (University of Minnesota) have
-posted their <a
-href="http://www-users.cs.umn.edu/~gopalan/code/ho-pattern-unif.tar.gz"
->code</a>
-for <em>An implementation of Higher-Order Pattern Unification in SML</em>.
-</li>
+      <li> From the University of Minnesota <a href="http://teyjus.cs.umn.edu/">Teyjus</a>
+      team:
+      <a href="http://www-users.cs.umn.edu/~agacek/">Andrew Gacek</a>,
+      <a href="http://www-users.cs.umn.edu/~gopalan/">Gopalan Nadathur</a>,
+      <a href="http://www-users.cs.umn.edu/~snow/">Zach Snow</a>, and
+      <a href="http://www-users.cs.umn.edu/~xqi/">Xiaochu Qi</a>.
+      </li>
+    </ul>
 
-<li>
-Alwen Tiu's SML code for the <a
-href="http://www.lix.polytechnique.fr/~tiu/lincproject/download.htm">Level
-0/1</a> prover.  This system has largely been superseded by the Bedwyr
-system.
-</li>
-</ul>
+    <p>
+    Two other teams have been added in the final years of this project in
+    order to help shape the next steps to take at the end of the funded
+    period.
+    </p>
+
+    <ul>
+      <li>From the Australian National University: <a
+        href="http://users.cecs.anu.edu.au/~tiu/">Alwen Tiu</a>.</li>
+
+      <li>
+      From the Universidade Federal de Minas Gerais, Brazil: <a target=_top
+        href="http://www.mat.ufmg.br/~elaine/">Elaine Pimentel</a>.
+      </li>
+
+      <li>
+      From Hofstra University: <a
+        href="http://cs.hofstra.edu/~cscccl/">Chuck Liang</a>.</li>
+      </li>
+    </ul>
+
+    <h2><a name="funding">Funding</a></h2>
+
+    <p class="body">
+    Financial support for the project has been obtained from INRIA via its
+    ``Equipes Associ&eacute;es'' program.  Matching funds have been
+    contributed by the National Science Foundation (CISE Directorate and
+    the Office of International Science and Engineering, Grant
+    No. 0429572).  The opinions, findings, and conclusions or
+    recommendations expressed in this material are those of the project
+    participants and do not necessarily reflect the views of INRIA or the
+    National Science Foundation.
+    </p>
+
+
+    <h2><a name="code">Code</a></h2>
+
+    <ul>
+      <li>
+      The <a href="http://abella.cs.umn.edu/">Abella</a> system was released
+      in February 2008. This is an interactive theorem prover for proving
+      properties of specifications written in the second-order hereditary
+      Harrop formula logic. The meta-reasoning is based on an extension of
+      the Alwen Tiu's LG-omega logic. The details of this extended logic are
+      available in this <a
+      href="http://www.lix.polytechnique.fr/Labo/Dale.Miller/papers/lfmtp08.pdf">paper</a>.
+      Abella is written in OCaml by
+      Andrew Gacek and uses the higher-order pattern unification code of
+      Gopalan Nadathur and Natalie Linnell.
+      </li>
+
+      <li>
+      Version 1.1 of <a href="bedwyr/">Bedwyr</a> was released in February
+      2007 (following the initial release of Version 1.0 in November 2006).
+      This open source system is hosted on INRIA's GForge system under the
+      <a href="http://gforge.inria.fr/scm/?group_id=367">Slimmer project</a>.
+      This OCaml system was developed by David Baelde and Andrew Gacek with
+      help from Axelle Ziegler and code for pattern unification code
+      extracted from the Teyjus system.  <a href="bedwyr/">Read more</a>.
+      </li>
+
+      <li>
+      Version 0.9.2 of the <a href="tac/">Tac system</a> was released in January
+      2010.  This open source system is hosted on INRIA's GForge system under the
+      <a href="https://gforge.inria.fr/scm/?group_id=367">Slimmer project</a> as
+      well.  This OCaml system was developed by David Baelde, Zach Snow, and
+      Alexandre Viel. <a href="tac/">Read more</a>.
+      </li>
+
+      <li>
+      Gopalan Nadathur and Natalie Linnell (University of Minnesota) have
+      posted their <a
+        href="http://www-users.cs.umn.edu/~gopalan/code/ho-pattern-unif.tar.gz"
+        >code</a>
+      for <em>An implementation of Higher-Order Pattern Unification in SML</em>.
+      </li>
+
+      <li>
+      Alwen Tiu's SML code for the <a
+        href="http://www.lix.polytechnique.fr/~tiu/lincproject/download.htm">Level
+        0/1</a> prover.  This system has largely been superseded by the Bedwyr
+      system.
+      </li>
+    </ul>
 
 
 
-<h2><a name="publications">Publications</a></h2>
+    <h2><a name="publications">Publications</a></h2>
 
-<p>
-During the six years of its funding, Slimmer provided a context to two
-PhD thesis (Baelde and Gacek).  Several papers were co-authored by
-members of the associated teams and many other papers were published
-that contributed to the general thrust of the project.   A 
-<a href="pubs.html">complete list of publications</a> from this
-project is available.
-</p>
+    <p>
+    During the six years of its funding, Slimmer provided a context to two
+    PhD thesis (Baelde and Gacek).  Several papers were co-authored by
+    members of the associated teams and many other papers were published
+    that contributed to the general thrust of the project.   A
+    <a href="pubs.html">complete list of publications</a> from this
+    project is available.
+    </p>
 
-<h2><a name="links">Related Sites and Other Relevant Systems</a></h2>
+    <h2><a name="links">Related Sites and Other Relevant Systems</a></h2>
 
-      <ul>
-        <li><a href="http://abella.cs.umn.edu/">Abella</a> -
-          an interactive theorem prover using higher-order abstract
-          syntax and the &nabla;-quantifier.</li>
-        <li><a href="bedwyr/">
-          Bedwyr</a> - a model checker using higher-order abstract
-          syntax and the &nabla;-quantifer.</li>
-        <li><a href="tac/">Tac</a> - an interactive theorem prover.</li>
-        <li><a href="http://www.lix.polytechnique.fr/Labo/Dale.Miller/lProlog/">&lambda;Prolog</a>
-        - a higher-order logic programming language</li>  
-        <li><a href="http://teyjus.cs.umn.edu/">Teyjus</a> - An implementation
-        of Lambda Prolog</li>
-      </ul>
+    <ul>
+      <li><a href="http://abella.cs.umn.edu/">Abella</a> -
+        an interactive theorem prover using higher-order abstract
+        syntax and the &nabla;-quantifier.</li>
+      <li><a href="bedwyr/">
+        Bedwyr</a> - a model checker using higher-order abstract
+        syntax and the &nabla;-quantifer.</li>
+      <li><a href="tac/">Tac</a> - an interactive theorem prover.</li>
+      <li><a href="http://www.lix.polytechnique.fr/Labo/Dale.Miller/lProlog/">&lambda;Prolog</a>
+      - a higher-order logic programming language</li>
+      <li><a href="http://teyjus.cs.umn.edu/">Teyjus</a> - An implementation
+      of Lambda Prolog</li>
+    </ul>
 
 
     <script src="http://www.google-analytics.com/urchin.js"
             type="text/javascript">
-    </script>       
+    </script>
     <script type="text/javascript">
     _uacct = "UA-283578-2";
     urchinTracker();
