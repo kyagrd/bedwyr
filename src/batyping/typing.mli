@@ -1,6 +1,6 @@
 (****************************************************************************)
 (* Bedwyr prover                                                            *)
-(* Copyright (C) 2012 Quentin Heath                                         *)
+(* Copyright (C) 2012 Quentin Heath, Alwen Tiu                              *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -46,7 +46,8 @@ module type S = sig
 
   (** {6 Types} *)
 
-  (** Simple types (including some predefined ones). *)
+  (** First-order parametricly polymorphic types (of sort [*]),
+    * including some predefined monomorphic ones. *)
   type ty
   (** Type composition. *)
   val ty_arrow : ty list -> ty -> ty
