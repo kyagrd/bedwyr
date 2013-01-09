@@ -210,6 +210,7 @@ exception Inconsistent_definition of string * Typing.pos * string
 
 
 let translate_term
+      ?(instantiate_head=true)
       ?(free_args=[])
       ?(infer=true)
       ?(expected_type=Typing.tprop)
@@ -254,39 +255,40 @@ let translate_term
   in
   (* return a typed variable corresponding to the name
    * of a constant (predefined or not) or a predicate *)
-  let typed_declared_var (p,name) =
+  let typed_declared_var ~instantiate_head (p,name) =
     let t = Term.atom ~tag:Term.Constant name in
     let v = Term.get_var t in
-    try begin
-      match Hashtbl.find defs v with
-        | Constant ty -> t,ty
-        | Predicate (_,_,_,_,ty) -> t,ty
-    end with Not_found ->
-      let ty = match v with
-        | v when v = Logic.var_print ->
-            let ty = Typing.fresh_typaram () in
-            Typing.ty_arrow [ty] Typing.tprop
-        | v when v = Logic.var_println ->
-            let ty = Typing.fresh_typaram () in
-            Typing.ty_arrow [ty] Typing.tprop
-        | v when v = Logic.var_printstr ->
-            Typing.ty_arrow [Typing.tstring] Typing.tprop
-        | v when v = Logic.var_fprint ->
-            let ty = Typing.fresh_typaram () in
-            Typing.ty_arrow [Typing.tstring;ty] Typing.tprop
-        | v when v = Logic.var_fprintln ->
-            let ty = Typing.fresh_typaram () in
-            Typing.ty_arrow [Typing.tstring;ty] Typing.tprop
-        | v when v = Logic.var_fprintstr ->
-            Typing.ty_arrow [Typing.tstring;Typing.tstring] Typing.tprop
-        | v when v = Logic.var_fopen_out ->
-            Typing.ty_arrow [Typing.tstring] Typing.tprop
-        | v when v = Logic.var_fclose_out ->
-            Typing.ty_arrow [Typing.tstring] Typing.tprop
-        | _ ->
-            Term.free name ;
-            raise (Missing_declaration (name,Some p))
-      in t,ty
+    let ty =
+      try begin
+        match Hashtbl.find defs v with
+          | Constant ty -> ty
+          | Predicate (_,_,_,_,ty) -> ty
+      end with Not_found ->
+        match v with
+          | v when v = Logic.var_print ->
+              let ty = Typing.fresh_typaram () in
+              Typing.ty_arrow [ty] Typing.tprop
+          | v when v = Logic.var_println ->
+              let ty = Typing.fresh_typaram () in
+              Typing.ty_arrow [ty] Typing.tprop
+          | v when v = Logic.var_printstr ->
+              Typing.ty_arrow [Typing.tstring] Typing.tprop
+          | v when v = Logic.var_fprint ->
+              let ty = Typing.fresh_typaram () in
+              Typing.ty_arrow [Typing.tstring;ty] Typing.tprop
+          | v when v = Logic.var_fprintln ->
+              let ty = Typing.fresh_typaram () in
+              Typing.ty_arrow [Typing.tstring;ty] Typing.tprop
+          | v when v = Logic.var_fprintstr ->
+              Typing.ty_arrow [Typing.tstring;Typing.tstring] Typing.tprop
+          | v when v = Logic.var_fopen_out ->
+              Typing.ty_arrow [Typing.tstring] Typing.tprop
+          | v when v = Logic.var_fclose_out ->
+              Typing.ty_arrow [Typing.tstring] Typing.tprop
+          | _ ->
+              Term.free name ;
+              raise (Missing_declaration (name,Some p))
+    in t,(if instantiate_head then Typing.fresh_tyinst ty else ty)
   in
   (* return a typed variable corresponding to the name
    * of an internal constant *)
@@ -327,6 +329,7 @@ let translate_term
     let _ = kind_check p ty in ty
   in
   type_check_and_translate
+    ~instantiate_head
     ~infer
     ~iter_free_types
     ~free_args
@@ -432,7 +435,7 @@ let add_def_clause new_predicates (p,pre_head,pre_body) =
     Hashtbl.create 10
   in
   let free_args = free_args pre_head in
-  let head,_ = translate_term ~free_args pre_head free_types in
+  let head,_ = translate_term ~instantiate_head:false ~free_args pre_head free_types in
   let body,_ = translate_term ~free_args pre_body free_types in
   let pred,arity,body =
     mk_def_clause p head body

@@ -1,6 +1,6 @@
 (****************************************************************************)
 (* Bedwyr prover                                                            *)
-(* Copyright (C) 2012 Quentin Heath                                         *)
+(* Copyright (C) 2012 Quentin Heath, Alwen Tiu                              *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -167,6 +167,7 @@ exception Term_typing_error of pos * Typing.ty * Typing.ty * Typing.type_unifier
 exception Var_typing_error of string option * pos * Typing.ty
 
 let type_check_and_translate
+      ?(instantiate_head=true)
       ?(infer=false)
       ?(iter_free_types=ignore)
       ?(free_args=[])
@@ -181,7 +182,7 @@ let type_check_and_translate
     in
     aux 1 bvars
   in
-  let rec aux pt exty bvars u =
+  let rec aux ?(instantiate_head=true) pt exty bvars u =
     let p = get_pos pt in
     try match pt with
       | QString (p,s) ->
@@ -203,12 +204,10 @@ let type_check_and_translate
       | PredConstID (p,s) ->
           begin match find_db s bvars with
             | Some (t,ty) ->
-                let ty = Typing.fresh_tyinst ty in
                 let u = Typing.unify_constraint u exty ty in
                 t,u
             | None ->
-                let t,ty = typed_declared_var (p,s) in
-                let ty = Typing.fresh_tyinst ty in
+                let t,ty = typed_declared_var ~instantiate_head (p,s) in
                 let u = Typing.unify_constraint u exty ty in
                 t,u
           end
@@ -280,11 +279,10 @@ let type_check_and_translate
                          tys
           in
           Term.app hd (List.rev args),u
-    with
-      | Typing.Type_unification_error (ty1,ty2,unifier) ->
-          raise (Term_typing_error (p,ty1,ty2,unifier))
+    with Typing.Type_unification_error (ty1,ty2,unifier) ->
+      raise (Term_typing_error (p,ty1,ty2,unifier))
   in
-  let term,unifier = aux pre_term expected_type [] !Typing.global_unifier in
+  let term,unifier = aux ~instantiate_head pre_term expected_type [] !Typing.global_unifier in
   iter_free_types
     (fun v ty ->
        let ty = Typing.ty_norm ~unifier:unifier ty in
