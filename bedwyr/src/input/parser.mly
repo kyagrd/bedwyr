@@ -1,6 +1,6 @@
 /****************************************************************************
  * Bedwyr prover                                                            *
- * Copyright (C) 2006-2012 Baelde, Tiu, Ziegler, Heath                      *
+ * Copyright (C) 2006-2013 Baelde, Tiu, Ziegler, Heath                      *
  *                                                                          *
  * This program is free software; you can redistribute it and/or modify     *
  * it under the terms of the GNU General Public License as published by     *
@@ -192,8 +192,8 @@ ty_atom2:
   | PROP                                { Input.Typing.tprop }
   | STRING                              { Input.Typing.tstring }
   | NAT                                 { Input.Typing.tnat }
-  | UNDERSCORE                          { Input.Typing.fresh_tyvar () }
-  | UPPER_ID				{ Input.Typing.get_tyvar $1 }
+  | UNDERSCORE                          { Input.Typing.fresh_typaram () }
+  | UPPER_ID				{ Input.Typing.get_typaram $1 }
   | LPAREN ty RPAREN                    { $2 }
 
 /* definitions */
@@ -314,15 +314,15 @@ any_id:
 
 /* annotated id types */
 apred_id:
-  | lower_id                            { pos 1,$1,Input.Typing.fresh_typaram () }
+  | lower_id                            { pos 1,$1,Input.Typing.fresh_tyvar () }
   | lower_id COLON ty                   { pos 1,$1,$3 }
 
 abound_id:
-  | bound_id                            { pos 1,$1,Input.Typing.fresh_typaram () }
+  | bound_id                            { pos 1,$1,Input.Typing.fresh_tyvar () }
   | bound_id COLON ty                   { pos 1,$1,$3 }
 
 pabound_id:
-  | bound_id                            { pos 1,$1,Input.Typing.fresh_typaram () }
+  | bound_id                            { pos 1,$1,Input.Typing.fresh_tyvar () }
   | LPAREN bound_id COLON ty RPAREN     { pos 2,$2,$4 }
 
 /* predicate or constant in a term */

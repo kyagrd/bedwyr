@@ -29,14 +29,6 @@ Type tt     o.               % true
 Type and    o -> o -> o.     % conjunction
 Type imp    atom -> o -> o.  % implication restricted to second order
 
-Kind alist type.                   % List of atoms
-Type nil   alist.                  % empty olist
-Type cons  atom -> alist -> alist. % non-empty olist
-
-Define memb : atom -> alist -> prop by
-  memb X (cons X _);
-  memb X (cons _ L) := memb X L.
-
 % Object level types and quantifiers
 Kind tm            type.
 Kind p             type.
@@ -66,11 +58,13 @@ Define prog : atom -> o -> prop by
   prog (bpath (beta R N) P)         (pitm x\ imp (jump x N) (atm (bpath (R x) P)));
   prog (bpath X          P)         (and (atm (jump X N)) (atm (bpath N P))).
 
+#include "list.def".
+
 % Interpreter for the object-logic
-Define seq : alist -> o -> prop by
-  seq L (atm A)   := memb A L \/ (prog A D /\ seq L D);
+Define seq : list atom -> o -> prop by
+  seq L (atm A)   := member A L \/ (prog A D /\ seq L D);
   seq L (and G H) := seq L G /\ seq L H;
-  seq L (imp A G) := seq (cons A L) G;
+  seq L (imp A G) := seq (A ::: L) G;
   seq L (pitm G)  := nabla x, seq L (G x);
   seq L (pip  G)  := nabla x, seq L (G x).
 

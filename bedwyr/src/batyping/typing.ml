@@ -1,6 +1,6 @@
 (****************************************************************************)
 (* Bedwyr prover                                                            *)
-(* Copyright (C) 2012 Quentin Heath, Alwen Tiu                              *)
+(* Copyright (C) 2012-2013 Quentin Heath, Alwen Tiu                         *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -29,24 +29,24 @@ module type S = sig
   val dummy_pos : pos
 
   type ki
-  val ki_arrow : ki list -> ki -> ki
   val ktype : ki
+  val ki_arrow : ki list -> ki -> ki
 
 
   val pp_kind : Format.formatter -> ki -> unit
   val kind_to_string : ki ->string
 
   type ty
-  val ty_arrow : ty list -> ty -> ty
   val tconst : string -> ty list -> ty
   val tprop : ty
   val tstring : ty
   val tnat : ty
-  val tvar : int -> ty
   val tparam : int -> ty
-  val fresh_tyvar : unit -> ty
-  val get_tyvar : string -> ty
+  val tvar : int -> ty
+  val ty_arrow : ty list -> ty -> ty
   val fresh_typaram : unit -> ty
+  val get_typaram : string -> ty
+  val fresh_tyvar : unit -> ty
   val fresh_tyinst : ty -> ty
   val build_abstraction_types : int -> ty list * ty
 
@@ -135,31 +135,17 @@ module Make (I : INPUT) = struct
     | TProp
     | TString
     | TNat
-    | TVar        of int                (* type variables (for polymorphism) *)
-    | TParam      of int                (* type parameters (for type inference) *)
+    | TParam      of int                (* type parameters (for polymorphism) *)
+    | TVar        of int                (* type variables (for inference) *)
 
-  let ty_arrow tys = function
-    | Ty (tys',ty)        -> Ty (tys@tys',ty)
   let tconst name args = Ty ([],TConst (name, args))
   let tprop = Ty ([],TProp)
   let tstring = Ty ([],TString)
   let tnat = Ty ([],TNat)
-  let tvar i = Ty ([],TVar i)
   let tparam i = Ty ([],TParam i)
-
-  let fresh_tyvar =
-    let count = ref 0 in
-    fun () ->
-      incr count ;
-      tvar (!count)
-
-  let get_tyvar =
-    let bindings = ref [] in
-    fun s ->
-      try List.assoc s !bindings
-      with Not_found ->
-        let ty = fresh_tyvar () in
-        bindings := (s,ty) :: !bindings ; ty
+  let tvar i = Ty ([],TVar i)
+  let ty_arrow tys = function
+    | Ty (tys',ty)        -> Ty (tys@tys',ty)
 
   let fresh_typaram =
     let count = ref 0 in
@@ -167,8 +153,22 @@ module Make (I : INPUT) = struct
       incr count ;
       tparam (!count)
 
+  let get_typaram =
+    let bindings = ref [] in
+    fun s ->
+      try List.assoc s !bindings
+      with Not_found ->
+        let ty = fresh_typaram () in
+        bindings := (s,ty) :: !bindings ; ty
+
+  let fresh_tyvar =
+    let count = ref 0 in
+    fun () ->
+      incr count ;
+      tvar (!count)
+
   (* Create a fresh instance of a polymorphic type.
-   * All type variables are replaced with fresh type parameters. *)
+   * All type parameters are replaced with fresh type variables. *)
   let fresh_tyinst ty =
     let bindings = ref [] in
     let rec aux accum = function
@@ -177,11 +177,11 @@ module Make (I : INPUT) = struct
       | Ty ([],TConst (name,tys)) ->
           let tys = List.map (aux []) tys in
           Ty (List.rev accum,TConst (name,tys))
-      | Ty ([],TVar i) ->
+      | Ty ([],TParam i) ->
           let ty =
             try List.assoc i !bindings
             with Not_found ->
-              let ty = fresh_typaram () in
+              let ty = fresh_tyvar () in
               bindings := (i,ty) :: !bindings ; ty
           in
           ty_arrow (List.rev accum) ty
@@ -192,13 +192,13 @@ module Make (I : INPUT) = struct
 
   let build_abstraction_types arity =
     let rec aux tys ty a =
-      if a>0 then aux ((fresh_typaram ())::tys) ty (a-1)
+      if a>0 then aux ((fresh_tyvar ())::tys) ty (a-1)
       else tys,ty
     in
-    aux [] (fresh_typaram ()) arity
+    aux [] (fresh_tyvar ()) arity
 
   let pp_type chan ty =
-    let string_of_var =
+    let string_of_param =
       let bindings = ref [] in
       let count = ref 0 in
       function i ->
@@ -211,7 +211,10 @@ module Make (I : INPUT) = struct
           in
           incr count ; bindings := (i,s) :: !bindings ; s
     in
-    let string_of_param =
+    let string_of_var =
+      (* TODO do some magic to share the bindings
+       * between a list of calls to pp_type,
+       * so that #typeof's output makes actual sense *)
       let bindings = ref [] in
       let count = ref 0 in
       function i ->
@@ -220,7 +223,6 @@ module Make (I : INPUT) = struct
           let s = "?" ^ string_of_int !count in
           incr count ; bindings := (i,s) :: !bindings ; s
     in
-
     let rec aux par chan = function
       | Ty (ty::tys,ty_base) ->
           let print =
@@ -241,10 +243,10 @@ module Make (I : INPUT) = struct
           Format.fprintf chan "string"
       | Ty ([],TNat) ->
           Format.fprintf chan "nat"
-      | Ty ([],TVar i) ->
-          Format.fprintf chan "%s" (string_of_var i)
       | Ty ([],TParam i) ->
           Format.fprintf chan "%s" (string_of_param i)
+      | Ty ([],TVar i) ->
+          Format.fprintf chan "%s" (string_of_var i)
     and aux2 chan =
       List.iter (fun ty -> Format.fprintf chan " %a" (aux true) ty)
     in
@@ -277,8 +279,8 @@ module Make (I : INPUT) = struct
             (a,false,h,false,ho)
         | TProp -> (a,false,h,true,ho)
         | TString | TNat -> (a,false,h,false,ho)
-        | TVar _ -> (a,false,h,false,ho)
-        | TParam _ -> (a,true,true,false,ho)
+        | TParam _ -> (a,false,h,false,ho)
+        | TVar _ -> (a,true,true,false,ho)
     and aux2 (a,h,ho) ty =
       let (_,_,h',p',ho') = aux ty in
       (a+1,h || h',ho || p' || ho')
@@ -305,11 +307,11 @@ module Make (I : INPUT) = struct
       | Ty (tys,ty_base) ->
           aux_base (List.map aux tys) ty_base
     and aux_base tys ty_base = match ty_base with
-      | TProp | TString | TNat | TVar _ ->
+      | TProp | TString | TNat | TParam _ ->
           Ty (tys,ty_base)
       | TConst (name,tys1) ->
           Ty (tys,TConst (name,List.map aux tys1))
-      | TParam i ->
+      | TVar i ->
           try ty_arrow tys (aux (Unifier.find i unifier))
           with Not_found -> Ty (tys,ty_base)
     in
@@ -333,9 +335,9 @@ module Make (I : INPUT) = struct
       | Ty (tys,ty_base) ->
           List.exists aux tys || aux_base ty_base
     and aux_base = function
-      | TProp | TString | TNat | TVar _ -> false
+      | TProp | TString | TNat | TParam _ -> false
       | TConst (_,tys) -> List.exists aux tys
-      | TParam j ->
+      | TVar j ->
           if i=j then true
           else try aux (Unifier.find j unifier)
           with Not_found -> false
@@ -347,7 +349,7 @@ module Make (I : INPUT) = struct
   (* TODO [unifier] needs to be GC-ed,
    * or at least we should avoid unnecessary chained references,
    * for instance by soft-normaliying (leaving only the last
-   * typaram) and removing the pure typarams from the unifier
+   * tyvar) and removing the pure typarams from the unifier
    *)
   let unify_constraint unifier ty1' ty2' =
     let rec aux u ty1 ty2 = match ty1,ty2 with
@@ -362,17 +364,17 @@ module Make (I : INPUT) = struct
               raise (Type_unification_error (ty1',ty2',unifier))
           else
              raise (Type_unification_error (ty1',ty2',unifier))
-      | Ty ([],TParam i),_ when Unifier.mem i u ->
+      | Ty ([],TVar i),_ when Unifier.mem i u ->
           let ty1 = Unifier.find i u in
           aux u ty1 ty2
-      | _,Ty ([],TParam j) when Unifier.mem j u ->
+      | _,Ty ([],TVar j) when Unifier.mem j u ->
           let ty2 = Unifier.find j u in
           aux u ty1 ty2
-      | Ty ([],TParam i),_ ->
+      | Ty ([],TVar i),_ ->
           if occurs u i ty2
           then raise (Type_unification_error (ty1',ty2',unifier))
           else Unifier.add i ty2 u
-      | _,Ty ([],TParam j) ->
+      | _,Ty ([],TVar j) ->
           if occurs u j ty1
           then raise (Type_unification_error (ty1',ty2',unifier))
           else Unifier.add j ty1 u

@@ -1,6 +1,6 @@
 (****************************************************************************)
 (* Bedwyr prover                                                            *)
-(* Copyright (C) 2012 Quentin Heath, Alwen Tiu                              *)
+(* Copyright (C) 2012-2013 Quentin Heath, Alwen Tiu                         *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -236,7 +236,7 @@ let type_check_and_translate
           let u = Typing.unify_constraint u exty Typing.tprop in
           Term.op_false,u
       | Eq (_,pt1,pt2) ->
-          let ty = Typing.fresh_typaram () in
+          let ty = Typing.fresh_tyvar () in
           let u = Typing.unify_constraint u exty Typing.tprop in
           let t1,u = aux ~negative pt1 ty bvars u in
           let t2,u = aux ~negative pt2 ty bvars u in
@@ -276,7 +276,7 @@ let type_check_and_translate
           let arity = List.length vars in
           let bvars = List.rev_append vars bvars in
           let tys = List.map bound_var_type vars in
-          let ty = Typing.fresh_typaram () in
+          let ty = Typing.fresh_tyvar () in
           let u = Typing.unify_constraint u exty (Typing.ty_arrow tys ty) in
           let t,u = aux ~negative pt ty bvars u in
           Term.lambda arity t,u

@@ -78,14 +78,9 @@ Define sat : p -> form -> prop by
 
 % A complete encoding: using explicit list of names.
 
-Kind list       type.
-Type cons       _ -> list -> list.
-Type nil        list.
+#include "../list.def".
 
-Define member : name -> list -> prop by
-  member X (cons Y L) := (X = Y) \/ member X L.
-
-Define lsat : list -> p -> form -> prop by
+Define lsat : list name -> p -> form -> prop by
   lsat L P top;
   lsat L P (land A B) := lsat L P A /\ lsat L P B;
   lsat L P (lor  A B) := lsat L P A \/ lsat L P B;
@@ -94,28 +89,28 @@ Define lsat : list -> p -> form -> prop by
   lsat L P (boxAct X A) := forall P1, one P X P1 -> lsat L P1 A;
   lsat L P (diaAct X A) := exists P1, one P X P1 /\ lsat L P1 A;
   lsat L P (boxOut X A) :=
-    forall Q, onep P (up X) Q -> nabla y, lsat (cons y L) (Q y) (A y);
+    forall Q, onep P (up X) Q -> nabla y, lsat (y ::: L) (Q y) (A y);
   lsat L P (diaOut X A) :=
-    exists Q, onep P (up X) Q /\ nabla y, lsat (cons y L) (Q y) (A y);
+    exists Q, onep P (up X) Q /\ nabla y, lsat (y ::: L) (Q y) (A y);
   lsat L P (boxIn X A) :=
     forall Q, onep P (dn X) Q ->
-      nabla w, forall y, (member y (cons w L) -> lsat (cons w L) (Q y) (A y));
+      nabla w, forall y, (member y (w ::: L) -> lsat (w ::: L) (Q y) (A y));
   lsat L P (diaIn X A) :=
     exists Q, onep P (dn X) Q /\
-      nabla w, exists y, (member y (cons w L) /\ lsat (cons w L) (Q y) (A y));
+      nabla w, exists y, (member y (w ::: L) /\ lsat (w ::: L) (Q y) (A y));
   lsat L P (boxInL X A) :=
     forall Q, onep P (dn X) Q ->
-      nabla w, exists y, (member y (cons w L) /\ lsat (cons w L) (Q y) (A y));
+      nabla w, exists y, (member y (w ::: L) /\ lsat (w ::: L) (Q y) (A y));
   lsat L P (diaInL X A) :=
     exists Q, onep P (dn X) Q /\
-      nabla w, forall y, (member y (cons w L) -> lsat (cons w L) (Q y) (A y));
+      nabla w, forall y, (member y (w ::: L) -> lsat (w ::: L) (Q y) (A y));
   lsat L P (boxInE X A) :=
     nabla w, exists y,
-      (member y (cons w L) /\
-         forall Q, onep P (dn X) Q -> lsat (cons w L) (Q y) (A y));
+      (member y (w ::: L) /\
+         forall Q, onep P (dn X) Q -> lsat (w ::: L) (Q y) (A y));
   lsat L P (diaInE X A) :=
-    nabla w, forall y, member y (cons w L) ->
-      exists Q, onep P (dn X) Q /\ lsat (cons w L) (Q y) (A y).
+    nabla w, forall y, member y (w ::: L) ->
+      exists Q, onep P (dn X) Q /\ lsat (w ::: L) (Q y) (A y).
 
 
 % Some examples ===============================================================
@@ -147,11 +142,11 @@ Define test : nat -> prop by
   % This will generate an exception
   test 1 := process 1 P /\ assert 1 A /\ sat P A;
   % However, lsat is complete
-  test 2 := process 1 P /\ assert 1 A /\ lsat (cons x nil) P A;
+  test 2 := process 1 P /\ assert 1 A /\ lsat (x ::: nil) P A;
   % The excluded middle example is not provable using sat,
   % but is provable using lsat.
   test 3 := process 2 P /\ assert 2 A /\ sat P A;
-  test 4 := process 2 P /\ assert 2 A /\ lsat (cons x nil) P A;
+  test 4 := process 2 P /\ assert 2 A /\ lsat (x ::: nil) P A;
   test 5 := process 3 P /\ process 4 Q /\ assert 3 A /\ sat P A /\ sat Q A.
 
 #assert_raise test 1.

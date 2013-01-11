@@ -113,20 +113,14 @@ Define trace : p -> p -> prop by
     onep P nd Q /\
     nabla x, trace (Q x) (T x).
 
-
-Kind list       type.
-Type cons       obj -> list -> list.
-Type nil        list.
-Define remove : obj -> list -> list -> prop by
-  remove X (cons X L) L;
-  remove X (cons Y L) R := remove X L R.
+#include "../list.def".
 
 % Check whether a trace is a correspondence. The list L is the accumulated
 % "begin" assertions. Use tabling to speed up proof search.
-Define inductive iscorr : list -> p -> prop by
+Define inductive iscorr : list obj -> p -> prop by
   iscorr L stop;
-  iscorr L (begin M T) := iscorr (cons M L) T;
-  iscorr L ($end M T) := remove M L L1 /\ iscorr L1 T;
+  iscorr L (begin M T) := iscorr (M ::: L) T;
+  iscorr L ($end M T) := remove L M L1 /\ iscorr L1 T;
   iscorr L (nu x\(T x)) := nabla x, iscorr L (T x).
 
 
