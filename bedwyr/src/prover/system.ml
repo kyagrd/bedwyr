@@ -618,8 +618,8 @@ let print_env () =
     Format.printf "@[<v 3>*** Constants ***" ;
     List.iter
       (fun (n,ty) -> Format.printf "@,@[%s :@;<1 2>%a@]"
-                     n
-                     (fun ty -> Typing.pp_type_norm ty) ty)
+                       n
+                       (Typing.get_pp_type ()) ty)
       (List.sort (fun (x,_) (y,_) -> compare x y) lc) ;
     Format.printf "@]@."
   in
@@ -632,9 +632,9 @@ let print_env () =
     Format.printf "@[<v 1>*** Predicates ***" ;
     List.iter
       (fun (n,f,ty) -> Format.printf "@,@[%s%s :@;<1 4>%a@]"
-                       (string_of_flavour f)
-                       n
-                       (fun ty -> Typing.pp_type_norm ty) ty)
+                         (string_of_flavour f)
+                         n
+                         (Typing.get_pp_type ()) ty)
       (List.sort (fun (x,_,_) (y,_,_) -> compare x y) lp) ;
     Format.printf "@]@."
   in
@@ -654,13 +654,13 @@ let get_types pre_term =
 
 let print_type_of pre_term =
   let t,ty,free_types = get_types pre_term in
+  let pp_type = Typing.get_pp_type () in
   Format.printf "@[<v 3>@[%a :@;<1 2>%a@]"
     Pprint.pp_term t
-    Typing.pp_type ty ;
+    pp_type ty ;
   Hashtbl.iter
     (fun v ty -> Format.printf "@,@[%s :@;<1 2>%a@]"
-                   (Term.get_var_name v)
-                   (fun ty -> Typing.pp_type_norm ty) ty)
+                   (Term.get_var_name v) pp_type ty)
     free_types ;
   Format.printf "@]@."
 

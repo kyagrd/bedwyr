@@ -50,9 +50,6 @@ module type S = sig
   val fresh_tyinst : ty -> ty
   val build_abstraction_types : int -> ty list * ty
 
-  val pp_type : Format.formatter -> ty -> unit
-  val type_to_string : ty -> string
-
   exception Type_kinding_error of string * pos option * ki * ki
   val kind_check :
     ?p:pos ->
@@ -65,14 +62,15 @@ module type S = sig
   val global_unifier : type_unifier ref
   val clear : unit -> unit
   val ty_norm : ?unifier:type_unifier -> ty -> ty
-  val pp_type_norm :
-    ?unifier:type_unifier -> Format.formatter -> ty -> unit
-  val type_to_string_norm :
-    ?unifier:type_unifier -> ty -> string
 
   exception Hollow_type of string
   exception Type_unification_error of ty * ty * type_unifier
   val unify_constraint : type_unifier -> ty -> ty -> type_unifier
+
+  val get_pp_type :
+    ?unifier:type_unifier -> unit -> Format.formatter -> ty -> unit
+  val type_to_string :
+    ?unifier:type_unifier -> ty -> string
 end
 
 module Make (I : INPUT) = struct
@@ -197,7 +195,7 @@ module Make (I : INPUT) = struct
     in
     aux [] (fresh_tyvar ()) arity
 
-  let pp_type chan ty =
+  let get_pp_type () =
     let string_of_param =
       let bindings = ref [] in
       let count = ref 0 in
@@ -212,9 +210,6 @@ module Make (I : INPUT) = struct
           incr count ; bindings := (i,s) :: !bindings ; s
     in
     let string_of_var =
-      (* TODO do some magic to share the bindings
-       * between a list of calls to pp_type,
-       * so that #typeof's output makes actual sense *)
       let bindings = ref [] in
       let count = ref 0 in
       function i ->
@@ -250,10 +245,8 @@ module Make (I : INPUT) = struct
     and aux2 chan =
       List.iter (fun ty -> Format.fprintf chan " %a" (aux true) ty)
     in
-    Format.fprintf chan "@[%a@]" (aux false) ty
-
-  let type_to_string ty =
-    do_formatter (fun () -> pp_type formatter ty)
+    fun chan ty ->
+      Format.fprintf chan "@[%a@]" (aux false) ty
 
   (* Kind checking *)
 
@@ -320,13 +313,14 @@ module Make (I : INPUT) = struct
   let kind_check ?p ty ~atomic_kind =
     kind_check ?p (ty_norm ty) ~atomic_kind
 
-  let pp_type_norm ?unifier chan ty =
-    let ty = ty_norm ?unifier ty in
-    pp_type chan ty
+  let get_pp_type ?unifier () =
+    let pp_type = get_pp_type () in
+    fun chan ty ->
+      let ty = ty_norm ?unifier ty in
+      pp_type chan ty
 
-  let type_to_string_norm ?unifier ty =
-    let ty = ty_norm ?unifier ty in
-    type_to_string ty
+  let type_to_string ?unifier ty =
+    do_formatter (fun () -> get_pp_type ?unifier () formatter ty)
 
   exception Hollow_type of string
 

@@ -243,7 +243,7 @@ let rec process ?(test=false) ?(interactive=false) parse lexbuf =
           eprintf def_error ~p
             "Cannot declare constant %s of type %a:@ %s."
             n
-            Input.Typing.pp_type ty
+            (Input.Typing.get_pp_type ()) ty
             s
       | System.Invalid_flavour (n,p,gf,f) ->
           let string_of_flavour = function
@@ -260,7 +260,7 @@ let rec process ?(test=false) ?(interactive=false) parse lexbuf =
           eprintf def_error ~p
             "Cannot declare predicate %s of type %a:@ %s."
             n
-            Input.Typing.pp_type ty
+            (Input.Typing.get_pp_type ()) ty
             s
 
       (* Definitions and theorems *)
@@ -293,18 +293,18 @@ let rec process ?(test=false) ?(interactive=false) parse lexbuf =
       | Input.Term_typing_error (p,ty1,ty2,unifier) ->
           eprintf def_error ~p
             "Typing error: this term has type %a but is used as %a."
-            (Input.Typing.pp_type_norm ~unifier) ty2
-            (Input.Typing.pp_type_norm ~unifier) ty1
+            (Input.Typing.get_pp_type ~unifier ()) ty2
+            (Input.Typing.get_pp_type ~unifier ()) ty1
       | Input.Var_typing_error (n,p,ty) ->
           begin match n with
             | Some n ->
                 eprintf def_error ~p
                   "Typing error: cannot give free variable %s the type %a." n
-                  Input.Typing.pp_type ty
+                  (Input.Typing.get_pp_type ()) ty
             | None ->
                 eprintf def_error ~p
                   "Typing error: cannot quantify over type %a."
-                  Input.Typing.pp_type ty
+                  (Input.Typing.get_pp_type ()) ty
           end
       | Input.Typing.Hollow_type n ->
           eprintf def_error

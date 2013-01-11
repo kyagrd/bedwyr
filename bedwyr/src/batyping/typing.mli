@@ -75,10 +75,6 @@ module type S = sig
   val fresh_tyinst : ty -> ty
   val build_abstraction_types : int -> ty list * ty
 
-  (** Print a type. *)
-  val pp_type : Format.formatter -> ty -> unit
-  val type_to_string : ty -> string
-
   (** {6 Kind checking} *)
 
   (** Kind checking error. *)
@@ -117,12 +113,6 @@ module type S = sig
     * unifier. *)
   val ty_norm : ?unifier:type_unifier -> ty -> ty
 
-  (** Print a type in a more unique way. *)
-  val pp_type_norm :
-    ?unifier:type_unifier -> Format.formatter -> ty -> unit
-  val type_to_string_norm :
-    ?unifier:type_unifier -> ty -> string
-
   (** Type incompletely inferred. *)
   exception Hollow_type of string
 
@@ -132,6 +122,18 @@ module type S = sig
   (** Refines the provided unifier accordingly to a pair of types. *)
   val unify_constraint : type_unifier -> ty -> ty -> type_unifier
   (* TODO Does this unification procedure have a name?*)
+
+  (** {6 Output} *)
+
+  (** Print a type. *)
+  val get_pp_type :
+    ?unifier:type_unifier -> unit -> Format.formatter -> ty -> unit
+  (** [get_pp_type ()] builds a formatting function which will always
+    * use the same representation for a given type parameter
+    * or variable. It can be used to display the types of multiple
+    * formulae with consistency. *)
+  val type_to_string :
+    ?unifier:type_unifier -> ty -> string
 end
 
 (** Functor building an implementation of the typing structure,
