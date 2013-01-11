@@ -87,17 +87,12 @@ let declare_type (p,name) ki =
   else Hashtbl.add type_kinds ty_var ki
 
 let atomic_kind (p,name) =
-    let type_var = Term.get_var (Term.atom ~tag:Term.Constant name) in
-    try Hashtbl.find type_kinds type_var
-    with Not_found -> raise (Missing_type (name,p))
+  let type_var = Term.get_var (Term.atom ~tag:Term.Constant name) in
+  try Hashtbl.find type_kinds type_var
+  with Not_found -> raise (Missing_type (name,p))
 
-let kind_check ?(expected_kind=Typing.ktype) ty =
-  (* let atomic_kind (p,name) = *)
-  (*    let type_var = Term.get_var (Term.atom ~tag:Term.Constant name) in *)
-  (*    try Hashtbl.find type_kinds type_var *)
-  (*    with Not_found -> raise (Missing_type (name,p)) *)
-  (* in *)
-  Typing.kind_check ty expected_kind ~atomic_kind
+let kind_check p ty =
+  Typing.kind_check ~p ty ~atomic_kind
 
 
 (* Constants and predicates declarations *)
@@ -135,7 +130,7 @@ let declare_const (p,name) ty =
   else if List.mem const_var Logic.predefined then
     raise (Invalid_const_declaration
              (name,p,ty,"name conflict with a predefined predicate"))
-  else let _ = kind_check ty in
+  else let _ = kind_check p ty in
   Hashtbl.add decls const_var (Constant ty)
 
 let create_def stratum global_flavour (flavour,p,name,ty) =
@@ -146,8 +141,8 @@ let create_def stratum global_flavour (flavour,p,name,ty) =
   else if List.mem head_var Logic.predefined then
     raise (Invalid_pred_declaration
              (name,p,ty,"name conflict with a predefined predicate"))
-  else let (arity,flex,_,propositional,_) = kind_check ty in
-  if not (propositional || flex) then
+  else let (arity,flex_head,_,propositional,_) = kind_check p ty in
+  if not (propositional || flex_head) then
     raise (Invalid_pred_declaration
              (name,p,ty,Format.sprintf
                           "target type can only be %s"
@@ -195,7 +190,6 @@ exception Stratification_error of string * Input.pos
 
 let translate_term
       ?stratum
-      ?(phead_name=None)
       ?(free_args=[])
       ?(infer=true)
       ?(expected_type=Typing.tprop)
@@ -312,11 +306,10 @@ let translate_term
   in
   (* return the type of the variable corresponding to an annotated ID *)
   let bound_var_type (p,name,ty) =
-    let _ = kind_check ty in ty
+    let _ = kind_check p ty in ty
   in
   Input.type_check_and_translate
     ?stratum
-    ~phead_name
     ~infer
     ~iter_free_types
     ~free_args
@@ -420,11 +413,10 @@ let add_def_clause stratum (p,pre_head,pre_body) =
   let free_types : (Term.var,Typing.ty) Hashtbl.t =
     Hashtbl.create 10
   in
-  let phead_name = Input.pred_name pre_head in 
   let free_args = Input.free_args pre_head in
   (* XXX what about stratum in theorems? *)
-  let head,_ = translate_term ~stratum ~phead_name ~free_args pre_head free_types in
-  let body,_ = translate_term ~stratum ~phead_name ~free_args pre_body free_types in
+  let head,_ = translate_term ~stratum ~free_args pre_head free_types in
+  let body,_ = translate_term ~stratum ~free_args pre_body free_types in
   let pred,arity,body =
     mk_def_clause p head body
   in
