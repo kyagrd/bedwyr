@@ -284,7 +284,7 @@ let type_check_and_translate
           let arity = List.length pargs in
           let tys,ty = Typing.build_abstraction_types arity in
           let u = Typing.unify_constraint u exty ty in
-          let hd,u = aux ~negative phd (Typing.ty_arrow tys ty) bvars u in
+          let hd,u = aux ~instantiate_head ~negative phd (Typing.ty_arrow tys ty) bvars u in
           let u,args = List.fold_left2
                          (fun (u,args) pt ty ->
                             let t,u = aux ~negative pt ty bvars u in u,t::args)
