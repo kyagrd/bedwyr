@@ -183,7 +183,7 @@ let type_check_and_translate
       ?(free_args=[])
       pre_term
       expected_type
-      (typed_free_var,typed_declared_obj,typed_intern_pred,bound_var_type) =
+      (typed_free_var,typed_declared_obj,typed_intern_pred,bound_var_type,atomic_kind) =
   let find_db s bvars =
     let rec aux n = function
       | [] -> None
@@ -219,6 +219,7 @@ let type_check_and_translate
             | None -> (* declared object *)
                 let stratum = (if negative then stratum else None) in
                 let t,ty = typed_declared_obj ?stratum (p,s) in
+                let ty = Typing.fresh_inst ty in 
                 let u = Typing.unify_constraint u exty ty in
                 t,u
           end
@@ -263,7 +264,7 @@ let type_check_and_translate
             (fun (p,_,ty) ->
                let ty = Typing.ty_norm ~unifier:u ty in
                let (_,_,_,propositional,higher_order) =
-                 Typing.kind_check ty Typing.ktype
+                 Typing.kind_check ty Typing.ktype ~atomic_kind
                in
                if higher_order || propositional
                then raise (Var_typing_error (None,p,ty)))
@@ -302,7 +303,7 @@ let type_check_and_translate
        let n = Term.get_var_name v in
        if not (List.mem n free_args) then begin
          let (_,_,_,propositional,higher_order) =
-           Typing.kind_check ty Typing.ktype
+           Typing.kind_check ty Typing.ktype ~atomic_kind
          in
          if infer && (higher_order || propositional)
          then raise (Var_typing_error (Some n,get_pos pre_term,ty))

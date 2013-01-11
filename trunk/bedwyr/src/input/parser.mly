@@ -165,7 +165,7 @@ type_clist:
   | lower_id COMMA type_clist           { (pos 1,$1)::$3 }
 
 ki:
-  | ki RARROW ki                        { Input.Typing.ki_arrow [$1] $3 }
+  | TYPE RARROW ki                      { Input.Typing.ki_arrow [Input.Typing.ktype] $3 }
   | TYPE                                { Input.Typing.ktype }
   | LPAREN ki RPAREN                    { $2 }
 
@@ -173,14 +173,37 @@ const_clist:
   | const_id                            { [pos 1,$1] }
   | const_id COMMA const_clist          { (pos 1,$1)::$3 }
 
-ty:
-  | ty RARROW ty                        { Input.Typing.ty_arrow [$1] $3 }
+ty_list:
+  | ty_atom                             { [$1] }
+  | ty_atom ty_list                     { $1 :: $2 }
+
+ty_atom: 
   | lower_id                            { Input.Typing.tconst $1 }
+  | lower_id ty_list                    { Input.Typing.tfunc $1 $2 }
   | PROP                                { Input.Typing.tprop }
   | STRING                              { Input.Typing.tstring }
   | NAT                                 { Input.Typing.tnat }
   | UNDERSCORE                          { Input.Typing.fresh_typaram () }
+  | UPPER_ID				{ Input.Typing.get_typaram $1 }
   | LPAREN ty RPAREN                    { $2 }
+
+ty:
+  | ty_atom                             { $1 }
+  | ty RARROW ty                        { Input.Typing.ty_arrow [$1] $3 }
+
+/*
+ty:
+  | ty RARROW ty                        { Input.Typing.ty_arrow [$1] $3 }
+  | lower_id                            { Input.Typing.tconst $1 }
+  | lower_id ty_list                    { Input.Typing.tfunc $1 $2 }
+  | PROP                                { Input.Typing.tprop }
+  | STRING                              { Input.Typing.tstring }
+  | NAT                                 { Input.Typing.tnat }
+  | UNDERSCORE                          { Input.Typing.fresh_typaram () }
+  | UPPER_ID				{ Input.Typing.get_typaram $1 }
+  | LPAREN ty RPAREN                    { $2 }
+*/
+
 
 /* definitions */
 
