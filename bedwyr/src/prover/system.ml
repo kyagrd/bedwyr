@@ -195,6 +195,7 @@ exception Stratification_error of string * Input.pos
 
 let translate_term
       ?stratum
+      ?(phead_name=None)
       ?(free_args=[])
       ?(infer=true)
       ?(expected_type=Typing.tprop)
@@ -220,7 +221,7 @@ let translate_term
     let v = Term.get_var t in
     try
       let ty = Hashtbl.find free_types v in
-      t,ty
+        t,ty
     with Not_found ->
       let t,v =
         if was_free then t,v else begin
@@ -315,6 +316,7 @@ let translate_term
   in
   Input.type_check_and_translate
     ?stratum
+    ~phead_name
     ~infer
     ~iter_free_types
     ~free_args
@@ -418,10 +420,11 @@ let add_def_clause stratum (p,pre_head,pre_body) =
   let free_types : (Term.var,Typing.ty) Hashtbl.t =
     Hashtbl.create 10
   in
+  let phead_name = Input.pred_name pre_head in 
   let free_args = Input.free_args pre_head in
   (* XXX what about stratum in theorems? *)
-  let head,_ = translate_term ~stratum ~free_args pre_head free_types in
-  let body,_ = translate_term ~stratum ~free_args pre_body free_types in
+  let head,_ = translate_term ~stratum ~phead_name ~free_args pre_head free_types in
+  let body,_ = translate_term ~stratum ~phead_name ~free_args pre_body free_types in
   let pred,arity,body =
     mk_def_clause p head body
   in
