@@ -231,7 +231,7 @@ term_atom:
   | FALSE                               { Input.pre_false (pos 0) }
   | LPAREN formula RPAREN               { Input.change_pos (pos 1) $2 (pos 3) }
   | LPAREN term RPAREN                  { $2 }
-  | LPAREN INFIX_ID RPAREN              { Input.pre_predconstid (pos 0) $2 }
+  | LPAREN INFIX_ID RPAREN              { Input.pre_predconstid (pos 0) ("("^$2^")") }
   | token_id                            { $1 }
   | QSTRING                             { let p,s = $1 in
                                           Input.pre_qstring p s }
@@ -245,7 +245,7 @@ term:
                                           Input.pre_app (pos 1) t l }
   | term INFIX_ID term                  { Input.pre_app
                                             (pos 0)
-                                            (Input.pre_predconstid (pos 2) $2)
+                                            (Input.pre_predconstid (pos 2) ("("^$2^")"))
                                             [$1; $3] }
 
 formula:
@@ -304,12 +304,12 @@ bound_id:
 
 const_id:
   | lower_id                            { $1 }
-  | INFIX_ID                            { $1 }
+  | INFIX_ID                            { ("("^$1^")") }
 
 any_id:
   | upper_id                            { $1 }
   | lower_id                            { $1 }
-  | INFIX_ID                            { $1 }
+  | INFIX_ID                            { ("("^$1^")") }
   | INTERN_ID                           { $1 }
 
 /* annotated id types */
