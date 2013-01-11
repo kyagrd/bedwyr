@@ -54,6 +54,7 @@ module type S = sig
 
   (** User-defined base type. *)
   val tconst : string -> ty
+  val tfunc : string -> ty list -> ty
   val tprop : ty
   val tstring : ty
   val tnat : ty
@@ -65,6 +66,7 @@ module type S = sig
   val tparam : int -> ty
   val fresh_tyvar : unit -> ty
   val fresh_typaram : unit -> ty
+  val get_typaram : string -> ty
   val build_abstraction_types : int -> ty list * ty
 
   (** Print a type. *)
@@ -126,6 +128,8 @@ module type S = sig
   (** Refines the provided unifier accordingly to a pair of types. *)
   val unify_constraint : type_unifier -> ty -> ty -> type_unifier
   (* TODO Does this unification procedure have a name?*)
+
+  val fresh_inst : ty -> ty
 end
 
 (** Functor building an implementation of the typing structure,
