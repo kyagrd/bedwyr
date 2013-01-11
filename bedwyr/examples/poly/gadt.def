@@ -11,7 +11,7 @@ Kind exp type -> type.
 Type nat_exp  nt  -> exp nt.  
                               
 Type bool_exp bool -> exp bool.
-Type if_exp   exp bool -> exp nt -> exp nt -> exp nt.
+Type if_exp   exp bool -> exp A -> exp A -> exp A.
 
 
 Define eval : (exp A) -> A -> prop by
