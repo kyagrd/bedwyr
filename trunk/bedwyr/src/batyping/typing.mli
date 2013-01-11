@@ -1,6 +1,6 @@
 (****************************************************************************)
 (* Bedwyr prover                                                            *)
-(* Copyright (C) 2012 Quentin Heath, Alwen Tiu                              *)
+(* Copyright (C) 2012-2013 Quentin Heath, Alwen Tiu                         *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -37,8 +37,8 @@ module type S = sig
 
   (** Kind (of type operators). *)
   type ki
-  val ki_arrow : ki list -> ki -> ki
   val ktype : ki
+  val ki_arrow : ki list -> ki -> ki
 
   (** Print a kind. *)
   val pp_kind : Format.formatter -> ki -> unit
@@ -50,27 +50,28 @@ module type S = sig
     * including some predefined monomorphic ones. *)
   type ty
 
-  (** Type composition. *)
-  val ty_arrow : ty list -> ty -> ty
-
   (** User-defined base type. *)
   val tconst : string -> ty list -> ty
   val tprop : ty
   val tstring : ty
   val tnat : ty
 
-  (** Type variables (for polymorphism). *)
+  (** Type parameters (for polymorphism). *)
+  val tparam : int -> ty
+
+  (** Type variables (for type inference). *)
   val tvar : int -> ty
 
-  (** Type parameters (for type inference). *)
-  val tparam : int -> ty
-  val fresh_tyvar : unit -> ty
-  (** Map type names to parametric types (ie type variables).
-    * XXX take care of this param/var naming inconsistency *)
-  val get_tyvar : string -> ty
+  (** Type composition. *)
+  val ty_arrow : ty list -> ty -> ty
   val fresh_typaram : unit -> ty
+
+  (** Map type names to parametric types. *)
+  val get_typaram : string -> ty
+  val fresh_tyvar : unit -> ty
+
   (** Create a fresh instance of a polymorphic type.
-    * All type variables are replaced with fresh type parameters. *)
+    * All type parameters are replaced with fresh type variables. *)
   val fresh_tyinst : ty -> ty
   val build_abstraction_types : int -> ty list * ty
 

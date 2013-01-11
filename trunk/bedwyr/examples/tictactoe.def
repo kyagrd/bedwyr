@@ -1,20 +1,19 @@
-Kind    list,
-        cell,
+Kind    cell,
         row,
         board   type.
 
-Type    nil'    list.
 Type    b,o,x   cell.
-Type    c       cell -> list -> list.
 Type    row     cell -> cell -> cell -> row.
 Type    board   row -> row -> row -> board.
+
+#include "list.def".
 
 % convert Internal External
 % Allows us to convert between internal and external formats.
 % The external format is simple to read and write, but the internal
 % format is better for recursion.
-Define convert : list -> board -> prop by
-  convert (c A (c B (c C (c D (c E (c F (c G (c H (c I nil')))))))))
+Define convert : list cell -> board -> prop by
+  convert (A ::: B ::: C ::: D ::: E ::: F ::: G ::: H ::: I ::: nil)
           (board (row A B C) (row D E F) (row G H I)).
 
 % Useful for theorems.
@@ -22,39 +21,39 @@ Define convert : list -> board -> prop by
 % the half turn and the anticlockwise turn enabled,
 % adds too much complexity for backward chaining
 % (for the third and fourth asserts).
-Define symmetries : list -> list -> prop by
+Define symmetries : list cell -> list cell -> prop by
   % vertical flip
   symmetries
-    (c A (c B (c C (c D (c E (c F (c G (c H (c I nil')))))))))
-    (c C (c B (c A (c F (c E (c D (c I (c H (c G nil')))))))));
+    (A ::: B ::: C ::: D ::: E ::: F ::: G ::: H ::: I ::: nil)
+    (C ::: B ::: A ::: F ::: E ::: D ::: I ::: H ::: G ::: nil);
 % % horizontal flip
 % symmetries
-%   (c A (c B (c C (c D (c E (c F (c G (c H (c I nil')))))))))
-%   (c G (c H (c I (c D (c E (c F (c A (c B (c C nil')))))))));
+%   (A ::: B ::: C ::: D ::: E ::: F ::: G ::: H ::: I ::: nil)
+%   (G ::: H ::: I ::: D ::: E ::: F ::: A ::: B ::: C ::: nil);
 % % anticlockwise turn
 % symmetries
-%   (c A (c B (c C (c D (c E (c F (c G (c H (c I nil')))))))))
-%   (c C (c F (c I (c B (c E (c H (c A (c D (c G nil')))))))));
+%   (A ::: B ::: C ::: D ::: E ::: F ::: G ::: H ::: I ::: nil)
+%   (C ::: F ::: I ::: B ::: E ::: H ::: A ::: D ::: G ::: nil);
 % % half turn
 % symmetries
-%   (c A (c B (c C (c D (c E (c F (c G (c H (c I nil')))))))))
-%   (c I (c H (c G (c F (c E (c D (c C (c B (c A nil')))))))));
+%   (A ::: B ::: C ::: D ::: E ::: F ::: G ::: H ::: I ::: nil)
+%   (I ::: H ::: G ::: F ::: E ::: D ::: C ::: B ::: A ::: nil);
   % clockwise turn
   symmetries
-    (c A (c B (c C (c D (c E (c F (c G (c H (c I nil')))))))))
-    (c G (c D (c A (c H (c E (c B (c I (c F (c C nil'))))))))).
+    (A ::: B ::: C ::: D ::: E ::: F ::: G ::: H ::: I ::: nil)
+    (G ::: D ::: A ::: H ::: E ::: B ::: I ::: F ::: C ::: nil).
 
 % winner Player Board
 % True if Player has won on the Board
-Define winner : cell -> list -> prop by
-  winner W (c W (c W (c W (c A (c B (c C (c D (c E (c F nil')))))))));
-  winner W (c A (c B (c C (c W (c W (c W (c D (c E (c F nil')))))))));
-  winner W (c A (c B (c C (c D (c E (c F (c W (c W (c W nil')))))))));
-  winner W (c W (c A (c B (c W (c C (c D (c W (c E (c F nil')))))))));
-  winner W (c A (c W (c B (c C (c W (c D (c E (c W (c F nil')))))))));
-  winner W (c A (c B (c W (c C (c D (c W (c E (c F (c W nil')))))))));
-  winner W (c W (c A (c B (c C (c W (c D (c E (c F (c W nil')))))))));
-  winner W (c A (c B (c W (c C (c W (c D (c W (c E (c F nil'))))))))).
+Define winner : cell -> list cell -> prop by
+  winner W (W ::: W ::: W ::: A ::: B ::: C ::: D ::: E ::: F ::: nil);
+  winner W (A ::: B ::: C ::: W ::: W ::: W ::: D ::: E ::: F ::: nil);
+  winner W (A ::: B ::: C ::: D ::: E ::: F ::: W ::: W ::: W ::: nil);
+  winner W (W ::: A ::: B ::: W ::: C ::: D ::: W ::: E ::: F ::: nil);
+  winner W (A ::: W ::: B ::: C ::: W ::: D ::: E ::: W ::: F ::: nil);
+  winner W (A ::: B ::: W ::: C ::: D ::: W ::: E ::: F ::: W ::: nil);
+  winner W (W ::: A ::: B ::: C ::: W ::: D ::: E ::: F ::: W ::: nil);
+  winner W (A ::: B ::: W ::: C ::: W ::: D ::: W ::: E ::: F ::: nil).
 
 Theorem winner_symmetries :
   symmetries List List' /\ winner W List -> winner W List'.
@@ -63,39 +62,39 @@ Qed.
 
 % nowinner Board
 % True if nobody has won on the Board yet
-Define nowinner : list -> prop by
+Define nowinner : list cell -> prop by
   nowinner B := forall X, winner X B -> X = b.
 
 % move Board Player Board'
 % True if Board' is the same as Board except for one move by Player.
-Define move : list -> cell -> list -> prop by
-  move (c b L) W (c W L);
-  move (c X L) W (c X K) := move L W K.
+Define move : list cell -> cell -> list cell -> prop by
+  move (b ::: L) W (W ::: L);
+  move (X ::: L) W (X ::: K) := move L W K.
 
 % somemove Board
 % True if there is a possible move on the Board
-Define somemove : list -> prop by
+Define somemove : list cell -> prop by
   somemove L := exists K, move L o K.
 
 % nomoves Board
 % True if there are no possible moves on the Board.
-Define nomoves : list -> prop by
+Define nomoves : list cell -> prop by
   nomoves L := somemove L -> false.
 
 % tie Board
 % True if the Board is a tie.
-Define tie : list -> prop by
+Define tie : list cell -> prop by
   tie L := nomoves L /\ nowinner L.
 
 % xwins Board
 % True if x has a winning strategy for Board, assuming o plays first.
-Define xwins : list -> prop by
+Define xwins : list cell -> prop by
   xwins L := winner x L;
   xwins L := forall K, move L o K -> (nowinner K /\ exists M, move K x M /\ xwins M).
 
 % owins Board
 % True if o has a winning strategy for Board, assuming o plays first.
-Define inductive owins : list -> prop by
+Define inductive owins : list cell -> prop by
   owins L := winner o L;
   owins L := nowinner L /\ exists K, move L o K /\
                (winner o K \/ somemove K /\ forall M, move K x M -> owins M).
@@ -109,7 +108,7 @@ Define inductive owins : list -> prop by
 % notxwins Board
 % True if x does not have a winning strategy for Board, assuming o plays first.
 % It would be nice to use (forall L, xwins L -> false), but xwins is level 1.
-Define coinductive notxwins : list -> prop by
+Define coinductive notxwins : list cell -> prop by
   notxwins L := tie L;
   notxwins L := winner o L;
   notxwins L := nowinner L /\ exists K, move L o K /\
@@ -125,10 +124,10 @@ Qed.
 % Given a board, the computer attempts to make a move in a winning
 % strategy. If this is not possible, it attempts to make a move in a
 % non-losing strategy. If this is not possible, it just makes some move.
-Define play_to_win : list -> list -> prop by
+Define play_to_win : list cell -> list cell -> prop by
   play_to_win L K := winner o K \/ somemove K /\ forall M, move K x M -> owins M.
 
-Define play_to_tie : list -> list -> prop by
+Define play_to_tie : list cell -> list cell -> prop by
   play_to_tie L K := tie K \/ forall M, move K x M -> notxwins M.
 
 Define play : board -> prop by

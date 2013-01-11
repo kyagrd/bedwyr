@@ -24,6 +24,10 @@ Define append : list A -> list A -> list A -> prop by
   append nil K K;
   append (X ::: L) K (X ::: M) := append L K M.
 
+Define remove : list A -> A -> list A -> prop by
+  remove (X ::: L) X L;
+  remove (Y ::: L) X (Y ::: Lp) := remove L X Lp.
+
 % In the following checks, we assume the mode: append +L +K -M.
 
 % Coverage implicitly proves termination

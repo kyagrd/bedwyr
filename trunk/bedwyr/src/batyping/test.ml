@@ -1,6 +1,6 @@
 (****************************************************************************)
 (* An implementation of Higher-Order Pattern Unification                    *)
-(* Copyright (C) 2012 Andrew Gacek, Quentin Heath                           *)
+(* Copyright (C) 2012-2013 Andrew Gacek, Quentin Heath                      *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -34,10 +34,10 @@ let assert_equal = assert_equal ~cmp:eq ~printer:Pprint.term_to_string*)
 (*
 let dummy_pos = (Lexing.dummy_pos, Lexing.dummy_pos)
 
-let ucon ?(ty=fresh_tyvar ()) v =
+let ucon ?(ty=fresh_typaram ()) v =
   UCon(dummy_pos, v, ty)
 
-let ulam v ?(ty=fresh_tyvar ()) t =
+let ulam v ?(ty=fresh_typaram ()) t =
   ULam(dummy_pos, v, ty, t)
 
 let uapp t1 t2 =
@@ -59,29 +59,29 @@ let test =
   [
     "environment" >:::
     [
-      (type_to_string (fresh_tyvar ())) ^ " <> " ^ (type_to_string (fresh_tyvar ())) >::
+      (type_to_string (fresh_typaram ())) ^ " <> " ^ (type_to_string (fresh_typaram ())) >::
       (fun () ->
          assert_bool "polymorphic type variables should not be unifiable"
            (try
               ignore
                 (unify_constraint
                    !global_unifier
-                   (fresh_tyvar ())
-                   (fresh_tyvar ())) ;
+                   (fresh_typaram ())
+                   (fresh_typaram ())) ;
               false
             with
               | Type_unification_error _ -> true
               | _ -> false )) ;
 
-      (type_to_string (fresh_typaram ())) ^ " ~~ " ^ (type_to_string (fresh_typaram())) >::
+      (type_to_string (fresh_tyvar ())) ^ " ~~ " ^ (type_to_string (fresh_tyvar())) >::
       (fun () ->
          assert_bool "type inference parameters should be unifiable"
            (try
               ignore
                 (unify_constraint
                    !global_unifier
-                   (fresh_typaram ())
-                   (fresh_typaram ())) ;
+                   (fresh_tyvar ())
+                   (fresh_tyvar ())) ;
               true
             with
               | Type_unification_error _ -> false

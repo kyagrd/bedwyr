@@ -94,31 +94,31 @@ Define one4 : nat -> trans -> nat -> prop by
 %% could try to detect loops ourselves using the following code.  This is not
 %% needed any more but might be useful as a programming example.
 
-Kind list,obj   type.
-Type nil        list.
-Type cons       obj -> list -> list.
+Kind obj        type.
 
 Kind bool       type.
 Type ff,tt      bool.
 
 Type pr         nat -> nat -> obj.
 
+#include "list.def".
+
 % Membership in a list.
 % This predicate always succeeds with a boolean value.
-Define member : obj -> list -> bool -> prop by
-  member X nil        ff;
-  member X (cons Y L) Bool := (X = Y -> false) /\ member X L Bool;
-  member X (cons X L) tt.
+Define memb : obj -> list obj -> bool -> prop by
+  memb X nil        ff;
+  memb X (Y ::: L) Bool := (X = Y -> false) /\ memb X L Bool;
+  memb X (X ::: _) tt.
 
 % Co-induction with History checking.  Simply check that goal appears
 % before.  If so, succeed.  Here, pr is for pairing.
 
 Define cyclic : ((nat -> nat -> prop) -> nat -> nat -> prop) ->
-                list -> nat -> nat -> prop by
+                list obj -> nat -> nat -> prop by
   cyclic R History P Q :=
-   member (pr P Q) History Bool /\
+   memb (pr P Q) History Bool /\
    (Bool = tt \/ % A cycle observed so succeed - coinduction
-    (Bool = ff /\ (R (cyclic R (cons (pr P Q) History)) P Q))).
+    (Bool = ff /\ (R (cyclic R (pr P Q ::: History)) P Q))).
 
 Define cycsim : (nat -> trans -> nat -> prop) -> nat -> nat -> prop by
   cycsim One P Q :=

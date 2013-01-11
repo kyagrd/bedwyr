@@ -1,8 +1,8 @@
 % This is an alternate presentation of graphs where the graph structure
 % is not hardcoded into the predicates, but rather is kept as a
 % datastructure of the following form:
-%   (mkgraph (cc 1 (cc 2 (cc 3 (cc 4 nil))))
-%            (ca (arrow 1 2) (ca (arrow 3 4) nil)))
+%   (mkgraph (1 ::: 2 ::: 3 ::: 4 ::: nil)
+%            (arrow 1 2 ::: arrow 3 4 ::: nil))
 % where the the first list is the nodes of the graph and the second is
 % the arrows of the graph. The benefit of this representation is that
 % we modify the graph on the fly (as seen in the 'tree' predicate).
@@ -12,35 +12,14 @@
 
 % List utilities
 
-Kind    list,
-        arrow,
-        alist,
+Kind    arrow,
         graph   type.
 
-Type    nil     list.
-Type    cc      nat -> list -> list.
-
 Type    mkarrow nat -> nat -> arrow.
-Type    anil    alist.
-Type    ca      arrow -> alist -> alist.
 
-Type    mkgraph list -> alist -> graph.
+#include "list.def".
 
-Define member : nat -> list -> prop by
-  member X (cc X L);
-  member X (cc Y L) := member X L.
-
-Define remove : list -> nat -> list -> prop by
-  remove (cc X L) X L;
-  remove (cc Y L) X (cc Y Lp) := remove L X Lp.
-
-Define amember : arrow -> alist -> prop by
-  amember X (ca X L);
-  amember X (ca Y L) := amember X L.
-
-Define aremove : alist -> arrow -> alist -> prop by
-  aremove (ca X L) X L;
-  aremove (ca Y L) X (ca Y Lp) := aremove L X Lp.
+Type    mkgraph list nat -> list arrow -> graph.
 
 % Nodes of the graph
 
@@ -50,7 +29,7 @@ Define node : graph -> nat -> prop by
 % Directed predicates
 
 Define arrow : graph -> nat -> nat -> prop by
-  arrow (mkgraph _ A) X Y := amember (mkarrow X Y) A.
+  arrow (mkgraph _ A) X Y := member (mkarrow X Y) A.
 
 Define path : graph -> nat -> nat -> prop by
   path G X Y := arrow G X Y;
@@ -78,7 +57,7 @@ Define disconnected : graph -> prop by
                     node G X /\ node G Y /\ (edgepath G X Y -> false).
 
 Define removearrow : graph -> arrow -> graph -> prop by
-  removearrow (mkgraph N A) X (mkgraph N Ap) := aremove A X Ap.
+  removearrow (mkgraph N A) X (mkgraph N Ap) := remove A X Ap.
 
 % A tree is a connected graph that becomes disconnected
 % if you remove any edge.
@@ -97,21 +76,19 @@ Define graph : nat -> graph -> prop by
   % 1 - 2   5 - 6
   %      \
   %       4
-  graph 1  (mkgraph (cc 1 (cc 2 (cc 3 (cc 4 (cc 5 (cc 6 nil))))))
-                (ca (mkarrow 1 2) (ca (mkarrow 2 3) (ca (mkarrow 2 4)
-                   (ca (mkarrow 3 5) (ca (mkarrow 5 6) anil))))));
+  graph 1  (mkgraph (1 ::: 2 ::: 3 ::: 4 ::: 5 ::: 6 ::: nil)
+                (mkarrow 1 2 ::: mkarrow 2 3 ::: mkarrow 2 4 :::
+                   mkarrow 3 5 ::: mkarrow 5 6 ::: nil));
   %       3
   %      / \
   % 1 - 2   5 - 6
   %      \ /
   %       4
-  graph 2  (mkgraph (cc 1 (cc 2 (cc 3 (cc 4 (cc 5 (cc 6 nil))))))
-                (ca (mkarrow 1 2) (ca (mkarrow 2 3) (ca (mkarrow 2 4)
-                   (ca (mkarrow 3 5) (ca (mkarrow 4 5)
-                      (ca (mkarrow 5 6) anil))))))).
+  graph 2  (mkgraph (1 ::: 2 ::: 3 ::: 4 ::: 5 ::: 6 ::: nil)
+                (mkarrow 1 2 ::: mkarrow 2 3 ::: mkarrow 2 4 :::
+                   mkarrow 3 5 ::: mkarrow 4 5 :::
+                      mkarrow 5 6 ::: nil)).
 
 #assert_not (graph 1 G /\ disconnected G).
-
 #assert (graph 1 G /\ tree G).
-
 #assert (graph 2 G /\ nottree G).

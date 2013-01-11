@@ -1,6 +1,6 @@
 (****************************************************************************)
 (* Bedwyr prover                                                            *)
-(* Copyright (C) 2005-2012 Baelde, Tiu, Ziegler, Heath                      *)
+(* Copyright (C) 2005-2013 Baelde, Tiu, Ziegler, Heath                      *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -229,7 +229,7 @@ let translate_term
           t,v
         end
       in
-      let ty = Typing.fresh_typaram () in
+      let ty = Typing.fresh_tyvar () in
       Hashtbl.add free_types v ty ;
       t,ty
   in
@@ -246,20 +246,21 @@ let translate_term
               raise (Stratification_error (name,p))
             else ty
       with Not_found ->
+        (* TODO use real predefined polymorphic types *)
         match v with
           | v when v = Logic.var_print ->
-              let ty = Typing.fresh_typaram () in
+              let ty = Typing.fresh_tyvar () in
               Typing.ty_arrow [ty] Typing.tprop
           | v when v = Logic.var_println ->
-              let ty = Typing.fresh_typaram () in
+              let ty = Typing.fresh_tyvar () in
               Typing.ty_arrow [ty] Typing.tprop
           | v when v = Logic.var_printstr ->
               Typing.ty_arrow [Typing.tstring] Typing.tprop
           | v when v = Logic.var_fprint ->
-              let ty = Typing.fresh_typaram () in
+              let ty = Typing.fresh_tyvar () in
               Typing.ty_arrow [Typing.tstring;ty] Typing.tprop
           | v when v = Logic.var_fprintln ->
-              let ty = Typing.fresh_typaram () in
+              let ty = Typing.fresh_tyvar () in
               Typing.ty_arrow [Typing.tstring;ty] Typing.tprop
           | v when v = Logic.var_fprintstr ->
               Typing.ty_arrow [Typing.tstring;Typing.tstring] Typing.tprop
@@ -280,26 +281,27 @@ let translate_term
     let t = Term.atom ~tag:Term.Constant name in
     let v = Term.get_var t in
     let ty = match v with
+      (* TODO use real predefined polymorphic types *)
       | v when v = Logic.var_not ->
           Typing.ty_arrow [Typing.tprop] Typing.tprop
       | v when v = Logic.var_ite ->
           Typing.ty_arrow [Typing.tprop;Typing.tprop;Typing.tprop] Typing.tprop
       | v when v = Logic.var_abspred ->
-          let ty1 = Typing.fresh_typaram () in
-          let ty2 = Typing.ty_arrow [Typing.fresh_typaram ()] ty1 in
+          let ty1 = Typing.fresh_tyvar () in
+          let ty2 = Typing.ty_arrow [Typing.fresh_tyvar ()] ty1 in
           let ty3 = Typing.ty_arrow [ty2] ty1 in
           Typing.ty_arrow [ty1;ty3;ty1] Typing.tprop
       | v when v = Logic.var_distinct ->
           Typing.ty_arrow [Typing.tprop] Typing.tprop
       | v when v = Logic.var_assert_rigid ->
-          let ty = Typing.fresh_typaram () in
+          let ty = Typing.fresh_tyvar () in
           Typing.ty_arrow [ty] Typing.tprop
       | v when v = Logic.var_abort_search ->
           Typing.tprop
       | v when v = Logic.var_cutpred ->
           Typing.ty_arrow [Typing.tprop] Typing.tprop
       | v when v = Logic.var_check_eqvt ->
-          let ty = Typing.fresh_typaram () in
+          let ty = Typing.fresh_tyvar () in
           Typing.ty_arrow [ty;ty] Typing.tprop
       | _ ->
           Term.free name ;
@@ -644,7 +646,7 @@ let get_types pre_term =
   let free_types : (Term.var,Typing.ty) Hashtbl.t =
     Hashtbl.create 10
   in
-  let ty = Typing.fresh_typaram () in
+  let ty = Typing.fresh_tyvar () in
   let t,ty =
     translate_term ~infer:false ~expected_type:ty pre_term free_types
   in
