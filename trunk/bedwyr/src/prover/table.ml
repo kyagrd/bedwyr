@@ -73,8 +73,8 @@ let fprint fout head table ty =
   Format.fprintf fmt
     "@[%% Table for %a contains :@,@,@[<hov>Define@;<1 2>proved : %a,@;<1 2>disproved : %a"
     Pprint.pp_term head
-    (fun ty -> Input.Typing.pp_type_norm ty) ty
-    (fun ty -> Input.Typing.pp_type_norm ty) ty ;
+    (Input.Typing.get_pp_type ()) ty
+    (Input.Typing.get_pp_type ()) ty ;
   let first = ref true in
   Index.iter !table
     (fun t tag ->
