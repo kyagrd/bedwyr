@@ -1,6 +1,6 @@
 (****************************************************************************)
 (* Bedwyr prover                                                            *)
-(* Copyright (C) 2005-2012 Baelde, Tiu, Ziegler, Gacek, Heath               *)
+(* Copyright (C) 2005-2013 Baelde, Tiu, Ziegler, Gacek, Heath               *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -136,7 +136,7 @@ let bool_of_flag = function
   | Some "off" | Some "false" -> false
   | _ -> raise Invalid_command
 
-let rec process ?(interactive=false) parse lexbuf =
+let rec process ?(test=false) ?(interactive=false) parse lexbuf =
   let flush_input () =
     Lexing.flush_input lexbuf ;
     lexbuf.Lexing.lex_curr_p <- {
@@ -195,7 +195,7 @@ let rec process ?(interactive=false) parse lexbuf =
                if !exit_status = None then Prover.toplevel_prove query)
             t
             reset
-      | Input.Command c -> command c reset
+      | Input.Command c -> command ~test c reset
     with
       (* I/O - Lexer *)
       | End_of_file -> raise End_of_file
@@ -372,16 +372,16 @@ let rec process ?(interactive=false) parse lexbuf =
           "Unexpected error:@ %s"
           (Printexc.to_string e)
 
-and input_from_file file =
+and input_from_file ~test file =
   let channel = IO.open_in file in
   let lexbuf = Lexing.from_channel channel in
   lexbuf.Lexing.lex_curr_p <- {
       lexbuf.Lexing.lex_curr_p with
         Lexing.pos_fname = file } ;
-  input_defs lexbuf ;
+  input_defs ~test lexbuf ;
   IO.close_in file channel
-and input_defs lexbuf =
-  process Parser.input_def lexbuf
+and input_defs ~test lexbuf =
+  process ~test Parser.input_def lexbuf
 and input_queries ?(interactive=false) lexbuf =
   process ~interactive Parser.input_query lexbuf
 
@@ -389,9 +389,9 @@ and load_session () =
   System.reset_decls () ;
   Input.Typing.clear () ;
   inclfiles := [] ;
-  List.iter include_file !session
+  List.iter (include_file ~test:!test) !session
 
-and include_file fname =
+and include_file ?(test=false) fname =
   let cwd = Sys.getcwd () in
   let fname =
     if (Filename.is_relative fname) then
@@ -405,11 +405,11 @@ and include_file fname =
     Format.eprintf "Now including %S.@." fname ;
     inclfiles := fname :: !inclfiles ;
     Sys.chdir (Filename.dirname fname) ;
-    input_from_file (Filename.basename fname);
+    input_from_file ~test (Filename.basename fname);
     Sys.chdir cwd
   end
 
-and command c reset =
+and command ~test c reset =
   let aux = function
     | Input.Exit ->
         IO.close_user_files () ;
@@ -451,7 +451,7 @@ and command c reset =
     (* Testing commands *)
     | Input.Assert pre_query ->
         let query = System.translate_query pre_query in
-        if !test then
+        if test then
           if !exit_status = None then begin
             Format.eprintf "@[<hv 2>Checking that@ %a@,...@]@."
               Pprint.pp_term query ;
@@ -461,7 +461,7 @@ and command c reset =
           end
     | Input.Assert_not pre_query ->
         let query = System.translate_query pre_query in
-        if !test then
+        if test then
           if !exit_status = None then begin
             Format.eprintf "@[<hv 2>Checking that@ %a@ is false...@]@."
               Pprint.pp_term query ;
@@ -470,7 +470,7 @@ and command c reset =
           end
     | Input.Assert_raise pre_query ->
         let query = System.translate_query pre_query in
-        if !test then
+        if test then
           if !exit_status = None then begin
             Format.eprintf "@[<hv 2>Checking that@ %a@ causes an error...@]@."
               Pprint.pp_term query ;

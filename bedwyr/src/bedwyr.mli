@@ -1,6 +1,6 @@
 (****************************************************************************)
 (* Bedwyr prover                                                            *)
-(* Copyright (C) 2005-2012 Baelde, Tiu, Ziegler, Gacek, Heath               *)
+(* Copyright (C) 2005-2013 Baelde, Tiu, Ziegler, Gacek, Heath               *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -23,7 +23,7 @@ exception Invalid_command
 exception Assertion_failed
 
 (** Read a *.def file. *)
-val input_defs : Lexing.lexbuf -> unit
+val input_defs : test:bool -> Lexing.lexbuf -> unit
 
 (** Read the REPL or a script.
   * @param interactive intended for the REPL,
@@ -36,4 +36,4 @@ val input_queries : ?interactive:bool -> Lexing.lexbuf -> unit
   * "", "true", "on", "false" or "off")
   * @raise Assertion_failed if [#assert formula.], [#assert_not formula.]
   * or [#assert_raise formula.] fails *)
-val command : Input.command -> (unit -> unit) -> unit
+val command : test:bool -> Input.command -> (unit -> unit) -> unit
