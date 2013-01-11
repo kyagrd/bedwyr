@@ -190,6 +190,7 @@ exception Stratification_error of string * Input.pos
 
 let translate_term
       ?stratum
+      ?(instantiate_head=true)
       ?(free_args=[])
       ?(infer=true)
       ?(expected_type=Typing.tprop)
@@ -234,41 +235,42 @@ let translate_term
   in
   (* return a typed variable corresponding to the name
    * of a constant (predefined or not) or a predicate *)
-  let typed_declared_obj ?stratum (p,name) =
+  let typed_declared_obj ~instantiate_head ?stratum (p,name) =
     let t = Term.atom ~tag:Term.Constant name in
     let v = Term.get_var t in
-    try match Hashtbl.find decls v with
-      | Constant ty -> t,ty
-      | Predicate {stratum=stratum';ty=ty} ->
-          if stratum=(Some stratum') then
-            raise (Stratification_error (name,p))
-          else t,ty
-    with Not_found ->
-      let ty = match v with
-        | v when v = Logic.var_print ->
-            let ty = Typing.fresh_typaram () in
-            Typing.ty_arrow [ty] Typing.tprop
-        | v when v = Logic.var_println ->
-            let ty = Typing.fresh_typaram () in
-            Typing.ty_arrow [ty] Typing.tprop
-        | v when v = Logic.var_printstr ->
-            Typing.ty_arrow [Typing.tstring] Typing.tprop
-        | v when v = Logic.var_fprint ->
-            let ty = Typing.fresh_typaram () in
-            Typing.ty_arrow [Typing.tstring;ty] Typing.tprop
-        | v when v = Logic.var_fprintln ->
-            let ty = Typing.fresh_typaram () in
-            Typing.ty_arrow [Typing.tstring;ty] Typing.tprop
-        | v when v = Logic.var_fprintstr ->
-            Typing.ty_arrow [Typing.tstring;Typing.tstring] Typing.tprop
-        | v when v = Logic.var_fopen_out ->
-            Typing.ty_arrow [Typing.tstring] Typing.tprop
-        | v when v = Logic.var_fclose_out ->
-            Typing.ty_arrow [Typing.tstring] Typing.tprop
-        | _ ->
-            Term.free name ;
-            raise (Missing_declaration (name,Some p))
-      in t,ty
+    let ty =
+      try match Hashtbl.find decls v with
+        | Constant ty -> ty
+        | Predicate {stratum=stratum';ty=ty} ->
+            if stratum=(Some stratum') then
+              raise (Stratification_error (name,p))
+            else ty
+      with Not_found ->
+        match v with
+          | v when v = Logic.var_print ->
+              let ty = Typing.fresh_typaram () in
+              Typing.ty_arrow [ty] Typing.tprop
+          | v when v = Logic.var_println ->
+              let ty = Typing.fresh_typaram () in
+              Typing.ty_arrow [ty] Typing.tprop
+          | v when v = Logic.var_printstr ->
+              Typing.ty_arrow [Typing.tstring] Typing.tprop
+          | v when v = Logic.var_fprint ->
+              let ty = Typing.fresh_typaram () in
+              Typing.ty_arrow [Typing.tstring;ty] Typing.tprop
+          | v when v = Logic.var_fprintln ->
+              let ty = Typing.fresh_typaram () in
+              Typing.ty_arrow [Typing.tstring;ty] Typing.tprop
+          | v when v = Logic.var_fprintstr ->
+              Typing.ty_arrow [Typing.tstring;Typing.tstring] Typing.tprop
+          | v when v = Logic.var_fopen_out ->
+              Typing.ty_arrow [Typing.tstring] Typing.tprop
+          | v when v = Logic.var_fclose_out ->
+              Typing.ty_arrow [Typing.tstring] Typing.tprop
+          | _ ->
+              Term.free name ;
+              raise (Missing_declaration (name,Some p))
+    in t,(if instantiate_head then Typing.fresh_tyinst ty else ty)
   in
   (* return a typed variable corresponding to the name
    * of an internal constant *)
@@ -310,6 +312,7 @@ let translate_term
   in
   Input.type_check_and_translate
     ?stratum
+    ~instantiate_head
     ~infer
     ~iter_free_types
     ~free_args
@@ -415,7 +418,7 @@ let add_def_clause stratum (p,pre_head,pre_body) =
   in
   let free_args = Input.free_args pre_head in
   (* XXX what about stratum in theorems? *)
-  let head,_ = translate_term ~stratum ~free_args pre_head free_types in
+  let head,_ = translate_term ~stratum ~instantiate_head:false ~free_args pre_head free_types in
   let body,_ = translate_term ~stratum ~free_args pre_body free_types in
   let pred,arity,body =
     mk_def_clause p head body
