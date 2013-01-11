@@ -284,9 +284,10 @@ let rec process ?(interactive=false) parse lexbuf =
             s
 
       (* Kind/type checking *)
-      | Input.Typing.Type_kinding_error (_,ki1,ki2) ->
-          eprintf def_error
-            "Kinding error: this type has kind %a but is used as %a."
+      | Input.Typing.Type_kinding_error (n,p,ki1,ki2) ->
+          eprintf def_error ?p
+            "Kinding error: the type constructor %s has kind %a but is used as %a."
+            n
             Input.Typing.pp_kind ki2
             Input.Typing.pp_kind ki1
       | Input.Term_typing_error (p,ty1,ty2,unifier) ->

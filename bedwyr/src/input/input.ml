@@ -119,11 +119,6 @@ let pre_app p hd args = if args = [] then hd else match hd with
 
 let change_pos (p1,_) t (_,p2) = set_pos (p1,p2) t
 
-let pred_name pre_term = 
-  match pre_term with
- | App(_,PredConstBoundID(_,name),pargs) -> Some name
- | _ -> None
-
 let free_args pre_term =
   let in_arg accum = function
     | FreeBoundID (_,"_") -> accum
@@ -183,7 +178,6 @@ exception Var_typing_error of string option * pos * Typing.ty
 
 let type_check_and_translate
       ?stratum
-      ?(phead_name=None)
       ?(infer=false)
       ?(iter_free_types=ignore)
       ?(free_args=[])
@@ -225,14 +219,7 @@ let type_check_and_translate
             | None -> (* declared object *)
                 let stratum = (if negative then stratum else None) in
                 let t,ty = typed_declared_obj ?stratum (p,s) in
-                let ty = 
-                  (* prevents polymorphism when checking using a predicate symbol *
-		   * in the body of its definition. This is determined from       *
-                   * the phead_name parameter                                     *)
-		  match phead_name with 
-                  | Some nm when nm = s -> ty 
-		  | _ -> Typing.fresh_inst ty
-		in 
+                let ty = Typing.fresh_tyinst ty in
                 let u = Typing.unify_constraint u exty ty in
                 t,u
           end
@@ -277,7 +264,7 @@ let type_check_and_translate
             (fun (p,_,ty) ->
                let ty = Typing.ty_norm ~unifier:u ty in
                let (_,_,_,propositional,higher_order) =
-                 Typing.kind_check ty Typing.ktype ~atomic_kind
+                 Typing.kind_check ~p ty ~atomic_kind
                in
                if higher_order || propositional
                then raise (Var_typing_error (None,p,ty)))
@@ -316,7 +303,7 @@ let type_check_and_translate
        let n = Term.get_var_name v in
        if not (List.mem n free_args) then begin
          let (_,_,_,propositional,higher_order) =
-           Typing.kind_check ty Typing.ktype ~atomic_kind
+           Typing.kind_check ty ~atomic_kind
          in
          if infer && (higher_order || propositional)
          then raise (Var_typing_error (Some n,get_pos pre_term,ty))
