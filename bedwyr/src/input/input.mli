@@ -1,6 +1,6 @@
 (****************************************************************************)
 (* Bedwyr prover                                                            *)
-(* Copyright (C) 2012 Quentin Heath                                         *)
+(* Copyright (C) 2012 Quentin Heath, Alwen Tiu                              *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -227,13 +227,14 @@ exception Var_typing_error of string option * pos * Typing.ty
   * @raise Term_typing_error if the pre-tem isn't well typed *)
 val type_check_and_translate :
   ?stratum:int ->
+  ?instantiate_head:bool ->
   ?infer:bool ->
   ?iter_free_types:((Term.var -> Typing.ty -> Typing.ty) -> unit) ->
   ?free_args:string list ->
   preterm ->
   Typing.ty ->
   ((pos * string -> Term.term * Typing.ty) *
-   (?stratum:int -> pos * string -> Term.term * Typing.ty) *
+   (instantiate_head:bool -> ?stratum:int -> pos * string -> Term.term * Typing.ty) *
    (pos * string -> Term.term * Typing.ty) *
    (pos * string * Typing.ty -> Typing.ty) *
    (pos * string -> Typing.ki)) ->

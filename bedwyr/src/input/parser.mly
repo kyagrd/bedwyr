@@ -192,7 +192,7 @@ ty_atom2:
   | PROP                                { Input.Typing.tprop }
   | STRING                              { Input.Typing.tstring }
   | NAT                                 { Input.Typing.tnat }
-  | UNDERSCORE                          { Input.Typing.fresh_typaram () }
+  | UNDERSCORE                          { Input.Typing.fresh_tyvar () }
   | UPPER_ID				{ Input.Typing.get_tyvar $1 }
   | LPAREN ty RPAREN                    { $2 }
 

@@ -1,6 +1,6 @@
 (****************************************************************************)
 (* Bedwyr prover                                                            *)
-(* Copyright (C) 2012 Quentin Heath                                         *)
+(* Copyright (C) 2012 Quentin Heath, Alwen Tiu                              *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -198,6 +198,29 @@ module Make (I : INPUT) = struct
     aux [] (fresh_typaram ()) arity
 
   let pp_type chan ty =
+    let string_of_var =
+      let bindings = ref [] in
+      let count = ref 0 in
+      function i ->
+        try List.assoc i !bindings
+        with Not_found ->
+          let s = String.make 1 (Char.chr (65 + (!count mod 26))) in
+          let s = match !count / 26 with
+            | 0 -> s
+            | j -> s ^ string_of_int j
+          in
+          incr count ; bindings := (i,s) :: !bindings ; s
+    in
+    let string_of_param =
+      let bindings = ref [] in
+      let count = ref 0 in
+      function i ->
+        try List.assoc i !bindings
+        with Not_found ->
+          let s = "?" ^ string_of_int !count in
+          incr count ; bindings := (i,s) :: !bindings ; s
+    in
+
     let rec aux par chan = function
       | Ty (ty::tys,ty_base) ->
           let print =
@@ -219,9 +242,9 @@ module Make (I : INPUT) = struct
       | Ty ([],TNat) ->
           Format.fprintf chan "nat"
       | Ty ([],TVar i) ->
-          Format.fprintf chan "'%d" i
+          Format.fprintf chan "%s" (string_of_var i)
       | Ty ([],TParam i) ->
-          Format.fprintf chan "?%d" i
+          Format.fprintf chan "%s" (string_of_param i)
     and aux2 chan =
       List.iter (fun ty -> Format.fprintf chan " %a" (aux true) ty)
     in
