@@ -35,7 +35,7 @@ let welcome_msg =
   Printf.sprintf
     "%s %s%s welcomes you.
 
-This software is under GNU Public License version 2.
+This software is under GNU General Public License version 2.
 Copyright (C) 2005-2012 Slimmer project.
 
 For a little help, type \"#help.\"
@@ -53,7 +53,7 @@ let usage_msg =
   Printf.sprintf
     "%s prover version %s (%s).
 Built with OCaml %s on the %s.
-This software is under GNU Public License.
+This software is under GNU General Public License version 2.
 Copyright (c) 2005-2012 Slimmer project.
 
 Usage: bedwyr [filename | option]*

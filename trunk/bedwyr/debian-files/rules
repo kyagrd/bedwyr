@@ -3,23 +3,37 @@
 export DH_VERBOSE=1
 export DH_OPTIONS=-v
 
-
-%:
-	dh $@
-
-override_dh_auto_configure:
+build:
+	dh_testdir
 	autoconf
 	dh_auto_configure -- --no-create \
-	  --enable-doc --enable-nativecode --with-vimfiles
-
-override_dh_auto_build:
+	  --enable-nativecode --enable-doc --with-vimfiles
 	dh_auto_build
 	dh_auto_build -- doc
+	dh_auto_test
+
+build-arch:
+	dh_testdir -a
+	autoconf
+	dh_auto_configure -- --no-create \
+	  --enable-nativecode --with-vimfiles
+	dh_auto_build -a
+	dh_auto_test -a
+
+build-indep:
+	dh_testdir -i
+	autoconf
+	dh_auto_configure -- --no-create \
+	  --enable-doc
+	dh_auto_build -i -- doc
 
 override_dh_installchangelogs:
 	dh_installchangelogs -k
 
-override_dh_fixperms:
+override_dh_fixperms-arch:
 	dh_fixperms
 	chmod +x debian/bedwyr/usr/share/bedwyr/examples/mute.pl
 	chmod +x debian/bedwyr/usr/share/bedwyr/examples/ccs_vp/timing/sq
+
+%:
+	dh $@

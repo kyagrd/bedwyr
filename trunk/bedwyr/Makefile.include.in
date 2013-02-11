@@ -21,7 +21,10 @@
 #
 # dynamic part of Makefile
 
-### DEFINITIONS
+#
+# DEFINITIONS
+#
+##############################################################################
 
 PACKAGE_TARNAME	= @PACKAGE_TARNAME@
 PACKAGE_VERSION	= @PACKAGE_VERSION@
@@ -29,8 +32,6 @@ DIST_NAME	= $(PACKAGE_TARNAME)-$(PACKAGE_VERSION)
 DEBIAN_VERSION	= $(subst -,~,$(subst -p,+p,$(PACKAGE_VERSION)))
 DEB_DIST_NAME	= $(PACKAGE_TARNAME)-$(DEBIAN_VERSION)
 DEB_NAME	= $(PACKAGE_TARNAME)_$(DEBIAN_VERSION)
-# $(TARGET_NAME) is needed since we have one project/tarball
-# but several programs/packages
 ifeq ($(TARGET),)
   TARGET_NAME	= $(PACKAGE_TARNAME)
 else
@@ -42,9 +43,12 @@ BIN_SUFFIXES	= @BIN_SUFFIXES@
 BEST_SUFFIX	= @BEST_SUFFIX@
 DEBEMAIL	?=@UPSTREAM_EMAIL@
 DEBFULLNAME	?=@UPSTREAM_FULLNAME@
-ICONS		= @PROGRAM_ICON@ @FILE_ICON@
+NSIS_ICONS	= @PROGRAM_ICON@ @FILE_ICON@
 
-### FOLDERS
+#
+# FOLDERS
+#
+##############################################################################
 
 prefix		= @prefix@
 exec_prefix	= @exec_prefix@
@@ -52,7 +56,7 @@ bindir		= @bindir@
 #sbindir	= @sbindir@
 #libexecdir	= @libexecdir@
 datarootdir	= @datarootdir@
-datadir		= @datadir@
+pkgdatadir	= @datadir@/$(TARGET_NAME)
 #sysconfdir	= @sysconfdir@
 #sharedstatedir	= @sharedstatedir@
 #localstatedir	= @localstatedir@
@@ -64,7 +68,7 @@ docdir		= $(patsubst %$(PACKAGE_TARNAME),%$(TARGET_NAME),@docdir@)
 #dvidir		= @dvidir@
 #pdfdir		= @pdfdir@
 #psdir		= @psdir@
-libdir		= @libdir@
+pkglibdir	= @libdir@/ocaml/@PROJECT_TARNAME@
 #localedir	= @localedir@
 mandir		= @mandir@
 
@@ -73,9 +77,8 @@ mandir		= @mandir@
 BINDIR		= $(DESTDIR)$(bindir)
 #SBINDIR	= $(DESTDIR)$(sbindir)
 #LIBEXECDIR	= $(DESTDIR)$(libexecdir)
-#DATAROOTDIR	= $(DESTDIR)$(datarootdir)
-REAL_DATADIR	= $(datadir)/$(TARGET_NAME)
-DATADIR		= $(DESTDIR)$(REAL_DATADIR)
+DATAROOTDIR	= $(DESTDIR)$(datarootdir)
+PKGDATADIR	= $(DESTDIR)$(pkgdatadir)
 #SYSCONFDIR	= $(DESTDIR)$(sysconfdir)
 #SHAREDSTATEDIR	= $(DESTDIR)$(sharedstatedir)
 #LOCALSTATEDIR	= $(DESTDIR)$(localstatedir)
@@ -87,13 +90,19 @@ DOCDIR		= $(DESTDIR)$(docdir)
 #DVIDIR		= $(DESTDIR)$(dvidir)
 #PDFDIR		= $(DESTDIR)$(pdfdir)
 #PSDIR		= $(DESTDIR)$(psdir)
-LIBDIR		= $(DESTDIR)$(libdir)/ocaml/@PROJECT_TARNAME@
+PKGLIBDIR	= $(DESTDIR)$(pkglibdir)
 #LOCALEDIR	= $(DESTDIR)$(localedir)
 MANDIR		= $(DESTDIR)$(mandir)
 
 VIMFILES	= $(DESTDIR)@VIMFILES@
+PIXMAPS_DIR	= $(DATAROOTDIR)/pixmaps
+ICONS_DIR	= $(DATAROOTDIR)/icons
+DESKTOP_DIR	= $(DATAROOTDIR)/applications
 
-### PROGRAMS
+#
+# PROGRAMS
+#
+##############################################################################
 
 SHELL		= @BASH@
 TAR		= @TAR@ -p
@@ -115,11 +124,14 @@ INSTALL_BIN	= @INSTALL_PROGRAM@ $(INSTALL_OPTS) -p
 INSTALL_DATA	= @INSTALL_DATA@ $(INSTALL_OPTS) -p
 
 DCH		= @DCH@ -d -D unstable
-DEBUILD		= @DEBUILD@ --lintian-opts -Ivi
+DEBUILD		= @DEBUILD@
 MAKENSIS	= @MAKENSIS@ -V2 -NOCD \
 		  -DDEBEMAIL="$(DEBEMAIL)" -DDEBFULLNAME="$(DEBFULLNAME)"
 
-### SOURCE FILES
+#
+# SOURCE FILES
+#
+##############################################################################
 
 ac_config_files	= @ac_config_files@
 OCAML_FILES	= @OCAML_FILES@
@@ -130,6 +142,10 @@ VIM_CONTRIB	= @VIM_CONTRIB@
 EMACS_CONTRIB	= bedwyr.el
 CONTRIB_FILES	= $(addprefix contrib/emacs/,$(EMACS_CONTRIB)) \
 		  $(addprefix contrib/vim/,$(VIM_CONTRIB))
+HICOLOR_ICONS	= @HICOLOR_ICONS@
+ICONS		= contrib/icons/bedwyr_32x32.xpm \
+		  $(addprefix contrib/icons/,$(HICOLOR_ICONS))
+DESKTOP_FILES	= contrib/bedwyr.desktop.in
 EXAMPLES_FILES	= @EXAMPLES_FILES@
 DEBIAN_FILES	=  \
   control \
@@ -137,6 +153,7 @@ DEBIAN_FILES	=  \
   changelog \
   rules \
   bedwyr.install \
+  bedwyr.lintian-overrides \
   bedwyr-doc.install \
   bedwyr-doc.doc-base.quickstart \
   bedwyr-doc.doc-base.libref \
@@ -147,4 +164,4 @@ DEBIAN_FILES	=  \
   source/format
 NSIS_FILES	= \
   bedwyr.nsi EnvVarUpdate.nsh FileAssociation.nsh \
-  bedwyr.rc $(ICONS)
+  bedwyr.rc $(NSIS_ICONS)

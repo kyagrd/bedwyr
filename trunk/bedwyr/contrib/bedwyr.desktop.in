@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=@PACKAGE_NAME@
+GenericName=Theorem prover
+Terminal=true
+Type=Application
+Categories=Development;Science;ComputerScience;ConsoleOnly;
+Comment="@PACKAGE_NAME@, @PACKAGE_TAGLINE@"
+Exec=+bindir+/@PACKAGE_TARNAME@ %F
+TryExec=+bindir+/@PACKAGE_TARNAME@
+Icon=@PACKAGE_TARNAME@
+Path=+pkgdatadir+/examples
+MimeType=text/plain

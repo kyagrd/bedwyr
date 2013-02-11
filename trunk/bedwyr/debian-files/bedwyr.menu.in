@@ -1,0 +1,8 @@
+?package(@PACKAGE_TARNAME@): \
+  title="@PACKAGE_NAME@" \
+  longtitle="@PACKAGE_NAME@, @PACKAGE_TAGLINE@" \
+  needs="text" \
+  section="Applications/Science/Mathematics" \
+  command=+bindir+/@PACKAGE_TARNAME@ \
+  icon="/usr/share/pixmaps/bedwyr_32x32.xpm" \
+  hints="@PROJECT_NAME@"

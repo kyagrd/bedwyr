@@ -26,9 +26,17 @@
 # - "bedwyr" for the program only
 # - ""
 
+#
+# DEFINITIONS
+#
+##############################################################################
+
 -include Makefile.include
 
-### FILES
+#
+# FILES
+#
+##############################################################################
 
 TEST_EXAMPLES	= list.def internal/scoping.def internal/checks.def \
 		  3bits.def lambda.def progs.def \
@@ -36,8 +44,6 @@ TEST_EXAMPLES	= list.def internal/scoping.def internal/checks.def \
 		  tictactoe.def \
 		  pi/pi_trace.def pi/corr-assert.def pi/pi_modal.def \
 		  pi/pi_asserts.def
-
-## ?? ##
 
 ndcore_dir	= src/ndcore
 bedwyr_prefix	= src/bedwyr
@@ -47,8 +53,8 @@ l_cclib		= -lflags -cclib,
 # Archived files
 
 ARCH_FILES	= $(OCAML_FILES) \
-		  $(NDCORE_FILES) $(BEDWYR_FILES) COPYING \
-		  $(MAN_FILES) $(CONTRIB_FILES) $(EXAMPLES_FILES) \
+		  $(NDCORE_FILES) $(BEDWYR_FILES) COPYING $(MAN_FILES) \
+		  $(CONTRIB_FILES) $(DESKTOP_FILES) $(ICONS) $(EXAMPLES_FILES) \
 		  configure.ac Makefile Makefile.include.in \
 		  myocamlbuild.ml _tags install-sh
 
@@ -62,16 +68,17 @@ NDCORE_MODULES	= $(basename $(NDCORE_MLS))
 ifneq ($(BEST_SUFFIX),)
   NDCORE_CMIS	= $(addsuffix .cmi,$(NDCORE_MODULES))
 endif
-NDCORE_LIB_FLS	= $(NDCORE_LIBS) $(ndcore_dir)/META $(NDCORE_CMIS)
+NDCORE_META	= $(ndcore_dir)/META
 BEDWYR_BINS	= $(addprefix $(bedwyr_prefix).,$(BIN_SUFFIXES))
 ifeq ($(TARGET),ndcore)
-  BUILT_FILES	= $(NDCORE_LIB_FLS)
+  BUILT_FILES	= $(NDCORE_LIBS) $(NDCORE_CMIS) $(NDCORE_META)
 else
   ifeq ($(TARGET),bedwyr)
-  BUILT_FILES	= $(BEDWYR_BINS)
+  BUILT_FILES	= $(BEDWYR_BINS) $(MANPAGES) $(DESKTOP_FILES:.in=)
   else
     ifeq ($(TARGET),)
-  BUILT_FILES	= $(NDCORE_LIB_FLS) $(BEDWYR_BINS)
+  BUILT_FILES	= $(NDCORE_LIBS) $(NDCORE_CMIS) $(NDCORE_META) \
+		  $(BEDWYR_BINS) $(MANPAGES) $(DESKTOP_FILES:.in=)
     endif
   endif
 endif
@@ -82,7 +89,10 @@ MANPAGES	= $(MAN_FILES:.in=.gz)
 NSIS_RC_FILES	= $(addprefix nsis-files/,$(filter %.rc,$(NSIS_FILES)))
 COFF_FILES	= $(NSIS_RC_FILES:.rc=.o)
 
-### BUILDING
+#
+# BUILDING
+#
+##############################################################################
 
 .PHONY: build
 
@@ -122,7 +132,8 @@ $(BEDWYR_BINS): src/config.ml
 %:: config.status %.in Makefile
 	@./$< $@
 	@sed -i \
-	  -e 's|+datadir+|$(datadir)|' \
+	  -e 's|+pkgdatadir+|$(pkgdatadir)|' \
+	  -e 's|+bindir+|$(bindir)|' \
 	  $@
 
 config.status: configure Makefile
@@ -131,7 +142,10 @@ config.status: configure Makefile
 configure: configure.ac
 	autoconf
 
-### TESTING
+#
+# TESTING
+#
+##############################################################################
 
 bedwyr: $(bedwyr_prefix).$(BEST_SUFFIX)
 	@ln -svf _build/$< $@
@@ -197,9 +211,12 @@ else
   endif
 endif
 
-### DOC
+#
+# DOC
+#
+##############################################################################
 
-.PHONY: doc ndcore_doc ndcore_src_doc bedwyr_doc bedwyr_man bedwyr_src_doc bedwyr_refman
+.PHONY: doc ndcore_doc ndcore_src_doc bedwyr_doc bedwyr_src_doc bedwyr_refman
 
 ifeq ($(OCAMLDOC),)
   doc:
@@ -219,9 +236,7 @@ ndcore_doc: ndcore_src_doc
 
 ndcore_src_doc: $(NDCORE_ODOCS)
 
-bedwyr_doc: bedwyr_man bedwyr_src_doc bedwyr_refman
-
-bedwyr_man: $(MANPAGES)
+bedwyr_doc: bedwyr_src_doc bedwyr_refman
 
 bedwyr_src_doc: $(BEDWYR_ODOCS_DIR)/index.html
 
@@ -234,13 +249,18 @@ src.odocl:
 bedwyr_refman: doc/Makefile
 	@make -C doc
 
-### INSTALL
+#
+# INSTALL
+#
+##############################################################################
 
 .PHONY: install \
-  install_ndcore install_ndcore_doc install_ndcore_lib install_ndcore_files \
+  install_ndcore install_ndcore_doc install_ndcore_lib install_ndcore_meta \
+  install_ndcore_files \
   install_bedwyr install_bedwyr_doc install_bedwyr_bin install_bedwyr_files \
-  install_bedwyr_man install_bedwyr_contrib install_bedwyr_examples \
-  install_bedwyr_odocs install_bedwyr_refman
+  install_bedwyr_man install_bedwyr_contrib install_bedwyr_link \
+  install_bedwyr_icons install_bedwyr_examples install_bedwyr_odocs \
+  install_bedwyr_refman
 
 ifeq ($(TARGET),)
   install: install_ndcore install_bedwyr
@@ -253,11 +273,15 @@ ifneq ($(OCAMLDOC),)
   install_bedwyr: install_bedwyr_doc
 endif
 
-install_ndcore: install_ndcore_lib install_ndcore_files
+install_ndcore: install_ndcore_lib install_ndcore_meta install_ndcore_files
 
-install_ndcore_lib: $(NDCORE_LIB_FLS)
-	@$(INSTALL_DIR) $(LIBDIR)
-	@for i in $^ ; do $(INSTALL_DATA) _build/$$i $(LIBDIR) ; done
+install_ndcore_lib: $(NDCORE_LIBS) $(NDCORE_CMIS)
+	@$(INSTALL_DIR) $(PKGLIBDIR)
+	@for i in $^ ; do $(INSTALL_DATA) _build/$$i $(PKGLIBDIR) ; done
+
+install_ndcore_meta: $(NDCORE_META)
+	@$(INSTALL_DIR) $(PKGLIBDIR)
+	@$(INSTALL_DATA) $< $(PKGLIBDIR)
 
 install_ndcore_files: $(NDCORE_FILES:=.gz)
 	@$(INSTALL_DIR) $(DOCDIR)
@@ -270,7 +294,8 @@ install_ndcore_doc: $(NDCORE_ODOCS)
 	  done
 
 install_bedwyr: install_bedwyr_bin install_bedwyr_files \
-  install_bedwyr_man install_bedwyr_contrib install_bedwyr_examples
+  install_bedwyr_man install_bedwyr_contrib install_bedwyr_link \
+  install_bedwyr_icons install_bedwyr_examples
 
 install_bedwyr_bin: $(BEDWYR_BINS)
 	@$(INSTALL_DIR) $(BINDIR)
@@ -288,19 +313,27 @@ install_bedwyr_man: $(MANPAGES)
 	  do ln -svf bedwyr.1.gz $(MANDIR)/man1/$$i ; done
 
 install_bedwyr_contrib:
-	@$(INSTALL_DIR) $(DATADIR)
 	@for i in $(CONTRIB_FILES) ; do \
-	  $(INSTALL_DATA) -D $$i $(DATADIR)/$$i ; done
+	  $(INSTALL_DATA) -D $$i $(PKGDATADIR)/$$i ; done
 ifneq ($(VIMFILES),$(DESTDIR))
 	@for i in $(VIM_CONTRIB) ; do \
-	  $(INSTALL_DIR) $(dir $(VIMFILES)/$$i) ; \
-	  ln -svf $(REAL_DATADIR)/contrib/vim/$$i $(VIMFILES)/$$i ; done
+	  $(INSTALL_DIR) $$(dirname $(VIMFILES)/$$i) ; \
+	  ln -svf $(pkgdatadir)/contrib/vim/$$i $(VIMFILES)/$$i ; done
 endif
 
+install_bedwyr_link: $(DESKTOP_FILES:.in=)
+	@$(INSTALL_DIR) $(DESKTOP_DIR)
+	@$(INSTALL_DATA) $^ $(DESKTOP_DIR)
+
+install_bedwyr_icons:
+	@$(INSTALL_DIR) $(PIXMAPS_DIR)
+	@$(INSTALL_DATA) contrib/icons/bedwyr_32x32.xpm $(PIXMAPS_DIR)
+	@for i in $(HICOLOR_ICONS) ; do \
+	  $(INSTALL_DATA) -D contrib/icons/$$i  $(ICONS_DIR)/$$i ; done
+
 install_bedwyr_examples:
-	@$(INSTALL_DIR) $(DATADIR)
 	@for i in $(EXAMPLES_FILES) ; do \
-	  $(INSTALL_DATA) -D $$i $(DATADIR)/$$i ; done
+	  $(INSTALL_DATA) -D $$i $(PKGDATADIR)/$$i ; done
 
 install_bedwyr_doc: install_bedwyr_odocs install_bedwyr_refman
 
@@ -312,9 +345,12 @@ install_bedwyr_odocs: $(BEDWYR_ODOCS_DIR)/index.html
 install_bedwyr_refman: doc/Makefile
 	@make -C doc install
 
-### ARCHIVES
+#
+# ARCHIVES
+#
+##############################################################################
 
-.PHONY: dist archive deb orig_files debian_files deb_pkg
+.PHONY: dist archive deb deb_orig deb_debian deb_pkg
 .SUFFIXES: .tar .tbz .tgz
 
 dist: archive deb nsi
@@ -322,13 +358,13 @@ dist: archive deb nsi
 archive: $(BEDWYR_ARCH)
 
 archive.tar: $(ARCH_FILES)
-	@$(TAR) -cf $@ --xform 's|^|$(DIST_NAME)/|' $^
+	@$(TAR) -cpf $@ --xform 's|^|$(DIST_NAME)/|' $^
 
 doc/archive.tar: doc/Makefile
 	@$(MAKE) -C doc archive
 
 $(DIST_NAME).tar: archive.tar doc/archive.tar
-	@$(TAR) -cf $@ -T /dev/null
+	@$(TAR) -cpf $@ -T /dev/null
 	@for i in $^ ; do $(TAR) -Af $@ $$i ; done
 
 %.bz2: %
@@ -340,17 +376,23 @@ $(DIST_NAME).tar: archive.tar doc/archive.tar
 .tar.tgz:
 	@$(GZIP) -c $< > $@
 
-deb: orig_files debian_files
+deb: deb_orig deb_debian
 	@CONFIGURE_OPTS="$(CONFIGURE_OPTS) --enable-deb" \
 	  $(MAKE) -C $(DEB_DIST_NAME) deb_pkg
 
-orig_files: $(DIST_NAME).tgz
-	@$(TAR) -xf $< --xform 's|^$(DIST_NAME)/|$(DEB_DIST_NAME)/|'
-	@cp -pvf $< $(DEB_NAME).orig.tar.gz
+deb_orig: $(DEB_NAME).orig.tar.gz
 
-debian_files: $(addprefix debian-files/,$(DEBIAN_FILES))
-	@$(TAR) -cvf - $^ --xform 's|^debian-files/|$(DEB_DIST_NAME)/debian/|' \
-	  | $(TAR) -xpvf -
+$(DEB_NAME).orig.tar.gz: $(DIST_NAME).tgz
+	@mkdir -p $(DEB_DIST_NAME)
+	@find $(DEB_DIST_NAME) -maxdepth 1 -mindepth 1 \
+	  -path $(DEB_DIST_NAME)/debian -prune -o -exec rm -rf {} +
+	@$(TAR) -xpf $< --xform 's|^$(DIST_NAME)/|$(DEB_DIST_NAME)/|'
+	@$(TAR) -cpzf $@ $(DEB_DIST_NAME)
+
+deb_debian: $(addprefix debian-files/,$(DEBIAN_FILES))
+	@rm -rf $(DEB_DIST_NAME)/debian
+	@$(TAR) -cpf - $^ --xform 's|^debian-files/|$(DEB_DIST_NAME)/debian/|' \
+	  | $(TAR) -xpf -
 
 ifeq (0,$(MAKELEVEL))
   deb_pkg:
@@ -362,15 +404,17 @@ else
 endif
 
 nsi: nsis_orig_files nsis_files
-	@CONFIGURE_OPTS="$(CONFIGURE_OPTS) --enable-nsi --enable-bytecode --enable-win32 --enable-doc" \
+	@CONFIGURE_OPTS="$(CONFIGURE_OPTS) --enable-nsi \
+	  --enable-bytecode --enable-win32 --enable-doc" \
 	  $(MAKE) -C nsi-build nsi_pkg
 	@cp -pvf nsi-build/$(DIST_NAME)-installer.exe .
 
 nsis_orig_files: $(DIST_NAME).tgz
-	@$(TAR) -xf $< --xform 's|^$(DIST_NAME)/|nsi-build/|'
+	@rm -rvf nsi-build
+	@$(TAR) -xpf $< --xform 's|^$(DIST_NAME)/|nsi-build/|'
 
 nsis_files: $(addprefix nsis-files/,$(NSIS_FILES))
-	@$(TAR) -cvf - $^ --xform 's|^|nsi-build/|' | $(TAR) -xpvf -
+	@$(TAR) -cpf - $^ --xform 's|^|nsi-build/|' | $(TAR) -xpf -
 	@sed -e 's|$$|\r|' COPYING > nsi-build/COPYING.txt
 
 ifeq (0,$(MAKELEVEL))
@@ -385,7 +429,10 @@ else
 endif
 
 
-### OTHER TARGETS
+#
+# OTHER TARGETS
+#
+##############################################################################
 
 .PHONY: help mostlyclean clean distclean
 
@@ -423,6 +470,7 @@ clean: mostlyclean doc/Makefile
 	@rm -rvf $(DEB_DIST_NAME) nsi-build
 
 distclean: clean doc/Makefile
+	@$(MAKE) -C doc distclean
 	@rm -vf $(ac_config_files)
 	@rm -vf config.status config.log configure
 	@rm -rvf autom4te.cache
