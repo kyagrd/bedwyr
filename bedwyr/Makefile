@@ -353,7 +353,7 @@ install_bedwyr_refman: doc/Makefile
 .PHONY: dist archive deb deb_orig deb_debian deb_pkg
 .SUFFIXES: .tar .tbz .tgz
 
-dist: archive deb nsi
+dist: archive deb nsis
 
 archive: $(BEDWYR_ARCH)
 
@@ -403,25 +403,28 @@ else
 	@$(DEBUILD)
 endif
 
-nsi: nsis_orig_files nsis_files
-	@CONFIGURE_OPTS="$(CONFIGURE_OPTS) --enable-nsi \
+nsis: nsis_orig_files nsis_files
+	@CONFIGURE_OPTS="$(CONFIGURE_OPTS) --enable-nsis \
 	  --enable-bytecode --enable-win32 --enable-doc" \
-	  $(MAKE) -C nsi-build nsi_pkg
-	@cp -pvf nsi-build/$(DIST_NAME)-installer.exe .
+	  $(MAKE) -C nsis-build nsis_pkg
+	@cp -pvf nsis-build/$(DIST_NAME)-installer.exe .
 
 nsis_orig_files: $(DIST_NAME).tgz
-	@rm -rvf nsi-build
-	@$(TAR) -xpf $< --xform 's|^$(DIST_NAME)/|nsi-build/|'
+	@mkdir -p nsis-build
+	@find nsis-build -maxdepth 1 -mindepth 1 \
+	  -path nsis-build/nsis-files -prune -o -exec rm -rf {} +
+	@$(TAR) -xpf $< --xform 's|^$(DIST_NAME)/|nsis-build/|'
 
 nsis_files: $(addprefix nsis-files/,$(NSIS_FILES))
-	@$(TAR) -cpf - $^ --xform 's|^|nsi-build/|' | $(TAR) -xpf -
-	@sed -e 's|$$|\r|' COPYING > nsi-build/COPYING.txt
+	@rm -rf nsis-build/nsis-files
+	@$(TAR) -cpf - $^ --xform 's|^|nsis-build/|' | $(TAR) -xpf -
+	@sed -e 's|$$|\r|' COPYING > nsis-build/nsis-files/COPYING.txt
 
 ifeq (0,$(MAKELEVEL))
-  nsi_pkg:
-	@echo 'Use the "nsi" target to ensure the necessary files exist.'
+  nsis_pkg:
+	@echo 'Use the "nsis" target to ensure the necessary files exist.'
 else
-  nsi_pkg: build doc
+  nsis_pkg: build doc
 	@mv _build/$(src_docdir)/index.html _build/$(src_docdir)/index.htm
 	@find _build/$(src_docdir)/ -type f \
 	  -exec sed -i -e 's|\<index.html\>|index.htm|' {} \;
@@ -450,7 +453,7 @@ help:
 	@echo ' dist           build archives and packages'
 	@echo ' archive        build archives ($(DIST_NAME).($(ARCH_SUFFIXES)))'
 	@echo ' deb            build debian package ($(DEB_NAME)-1_*.deb)'
-	@echo ' nsi            build windows installer ($(DIST_NAME)-installer.exe)'
+	@echo ' nsis           build windows installer ($(DIST_NAME)-installer.exe)'
 	@echo
 	@echo ' help           display this message'
 	@echo ' mostlyclean    remove compiled files'
@@ -467,7 +470,7 @@ clean: mostlyclean doc/Makefile
 	@$(FIND) . -name '*~' -exec rm -vf \{\} \;
 	@rm -vf *.bz2 *.gz *.tar *.tbz *.tgz *.odocl $(MANPAGES)
 	@rm -vf *.build *.changes *.dsc *.deb *-installer.exe
-	@rm -rvf $(DEB_DIST_NAME) nsi-build
+	@rm -rvf $(DEB_DIST_NAME) nsis-build
 
 distclean: clean doc/Makefile
 	@$(MAKE) -C doc distclean

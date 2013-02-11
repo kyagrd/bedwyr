@@ -22,51 +22,98 @@
 # NSI input for makensis (from the Nullsoft Scriptable Install System)
 # option -NOCD required
 
+!include "MUI2.nsh"
 !include "nsis-files/EnvVarUpdate.nsh"
 !include "nsis-files/FileAssociation.nsh"
 
+#
+# Variables
+#
 ########################################################################
-### Variables
 
 !define PROJECT_NAME    "@PROJECT_NAME@"
 !define PACKAGE_NAME    "@PACKAGE_NAME@"
 !define PACKAGE_TARNAME "@PACKAGE_TARNAME@"
 !define PACKAGE_VERSION "@PACKAGE_VERSION@"
+!define PACKAGE_FULLNAME \
+  "${PACKAGE_NAME} ${PACKAGE_VERSION}"
 !define OCAML_VERSION   "@OCAML_VERSION@"
+!define PACKAGE_TAGLINE "@PACKAGE_TAGLINE@"
 !define PROJECT_PACKAGE "${PROJECT_NAME}\${PACKAGE_NAME}"
-!define UNINSTALL_KEY   "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PACKAGE_NAME}"
+!define UNINSTALL_KEY \
+  "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PACKAGE_NAME}"
 !define SOFTWARE_KEY    "Software\${PROJECT_PACKAGE}"
 !define INSTALL_DIR     "$PROGRAMFILES32\${PROJECT_PACKAGE}"
-!define START_MENU_DIR  "$SMPROGRAMS\${PROJECT_PACKAGE}"
 !define HKCR_EXTENSION  ".def"
-!define HKCR_FILECLASS  "Bedwyr.Definitions.1.3"
-!define HKCR_DESC       "Bedwyr Definitions"
+!define HKCR_FILECLASS  "${PACKAGE_NAME}.Definitions.1.3"
+!define HKCR_DESC       "${PACKAGE_NAME} Definitions"
 
+#!define MUI_HEADERIMAGE
+#!define MUI_HEADERIMAGE_BITMAP "150x57.bmp"
+#!define MUI_HEADERIMAGE_BITMAP_NOSTRETCH
+#!define MUI_HEADER_TRANSPARANT_TEXT
+#!define MUI_WELCOMEFINISHPAGE_BITMAP "164x314.bmp"
+#!define MUI_WELCOMEFINISHPAGE_BITMAP_NOSTRETCH
+!define MUI_COMPONENTSPAGE_NODESC
+!define MUI_FINISHPAGE_NOAUTOCLOSE
+!define MUI_ABORTWARNING
+!define MUI_ABORTWARNING_TEXT "Nothing was installed yet. Abort now?"
+!define MUI_ABORTWARNING_CANCEL_DEFAULT
+!define MUI_UNABORTWARNING
+!define MUI_UNABORTWARNING_TEXT "Nothing was removed yet. Abort now?"
+!define MUI_UNABORTWARNING_CANCEL_DEFAULT
+
+#!define MUI_STARTMENUPAGE_NODISABLE
+Var StartMenuFolder
+#!define MUI_STARTMENUPAGE_DEFAULTFOLDER ${PROJECT_PACKAGE}
+#!define MUI_STARTMENUPAGE_REGISTRY_ROOT "HKLM"
+#!define MUI_STARTMENUPAGE_REGISTRY_KEY "${SOFTWARE_KEY}"
+#!define MUI_STARTMENUPAGE_REGISTRY_VALUENAME "StartMenuFolder"
+
+#
+# General commands
+#
 ########################################################################
-### General commands
 
-Name "${PACKAGE_NAME} version ${PACKAGE_VERSION}"
+Name "${PACKAGE_FULLNAME}"
 OutFile "${PACKAGE_TARNAME}-${PACKAGE_VERSION}-installer.exe"
 InstallDir "${INSTALL_DIR}"
 InstallDirRegKey HKLM "${SOFTWARE_KEY}" "InstallDir"
 ;RequestExecutionLevel user
-LicenseData "COPYING.txt"
 
-Page license
-Page components
-Page directory
-Page instfiles
-UninstPage uninstConfirm
-UninstPage instfiles
+!insertmacro MUI_PAGE_LICENSE "nsis-files/COPYING.txt"
+
+!insertmacro MUI_PAGE_COMPONENTS
+
+!insertmacro MUI_PAGE_DIRECTORY
+
+# XXX broken, doesn't take the user's choice into account
+#!insertmacro MUI_PAGE_STARTMENU page_id $StartMenuFolder
+
+!insertmacro MUI_PAGE_INSTFILES
+
+!define MUI_FINISHPAGE_TEXT \
+  "${PACKAGE_FULLNAME} has been installed on your computer, \
+along with examples ($INSTDIR\Examples) and the manual ($INSTDIR\Doc) \
+if requested."
+!define MUI_FINISHPAGE_LINK "Visit the website"
+!define MUI_FINISHPAGE_LINK_LOCATION "http://slimmer.gforge.inria.fr/bedwyr/"
+!insertmacro MUI_PAGE_FINISH
+
+!insertmacro MUI_UNPAGE_CONFIRM
+
+!insertmacro MUI_UNPAGE_INSTFILES
+
+!insertmacro MUI_LANGUAGE "English"
 
 InstType "Full"
 InstType "Standard"
 InstType "Minimal"
 
-InstProgressFlags smooth colored
-
+#
+# Uninstall a previous version
+#
 ########################################################################
-### Uninstall a previous version
 
 Function .onInit
   SetCurInstType 1
@@ -78,8 +125,8 @@ Function .onInit
 
   MessageBox MB_OKCANCEL|MB_ICONEXCLAMATION \
     "${PACKAGE_NAME} version $R1 is already installed.$\n$\n \
-    Click `OK` to replace it, or `Cancel` to cancel the installation of \
-    ${PACKAGE_NAME} version ${PACKAGE_VERSION}." \
+Click `OK` to replace it, or `Cancel` to cancel the installation of \
+${PACKAGE_NAME} version ${PACKAGE_VERSION}." \
     /SD IDCANCEL IDOK onInitUninst
   Abort
 
@@ -92,31 +139,24 @@ onInitUninst:
   IfErrors no_remove_uninstaller onInitdone
   no_remove_uninstaller:
   messageBox MB_OK|MB_ICONSTOP \
-    "An error prevented the previous version to be uninstalled. \
-    Contact support and ask politely what the heck is going on."
+    "The previous version was not uninstalled. \
+If this was not your intention, please contact support."
   Abort
 
 onInitdone:
 FunctionEnd
 
+#
+# Stuff to install
+#
 ########################################################################
-### Congratulation
-
-Function .onInstSuccess
-  MessageBox MB_OK|MB_ICONINFORMATION \
-    "${PACKAGE_NAME} was successfully installed. \
-    Find the examples in '$INSTDIR\Examples' and the doc in '$INSTDIR\Doc'."
-FunctionEnd
-
-########################################################################
-### Stuff to install
 
 SectionGroup "!Bedwyr binaries"
   Section "x86 native code (required)"
     SectionIn 1 2 3 RO
     ${EnvVarUpdate} $0 "PATH" "A" "HKLM" "$INSTDIR"
-    WriteRegStr HKLM "${SOFTWARE_KEY}" "InstallDir" "$INSTDIR"
-    WriteRegStr HKLM "${SOFTWARE_KEY}" "Version" "${PACKAGE_VERSION}"
+    WriteRegStr   HKLM "${SOFTWARE_KEY}" "InstallDir" "$INSTDIR"
+    WriteRegStr   HKLM "${SOFTWARE_KEY}" "Version" "${PACKAGE_VERSION}"
     WriteRegStr   HKLM "${UNINSTALL_KEY}" "DisplayName" "${PACKAGE_NAME}"
     WriteRegStr   HKLM "${UNINSTALL_KEY}" "DisplayVersion" "${PACKAGE_VERSION}"
     WriteRegStr   HKLM "${UNINSTALL_KEY}" "DisplayIcon" "$INSTDIR\bedwyr.exe,0"
@@ -158,41 +198,50 @@ SectionEnd
 
 SectionGroup "Start Menu Shortcuts"
   Section "Programs"
+    #!define MUI_STARTMENU_WRITE_BEGIN "page_id"
+    StrCpy $StartMenuFolder "${PROJECT_PACKAGE}"
     SectionIn 1 2
+    #!define MUI_STARTMENU_WRITE_BEGIN page_id
     SetShellVarContext all
-    CreateDirectory "${START_MENU_DIR}"
-    SetOutPath "$INSTDIR\"
-    CreateShortCut "${START_MENU_DIR}\Uninstall.lnk" \
+    CreateDirectory "$SMPROGRAMS\$StartMenuFolder"
+    SetOutPath "$SMPROGRAMS\$StartMenuFolder"
+    CreateShortCut "Uninstall ${PACKAGE_NAME}.lnk" \
       "$INSTDIR\uninstall.exe" "" "$INSTDIR\uninstall.exe" 0
-    CreateShortCut "${START_MENU_DIR}\${PACKAGE_NAME}.lnk" \
+    CreateShortCut "${PACKAGE_NAME}.lnk" \
       "$INSTDIR\bedwyr.exe" "" "$INSTDIR\bedwyr.exe" 0
     IfFileExists "$INSTDIR\bedwyr.byte" 0 +2
-    CreateShortCut "${START_MENU_DIR}\${PACKAGE_NAME} - bytecode.lnk" \
+    CreateShortCut "${PACKAGE_NAME} - bytecode.lnk" \
       "$INSTDIR\bedwyr.byte" "" "$INSTDIR\bedwyr.exe" 0
+    #!define MUI_STARTMENU_WRITE_END
   SectionEnd
   Section "Files"
+    #!define MUI_STARTMENU_WRITE_BEGIN "page_id"
+    StrCpy $StartMenuFolder "${PROJECT_PACKAGE}"
     SectionIn 1
+    #!define MUI_STARTMENU_WRITE_BEGIN page_id
     SetShellVarContext all
-    CreateDirectory "${START_MENU_DIR}"
-    SetOutPath "$INSTDIR\Doc"
-    CreateShortCut "${START_MENU_DIR}\Doc.lnk" \
+    CreateDirectory "$SMPROGRAMS\$StartMenuFolder"
+    SetOutPath "$SMPROGRAMS\$StartMenuFolder"
+    CreateShortCut "Doc.lnk" \
       "$INSTDIR\Doc" "" "$INSTDIR\bedwyr.exe" 1
-    SetOutPath "$INSTDIR\Examples"
-    CreateShortCut "${START_MENU_DIR}\Examples.lnk" \
+    CreateShortCut "Examples.lnk" \
       "$INSTDIR\Examples" "" "$INSTDIR\bedwyr.exe" 1
+    #!define MUI_STARTMENU_WRITE_END
   SectionEnd
 SectionGroupEnd
 
 SectionGroup "Contrib files"
   Section "Emacs files"
     SectionIn 1
-    SetOutPath "$INSTDIR\Contrib\Emacs"
+    SetOutPath "$INSTDIR\Contrib"
     File /r contrib\emacs
+    Rename "$INSTDIR\Contrib\emacs" "$INSTDIR\Contrib\Emacs"
   SectionEnd
   Section "Vim files"
     SectionIn 1
-    SetOutPath "$INSTDIR\Contrib\Vim"
+    SetOutPath "$INSTDIR\Contrib"
     File /r contrib\vim
+    Rename "$INSTDIR\Contrib\vim" "$INSTDIR\Contrib\Vim"
   SectionEnd
 SectionGroupEnd
 
@@ -230,33 +279,23 @@ SectionGroup "Documentation"
   SectionGroupEnd
 SectionGroupEnd
 
+#
+# Uninstaller
+#
 ########################################################################
-### Uninstaller
 
 Section "Uninstall"
   SetShellVarContext all
 
-  Delete "${START_MENU_DIR}\Examples.lnk"
   RMDir /r "$INSTDIR\Examples"
+  RMDir /r "$INSTDIR\Contrib"
 
-  Delete "${START_MENU_DIR}\Uninstall.lnk"
-  Delete "${START_MENU_DIR}\${PACKAGE_NAME}.lnk"
-  Delete "${START_MENU_DIR}\${PACKAGE_NAME} - bytecode.lnk"
-  RMDir "${START_MENU_DIR}"
+  #!insertmacro MUI_STARTMENU_GETFOLDER page_id $R0
+  StrCpy $StartMenuFolder "${PROJECT_PACKAGE}"
+  RMDir /r "$SMPROGRAMS\$StartMenuFolder"
   RMDir "$SMPROGRAMS\${PROJECT_NAME}"
 
-  RMDir /r "$INSTDIR\Contrib\Emacs"
-  RMDir /r "$INSTDIR\Contrib\Vim"
-  RMDir "$INSTDIR\Contrib"
-
-  Delete "${START_MENU_DIR}\Doc.lnk"
-  Delete "$INSTDIR\Doc\quickstart.*"
-  Delete "$INSTDIR\Doc\refman\*"
-  Delete "$INSTDIR\Doc\refman.*"
-  Delete "$INSTDIR\Doc\libref\*"
-  RMDir "$INSTDIR\Doc\refman"
-  RMDir "$INSTDIR\Doc\libref"
-  RMDir "$INSTDIR\Doc"
+  RMDir /r "$INSTDIR\Doc"
 
   Delete "$INSTDIR\bedwyr.exe"
   Delete "$INSTDIR\bedwyr.byte"
@@ -264,9 +303,9 @@ Section "Uninstall"
   RMDir "$INSTDIR"
   RMDir "$PROGRAMFILES32\${PROJECT_NAME}"
 
-  ${UnRegisterExtension} \
-    "${HKCR_EXTENSION}" "${HKCR_FILECLASS}"
+  ${UnRegisterExtension} "${HKCR_EXTENSION}" "${HKCR_FILECLASS}"
   DeleteRegKey HKLM "${UNINSTALL_KEY}"
   DeleteRegKey HKLM "${SOFTWARE_KEY}"
+  DeleteRegKey HKLM "Software\${PROJECT_NAME}"
   ${un.EnvVarUpdate} $0 "PATH" "R" "HKLM" "$INSTDIR"
 SectionEnd

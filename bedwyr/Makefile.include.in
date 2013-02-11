@@ -112,7 +112,7 @@ BZIP2		= @BZIP2@ -9 -f
 OCAMLC		= @OCAMLC@
 OCAMLDEBUG	= @OCAMLDEBUG@
 OCAMLBUILD	= @OCAMLBUILD@ -classic-display -yaccflag -v \
-		  -Xs debian,$(DEB_DIST_NAME),nsis-files,nsi-build
+		  -Xs debian,$(DEB_DIST_NAME),nsis-files,nsis-build
 OCAMLBUILDWIN32	= $(OCAMLBUILD) -ocamlopt @MINGW32_OCAMLOPT@
 MINGW32_WINDRES	= @MINGW32_WINDRES@ -c0xfde9 -l0x0890
 OCAMLDOC	= @OCAMLDOC@
@@ -154,6 +154,7 @@ DEBIAN_FILES	=  \
   rules \
   bedwyr.install \
   bedwyr.lintian-overrides \
+  bedwyr.menu \
   bedwyr-doc.install \
   bedwyr-doc.doc-base.quickstart \
   bedwyr-doc.doc-base.libref \
