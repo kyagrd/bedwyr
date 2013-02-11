@@ -102,26 +102,16 @@ let pre_or p t1 t2 = Or (p,t1,t2)
 let pre_arrow p t1 t2 = Arrow (p,t1,t2)
 
 let pre_binder p b vars t =
-  let vars =
-    List.map
-      (fun (p,name,ty) -> (p,name,Typing.fresh_tyinst ty))
-      vars
-  in
   match vars,t with
     | [],_ -> t
     | _,Binder (_,b',vars',t) when b=b' -> Binder (p,b,vars@vars',t)
     | _,_ -> Binder (p,b,vars,t)
 
 let pre_lambda p vars t =
-  let vars =
-    List.map
-      (fun (p,name,ty) -> (p,name,Typing.fresh_tyinst ty))
-      vars
-  in
   match vars,t with
-  | [],_ -> t
-  | _,Lam (_,vars',t) -> Lam (p,vars@vars',t)
-  | _,_ -> Lam (p,vars,t)
+    | [],_ -> t
+    | _,Lam (_,vars',t) -> Lam (p,vars@vars',t)
+    | _,_ -> Lam (p,vars,t)
 
 let pre_app p hd args = if args = [] then hd else match hd with
   | App (_,hd,args') -> App (p,hd,args'@args)
@@ -190,17 +180,18 @@ exception Var_typing_error of string option * pos * Typing.ty
 
 let type_check_and_translate
       ?stratum
-      ?(instantiate_head=true)
-      ?(infer=false)
-      ?(iter_free_types=ignore)
-      ?(free_args=[])
+      ~instantiate_head
+      ~free_args
+      ~infer
+      ~iter_free_types
+      ~fresh_tyinst
       pre_term
       expected_type
-      (typed_free_var,typed_declared_obj,typed_intern_pred,bound_var_type,atomic_kind) =
+      (typed_free_var,typed_declared_obj,typed_intern_pred,atomic_kind) =
   let find_db s bvars =
     let rec aux n = function
       | [] -> None
-      | (_,name,ty)::_ when name=s -> Some (Term.db n,ty)
+      | (name,ty)::_ when name=s -> Some (Term.db n,ty)
       | _::bvars -> aux (n+1) bvars
     in
     aux 1 bvars
@@ -270,25 +261,39 @@ let type_check_and_translate
           Term.op_arrow t1 t2,u
       | Binder (_,b,vars,pt) ->
           let arity = List.length vars in
-          let bvars = List.rev_append vars bvars in
-          let _ = List.map bound_var_type vars in
+          let r_vars,bvars =
+            List.fold_left
+              (fun (r_vars,bvars) (p,name,ty) ->
+                 let ty = fresh_tyinst ty in
+                 ((p,ty)::r_vars,(name,ty)::bvars))
+              ([],bvars)
+              vars
+          in
           let u = Typing.unify_constraint u exty Typing.tprop in
           let t,u = aux ~negative pt Typing.tprop bvars u in
           List.iter
-            (fun (p,_,ty) ->
+            (fun (p,ty) ->
                let ty = Typing.ty_norm ~unifier:u ty in
                let (_,_,_,propositional,higher_order) =
                  Typing.kind_check ~p ty ~atomic_kind
                in
                if higher_order || propositional
                then raise (Var_typing_error (None,p,ty)))
-            vars ;
+            r_vars ;
           Term.binder b arity t,u
       | Lam (_,vars,pt) ->
           let arity = List.length vars in
-          let bvars = List.rev_append vars bvars in
-          let tys = List.map bound_var_type vars in
+          let bvars,r_tys =
+            List.fold_left
+              (fun (bvars,r_tys) (p,name,ty) ->
+                 let ty = fresh_tyinst ty in
+                 let _ = Typing.kind_check ~p ty ~atomic_kind in
+                 ((name,ty)::bvars,ty::r_tys))
+              (bvars,[])
+              vars
+          in
           let ty = Typing.fresh_tyvar () in
+          let tys = List.rev r_tys in
           let u = Typing.unify_constraint u exty (Typing.ty_arrow tys ty) in
           let t,u = aux ~negative pt ty bvars u in
           Term.lambda arity t,u
