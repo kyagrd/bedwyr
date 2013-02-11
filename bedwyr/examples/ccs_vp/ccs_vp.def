@@ -1,0 +1,184 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Early and Late Semantics of Value-Passing CCS
+%  written by Peng Wu (LIX, Ecole Polytechnique)
+%
+%  An example of how to do various kinds of
+%  (bi)simulation checks for the value-passing CCS within Bedwyr.
+%
+%  Compare this approach to using logic programming and model
+%  checking to the approach described in the paper
+%
+%  Local and Symbolic Bisimulation Using Tabled Constraint Logic Programming
+%    by Samik Basu, Madhavan Mukund, C. R. Ramakrishnan, I. V. Ramakrishnan,
+%    Rakesh M. Verma
+%    Proc. 17th ICLP 2001 (LNCS 2237)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Late and early transition systems are describe together.  The
+% main difference is in the treatment of the input-prefix.
+Define
+  % Early input
+  trans  : proc -> action -> proc -> prop,
+  % Late input
+  ltrans : proc -> action -> proc -> prop
+by
+  % Prefixes
+  %  Input prefix is rather simple in Bedwyr, given the presence of
+  %  lambda-abstraction and of beta-conversion.
+  trans  (in C P) (i C V) Q := Q = (P V);
+  %  Notice that this definition should be equivalent to the following one.
+  %    trans  (in C P) (i C V) (P V).
+  %  This latter one is not used since it involves a non-L-lambda unification
+  %  problem.  Moving the unification to the body of the clause delays
+  %  unification until some beta-conversions are done.  The result yields
+  %  an L-lambda problem.
+  ltrans (in C P) (i' C) (abs P);
+  %  Notice that the "continuation" for an ltrans with an input action
+  %  is an abstraction of a process, not a process.
+
+  trans  (out C V P) (o C V) P;
+  ltrans (out C V P) (o C V) P;
+
+  trans  (taup P) tau P;
+  ltrans (taup P) tau P;
+
+  % Choice
+  trans  (P + Q) A R := trans  P A R \/ trans  Q A R;
+  ltrans (P + Q) A R := ltrans P A R \/ ltrans Q A R;
+
+  % Parallel
+  trans  (P | Q) A (R | Q) := trans  P A R;
+  ltrans (P | Q) A (R | Q) := ltrans P A R;
+
+  trans  (P | Q) A (P | R) := trans  Q A R;
+  ltrans (P | Q) A (P | R) := ltrans Q A R;
+
+  % Communication
+  trans  (P | Q) tau (R | S) := exists C V,
+    trans  P (i C V) R /\ trans  Q (o C V) S;
+  ltrans (P | Q) tau (R | S) := exists T C V,
+    ltrans P (i' C) (abs T) /\ ltrans Q (o C V) S /\ R = (T V);
+
+  trans  (P | Q) tau (R | S) := exists C V,
+    trans  P (o C V) R /\ trans  Q (i C V) S;
+  ltrans (P | Q) tau (R | S) := exists T C V,
+    ltrans P (o C V) R /\ ltrans Q (i' C) (abs T) /\ S = (T V);
+
+  % Match(if..then..)
+  trans  (if V V P) A Q := trans  P A Q;
+  ltrans (if V V P) A Q := ltrans P A Q;
+
+  % ite(if..then..else..) and "mismatch"  use a negation in the operational
+  % semantics.  This can cause problems in Bedwyr ("logic variable on the left")
+  % during bisimulations.
+  trans  (ite V V P R) A Q := trans  P A Q;
+  ltrans (ite V V P R) A Q := ltrans P A Q;
+
+  trans  (ite V W P R) A Q := (V = W -> false) /\ trans  R A Q;
+  ltrans (ite V W P R) A Q := (V = W -> false) /\ ltrans R A Q;
+
+  % Identifier: replace with an equivalent process.
+  trans  (proc I) A Q := pdef I P /\ trans  P A Q;
+  ltrans (proc I) A Q := pdef I P /\ ltrans P A Q.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Simulation and Bisimulation Relations
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% In the other paper, they specify the negation of bisimulation
+
+% Early, \forall\exists- simulation
+Define coinductive sim : proc -> proc -> prop by
+  sim P Q :=
+    (forall R A, trans P A R -> exists S, trans Q A S /\ sim R S).
+Define coinductive aesim : proc -> proc -> prop by
+  aesim P Q :=
+    (forall R C V, ltrans P (o C V) R -> exists S, ltrans Q (o C V) S /\ aesim R S) /\
+    (forall R, ltrans P tau R -> exists S, ltrans Q tau S /\ aesim R S) /\
+    (forall R C, ltrans P (i' C) (abs R) -> forall V,exists S, ltrans Q (i' C) (abs S) /\ aesim (R V) (S V)).
+
+% Late simulation
+Define coinductive lsim : proc -> proc -> prop by
+  lsim P Q :=
+    (forall R C V, ltrans P (o C V) R -> exists S, ltrans Q (o C V) S /\ lsim R S) /\
+    (forall R, ltrans P tau R -> exists S, ltrans Q tau S /\ lsim R S) /\
+    (forall R C, ltrans P (i' C) (abs R) -> exists S, ltrans Q (i' C) (abs S) /\ forall V, lsim (R V) (S V)).
+
+% Early, \_forall\_exists- bisimulation
+Define coinductive bisim : proc -> proc -> prop by
+  bisim P Q :=
+    (forall R A, trans P A R -> exists S, trans Q A S /\ bisim R S) /\
+    (forall S A, trans Q A S -> exists R, trans P A R /\ bisim R S).
+Define coinductive aebisim : proc -> proc -> prop by
+  aebisim P Q :=
+    (forall R C V, ltrans P (o C V) R -> exists S, ltrans Q (o C V) S /\ aebisim R S) /\
+    (forall R, ltrans P tau R -> exists S, ltrans Q tau S /\ aebisim R S) /\
+    (forall R C, ltrans P (i' C) (abs R) -> forall V, exists S, ltrans Q (i' C) (abs S) /\ aebisim (R V) (S V)) /\
+    (forall S C V, ltrans Q (o C V) S -> exists R, ltrans P (o C V) R /\ aebisim R S) /\
+    (forall S, ltrans Q tau S -> exists R, ltrans P tau R /\ aebisim R S) /\
+    (forall S C, ltrans Q (i' C) (abs S) -> forall V, exists R, ltrans P (i' C) (abs R) /\ aebisim (R V) (S V)).
+
+% Late bisimulation
+Define coinductive lbisim : proc -> proc -> prop by
+  lbisim P Q :=
+    (forall R C V, ltrans P (o C V) R -> exists S, ltrans Q (o C V) S /\ lbisim R S) /\
+    (forall R, ltrans P tau R -> exists S, ltrans Q tau S /\ lbisim R S) /\
+    (forall R C, ltrans P (i' C) (abs R) -> exists S, ltrans Q (i' C) (abs S) /\ forall V, lbisim (R V) (S V)) /\
+    (forall S C V, ltrans Q (o C V) S -> exists R, ltrans P (o C V) R /\ lbisim R S) /\
+    (forall S, ltrans Q tau S -> exists R, ltrans P tau R /\ lbisim R S) /\
+    (forall S C, ltrans Q (i' C) (abs S) -> exists R, ltrans P (i' C) (abs R) /\ forall V, lbisim (R V) (S V)).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Some useful predicates for testing
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% 1-step transition
+Define
+  step  : nat -> action -> proc -> prop,
+  lstep : nat -> action -> proc -> prop
+by
+  step  I A Q := pdef I P /\ trans  P A Q ;
+  lstep I A Q := pdef I P /\ ltrans P A Q.
+
+% 2-steps transitions
+Define two_steps : nat -> action -> proc -> action -> proc -> prop by
+  two_steps I A Q B W := pdef I P /\ trans P A Q /\ trans Q B W.
+
+% Simulation checking
+Define
+  sc   : nat -> nat -> prop,
+  aesc : nat -> nat -> prop
+by
+  sc   I J := pdef I P /\ pdef J Q /\ sim   P Q;
+  aesc I J := pdef I P /\ pdef J Q /\ aesim P Q.
+
+% Late simulation checking
+Define lsc : nat -> nat -> prop by
+  lsc I J := pdef I P /\ pdef J Q /\ lsim P Q.
+
+% Bisimulation checking
+Define
+  bc   : nat -> nat -> prop,
+  aebc : nat -> nat -> prop
+by
+  bc   I J := pdef I P /\ pdef J Q /\ bisim   P Q;
+  aebc I J := pdef I P /\ pdef J Q /\ aebisim P Q.
+
+% Late bisimulation checking
+Define lbc : nat -> nat -> prop by
+  lbc I J := pdef I P /\ pdef J Q /\ lbisim P Q.
+
+% Let's check some instances of some axioms
+% P + 0 = P
+Define axiom1 : nat -> prop by
+  axiom1 I := pdef I P /\ bisim (P + null) P.
+% P + P = P
+Define axiom2 : nat -> prop by
+  axiom2 I := pdef I P /\ bisim (P + P) P.
+% P + Q = Q + P
+Define axiom3 : nat -> nat -> prop by
+  axiom3 I J := pdef I P /\ pdef J Q /\ bisim (P + Q) (Q + P).
+% (P + Q) + R = P + (Q + R)
+Define axiom4 : nat -> nat -> nat -> prop by
+  axiom4 I J K := pdef I P /\ pdef J Q /\ pdef K R /\ bisim ((P + Q) + R) (P + (Q + R)).
