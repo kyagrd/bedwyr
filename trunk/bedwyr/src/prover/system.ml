@@ -196,6 +196,7 @@ let translate_term
       ?(expected_type=Ty.tprop)
       pre_term
       free_types =
+  let fresh_tyinst = Ty.fresh_tyinst () in
   let iter_free_types f =
     (* XXX [QH] yeah, reading-clearing-filling a hashtable is not elegant,
      * but it is not safe to use Hashtbl.replace *during* the Hashtbl.iter,
@@ -262,7 +263,7 @@ let translate_term
           | _ ->
               Term.free name ;
               raise (Missing_declaration (name,Some p))
-    in t,(if instantiate_head then Ty.fresh_tyinst ty else ty)
+    in t,(if instantiate_head then Ty.fresh_tyinst () ty else ty)
   in
   (* return a typed variable corresponding to the name
    * of an internal constant *)
@@ -295,21 +296,18 @@ let translate_term
       | _ ->
           Term.free name ;
           raise (Missing_declaration (name,Some p))
-    in t,Ty.fresh_tyinst ty
-  in
-  (* return the type of the variable corresponding to an annotated ID *)
-  let bound_var_type (p,name,ty) =
-    let _ = kind_check p ty in ty
+    in t,Ty.fresh_tyinst () ty
   in
   Input.type_check_and_translate
     ?stratum
     ~instantiate_head
+    ~free_args
     ~infer
     ~iter_free_types
-    ~free_args
+    ~fresh_tyinst
     pre_term
     expected_type
-    (typed_free_var,typed_declared_obj,typed_intern_pred,bound_var_type,atomic_kind)
+    (typed_free_var,typed_declared_obj,typed_intern_pred,atomic_kind)
 
 let translate_query pre_term =
   let free_types : (Term.var,Ty.ty) Hashtbl.t =

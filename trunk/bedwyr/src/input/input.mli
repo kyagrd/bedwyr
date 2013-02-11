@@ -102,9 +102,13 @@ val pre_binder :
 
 (** Abstraction. *)
 val pre_lambda : pos -> (pos * string * Typing.ty) list -> preterm -> preterm
+(** This pre-term may contain type parameters (not converted to type variables)
+  * if its type was polymorphic. *)
 
 (** Application. *)
 val pre_app : pos -> preterm -> preterm list -> preterm
+(** This pre-term may contain type parameters (not converted to type variables)
+  * if its type was polymorphic. *)
 
 (** {6 Pre-terms manipulation} *)
 
@@ -198,7 +202,7 @@ exception Term_typing_error of pos * Typing.ty * Typing.ty *
 (** Type checking error on a free or bound variable. *)
 exception Var_typing_error of string option * pos * Typing.ty
 
-(** [type_check_and_translate pt ty (fv,dv,iv,bv)] checks that the pre-term [pt]
+(** [type_check_and_translate pt ty (fv,do,ip,ak)] checks that the pre-term [pt]
   * build by the parser has the type [ty] (usually [TProp]),
   * and either translates it to the corresponding term
   * and realizes the type unification as side effect,
@@ -210,32 +214,36 @@ exception Var_typing_error of string option * pos * Typing.ty
   * that aren't needed after this stage, and nothing is done to clean up
   * the global type unifier at present, so this function has a memory leak.
   *
-  * [fv], [dv], [iv] and [bv] are functions returning the type (and,
-  * depending on the case, the corresponding term) of a free, declared,
-  * intern or bound variable.
+  * [fv], [do] and [ip] are functions returning the type (and,
+  * depending on the case, the corresponding term) of a free variable,
+  * declared object (constant or predicate) or intern predicate.
+  * [ak] returns the kind of a type constant.
   * @param stratum stratum of the predicate this term defines
+  * @param instantiate_head whether the type of the head of the term must be
+  * instantiated (false for the head of a clause)
+  * @param free_args names of the free variables used as argument of a top-level
+  * (wrt a definition) application, ie which will be abstracted on,
+  * and whose type are therefore allowed to contain [TProp]
   * @param infer whether the result of the inference is to be kept in the
   * global type unifier or not
   * @param iter_free_types function that maps a provided action
   * on a set of types once the type unification is done
   * (and before the corresponding unifier is lost, if [infer] is false)
-  * @param free_args names of the free variables used as argument of a top-level
-  * (wrt a definition) application, ie which will be abstracted on,
-  * and whose type are therefore allowed to contain [TProp]
+  * @param fresh_tyinst polymorphic type instantier
   * @return a type-checked Term.term and its type
   * @raise Var_typing_error if a free variable of type [prop] is found
   * @raise Term_typing_error if the pre-tem isn't well typed *)
 val type_check_and_translate :
   ?stratum:int ->
-  ?instantiate_head:bool ->
-  ?infer:bool ->
-  ?iter_free_types:((Term.var -> Typing.ty -> Typing.ty) -> unit) ->
-  ?free_args:string list ->
+  instantiate_head:bool ->
+  free_args:string list ->
+  infer:bool ->
+  iter_free_types:((Term.var -> Typing.ty -> Typing.ty) -> unit) ->
+  fresh_tyinst:(Typing.ty -> Typing.ty) ->
   preterm ->
   Typing.ty ->
   ((pos * string -> Term.term * Typing.ty) *
    (instantiate_head:bool -> ?stratum:int -> pos * string -> Term.term * Typing.ty) *
    (pos * string -> Term.term * Typing.ty) *
-   (pos * string * Typing.ty -> Typing.ty) *
    (pos * string -> Typing.ki)) ->
   Term.term * Typing.ty
