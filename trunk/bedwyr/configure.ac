@@ -21,7 +21,7 @@ m4_define([M4_VERSION_MAJOR],1)
 m4_define([M4_VERSION_MINOR],4)
 m4_define([M4_VERSION_PATCH],0)
 m4_define([M4_VERSION_BUILD],0)
-m4_define([M4_VERSION_DEV],alpha7)
+m4_define([M4_VERSION_DEV],alpha8)
 m4_define([M4_VERSION1],[M4_VERSION_MAJOR.M4_VERSION_MINOR])
 m4_define([M4_VERSION2],m4_if(M4_VERSION_PATCH,0,
           [M4_VERSION1],[M4_VERSION1.M4_VERSION_PATCH]))
@@ -105,7 +105,7 @@ AC_ARG_ENABLE([win32],
 if test "$enable_win32" = "yes" ; then
 	AC_PATH_PROGS(MINGW32_OCAMLOPT,
                       i686-w64-mingw32-ocamlopt.opt i686-w64-mingw32-ocamlopt \
-                      i586-mingw32msvc-ocamlopt.opt i586-mingw32msvc-ocamlopt,
+                        i586-mingw32msvc-ocamlopt.opt i586-mingw32msvc-ocamlopt,
                       no)
 	if test "$MINGW32_OCAMLOPT" = no ; then
 		AC_MSG_ERROR(Cannot find a native win32 code compiler. Install mingw32-ocaml.)
@@ -117,7 +117,7 @@ if test "$enable_win32" = "yes" ; then
 
 	AC_PATH_PROGS(MINGW32_WINDRES,
                       i686-w64-mingw32-windres.opt i686-w64-mingw32-windres \
-                      i586-mingw32msvc-windres.opt i586-mingw32msvc-windres,
+                        i586-mingw32msvc-windres.opt i586-mingw32msvc-windres,
                       no)
 	if test "$MINGW32_WINDRES" = no ; then
 		AC_MSG_ERROR(Cannot find windres. Install mingw32-binutils.)
@@ -215,14 +215,20 @@ if test "$enable_doc" = "yes" ; then
 		AC_MSG_ERROR(Cannot find latex.)
 	fi
 
-	AC_PATH_PROG(KPSEWHICH,kpsewhich,na)
-	if test "$KPSEWHICH" = na ; then
+	AC_PATH_PROG(KPSEWHICH,kpsewhich,no)
+	if test "$KPSEWHICH" = no ; then
 		AC_CHECK_FILE(/usr/share/texmf-dist/tex/generic/xypic/xypic.sty,,
                               AC_CHECK_FILE(/usr/share/texlive/texmf-dist/tex/generic/xypic/xypic.sty,,
-                                            AC_MSG_ERROR(Cannot find xypic.sty.)))
+                                            AC_MSG_ERROR(Cannot find xypic.sty. Install texlive-pictures.)))
+		AC_CHECK_FILE(/usr/share/texmf-dist/tex/latex/txfonts/txfonts.sty,,
+                              AC_CHECK_FILE(/usr/share/texlive/texmf-dist/tex/latex/txfonts/txfonts.sty,,
+                                            AC_MSG_ERROR(Cannot find txfonts.sty. Install texlive-fonts-recommended.)))
 	else
 		if ! "$KPSEWHICH" xypic.sty ; then
-			AC_MSG_ERROR(Cannot find xypic.sty.)
+			AC_MSG_ERROR(Cannot find xypic.sty. Install texlive-pictures.)
+		fi
+		if ! "$KPSEWHICH" txfonts.sty ; then
+			AC_MSG_ERROR(Cannot find xypic.sty. Install texlive-fonts-recommended.)
 		fi
 	fi
 
@@ -321,11 +327,11 @@ if test "$enable_deb" = "yes" ; then
 fi
 
 AC_MSG_CHECKING(if a Windows installer should be built)
-AC_ARG_ENABLE([nsi],
-	AC_HELP_STRING([--enable-nsi],[build a Nullsoft installer for Windows]),
-	[AC_MSG_RESULT($enable_nsi)],
+AC_ARG_ENABLE([nsis],
+	AC_HELP_STRING([--enable-nsis],[build a Nullsoft installer for Windows]),
+	[AC_MSG_RESULT($enable_nsis)],
 	[AC_MSG_RESULT(no)])
-if test "$enable_nsi" = "yes" ; then
+if test "$enable_nsis" = "yes" ; then
 	AC_PATH_PROG(MAKENSIS,makensis,no)
 	if test "$MAKENSIS" = no ; then
 		AC_MSG_ERROR(Cannot find makensis. Install nsis.)
