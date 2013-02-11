@@ -21,7 +21,7 @@ m4_define([M4_VERSION_MAJOR],1)
 m4_define([M4_VERSION_MINOR],4)
 m4_define([M4_VERSION_PATCH],0)
 m4_define([M4_VERSION_BUILD],0)
-m4_define([M4_VERSION_DEV],alpha6)
+m4_define([M4_VERSION_DEV],alpha7)
 m4_define([M4_VERSION1],[M4_VERSION_MAJOR.M4_VERSION_MINOR])
 m4_define([M4_VERSION2],m4_if(M4_VERSION_PATCH,0,
           [M4_VERSION1],[M4_VERSION1.M4_VERSION_PATCH]))
@@ -215,6 +215,17 @@ if test "$enable_doc" = "yes" ; then
 		AC_MSG_ERROR(Cannot find latex.)
 	fi
 
+	AC_PATH_PROG(KPSEWHICH,kpsewhich,na)
+	if test "$KPSEWHICH" = na ; then
+		AC_CHECK_FILE(/usr/share/texmf-dist/tex/generic/xypic/xypic.sty,,
+                              AC_CHECK_FILE(/usr/share/texlive/texmf-dist/tex/generic/xypic/xypic.sty,,
+                                            AC_MSG_ERROR(Cannot find xypic.sty.)))
+	else
+		if ! "$KPSEWHICH" xypic.sty ; then
+			AC_MSG_ERROR(Cannot find xypic.sty.)
+		fi
+	fi
+
 	AC_PATH_PROG(BIBTEX,bibtex,no)
 	if test "$BIBTEX" = no ; then
 		AC_MSG_ERROR(Cannot find bibtex.)
@@ -332,6 +343,7 @@ UPSTREAM_EMAIL="parsifal@lix.polytechnique.fr"
 UPSTREAM_FULLNAME="Parsifal"
 PROJECT_NAME=Slimmer
 PROJECT_TARNAME=slimmer
+PACKAGE_TAGLINE="the not-so-sound logician"
 PROGRAM_ICON=dutch-wick-0.3.ico
 FILE_ICON=dutch-wick-0.3-file.ico
 
@@ -340,8 +352,11 @@ AC_CONFIG_FILES([src/config.ml],[chmod a-w src/config.ml])
 AC_CONFIG_FILES([src/ndcore/META],[chmod a-w src/ndcore/META])
 AC_CONFIG_FILES([doc/Makefile],[chmod a-w doc/Makefile])
 AC_CONFIG_FILES([man/bedwyr.1],[chmod a-w man/bedwyr.1])
-AC_CONFIG_FILES([debian-files/control],[chmod a-w debian-files/control])
+AC_CONFIG_FILES([contrib/bedwyr.desktop],[chmod a-w contrib/bedwyr.desktop])
+AC_CONFIG_FILES([debian-files/control],[])
 AC_CONFIG_FILES([debian-files/copyright],[chmod a-w debian-files/copyright])
+AC_CONFIG_FILES([debian-files/bedwyr.menu],
+                [chmod a-w debian-files/bedwyr.menu])
 AC_CONFIG_FILES([nsis-files/bedwyr.nsi],[chmod a-w nsis-files/bedwyr.nsi])
 AC_CONFIG_FILES([nsis-files/bedwyr.rc],[chmod a-w nsis-files/bedwyr.rc])
 
@@ -352,6 +367,9 @@ OCAML_FILES=$(for i in $($FIND src -type f '!' -path '*.svn*' \
 VIM_CONTRIB=$($FIND contrib/vim -type f '!' -path '*.svn*' \
               '!' -name '*~' '!' -name '.*.sw*' \
               -printf ' \\\n\t%P')
+HICOLOR_ICONS=$($FIND contrib/icons/hicolor -type f '!' -path '*.svn*' \
+                '!' -name '*~' '!' -name '.*.sw*' \
+                -printf ' \\\n\thicolor/%P')
 EXAMPLES_FILES=$($FIND examples -type f '!' -path '*.svn*' \
                  '!' -name '*~' '!' -name '.*.sw*' '!' -name '*.old' \
                  -printf ' \\\n\t%p')
@@ -385,12 +403,14 @@ AC_SUBST(UPSTREAM_EMAIL)
 AC_SUBST(UPSTREAM_FULLNAME)
 AC_SUBST(PROJECT_NAME)
 AC_SUBST(PROJECT_TARNAME)
+AC_SUBST(PACKAGE_TAGLINE)
 AC_SUBST(PROGRAM_ICON)
 AC_SUBST(FILE_ICON)
 
 AC_SUBST(ac_config_files)
 AC_SUBST(OCAML_FILES)
 AC_SUBST(VIM_CONTRIB)
+AC_SUBST(HICOLOR_ICONS)
 AC_SUBST(EXAMPLES_FILES)
 
 AC_OUTPUT

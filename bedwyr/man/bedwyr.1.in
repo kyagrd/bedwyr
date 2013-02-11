@@ -19,32 +19,27 @@
 .\"
 .\" @configure_input@
 .\"
-.Dd August 23, 2012
+.Dd January 21, 2013
 .Os @PACKAGE_NAME@ v@PACKAGE_VERSION@
 .Dt BEDWYR 1 URM
 .\"
 .\"
 .Sh NAME
-.Nm @PACKAGE_TARNAME@
-.Nd the not-so-sound logician
+.Nm @PACKAGE_TARNAME@ ,
+.Nm Ns Nm .byte ,
+.Nm Ns Nm .native
+.Nd @PACKAGE_TAGLINE@
 .\"
 .\"
 .Sh SYNOPSIS
-.Nm
-.Op Fl I
+.Nm Op Fl I
 .Op Fl t
 .Op Fl \-strict
 .Op Fl e Ar query
 .Op Fl \-freezing Ar fp
 .Op Fl \-saturation Ar sp
 .Op Fl help | Fl \-help
-.Ar
-.Pp
-.Nm @PACKAGE_TARNAME@.byte
-.Ar ...
-.Pp
-.Nm @PACKAGE_TARNAME@.native
-.Ar ...
+.Op Ar
 .\"
 .\"
 .Sh DESCRIPTION
@@ -77,15 +72,15 @@ Webpage:
 .Pa http://slimmer.gforge.inria.fr/bedwyr/ .
 .Pp
 When invoked as
-.Nm @PACKAGE_TARNAME@ ,
-the fastest of the available binaries is used (i.e. the native code version,
-.Nm @PACKAGE_TARNAME@.native ,
-if available; otherwise the bytecode version,
-.Nm @PACKAGE_TARNAME@.byte ) .
+.Nm
+the fastest available binary is used (i.e.
+.Nm Ns Nm .native
+if present; otherwise,
+.Nm Ns Nm .byte ) .
 .\"
 .\"
 .Sh OPTIONS
-.Bl -tag
+.Bl -tag -width Ic
 .It Fl I
 Do not enter interactive mode.
 .It Fl t
@@ -116,7 +111,7 @@ Enable backward chaining and set its limit (the so-called
 to
 .Ar fp .
 Setting it to 0 (the default value) disables backward chaining,
-setting it to \-1 allows infinite chaining (usually not a smart idea).
+setting it to \-1 allows for infinite chaining (usually not a smart idea).
 The value 1 should be a good compromise.
 .It Fl \-saturation Ar sp
 Enable forward chaining and set its limit (the so-called
@@ -133,7 +128,7 @@ Display the version number and the list of command-line options.
 .\"
 .Sh EXIT STATUS
 .Ex -std
-.Bl -tag
+.Bl -tag -width Ic
 .It Ar 1
 Input error (base syntax error, type error)
 .It Ar 2
@@ -153,7 +148,7 @@ A definition file can contain any meta-command (see
 in addition to any of the following commands.
 .\"
 .Ss Type declaration
-.Bl -tag
+.Bl -tag -width Ic
 .It Ic Kind Ar int,object Ic type.
 This is the only kind of types allowed for now.
 .Pp
@@ -164,7 +159,7 @@ and obviously
 .El
 .\"
 .Ss Constant declaration
-.Bl -tag
+.Bl -tag -width Ic
 .It Ic Type Ar z Ic int.
 .It Ic Type Ar s Ic int \-> int.
 .It Ic Type Ar min,max Ic (int \-> prop) \-> int.
@@ -184,7 +179,7 @@ and any quoted string of type
 .El
 .\"
 .Ss Predicate declaration and definition
-.Bl -tag
+.Bl -tag -width Ic
 .It Ic Definition Ao Ar declarations Ac Ns Ic \&.
 .It Ic Definition Ao Ar declarations Ac Ic by Ao Ar definitions Ac Ns Ic \&.
 The header of a definition block gives the declarations of the predicates
@@ -208,7 +203,7 @@ A predicate without any clauses is always false.
 .El
 .\"
 .Ss Theorems
-.Bl -tag
+.Bl -tag -width Ic
 .It Ic Theorem Ar thm Ic \&: Ar forall Y, body X Y \-> head X Ns Ic \&.
 A theorem is a valid Abella theorem with some restrictions on its body
 (neither implication nor universal quantification).
@@ -216,7 +211,7 @@ A theorem is a valid Abella theorem with some restrictions on its body
 .\"
 .\"
 .Sh TOPLEVEL QUERIES
-.Bl -tag
+.Bl -tag -width Ic
 .It Ic ?= Ar query Ns Ic \&.
 The query entered at the prompt can either be a meta-command,
 which is executed, or a formula, which is solved (meaning that
@@ -231,7 +226,7 @@ Queries given via this option are dealt with in the exact same way.
 .\"
 .Sh META-COMMANDS
 Those can be given both in a file and to the toplevel.
-.Bl -tag
+.Bl -tag -width Ic
 .It Ic #help.
 This command should give a starting point.
 .It Ic #exit.
@@ -245,10 +240,12 @@ The only non-interactive output is given by
 .\"
 .\"
 .Sh FILES
-Sample input files can be found in
-.Pa +datadir+/@PACKAGE_TARNAME@/examples/ .
+.Bl -tag -width Ic
+.It Pa +pkgdatadir+/examples/
+Sample input files.
 Most of them have assertions that can be checked with the command-line option
 .Fl t .
+.El
 .\"
 .\"
 .Sh SEE ALSO
