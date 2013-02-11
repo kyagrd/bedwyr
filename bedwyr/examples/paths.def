@@ -58,13 +58,11 @@ Define prog : atom -> o -> prop by
   prog (bpath (beta R N) P)         (pitm x\ imp (jump x N) (atm (bpath (R x) P)));
   prog (bpath X          P)         (and (atm (jump X N)) (atm (bpath N P))).
 
-#include "list.def".
-
 % Interpreter for the object-logic
 Define seq : list atom -> o -> prop by
   seq L (atm A)   := member A L \/ (prog A D /\ seq L D);
   seq L (and G H) := seq L G /\ seq L H;
-  seq L (imp A G) := seq (A ::: L) G;
+  seq L (imp A G) := seq (A :: L) G;
   seq L (pitm G)  := nabla x, seq L (G x);
   seq L (pip  G)  := nabla x, seq L (G x).
 

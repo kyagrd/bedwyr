@@ -12,11 +12,9 @@ Type p          obj -> obj -> form.
 Type impl       form -> form -> form.
 Type for_all    (obj -> form) -> form.
 
-#include "list.def".
-
 Define pv : list form -> form -> prop by
   pv L (p X Y) := member (p X Y) L;
-  pv L (impl A B) := pv (A ::: L) B;
+  pv L (impl A B) := pv (A :: L) B;
   pv L (for_all B) := nabla x, pv L (B x).
 
 #assert

@@ -101,14 +101,12 @@ Type ff,tt      bool.
 
 Type pr         nat -> nat -> obj.
 
-#include "list.def".
-
 % Membership in a list.
 % This predicate always succeeds with a boolean value.
 Define memb : obj -> list obj -> bool -> prop by
   memb X nil        ff;
-  memb X (Y ::: L) Bool := (X = Y -> false) /\ memb X L Bool;
-  memb X (X ::: _) tt.
+  memb X (Y :: L) Bool := (X = Y -> false) /\ memb X L Bool;
+  memb X (X :: _) tt.
 
 % Co-induction with History checking.  Simply check that goal appears
 % before.  If so, succeed.  Here, pr is for pairing.
@@ -118,7 +116,7 @@ Define cyclic : ((nat -> nat -> prop) -> nat -> nat -> prop) ->
   cyclic R History P Q :=
    memb (pr P Q) History Bool /\
    (Bool = tt \/ % A cycle observed so succeed - coinduction
-    (Bool = ff /\ (R (cyclic R (pr P Q ::: History)) P Q))).
+    (Bool = ff /\ (R (cyclic R (pr P Q :: History)) P Q))).
 
 Define cycsim : (nat -> trans -> nat -> prop) -> nat -> nat -> prop by
   cycsim One P Q :=

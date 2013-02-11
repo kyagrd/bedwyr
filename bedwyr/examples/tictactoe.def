@@ -6,14 +6,12 @@ Type    b,o,x   cell.
 Type    row     cell -> cell -> cell -> row.
 Type    board   row -> row -> row -> board.
 
-#include "list.def".
-
 % convert Internal External
 % Allows us to convert between internal and external formats.
 % The external format is simple to read and write, but the internal
 % format is better for recursion.
 Define convert : list cell -> board -> prop by
-  convert (A ::: B ::: C ::: D ::: E ::: F ::: G ::: H ::: I ::: nil)
+  convert (A :: B :: C :: D :: E :: F :: G :: H :: I :: nil)
           (board (row A B C) (row D E F) (row G H I)).
 
 % Useful for theorems.
@@ -24,40 +22,39 @@ Define convert : list cell -> board -> prop by
 Define symmetries : list cell -> list cell -> prop by
   % vertical flip
   symmetries
-    (A ::: B ::: C ::: D ::: E ::: F ::: G ::: H ::: I ::: nil)
-    (C ::: B ::: A ::: F ::: E ::: D ::: I ::: H ::: G ::: nil);
+    (A :: B :: C :: D :: E :: F :: G :: H :: I :: nil)
+    (C :: B :: A :: F :: E :: D :: I :: H :: G :: nil);
 % % horizontal flip
 % symmetries
-%   (A ::: B ::: C ::: D ::: E ::: F ::: G ::: H ::: I ::: nil)
-%   (G ::: H ::: I ::: D ::: E ::: F ::: A ::: B ::: C ::: nil);
+%   (A :: B :: C :: D :: E :: F :: G :: H :: I :: nil)
+%   (G :: H :: I :: D :: E :: F :: A :: B :: C :: nil);
 % % anticlockwise turn
 % symmetries
-%   (A ::: B ::: C ::: D ::: E ::: F ::: G ::: H ::: I ::: nil)
-%   (C ::: F ::: I ::: B ::: E ::: H ::: A ::: D ::: G ::: nil);
+%   (A :: B :: C :: D :: E :: F :: G :: H :: I :: nil)
+%   (C :: F :: I :: B :: E :: H :: A :: D :: G :: nil);
 % % half turn
 % symmetries
-%   (A ::: B ::: C ::: D ::: E ::: F ::: G ::: H ::: I ::: nil)
-%   (I ::: H ::: G ::: F ::: E ::: D ::: C ::: B ::: A ::: nil);
+%   (A :: B :: C :: D :: E :: F :: G :: H :: I :: nil)
+%   (I :: H :: G :: F :: E :: D :: C :: B :: A :: nil);
   % clockwise turn
   symmetries
-    (A ::: B ::: C ::: D ::: E ::: F ::: G ::: H ::: I ::: nil)
-    (G ::: D ::: A ::: H ::: E ::: B ::: I ::: F ::: C ::: nil).
+    (A :: B :: C :: D :: E :: F :: G :: H :: I :: nil)
+    (G :: D :: A :: H :: E :: B :: I :: F :: C :: nil).
 
 % winner Player Board
 % True if Player has won on the Board
 Define winner : cell -> list cell -> prop by
-  winner W (W ::: W ::: W ::: A ::: B ::: C ::: D ::: E ::: F ::: nil);
-  winner W (A ::: B ::: C ::: W ::: W ::: W ::: D ::: E ::: F ::: nil);
-  winner W (A ::: B ::: C ::: D ::: E ::: F ::: W ::: W ::: W ::: nil);
-  winner W (W ::: A ::: B ::: W ::: C ::: D ::: W ::: E ::: F ::: nil);
-  winner W (A ::: W ::: B ::: C ::: W ::: D ::: E ::: W ::: F ::: nil);
-  winner W (A ::: B ::: W ::: C ::: D ::: W ::: E ::: F ::: W ::: nil);
-  winner W (W ::: A ::: B ::: C ::: W ::: D ::: E ::: F ::: W ::: nil);
-  winner W (A ::: B ::: W ::: C ::: W ::: D ::: W ::: E ::: F ::: nil).
+  winner W (W :: W :: W :: A :: B :: C :: D :: E :: F :: nil);
+  winner W (A :: B :: C :: W :: W :: W :: D :: E :: F :: nil);
+  winner W (A :: B :: C :: D :: E :: F :: W :: W :: W :: nil);
+  winner W (W :: A :: B :: W :: C :: D :: W :: E :: F :: nil);
+  winner W (A :: W :: B :: C :: W :: D :: E :: W :: F :: nil);
+  winner W (A :: B :: W :: C :: D :: W :: E :: F :: W :: nil);
+  winner W (W :: A :: B :: C :: W :: D :: E :: F :: W :: nil);
+  winner W (A :: B :: W :: C :: W :: D :: W :: E :: F :: nil).
 
 Theorem winner_symmetries :
-  symmetries List List' /\ winner W List -> winner W List'.
- .% TODO proof
+  symmetries List List' /\ winner W List -> winner W List'.% TODO proof
 Qed.
 
 % nowinner Board
@@ -68,8 +65,8 @@ Define nowinner : list cell -> prop by
 % move Board Player Board'
 % True if Board' is the same as Board except for one move by Player.
 Define move : list cell -> cell -> list cell -> prop by
-  move (b ::: L) W (W ::: L);
-  move (X ::: L) W (X ::: K) := move L W K.
+  move (b :: L) W (W :: L);
+  move (X :: L) W (X :: K) := move L W K.
 
 % somemove Board
 % True if there is a possible move on the Board
@@ -115,8 +112,7 @@ Define coinductive notxwins : list cell -> prop by
                   (tie K \/ winner o K \/ forall M, move K x M -> notxwins M).
 
 Theorem notxwins_symmetries :
-  symmetries List List' /\ notxwins List -> notxwins List'.
- .% TODO proof
+  symmetries List List' /\ notxwins List -> notxwins List'.% TODO proof
 Qed.
 
 % play Board
@@ -137,27 +133,47 @@ Define play : board -> prop by
        (move L o K /\ printstr "Playing to lose...\n")) /\
       convert K K' /\ println K'.
 
-#assert (convert Board (board (row x x x) (row b b b) (row b b b)) /\
-         xwins Board).
+%#assert (convert Board (board (row x x x) (row b b b) (row b b b)) /\
+%         xwins Board).
 
-#assert (convert Board (board (row x x b) (row b b b) (row b b b)) /\
-         xwins Board).
+%#assert (convert Board (board (row x x b) (row b b b) (row b b b)) /\
+%         xwins Board).
 
+%#freezing 3.
 #assert (convert Board (board (row x b o) (row b b b) (row b b b)) /\
          notxwins Board).
 % Performance in byte-mode (@heath)
-% Whatever the freezing point is, backward chaining isn't beneficial.
 %   0.50 (v1.4, fp=0)
 %   0.55 (v1.4, fp=1)
 %   0.72 (v1.4, fp=2)
 %   1.03 (v1.4, fp=3)
+% Performance in byte-mode (@camelot)
+%   0.85 (v1.4, fp=0)
+%   0.93 (v1.4, fp=1)
+%   1.09 (v1.4, fp=2)
+%   1.31 (v1.4, fp=3)
+% Whatever the freezing point is, backward chaining isn't beneficial.
 
+#freezing 6.
 #assert (convert Board (board (row b b b) (row b b b) (row b b b)) /\
          notxwins Board).
 % Performance in byte-mode (@heath)
-% A performance gain is sensible until fp = 2, and then is compensated by
-% the additional computations.
 %   1.14 (v1.4, fp=0)
 %   1.13 (v1.4, fp=1)
 %   0.62 (v1.4, fp=2)
 %   2.17 (v1.4, fp=3)
+% Performance in byte-mode (@camelot)
+%   1.91 (v1.4, fp=0)
+%   1.89 (v1.4, fp=1)
+%   1.28 (v1.4, fp=2)
+%   1.58 (v1.4, fp=3)
+% A performance gain is sensible until fp = 2, and then is compensated by
+% the additional computations.
+
+% Dual-performance (#3 and #4) in byte-mode (-0.85) (@camelot)
+%   1.91 (v1.4, fp=0)
+%   1.37 (v1.4, fp=1)
+%   0.95 (v1.4, fp=2)
+%   1.10 (v1.4, fp=3)
+%   1.38 (v1.4, fp=4)
+%   1.70 (v1.4, fp=5)

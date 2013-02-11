@@ -212,12 +212,11 @@
             [ (* Abella infix-case primitive operators and constants *)
               "|-",             TURN
             ]
-  let it_primitive_t = Hashtbl.create 3
+  let it_primitive_t = Hashtbl.create 2
   let _ = List.iter (fun (k,t) -> Hashtbl.add it_primitive_t k t)
             [ (* Teyjus infix-case primitive operators and constants *)
               ":-",             CLAUSEEQ;
-              "=>",             IMP;
-              "::",             CONS
+              "=>",             IMP
             ]
   let get_infix n =
     try Hashtbl.find ib_primitive_t n
