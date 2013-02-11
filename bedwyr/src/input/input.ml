@@ -101,12 +101,24 @@ let pre_and p t1 t2 = And (p,t1,t2)
 let pre_or p t1 t2 = Or (p,t1,t2)
 let pre_arrow p t1 t2 = Arrow (p,t1,t2)
 
-let pre_binder p b vars t = match vars,t with
-  | [],_ -> t
-  | _,Binder (_,b',vars',t) when b=b' -> Binder (p,b,vars@vars',t)
-  | _,_ -> Binder (p,b,vars,t)
+let pre_binder p b vars t =
+  let vars =
+    List.map
+      (fun (p,name,ty) -> (p,name,Typing.fresh_tyinst ty))
+      vars
+  in
+  match vars,t with
+    | [],_ -> t
+    | _,Binder (_,b',vars',t) when b=b' -> Binder (p,b,vars@vars',t)
+    | _,_ -> Binder (p,b,vars,t)
 
-let pre_lambda p vars t = match vars,t with
+let pre_lambda p vars t =
+  let vars =
+    List.map
+      (fun (p,name,ty) -> (p,name,Typing.fresh_tyinst ty))
+      vars
+  in
+  match vars,t with
   | [],_ -> t
   | _,Lam (_,vars',t) -> Lam (p,vars@vars',t)
   | _,_ -> Lam (p,vars,t)

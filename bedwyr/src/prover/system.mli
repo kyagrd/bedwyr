@@ -65,10 +65,10 @@ pr : alpha -> beta -> gamma
 ?= #typeof abs.
 abs : (beta -> gamma) -> gamma
 ?= #typeof _abstract.
-_abstract : ?4 -> ((?5 -> ?4) -> ?4) -> ?4 -> prop
+_abstract : ?0 -> ((?1 -> ?0) -> ?0) -> ?0 -> prop
 ?= #typeof abs (x1\ abs (x2\ pr x2 x1)).
-At line 4, characters 30-31:
-  Typing error: this expression has type beta but is used as alpha. v}
+At line 4, bytes 30-31:
+ Typing error: this term has type beta but is used as alpha. v}
     *
     * Hence type checking does not guarantee runtime type soundness
     * ("well typed programs don't go wrong").

@@ -314,15 +314,15 @@ any_id:
 
 /* annotated id types */
 apred_id:
-  | lower_id                            { pos 1,$1,Input.Typing.fresh_tyvar () }
+  | lower_id                            { pos 1,$1,Input.Typing.fresh_typaram () }
   | lower_id COLON ty                   { pos 1,$1,$3 }
 
 abound_id:
-  | bound_id                            { pos 1,$1,Input.Typing.fresh_tyvar () }
+  | bound_id                            { pos 1,$1,Input.Typing.fresh_typaram () }
   | bound_id COLON ty                   { pos 1,$1,$3 }
 
 pabound_id:
-  | bound_id                            { pos 1,$1,Input.Typing.fresh_tyvar () }
+  | bound_id                            { pos 1,$1,Input.Typing.fresh_typaram () }
   | LPAREN bound_id COLON ty RPAREN     { pos 2,$2,$4 }
 
 /* predicate or constant in a term */
