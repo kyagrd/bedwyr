@@ -26,29 +26,29 @@ let user_files : (string,out_channel) Hashtbl.t =
 
 (* Sanity wrappers *)
 
+let error name e s =
+  let msg = Str.replace_first (Str.regexp (Str.quote (name ^ ": "))) "" e in
+  raise (File_error (s,name,msg))
+
 let open_in name =
   try open_in name
-  with Sys_error e ->
-    let msg = Str.replace_first (Str.regexp (Str.quote (name ^ ": "))) "" e in
-    raise (File_error ("read from",name,msg))
+  with Sys_error e -> error name e "read from"
 
 let close_in name f =
   try close_in f
-  with Sys_error e ->
-    let msg = Str.replace_first (Str.regexp (Str.quote (name ^ ": "))) "" e in
-    raise (File_error ("close",name,msg))
+  with Sys_error e -> error name e "read close"
 
 let open_out name =
   try open_out_gen [Open_wronly;Open_creat;Open_excl] 0o600 name
-  with Sys_error e ->
-    let msg = Str.replace_first (Str.regexp (Str.quote (name ^ ": "))) "" e in
-    raise (File_error ("create",name,msg))
+  with Sys_error e -> error name e "create"
 
 let close_out name f =
   try close_out f
-  with Sys_error e ->
-    let msg = Str.replace_first (Str.regexp (Str.quote (name ^ ": "))) "" e in
-    raise (File_error ("close",name,msg))
+  with Sys_error e -> error name e "close"
+
+let chdir name =
+  try Sys.chdir name
+  with Sys_error e -> error name e "chdir in"
 
 let get_user_file name =
   try Some (Hashtbl.find user_files name)
