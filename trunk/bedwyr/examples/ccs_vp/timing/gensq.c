@@ -1,64 +1,87 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+enum base_t { STACK=0 , QUEUE=1 };
 const char *base_name[] = {"s", "q"};
 
-int gen_script(int base, int num)
+void print_range(const char* prefix, const char* sep, int start, int number){
+  int j;
+  if(number>0){
+    printf(" %s%d", prefix, start);
+    for(j = start+1; j<start+number; j++)
+      printf("%s%s%d", sep, prefix, j);
+  }
+}
+
+void gen_script(enum base_t base, int num, int first)
 {
-  int i = 0;
+  int i;
   int j;
 
-  for(i = 0; i <= num; i++) {
-    printf("\npdef ");
-    if (i == 0)
-      printf("%s0 (in insert x\\ (proc (%s1 x))) := true.", base_name[base], base_name[base]);
-    else {
-      printf("(%s%d", base_name[base], i);
-      for(j = 0; j < i; j++)
-	printf(" X%d", j);
-      if (i < num)
-	printf(") (sum (out delete X%d (proc %s%s%d", base == 0 ? i - 1 : 0, i > 1 ? "(" : "", base_name[base], i - 1);
-      else
-	printf(") (out delete X%d (proc %s%s%d", base == 0 ? i - 1 : 0, i > 1 ? "(" : "", base_name[base], i - 1);
-      for(j = base; j < i - 1 + base; j++)
-	printf(" X%d", j);
-      if (i < num) {
-	printf("%s)) (in insert x\\ (proc (%s%d", i > 1 ? ")" : "", base_name[base], i + 1);
-	for(j = 0; j < i; j++)
-	  printf(" X%d", j);
-	printf(" x)))) := true.");
-      }
-      else
-	printf("))) := true.");
-    }
-  }
-  printf("\n");
+  if(num<=0)
+    return;
 
-  return num;
+  for(i = 0; i <= num; i++) {
+    if(first && !i)
+      printf(" by\n  pdef ");
+    else
+      printf(" ;\n  pdef ");
+    if(i){
+      printf("(%s%d", base_name[base], i);
+      print_range("X", " ", 0, i);
+      printf(")");
+    }else
+      printf("%s%d", base_name[base], i);
+    printf("\n       (");
+    if(i){
+      printf("out delete X%d (proc ", base == STACK ? i - 1 : 0);
+      if(i){
+        printf("(%s%d", base_name[base], i-1);
+        print_range("X", " ", base == STACK ? 0 : 1, i-1);
+        printf(")");
+      }else
+        printf("%s%d", base_name[base], i-1);
+      printf(")");
+    }
+    if(i<num){
+      if(i)
+        printf(" +\n        ");
+      printf("in insert x\\ proc ");
+      printf("(%s%d", base_name[base], i+1);
+      print_range("X", " ", 0, i);
+      printf(" x)");
+    }
+    printf(")");
+  }
+
+  return;
 }
 
 int main(int argc, const char *argv[])
 {
-  int i;
-  int base = 0;
+  int i,j;
   int num = 10;
 
-  if (argc > 1)
-    for(i = 1; i < argc; i ++)
-      if (argv[i][0] <= '9' && argv[i][0] > '0')
-	num = atoi(argv[i]);
-      else switch (argv[i][0]) {
-      case 's' : base = 0; break;
-      case 'q' : base = 1; break;
-      }
+  for(i = 1; i < argc; i ++)
+    if (argv[i][0] <= '9' && argv[i][0] > '0'){
+      num = atoi(argv[i]);
+      break;
+    }
 
-  printf("#include \"../ccs_vp.def\".\n#time on.");
-  gen_script(0, num);
-  gen_script(1, num);
+  printf("#include \"../ccs.def\".\n\n");
+  printf("Type insert,delete label.\n\n");
+  for(i=0; i<=num; i++){
+    printf("Type s%d,q%d ",i,i);
+    for(j=0; j<i; j++)
+      printf("value -> ");
+    printf("nat.\n");
+  }
+  printf("\nDefine pdef : nat -> proc -> prop");
+  gen_script(STACK, num, 1);
+  gen_script(QUEUE, num, 0);
+  printf(".\n");
+  printf("\n#include \"../ccs_vp.def\".\n");
+  printf("#time on.\n");
 
-  return base;
+  return 0;
 }
-
-
-
-
