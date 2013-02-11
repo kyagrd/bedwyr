@@ -5,28 +5,19 @@
 % since coverage and determinancy checks would be useful to lambda prolog
 % programmers, for example.
 
-Kind    list    type -> type.
-
-Type    nil     list _.
-Type    :::     A -> list A -> list A.
-
 Define list : list _ -> prop by
   list nil;
-  list (X ::: nil);
-  list (X ::: Y ::: nil);
-  list (X ::: Y ::: Z ::: nil).
-
-Define member : A -> list A -> prop by
-  member X (X ::: _) ;
-  member X (_ ::: L) := member X L.
+  list (X :: nil);
+  list (X :: Y :: nil);
+  list (X :: Y :: Z :: nil).
 
 Define append : list A -> list A -> list A -> prop by
   append nil K K;
-  append (X ::: L) K (X ::: M) := append L K M.
+  append (X :: L) K (X :: M) := append L K M.
 
 Define remove : list A -> A -> list A -> prop by
-  remove (X ::: L) X L;
-  remove (Y ::: L) X (Y ::: Lp) := remove L X Lp.
+  remove (X :: L) X L;
+  remove (Y :: L) X (Y :: Lp) := remove L X Lp.
 
 % In the following checks, we assume the mode: append +L +K -M.
 
@@ -40,7 +31,7 @@ Define determinacy : prop by
 
 #assert coverage.
 #assert determinacy.
-#assert member 3 (1 ::: 3 ::: nil).
+#assert member 3 (1 :: 3 :: nil).
 #assert_not (exists X, member X nil).
-#assert_not (exists X, forall a, member X (a ::: nil)).
-#assert (forall a, exists X, member X (a ::: nil)).
+#assert_not (exists X, forall a, member X (a :: nil)).
+#assert (forall a, exists X, member X (a :: nil)).

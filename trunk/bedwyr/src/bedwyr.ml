@@ -20,6 +20,17 @@
 exception Invalid_command
 exception Assertion_failed
 
+let stdlib = "\
+Kind    list    type -> type.
+
+Type    nil     list _.
+Type    ::      A -> list A -> list A.
+
+Define member : A -> list A -> prop by
+  member X (X :: _) ;
+  member X (_ :: L) := member X L.
+"
+
 let welcome_msg =
   Printf.sprintf
     "%s %s%s welcomes you.
@@ -376,8 +387,7 @@ and input_from_file ~test file =
   let channel = IO.open_in file in
   let lexbuf = Lexing.from_channel channel in
   lexbuf.Lexing.lex_curr_p <- {
-      lexbuf.Lexing.lex_curr_p with
-        Lexing.pos_fname = file } ;
+    lexbuf.Lexing.lex_curr_p with Lexing.pos_fname = file } ;
   input_defs ~test lexbuf ;
   IO.close_in file channel
 and input_defs ~test lexbuf =
@@ -388,6 +398,10 @@ and input_queries ?(interactive=false) lexbuf =
 and load_session () =
   System.reset_decls () ;
   Input.Typing.clear () ;
+  let lexbuf = (Lexing.from_string stdlib) in
+  lexbuf.Lexing.lex_curr_p <- {
+    lexbuf.Lexing.lex_curr_p with Lexing.pos_fname = "Bedwyr::stdlib" } ;
+  input_defs ~test:false lexbuf ;
   inclfiles := [] ;
   List.iter (include_file ~test:!test) !session
 

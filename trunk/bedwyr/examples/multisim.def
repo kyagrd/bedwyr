@@ -17,8 +17,6 @@ Type    accept,
         is_z,
         loop    state.
 
-#include "list.def".
-
 % lt : state -> state -> o.
 % The order is as folllows: accept < $nat < even < odd < ...
 % We could have hardcoded the transivite closure for maximum efficiency,
@@ -41,9 +39,9 @@ Define lt : state -> state -> prop by
 Define union : list state -> list state -> list state -> prop by
   union X nil X;
   union nil X X;
-  union (X ::: L) (X ::: L') L'' := union L (X ::: L') L'';
-  union (X ::: L) (Y ::: L') (X ::: L'') := lt X Y /\ union L (Y ::: L') L'';
-  union (X ::: L) (Y ::: L') (Y ::: L'') := lt Y X /\ union (X ::: L) L' L''.
+  union (X :: L) (X :: L') L'' := union L (X :: L') L'';
+  union (X :: L) (Y :: L') (X :: L'') := lt X Y /\ union L (Y :: L') L'';
+  union (X :: L) (Y :: L') (Y :: L'') := lt Y X /\ union (X :: L) L' L''.
 
 % Declare accepting states.
 
@@ -58,21 +56,21 @@ Define accepts : state -> prop by
 % The lists should be sorted, the relation should be functional AND TOTAL.
 
 Define steps : state -> label -> list state -> prop by
-  steps even z (accept ::: nil);
-  steps even s (odd ::: nil);
-  steps odd  s (even ::: nil);
+  steps even z (accept :: nil);
+  steps even s (odd :: nil);
+  steps odd  s (even :: nil);
   steps odd  z nil;
-  steps $nat z (accept ::: nil);
-  steps $nat s ($nat ::: nil);
+  steps $nat z (accept :: nil);
+  steps $nat s ($nat :: nil);
   steps accept X nil;
-  steps half   z (accept ::: nil);
-  steps half   s (half_s ::: is_z ::: nil);
-  steps is_z   z (accept ::: nil);
+  steps half   z (accept :: nil);
+  steps half   s (half_s :: is_z :: nil);
+  steps is_z   z (accept :: nil);
   steps is_z   s nil;
   steps half_s z nil;
-  steps half_s s (half ::: nil);
-  steps loop   s (loop ::: nil);
-  steps loop   z (loop ::: nil).
+  steps half_s s (half :: nil);
+  steps loop   s (loop :: nil);
+  steps loop   z (loop :: nil).
 
 % Non-deterministic version of steps.
 
@@ -83,13 +81,13 @@ Define step : state -> label -> state -> prop by
 
 Define multi_steps : list state -> label -> list state -> prop by
   multi_steps nil A nil;
-  multi_steps (Q ::: S) A L'' :=
+  multi_steps (Q :: S) A L'' :=
     steps Q A L /\ multi_steps S A L' /\ union L L' L''.
 
 Define subset : list state -> list state -> prop by
   subset nil nil;
-  subset L (A ::: L') := subset L L';
-  subset (A ::: L) (A ::: L') := subset L L'.
+  subset L (A :: L') := subset L L';
+  subset (A :: L) (A :: L') := subset L L'.
 
 Define multi_step : list state -> label -> list state -> prop by
   multi_step X A Y := multi_steps X A X' /\ subset Y X'.
@@ -106,21 +104,21 @@ Define coinductive multisim : state -> list state -> prop by
     (accepts P -> multi_accepts Q).
 
 % Some extra checks that would work but pollute the table.
-#assert (forall x, multi_steps (even ::: odd ::: nil) z x ->
-               x = (accept ::: nil)).
-#assert (forall x, multi_steps (even ::: odd ::: nil) s x ->
-               x = (even ::: odd ::: nil)).
-#assert (forall x, multisim accept (accept ::: x)).
-#assert (multisim $nat ($nat ::: nil)).
+#assert (forall x, multi_steps (even :: odd :: nil) z x ->
+               x = (accept :: nil)).
+#assert (forall x, multi_steps (even :: odd :: nil) s x ->
+               x = (even :: odd :: nil)).
+#assert (forall x, multisim accept (accept :: x)).
+#assert (multisim $nat ($nat :: nil)).
 
 #clear_table multisim.
-#assert (multisim $nat (even ::: odd ::: nil)).
+#assert (multisim $nat (even :: odd :: nil)).
 #show_table multisim.
 
 #clear_table multisim.
-#assert (multisim $nat (half ::: nil)).
+#assert (multisim $nat (half :: nil)).
 #show_table multisim.
 
 #clear_table multisim.
-#assert (multisim $nat ($nat ::: loop ::: nil)).
+#assert (multisim $nat ($nat :: loop :: nil)).
 #show_table multisim.

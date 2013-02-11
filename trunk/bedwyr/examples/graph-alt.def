@@ -1,8 +1,8 @@
 % This is an alternate presentation of graphs where the graph structure
 % is not hardcoded into the predicates, but rather is kept as a
 % datastructure of the following form:
-%   (mkgraph (1 ::: 2 ::: 3 ::: 4 ::: nil)
-%            (arrow 1 2 ::: arrow 3 4 ::: nil))
+%   (mkgraph (1 :: 2 :: 3 :: 4 :: nil)
+%            (arrow 1 2 :: arrow 3 4 :: nil))
 % where the the first list is the nodes of the graph and the second is
 % the arrows of the graph. The benefit of this representation is that
 % we modify the graph on the fly (as seen in the 'tree' predicate).
@@ -12,12 +12,12 @@
 
 % List utilities
 
+#include "list.def".
+
 Kind    arrow,
         graph   type.
 
 Type    mkarrow nat -> nat -> arrow.
-
-#include "list.def".
 
 Type    mkgraph list nat -> list arrow -> graph.
 
@@ -76,18 +76,18 @@ Define graph : nat -> graph -> prop by
   % 1 - 2   5 - 6
   %      \
   %       4
-  graph 1  (mkgraph (1 ::: 2 ::: 3 ::: 4 ::: 5 ::: 6 ::: nil)
-                (mkarrow 1 2 ::: mkarrow 2 3 ::: mkarrow 2 4 :::
-                   mkarrow 3 5 ::: mkarrow 5 6 ::: nil));
+  graph 1  (mkgraph (1 :: 2 :: 3 :: 4 :: 5 :: 6 :: nil)
+                (mkarrow 1 2 :: mkarrow 2 3 :: mkarrow 2 4 ::
+                   mkarrow 3 5 :: mkarrow 5 6 :: nil));
   %       3
   %      / \
   % 1 - 2   5 - 6
   %      \ /
   %       4
-  graph 2  (mkgraph (1 ::: 2 ::: 3 ::: 4 ::: 5 ::: 6 ::: nil)
-                (mkarrow 1 2 ::: mkarrow 2 3 ::: mkarrow 2 4 :::
-                   mkarrow 3 5 ::: mkarrow 4 5 :::
-                      mkarrow 5 6 ::: nil)).
+  graph 2  (mkgraph (1 :: 2 :: 3 :: 4 :: 5 :: 6 :: nil)
+                (mkarrow 1 2 :: mkarrow 2 3 :: mkarrow 2 4 ::
+                   mkarrow 3 5 :: mkarrow 4 5 ::
+                      mkarrow 5 6 :: nil)).
 
 #assert_not (graph 1 G /\ disconnected G).
 #assert (graph 1 G /\ tree G).

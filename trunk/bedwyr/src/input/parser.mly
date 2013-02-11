@@ -61,7 +61,7 @@
 /* Teyjus keywords */
 %token SIG MODULE ACCUMSIG ACCUM END KIND
 /* Teyjus primitives */
-%token CLAUSEEQ IMP CONS
+%token CLAUSEEQ IMP
 
 %token <int> NUM
 %token <string> UPPER_ID LOWER_ID INFIX_ID INTERN_ID

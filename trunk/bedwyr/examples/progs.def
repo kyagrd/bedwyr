@@ -2,11 +2,10 @@
 
 Kind    ty      type.
 
-%object-level constants
-#include "list.def".
+%object-level constants: "list", "nil", "::"
 
 %object-level predicates
-Type    append' list name -> list name -> list name -> form.
+Type    append  list name -> list name -> list name -> form.
 Type    a,b     form.
 Type    p       name -> name -> form.
 Type    type_of name -> ty -> form.
@@ -20,7 +19,7 @@ Type    app     name -> name -> name.
 Type    ~>      ty -> ty -> ty.
 
 Define atom : form -> prop by
-  atom (append' X Y Z);
+  atom (append X Y Z);
   atom a;
   atom b;
   atom (p X Y);
@@ -57,8 +56,8 @@ by
 
 Define exprog : form -> form -> prop by
 % Appending of two lists
-  exprog (append' nil L L) tt;
-  exprog (append' (X ::: L) K (X ::: M)) (append' L K M).
+  exprog (append nil L L) tt;
+  exprog (append (X :: L) K (X :: M)) (append L K M).
 
 % object-level clauses
 Define prog : form -> form -> prop by
