@@ -359,7 +359,7 @@ let rec process ?(test=false) ?(interactive=false) parse lexbuf =
             "Proof search aborted!"
       | IO.File_error (s1,n,s2) ->
           eprintf bedwyr_error
-            "Couldn't %s file@ %S:@ %s."
+            "Couldn't %s@ %S:@ %s."
             s1 n s2
       | Invalid_command ->
           eprintf bedwyr_error
@@ -418,9 +418,9 @@ and include_file ?(test=false) fname =
   else begin
     Format.eprintf "Now including %S.@." fname ;
     inclfiles := fname :: !inclfiles ;
-    Sys.chdir (Filename.dirname fname) ;
+    IO.chdir (Filename.dirname fname) ;
     input_from_file ~test (Filename.basename fname);
-    Sys.chdir cwd
+    IO.chdir cwd
   end
 
 and command ~test c reset =
