@@ -1,0 +1,107 @@
+% Magic square problem (in Bedwyr)
+
+% This module implements a generate-and-test approach to solving the
+% following problem: select a placement of the number 1, 2, ..., 9 in
+% a 3x3 square so that the sum of the rows, columns, and diagonals 
+% all total 15.
+
+% There are two implementations of this query below.  The square query
+% picks some placement of these numbers and then checks the sums.
+% The square' query interleaves the placement of numbers with some
+% checks as to their sums.  Notice however that a rather radical
+% restructing of the second query is possible since the one
+% predicate, fifteen, functionally determines its their argument
+% (from its first two arguments).
+
+% The first query is much slower in Bedwyr than the second.  Some
+% timing results:  Placing the #assert line 
+%    #assert exists L, square' L /\ false.  
+% causes the interpreter to cycle through all 8 solutions.  Time for
+% this query was 5.69 seconds.  
+% Changing the #assert line to
+%    #assert exists L, square L /\ false.  
+% takes much longer:  43min, 44 seconds (2606 seconds)
+% Notice that these times also include parsing/typing inference/ etc. 
+
+Define select : A -> list A -> list A -> prop by
+  select A (A :: Rest) Rest ;
+  select A (B :: Tail) (B :: Rest) := select A Tail Rest.
+
+Kind  num   type.
+Type  z     num.
+Type  s     num -> num.
+
+Define plus : num -> num -> num -> prop by
+  plus z N N;
+  plus (s N) M (s P) := plus N M P.
+
+Define leq : num -> num -> prop by
+  leq z N;
+  leq (s N) (s M) := leq N M.
+
+Define lt : num -> num -> prop by
+  lt z (s N);
+  lt (s N) (s M) := lt N M.
+
+Define fiveNten : num -> prop by 
+  fiveNten (s (s (s (s (s (s (s (s (s (s (s (s (s (s (s z))))))))))))))).
+
+Define one2nine : list num -> prop by 
+  one2nine (
+    (s z) :: 
+    (s (s z)) :: 
+    (s (s (s z))) :: 
+    (s (s (s (s z)))) :: 
+    (s (s (s (s (s z))))) :: 
+    (s (s (s (s (s (s z)))))) :: 
+    (s (s (s (s (s (s (s z))))))) :: 
+    (s (s (s (s (s (s (s (s z)))))))) :: 
+    (s (s (s (s (s (s (s (s (s z))))))))) :: nil).
+
+Kind option   type -> type.
+Type none     option A.
+Type some     A -> option A.
+
+% The third argument of fifteen is functionally determined by the
+% first two arguments.  If the first two sum to a number greater than
+% or equal to 15, then the third argument is "none".  Otherwise, the
+% third number is the difference between 15 and that sum.
+
+Define fifteen : num -> num -> option num -> prop by
+  fifteen I J K :=
+     plus I J Sum /\ fiveNten Fifteen /\
+     ((leq Fifteen Sum /\                       K = none    ) \/
+      (lt  Sum Fifteen /\ plus Sum M Fifteen /\ K = (some M))).
+
+Define coerce : option num -> num -> prop by
+  coerce (some N) N.
+
+Define square : list num -> prop by 
+square (X1 :: X2 :: X4 :: nil) :=
+  one2nine L0 /\
+  select X1 L0 L1 /\ select X2 L1 L2 /\ select X3 L2 L3 /\
+  select X4 L3 L4 /\ select X5 L4 L5 /\ select X6 L5 L6 /\
+  select X7 L6 L7 /\ select X8 L7 L8 /\ select X9 L8 nil /\
+% sum the rows
+  fifteen X1 X2 (some X3) /\ fifteen X4 X5 (some X6) /\ fifteen X7 X8 (some X9) /\
+% sum the diagonals
+  fifteen X1 X5 (some X9) /\ fifteen X3 X5 (some X7) /\
+% sum the columns
+  fifteen X1 X4 (some X7) /\ fifteen X2 X5 (some X8) /\ fifteen X3 X6 (some X9).
+
+
+Define square' : list num -> prop by
+  square' (X1 :: X2 :: X4 :: nil) :=
+    one2nine L0 /\
+    select X1 L0 L1 /\                                                   % Guess X1
+    select X2 L1 L2 /\                                                   % Guess X2
+    forall x3, fifteen X1 X2 x3 -> coerce x3 X3 /\ select X3 L2 L3 /\    % Compute X3
+    select X4 L3 L4 /\                                                   % Guess X4
+    forall x7, fifteen X1 X4 x7 -> coerce  x7 X7 /\ select X7 L4 L5 /\   % Compute x7
+    forall x5, fifteen X3 X7 x5 -> coerce  x5 X5 /\ select X5 L5 L6 /\   % Compute X5
+    forall x6, fifteen X4 X5 x6 -> coerce  x6 X6 /\ select X6 L6 L7 /\   % Compute x6
+    forall x8, fifteen X2 X5 x8 -> coerce  x8 X8 /\ select X8 L7 L8 /\   % Compute x8
+    forall x9, fifteen X7 X8 x9 -> coerce  x9 X9 /\ select X9 L8 nil /\  % Compute x9
+    fifteen X1 X5 x9 /\ fifteen X3 X5 x7 /\ fifteen X3 X6 x9.            % Additional checks
+
+#assert exists L, square L /\ false.  % cycle through all 8 solutions - used for timing.
