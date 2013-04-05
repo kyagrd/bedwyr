@@ -19,7 +19,7 @@
 .\"
 .\" @configure_input@
 .\"
-.Dd January 21, 2013
+.Dd April 4, 2013
 .Os @PACKAGE_NAME@ v@PACKAGE_VERSION@
 .Dt BEDWYR 1 URM
 .\"
@@ -97,7 +97,8 @@ won't exit on non-interactive errors (except for critical errors of status
 see
 .Sx EXIT STATUS )
 but will exit at the end of the non-interactive stage
-with the exit status of the first non-interactive error.
+with the exit status of the first non-interactive error
+(this is useful to typecheck a whole file at once).
 .It Fl e Ar query
 Execute
 .Ar query

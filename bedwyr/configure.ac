@@ -21,7 +21,7 @@ m4_define([M4_VERSION_MAJOR],1)
 m4_define([M4_VERSION_MINOR],4)
 m4_define([M4_VERSION_PATCH],0)
 m4_define([M4_VERSION_BUILD],0)
-m4_define([M4_VERSION_DEV],alpha8)
+m4_define([M4_VERSION_DEV],alpha9)
 m4_define([M4_VERSION1],[M4_VERSION_MAJOR.M4_VERSION_MINOR])
 m4_define([M4_VERSION2],m4_if(M4_VERSION_PATCH,0,
           [M4_VERSION1],[M4_VERSION1.M4_VERSION_PATCH]))
@@ -47,7 +47,7 @@ AC_CONFIG_SRCDIR([src/bedwyr.ml])
 
 AC_PATH_PROG(BASH,bash,no)
 if test "$BASH" = no ; then
-	AC_MSG_ERROR(Cannot find bash (needed by the makefiles).)
+	AC_MSG_ERROR(Cannot find bash.)
 fi
 
 AC_PATH_PROG(TAR,tar,no)
@@ -208,10 +208,10 @@ if test "$enable_doc" = "yes" ; then
 		AC_MSG_ERROR(Cannot find ocamldoc.)
 	fi
 
-	AC_PATH_PROG(FIG2DEV,fig2dev,no)
-	if test "$FIG2DEV" = no ; then
-		AC_MSG_ERROR(Cannot find fig2dev. Install transfig.)
-	fi
+	#AC_PATH_PROG(FIG2DEV,fig2dev,no)
+	#if test "$FIG2DEV" = no ; then
+	#	AC_MSG_ERROR(Cannot find fig2dev. Install transfig.)
+	#fi
 
 	AC_PATH_PROG(LATEX,latex,no)
 	if test "$LATEX" = no ; then
@@ -227,12 +227,18 @@ if test "$enable_doc" = "yes" ; then
                               AC_CHECK_FILE(/usr/share/texlive/texmf-dist/tex/latex/txfonts/txfonts.sty,,
                                             AC_MSG_ERROR(Cannot find txfonts.sty. Install texlive-fonts-recommended.)))
 	else
-		if ! "$KPSEWHICH" xypic.sty ; then
+		AC_MSG_CHECKING(for xypic.sty)
+		if ! kpsewhich_xypic=$("$KPSEWHICH" xypic.sty) ; then
+			AC_MSG_RESULT(no)
 			AC_MSG_ERROR(Cannot find xypic.sty. Install texlive-pictures.)
 		fi
-		if ! "$KPSEWHICH" txfonts.sty ; then
+		AC_MSG_RESULT(${kpsewhich_xypic})
+		AC_MSG_CHECKING(for txfonts.sty)
+		if ! kpsewhich_txfonts=$("$KPSEWHICH" txfonts.sty) ; then
+			AC_MSG_RESULT(no)
 			AC_MSG_ERROR(Cannot find xypic.sty. Install texlive-fonts-recommended.)
 		fi
+		AC_MSG_RESULT(${kpsewhich_txfonts})
 	fi
 
 	AC_PATH_PROG(BIBTEX,bibtex,no)
