@@ -2,7 +2,7 @@ Source: @PACKAGE_TARNAME@
 Section: math
 Priority: optional
 Maintainer: Quentin Heath <quentin.heath@inria.fr>
-Build-Depends: ocaml (>= 3.10.0), autoconf (>= 2.60),
+Build-Depends: ocaml (>= 3.11.0), autoconf (>= 2.60),
  debhelper (>= 7.0.50~), fakeroot, lintian, devscripts
 Build-Depends-Indep: transfig, ghostscript, hevea (>= 1.10),
  texlive-latex-base (>= 2009-11), texlive-latex-extra (>= 2009-10)
