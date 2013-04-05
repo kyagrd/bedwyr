@@ -169,9 +169,8 @@ exception Cannot_table
 (* [create_node bindings terms data] compiles the terms into patterns
  * and associates them with a leaf containing the data.
  * [terms] is expected to be reversed. *)
-let create_node
-      ~allow_universal ~allow_existential ~switch_vars
-      bindings terms data =
+let create_node ~switch_vars bindings terms data =
+  let allow_universal = not switch_vars in
   let bindings = List.sort (fun (i,_) (j,_) -> compare i j) bindings in
   let add bindings v =
     let rec aux accu expect = function
@@ -189,13 +188,13 @@ let create_node
           when (not switch_vars) & allow_universal ->
           let i,bindings = add bindings var in
           UVar i, bindings
-      | Term.Var ({Term.tag=Term.Logic})
+      | Term.Var ({Term.tag=Term.Logic} as var)
           when switch_vars & allow_universal ->
-          failwith "logic variable forbidden here"
-          (*let i,bindings = add bindings var in
-          UVar i, bindings*)
+          let i,bindings = add bindings var in
+          UVar i, bindings
       | Term.Var ({Term.tag=Term.Constant} as v) ->
           Cst (Term.deref term,v), bindings
+                                     (*
       | Term.Var ({Term.tag=Term.Logic} as var)
           when (not switch_vars) & allow_existential ->
           let i,bindings = add bindings var in
@@ -204,6 +203,7 @@ let create_node
           when switch_vars & allow_existential ->
           let i,bindings = add bindings var in
           EVar i, bindings
+                                      *)
       | Term.DB i -> DB i, bindings
       | Term.NB i -> NB i, bindings
       | Term.True -> True, bindings
@@ -244,7 +244,7 @@ let create_node
 
 (* Expects a head-normalized term. *)
 let superficial_match ~switch_vars patterns terms =
-  let sub (pat,term) =
+  let sub pat term =
     match pat, Term.observe term with
       | QString s1,Term.QString s2 -> s1=s2
       | Nat i,Term.Nat j
@@ -253,8 +253,7 @@ let superficial_match ~switch_vars patterns terms =
       | UVar _, Term.Var {Term.tag=Term.Eigen} -> not switch_vars
       | UVar _, Term.Var {Term.tag=Term.Logic} -> switch_vars
       | Cst (_,v), Term.Var v' -> v==v'
-      | EVar _, Term.Var {Term.tag=Term.Logic} -> not switch_vars
-      | EVar _, Term.Var {Term.tag=Term.Eigen} -> switch_vars
+      | EVar _,_ -> assert false
       | True, Term.True
       | False, Term.False -> true
       | Binop (b1,_,_), Term.Binop (b2,_,_) -> b1=b2
@@ -264,7 +263,7 @@ let superficial_match ~switch_vars patterns terms =
       | Hole, _ -> true
       | _ -> false
   in
-  List.for_all sub (List.map2 (fun a b -> a,b) patterns terms)
+  List.for_all2 sub patterns terms
 
 (* Sorts patterns directly contained in a list
  * according to their top-level symbol.
@@ -337,15 +336,13 @@ let superficial_sort nodes =
 (* TODO Some of these are tailrec, some waste this effort... *)
 
 (* Expects head-normalized terms. *)
-let access
-      ~allow_universal ~allow_existential ~switch_vars
-      zindex terms =
+let access ~switch_vars zindex terms =
   (* [access_pattern] filters a term through a pattern,
    * XXX whatup on mismatch? XXX
    * returns the list of bindings,
    * returns the reversed list of catches and
    * returns the reversed list of former patterns.
-   * XXX beware of allow_universal and switch_vars! XXX
+   * XXX beware of switch_vars! XXX
    * Returns hnorm-ed terms. *)
   let rec access_pattern bindings catches former_pats pattern term =
     let term = Norm.hnorm term in
@@ -357,10 +354,10 @@ let access
       | NB i, Term.NB j when i = j ->
           (false, pattern, bindings, catches, former_pats)
       | UVar v, Term.Var ({Term.tag=Term.Eigen} as var)
-          when (not switch_vars) & allow_universal ->
+          when (not switch_vars) & (not switch_vars) ->
           (false, pattern, (v,var)::bindings, catches, former_pats)
       | UVar v, Term.Var ({Term.tag=Term.Logic})
-          when switch_vars & allow_universal ->
+          when switch_vars & (not switch_vars) ->
           failwith "logic variable forbidden here"
           (*(false, pattern, (v,var)::bindings, catches, former_pats)*)
             (*
@@ -382,12 +379,14 @@ let access
           Format.eprintf "comparaison Const/Eigen@." ;
           (false, pattern, bindings, catches, former_pats)
              *)
+                                     (*
       | EVar v, Term.Var ({Term.tag=Term.Logic} as var)
           when (not switch_vars) & allow_existential ->
           (false, pattern, (v,var)::bindings, catches, former_pats)
       | EVar v, Term.Var ({Term.tag=Term.Eigen} as var)
           when switch_vars & allow_existential ->
           (false, pattern, (v,var)::bindings, catches, former_pats)
+                                      *)
       | True, Term.True | False, Term.False ->
           (false, pattern, bindings, catches, former_pats)
       | Binop (b1,pat1,pat2), Term.Binop (b2,t1,t2) when b1=b2 ->
@@ -445,8 +444,7 @@ let access
        * We need to compile the caught terms into patterns. *)
       (fun data ->
          let patterns,children =
-           create_node ~allow_universal ~allow_existential ~switch_vars
-             bindings catches data
+           create_node ~switch_vars bindings catches data
          in
          let newnode = Node (patterns,(children,[])) in
          let oldnode = Node (List.rev former_pats,index) in
@@ -454,16 +452,15 @@ let access
          z_top (index,zipper)),
       None
     else
-        (* The terms were fully matched by the patterns,
-         * the new [patterns] is the same as the former one,
-         * the access gets propagated deeper without changing anything here. *)
-        access_index bindings (List.rev catches) (index,zipper)
+      (* The terms were fully matched by the patterns,
+       * the new [patterns] is the same as the former one,
+       * the access gets propagated deeper without changing anything here. *)
+      access_index bindings (List.rev catches) (index,zipper)
   and access_nodes bindings terms zipper older_nodes = function
     | [] ->
         (fun data ->
            let patterns,children =
-             create_node ~allow_universal ~allow_existential ~switch_vars
-               bindings (List.rev terms) data
+             create_node ~switch_vars bindings (List.rev terms) data
            in
            let index = children,[] in
            let zipper = Zip (Refine,older_nodes,patterns,[],zipper) in
@@ -488,17 +485,11 @@ let access
   in
   access_index [] terms zindex
 
-let access
-      ~allow_universal ~allow_existential ~switch_vars
-      zindex terms =
-  assert (not allow_existential) ;
-  assert (not (allow_universal=switch_vars)) ;
+let access ~switch_vars zindex terms =
   let terms =
     if !eqvt_index then (Norm.nb_rename terms) else (List.map Norm.hnorm terms)
   in
-  let update,found =
-    access ~allow_universal ~allow_existential ~switch_vars zindex terms
-  in
+  let update,found = access ~switch_vars zindex terms in
   (* TODO implement a real [delete] *)
   let delete () = zindex in
   update,found,delete

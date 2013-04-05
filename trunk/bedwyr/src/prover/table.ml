@@ -27,8 +27,6 @@ let create () = ref Index.empty
 let access ~allow_eigenvar table args =
   let update,found,_ =
     Index.access
-      ~allow_universal:allow_eigenvar
-      ~allow_existential:false
       ~switch_vars:(not allow_eigenvar)
       !table args
   in

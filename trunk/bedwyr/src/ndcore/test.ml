@@ -78,17 +78,13 @@ let const nm ts = fresh ~tag:Constant ~name:nm ~ts:ts ~lts:0
 
 let add index terms =
   let add,_,_ =
-    Index.access
-      ~allow_universal:true ~allow_existential:false ~switch_vars:false
-      index terms
+    Index.access ~switch_vars:false index terms
   in
   add
 
 let find index terms =
   let _,found,_ =
-    Index.access
-      ~allow_universal:true ~allow_existential:false ~switch_vars:false
-      index terms
+    Index.access ~switch_vars:false index terms
   in
   found
 
