@@ -158,6 +158,9 @@ if test "$enable_nativecode" = "yes" ; then
 	OCAML_WHERE=$("$OCAMLOPT" -where)
 fi
 
+AS_VERSION_COMPARE([$OCAML_VERSION],[3.11],
+                   AC_MSG_ERROR([OCaml version $OCAML_VERSION is not supported (>=3.11 required).]))
+
 if test "$BEST_SUFFIX" = "" ; then
 	AC_MSG_WARN(You may want to enable at least one type of compilation.)
 else

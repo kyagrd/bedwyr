@@ -21,13 +21,6 @@
   open Parser
   open Lexing
 
-  (* XXX incrline = new_line in OCaml >= 3.11.0 *)
-  let incrline lexbuf =
-    lexbuf.lex_curr_p <- {
-        lexbuf.lex_curr_p with
-          pos_bol = lexbuf.lex_curr_p.pos_cnum ;
-          pos_lnum = 1 + lexbuf.lex_curr_p.pos_lnum }
-
   (* == Quoted strings ============================================== *)
 
   (* keep track of the content of a quoted string
@@ -168,15 +161,31 @@
               "abbrev",         ABBREV_T;
               "unabbrev",       UNABBREV_T
             ]
-  let lt_keyword_t = Hashtbl.create 6
+  let lt_keyword_t = Hashtbl.create 22
   let _ = List.iter (fun (k,t) -> Hashtbl.add lt_keyword_t k t)
             [ (* Teyjus lower-case keywords *)
-              "sig",            SIG;
-              "module",         MODULE;
-              "accum_sig",      ACCUMSIG;
-              "accumulate",     ACCUM;
-              "end",            END;
-              "kind",           KIND
+              "sig",            TEYJUS_KEYWORD;
+              "module",         TEYJUS_KEYWORD;
+              "accum_sig",      TEYJUS_KEYWORD;
+              "accumulate",     TEYJUS_KEYWORD;
+              "end",            TEYJUS_KEYWORD;
+              "kind",           TEYJUS_KEYWORD;
+              "closed",         TEYJUS_KEYWORD;
+              "exportdef",      TEYJUS_KEYWORD;
+              "import",         TEYJUS_KEYWORD;
+              "infix",          TEYJUS_KEYWORD;
+              "infixl",         TEYJUS_KEYWORD;
+              "infixr",         TEYJUS_KEYWORD;
+              "local",          TEYJUS_KEYWORD;
+              "localkind",      TEYJUS_KEYWORD;
+              "postfix",        TEYJUS_KEYWORD;
+              "posfixl",        TEYJUS_KEYWORD;
+              "prefix",         TEYJUS_KEYWORD;
+              "prefixr",        TEYJUS_KEYWORD;
+              "typeabbrev",     TEYJUS_KEYWORD;
+              "use_sig",        TEYJUS_KEYWORD;
+              "useonly",        TEYJUS_KEYWORD;
+              "!",              TEYJUS_KEYWORD
             ]
   let get_lower n =
     try Hashtbl.find lb_keyword_t n
@@ -215,8 +224,8 @@
   let it_primitive_t = Hashtbl.create 2
   let _ = List.iter (fun (k,t) -> Hashtbl.add it_primitive_t k t)
             [ (* Teyjus infix-case primitive operators and constants *)
-              ":-",             CLAUSEEQ;
-              "=>",             IMP
+              ":-",             TEYJUS_KEYWORD;
+              "=>",             TEYJUS_KEYWORD
             ]
   let get_infix n =
     try Hashtbl.find ib_primitive_t n
@@ -234,8 +243,8 @@ let uchar = ['A'-'Z']
 let lchar = ['a'-'z']
 
 (* special symbols *)
-let prefix_special       = ['?' '`' '\'' '$']
-let tail_special_noslash = ['_' '@' '#' '!'] | digit
+let prefix_special       = ['?' '!' '`' '\'' '$']
+let tail_special_noslash = ['_' '@' '#'] | digit
 let infix_special_nostar = ['-' '^' '<' '>' '=' '~' '+' '&' ':' '|']
 let infix_special        = infix_special_nostar | '*'
 
@@ -256,12 +265,12 @@ let in_qstring = [^'\\' '"' '\n' '/' '*']+
 rule token = parse
   (* Multi-line and single-line comments *)
   | "/*"                        { comment 0 None token lexbuf }
-  | '%' [^'\n']* '\n'           { incrline lexbuf; token lexbuf }
+  | '%' [^'\n']* '\n'           { new_line lexbuf; token lexbuf }
   | '%' [^'\n']*                { token lexbuf }
 
   (* Separators *)
   | blank                       { token lexbuf }
-  | '\n'                        { incrline lexbuf; token lexbuf }
+  | '\n'                        { new_line lexbuf; token lexbuf }
 
   | '"'                         { Buffer.clear strbuf ;
                                   strstart := lexbuf.lex_start_p ;
@@ -324,54 +333,54 @@ rule token = parse
   | _ as c                      { raise (Input.Illegal_string c) }
 
 and proof = parse
-  | '\n'                { incrline lexbuf; proof lexbuf }
-  | "Qed"               { QED }
-  | '.'                 { DOT }
-  | eof                 { EOF }
+  | '\n'                        { new_line lexbuf; proof lexbuf }
+  | "Qed"                       { QED }
+  | '.'                         { DOT }
+  | eof                         { EOF }
   | upper_name
   | lower_name
   | intern_name
-  | _                   { proof lexbuf }
+  | _                           { proof lexbuf }
 
 and invalid = parse
-  | '.'                 { DOT }
-  | "/*"                { comment 0 None invalid lexbuf }
-  | '%' [^'\n']* '\n'   { incrline lexbuf; invalid lexbuf }
-  | '%' [^'\n']*        { invalid lexbuf }
-  | '\n'                { incrline lexbuf; invalid lexbuf }
-  | '"'                 { Buffer.clear strbuf ;
-                          strstart := lexbuf.lex_start_p ;
-                          qstring lexbuf }
-  | eof                 { EOF }
-  | _                   { invalid lexbuf }
+  | '.'                         { DOT }
+  | "/*"                        { comment 0 None invalid lexbuf }
+  | '%' [^'\n']* '\n'           { new_line lexbuf; invalid lexbuf }
+  | '%' [^'\n']*                { invalid lexbuf }
+  | '\n'                        { new_line lexbuf; invalid lexbuf }
+  | '"'                         { Buffer.clear strbuf ;
+                                  strstart := lexbuf.lex_start_p ;
+                                  qstring lexbuf }
+  | eof                         { EOF }
+  | _                           { invalid lexbuf }
 
 and comment level prev_token k = parse
-  | in_comment          { comment level prev_token k lexbuf }
-  | "/*"                { comment (level + 1) prev_token k lexbuf }
-  | "*/"                { if level = 0 then
-                            match prev_token with
-                              | None -> k lexbuf
-                              | Some t -> t
-                          else
-                            comment (level - 1) prev_token k lexbuf }
-  | '\n'                { incrline lexbuf ;
-                          comment level prev_token k lexbuf }
-  | eof                 { failwith "comment not closed at end of input" }
+  | in_comment                  { comment level prev_token k lexbuf }
+  | "/*"                        { comment (level + 1) prev_token k lexbuf }
+  | "*/"                        { if level = 0 then
+                                    match prev_token with
+                                      | None -> k lexbuf
+                                      | Some t -> t
+                                  else
+                                    comment (level - 1) prev_token k lexbuf }
+  | '\n'                        { new_line lexbuf ;
+                                  comment level prev_token k lexbuf }
+  | eof                         { failwith "comment not closed at end of input" }
 
 and qstring = parse
-  | "\\\n"              { incrline lexbuf ;
-                          qstring lexbuf }
-  | "\\/*" | "\\*/"     { raise Input.Illegal_string_comment }
-  | '\\' (_ as c)       { addEscapedChar c ;
-                          qstring lexbuf }
-  | in_qstring as s     { addString s ;
-                          qstring lexbuf }
-  | '"'                 { let pos = (!strstart,lexbuf.lex_curr_p) in
-                          QSTRING (pos,Buffer.contents strbuf) }
-  | '\n'                { addChar '\n' ;
-                          incrline lexbuf ;
-                          qstring lexbuf }
-  | "/*" | "*/"         { raise Input.Illegal_string_comment }
-  | (('/' | '*') as c)  { addChar c ;
-                          qstring lexbuf }
-  | eof                 { failwith "string not closed at end of input" }
+  | "\\\n"                      { new_line lexbuf ;
+                                  qstring lexbuf }
+  | "\\/*" | "\\*/"             { raise Input.Illegal_string_comment }
+  | '\\' (_ as c)               { addEscapedChar c ;
+                                  qstring lexbuf }
+  | in_qstring as s             { addString s ;
+                                  qstring lexbuf }
+  | '"'                         { let pos = (!strstart,lexbuf.lex_curr_p) in
+                                  QSTRING (pos,Buffer.contents strbuf) }
+  | '\n'                        { addChar '\n' ;
+                                  new_line lexbuf ;
+                                  qstring lexbuf }
+  | "/*" | "*/"                 { raise Input.Illegal_string_comment }
+  | (('/' | '*') as c)          { addChar c ;
+                                  qstring lexbuf }
+  | eof                         { failwith "string not closed at end of input" }
