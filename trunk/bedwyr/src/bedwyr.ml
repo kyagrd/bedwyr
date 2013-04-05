@@ -392,8 +392,8 @@ and input_from_file ~test file =
   IO.close_in file channel
 and input_defs ~test lexbuf =
   process ~test Parser.input_def lexbuf
-and input_queries ?(interactive=false) lexbuf =
-  process ~interactive Parser.input_query lexbuf
+and input_queries ~test ?(interactive=false) lexbuf =
+  process ~test ~interactive Parser.input_query lexbuf
 
 and load_session () =
   System.reset_decls () ;
@@ -503,11 +503,11 @@ and command ~test c reset =
 
 let _ =
   load_session () ;
-  List.iter (fun s -> input_queries (Lexing.from_string s)) !queries ;
+  List.iter (fun s -> input_queries ~test:!test (Lexing.from_string s)) !queries ;
   match !exit_status with
     | None ->
         if !interactive then begin
           Format.printf "%s%!" welcome_msg ;
-          input_queries ~interactive:true (Lexing.from_channel stdin)
+          input_queries ~test:!test ~interactive:true (Lexing.from_channel stdin)
         end
     | Some error_code -> exit error_code

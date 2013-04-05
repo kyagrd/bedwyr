@@ -28,7 +28,7 @@ val input_defs : test:bool -> Lexing.lexbuf -> unit
 (** Read the REPL or a script.
   * @param interactive intended for the REPL,
   * gives additional error messages *)
-val input_queries : ?interactive:bool -> Lexing.lexbuf -> unit
+val input_queries : test:bool -> ?interactive:bool -> Lexing.lexbuf -> unit
 
 (** Execute meta-commands ([#debug.], etc).
   * @raise Invalid_command if an argument is unexpected
