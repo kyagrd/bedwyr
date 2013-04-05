@@ -46,10 +46,10 @@ exception Cannot_table
 
 (** {6 Access} *)
 
-(** @return [(update,found,remove)] *)
+(** @param switch_vars map eigen on existential and logic on universal
+  * instead of the other way around
+  * @return [(update,found,remove)] *)
 val access :
-  allow_universal:bool ->
-  allow_existential:bool ->
   switch_vars:bool ->
   'a t -> Term.term list ->
   ('a -> 'a t) * 'a option * (unit -> 'a t)
