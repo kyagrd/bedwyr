@@ -19,7 +19,11 @@
 
 (** Goals tabling. *)
 
-type tag = Proved | Working of bool ref | Disproved | Unset
+type tag =
+  | Proved
+  | Working of (bool ref * tag ref list ref * tag ref list ref)
+  | Disproved
+  | Unset
 type t
 
 (** Turn on/off equivariant tabling. *)
@@ -27,8 +31,10 @@ val set_eqvt : bool -> unit
 
 val create : unit -> t
 
-val access : allow_eigenvar:bool -> t -> Term.term list ->
-  (tag ref -> unit) * tag ref option * (unit -> unit)
+val access :
+  switch_vars:bool ->
+  t -> Term.term list ->
+  (tag ref -> bool) * tag ref option * (unit -> bool)
 
 (** Abstract nabla variables in a term.
   * If equivariant tabling is used then use only nabla variables appearing in
@@ -44,14 +50,15 @@ val nabla_abstract : Term.term -> Term.term
   * then the table will only display [nabla x\ p x],
   * because the vacuous y is forgotten in the table.
   *
-  * This behavior is strictly speaking unsound. For example, if [p] is defined as
-  * {[p X := sigma Y\ (X = Y -> false)]}
+  * This behavior is strictly speaking unsound.
+  * For example, if [p] is defined as {[p X := sigma Y\ (X = Y -> false)]}
   * that is, [p X] is true if there exists a term distinct from [X].
   * Assuming that the types are vacuous, then [nabla x\ p x]  is not provable
   * in Linc, but [nabla x\ nabla y\ p x] is.
   * Suppose the latter were proved by Bedwyr (currently it's impossible because
   * we can't yet handle logic variables on the left),
-  * then the table will instead display [nabla x\ p x] as provable, which is wrong.
+  * then the table will instead display [nabla x\ p x] as provable,
+  * which is wrong.
   *
   * This unsoundness may never arise in the goals tabled by Bedwyr,
   * because to produce this behavior, it seems that we need unification

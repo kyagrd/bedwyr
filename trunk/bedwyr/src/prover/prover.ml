@@ -64,29 +64,56 @@ let unify lvl a b =
 (* Tabling provides a way to cut some parts of the search,
  * but we should take care not to mistake shortcuts and disproving. *)
 
-let disprovable_stack = Stack.create ()
+let dependency_stack = Stack.create ()
 
-let clear_disprovable () =
+let clear_dependency_stack () =
   try
     while true do
-      let s,_ = Stack.pop disprovable_stack in s := Table.Unset
+      let s,_ = Stack.pop dependency_stack in s := Table.Unset
     done
   with Stack.Empty -> ()
 
 exception Found
-let mark_not_disprovable_until ?(included=false) d =
-  try
-    Stack.iter (fun (_,disprovable) ->
-                  if disprovable == d then begin
-                    if included then disprovable := false ;
-                    raise Found
-                  end else disprovable := false)
-      disprovable_stack
-  with Found -> ()
+let mark_dependent_until =
+  let add_dependencies ~included status final_dependencies =
+    try
+      Stack.iter (fun (st,fi) ->
+                    if st == status then begin
+                      if included then begin (* XXX does this still work? *)
+                        fi := status :: !fi ;
+                        final_dependencies := st :: !final_dependencies
+                      end ;
+                      raise Found
+                    end else begin
+                      fi := status :: !fi ;
+                      final_dependencies := st :: !final_dependencies
+                    end)
+        dependency_stack ;
+      assert false (* this can only be called on the tip of a loop *)
+    with Found -> ()
+  in
+  let rec aux
+        ?(skip=true) ?(included=false)
+        status (looping,final_influences,final_dependencies) =
+    if !looping then begin
+      (* this atom is the tip of a loop;
+       * we need to make the previous atoms depend on it *)
+      add_dependencies ~included status final_dependencies
+    end else if not skip then begin
+      (* this atom is not a tip but depends upon some;
+       * we need to make the previous atoms depend on them *)
+      List.iter
+        (fun st -> match !st with
+           | Table.Working w -> aux ~included st w
+           | _ -> assert false)
+        !final_influences
+    end
+  in
+  aux ~skip:false
 
 type 'a answer =
-  | Known of 'a * Term.term * Table.t
-  | Unknown of Term.term * Table.t
+  | Known of ('a ref -> bool) * 'a ref * Term.term * Table.t
+  | Unknown of ('a ref -> bool) * Term.term * Table.t
   | OffTopic
 
 
@@ -96,10 +123,12 @@ type 'a answer =
  * which can be seen as a more usual continuation, typically
  * restoring modifications and backtracking.
  * [timestamp] must be the oldest timestamp in the goal. *)
-let rec prove temperatures depth ~success ~failure ~level ~timestamp ~local g =
+let rec prove
+      temperatures depth
+      ~success ~failure ~level ~timestamp ~local g =
 
   if check_interrupt () then begin
-    clear_disprovable () ;
+    clear_dependency_stack () ;
     raise Interrupt
   end ;
 
@@ -115,7 +144,9 @@ let rec prove temperatures depth ~success ~failure ~level ~timestamp ~local g =
     let a = match goals with [a] -> a | _ -> invalid_goal () in
     let a = Norm.deep_norm a in
     let vars = if level = Zero then eigen_vars [a] else logic_vars [a] in
-    prove temperatures (depth+1) ~level ~timestamp ~failure ~local a
+    prove
+      temperatures (depth+1)
+      ~level ~timestamp ~failure ~local a
       ~success:(fun ts k ->
                   let tm_list = List.map shared_copy vars in
                   if List.exists (match_list tm_list) !sol then k () else begin
@@ -137,7 +168,9 @@ let rec prove temperatures depth ~success ~failure ~level ~timestamp ~local g =
       List.fold_left (fun t v -> app b [abstract_flex v t]) a vars
     in
     let g = op_eq c d in
-    prove temperatures (depth+1) ~level ~success ~failure ~timestamp ~local g
+    prove
+      temperatures (depth+1)
+      ~level ~success ~failure ~timestamp ~local g
   in
 
   (* Function to prove _not predicate *)
@@ -168,14 +201,16 @@ let rec prove temperatures depth ~success ~failure ~level ~timestamp ~local g =
                   (*  prove temperatures (depth+1) ~success ~failure ~level
                    *  ~timestamp ~local (op_and a b) *)
                   succeeded := true ;
-                  prove temperatures (depth+1) ~success ~level
-                    ~timestamp:ts ~local b ~failure:k)
+                  prove
+                    temperatures (depth+1)
+                    ~success ~level ~timestamp:ts ~local b ~failure:k)
       (* (fun () -> restore_state state ; failure()) *)
       ~failure:(fun () ->
                   restore_state state ;
                   if !succeeded then failure () else
-                    prove temperatures (depth+1) ~success ~failure
-                      ~level ~timestamp ~local c)
+                    prove
+                      temperatures (depth+1)
+                      ~success ~failure ~level ~timestamp ~local c)
   in
 
   (* 2-step procedure (table, definition)
@@ -188,33 +223,34 @@ let rec prove temperatures depth ~success ~failure ~level ~timestamp ~local g =
     let flavour,definition = get_flav_def d in
     (* first step, first sub-step: look at the table
      * (whether the atom is frozen or not is irrelevent at this point) *)
-    let table_add,status =
+    let status =
       match flavour with
-        | Normal -> ignore,OffTopic
+        | Normal -> OffTopic
         | Inductive {theorem=theorem;table=table}
         | CoInductive {theorem=theorem;table=table} ->
             try
               let add,found,_ =
-                Table.access ~allow_eigenvar:(level=One) table args
+                Table.access ~switch_vars:(level=Zero) table args
               in
               match found with
-                | Some {contents=c} -> add,Known (c,theorem,table)
-                | None -> add,Unknown (theorem,table)
-            with Index.Cannot_table -> ignore,OffTopic
+                | Some c -> Known (add,c,theorem,table)
+                | None -> Unknown (add,theorem,table)
+            with Index.Cannot_table -> OffTopic
     in
     match status with
       | OffTopic ->
           prove temperatures (depth+1)
             ~level ~timestamp ~local ~success ~failure (app definition args)
-      | Known (Table.Proved,_,_) ->
+      | Known (_,{contents=Table.Proved},_,_) ->
           if !debug || depth<=debug_max_depth then
             eprintf "Goal (%a) proved using table@." Pprint.pp_term g;
           success timestamp failure
-      | Known (Table.Disproved,_,_) ->
+      | Known (_,{contents=Table.Disproved},_,_) ->
           if !debug || depth<=debug_max_depth then
             eprintf "Known disproved@." ;
           failure ()
-      | Known (Table.Working disprovable,_,_) ->
+      | Known (_,({contents=Table.Working w} as status),_,_) ->
+          (* this is an unsure atom *)
           begin match temperature with
             | Frozen t ->
                 (* Unfortunately, a theorem is not a clause
@@ -225,38 +261,106 @@ let rec prove temperatures depth ~success ~failure ~level ~timestamp ~local g =
                  * whereas its theorem notxwins_symetries has loops
                  * from which we can conclude nothing).
                  * Therefore no atom is disprovable. *)
-                mark_not_disprovable_until ~included:true disprovable ;
+                mark_dependent_until ~included:true status w ;
                 failure ()
             | Unfrozen ->
                 begin match flavour with
                   | Inductive _ ->
-                      (* XXX Why exactly are the intermediate atoms
-                       * not disproved? *)
-                      mark_not_disprovable_until disprovable ;
+                      mark_dependent_until status w ;
                       failure ()
-                  | _ ->
+                  | CoInductive _ ->
+                      mark_dependent_until status w ;
                       success timestamp failure
+                  | _ -> assert false (* XXX plain loop detection or not? *)
                 end
           end
-      | Unknown (theorem,table)
-      | Known (Table.Unset,theorem,table) ->
+      | Unknown (table_add,theorem,table)
+      | Known (table_add,{contents=Table.Unset},theorem,table) ->
           (* This handles the cases where nothing is in the table,
            * or Unset has been left, in which case the [Table.add]
            * will overwrite it. *)
           let prove body success failure temperatures =
-            let disprovable = ref true in
-            let status = ref (Table.Working disprovable) in
+            let validate status final_influences result =
+              let rec aux = function
+                | [] -> ()
+                | ([],_) :: l2 -> aux l2
+                | ((st :: l1),st') :: l2 ->
+                    begin match !st with
+                      | Table.Working (_,fi,fd) ->
+                          let fi1,fi2 =
+                            let rec rem l1 = function
+                              | [] -> assert false
+                              | hd::l2 ->
+                                  if hd==st' then l1,l2 else rem (hd::l1) l2
+                            in
+                            rem [] !fi
+                          in
+                          if fi1=[] && fi2=[] then begin
+                            st := result ;
+                            aux ((!fd,st) :: (l1,st') :: l2)
+                          end else begin
+                            fi := List.rev_append fi1 fi2 ;
+                            aux ((l1,st') :: l2)
+                          end
+                      | _ -> assert false
+                    end
+              in
+              (* we have to add a dumy dependency for the atom,
+               * since [aux] decrements the number of dependencies *)
+              let r = ref Table.Unset in
+              final_influences := r :: !final_influences ;
+              aux [[status],r]
+            in
+            let invalidate status result =
+              let rec aux = function
+                | [] -> ()
+                | [] :: l2 -> aux l2
+                | (st :: l1) :: l2 ->
+                    begin match !st with
+                      | Table.Working (_,_,fd) ->
+                          st := Table.Unset ;
+                          aux (!fd :: l1 :: l2)
+                      | _ -> aux (l1 :: l2)
+                    end
+              in
+              aux [[status]] ;
+              status := result
+            in
+            let process_success status final_influences =
+              match flavour with
+                | Inductive _ ->
+                    invalidate status Table.Proved
+                | CoInductive _ ->
+                    validate status final_influences Table.Proved
+                | _ -> assert false
+            in
+            let process_failure status final_influences =
+              match flavour with
+                | Inductive _ ->
+                    validate status final_influences Table.Disproved
+                | CoInductive _ ->
+                    invalidate status Table.Disproved
+                | _ -> assert false
+            in
+            let looping = ref false in
+            let final_influences = ref [] in
+            let final_dependencies = ref [] in
+            let status =
+              ref (Table.Working (looping,final_influences,final_dependencies))
+            in
             let s0 = save_state () in
-            let table_update_success ts k =
-              ignore (Stack.pop disprovable_stack) ;
-              status := Table.Proved ;
-              (* TODO check that optimization: since we know that
-               * there is at most one success, we ignore
-               * the continuation [k] and directly jump to the
+            let table_update_success ts _ =
+              ignore (Stack.pop dependency_stack) ;
+              looping := false ;
+              process_success status final_influences ;
+              (* Since we know that there is at most one success,
+               * we ignore the failure continuation passed as argument
+               * to [table_update_success] and directly jump to the
                * [failure] continuation. It _seems_ OK regarding the
                * cleanup handlers, which are just jumps to
                * previous states.
-               * It is actually quite useful in examples/graph-alt.def. *)
+               * It is actually quite useful in examples/graph-alt.def,
+               * and is required by the dependency_stack. *)
               let k () =
                 success ts (fun () -> restore_state s0 ; failure ())
               in
@@ -264,7 +368,8 @@ let rec prove temperatures depth ~success ~failure ~level ~timestamp ~local g =
               let saturate =
                 match temperature with
                   | Frozen _ ->
-                      (* XXX for now we don't forward-chain during backward chaining;
+                      (* XXX for now we don't forward-chain during
+                       * backward chaining;
                        * if someday we do, we must skip "Working _"
                        * instead of failing on it *)
                       fun k -> k ()
@@ -275,7 +380,10 @@ let rec prove temperatures depth ~success ~failure ~level ~timestamp ~local g =
                       let vars =
                         let rec aux l = function
                           | n when n <= 0 -> l
-                          | n -> aux ((fresh ~lts:local Eigen ~ts:(timestamp + n))::l) (n-1)
+                          | n -> aux ((fresh
+                                         ~lts:local
+                                         Eigen
+                                         ~ts:(timestamp + n))::l) (n-1)
                         in
                         aux [] arity
                       in
@@ -307,34 +415,34 @@ let rec prove temperatures depth ~success ~failure ~level ~timestamp ~local g =
                                 pressure
                                 Pprint.pp_term (app d args);
                             let k () = fc k pressure copies in
-                            let table_add,status =
+                            let status =
                               try
                                 let add,found,_ =
-                                  Table.access ~allow_eigenvar:(level=One) table args
+                                  Table.access
+                                    ~switch_vars:(level=Zero) table args
                                 in
                                 match found with
-                                  | Some {contents=c} -> add,Known (c,theorem,table)
-                                  | None -> add,Unknown (theorem,table)
-                              with Index.Cannot_table -> ignore,OffTopic
+                                  | Some c -> Known (add,c,theorem,table)
+                                  | None -> Unknown (add,theorem,table)
+                              with Index.Cannot_table -> OffTopic
                             in
                             match status with
                               | OffTopic -> k ()
-                              | Known (Table.Proved,_,_) ->
+                              | Known (_,{contents=Table.Proved},_,_) ->
                                   if !debug || depth<=debug_max_depth then
                                     eprintf
                                       "Goal (%a) already proved!@."
                                       Pprint.pp_term (app d args);
                                   k ()
-                              | Known (Table.Disproved,_,_) ->
+                              | Known (_,{contents=Table.Disproved},_,_) ->
                                   failwith "did our theorem just prove false?"
-                              | Known (Table.Working disprovable,_,_) ->
+                              | Known (_,{contents=Table.Working _},_,_) ->
                                   assert false
-                              | Unknown (theorem,table)
-                              | Known (Table.Unset,theorem,table) ->
-                                  let status = ref Table.Proved in
-                                  (* XXX allow_eigenvar? *)
-                                  begin try table_add status
-                                  with Index.Cannot_table -> assert false end ;
+                              | Unknown (table_add,theorem,table)
+                              | Known (table_add,{contents=Table.Unset},theorem,table) ->
+                                  let status = ref (Table.Proved) in
+                                  (* XXX switch_vars? *)
+                                  if not (table_add status) then assert false ;
                                   if !debug || depth<=debug_max_depth then
                                     eprintf
                                       "Goal (%a) proved using forward chaining@."
@@ -355,10 +463,12 @@ let rec prove temperatures depth ~success ~failure ~level ~timestamp ~local g =
                             substs := [] ;
                             fc k pressure copies
                           in
-                          (* XXX for now we don't backward-chain during forward chaining;
+                          (* XXX for now we don't backward-chain during
+                           * forward chaining;
                            * we must also use [args] at least once
                            * to improve performance *)
-                          prove ((v,Frozen 0)::temperatures) (depth+1) ~local ~timestamp
+                          prove ((v,Frozen 0)::temperatures)
+                            (depth+1) ~local ~timestamp
                             ~level:Zero ~success:store_subst ~failure th_body
                         end else k ()
                       in
@@ -375,28 +485,25 @@ let rec prove temperatures depth ~success ~failure ~level ~timestamp ~local g =
                      * Never happens if we skipped the success continuation. *)
                     assert false
                 | Table.Working _ ->
-                    ignore (Stack.pop disprovable_stack) ;
-                    if !disprovable then begin
-                      status := Table.Disproved ;
-                    end else
-                      status := Table.Unset
+                    ignore (Stack.pop dependency_stack) ;
+                    looping := false ;
+                    process_failure status final_influences
                 | Table.Disproved | Table.Unset -> assert false
               end ;
               failure ()
             in
-            if try
-              table_add status ;
-              true
-            with Index.Cannot_table -> false
-            then begin
-              Stack.push (status,disprovable) disprovable_stack ;
-              prove temperatures (depth+1) ~level ~local ~timestamp
+            if table_add status then begin
+              Stack.push (status,final_influences) dependency_stack ;
+              looping := true ;
+              prove
+                temperatures (depth+1)
+                ~level ~local ~timestamp (app body args)
                 ~success:table_update_success
                 ~failure:table_update_failure
-                (app body args)
             end else
-              prove temperatures (depth+1) ~level ~local ~success ~failure
-                ~timestamp (app body args)
+              prove
+                temperatures (depth+1)
+                ~level ~local ~timestamp ~success ~failure (app body args)
           in
           (* first step, second sub-step: freeze the atom if needed,
            * unfold the theorem *)
@@ -547,11 +654,15 @@ let rec prove temperatures depth ~success ~failure ~level ~timestamp ~local g =
         let rec prove_conj ts failure = function
           | [] -> success ts failure
           | (ts'',g)::gs ->
-              prove temperatures (depth+1) ~level ~local ~timestamp:ts''
+              prove
+                temperatures (depth+1)
+                ~level ~local ~timestamp:ts''
                 ~success:(fun ts' k -> prove_conj (max ts ts') k gs)
                 ~failure g
         in
-        prove temperatures (depth+1) ~level:Zero ~local ~timestamp a
+        prove
+          temperatures (depth+1)
+          ~level:Zero ~local ~timestamp a
           ~success:store_subst
           ~failure:(fun () ->
                       prove_conj timestamp failure (make_copies !substs b))
@@ -568,8 +679,9 @@ let rec prove temperatures depth ~success ~failure ~level ~timestamp ~local g =
           aux [] n
         in
         let goal = app goal vars in
-        prove temperatures (depth+1) ~local ~timestamp:(timestamp + n) ~level
-          ~success ~failure goal
+        prove
+          temperatures (depth+1)
+          ~local ~timestamp:(timestamp + n) ~level ~success ~failure goal
 
     (* Local quantification *)
     | Binder (Nabla,n,goal) ->
@@ -582,8 +694,9 @@ let rec prove temperatures depth ~success ~failure ~level ~timestamp ~local g =
           aux [] n
         in
         let goal = app goal vars in
-        prove temperatures (depth+1) ~local:(local + n) ~timestamp ~level
-          ~success ~failure goal
+        prove
+          temperatures (depth+1)
+          ~local:(local + n) ~timestamp ~level ~success ~failure goal
 
     (* Existential quantification *)
     | Binder (Exists,n,goal) ->
@@ -592,13 +705,15 @@ let rec prove temperatures depth ~success ~failure ~level ~timestamp ~local g =
           | Zero ->
               let rec aux l = function
                 | n when n <= 0 -> l
-                | n -> aux ((fresh ~lts:local Eigen ~ts:(timestamp + n))::l) (n-1)
+                | n -> aux ((fresh
+                               ~lts:local Eigen ~ts:(timestamp + n))::l) (n-1)
               in
               timestamp + n,aux [] n
           | One ->
               let rec aux l = function
                 | n when n <= 0 -> l
-                | n -> aux ((fresh ~lts:local Logic ~ts:timestamp)::l) (n-1)
+                | n -> aux ((fresh
+                               ~lts:local Logic ~ts:timestamp)::l) (n-1)
               in
               timestamp,aux [] n
         in
@@ -632,7 +747,9 @@ let rec prove temperatures depth ~success ~failure ~level ~timestamp ~local g =
           | Var v when v == Logic.var_assert_rigid ->
              let a = match goals with [a] -> a | _ -> invalid_goal () in
              let a = Norm.deep_norm a in
-             let vars = if level = Zero then eigen_vars [a] else logic_vars [a] in
+             let vars =
+               if level = Zero then eigen_vars [a] else logic_vars [a]
+             in
              begin match vars with
                | [] -> success timestamp failure
                | _ -> raise Variable_leakage
@@ -643,8 +760,12 @@ let rec prove temperatures depth ~success ~failure ~level ~timestamp ~local g =
              let a = match goals with [a] -> a | _ -> invalid_goal () in
              let a = Norm.deep_norm a in
              let state = save_state () in
-             prove temperatures (depth+1) ~level ~local ~timestamp ~failure a
-               ~success:(fun ts k -> success ts (fun () -> restore_state state ; failure ()) )
+             prove
+               temperatures (depth+1)
+               ~level ~local ~timestamp ~failure a
+               ~success:(fun ts k -> success ts (fun () ->
+                                                   restore_state state ;
+                                                   failure ()) )
 
           (* Proving distinct-predicate *)
           | Var v when v == Logic.var_distinct ->
@@ -729,18 +850,20 @@ let rec prove temperatures depth ~success ~failure ~level ~timestamp ~local g =
 let prove ~success ~failure ~level ~timestamp ~local g =
   let s0 = save_state () in
   let success ts k =
-    assert (Stack.is_empty disprovable_stack) ;
+    assert (Stack.is_empty dependency_stack) ;
     success ts k
   in
   let failure () =
-    assert (Stack.is_empty disprovable_stack) ;
+    assert (Stack.is_empty dependency_stack) ;
     assert (s0 = save_state ()) ;
     failure ()
   in
   try
-    prove [] 0 ~success ~failure ~level ~timestamp ~local g
+    prove
+      [] 0
+      ~success ~failure ~level ~timestamp ~local g
   with e ->
-    clear_disprovable () ;
+    clear_dependency_stack () ;
     restore_state s0 ;
     raise e
 
