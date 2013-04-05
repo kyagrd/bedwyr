@@ -467,6 +467,7 @@ mostlyclean:
 
 clean: mostlyclean doc/Makefile
 	@$(MAKE) -C doc clean
+	@$(MAKE) -C examples/ccs_vp/timing clean
 	@$(FIND) . -name '*~' -exec rm -vf \{\} \;
 	@rm -vf *.bz2 *.gz *.tar *.tbz *.tgz *.odocl $(MANPAGES)
 	@rm -vf *.build *.changes *.dsc *.deb *-installer.exe

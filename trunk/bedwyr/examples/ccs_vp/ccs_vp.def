@@ -1,6 +1,6 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Early and Late Semantics of Value-Passing CCS
-%  written by Peng Wu (LIX, Ecole Polytechnique)
+%  originally written by Peng Wu (LIX, Ecole Polytechnique)
 %
 %  An example of how to do various kinds of
 %  (bi)simulation checks for the value-passing CCS within Bedwyr.
