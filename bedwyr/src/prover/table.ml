@@ -17,20 +17,25 @@
 (* 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.              *)
 (****************************************************************************)
 
-type tag = Proved | Working of bool ref | Disproved | Unset
+type tag =
+  | Proved
+  | Working of (bool ref * tag ref list ref * tag ref list ref)
+  | Disproved
+  | Unset
 type t = tag ref Index.t ref
 
 let set_eqvt b = Index.eqvt_index := b
 
 let create () = ref Index.empty
 
-let access ~allow_eigenvar table args =
+let access ~switch_vars table args =
   let update,found,_ =
-    Index.access
-      ~switch_vars:(not allow_eigenvar)
-      !table args
+    Index.access ~switch_vars !table args
   in
-  let update tag = table := update tag in
+  let update tag =
+    try table := update tag ; true
+    with Index.Cannot_table -> false
+  in
   (*let delete () = table := delete () in*)
   let delete () = update (ref Unset) in
   update,found,delete
@@ -38,7 +43,7 @@ let access ~allow_eigenvar table args =
 
 (* TODO factorize this with nb_rename *)
 (* FIXME the display depends on the current value of Index.eqvt_index,
- * while it should depend its value when the goal *was* tabled... *)
+ * while it should depend on its value when the goal *was* tabled... *)
 let nabla_abstract t =
   let t = Norm.deep_norm t in
   let bindings =
