@@ -36,7 +36,7 @@ let open_in name =
 
 let close_in name f =
   try close_in f
-  with Sys_error e -> error name e "read close"
+  with Sys_error e -> error name e "close"
 
 let open_out name =
   try open_out_gen [Open_wronly;Open_creat;Open_excl] 0o600 name
