@@ -1,27 +1,26 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Early and Late Semantics of Value-Passing CCS
-%  written by Peng Wu (LIX, Ecole Polytechnique)
+%  originally written by Peng Wu (LIX, Ecole Polytechnique)
 %
 % Declarations for the file ccs_vp.def,
 % to be included before the definition of the pdef predicate
 % (see test.def for an example).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Kind proc,
-     action,
-     value,
+Kind value,
      label      type.
 
+Kind action     type.
+Type i, o       label -> value -> action.
+Type i'         label -> action. % input action for a late transition
+Type tau        action.
+
+Kind proc       type.
 Type in         label -> (value -> proc) -> proc.
-Type i          label -> value -> action.
-Type i'         label -> action.
 Type abs        (value -> proc) -> proc.
 Type out        label -> value -> proc -> proc.
-Type o          label -> value -> action.
 Type taup       proc -> proc.
-Type tau        action.
-Type +          proc -> proc -> proc.
-Type |          proc -> proc -> proc.
+Type +, |       proc -> proc -> proc.
 Type if         A -> A -> proc -> proc.
 Type ite        A -> A -> proc -> proc -> proc.
 Type proc       nat -> proc.

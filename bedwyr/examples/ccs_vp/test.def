@@ -9,7 +9,7 @@
 % of operational semantics.
 
 % This file contains the declarations required by the pdef predicate.
-#include "ccs.def".
+#include "ccs_vp_decl.def".
 
 Type p0,p1,p2,p3,p4,p5,p6,p7,
      s0,stack,
@@ -24,7 +24,7 @@ Type a,b,c,d,
 Type v0,v1      value.
 
 % This predicate is used in ccs_vp.def,
-% and thus must be defined between the two fist includes.
+% and thus must be defined between the two first includes of this file.
 Define pdef : nat -> proc -> prop by
   % Emit a tau action and repeat.
   pdef p0 (taup (proc p0));
