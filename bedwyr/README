@@ -63,7 +63,7 @@ in addition to the complete program.
 
 For proper compilation and installation, a Linux environment
 and the following packages are required:
-- OCaml (3.10 or later)
+- OCaml (3.11 or later)
 - autotools (at least autoconf-2.60) and GNU make
 - bash, tar, gzip, bzip2 and some other standard tools
 
