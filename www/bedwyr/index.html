@@ -98,8 +98,10 @@
 
     <h2 id="download">Download</h2>
 
-    <!--p>The latest stablish release is version 1.4-alpha7 (November 2012).</p-->
-    <p>The latest stablish release is version 1.4-alpha5 (September 2012).</p>
+    <!--p>The latest stablish release is version 1.4-rc? (July 2013).</p-->
+    <!--p>The latest stablish release is version 1.4-beta? (June 2013).</p-->
+    <!--p>The latest stablish release is version 1.4-alpha? (May 2013).</p-->
+    <p>The latest stablish release is version 1.4-alpha9 (April 2013).</p>
 
     <p><font color=green><b>SCM</b></font><br/>
     The <a href="https://gforge.inria.fr/scm/?group_id=367">SVN repository</a>
@@ -121,42 +123,42 @@
     <p><font color=green><b>Packages</b></font><br/>
     Some packages, containing both versions of the program (native and
     bytecode), the complete documentation, all examples and some language files
-    for Emacs and Vim, are available for GNU/Linux (Debian and Gentoo) and
-    Windows 7. The Linux packages also include the standalone core library
+    for Emacs and Vim, are available for GNU/Linux (Debian testing and Gentoo)
+    and Windows 8. The Linux packages also include the standalone core library
     <em>ndcore</em> for development purposes.
     <ul>
       <li>The <a
         href="http://slimmer.gforge.inria.fr/releases/debian/pool/main/b/bedwyr/">Debian
         packages</a> exist for i386 and amd64 and are designed for
-      the current stable (<em>Squeeze</em>), but might just work for other
+      the current testing (<em>Wheezy</em>), but might just work for other
       versions or even derivatives such as Ubuntu:
       <ul>
-        <li>add (as root)
-        <code>deb http://slimmer.gforge.inria.fr/releases/debian/ squeeze
-          main</code> to your <code>/etc/apt/sources.list</code></li>
+        <li>create (as root) the file
+        <code>/etc/apt/sources.list.d/slimmer.list</code> containing
+        <code>deb http://slimmer.gforge.inria.fr/releases/debian/ wheezy
+          main</code>
+        </li>
         <li>download this public <a href="/heath.asc">PGP key</a>
         (note: the old 9678A222 has been revoked, this one should be 40565E01)
         and add it to your APT keyring by running (as root)
         <code>apt-key add heath.asc</code></li>
         <li>run <code>apt-get update</code>, then
         <code>apt-get install bedwyr bedwyr-doc</code></li>
-        <li>find the examples in <code>/usr/share/bedwyr</code> and the doc in
-        <code>/usr/share/doc/bedwyr</code></li>
+        <li>brose <code>/usr/share/bedwyr/examples</code></li>
       </ul></li>
-      <li>The Gentoo package, for ~x86 and ~amd64, are in the overlay
+      <li>The Gentoo package, for ~x86 and ~amd64, is in the overlay
       <em>dawan</em>:
       <ul>
-        <li>install <em>layman</em> and run <code>layman -a dawan</code></li>
-        <li>make sure that <code>/var/lib/layman/make.conf</code> adds
-        <code>/var/lib/layman/dawan</code> to <code>$PORTDIR_OVERLAY</code>
-        and is included in <code>/etc/make.conf</code>
-        <li>install <em>bedwyr</em> (OCaml will be part of the
-        dependencies)</li>
+        <li>emerge <em>layman</em> and run <code>layman -a dawan</code></li>
+        <li>make sure that <code>/var/lib/layman/make.conf</code>
+        is sourced by <code>/etc/portage/make.conf</code>
+        <li>emerge <em>sci-mathematics/bedwyr</em>
+        (<em>dev-lang/ocaml</em> will be part of the dependencies)</li>
       </ul></li>
       <li>The <a
-        href="https://gforge.inria.fr/frs/download.php/31496/bedwyr-1.4-alpha5-installer.exe">Windows
+        href="https://gforge.inria.fr/frs/download.php/32339/bedwyr-1.4-alpha9-installer.exe">Windows
         package</a> is a full-featured (although simple) installer
-      that should work on Windows XP, Vista and 7, 32 bits or 64.
+      that should work on Windows Vista, 7 and 8, 32 or 64 bits.
       It installs the program in
       <code>C:\Program Files (x86)\Slimmer\Bedwyr</code>,
       along with examples and an uninstaller.</li>
@@ -242,7 +244,7 @@
 
     <hr>
 
-    <p>Last modifed: 20 November 2012.</p>
+    <p>Last modifed: 06 April 2013.</p>
 
     <script src="http://www.google-analytics.com/urchin.js"
       type="text/javascript">
