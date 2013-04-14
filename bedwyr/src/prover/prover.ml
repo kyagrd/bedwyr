@@ -1,6 +1,6 @@
 (****************************************************************************)
 (* Bedwyr prover                                                            *)
-(* Copyright (C) 2005-2012 Baelde, Tiu, Ziegler, Gacek, Heath               *)
+(* Copyright (C) 2005-2013 Baelde, Tiu, Ziegler, Gacek, Heath               *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -26,6 +26,7 @@ exception Variable_leakage
 open Format
 open System
 open Term
+module Table = Table.O
 
 (* Internal design of the prover has two levels, Zero and One.
  * On level One, logic vars are instantiated and eigenvars are constants.

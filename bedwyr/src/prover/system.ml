@@ -70,6 +70,7 @@ let time  = ref false
 
 
 module Ty = Input.Typing
+module Table = Table.O
 
 (* Types declarations *)
 

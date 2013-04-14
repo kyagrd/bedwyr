@@ -445,7 +445,7 @@ and command ~test c reset =
     | Input.Time value -> System.time := (bool_of_flag value)
 
     (* Tabling-related commands *)
-    | Input.Equivariant value -> Table.set_eqvt (bool_of_flag value)
+    | Input.Equivariant value -> Table.O.set_eqvt (bool_of_flag value)
     | Input.Freezing temp -> Prover.freezing_point := temp
     | Input.Saturation pressure -> Prover.saturation_pressure := pressure
     | Input.Env -> System.print_env ()

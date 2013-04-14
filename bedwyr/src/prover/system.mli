@@ -190,7 +190,7 @@ val declare_type : Input.pos * string -> Input.Typing.ki -> unit
 
 (** Tabling information: the table itself,
   * and some theorems for forward/backward chaining. *)
-type tabling_info = { mutable theorem : Term.term ; table : Table.t }
+type tabling_info = { mutable theorem : Term.term ; table : Table.O.t }
 
 (** Describe whether tabling is possible, and if so, how it is used. *)
 type flavour = private
