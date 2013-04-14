@@ -502,7 +502,14 @@ and command ~test c reset =
   do_cleanup aux c reset
 
 let _ =
-  load_session () ;
+  begin try load_session ()
+  with IO.File_error (s1,n,s2) ->
+    Format.kfprintf
+      (fun _ -> exit 5)
+      Format.err_formatter
+      ("@[Couldn't %s@ input file %S:@ %s.@]@.")
+      s1 n s2
+  end ;
   List.iter (fun s -> input_queries ~test:!test (Lexing.from_string s)) !queries ;
   match !exit_status with
     | None ->
