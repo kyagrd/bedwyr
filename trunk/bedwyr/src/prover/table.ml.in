@@ -17,6 +17,8 @@
 (* 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.              *)
 (****************************************************************************)
 
+(* @configure_input@ *)
+
 module I = struct
   type son =
     | Son of tag ref
@@ -120,4 +122,4 @@ module Make (I : TableTypes.INPUT) : TableTypes.INPUT = struct
   include I
 end
 
-module O = TableXmlExport.Make (I)
+module O = @TABLE_XML_EXPORT_MODULE_DOT@Make (I)
