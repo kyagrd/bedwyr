@@ -1,0 +1,12 @@
+<!ELEMENT skeleton (son*)>
+<!ATTLIST skeleton timestamp CDATA #REQUIRED>
+<!ELEMENT son (atom,(son|loop|cut)*)>
+<!ATTLIST son value CDATA #REQUIRED>
+<!ATTLIST son id CDATA #REQUIRED>
+<!ELEMENT atom (#PCDATA)>
+<!ELEMENT loop (#PCDATA)>
+<!ATTLIST loop value CDATA #REQUIRED>
+<!ATTLIST loop ref CDATA #REQUIRED>
+<!ELEMENT cut (#PCDATA)>
+<!ATTLIST cut value CDATA #REQUIRED>
+<!ATTLIST cut ref CDATA #REQUIRED>
