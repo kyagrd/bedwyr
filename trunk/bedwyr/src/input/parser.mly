@@ -12,9 +12,9 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            *
  * GNU General Public License for more details.                             *
  *                                                                          *
- * You should have received a copy of the GNU General Public License        *
- * along with this code; if not, write to the Free Software Foundation,     *
- * Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA             *
+ * You should have received a copy of the GNU General Public License along  *
+ * with this program; if not, write to the Free Software Foundation, Inc.,  *
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.              *
  ****************************************************************************/
 
 %{
@@ -39,7 +39,8 @@
 /* Bedwyr meta-commands */
 %token EXIT HELP INCLUDE RESET RELOAD SESSION
 %token DEBUG TIME EQUIVARIANT FREEZING SATURATION
-%token ENV TYPEOF SHOW_DEF SHOW_TABLE CLEAR_TABLES CLEAR_TABLE SAVE_TABLE
+%token ENV TYPEOF SHOW_DEF
+%token SHOW_TABLE CLEAR_TABLES CLEAR_TABLE SAVE_TABLE EXPORT
 %token ASSERT ASSERT_NOT ASSERT_RAISE
 /* Bedwyr keywords */
 %token KKIND TTYPE DEFINE THEOREM QED
@@ -148,6 +149,8 @@ meta_command:
   | CLEAR_TABLE lower_id DOT            { Input.Command (Input.Clear_table (pos 2,$2)) }
   | SAVE_TABLE lower_id QSTRING DOT     { let _,s = $3 in
                                           Input.Command (Input.Save_table (pos 2,$2,s)) }
+  | EXPORT QSTRING DOT                  { let _,s = $2 in
+                                          Input.Command (Input.Export s) }
   | ASSERT formula DOT                  { Input.Command (Input.Assert $2) }
   | ASSERT_NOT formula DOT              { Input.Command (Input.Assert_not $2) }
   | ASSERT_RAISE formula DOT            { Input.Command (Input.Assert_raise $2) }
