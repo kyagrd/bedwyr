@@ -28,4 +28,6 @@
 <src/input/*.{native,byte}>: use_batyping,use_input
 <src/prover/*.{native,byte}>: use_batyping,use_input,use_prover
 
+<src/prover/*>: use_xmlm
+
 <src/bedwyr.{native,p.native,byte,d.byte}>: use_unix,use_str,use_ndcore,use_batyping,use_input,use_prover

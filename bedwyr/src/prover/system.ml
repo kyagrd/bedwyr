@@ -666,6 +666,18 @@ let save_table (p,head_tm) name file =
        IO.close_out name fout)
     (fun () -> IO.close_out name fout)
 
+let export file =
+  let all_tables =
+    Hashtbl.fold
+      (fun k v l -> match v with
+         | Predicate {flavour=Inductive {table=table}}
+         | Predicate {flavour=CoInductive {table=table}} ->
+             (Term.atom (Term.get_var_name k),table) :: l
+         | _ -> l)
+      decls []
+  in
+  Table.export file all_tables ;
+
 
 (* Misc *)
 

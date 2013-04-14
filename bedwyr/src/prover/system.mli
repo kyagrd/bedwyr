@@ -298,6 +298,10 @@ val show_table : Input.pos * Term.term -> unit
   * to the predicates [proved] and [disproved], respectively. *)
 val save_table : Input.pos * Term.term -> string -> string -> unit
 
+(** Export the current tables in an XML file. *)
+val export : string -> unit
+(** XXX This currently crashes if [#clear_table] was ever used. *)
+
 (** {6 Misc} *)
 
 (** User interruption. *)
