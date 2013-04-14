@@ -104,7 +104,7 @@ let mark_dependent_until =
        * we need to make the previous atoms depend on them *)
       List.iter
         (fun st -> match !st with
-           | Table.Working w -> aux ~included st w
+           | Table.Working (_,w) -> aux ~included st w
            | _ -> assert false)
         !final_influences
     end
@@ -123,7 +123,7 @@ type 'a answer =
  * which can be seen as a more usual continuation, typically
  * restoring modifications and backtracking.
  * [timestamp] must be the oldest timestamp in the goal. *)
-let rec prove
+let rec prove sons
       temperatures depth
       ~success ~failure ~level ~timestamp ~local g =
 
@@ -144,7 +144,7 @@ let rec prove
     let a = match goals with [a] -> a | _ -> invalid_goal () in
     let a = Norm.deep_norm a in
     let vars = if level = Zero then eigen_vars [a] else logic_vars [a] in
-    prove
+    prove sons
       temperatures (depth+1)
       ~level ~timestamp ~failure ~local a
       ~success:(fun ts k ->
@@ -168,7 +168,7 @@ let rec prove
       List.fold_left (fun t v -> app b [abstract_flex v t]) a vars
     in
     let g = op_eq c d in
-    prove
+    prove sons
       temperatures (depth+1)
       ~level ~success ~failure ~timestamp ~local g
   in
@@ -178,7 +178,7 @@ let rec prove
     let a = match goals with [a] -> a | _ -> invalid_goal () in
     let a = Norm.deep_norm a in
     let state = save_state () in
-    prove temperatures (depth+1) ~level ~timestamp ~local a
+    prove sons temperatures (depth+1) ~level ~timestamp ~local a
       ~success:(fun ts k ->
                   restore_state state ;
                   failure ())
@@ -195,20 +195,20 @@ let rec prove
     let c = Norm.deep_norm c in
     let succeeded = ref false in
     let state = save_state () in
-    prove temperatures (depth+1) ~level ~timestamp ~local a
+    prove sons temperatures (depth+1) ~level ~timestamp ~local a
       ~success:(fun ts k ->
                   (*  restore_state state ; *)
                   (*  prove temperatures (depth+1) ~success ~failure ~level
                    *  ~timestamp ~local (op_and a b) *)
                   succeeded := true ;
-                  prove
+                  prove sons
                     temperatures (depth+1)
                     ~success ~level ~timestamp:ts ~local b ~failure:k)
       (* (fun () -> restore_state state ; failure()) *)
       ~failure:(fun () ->
                   restore_state state ;
                   if !succeeded then failure () else
-                    prove
+                    prove sons
                       temperatures (depth+1)
                       ~success ~failure ~level ~timestamp ~local c)
   in
@@ -239,17 +239,19 @@ let rec prove
     in
     match status with
       | OffTopic ->
-          prove temperatures (depth+1)
+          prove sons temperatures (depth+1)
             ~level ~timestamp ~local ~success ~failure (app definition args)
-      | Known (_,{contents=Table.Proved},_,_) ->
+      | Known (_,({contents=Table.Proved _} as status),_,_) ->
           if !debug || depth<=debug_max_depth then
             eprintf "Goal (%a) proved using table@." Pprint.pp_term g;
+          sons := Table.Cut status :: !sons ;
           success timestamp failure
-      | Known (_,{contents=Table.Disproved},_,_) ->
+      | Known (_,({contents=Table.Disproved _} as status),_,_) ->
           if !debug || depth<=debug_max_depth then
             eprintf "Known disproved@." ;
+          sons := Table.Cut status :: !sons ;
           failure ()
-      | Known (_,({contents=Table.Working w} as status),_,_) ->
+      | Known (_,({contents=Table.Working (_,w)} as status),_,_) ->
           (* this is an unsure atom *)
           begin match temperature with
             | Frozen t ->
@@ -264,6 +266,12 @@ let rec prove
                 mark_dependent_until ~included:true status w ;
                 failure ()
             | Unfrozen ->
+                let looping,_,_ = w in
+                if !looping then begin
+                  sons := Table.Loop status :: !sons
+                end else begin
+                  sons := Table.Cut status :: !sons
+                end ;
                 begin match flavour with
                   | Inductive _ ->
                       mark_dependent_until status w ;
@@ -279,6 +287,8 @@ let rec prove
           (* This handles the cases where nothing is in the table,
            * or Unset has been left, in which case the [Table.add]
            * will overwrite it. *)
+          (* This is a generic function that works both for unfrozen proof
+           * and backward chaining. *)
           let prove body success failure temperatures =
             let validate status final_influences result =
               let rec aux = function
@@ -286,7 +296,7 @@ let rec prove
                 | ([],_) :: l2 -> aux l2
                 | ((st :: l1),st') :: l2 ->
                     begin match !st with
-                      | Table.Working (_,fi,fd) ->
+                      | Table.Working (sons',(_,fi,fd)) ->
                           let fi1,fi2 =
                             let rec rem l1 = function
                               | [] -> assert false
@@ -296,7 +306,7 @@ let rec prove
                             rem [] !fi
                           in
                           if fi1=[] && fi2=[] then begin
-                            st := result ;
+                            st := result sons' ;
                             aux ((!fd,st) :: (l1,st') :: l2)
                           end else begin
                             fi := List.rev_append fi1 fi2 ;
@@ -317,7 +327,7 @@ let rec prove
                 | [] :: l2 -> aux l2
                 | (st :: l1) :: l2 ->
                     begin match !st with
-                      | Table.Working (_,_,fd) ->
+                      | Table.Working (_,(_,_,fd)) ->
                           st := Table.Unset ;
                           aux (!fd :: l1 :: l2)
                       | _ -> aux (l1 :: l2)
@@ -326,27 +336,28 @@ let rec prove
               aux [[status]] ;
               status := result
             in
+            let sons' = ref [] in
             let process_success status final_influences =
               match flavour with
                 | Inductive _ ->
-                    invalidate status Table.Proved
+                    invalidate status (Table.Proved sons')
                 | CoInductive _ ->
-                    validate status final_influences Table.Proved
+                    validate status final_influences (fun sons'' -> Table.Proved sons'')
                 | _ -> assert false
             in
             let process_failure status final_influences =
               match flavour with
                 | Inductive _ ->
-                    validate status final_influences Table.Disproved
+                    validate status final_influences (fun sons'' -> Table.Disproved sons'')
                 | CoInductive _ ->
-                    invalidate status Table.Disproved
+                    invalidate status (Table.Disproved sons')
                 | _ -> assert false
             in
-            let looping = ref false in
-            let final_influences = ref [] in
-            let final_dependencies = ref [] in
+            let looping,final_influences,final_dependencies =
+              (ref false,ref [],ref [])
+            in
             let status =
-              ref (Table.Working (looping,final_influences,final_dependencies))
+              ref (Table.Working (sons',(looping,final_influences,final_dependencies)))
             in
             let s0 = save_state () in
             let table_update_success ts _ =
@@ -428,19 +439,20 @@ let rec prove
                             in
                             match status with
                               | OffTopic -> k ()
-                              | Known (_,{contents=Table.Proved},_,_) ->
+                              | Known (_,{contents=Table.Proved _},_,_) ->
                                   if !debug || depth<=debug_max_depth then
                                     eprintf
                                       "Goal (%a) already proved!@."
                                       Pprint.pp_term (app d args);
                                   k ()
-                              | Known (_,{contents=Table.Disproved},_,_) ->
+                              | Known (_,{contents=Table.Disproved _},_,_) ->
                                   failwith "did our theorem just prove false?"
                               | Known (_,{contents=Table.Working _},_,_) ->
                                   assert false
                               | Unknown (table_add,theorem,table)
                               | Known (table_add,{contents=Table.Unset},theorem,table) ->
-                                  let status = ref (Table.Proved) in
+                                  (* XXX what [sons] to use here? *)
+                                  let status = ref (Table.Proved sons') in
                                   (* XXX switch_vars? *)
                                   if not (table_add status) then assert false ;
                                   if !debug || depth<=debug_max_depth then
@@ -467,7 +479,8 @@ let rec prove
                            * forward chaining;
                            * we must also use [args] at least once
                            * to improve performance *)
-                          prove ((v,Frozen 0)::temperatures)
+                          (* XXX check this sons! *)
+                          prove sons' ((v,Frozen 0)::temperatures)
                             (depth+1) ~local ~timestamp
                             ~level:Zero ~success:store_subst ~failure th_body
                         end else k ()
@@ -479,7 +492,7 @@ let rec prove
             in
             let table_update_failure () =
               begin match !status with
-                | Table.Proved ->
+                | Table.Proved _ ->
                     (* This is just backtracking, we are seeing the tabling
                      * entry corresponding to a previous goal.
                      * Never happens if we skipped the success continuation. *)
@@ -488,20 +501,21 @@ let rec prove
                     ignore (Stack.pop dependency_stack) ;
                     looping := false ;
                     process_failure status final_influences
-                | Table.Disproved | Table.Unset -> assert false
+                | Table.Disproved _ | Table.Unset -> assert false
               end ;
               failure ()
             in
             if table_add status then begin
               Stack.push (status,final_influences) dependency_stack ;
               looping := true ;
-              prove
+              sons := Table.Son status :: !sons ;
+              prove sons'
                 temperatures (depth+1)
                 ~level ~local ~timestamp (app body args)
                 ~success:table_update_success
                 ~failure:table_update_failure
             end else
-              prove
+              prove sons'
                 temperatures (depth+1)
                 ~level ~local ~timestamp ~success ~failure (app body args)
           in
@@ -566,7 +580,7 @@ let rec prove
         let rec conj ts failure = function
           | [] -> success ts failure
           | goal::goals ->
-              prove temperatures (depth+1)
+              prove sons temperatures (depth+1)
                 ~local ~level ~timestamp
                 ~success:(fun ts' k -> conj (max ts ts') k goals)
                 ~failure
@@ -579,7 +593,7 @@ let rec prove
         let rec alt = function
           | [] -> failure ()
           | g::goals ->
-              prove temperatures (depth+1)
+              prove sons temperatures (depth+1)
                 ~level ~local ~success ~timestamp
                 ~failure:(fun () -> alt goals)
                 g
@@ -654,13 +668,13 @@ let rec prove
         let rec prove_conj ts failure = function
           | [] -> success ts failure
           | (ts'',g)::gs ->
-              prove
+              prove sons
                 temperatures (depth+1)
                 ~level ~local ~timestamp:ts''
                 ~success:(fun ts' k -> prove_conj (max ts ts') k gs)
                 ~failure g
         in
-        prove
+        prove sons
           temperatures (depth+1)
           ~level:Zero ~local ~timestamp a
           ~success:store_subst
@@ -679,7 +693,7 @@ let rec prove
           aux [] n
         in
         let goal = app goal vars in
-        prove
+        prove sons
           temperatures (depth+1)
           ~local ~timestamp:(timestamp + n) ~level ~success ~failure goal
 
@@ -694,7 +708,7 @@ let rec prove
           aux [] n
         in
         let goal = app goal vars in
-        prove
+        prove sons
           temperatures (depth+1)
           ~local:(local + n) ~timestamp ~level ~success ~failure goal
 
@@ -718,7 +732,7 @@ let rec prove
               timestamp,aux [] n
         in
         let goal = app goal vars in
-        prove temperatures (depth+1) ~local ~timestamp ~level
+        prove sons temperatures (depth+1) ~local ~timestamp ~level
           ~success ~failure goal
 
     | App (hd,goals) ->
@@ -760,7 +774,7 @@ let rec prove
              let a = match goals with [a] -> a | _ -> invalid_goal () in
              let a = Norm.deep_norm a in
              let state = save_state () in
-             prove
+             prove sons
                temperatures (depth+1)
                ~level ~local ~timestamp ~failure a
                ~success:(fun ts k -> success ts (fun () ->
@@ -858,8 +872,9 @@ let prove ~success ~failure ~level ~timestamp ~local g =
     assert (s0 = save_state ()) ;
     failure ()
   in
+  let sons = ref [] in
   try
-    prove
+    prove sons
       [] 0
       ~success ~failure ~level ~timestamp ~local g
   with e ->

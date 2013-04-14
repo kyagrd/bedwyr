@@ -19,10 +19,15 @@
 
 (** Goals tabling. *)
 
-type tag =
-  | Proved
-  | Working of (bool ref * tag ref list ref * tag ref list ref)
-  | Disproved
+type son =
+  | Son of tag ref
+  | Loop of tag ref
+  | Cut of tag ref
+and tag =
+  | Proved of (son list ref)
+  | Working of ((son list ref) *
+                (bool ref * tag ref list ref * tag ref list ref))
+  | Disproved of (son list ref)
   | Unset
 type t
 
