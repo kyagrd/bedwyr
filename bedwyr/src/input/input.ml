@@ -159,6 +159,7 @@ type command =
   | Clear_tables
   | Clear_table         of pos * string
   | Save_table          of pos * string * string
+  | Export              of string
   | Assert              of preterm
   | Assert_not          of preterm
   | Assert_raise        of preterm

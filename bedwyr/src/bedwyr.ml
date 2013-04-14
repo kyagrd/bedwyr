@@ -461,6 +461,7 @@ and command ~test c reset =
      * file already exists. *)
     | Input.Save_table (p,name,file) ->
         System.save_table (p,Term.atom ~tag:Term.Constant name) name file
+    | Input.Export name -> System.export name
 
     (* Testing commands *)
     | Input.Assert pre_query ->

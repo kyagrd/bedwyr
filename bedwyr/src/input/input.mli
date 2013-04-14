@@ -157,23 +157,25 @@ type command =
   | Env
   (** [#env.] call {!System.print_env} *)
   | Type_of of preterm
-  (** [#type_of.] call {!System.print_type_of} *)
+  (** [#type_of t.] call {!System.print_type_of} *)
   | Show_def of pos * string
-  (** [#show_def.] call {!System.show_def} *)
+  (** [#show_def p.] call {!System.show_def} *)
   | Show_table of pos * string
-  (** [#show_table.] call {!System.show_table} *)
+  (** [#show_table p.] call {!System.show_table} *)
   | Clear_tables
   (** [#clear_tables.] call {!System.clear_tables} *)
   | Clear_table of pos * string
-  (** [#clear_table.] call {!System.clear_table} *)
+  (** [#clear_table p.] call {!System.clear_table} *)
   | Save_table of pos * string * string
-  (** [#save_table.] call {!System.save_table} *)
+  (** [#save_table p "p-table.def".] call {!System.save_table} *)
+  | Export of string
+  (** [#export "skeleton.xml".] call {!System.export} *)
   | Assert of preterm
-  (** [#assert.] check whether a query succeeds *)
+  (** [#assert t.] check whether a query succeeds *)
   | Assert_not of preterm
-  (** [#assert_not.] check whether a query fails *)
+  (** [#assert_not t.] check whether a query fails *)
   | Assert_raise of preterm
-  (** [#assert_raise.] check whether a query crashes *)
+  (** [#assert_raise t.] check whether a query crashes *)
 
 (** Global AST for any input (file or toplevel). *)
 type input =
