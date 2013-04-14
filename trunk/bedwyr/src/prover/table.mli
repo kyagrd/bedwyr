@@ -87,3 +87,7 @@ val print : Term.term -> t -> unit
 (** Print a table to a file.
   * Nabla variables are abstracted and explicitly quantified. *)
 val fprint : out_channel -> Term.term -> t -> Input.Typing.ty -> unit
+
+(** Export the provided tables in an XML file. *)
+val export : string -> ((Term.term * t) list) -> unit
+(** XXX This currently crashes if [#clear_table] was used on any of those tables. *)
