@@ -46,33 +46,26 @@ AC_CONFIG_SRCDIR([src/bedwyr.ml])
 ##############################################################################
 
 AC_PATH_PROG(BASH,bash,no)
-if test "$BASH" = no ; then
-	AC_MSG_ERROR(Cannot find bash.)
-fi
+AS_IF([test "X$BASH" = Xno],
+      [AC_MSG_ERROR(Cannot find bash.)])
 
 AC_PATH_PROG(TAR,tar,no)
-if test "$TAR" = no ; then
-	AC_MSG_ERROR(Cannot find tar.)
-fi
+AS_IF([test "X$TAR" = Xno],
+      [AC_MSG_ERROR(Cannot find tar.)])
 
 AC_PATH_PROG(FIND,find,no)
-if test "$FIND" = no ; then
-	AC_MSG_ERROR(Cannot find find.)
-fi
+AS_IF([test "X$FIND" = Xno],
+      [AC_MSG_ERROR(Cannot find find.)])
 
 AC_PATH_PROG(GZIP,gzip,no)
-if test "$GZIP" = no ; then
-	AC_MSG_WARN(Cannot find gzip.)
-else
-	ARCH_SUFFIXES="$ARCH_SUFFIXES tgz"
-fi
+AS_IF([test "X$GZIP" = Xno],
+      [AC_MSG_WARN(Cannot find gzip.)],
+      [ARCH_SUFFIXES="$ARCH_SUFFIXES tgz"])
 
 AC_PATH_PROG(BZIP2,bzip2,no)
-if test "$BZIP2" = no ; then
-	AC_MSG_WARN(Cannot find bzip2.)
-else
-	ARCH_SUFFIXES="$ARCH_SUFFIXES tbz"
-fi
+AS_IF([test "X$BZIP2" = Xno],
+      [AC_MSG_WARN(Cannot find bzip2.)],
+      [ARCH_SUFFIXES="$ARCH_SUFFIXES tbz"])
 
 #
 # OCaml stuff (only $OCAML[C|DEBUG|BUILD] and $MINGW32_* are actually used)
@@ -82,10 +75,11 @@ fi
 WIN32_BIN_SUFFIX="exe"
 AC_MSG_CHECKING(if debugging information should be added)
 AC_ARG_ENABLE([debug],
-	AC_HELP_STRING([--enable-debug],[add debugging/profiling information]),
-	[AC_MSG_RESULT($enable_debug)],
-	[AC_MSG_RESULT(no)])
-if test "$enable_debug" = "yes" ; then
+              AC_HELP_STRING([--enable-debug],
+                             [add debugging/profiling information (no)]),
+              [AC_MSG_RESULT($enable_debug)],
+              [AC_MSG_RESULT(no)])
+if test "X$enable_debug" = Xyes ; then
 	BYTE_BIN_SUFFIX="d.byte"
 	NATIVE_BIN_SUFFIX="p.native"
 	BYTE_LIBS_SUFFIX="d.cma"
@@ -99,41 +93,38 @@ fi
 
 AC_MSG_CHECKING(if native win32 code should be generated)
 AC_ARG_ENABLE([win32],
-	AC_HELP_STRING([--enable-win32],[output native win32 code]),
-	[AC_MSG_RESULT($enable_win32)],
-	[AC_MSG_RESULT(no)])
-if test "$enable_win32" = "yes" ; then
+              AC_HELP_STRING([--enable-win32],[output native win32 code (no)]),
+              [AC_MSG_RESULT($enable_win32)],
+              [AC_MSG_RESULT(no)])
+if test "X$enable_win32" = Xyes ; then
 	AC_PATH_PROGS(MINGW32_OCAMLOPT,
-                      i686-w64-mingw32-ocamlopt.opt i686-w64-mingw32-ocamlopt \
-                        i586-mingw32msvc-ocamlopt.opt i586-mingw32msvc-ocamlopt,
-                      no)
-	if test "$MINGW32_OCAMLOPT" = no ; then
-		AC_MSG_ERROR(Cannot find a native win32 code compiler. Install mingw32-ocaml.)
-	fi
+	              i686-w64-mingw32-ocamlopt.opt i686-w64-mingw32-ocamlopt \
+	                i586-mingw32msvc-ocamlopt.opt i586-mingw32msvc-ocamlopt,
+	              no)
+	AS_IF([test "X$MINGW32_OCAMLOPT" = Xno],
+	      [AC_MSG_ERROR(Cannot find a native win32 code compiler. Install mingw32-ocaml.)])
 	BIN_SUFFIXES="$BIN_SUFFIXES $WIN32_BIN_SUFFIX"
 	BEST_SUFFIX="$WIN32_BIN_SUFFIX"
 	OCAML_VERSION=$("$MINGW32_OCAMLOPT" -version)
 	OCAML_WHERE=$("$MINGW32_OCAMLOPT" -where)
 
 	AC_PATH_PROGS(MINGW32_WINDRES,
-                      i686-w64-mingw32-windres.opt i686-w64-mingw32-windres \
-                        i586-mingw32msvc-windres.opt i586-mingw32msvc-windres,
-                      no)
-	if test "$MINGW32_WINDRES" = no ; then
-		AC_MSG_ERROR(Cannot find windres. Install mingw32-binutils.)
-	fi
+	              i686-w64-mingw32-windres.opt i686-w64-mingw32-windres \
+	                i586-mingw32msvc-windres.opt i586-mingw32msvc-windres,
+	              no)
+	AS_IF([test "X$MINGW32_WINDRES" = Xno],
+	      [AC_MSG_ERROR(Cannot find windres. Install mingw32-binutils.)])
 fi
 
 AC_MSG_CHECKING(if bytecode should be generated)
 AC_ARG_ENABLE([bytecode],
-	AC_HELP_STRING([--enable-bytecode],[output bytecode (default)]),
-	[AC_MSG_RESULT($enable_bytecode)],
-	[AC_MSG_RESULT(yes)])
-if test "$enable_bytecode" != "no" ; then
+              AC_HELP_STRING([--enable-bytecode],[output bytecode (yes)]),
+              [AC_MSG_RESULT($enable_bytecode)],
+              [AC_MSG_RESULT(yes)])
+if test "X$enable_bytecode" != Xno ; then
 	AC_PATH_PROGS(OCAMLC,ocamlc.opt ocamlc,no)
-	if test "$OCAMLC" = no ; then
-		AC_MSG_ERROR(Cannot find a bytecode compiler.)
-	fi
+	AS_IF([test "X$OCAMLC" = Xno],
+	      [AC_MSG_ERROR(Cannot find a bytecode compiler.)])
 	LIB_SUFFIXES="$LIB_SUFFIXES $BYTE_LIBS_SUFFIX"
 	BIN_SUFFIXES="$BIN_SUFFIXES $BYTE_BIN_SUFFIX"
 	BEST_SUFFIX="$BYTE_BIN_SUFFIX"
@@ -143,14 +134,13 @@ fi
 
 AC_MSG_CHECKING(if native code should be generated)
 AC_ARG_ENABLE([nativecode],
-	AC_HELP_STRING([--enable-nativecode],[output native code]),
-	[AC_MSG_RESULT($enable_nativecode)],
-	[AC_MSG_RESULT(no)])
-if test "$enable_nativecode" = "yes" ; then
+              AC_HELP_STRING([--enable-nativecode],[output native code (no)]),
+              [AC_MSG_RESULT($enable_nativecode)],
+              [AC_MSG_RESULT(no)])
+if test "X$enable_nativecode" = Xyes ; then
 	AC_PATH_PROGS(OCAMLOPT,ocamlopt.opt ocamlopt,no)
-	if test "$OCAMLOPT" = no ; then
-		AC_MSG_ERROR(Cannot find a native code compiler.)
-	fi
+	AS_IF([test "X$OCAMLOPT" = Xno],
+	      [AC_MSG_ERROR(Cannot find a native code compiler.)])
 	LIB_SUFFIXES="$LIB_SUFFIXES $NATIVE_LIBS_SUFFIX"
 	BIN_SUFFIXES="$BIN_SUFFIXES $NATIVE_BIN_SUFFIX"
 	BEST_SUFFIX="$NATIVE_BIN_SUFFIX"
@@ -164,31 +154,54 @@ AS_VERSION_COMPARE([$OCAML_VERSION],[3.11],
 if test "$BEST_SUFFIX" = "" ; then
 	AC_MSG_WARN(You may want to enable at least one type of compilation.)
 else
-	if test "$enable_debug" = "yes" ; then
+	if test "X$enable_debug" = Xyes ; then
 		AC_PATH_PROGS(OCAMLDEBUG,ocamldebug.opt ocamldebug,no)
-		if test "$OCAMLDEBUG" = no ; then
-			AC_MSG_ERROR(Cannot find ocamldebug.)
-		fi
+		AS_IF([test "X$OCAMLDEBUG" = Xno],
+		      [AC_MSG_ERROR(Cannot find ocamldebug.)])
 	fi
 
 	AC_PATH_PROGS(OCAMLDEP,ocamldep.opt ocamldep,no)
-	if test "$OCAMLDEP" = no ; then
-		AC_MSG_ERROR(Cannot find ocamldep.)
-	fi
+	AS_IF([test "X$OCAMLDEP" = Xno],
+	      [AC_MSG_ERROR(Cannot find ocamldep.)])
 
 	AC_PATH_PROGS(OCAMLLEX,ocamllex.opt ocamllex,no)
-	if test "$OCAMLLEX" = no ; then
-		AC_MSG_ERROR(Cannot find ocamllex.)
-	fi
+	AS_IF([test "X$OCAMLLEX" = Xno],
+	      [AC_MSG_ERROR(Cannot find ocamllex.)])
 
 	AC_PATH_PROGS(OCAMLYACC,ocamlyacc.opt ocamlyacc,no)
-	if test "$OCAMLYACC" = no ; then
-		AC_MSG_ERROR(Cannot find ocamlyacc.)
-	fi
+	AS_IF([test "X$OCAMLYACC" = Xno],
+	      [AC_MSG_ERROR(Cannot find ocamlyacc.)])
+
+	AC_PATH_PROGS(OCAMLFIND,ocamlfind.opt ocamlfind,no)
+	AS_IF([test "X$OCAMLFIND" = Xno],
+	      [AC_MSG_ERROR(Cannot find ocamlfind.)])
 
 	AC_PATH_PROGS(OCAMLBUILD,ocamlbuild.opt ocamlbuild.native ocamlbuild ocamlbuild.byte,no)
-	if test "$OCAMLBUILD" = no ; then
-		AC_MSG_ERROR(Cannot find ocamlbuild.)
+	AS_IF([test "X$OCAMLBUILD" = Xno],
+	      [AC_MSG_ERROR(Cannot find ocamlbuild.)])
+fi
+
+#
+# Optional functionalities
+#
+##############################################################################
+
+AC_MSG_CHECKING(for xmlm)
+AC_ARG_WITH([xmlm],
+            AC_HELP_STRING([--with-xmlm],
+                           [add support for XML proof skeleton export (auto)]),
+            [],[with_xmlm="auto"])
+if test "X$with_xmlm" = Xno ; then
+	AC_MSG_RESULT(no)
+else
+	if ocamlfind_xmlm=$("$OCAMLFIND" query xmlm 2>/dev/null) ; then
+		AC_MSG_RESULT(${ocamlfind_xmlm})
+		TABLE_XML_EXPORT_MODULE="TableXmlExport"
+		TABLE_XML_EXPORT_MODULE_DOT="${TABLE_XML_EXPORT_MODULE}."
+	else
+		AC_MSG_RESULT(no)
+		AS_IF([test "X$with_xmln" = Xyes],
+		      [AC_MSG_ERROR(Cannot find xmlm.)])
 	fi
 fi
 
@@ -199,33 +212,31 @@ fi
 
 AC_MSG_CHECKING(if the documentation should be built)
 AC_ARG_ENABLE([doc],
-	AC_HELP_STRING([--enable-doc],[build the complete documentation]),
+	AC_HELP_STRING([--enable-doc],[build the complete documentation (no)]),
 	[AC_MSG_RESULT($enable_doc)],
 	[AC_MSG_RESULT(no)])
-if test "$enable_doc" = "yes" ; then
+if test "X$enable_doc" = Xyes ; then
 	AC_PATH_PROGS(OCAMLDOC,ocamldoc.opt ocamldoc,no)
-	if test "$OCAMLDOC" = no ; then
-		AC_MSG_ERROR(Cannot find ocamldoc.)
-	fi
+	AS_IF([test "X$OCAMLDOC" = Xno],
+	      [AC_MSG_ERROR(Cannot find ocamldoc.)])
 
 	#AC_PATH_PROG(FIG2DEV,fig2dev,no)
-	#if test "$FIG2DEV" = no ; then
+	#if test "X$FIG2DEV" = Xno ; then
 	#	AC_MSG_ERROR(Cannot find fig2dev. Install transfig.)
 	#fi
 
 	AC_PATH_PROG(LATEX,latex,no)
-	if test "$LATEX" = no ; then
-		AC_MSG_ERROR(Cannot find latex.)
-	fi
+	AS_IF([test "X$LATEX" = Xno],
+	      [AC_MSG_ERROR(Cannot find latex.)])
 
 	AC_PATH_PROG(KPSEWHICH,kpsewhich,no)
-	if test "$KPSEWHICH" = no ; then
+	if test "X$KPSEWHICH" = Xno ; then
 		AC_CHECK_FILE(/usr/share/texmf-dist/tex/generic/xypic/xypic.sty,,
-                              AC_CHECK_FILE(/usr/share/texlive/texmf-dist/tex/generic/xypic/xypic.sty,,
-                                            AC_MSG_ERROR(Cannot find xypic.sty. Install texlive-pictures.)))
+		              AC_CHECK_FILE(/usr/share/texlive/texmf-dist/tex/generic/xypic/xypic.sty,,
+		                            AC_MSG_ERROR(Cannot find xypic.sty. Install texlive-pictures.)))
 		AC_CHECK_FILE(/usr/share/texmf-dist/tex/latex/txfonts/txfonts.sty,,
-                              AC_CHECK_FILE(/usr/share/texlive/texmf-dist/tex/latex/txfonts/txfonts.sty,,
-                                            AC_MSG_ERROR(Cannot find txfonts.sty. Install texlive-fonts-recommended.)))
+		              AC_CHECK_FILE(/usr/share/texlive/texmf-dist/tex/latex/txfonts/txfonts.sty,,
+		                            AC_MSG_ERROR(Cannot find txfonts.sty. Install texlive-fonts-recommended.)))
 	else
 		AC_MSG_CHECKING(for xypic.sty)
 		if ! kpsewhich_xypic=$("$KPSEWHICH" xypic.sty) ; then
@@ -242,39 +253,32 @@ if test "$enable_doc" = "yes" ; then
 	fi
 
 	AC_PATH_PROG(BIBTEX,bibtex,no)
-	if test "$BIBTEX" = no ; then
-		AC_MSG_ERROR(Cannot find bibtex.)
-	fi
+	AS_IF([test "X$BIBTEX" = Xno],
+	      [AC_MSG_ERROR(Cannot find bibtex.)])
 
 	AC_PATH_PROG(DVIPS,dvips,no)
-	if test "$DVIPS" = no ; then
-		AC_MSG_ERROR(Cannot find dvips.)
-	fi
+	AS_IF([test "X$DVIPS" = Xno],
+	      [AC_MSG_ERROR(Cannot find dvips.)])
 
 	AC_PATH_PROG(PS2PDF,ps2pdf,no)
-	if test "$PS2PDF" = no ; then
-		AC_MSG_ERROR(Cannot find ps2pdf. Install ghostscript.)
-	fi
+	AS_IF([test "X$PS2PDF" = Xno],
+	      [AC_MSG_ERROR(Cannot find ps2pdf. Install ghostscript.)])
 
 	AC_PATH_PROGS(HEVEA,hevea.opt hevea,no)
-	if test "$HEVEA" = no ; then
-		AC_MSG_ERROR(Cannot find hevea.)
-	fi
+	AS_IF([test "X$HEVEA" = Xno],
+	      [AC_MSG_ERROR(Cannot find hevea.)])
 
 	AC_PATH_PROGS(BIBHVA,bibhva.opt bibhva,no)
-	if test "$BIBHVA" = no ; then
-		AC_MSG_ERROR(Cannot find bibhva.)
-	fi
+	AS_IF([test "X$BIBHVA" = Xno],
+	      [AC_MSG_ERROR(Cannot find bibhva.)])
 
 	AC_PATH_PROG(IMAGEN,imagen,no)
-	if test "$IMAGEN" = no ; then
-		AC_MSG_ERROR(Cannot find imagen.)
-	fi
+	AS_IF([test "X$IMAGEN" = Xno],
+	      [AC_MSG_ERROR(Cannot find imagen.)])
 
 	AC_PATH_PROGS(HACHA,hacha.opt hacha,no)
-	if test "$HACHA" = no ; then
-		AC_MSG_ERROR(Cannot find hacha.)
-	fi
+	AS_IF([test "X$HACHA" = Xno],
+	      [AC_MSG_ERROR(Cannot find hacha.)])
 fi
 
 #
@@ -284,67 +288,58 @@ fi
 
 AC_MSG_CHECKING(if vim files should be installed)
 AC_ARG_WITH([vimfiles],
-	AC_HELP_STRING([--with-vimfiles],[install vim files]),
-	[AC_MSG_RESULT($with_vimfiles)],
-	[AC_MSG_RESULT(no)])
-if test "$with_vimfiles" = "yes" ; then
-	VIMFILES='${datarootdir}/vim/vimfiles'
-fi
+            AC_HELP_STRING([--with-vimfiles],[install vim files (no)]),
+            [AC_MSG_RESULT($with_vimfiles)],
+            [AC_MSG_RESULT(no)])
+AS_IF([test "X$with_vimfiles" = Xyes],
+      [VIMFILES='${datarootdir}/vim/vimfiles'])
 
 AC_PROG_INSTALL
 
 AC_MSG_CHECKING(if a Debian package should be built)
 AC_ARG_ENABLE([deb],
-	AC_HELP_STRING([--enable-deb],[build deb and debsrc packages]),
+	AC_HELP_STRING([--enable-deb],[build deb and debsrc packages (no)]),
 	[AC_MSG_RESULT($enable_deb)],
 	[AC_MSG_RESULT(no)])
-if test "$enable_deb" = "yes" ; then
+if test "X$enable_deb" = Xyes ; then
 	AC_PATH_PROG(DPKG_BUILDPACKAGE,dpkg-buildpackage,no)
-	if test "$DPKG_BUILDPACKAGE" = no ; then
-		AC_MSG_ERROR(Cannot find dpkg-buildpackage. Install dpkg-dev.)
-	fi
+	AS_IF([test "X$DPKG_BUILDPACKAGE" = Xno],
+	      [AC_MSG_ERROR(Cannot find dpkg-buildpackage. Install dpkg-dev.)])
 
 	AC_PATH_PROG(DCH,dch,no)
-	if test "$DCH" = no ; then
-		AC_MSG_ERROR(Cannot find dch. Install devscripts.)
-	fi
+	AS_IF([test "X$DCH" = Xno],
+	      [AC_MSG_ERROR(Cannot find dch. Install devscripts.)])
 
 	AC_PATH_PROG(DEBUILD,debuild,no)
-	if test "$DEBUILD" = no ; then
-		AC_MSG_ERROR(Cannot find debuild. Install devscripts.)
-	fi
+	AS_IF([test "X$DEBUILD" = Xno],
+	      [AC_MSG_ERROR(Cannot find debuild. Install devscripts.)])
 
 	AC_PATH_PROG(LINTIAN,lintian,no)
-	if test "$LINTIAN" = no ; then
-		AC_MSG_WARN(Cannot find lintian.)
-	fi
+	AS_IF([test "X$LINTIAN" = Xno],
+	      [AC_MSG_WARN(Cannot find lintian.)])
 
 	AC_PATH_PROG(FAKEROOT,fakeroot,no)
-	if test "$FAKEROOT" = no ; then
-		AC_MSG_ERROR(Cannot find fakeroot.)
-	fi
+	AS_IF([test "X$FAKEROOT" = Xno],
+	      [AC_MSG_ERROR(Cannot find fakeroot.)])
 
 	AC_PATH_PROG(DH,dh,no)
-	if test "$DH" = no ; then
-		AC_MSG_ERROR(Cannot find dh. Install debhelper.)
-	fi
+	AS_IF([test "X$DH" = Xno],
+	      [AC_MSG_ERROR(Cannot find dh. Install debhelper.)])
 
 	AC_PATH_PROG(GPG,gpg,no)
-	if test "$GPG" = no ; then
-		AC_MSG_ERROR(Cannot find gpg. Install gnupg.)
-	fi
+	AS_IF([test "X$GPG" = Xno],
+	      [AC_MSG_ERROR(Cannot find gpg. Install gnupg.)])
 fi
 
 AC_MSG_CHECKING(if a Windows installer should be built)
 AC_ARG_ENABLE([nsis],
-	AC_HELP_STRING([--enable-nsis],[build a Nullsoft installer for Windows]),
+	AC_HELP_STRING([--enable-nsis],[build a Nullsoft installer for Windows (no)]),
 	[AC_MSG_RESULT($enable_nsis)],
 	[AC_MSG_RESULT(no)])
-if test "$enable_nsis" = "yes" ; then
+if test "X$enable_nsis" = Xyes ; then
 	AC_PATH_PROG(MAKENSIS,makensis,no)
-	if test "$MAKENSIS" = no ; then
-		AC_MSG_ERROR(Cannot find makensis. Install nsis.)
-	fi
+	AS_IF([test "X$MAKENSIS" = Xno],
+	      [AC_MSG_ERROR(Cannot find makensis. Install nsis.)])
 fi
 
 #
@@ -363,7 +358,10 @@ PROGRAM_ICON=dutch-wick-0.3.ico
 FILE_ICON=dutch-wick-0.3-file.ico
 
 AC_CONFIG_FILES([Makefile.include],[chmod a-w Makefile.include])
+AC_CONFIG_FILES([myocamlbuild.ml],[chmod a-w myocamlbuild.ml])
 AC_CONFIG_FILES([src/config.ml],[chmod a-w src/config.ml])
+AC_CONFIG_FILES([src/prover/table.ml],[chmod a-w src/prover/table.ml])
+AC_CONFIG_FILES([src/prover/prover.mllib],[chmod a-w src/prover/prover.mllib])
 AC_CONFIG_FILES([src/ndcore/META],[chmod a-w src/ndcore/META])
 AC_CONFIG_FILES([doc/Makefile],[chmod a-w doc/Makefile])
 AC_CONFIG_FILES([man/bedwyr.1],[chmod a-w man/bedwyr.1])
@@ -379,6 +377,9 @@ OCAML_FILES=$(for i in $($FIND src -type f '!' -path '*.svn*' \
               '!' -name '*~' '!' -name '.*.sw*') ; do \
               bash -c "grep ' $i ' <<<' $ac_config_files ' -qv" && \
               echo -n -e ' \\\n\t'"$i" ; done)
+OCAML_IN_FILES=$(for i in $($FIND src -type f '!' -path '*.svn*' \
+                  -name '*.ml*.in') ; do \
+                 echo -n -e ' \\\n\t'"$i" ; done)
 VIM_CONTRIB=$($FIND contrib/vim -type f '!' -path '*.svn*' \
               '!' -name '*~' '!' -name '.*.sw*' \
               -printf ' \\\n\t%P')
@@ -407,6 +408,9 @@ AC_SUBST(BEST_SUFFIX)
 AC_SUBST(OCAML_VERSION)
 AC_SUBST(OCAML_WHERE)
 
+AC_SUBST(TABLE_XML_EXPORT_MODULE)
+AC_SUBST(TABLE_XML_EXPORT_MODULE_DOT)
+
 AC_SUBST(INSTALL)
 AC_SUBST(INSTALL_DATA)
 AC_SUBST(INSTALL_PROGRAM)
@@ -424,6 +428,7 @@ AC_SUBST(FILE_ICON)
 
 AC_SUBST(ac_config_files)
 AC_SUBST(OCAML_FILES)
+AC_SUBST(OCAML_IN_FILES)
 AC_SUBST(VIM_CONTRIB)
 AC_SUBST(HICOLOR_ICONS)
 AC_SUBST(EXAMPLES_FILES)

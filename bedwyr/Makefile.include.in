@@ -135,6 +135,8 @@ MAKENSIS	= @MAKENSIS@ -V2 -NOCD \
 
 ac_config_files	= @ac_config_files@
 OCAML_FILES	= @OCAML_FILES@
+OCAML_IN_FILES	= myocamlbuild.ml.in @OCAML_IN_FILES@
+.SECONDARY: $(OCAML_IN_FILES:.in=)
 NDCORE_FILES	= README.ndcore
 BEDWYR_FILES	= ChangeLog README TODO
 MAN_FILES	= $(wildcard man/*.in)

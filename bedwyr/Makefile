@@ -98,30 +98,28 @@ COFF_FILES	= $(NSIS_RC_FILES:.rc=.o)
 
 build: $(BUILT_FILES) bedwyr
 
-$(BEDWYR_BINS): src/config.ml
-
-%.byte:
+%.byte: $(OCAML_IN_FILES:.in=)
 	@$(OCAMLBUILD) $@
 
-%.native:
+%.native: $(OCAML_IN_FILES:.in=)
 	@$(OCAMLBUILD) $@
 
-%.cmi:
+%.cmi: $(OCAML_IN_FILES:.in=)
 	@$(OCAMLBUILD) $@
 
-%.cma:
+%.cma: $(OCAML_IN_FILES:.in=)
 	@$(OCAMLBUILD) $@
 
-%.cmxa %.a:
+%.cmxa %.a: $(OCAML_IN_FILES:.in=)
 	@$(OCAMLBUILD) $@
 
-%.docdir/index.html: %.odocl
+%.docdir/index.html: $(OCAML_IN_FILES:.in=) %.odocl
 	@$(OCAMLBUILD) $@
 
-%.odoc:
+%.odoc: $(OCAML_IN_FILES:.in=)
 	@$(OCAMLBUILD) $@
 
-%.exe: $(COFF_FILES)
+%.exe: $(OCAML_IN_FILES:.in=) $(COFF_FILES)
 	@$(OCAMLBUILD) -just-plugin
 	@$(OCAMLBUILDWIN32) $(addprefix $(l_cclib)../,$(COFF_FILES)) $*.native
 	@mv -vi _build/$*.native _build/$@
@@ -137,7 +135,7 @@ $(BEDWYR_BINS): src/config.ml
 	  $@
 
 config.status: configure Makefile
-	./$< --no-create $(CONFIGURE_OPTS)
+	@[[ -x $@ ]] && ./$@ --recheck || ./$< --no-create $(CONFIGURE_OPTS)
 
 configure: configure.ac
 	autoconf
