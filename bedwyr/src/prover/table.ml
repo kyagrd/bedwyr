@@ -17,10 +17,15 @@
 (* 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.              *)
 (****************************************************************************)
 
-type tag =
-  | Proved
-  | Working of (bool ref * tag ref list ref * tag ref list ref)
-  | Disproved
+type son =
+  | Son of tag ref
+  | Loop of tag ref
+  | Cut of tag ref
+and tag =
+  | Proved of (son list ref)
+  | Working of ((son list ref) *
+                (bool ref * tag ref list ref * tag ref list ref))
+  | Disproved of (son list ref)
   | Unset
 type t = tag ref Index.t ref
 
@@ -72,9 +77,9 @@ let print head table =
     (fun t tag ->
        let t = nabla_abstract (Term.app t [head]) in
        match tag with
-         | Proved    -> Format.printf "@;<1 1>[P] %a" Pprint.pp_term t
-         | Disproved -> Format.printf "@;<1 1>[D] %a" Pprint.pp_term t
-         | Unset     -> ()
+         | Proved _    -> Format.printf "@;<1 1>[P] %a" Pprint.pp_term t
+         | Disproved _ -> Format.printf "@;<1 1>[D] %a" Pprint.pp_term t
+         | Unset       -> ()
          | Working _ -> assert false)
     table ;
   Format.printf "@]@."
@@ -99,10 +104,10 @@ let fprint fout head table ty =
            Format.fprintf fmt " ;@;<1 2>%s %a"
        in
        match tag with
-         | Proved    -> print "proved" Pprint.pp_term t
-         | Disproved -> print "disproved" Pprint.pp_term t
-         | Unset     -> ()
-         | Working _ -> assert false)
+         | Proved _    -> print "proved" Pprint.pp_term t
+         | Disproved _ -> print "disproved" Pprint.pp_term t
+         | Unset       -> ()
+         | Working _   -> assert false)
     table ;
   Format.fprintf fmt "@;<0 0>.@]@]@."
 
