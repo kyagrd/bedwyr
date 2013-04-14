@@ -1,0 +1,39 @@
+.skeleton {
+  margin: 20px;
+}
+
+.proof {
+  margin: 0px 0px 0px 15px;
+  padding: 0px 0px 0px 20px;
+  border-left: solid black 2px;
+}
+
+.atom {
+  margin: 3px 0px 0px 0px;
+  display: inline-block;
+  border: dotted 3px;
+  padding: 3px;
+}
+a {
+  color: black;
+  text-decoration: none;
+}
+
+.proved {
+  background-color: #9F9;
+  border-color: #393;
+}
+.disproved {
+  background-color: #F99;
+  border-color: #933;
+}
+
+.atom:target {
+  border-style: solid;
+}
+.loop {
+  border-color: #CC6;
+}
+.cut {
+  border-color: #66C;
+}
