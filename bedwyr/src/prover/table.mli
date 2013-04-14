@@ -66,6 +66,15 @@ val nabla_abstract : Term.term -> Term.term
   * But it'd be good if this can be fixed,
   * if we want to be faithful to the Linc logic. *)
 
+(** Empty the table. *)
+val reset : t -> unit
+
+(** Apply a function to each element of a table. *)
+val iter : (Term.term -> tag -> unit) -> t -> unit
+
+(** Fold a table on an initial value with respect to a function. *)
+val fold : (Term.term -> tag -> 'a -> 'a) -> t -> 'a -> 'a
+
 (** Print a table to standard output.
   * Nabla variables are abstracted and explicitly quantified. *)
 val print : Term.term -> t -> unit
@@ -73,9 +82,3 @@ val print : Term.term -> t -> unit
 (** Print a table to a file.
   * Nabla variables are abstracted and explicitly quantified. *)
 val fprint : out_channel -> Term.term -> t -> Input.Typing.ty -> unit
-
-(** Empty the table. *)
-val reset : t -> unit
-
-(** Apply a function to each element of the table. *)
-val iter : t -> (Term.term -> tag -> unit) -> unit

@@ -56,18 +56,27 @@ let nabla_abstract t =
   List.fold_left
     (fun s i -> (Term.quantify Term.Nabla (Term.nabla i) s)) t bindings
 
+let reset x = x := Index.empty
+
+let iter f table =
+  Index.iter (fun t v -> f t !v) !table
+
+let fold f table x =
+  Index.fold (fun t v y -> f t !v y) !table x
+
 let print head table =
   Format.printf
     "@[<v>Table for %a contains (P=Proved, D=Disproved):"
     Pprint.pp_term head ;
-  Index.iter !table
+  iter
     (fun t tag ->
        let t = nabla_abstract (Term.app t [head]) in
-       match !tag with
+       match tag with
          | Proved    -> Format.printf "@;<1 1>[P] %a" Pprint.pp_term t
          | Disproved -> Format.printf "@;<1 1>[D] %a" Pprint.pp_term t
          | Unset     -> ()
-         | Working _ -> assert false) ;
+         | Working _ -> assert false)
+    table ;
   Format.printf "@]@."
 
 let fprint fout head table ty =
@@ -79,7 +88,7 @@ let fprint fout head table ty =
     (Input.Typing.get_pp_type ()) ty
     (Input.Typing.get_pp_type ()) ty ;
   let first = ref true in
-  Index.iter !table
+  iter
     (fun t tag ->
        let t = nabla_abstract (Term.app t [head]) in
        let print =
@@ -89,15 +98,11 @@ let fprint fout head table ty =
          end else
            Format.fprintf fmt " ;@;<1 2>%s %a"
        in
-       match !tag with
+       match tag with
          | Proved    -> print "proved" Pprint.pp_term t
          | Disproved -> print "disproved" Pprint.pp_term t
          | Unset     -> ()
-         | Working _ -> assert false) ;
+         | Working _ -> assert false)
+    table ;
   Format.fprintf fmt "@;<0 0>.@]@]@."
-
-let reset x = x := Index.empty
-
-let iter table f =
-  Index.iter !table (fun t tag -> f t !tag)
 

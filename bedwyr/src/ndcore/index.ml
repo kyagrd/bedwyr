@@ -156,7 +156,7 @@ type 'a t = 'a index * 'a zipper
 let empty = (Refine,[]),Top
 
 let rec z_top = function
-  | index,Top -> index,Top
+  | index,Top -> index
   | index,Zip (children,older,patterns,younger,zipper) ->
       let index =
         children,(List.rev_append older ((Node (patterns,index))::younger))
@@ -449,7 +449,7 @@ let access ~switch_vars zindex terms =
          let newnode = Node (patterns,(children,[])) in
          let oldnode = Node (List.rev former_pats,index) in
          let index = Refine,[newnode ; oldnode] in
-         z_top (index,zipper)),
+         z_top (index,zipper),Top),
       None
     else
       (* The terms were fully matched by the patterns,
@@ -464,7 +464,7 @@ let access ~switch_vars zindex terms =
            in
            let index = children,[] in
            let zipper = Zip (Refine,older_nodes,patterns,[],zipper) in
-           z_top (index,zipper)),
+           z_top (index,zipper),Top),
         None
     | (Node (patterns,index) as node)::nodes ->
         if superficial_match ~switch_vars patterns terms then
@@ -477,7 +477,7 @@ let access ~switch_vars zindex terms =
     | [],(Leaf leaf,[]) ->
         (fun data ->
            let index = Leaf (update_leaf leaf bindings (Some data)),[] in
-           z_top (index,zipper)),
+           z_top (index,zipper),Top),
         find_leaf leaf bindings
     | _,(Refine,nodes) ->
         access_nodes bindings terms zipper [] nodes
@@ -497,8 +497,7 @@ let access ~switch_vars zindex terms =
 
 (* == FOLD ================================================================== *)
 
-(* We use some kind of multi-locations zippers
- * XXX merge with the main zipper? *)
+(* We use some kind of multi-locations zippers. *)
 
 module type MZ_t =
 sig
@@ -630,7 +629,7 @@ struct
 
 end
 
-let iter x f =
+let iter f x =
   let rec iter_node mz (Node (patterns,index)) =
     iter_index (MZ.refine mz patterns) index
   and iter_index mz = function
@@ -651,5 +650,29 @@ let iter x f =
     | Refine,nodes -> List.iter (iter_node mz) (superficial_sort nodes)
     | _ -> assert false
   in
-  let index,_ = z_top x in
+  let index = z_top x in
   iter_index MZ.empty index
+
+let fold f x y =
+  let rec fold_node mz y (Node (patterns,index)) =
+    fold_index (MZ.refine mz patterns) index y
+  and fold_index mz index y = match index with
+    | Leaf (max_vid,vid,map),[] ->
+        ConstraintsMap.fold
+          (fun c v y ->
+             let table,l = (get_vars max_vid vid c) in
+             let head = Term.fresh Term.Eigen ~ts:0 ~lts:0 in
+             let t = Term.app head (MZ.zip table mz) in
+             let t =
+               List.fold_left
+                 (fun t v -> Term.abstract v t)
+                 t
+                 l
+             in
+             f (Term.abstract head t) v y)
+          map y
+    | Refine,nodes -> List.fold_left (fold_node mz) y (superficial_sort nodes)
+    | _ -> assert false
+  in
+  let index = z_top x in
+  fold_index MZ.empty index y

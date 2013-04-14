@@ -56,5 +56,8 @@ val access :
 
 (** {6 Fold} *)
 
-(** Apply a function on each binding of index. *)
-val iter   : 'a t -> (Term.term -> 'a -> unit) -> unit
+(** Apply a function to each binding of an index. *)
+val iter   : (Term.term -> 'a -> unit) -> 'a t -> unit
+
+(** Fold an index on an initial value with respect to a function. *)
+val fold   : (Term.term -> 'a -> 'b -> 'b) -> 'a t -> 'b -> 'b
