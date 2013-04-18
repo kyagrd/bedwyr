@@ -9,4 +9,4 @@ Exec=+bindir+/@PACKAGE_TARNAME@ %F
 TryExec=+bindir+/@PACKAGE_TARNAME@
 Icon=@PACKAGE_TARNAME@
 Path=+pkgdatadir+/examples
-MimeType=text/plain
+MimeType=text/plain;
