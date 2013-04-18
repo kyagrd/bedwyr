@@ -76,16 +76,10 @@ let clear_dependency_stack () =
 
 exception Found
 let mark_dependent_until =
-  let add_dependencies ~included status final_dependencies =
+  let add_dependencies status final_dependencies =
     try
       Stack.iter (fun (st,fi) ->
-                    if st == status then begin
-                      if included then begin (* XXX does this still work? *)
-                        fi := status :: !fi ;
-                        final_dependencies := st :: !final_dependencies
-                      end ;
-                      raise Found
-                    end else begin
+                    if st == status then raise Found else begin
                       fi := status :: !fi ;
                       final_dependencies := st :: !final_dependencies
                     end)
@@ -93,24 +87,29 @@ let mark_dependent_until =
       assert false (* this can only be called on the tip of a loop *)
     with Found -> ()
   in
-  let rec aux
-        ?(skip=true) ?(included=false)
-        status (looping,final_influences,final_dependencies) =
-    if !looping then begin
+  let aux2 status (looping,final_influences,final_dependencies) =
+    if !looping then
       (* this atom is the tip of a loop;
        * we need to make the previous atoms depend on it *)
-      add_dependencies ~included status final_dependencies
-    end else if not skip then begin
+      add_dependencies status final_dependencies
+    else ((* TODO prove that the second level of final influences
+               * is included in the first *))
+  in
+  let aux status (looping,final_influences,final_dependencies) =
+    if !looping then
+      (* this atom is the tip of a loop;
+       * we need to make the previous atoms depend on it *)
+      add_dependencies status final_dependencies
+    else
       (* this atom is not a tip but depends upon some;
        * we need to make the previous atoms depend on them *)
       List.iter
         (fun st -> match !st with
-           | Table.Working (_,w) -> aux ~included st w
+           | Table.Working (_,w) -> aux2 st w
            | _ -> assert false)
         !final_influences
-    end
   in
-  aux ~skip:false
+  aux
 
 type 'a answer =
   | Known of ('a ref -> bool) * 'a ref * Term.term * Table.t
@@ -255,16 +254,15 @@ let rec prove sons
       | Known (_,({contents=Table.Working (_,w)} as status),_,_) ->
           (* this is an unsure atom *)
           begin match temperature with
-            | Frozen t ->
+            | Frozen _ ->
                 (* Unfortunately, a theorem is not a clause
                  * that we can add to a definition,
-                 * since it doesn't respect the flavour (e.g. the
-                 * predicate notxwins from tictactoe.def involves no loop,
-                 * and thus can be marked inductive as well as coinductive,
-                 * whereas its theorem notxwins_symetries has loops
-                 * from which we can conclude nothing).
-                 * Therefore no atom is disprovable. *)
-                mark_dependent_until ~included:true status w ;
+                 * since it doesn't respect the flavour.
+                 * Therefore no loop-related feature is relevant,
+                 * ie no marking.
+                 * Moreover, this breaks the symmetry
+                 * (theorems cannot handle negated atoms),
+                 * so no success either. *)
                 failure ()
             | Unfrozen ->
                 let looping,_,_ = w in
@@ -339,26 +337,51 @@ let rec prove sons
             in
             let sons' = ref [] in
             let process_success status final_influences =
-              match flavour with
-                | Inductive _ ->
-                    invalidate status (Table.Proved sons')
-                | CoInductive _ ->
-                    validate status final_influences (fun sons'' -> Table.Proved sons'')
-                | _ -> assert false
+              match temperature with
+                | Frozen _ ->
+                    (* Theorems cannot handle loops,
+                     * so no (in)validation. *)
+                    status := Table.Proved sons'
+                    (* TODO maybe remove this case, since final_dependencies
+                     * and final_influences are empty anyway *)
+                | Unfrozen ->
+                    begin match flavour with
+                      | Inductive _ ->
+                          invalidate status (Table.Proved sons')
+                      | CoInductive _ ->
+                          validate status final_influences
+                            (fun sons'' -> Table.Proved sons'')
+                      | _ -> assert false
+                    end
             in
             let process_failure status final_influences =
-              match flavour with
-                | Inductive _ ->
-                    validate status final_influences (fun sons'' -> Table.Disproved sons'')
-                | CoInductive _ ->
-                    invalidate status (Table.Disproved sons')
-                | _ -> assert false
+              match temperature with
+                | Frozen _ ->
+                    (* Theorems cannot handle negated atoms yet,
+                     * so a failure means nothing. *)
+                    status := Table.Unset
+                    (* XXX (Frozen !freezing_point) never actually happens,
+                     * instead the temperature is Unfrozen and the atom
+                     * is incorrectly marked as Disproved,
+                     * which is not a problem as long as the
+                     * failure continuation calls for a standard proof search
+                     * (which starts with resetting status to Working) *)
+                | Unfrozen ->
+                    begin match flavour with
+                      | Inductive _ ->
+                          validate status final_influences
+                            (fun sons'' -> Table.Disproved sons'')
+                      | CoInductive _ ->
+                          invalidate status (Table.Disproved sons')
+                      | _ -> assert false
+                    end
             in
             let looping,final_influences,final_dependencies =
               (ref false,ref [],ref [])
             in
             let status =
-              ref (Table.Working (sons',(looping,final_influences,final_dependencies)))
+              let w = looping,final_influences,final_dependencies in
+              ref (Table.Working (sons',w))
             in
             let s0 = save_state () in
             let table_update_success ts _ =
@@ -507,6 +530,7 @@ let rec prove sons
               failure ()
             in
             if table_add status then begin
+              (* TODO maybe do not add this when frozen *)
               Stack.push (status,final_influences) dependency_stack ;
               looping := true ;
               sons := Table.Son status :: !sons ;
