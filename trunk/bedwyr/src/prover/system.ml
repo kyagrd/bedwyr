@@ -118,7 +118,10 @@ exception Invalid_pred_declaration of string * Input.pos * Ty.ty * string
 
 
 let predicate flavour stratum definition ty =
-  Predicate { flavour=flavour ; stratum=stratum ; definition=definition ; ty=ty }
+  Predicate { flavour=flavour ;
+              stratum=stratum ;
+              definition=definition ;
+              ty=ty }
 
 let decls : (Term.var,object_declaration) Hashtbl.t =
   Hashtbl.create 100
@@ -408,8 +411,14 @@ let add_def_clause stratum (p,pre_head,pre_body) =
   in
   let free_args = Input.free_args pre_head in
   (* XXX what about stratum in theorems? *)
-  let head,_ = translate_term ~stratum ~instantiate_head:false ~free_args pre_head free_types in
-  let body,_ = translate_term ~stratum ~free_args pre_body free_types in
+  let head,_ =
+    translate_term ~stratum ~free_args ~instantiate_head:false
+      pre_head free_types
+  in
+  let body,_ =
+    translate_term ~stratum ~free_args
+      pre_body free_types
+  in
   let pred,arity,body =
     mk_def_clause p head body
   in
@@ -468,28 +477,25 @@ let mk_theorem_clauses (p,_) theorem =
      * [oldl] is a list of theorems built with theorem clauses, /\ and -> *)
     let rec aux newl = function
       | [] -> newl
-      | theorem::oldl ->
+      | (hypothesis,theorem)::oldl ->
           let theorem = Norm.hnorm theorem in
           begin match Term.observe theorem with
             | Term.Binop (Term.Arrow,body,head) ->
-                let head = Norm.deep_norm head in
                 let body = Norm.deep_norm body in
-                let pred,params = split head in
-                aux ((pred,params,body)::newl) oldl
+                let hypothesis = Term.op_and body hypothesis in
+                aux newl ((hypothesis,head)::oldl)
             | Term.Binder (Term.Forall,n,t) ->
                 let t = Term.lambda n t in
-                aux newl ((Term.app t (vars n))::oldl)
+                aux newl ((hypothesis,Term.app t (vars n))::oldl)
             | Term.Binop (Term.And,t1,t2) ->
-                aux newl (t1::t2::oldl)
-            (* TODO allow atomic facts,
-             * ie auto-translate "p X" to "true -> p X" *)
+                aux newl ((hypothesis,t1)::(hypothesis,t2)::oldl)
             | _ ->
                 let head = Norm.deep_norm theorem in
                 let pred,params = split head in
-                aux ((pred,params,Term.op_true)::newl) oldl
+                aux ((pred,params,hypothesis)::newl) oldl
           end
     in
-    aux [] [theorem]
+    aux [] [Term.op_true,theorem]
   in
   List.rev_map
     (fun (pred,params,body) -> mk_clause pred params body)
