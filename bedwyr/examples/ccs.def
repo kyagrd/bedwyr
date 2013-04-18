@@ -1,0 +1,106 @@
+% Encoding of CCS.
+% This is to test tabling-modulo implementation.
+% Alwen Tiu, version 18 Dec 2012.
+
+Kind    name        type.   % some names
+Type    a,b,c,x,y   name.
+
+Kind    act         type.   % exactly three action constructors
+Type    tau         act.
+Type    in, out     name -> act.
+
+Kind    proc        type.   % processes
+Type    inp, outp   name -> proc -> proc.
+Type    +, |        proc -> proc -> proc.
+Type    !!          proc -> proc.
+Type    zero        proc.
+
+Define one : proc -> act -> proc -> prop
+by
+  one (inp A P) (in A) P;
+  one (outp A P) (out A) P;
+  one (P + Q) A R := one P A R;
+  one (P + Q) A R := one Q A R;
+
+  one (P | Q) tau (S | T) := one P (in A) S /\ one Q (out A) T ;
+  one (P | Q) tau (S | T) := one P (out A) S /\ one Q (in A) T ;
+
+  one (P | Q) A (R | Q) := one P A R ;
+  one (P | Q) A (P | R) := one Q A R ;
+
+  one (!! P) A (Q | (!! P)) := one P A Q.
+
+
+
+Define coinductive bisim : proc -> proc -> prop
+by
+  bisim P Q :=
+   (forall A P1, one P A P1 -> exists Q1, one Q A Q1 /\ bisim P1 Q1) /\
+   (forall A Q1, one Q A Q1 -> exists P1, one P A P1 /\ bisim P1 Q1).
+
+Theorem bang_congr : forall P Q, bisim P Q -> bisim (!! P) (!! Q).%
+Qed.
+
+Theorem par_bang : forall P, bisim (!! P) ((!! P) | (!! P)).%
+Qed.
+
+% This theorem is not currently used:
+% it introduces an instantiable variable (Q) that prevents tabling.
+Theorem trans : forall P Q R, bisim P Q -> bisim Q R -> bisim P R.%
+Qed.
+
+Define print_bisim : proc -> proc -> prop
+by
+  print_bisim P Q :=
+    printstr "Checking that  [" /\ print P /\
+    printstr "]  ~  [" /\ print Q /\ printstr "]..." /\
+    bisim P Q /\ printstr " OK\n".
+
+Define test_pair : nat -> proc -> proc -> prop
+by
+  test_pair 0 (outp a zero + outp a zero) (outp a zero) ;
+  test_pair 1 (!! (outp a zero + outp a zero)) (!! (outp a zero)) ;
+  test_pair 2 (!! (outp a zero)) ((!! (outp a zero)) | (!! (outp a zero))) ;
+  test_pair 3 (!! (outp a zero + outp a zero)) ((!! (outp a zero)) | (!! (outp a zero))).
+
+Define test : nat -> prop
+by
+  test 0 :=
+     % a + a ~ a
+     % easily provable without tabling
+     test_pair 0 P Q /\ print_bisim P Q ;
+     % ?= test 0.
+     % Yes.
+     % More [y] ? y
+     % No more solutions.
+
+  test 1 :=
+     % !(a + a) ~ !a
+     % provable using the fact that a + a ~ a, and the bang_congr theorem;
+     % loops if a + a ~ a is not already known (nothing to backchain on)
+     test_pair 1 P Q /\ print_bisim P Q ;
+     % ?= #freezing 1.
+     % ?= test 0 /\ test 1.
+     % Yes.
+     % More [y] ? n
+     % Search stopped.
+
+  test 2 :=
+     % !a ~ (!a | !a)
+     % provable using the par_bang theorem
+     test_pair 2 P Q /\ print_bisim P Q ;
+     % ?= #freezing 1.
+     % ?= test 2.
+     % Yes.
+     % More [y] ? n
+     % Search stopped.
+
+  test 3 :=
+     % !(a + a) ~ (!a | !a)
+     % should be provable as follows:
+     %   !(a + a) ~ !a      : a + a ~ a and bang_congr
+     %   !a ~ (!a | !a)     : par_bang
+     %   !(a + a) ~ (!a | !a) : trans
+     test_pair 3 X Y /\ print_bisim X Y.
+     % not provable yet, as the trans theorem needs
+     % better variable support in the table
