@@ -559,7 +559,7 @@ let test =
 
     "Indexing" >:::
     [
-      "Four ground terms" >::
+      "Ground terms" >::
       (fun () ->
          let d = db in
          let t1 = ((d 1) ^^ [ d 2 ; (d 1) ^^ [ d 2 ; d 2 ] ]) in
@@ -578,17 +578,68 @@ let test =
          let i5 = add i4 [t4] 42 in
          assert (Some 42 = find i5 [t4])) ;
 
-      "With eigenvariables" >::
-      (fun () ->
-         let x = fresh ~tag:Eigen ~name:"x" ~lts:0 ~ts:0 in
-         let y = fresh ~tag:Eigen ~name:"y" ~lts:0 ~ts:0 in
-         let z = fresh ~tag:Eigen ~name:"z" ~lts:0 ~ts:0 in
-         let t1 = (db 1) ^^ [ x ; y ; y ] in
-         let t2 = (db 1) ^^ [ y ; y ; y ] in
-         let index = add (add Index.empty [t1] 1) [t2] 2 in
-         assert (Some 1 = find index [(db 1) ^^ [ y ; z ; z ]]) ;
-         assert (Some 2 = find index [(db 1) ^^ [ x ; x ; x ]]) ;
-         assert (None = find index [(db 1) ^^ [ x ; z ; x ]]))
+      "Eigenvariables" >:::
+      [
+        "Plain" >::
+        (fun () ->
+           let x = fresh ~tag:Eigen ~name:"x" ~lts:0 ~ts:0 in
+           let y = fresh ~tag:Eigen ~name:"y" ~lts:0 ~ts:0 in
+           let z = fresh ~tag:Eigen ~name:"z" ~lts:0 ~ts:0 in
+           let t1 = (db 1) ^^ [ x ; y ; y ] in
+           let t2 = (db 1) ^^ [ y ; y ; y ] in
+           let index = add (add Index.empty [t1] 1) [t2] 2 in
+           assert (Some 1 = find index [(db 1) ^^ [ y ; z ; z ]]) ;
+           assert (Some 2 = find index [(db 1) ^^ [ x ; x ; x ]]) ;
+           assert (None = find index [(db 1) ^^ [ x ; z ; x ]])) ;
+
+        "Instantiated with other eigenvariables" >::
+        (fun () ->
+           let x = fresh ~tag:Eigen ~name:"x" ~lts:0 ~ts:0 in
+           let y = fresh ~tag:Eigen ~name:"y" ~lts:0 ~ts:0 in
+           let z = fresh ~tag:Eigen ~name:"z" ~lts:0 ~ts:0 in
+           let index = add Index.empty [(db 1) ^^ [ x ; y ; y ]] 42 in
+           assert (Some 42 = find index [(db 1) ^^ [ y ; z ; z ]]) ;
+           assert (Some 42 = find index [(db 1) ^^ [ z ; z ; z ]]) ;
+           assert (None = find index [(db 1) ^^ [ x ; x ; y ]])) ;
+
+        "Mixed with nominal variables" >::
+        (fun () ->
+           let x = fresh ~tag:Eigen ~name:"x" ~lts:0 ~ts:0 in
+           let y = fresh ~tag:Eigen ~name:"y" ~lts:1 ~ts:0 in
+           let z = fresh ~tag:Eigen ~name:"z" ~lts:2 ~ts:0 in
+           let index = add Index.empty [(db 1) ^^ [ x ; y ]] 42 in
+           assert (None = find index [(db 1) ^^ [ y ; z ]]) ;
+           assert (None = find index [(db 1) ^^ [ y ; x ]])) ;
+
+        "Instantiated with terms" >::
+        (fun () ->
+           let x = fresh ~tag:Eigen ~name:"x" ~lts:0 ~ts:0 in
+           let y = fresh ~tag:Eigen ~name:"y" ~lts:0 ~ts:0 in
+           let a = const "a" 1 in
+           let b = const "b" 1 in
+           let t = 1 // ( a ^^ [ db 1 ; b ] ) in
+           let c = const "c" 1 in
+           let index = add Index.empty [(db 1) ^^ [ x ; y ; y ]] 42 in
+           assert (None = find index [(db 1) ^^ [ t ; c ; c ]])) ;
+      ] ;
+
+      "Nominal variables" >:::
+      [
+        "Equivariant indexing" >::
+        (fun () ->
+           let index = add Index.empty [nabla 1 ; nabla 2] 42 in
+           assert (Some 42 = find index [nabla 3 ; nabla 1]) ;
+           let () = Index.eqvt_index := false in
+           assert (None = find index [nabla 3 ; nabla 1])) ;
+      ] ;
+
+      "Logic variables" >:::
+      [
+        (*
+        "" >::
+        (fun () -> ())
+         *)
+      ]
     ]
   ]
 
