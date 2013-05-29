@@ -21,7 +21,7 @@ m4_define([M4_VERSION_MAJOR],1)
 m4_define([M4_VERSION_MINOR],4)
 m4_define([M4_VERSION_PATCH],0)
 m4_define([M4_VERSION_BUILD],0)
-m4_define([M4_VERSION_DEV],alpha10)
+m4_define([M4_VERSION_DEV],alpha11)
 m4_define([M4_VERSION1],[M4_VERSION_MAJOR.M4_VERSION_MINOR])
 m4_define([M4_VERSION2],m4_if(M4_VERSION_PATCH,0,
           [M4_VERSION1],[M4_VERSION1.M4_VERSION_PATCH]))
@@ -198,6 +198,7 @@ else
 		AC_MSG_RESULT(${ocamlfind_xmlm})
 		TABLE_XML_EXPORT_MODULE="TableXmlExport"
 		TABLE_XML_EXPORT_MODULE_DOT="${TABLE_XML_EXPORT_MODULE}."
+		XMLM_TAG="xmlm"
 	else
 		AC_MSG_RESULT(no)
 		AS_IF([test "X$with_xmln" = Xyes],
@@ -359,6 +360,7 @@ FILE_ICON=dutch-wick-0.3-file.ico
 
 AC_CONFIG_FILES([Makefile.include],[chmod a-w Makefile.include])
 AC_CONFIG_FILES([myocamlbuild.ml],[chmod a-w myocamlbuild.ml])
+AC_CONFIG_FILES([_tags],[chmod a-w _tags])
 AC_CONFIG_FILES([src/config.ml],[chmod a-w src/config.ml])
 AC_CONFIG_FILES([src/prover/table.ml],[chmod a-w src/prover/table.ml])
 AC_CONFIG_FILES([src/prover/prover.mllib],[chmod a-w src/prover/prover.mllib])
@@ -378,7 +380,7 @@ OCAML_FILES=$(for i in $($FIND src -type f '!' -path '*.svn*' \
               bash -c "grep ' $i ' <<<' $ac_config_files ' -qv" && \
               echo -n -e ' \\\n\t'"$i" ; done)
 OCAML_IN_FILES=$(for i in $($FIND src -type f '!' -path '*.svn*' \
-                  -name '*.ml*.in') ; do \
+                 -name '*.ml*.in') ; do \
                  echo -n -e ' \\\n\t'"$i" ; done)
 VIM_CONTRIB=$($FIND contrib/vim -type f '!' -path '*.svn*' \
               '!' -name '*~' '!' -name '.*.sw*' \
@@ -410,6 +412,7 @@ AC_SUBST(OCAML_WHERE)
 
 AC_SUBST(TABLE_XML_EXPORT_MODULE)
 AC_SUBST(TABLE_XML_EXPORT_MODULE_DOT)
+AC_SUBST(XMLM_TAG)
 
 AC_SUBST(INSTALL)
 AC_SUBST(INSTALL_DATA)
