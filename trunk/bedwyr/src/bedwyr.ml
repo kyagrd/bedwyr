@@ -33,14 +33,12 @@ Define member : A -> list A -> prop by
 
 let welcome_msg =
   Printf.sprintf
-    "%s %s%s welcomes you.
-
-This software is under GNU General Public License version 2.
-Copyright (C) 2005-2012 Slimmer project.
-
-For a little help, type \"#help.\"
-
-"
+    "%s %s%s welcomes you.\n\
+    \n\
+    This software is under GNU General Public License version 2.\n\
+    Copyright (C) 2005-2012 Slimmer project.\n\
+    \n\
+    For a little help, type \"#help.\"\n\n"
     Config.package_name
     Config.package_version
     (if Config.build="v"^Config.package_version || Config.build="" then ""
@@ -51,38 +49,42 @@ For a little help, type \"#help.\"
  * and internal (oUnit version, ndcore version, etc). *)
 let usage_msg =
   Printf.sprintf
-    "%s prover version %s (%s).
-Built with OCaml %s on the %s.
-This software is under GNU General Public License version 2.
-Copyright (c) 2005-2012 Slimmer project.
-
-Usage: bedwyr [filename | option]*
-"
+    "%s prover version %s (%s).\n\
+    This software is under GNU General Public License version 2.\n\
+    Copyright (c) 2005-2012 Slimmer project.\n\
+    Built with OCaml %s on the %s.\n\
+    Features (+/-):%s\n\
+    \n\
+    Usage: bedwyr [filename | option]*\n"
     Config.package_name
     Config.package_version
     (if Config.build="" then "unknown revision"
      else "revision " ^ Config.build ^ "")
     Config.ocaml_version
     Config.build_date
+    (String.concat ""
+       (List.map
+          (fun (s1,s2) -> (match s2 with "" -> "\n - " | _ -> "\n + ") ^ s1)
+          Config.features))
 
 let help_msg =
-  "Useful commands in query mode:
-#help.                               Display this message.
-#exit.                               Exit.
-#debug [flag].                       Turn debugging [on]/off (initially off).
-#time [flag].                        Turn timing [on]/off (initially off).
-#session \"file_1\" ... \"file_N\".      Load these files as the current \
-session.
-#reload.                             Reload the current session.
-#reset.                              Clears the current session.
-#show_table [pred].                  Displays the predicate's table.
-#save_table [pred] [file].           Save the predicate's table in a file.
-#equivariant [flag].                 Turn equivariant tabling [on]/off (initially on).
-Or type in a formula to ask for its verification.
-For more information (including commands relevant in definition mode),
-see the user guide.
-
-"
+  "Useful commands in query mode:\n\
+  #help.                               Display this message.\n\
+  #exit.                               Exit.\n\
+  #debug [flag].                       Turn debugging [on]/off \
+    (initially off).\n\
+  #time [flag].                        Turn timing [on]/off (initially off).\n\
+  #session \"file_1\" ... \"file_N\".      Load these files as the \
+    current session.\n\
+  #reload.                             Reload the current session.\n\
+  #reset.                              Clears the current session.\n\
+  #show_table [pred].                  Displays the predicate's table.\n\
+  #save_table [pred] [file].           Save the predicate's table in a file.\n\
+  #equivariant [flag].                 Turn equivariant tabling [on]/off \
+    (initially on).\n\
+  Or type in a formula to ask for its verification.\n\
+  For more information (including commands relevant in definition mode),\n\
+  see the user guide.\n\n"
 
 let interactive = ref true
 let test        = ref false
@@ -173,7 +175,11 @@ let rec process ?(test=false) ?(interactive=false) parse lexbuf =
   let ndcore_error _ = basic_error 3 in
   let solver_error _ = basic_error 4 in
   let bedwyr_error _ = basic_error 5 in
-  let critical_error _ = basic_error 5 ~non_interactive_fun:(fun () -> exit 5) in
+  let critical_error _ =
+    basic_error 5
+      ~interactive_fun:(fun () -> exit 5)
+      ~non_interactive_fun:(fun () -> exit 5)
+  in
   let eprintf k ?(p=position_lex lexbuf) f =
     Format.kfprintf k
       (if interactive then Format.std_formatter else Format.err_formatter)
@@ -263,7 +269,8 @@ let rec process ?(test=false) ?(interactive=false) parse lexbuf =
             | Input.CoInductive -> "CoInductive"
           in
           eprintf def_error ~p
-            "Cannot declare predicate %s of flavour %s:@ this definition block is %s."
+            "Cannot declare predicate %s of flavour %s:@ \
+              this definition block is %s."
             n
             (string_of_flavour f)
             (string_of_flavour gf)
@@ -297,7 +304,8 @@ let rec process ?(test=false) ?(interactive=false) parse lexbuf =
       (* Kind/type checking *)
       | Input.Typing.Type_kinding_error (n,p,ki1,ki2) ->
           eprintf def_error ?p
-            "Kinding error: the type constructor %s has kind %a but is used as %a."
+            "Kinding error: the type constructor %s has kind %a \
+              but is used as %a."
             n
             Input.Typing.pp_kind ki2
             Input.Typing.pp_kind ki1
@@ -511,11 +519,13 @@ let _ =
       ("@[Couldn't %s@ input file %S:@ %s.@]@.")
       s1 n s2
   end ;
-  List.iter (fun s -> input_queries ~test:!test (Lexing.from_string s)) !queries ;
+  List.iter
+    (fun s -> input_queries ~test:!test (Lexing.from_string s)) !queries ;
   match !exit_status with
     | None ->
         if !interactive then begin
           Format.printf "%s%!" welcome_msg ;
-          input_queries ~test:!test ~interactive:true (Lexing.from_channel stdin)
+          input_queries ~test:!test ~interactive:true
+            (Lexing.from_channel stdin)
         end
     | Some error_code -> exit error_code
