@@ -17,6 +17,8 @@
 #  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.               #
 ##############################################################################
 
+# @configure_input@
+
 <src>: include
 # remove the following "include"s when using external libs
 <src/oUnit> or <src/ndcore> or <src/batyping> or <src/input> or <src/prover>: include
@@ -28,6 +30,6 @@
 <src/input/*.{native,byte}>: use_batyping,use_input
 <src/prover/*.{native,byte}>: use_batyping,use_input,use_prover
 
-<src/prover/*>: use_xmlm
+<src/prover/*>: use_@XMLM_TAG@
 
 <src/bedwyr.{native,p.native,byte,d.byte}>: use_unix,use_str,use_ndcore,use_batyping,use_input,use_prover
