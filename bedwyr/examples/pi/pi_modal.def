@@ -48,7 +48,7 @@ Type boxOut, diaOut,
 
 % A "lazy" but incomplete encoding.
 
-Define sat : p -> form -> prop by
+Define inductive sat : p -> form -> prop by
   sat P top;
   sat P (land A B) := sat P A /\ sat P B;
   sat P (lor A B) := sat P A \/ sat P B;
@@ -78,7 +78,7 @@ Define sat : p -> form -> prop by
 
 % A complete encoding: using explicit list of names.
 
-Define lsat : list name -> p -> form -> prop by
+Define inductive lsat : list name -> p -> form -> prop by
   lsat L P top;
   lsat L P (land A B) := lsat L P A /\ lsat L P B;
   lsat L P (lor  A B) := lsat L P A \/ lsat L P B;
@@ -124,7 +124,10 @@ Define assert : nat -> form -> prop by
   % the same set of assertions.
   % <x(y)>^L (<tau><tau> true ; <tau> true).
   assert  3 (diaInL x (y\ lor (diaAct tau (diaAct tau top))
-                            (diaAct tau top))).
+                            (diaAct tau top))) ; 
+  % Assertions to test tabling behaviours
+  assert 4 (boxOut a (m\ boxIn a (x\ boxOut a (n\ boxMatch x m bot)))) ; 
+  assert 5 (boxOut a (m\ boxIn a (x\ boxOut a (n\ boxMatch x n bot)))).
 
 Define process : nat -> p -> prop by
   process 1 (in x (y\ z));
@@ -132,7 +135,9 @@ Define process : nat -> p -> prop by
   process 3 (in x u\ (plus (taup (taup z)) (taup z)));
   process 4 (in x u\ nu y\ ((plus (taup (taup z))
                            (plus (taup z)
-                                 (taup (match u y (taup z))))))).
+                                 (taup (match u y (taup z))))))) ;
+  process 5 (nu m\ out a m (in a (x\ nu n\ out a n z))).
+
 
 
 % Counterexample to the completeness of sat:
@@ -145,7 +150,11 @@ Define test : nat -> prop by
   % but is provable using lsat.
   test 3 := process 2 P /\ assert 2 A /\ sat P A;
   test 4 := process 2 P /\ assert 2 A /\ lsat (x :: nil) P A;
-  test 5 := process 3 P /\ process 4 Q /\ assert 3 A /\ sat P A /\ sat Q A.
+  test 5 := process 3 P /\ process 4 Q /\ assert 3 A /\ sat P A /\ sat Q A ;
+  % The next two tests are to test tabling behaviour.
+  % Running test 7 after running test 6 should still gives a positive answer. 
+  test 6 := process 5 P /\ assert 4 A /\ sat P A ;
+  test 7 := process 5 P /\ assert 5 A /\ sat P A. 
 
 #assert_raise test 1.
 #assert test 2.
