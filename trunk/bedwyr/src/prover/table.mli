@@ -90,6 +90,6 @@ module O : sig
   val fprint : out_channel -> Term.term -> t -> Input.Typing.ty -> unit
 
   (** Export the provided tables in an XML file. *)
-  val export : string -> ((Term.term * t) list) -> unit
+  val export : string -> ((Term.term * t) list) -> (son list) -> unit
   (** XXX This currently crashes if [#clear_table] was used on any of those tables. *)
 end

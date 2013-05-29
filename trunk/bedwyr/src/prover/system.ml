@@ -67,10 +67,11 @@ end
 
 let debug = ref false
 let time  = ref false
+let root_atoms = ref []
 
 
 module Ty = Input.Typing
-module Table = Table.O
+module T = Table.O
 
 (* Types declarations *)
 
@@ -98,7 +99,7 @@ let kind_check p ty =
 
 (* Constants and predicates declarations *)
 
-type tabling_info = { mutable theorem : Term.term ; table : Table.t }
+type tabling_info = { mutable theorem : Term.term ; table : T.t }
 type flavour =
   | Normal
   | Inductive of tabling_info
@@ -160,11 +161,11 @@ let create_def stratum global_flavour (flavour,p,name,ty) =
     | _,Input.Inductive ->
         flavour,
         Inductive { theorem = Term.lambda arity Term.op_false ;
-                    table = Table.create () }
+                    table = T.create () }
     | _,Input.CoInductive ->
         flavour,
         CoInductive { theorem = Term.lambda arity Term.op_false ;
-                      table = Table.create () }
+                      table = T.create () }
   in
   begin
     Hashtbl.add decls head_var
@@ -579,12 +580,12 @@ let clear_tables () =
     (fun _ v -> match v with
        | Predicate {flavour=Inductive {table=table}}
        | Predicate {flavour=CoInductive {table=table}} ->
-           Table.reset table
+           T.reset table
        | _ -> ())
     decls
 
 let clear_table (p,head_tm) =
-  get_table p head_tm (fun table _ -> Table.reset table) ignore
+  get_table p head_tm (fun table _ -> T.reset table) ignore
 
 
 (* I/O *)
@@ -663,13 +664,13 @@ let show_def (p,head_tm) =
     (fun body _ -> Format.printf "%a@." Pprint.pp_term body) ignore
 
 let show_table (p,head_tm) =
-  get_table p head_tm (fun table _ -> Table.print head_tm table) ignore
+  get_table p head_tm (fun table _ -> T.print head_tm table) ignore
 
 let save_table (p,head_tm) name file =
   let fout = IO.open_out file in
   get_table p head_tm
     (fun table ty ->
-       Table.fprint fout head_tm table ty ;
+       T.fprint fout head_tm table ty ;
        IO.close_out name fout)
     (fun () -> IO.close_out name fout)
 
@@ -683,7 +684,7 @@ let export file =
          | _ -> l)
       decls []
   in
-  Table.export file all_tables ;
+  T.export file all_tables !root_atoms ;
 
 
 (* Misc *)

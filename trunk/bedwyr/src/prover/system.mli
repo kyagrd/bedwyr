@@ -1,6 +1,6 @@
 (****************************************************************************)
 (* Bedwyr prover                                                            *)
-(* Copyright (C) 2005-2012 Baelde, Tiu, Ziegler, Heath                      *)
+(* Copyright (C) 2005-2013 Baelde, Tiu, Ziegler, Heath                      *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -177,6 +177,9 @@ val debug : bool ref
 
 (** Enables the display of computation times. *)
 val time : bool ref
+
+(** Root of the tree of tabled atoms. *)
+val root_atoms : Table.O.son list ref
 
 (** {6 Type declarations} *)
 

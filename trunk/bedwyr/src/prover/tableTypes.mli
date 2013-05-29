@@ -38,5 +38,5 @@ module type INPUT = sig
   val fold : (Term.term -> tag -> 'a -> 'a) -> t -> 'a -> 'a
   val print : Term.term -> t -> unit
   val fprint : out_channel -> Term.term -> t -> Input.Typing.ty -> unit
-  val export : string -> (Term.term * t) list -> unit
+  val export : string -> (Term.term * t) list -> son list -> unit
 end

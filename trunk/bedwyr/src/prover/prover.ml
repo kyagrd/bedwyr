@@ -897,9 +897,8 @@ let prove ~success ~failure ~level ~timestamp ~local g =
     assert (s0 = save_state ()) ;
     failure ()
   in
-  let sons = ref [] in
   try
-    prove sons
+    prove System.root_atoms
       [] 0
       ~success ~failure ~level ~timestamp ~local g
   with e ->
