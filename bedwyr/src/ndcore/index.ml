@@ -1,6 +1,6 @@
 (****************************************************************************)
 (* Bedwyr prover                                                            *)
-(* Copyright (C) 2006-2012 David Baelde, Alwen Tiu                          *)
+(* Copyright (C) 2006-2013 David Baelde, Alwen Tiu, Quentin Heath           *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -66,13 +66,12 @@ let get_leaf bindings =
          v.(j) <- x ;
          (* [c.eq.(j)] gets the least index which has an equal value *)
          c.eq.(j) <-
-         begin try
-           for k = 0 to j do
-             if v.(k) = x then raise (Found k)
-           done ;
-           assert false
-         with Found k -> k
-         end ;
+           (try
+              for k = 0 to j do
+                if v.(k) = x then raise (Found k)
+              done ;
+              assert false
+            with Found k -> k) ;
          j+1)
       0 bindings
   in
@@ -114,10 +113,34 @@ let update_leaf (max_vid,vid,map) bindings data =
   in
   max_vid,vid,map
 
+exception StopIter
+
 let find_leaf (_,_,map) bindings =
   let constraints = get_constraints bindings in
   try Some (ConstraintsMap.find constraints map)
-  with Not_found -> None
+  with Not_found ->
+    (* an exact match was not found,
+     * now looking for an instantiation *)
+    let data = ref None in
+    begin try
+      ConstraintsMap.iter
+        (fun c d ->
+           try
+             Array.iteri
+               (fun i j ->
+                  if (constraints.eq.(i) <> constraints.eq.(j))
+                    || (c.lts.(i) <> constraints.lts.(i))
+                  then raise (Found i))
+               c.eq ;
+             (* if the term has equalities where the pattern does,
+              * and has the same local timestamps,
+              * then it is an instance of the pattern *)
+             data := Some d ;
+             raise StopIter
+           with Found _ -> ())
+        map
+    with StopIter -> () end ;
+    !data
 
 
 (* == Indexing ============================================================= *)
@@ -339,9 +362,9 @@ let superficial_sort nodes =
 let access ~switch_vars zindex terms =
   (* [access_pattern] filters a term through a pattern,
    * XXX whatup on mismatch? XXX
-   * returns the list of bindings,
-   * returns the reversed list of catches and
-   * returns the reversed list of former patterns.
+   * returns the list of CID-var bindings,
+   * the reversed list of catches,
+   * and the reversed list of former patterns.
    * XXX beware of switch_vars! XXX
    * Returns hnorm-ed terms. *)
   let rec access_pattern bindings catches former_pats pattern term =
@@ -423,10 +446,10 @@ let access ~switch_vars zindex terms =
       (fun (changed,patterns,bindings,catches,former_pats) pattern term ->
          (* Go through one pattern, enrich catches and bindings,
           * and build the updated pattern. *)
-         let (changed',pattern,bindings,catches,former_pats) =
+         let (changed',pattern',bindings',catches',former_pats') =
            access_pattern bindings catches former_pats pattern term
          in
-         changed'||changed,pattern::patterns,bindings,catches,former_pats)
+         changed'||changed,pattern'::patterns,bindings',catches',former_pats')
       (false,[],bindings,catches,former_pats)
       patterns
       terms
