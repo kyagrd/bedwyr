@@ -114,7 +114,7 @@ module I = struct
       table ;
     Format.fprintf fmt "@;<0 0>.@]@]@."
 
-  let export _ _ =
+  let export _ _ _ =
     Format.eprintf "XML export disabled at compile time.@."
 end
 
