@@ -167,7 +167,6 @@ DEBIAN_FILES	=  \
   bedwyr-doc.doc-base.refman \
   bedwyr-doc.lintian-overrides \
   bedwyr-dev.install \
-  bedwyr-dev.links \
   bedwyr-dev.lintian-overrides \
   watch \
   compat \
