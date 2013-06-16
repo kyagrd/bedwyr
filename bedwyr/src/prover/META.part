@@ -1,0 +1,2 @@
+version = "[internal]"
+requires = "str,xmlm"

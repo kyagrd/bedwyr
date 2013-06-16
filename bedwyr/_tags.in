@@ -1,6 +1,6 @@
 ##############################################################################
 #  Bedwyr prover                                                             #
-#  Copyright (C) 2012 Quentin Heath                                          #
+#  Copyright (C) 2012-2013 Quentin Heath                                     #
 #                                                                            #
 #  This program is free software; you can redistribute it and/or modify      #
 #  it under the terms of the GNU General Public License as published by      #
@@ -28,8 +28,9 @@
 <src/ndcore/*.{native,byte}>: use_ndcore
 <src/batyping/*.{native,byte}>: use_batyping
 <src/input/*.{native,byte}>: use_batyping,use_input
-<src/prover/*.{native,byte}>: use_batyping,use_input,use_prover
+<src/prover/*.{native,byte}>: use_batyping,use_input,use_prover,package(str)
 
-<src/prover/*>: use_@XMLM_TAG@
+<src/prover/*>: package(@XMLM_TAG@)
 
-<src/bedwyr.{native,p.native,byte,d.byte}>: use_unix,use_str,use_ndcore,use_batyping,use_input,use_prover
+<src/bedwyr.{native,p.native,byte,d.byte}>: package(unix),package(str),\
+  package(@XMLM_TAG@),use_ndcore,use_batyping,use_input,use_prover

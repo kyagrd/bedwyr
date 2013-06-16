@@ -6,11 +6,11 @@ Abstract: This manual provides the information needed
 Section: Science/Mathematics
 
 Format: HTML
-Index: /usr/share/bedwyr-doc/quickstart.html
-Files: /usr/share/bedwyr-doc/quickstart.html
+Index: /usr/share/doc/bedwyr/quickstart.html
+Files: /usr/share/doc/bedwyr/quickstart.html
 
 Format: PDF
-Files: /usr/share/bedwyr-doc/quickstart.pdf.gz
+Files: /usr/share/doc/bedwyr/quickstart.pdf.gz
 
 Format: PostScript
-Files: /usr/share/bedwyr-doc/quickstart.ps.gz
+Files: /usr/share/doc/bedwyr/quickstart.ps.gz

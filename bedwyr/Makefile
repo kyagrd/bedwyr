@@ -56,7 +56,7 @@ ARCH_FILES	= $(OCAML_FILES) \
 		  $(NDCORE_FILES) $(BEDWYR_FILES) COPYING $(MAN_FILES) \
 		  $(CONTRIB_FILES) $(DESKTOP_FILES) $(ICONS) $(EXAMPLES_FILES) \
 		  configure.ac Makefile Makefile.include.in \
-		  myocamlbuild.ml _tags install-sh
+		  myocamlbuild.ml.in _tags.in install-sh
 
 BEDWYR_ARCH	= $(addprefix $(DIST_NAME).,$(ARCH_SUFFIXES))
 
@@ -64,20 +64,21 @@ BEDWYR_ARCH	= $(addprefix $(DIST_NAME).,$(ARCH_SUFFIXES))
 
 NDCORE_LIBS	= $(addprefix $(ndcore_dir)/ndcore.,$(LIB_SUFFIXES))
 NDCORE_MLS	= $(filter-out $(ndcore_dir)/test.ml,$(wildcard $(ndcore_dir)/*.ml))
+NDCORE_MLIS	= $(wildcard $(ndcore_dir)/*.mli)
 NDCORE_MODULES	= $(basename $(NDCORE_MLS))
 ifneq ($(BEST_SUFFIX),)
   NDCORE_CMIS	= $(addsuffix .cmi,$(NDCORE_MODULES))
 endif
-NDCORE_META	= $(ndcore_dir)/META
+SLIMMER_META	= src/META
 BEDWYR_BINS	= $(addprefix $(bedwyr_prefix).,$(BIN_SUFFIXES))
 ifeq ($(TARGET),ndcore)
-  BUILT_FILES	= $(NDCORE_LIBS) $(NDCORE_CMIS) $(NDCORE_META)
+  BUILT_FILES	= $(NDCORE_LIBS) $(NDCORE_CMIS) $(SLIMMER_META)
 else
   ifeq ($(TARGET),bedwyr)
   BUILT_FILES	= $(BEDWYR_BINS) $(MANPAGES) $(DESKTOP_FILES:.in=)
   else
     ifeq ($(TARGET),)
-  BUILT_FILES	= $(NDCORE_LIBS) $(NDCORE_CMIS) $(NDCORE_META) \
+  BUILT_FILES	= $(NDCORE_LIBS) $(NDCORE_CMIS) $(SLIMMER_META) \
 		  $(BEDWYR_BINS) $(MANPAGES) $(DESKTOP_FILES:.in=)
     endif
   endif
@@ -127,6 +128,15 @@ build: $(BUILT_FILES) bedwyr
 %.o: %.rc
 	@$(MINGW32_WINDRES) $< $@
 
+$(SLIMMER_META): $(SLIMMER_META).part $(BEDWYR_MODULES:%=src/%/META.part)
+	@cat $< > $@
+	@for i in $(BEDWYR_MODULES) ; do \
+	  echo -e "\n# Specifications for the \"slimmer.$$i\" library" ; \
+	  echo "package \"$$i\" (" ; \
+	  sed -e 's|^|  |' src/$$i/META.part ; \
+	  echo ')' ; \
+	  done >> $@
+
 %:: config.status %.in Makefile
 	@./$< $@
 	@sed -i \
@@ -135,7 +145,7 @@ build: $(BUILT_FILES) bedwyr
 	  $@
 
 config.status: configure Makefile
-	@[[ -x $@ ]] && ./$@ --recheck || ./$< --no-create $(CONFIGURE_OPTS)
+	@[ -x $@ ] && ./$@ --recheck || ./$< --no-create $(CONFIGURE_OPTS)
 
 configure: configure.ac
 	autoconf
@@ -238,9 +248,9 @@ bedwyr_doc: bedwyr_src_doc bedwyr_refman
 
 bedwyr_src_doc: $(BEDWYR_ODOCS_DIR)/index.html
 
-src.odocl:
+src.odocl: $(foreach m,$(BEDWYR_MODULES),src/$m/$m.mllib)
 	@echo src/Bedwyr > $@
-	@for i in ndcore batyping input prover ; do \
+	@for i in $(BEDWYR_MODULES) ; do \
 	  sed -e "s|^|src/$$i/|" src/$$i/$$i.mllib ; \
 	  done >> $@
 
@@ -253,7 +263,7 @@ bedwyr_refman: doc/Makefile
 ##############################################################################
 
 .PHONY: install \
-  install_ndcore install_ndcore_doc install_ndcore_lib install_ndcore_meta \
+  install_ndcore install_ndcore_doc install_ndcore_lib \
   install_ndcore_files \
   install_bedwyr install_bedwyr_doc install_bedwyr_bin install_bedwyr_files \
   install_bedwyr_man install_bedwyr_contrib install_bedwyr_link \
@@ -271,15 +281,12 @@ ifneq ($(OCAMLDOC),)
   install_bedwyr: install_bedwyr_doc
 endif
 
-install_ndcore: install_ndcore_lib install_ndcore_meta install_ndcore_files
+install_ndcore: install_ndcore_lib install_ndcore_files
 
-install_ndcore_lib: $(NDCORE_LIBS) $(NDCORE_CMIS)
-	@$(INSTALL_DIR) $(PKGLIBDIR)
-	@for i in $^ ; do $(INSTALL_DATA) _build/$$i $(PKGLIBDIR) ; done
-
-install_ndcore_meta: $(NDCORE_META)
-	@$(INSTALL_DIR) $(PKGLIBDIR)
-	@$(INSTALL_DATA) $< $(PKGLIBDIR)
+install_ndcore_lib: $(SLIMMER_META) $(NDCORE_LIBS) \
+  $(NDCORE_CMIS) $(NDCORE_MLIS)
+	@$(INSTALL_DIR) $(OCAMLLIBDIR)
+	@$(FINDLIB_INSTALL) $< $(wildcard $(^:%=_build/%))
 
 install_ndcore_files: $(NDCORE_FILES:=.gz)
 	@$(INSTALL_DIR) $(DOCDIR)
@@ -467,6 +474,7 @@ clean: mostlyclean doc/Makefile
 	@$(MAKE) -C doc clean
 	@$(MAKE) -C examples/ccs_vp/timing clean
 	@$(FIND) . -name '*~' -exec rm -vf \{\} \;
+	@rm -vf $(SLIMMER_META)
 	@rm -vf *.bz2 *.gz *.tar *.tbz *.tgz *.odocl $(MANPAGES)
 	@rm -vf *.build *.changes *.dsc *.deb *-installer.exe
 	@rm -rvf $(DEB_DIST_NAME) nsis-build

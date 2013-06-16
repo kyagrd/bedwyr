@@ -21,7 +21,7 @@ m4_define([M4_VERSION_MAJOR],1)
 m4_define([M4_VERSION_MINOR],4)
 m4_define([M4_VERSION_PATCH],0)
 m4_define([M4_VERSION_BUILD],0)
-m4_define([M4_VERSION_DEV],alpha11)
+m4_define([M4_VERSION_DEV],alpha12)
 m4_define([M4_VERSION1],[M4_VERSION_MAJOR.M4_VERSION_MINOR])
 m4_define([M4_VERSION2],m4_if(M4_VERSION_PATCH,0,
           [M4_VERSION1],[M4_VERSION1.M4_VERSION_PATCH]))
@@ -174,7 +174,7 @@ else
 
 	AC_PATH_PROGS(OCAMLFIND,ocamlfind.opt ocamlfind,no)
 	AS_IF([test "X$OCAMLFIND" = Xno],
-	      [AC_MSG_ERROR(Cannot find ocamlfind.)])
+	      [AC_MSG_ERROR(Cannot find ocamlfind. Install findlib.)])
 
 	AC_PATH_PROGS(OCAMLBUILD,ocamlbuild.opt ocamlbuild.native ocamlbuild ocamlbuild.byte,no)
 	AS_IF([test "X$OCAMLBUILD" = Xno],
@@ -364,7 +364,7 @@ AC_CONFIG_FILES([_tags],[chmod a-w _tags])
 AC_CONFIG_FILES([src/config.ml],[chmod a-w src/config.ml])
 AC_CONFIG_FILES([src/prover/table.ml],[chmod a-w src/prover/table.ml])
 AC_CONFIG_FILES([src/prover/prover.mllib],[chmod a-w src/prover/prover.mllib])
-AC_CONFIG_FILES([src/ndcore/META],[chmod a-w src/ndcore/META])
+AC_CONFIG_FILES([src/META.part],[chmod a-w src/META.part])
 AC_CONFIG_FILES([doc/Makefile],[chmod a-w doc/Makefile])
 AC_CONFIG_FILES([man/bedwyr.1],[chmod a-w man/bedwyr.1])
 AC_CONFIG_FILES([contrib/bedwyr.desktop],[chmod a-w contrib/bedwyr.desktop])

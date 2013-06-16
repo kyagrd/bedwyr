@@ -1,6 +1,6 @@
 (****************************************************************************)
 (* Bedwyr prover                                                            *)
-(* Copyright (C) 2006-2012 Baelde, Tiu, Ziegler, Heath                      *)
+(* Copyright (C) 2006-2013 Baelde, Tiu, Ziegler, Heath                      *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -235,6 +235,12 @@
       (* infix constant *)
       with Not_found -> INFIX_ID n
     end
+
+  (* == Comments ==================================================== *)
+
+  type comment_continuation =
+    | Previous_token of token
+    | Continuation of (lexbuf -> token)
 }
 
 let digit = ['0'-'9']
@@ -265,9 +271,9 @@ let in_qstring = [^'\\' '"' '\n' '/' '*']+
 
 rule token = parse
   (* Multi-line and single-line comments *)
-  | "/*"                        { comment 0 None token lexbuf }
-  | '%' [^'\n']* '\n'           { new_line lexbuf; token lexbuf }
-  | '%' [^'\n']*                { token lexbuf }
+  | "/*"                        { comment 0 (Continuation token) lexbuf }
+  | ('%'|"#!") [^'\n']* '\n'    { new_line lexbuf; token lexbuf }
+  | ('%'|"#!") [^'\n']*         { token lexbuf }
 
   (* Separators *)
   | blank                       { token lexbuf }
@@ -303,30 +309,30 @@ rule token = parse
 
   (* Upper-case prefix names *)
   | upper_name as n             { get_upper n }
-  | (upper_name as n) "/*"      { comment 0 (Some (get_upper n)) token lexbuf }
+  | (upper_name as n) "/*"      { comment 0 (Previous_token (get_upper n)) lexbuf }
 
   (* Lower-case prefix names *)
   | lower_name as n             { get_lower n }
-  | (lower_name as n) "/*"      { comment 0 (Some (get_lower n)) token lexbuf }
+  | (lower_name as n) "/*"      { comment 0 (Previous_token (get_lower n)) lexbuf }
 
   (* Internal prefix names *)
   | intern_name as n            { get_intern n }
-  | (intern_name as n) "/*"     { comment 0 (Some (get_intern n)) token lexbuf }
+  | (intern_name as n) "/*"     { comment 0 (Previous_token (get_intern n)) lexbuf }
 
   (* Infix-case names *)
   | infix_name as n             { get_infix n }
 
   (* Placeholder *)
   | '_'                         { UNDERSCORE }
-  | "_/*"                       { comment 0 (Some UNDERSCORE) token lexbuf }
+  | "_/*"                       { comment 0 (Previous_token UNDERSCORE) lexbuf }
+
+  | ('-'? number) as n          { NUM (int_of_string n) }
 
   (* Ambiguous names *)
   | ((safe_char* safe_char_noslash) as n1) (infix_name as n2)
   | (safe_char+ as n1) ((infix_special_nostar infix_special*) as n2)
   | (infix_name as n1) (safe_char+ as n2)
                                 { raise (Input.Illegal_token (n1,n2)) }
-
-  | number as n                 { NUM (int_of_string n) }
 
   (* misc *)
   | eof                         { EOF }
@@ -345,7 +351,7 @@ and proof = parse
 
 and invalid = parse
   | '.'                         { DOT }
-  | "/*"                        { comment 0 None invalid lexbuf }
+  | "/*"                        { comment 0 (Continuation invalid) lexbuf }
   | '%' [^'\n']* '\n'           { new_line lexbuf; invalid lexbuf }
   | '%' [^'\n']*                { invalid lexbuf }
   | '\n'                        { new_line lexbuf; invalid lexbuf }
@@ -355,17 +361,17 @@ and invalid = parse
   | eof                         { EOF }
   | _                           { invalid lexbuf }
 
-and comment level prev_token k = parse
-  | in_comment                  { comment level prev_token k lexbuf }
-  | "/*"                        { comment (level + 1) prev_token k lexbuf }
+and comment level cont = parse
+  | in_comment                  { comment level cont lexbuf }
+  | "/*"                        { comment (level + 1) cont lexbuf }
   | "*/"                        { if level = 0 then
-                                    match prev_token with
-                                      | None -> k lexbuf
-                                      | Some t -> t
+                                    match cont with
+                                      | Continuation k -> k lexbuf
+                                      | Previous_token t -> t
                                   else
-                                    comment (level - 1) prev_token k lexbuf }
+                                    comment (level - 1) cont lexbuf }
   | '\n'                        { new_line lexbuf ;
-                                  comment level prev_token k lexbuf }
+                                  comment level cont lexbuf }
   | eof                         { failwith "comment not closed at end of input" }
 
 and qstring = parse

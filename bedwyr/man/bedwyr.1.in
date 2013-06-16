@@ -19,7 +19,7 @@
 .\"
 .\" @configure_input@
 .\"
-.Dd April 4, 2013
+.Dd April 18, 2013
 .Os @PACKAGE_NAME@ v@PACKAGE_VERSION@
 .Dt BEDWYR 1 URM
 .\"
@@ -47,19 +47,10 @@
 Linc logic.
 .Pp
 It is based on
-.An Alwen Tiu Ns 's
+.An Tiu Ns 's
 Level-0/1, and
 .An Nadathur & Linell Ns 's
-LLambda library, both written in SML. The OCaml translation has been done by
-.An Baelde & Ziegler
-and further development by
-.An Baelde & Gacek .
-It is currently under work by
-.An Heath .
-The system also benefited from the wisdom
-of Miller, Nadathur and Pientka.
-.Pp
-For background on the system, see
+LLambda library. For background on the system, see
 .Rs
 .%T Mixing Finite Success and Finite Failure in an Automated Prover
 .%A Alwen Tiu

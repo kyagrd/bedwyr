@@ -5,7 +5,7 @@
 "               David Baelde   <firstname.name@ens-lyon.org>
 " URL:
 " https://gforge.inria.fr/scm/viewvc.php/*checkout*/trunk/bedwyr/contrib/vim/syntax/bedwyr.vim?root=slimmer
-" Last Change:  2012 Jan 06 - Added new yntax
+" Last Change:  2013 May 17 - Add shbang
 
 if version < 600
   set iskeyword+=33,35-36,38-39,42-43,45,58,60-64,94,95,96,124,126
@@ -46,6 +46,7 @@ syn keyword     bedwyrImpErr    =>
 syn cluster     bedwyrCommonErrs contains=bedwyrCommentErr,bedwyrMetaCommendErr,bedwyrPointErr,bedwyrDefineErr,bedwyrByErr,bedwyrThmErr,bedwyrQedErr,bedwyrSemiColonErr,bedwyrDefEqErr,bedwyrFormulaErr,bedwyrImpErr
 
 syn match       bedwyrComment   "%.*" contains=bedwyrTodo extend
+syn match       bedwyrComment   "#!.*" extend
 syn region      bedwyrComment   start="/\*" end="\*/" contains=bedwyrComment,bedwyrTodo extend
 
 syn keyword     bedwyrTodo      contained TODO XXX

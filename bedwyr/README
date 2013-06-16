@@ -20,11 +20,12 @@ Bedwyr is a theorem prover for the Level-0/1 fragment of the Linc logic.
 It is based on Alwen Tiu's Level-0/1, and Nadathur & Linell's LLambda
 library, both written in SML. The OCaml translation has been done by
 Baelde & Ziegler and further development by Baelde & Gacek. It is
-currently under work by Heath. The system also benefited from the wisdom
-of Miller, Nadathur and Pientka.
+currently under work by Heath.  The system also benefited from the
+wisdom of Miller, Nadathur and Pientka.
 
-For background on the system, see "Mixing Finite Success and Finite Failure
-in an Automated Prover" (Alwen Tiu and Gopalan Nadathur and Dale Miller):
+For background on the system, see "Mixing Finite Success and Finite
+Failure in an Automated Prover" (Alwen Tiu and Gopalan Nadathur and Dale
+Miller):
 http://www.lix.polytechnique.fr/Labo/Dale.Miller/papers/eshol05.pdf
 
 Webpage: http://slimmer.gforge.inria.fr/bedwyr/
@@ -33,9 +34,8 @@ Webpage: http://slimmer.gforge.inria.fr/bedwyr/
  2. License
 ------------
 
-This is free software, licensed under GPL version 2.
-A copy of this license can be found in COPYING or,
-depending on your distribution,
+This is free software, licensed under GPL version 2.  A copy of this
+license can be found in COPYING or, depending on your distribution,
 /usr/share/common-licenses/GPL-2 or /usr/portage/licenses/GPL-2.
 
 
@@ -52,25 +52,24 @@ or
 (the password is the username).
 
 The project is also available for Debian
-(http://slimmer.gforge.inria.fr/releases/debian/ squeeze main),
-Gentoo (public user overlay 'dawan') and Windows.
-The Linux packages contains ndcore as a library,
-in addition to the complete program.
+(http://slimmer.gforge.inria.fr/releases/debian/ squeeze main), Gentoo
+(public user overlay 'dawan') and Windows.  The Linux packages contains
+the core libraries as well as the complete program.
 
 
  4. Building Bedwyr
 --------------------
 
-For proper compilation and installation, a Linux environment
-and the following packages are required:
+For proper compilation and installation, a Linux environment and the
+following packages are required:
 - OCaml (3.11 or later)
 - autotools (at least autoconf-2.60) and GNU make
 - bash, tar, gzip, bzip2 and some other standard tools
 
 With the vanilla archive, the single command
   $ make
-will build bedwyr with default options (no documentation, byte code only).
-You can customize the process with configure options:
+will build bedwyr with default options (no documentation, byte code
+only).  You can customize the process with configure options:
   $ autoconf
   $ ./configure [--enable-doc] [--disable-bytecode] [--enable-nativecode] [...]
   $ make
@@ -86,11 +85,12 @@ and type "#help." for a little help.
  5. Documentation
 ------------------
 
-See doc/quickstart.(ps.gz|pdf|html) for more information on how to use bedwyr,
-doc/refman/index.html for a complete system description,
-and _build/src_docdir/index.html for the source code documentation.
-Those files need the "--enable-doc" configure option (which add some programs
--- latex, hevea and Co. -- to the list of dependencies) and are built by the
+See doc/quickstart.(ps.gz|pdf|html) for more information on how to use
+bedwyr, doc/refman/index.html for a complete system description, and
+_build/src_docdir/index.html for the source code documentation.
+Building those files requires the "--enable-doc" configure option (which
+add some programs -- latex, hevea and Co. -- to the list of
+dependencies) and is done by the
   $ make doc
 command.
 
@@ -98,12 +98,12 @@ command.
  6. Installation
 -----------------
 
-If for some reason you don't want to use bedwyr fresh out of the tarball,
-and you won't or can't use one of the provided packages,
-you can use the `make install` facility.
-It makes good use of the standard $DESTDIR variable, which is a absolute prefix
-added to all installation paths. You can install all the files in a temporary
-copy of the file hierarchy by typing
+If for some reason you don't want to use bedwyr fresh out of the
+tarball, and you won't or can't use one of the provided packages, you
+can use the `make install` facility.  It makes good use of the standard
+$DESTDIR variable, which is an absolute prefix added to all installation
+paths.  You can install all the files in a temporary copy of the file
+hierarchy by typing
   $ make DESTDIR=~/tmpdir install
 or in a alternative standard place with
   $ ./configure --prefix=/usr
