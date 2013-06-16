@@ -74,7 +74,8 @@ let rec extract path t =
 let fresh ~ts ~lts ~name ~tag = fresh ~ts ~lts ~name tag
 
 let var nm ts = fresh ~tag:Logic ~name:nm ~ts:ts ~lts:0
-let const nm ts = fresh ~tag:Constant ~name:nm ~ts:ts ~lts:0
+let eig nm ts = fresh ~tag:Eigen ~name:nm ~ts:ts ~lts:0
+let const nm = fresh ~tag:Constant ~name:nm ~ts:0 ~lts:0
 
 let add index terms =
   let add,_,_ =
@@ -96,7 +97,7 @@ let test =
       (* Test that there are no empty Term.Binder *)
       "[exists, a]" >::
       (fun () ->
-         let a = const "a" 1 in
+         let a = const "a" in
          let t = 0 &/ a in
          assert_equal a t) ;
 
@@ -109,7 +110,7 @@ let test =
       (* Test that there are no empty Term.Lam *)
       "[[]\\ a]" >::
       (fun () ->
-         let a = const "a" 1 in
+         let a = const "a" in
          let t = 0 // a in
          assert_equal a t) ;
 
@@ -122,9 +123,9 @@ let test =
       (* Test that Term.App is flattened *)
       "[(a b) c]" >::
       (fun () ->
-         let a = const "a" 1 in
-         let b = const "b" 1 in
-         let c = const "c" 1 in
+         let a = const "a" in
+         let b = const "b" in
+         let c = const "c" in
          let t = (a ^^ [b]) ^^ [c] in
          assert_equal (a ^^ [b ; c]) t) ;
 
@@ -135,7 +136,7 @@ let test =
 
       "[exists x, f x y]" >::
       (fun () ->
-         let f = const "f" 1 in
+         let f = const "f" in
          let x = var "x" 1 in
          let y = var "y" 1 in
          let t = x &// (f ^^ [x;y]) in
@@ -148,21 +149,21 @@ let test =
     [
       "[(x\\ x) c]" >::
       (fun () ->
-         let c = const "c" 1 in
+         let c = const "c" in
          let t = (1 // db 1) ^^ [c] in
          assert_equal c (Norm.hnorm t)) ;
 
       "[(x\\ y\\ x) a b]" >::
       (fun () ->
-         let a = const "a" 1 in
-         let b = const "b" 1 in
+         let a = const "a" in
+         let b = const "b" in
          let t = (2 // db 2) ^^ [a; b] in
          assert_equal a (Norm.hnorm t)) ;
 
       "[(x\\ y\\ y) a b]" >::
       (fun () ->
-         let a = const "a" 1 in
-         let b = const "b" 1 in
+         let a = const "a" in
+         let b = const "b" in
          let t = (2 // db 1) ^^ [a; b] in
          assert_equal b (Norm.hnorm t)) ;
 
@@ -173,7 +174,7 @@ let test =
 
       "[(x\\ y\\ z\\ x) a]" >::
       (fun () ->
-         let a = const "a" 1 in
+         let a = const "a" in
          let t = (3 // db 3) ^^ [a] in
          assert_equal (2 // a) (Norm.hnorm t)) ;
 
@@ -185,14 +186,14 @@ let test =
 
       "[(x\\ x (x\\ x)) (x\\ y\\ x y) c]" >::
       (fun () ->
-         let c = const "c" 1 in
+         let c = const "c" in
          let t = 1 // (db 1 ^^ [1 // db 1]) in
          let t = t ^^ [ 2 // (db 2 ^^ [db 1]) ; c ] in
          assert_equal c (Norm.hnorm t)) ;
 
       "[x\\ c x]" >::
       (fun () ->
-         let c = const "c" 1 in
+         let c = const "c" in
          let t = 1 // (c ^^ [db 1]) in
          assert_equal (1 // (c ^^ [db 1])) (Norm.hnorm t)) ;
 
@@ -224,7 +225,7 @@ let test =
       "[x\\ c x = x\\ c (N x)]" >::
       (fun () ->
          let n = var "n" 1 in
-         let c = const "c" 1 in
+         let c = const "c" in
          let t1 = 1 // (c ^^ [ db 1 ]) in
          let t2 = 1 // (c ^^ [ n ^^ [ db 1 ] ]) in
          unify t1 t2 ;
@@ -234,7 +235,7 @@ let test =
       "[x\\ y\\ c y x = N]" >::
       (fun () ->
          let n = var "n" 1 in
-         let c = const "c" 1 in
+         let c = const "c" in
          let t = 2 // (c ^^ [ db 1 ; db 2 ]) in
          unify t n ;
          assert_equal_norm (2 // (c ^^ [ db 1 ; db 2 ])) n) ;
@@ -243,7 +244,7 @@ let test =
       "[x\\ y\\ c x y = x\\ c (N x)]" >::
       (fun () ->
          let n = var "n" 1 in
-         let c = const "c" 1 in
+         let c = const "c" in
          unify (2 // (c ^^ [db 2;db 1])) (1 // (c ^^ [n ^^ [db 1]])) ;
          assert_equal_norm (1 // db 1) n) ;
 
@@ -252,9 +253,9 @@ let test =
       (fun () ->
          let x = var "x" 1 in
          let y = var "y" 2 in
-         let a = const "a" 2 in
-         let b = const "b" 3 in
-         let c = const "c" 3 in
+         let a = eig "a" 2 in
+         let b = eig "b" 3 in
+         let c = eig "c" 3 in
          let t1 = x ^^ [ a ; b ] in
          let t2 = y ^^ [ b ; c ] in
          unify t1 t2 ;
@@ -275,10 +276,10 @@ let test =
       (fun () ->
          let x = var "x" 1 in
          let y = var "y" 2 in
-         let a = const "a" 2 in
-         let b = const "b" 3 in
-         let c = const "c" 1 in
-         let c3 = const "c" 3 in
+         let a = eig "a" 2 in
+         let b = eig "b" 3 in
+         let c = eig "c" 1 in
+         let c3 = eig "c" 3 in
          unify (x ^^ [a;b]) (c ^^ [y ^^ [b;c3]]) ;
          let h =
            let x = Norm.hnorm x in
@@ -296,10 +297,10 @@ let test =
       (fun () ->
          let x = var "x" 1 in
          let y = var "y" 2 in
-         let a = const "a" 2 in
-         let b = const "b" 3 in
-         let c = const "c" 3 in
-         let d = const "d" 2 in
+         let a = eig "a" 2 in
+         let b = eig "b" 3 in
+         let c = eig "c" 3 in
+         let d = eig "d" 2 in
          unify
            (c ^^ [ x ^^ [a;b] ; x ^^ [b;d] ])
            (c ^^ [ y ^^ [b;c] ; b ^^ [d] ]) ;
@@ -313,10 +314,10 @@ let test =
       (fun () ->
          let x = var "x" 1 in
          let y = var "y" 2 in
-         let a = const "a" 2 in
-         let b = const "b" 3 in
-         let d = const "d" 2 in
-         let c = const "c" 3 in
+         let a = eig "a" 2 in
+         let b = eig "b" 3 in
+         let d = eig "d" 2 in
+         let c = eig "c" 3 in
          unify
            (1 // (c ^^ [ x ^^ [a;b] ; x ^^ [db 1;d]]))
            (1 // (c ^^ [ y ^^ [b;c] ; db 1 ^^ [d] ])) ;
@@ -328,9 +329,9 @@ let test =
       "[X1 a2 b3 c3 = X1 c3 b3 a2]" >::
       (fun () ->
          let x = var "x" 1 in
-         let a = const "a" 2 in
-         let b = const "b" 3 in
-         let c = const "c" 3 in
+         let a = eig "a" 2 in
+         let b = eig "b" 3 in
+         let c = eig "c" 3 in
          unify (x ^^ [a;b;c]) (x ^^ [c;b;a]) ;
          let h =
            let x = Norm.hnorm x in
@@ -346,10 +347,10 @@ let test =
       "[X1 a2 b3 != c1 (X1 b3 c3)]" >::
       (fun () ->
          let x = var "x" 1 in
-         let a = const "a" 2 in
-         let b = const "b" 3 in
-         let c1 = const "c" 1 in
-         let c3 = const "c" 3 in
+         let a = eig "a" 2 in
+         let b = eig "b" 3 in
+         let c1 = eig "c" 1 in
+         let c3 = eig "c" 3 in
          try
            unify (x ^^ [a;b]) (c1 ^^ [x ^^ [b;c3]]) ;
            "Expected OccursCheck" @? false
@@ -359,9 +360,9 @@ let test =
       "[X1 a2 b3 != c3 (X b c)]" >::
       (fun () ->
          let x = var "x" 1 in
-         let a = const "a" 2 in
-         let b = const "b" 3 in
-         let c = const "c" 3 in
+         let a = eig "a" 2 in
+         let b = eig "b" 3 in
+         let c = eig "c" 3 in
          try
            unify (x ^^ [a;b]) (c ^^ [x ^^ [b;c]]) ;
            "Expected OccursCheck" @? false
@@ -372,9 +373,9 @@ let test =
       (fun () ->
          let x = var "x" 1 in
          let y = var "y" 1 in
-         let a = const "a" 2 in
-         let b = const "b" 3 in
-         let c = const "c" 3 in
+         let a = eig "a" 2 in
+         let b = eig "b" 3 in
+         let c = eig "c" 3 in
          unify (x ^^ [a;b]) (y ^^ [b;c]) ;
          let h =
            let x = Norm.hnorm x in
@@ -394,9 +395,9 @@ let test =
       (fun () ->
          let x = var "x" 1 in
          let y = var "y" 2 in
-         let a = const "a" 2 in
-         let b = const "b" 3 in
-         let c = const "c" 3 in
+         let a = eig "a" 2 in
+         let b = eig "b" 3 in
+         let c = eig "c" 3 in
          unify (x ^^ [a;b;c]) (y ^^ [c]) ;
          let h =
            let x = Norm.hnorm x in
@@ -414,9 +415,9 @@ let test =
       (fun () ->
          let x = var "x" 1 in
          let y = var "y" 2 in
-         let a = const "a" 2 in
-         let b = const "b" 3 in
-         let c = const "c" 3 in
+         let a = eig "a" 2 in
+         let b = eig "b" 3 in
+         let c = eig "c" 3 in
          unify (x ^^ [a;b]) (a ^^ [y ^^ [b;c]]) ;
          let h =
            let x = Norm.hnorm x in
@@ -434,10 +435,10 @@ let test =
       (fun () ->
          let x = var "x" 1 in
          let y = var "y" 2 in
-         let a = const "a" 2 in
-         let b = const "b" 3 in
-         let c = const "c" 3 in
-         let d = const "d" 3 in
+         let a = eig "a" 2 in
+         let b = eig "b" 3 in
+         let c = eig "c" 3 in
+         let d = eig "d" 3 in
          try
            unify (x ^^ [a;b]) (d ^^ [y ^^ [b;c]]) ;
            "Expected OccursCheck" @? false
@@ -451,8 +452,8 @@ let test =
       (* Example 16, unifying rigid terms *)
       "[x\\ a x b = x\\ a x b]" >::
       (fun () ->
-         let a = const "a" 1 in
-         let b = const "b" 1 in
+         let a = const "a" in
+         let b = const "b" in
          let t = 1 // ( a ^^ [ db 1 ; b ] ) in
          unify t t) ;
 
@@ -460,11 +461,11 @@ let test =
        * End of Gopalan's examples *
        ****************************)
 
-      "[f\\ a a = f\\ X X]" >::
+      "[f a a = f X X]" >::
       (fun () ->
-         let a = const "a" 2 in
-         let f = const "f" 1 in
-         let x = var "x" 3 in
+         let a = eig "a" 1 in
+         let f = const "f" in
+         let x = var "x" 2 in
          unify (f ^^ [x;x]) (f ^^ [a;a])) ;
 
       "[x\\x1\\ P x = x\\ Q x]" >::
@@ -480,7 +481,7 @@ let test =
          let t = var "T" 1 in
          let x = var "X" 1 in
          let y = var "Y" 1 in
-         let a = const "a" 0 in
+         let a = const "a" in
          let a x = a ^^ [x] in
          unify t (a x) ;
          unify t (a y) ;
@@ -499,7 +500,7 @@ let test =
       "[X1 = y2]" >::
       (fun () ->
          let x = var "X" 1 in
-         let y = fresh ~tag:Eigen ~name:"y" ~ts:2 ~lts:0 in
+         let y = eig "y" 2 in
          try unify x y ; assert false
          with Unify.Error _ -> ()) ;
 
@@ -551,7 +552,7 @@ let test =
       (fun () ->
          let x = var "X" 0 in
          let y = fresh ~tag:Logic ~name:"Y" ~lts:2 ~ts:0 in
-         let c = const "c" 0 in
+         let c = const "c" in
          let t = x ^^ [nabla 1 ; nabla 2] in
          unify t (c ^^ [y]) ;
          unify (Norm.hnorm t) (c ^^ [nabla 2]))
@@ -559,6 +560,7 @@ let test =
 
     "Indexing" >:::
     [
+
       "Ground terms" >::
       (fun () ->
          let d = db in
@@ -582,9 +584,9 @@ let test =
       [
         "Plain" >::
         (fun () ->
-           let x = fresh ~tag:Eigen ~name:"x" ~lts:0 ~ts:0 in
-           let y = fresh ~tag:Eigen ~name:"y" ~lts:0 ~ts:0 in
-           let z = fresh ~tag:Eigen ~name:"z" ~lts:0 ~ts:0 in
+           let x = eig "x" 0 in
+           let y = eig "y" 0 in
+           let z = eig "z" 0 in
            let t1 = (db 1) ^^ [ x ; y ; y ] in
            let t2 = (db 1) ^^ [ y ; y ; y ] in
            let index = add (add Index.empty [t1] 1) [t2] 2 in
@@ -592,11 +594,11 @@ let test =
            assert (Some 2 = find index [(db 1) ^^ [ x ; x ; x ]]) ;
            assert (None = find index [(db 1) ^^ [ x ; z ; x ]])) ;
 
-        "Instantiated with other eigenvariables" >::
+        "Instantiated with eigenvariables" >::
         (fun () ->
-           let x = fresh ~tag:Eigen ~name:"x" ~lts:0 ~ts:0 in
-           let y = fresh ~tag:Eigen ~name:"y" ~lts:0 ~ts:0 in
-           let z = fresh ~tag:Eigen ~name:"z" ~lts:0 ~ts:0 in
+           let x = eig "x" 0 in
+           let y = eig "y" 0 in
+           let z = eig "z" 0 in
            let index = add Index.empty [(db 1) ^^ [ x ; y ; y ]] 42 in
            assert (Some 42 = find index [(db 1) ^^ [ y ; z ; z ]]) ;
            assert (Some 42 = find index [(db 1) ^^ [ z ; z ; z ]]) ;
@@ -610,22 +612,11 @@ let test =
            let index = add Index.empty [(db 1) ^^ [ x ; y ]] 42 in
            assert (None = find index [(db 1) ^^ [ y ; z ]]) ;
            assert (None = find index [(db 1) ^^ [ y ; x ]])) ;
-
-        "Instantiated with terms" >::
-        (fun () ->
-           let x = fresh ~tag:Eigen ~name:"x" ~lts:0 ~ts:0 in
-           let y = fresh ~tag:Eigen ~name:"y" ~lts:0 ~ts:0 in
-           let a = const "a" 1 in
-           let b = const "b" 1 in
-           let t = 1 // ( a ^^ [ db 1 ; b ] ) in
-           let c = const "c" 1 in
-           let index = add Index.empty [(db 1) ^^ [ x ; y ; y ]] 42 in
-           assert (None = find index [(db 1) ^^ [ t ; c ; c ]])) ;
       ] ;
 
       "Nominal variables" >:::
       [
-        "Equivariant indexing" >::
+        "Bug in equivariant indexing" >::
         (fun () ->
            let index = add Index.empty [nabla 1 ; nabla 2] 42 in
            assert (Some 42 = find index [nabla 3 ; nabla 1]) ;
