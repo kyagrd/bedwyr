@@ -1,6 +1,6 @@
 ##############################################################################
 #  Bedwyr prover                                                             #
-#  Copyright (C) 2012 Quentin Heath                                          #
+#  Copyright (C) 2013-2013 Quentin Heath                                     #
 #                                                                            #
 #  This program is free software; you can redistribute it and/or modify      #
 #  it under the terms of the GNU General Public License as published by      #
@@ -19,7 +19,10 @@
 
 # @configure_input@
 
-### DEFINITIONS
+#
+# DEFINITIONS
+#
+##############################################################################
 
 PACKAGE_TARNAME	= @PACKAGE_TARNAME@
 PACKAGE_VERSION	= @PACKAGE_VERSION@
@@ -30,19 +33,18 @@ else
   TARGET_NAME	= $(TARGET)
 endif
 
-SHELL	= @BASH@
-FIG2DEV	= @FIG2DEV@
-LATEX	= @LATEX@
-BIBTEX	= @BIBTEX@
-DVIPS	= @DVIPS@ -Ppdf -z
-PS2PDF	= @PS2PDF@
-HEVEA	= @HEVEA@ png.hva
-BIBHVA	= @BIBHVA@
-IMAGEN	= @IMAGEN@ -png
-HACHA	= @HACHA@ -tocbis
-TAR	= @TAR@
-FIND	= @FIND@
-GZIP	= @GZIP@ -4 -f
+SHELL		= @BASH@
+LATEX		= @LATEX@
+BIBTEX		= @BIBTEX@
+DVIPS		= @DVIPS@ -t a4
+PS2PDF		= @PS2PDF@
+HEVEA		= @HEVEA@ -O png.hva -fix
+BIBHVA		= @BIBHVA@
+IMAGEN		= @IMAGEN@ -png
+HACHA		= @HACHA@ -tocbis
+TAR		= @TAR@
+FIND		= @FIND@
+GZIP		= @GZIP@ -4 -f
 
 prefix		= @prefix@
 datarootdir	= @datarootdir@
@@ -60,22 +62,25 @@ INSTALL_OPTS	= -v
 INSTALL_DIR	= @INSTALL_PROGRAM@ $(INSTALL_OPTS) -d
 INSTALL_DATA	= @INSTALL_DATA@ $(INSTALL_OPTS) -p
 
-### FILES
-
-FIGDIR	= ./figures
+#
+# FILES
+#
+##############################################################################
 
 QUICKSTART	= quickstart
 REFMAN		= refman
 
+TEX_INCLUDES	= $(wildcard include/tex/*.tex)
+STY_INCLUDES	= $(wildcard include/tex/*.sty)
+HVA_INCLUDES	= $(wildcard include/tex/*.hva)
+LPROLOG_FILES	= $(wildcard include/lprolog/*.mod) \
+		  $(wildcard include/lprolog/*.sig)
+BEDWYR_FILES	= $(wildcard include/linc/*.def)
+TEX_DEPS	= $(TEX_INCLUDES) $(LPROLOG_FILES) $(BEDWYR_FILES)
+LATEX_DEPS	= $(TEX_DEPS) $(STY_INCLUDES)
+HEVEA_DEPS	= $(TEX_DEPS) $(HVA_INCLUDES)
+BIB_DEPS	= $(wildcard *.bib)
 TEX_FILES	= $(QUICKSTART).tex $(REFMAN).tex
-TEX_INCLUDES	= $(wildcard include/*.tex)
-BIB_FILES	= $(wildcard *.bib)
-FIG_FILES	= $(wildcard $(FIGDIR)/*.fig )
-PSTEX		= $(FIG_FILES:.fig=.pstex)
-PSTEX_T		= $(FIG_FILES:.fig=.pstex_t)
-PIC_FILES	= $(FIG_FILES) \
-		  $(wildcard $(FIGDIR)/*.ps ) \
-		  $(wildcard $(FIGDIR)/*.eps)
 DVI_FILES	= $(TEX_FILES:.tex=.dvi)
 PS_FILES	= $(DVI_FILES:.dvi=.ps)
 PSGZ_FILES	= $(PS_FILES:=.gz)
@@ -83,64 +88,81 @@ PDF_FILES	= $(PS_FILES:.ps=.pdf)
 PDFGZ_FILES	= $(PDF_FILES:=.gz)
 HTML_FILES	= $(QUICKSTART).html $(REFMAN)/index.html
 
-ARCH_FILES	= $(TEX_FILES) $(TEX_INCLUDES) $(BIB_FILES) \
-		  $(PIC_FILES) Makefile.in
+ARCH_FILES	= $(TEX_INCLUDES) $(STY_INCLUDES) $(HVA_INCLUDES) \
+		  $(LPROLOG_FILES) $(BEDWYR_FILES) \
+		  $(BIB_DEPS) $(TEX_FILES) Makefile.in
 
-TARGETS		= $(PSGZ_FILES) $(PDF_FILES) $(PDFGZ_FILES) $(HTML_FILES)
+TARGETS		= $(PSGZ_FILES) $(PDFGZ_FILES) $(HTML_FILES)
 
-### BUILDING
+RESET_COLOR	= \e[0m
+SET_BLACK	= \e[0;30m
+SET_RED		= \e[1;31m
+SET_GREEN	= \e[1;32m
+SET_YELLOW	= \e[1;33m
+SET_BLUE	= \e[1;34m
+SET_MAG		= \e[1;35m
+
+#
+# BUILDING
+#
+##############################################################################
 
 all: $(TARGETS)
 
-.SUFFIXES: .fig .pstex .pstex_t .tex .aux .bbl .dvi .ps .gz .pdf .haux .hbbl .html
+.SUFFIXES: .fig .tex .aux .bbl .dvi .ps .gz .pdf .haux .hbbl .html
 
-.fig.pstex:
-	@$(FIG2DEV) -L pstex $< $@
-
-.pstex.pstex_t:
-	@$(FIG2DEV) -L pstex_t -p $< $*.fig $@
-
-.tex.aux: $(TEX_INCLUDES)
+%.aux: %.tex $(LATEX_DEPS)
+	@echo -e "$(SET_RED)===== TEX -> AUX Pass ==== $* =====$(RESET_COLOR)"
 	@$(LATEX) $*
 
 # "|| true" avoid failure when there is no bib
-.aux.bbl: $(BIB_FILES)
+%.bbl: %.aux $(BIB_DEPS)
+	@echo -e "$(SET_BLUE)===== AUX -> BBL Pass ==== $* =====$(RESET_COLOR)"
 	@$(BIBTEX) $* || true
 
 %.dvi: %.tex
 
 .bbl.dvi:
+	@echo -e "$(SET_RED)===== BBL -> DVI Pass ==== $* =====$(RESET_COLOR)"
 	@$(LATEX) $*
 	@while ( grep -q "Rerun to get cross-references right" $*.log ) ; do \
+	  echo -e "$(SET_RED)===== AUX -> DVI (cross-references) Pass ==== $* =====$(RESET_COLOR)" ; \
 	  $(LATEX) $* ; \
 	  done
 
 .dvi.ps:
+	@echo -e "$(SET_GREEN)===== DVI -> PS Pass ==== $* =====$(RESET_COLOR)"
 	@$(DVIPS) $*
 
 .ps.pdf:
+	@echo -e "$(SET_MAG)===== PS -> PDF Pass ==== $* =====$(RESET_COLOR)"
 	@$(PS2PDF) $<
 
 %.gz: %
 	@$(GZIP) -c $< > $@
 
-# "-fix" enforces the creation of $*.haux even if $*.aux is still present
-# from a previous latex run (while hevea can use both, bibhva cannot)
-.tex.haux:
-	@$(HEVEA) -fix $*
+%.haux: %.tex $(HEVEA_DEPS)
+	@echo -e "$(SET_RED)===== TEX -> HAUX Pass ==== $* =====$(RESET_COLOR)"
+	@$(HEVEA) $*
 
-.haux.hbbl:
+%.hbbl: %.haux $(BIB_DEPS)
+	@echo -e "$(SET_BLUE)===== HAUX -> HBBL Pass ==== $* =====$(RESET_COLOR)"
 	@$(BIBHVA) $*
 
 .hbbl.html:
-	@$(HEVEA) -fix $*
+	@echo -e "$(SET_RED)===== HBBL -> HTML Pass ==== $* =====$(RESET_COLOR)"
+	@$(HEVEA) $*
 
 %/index.html: %.html
+	@echo -e "$(SET_MAG)===== HTML -> HTMLs Pass ==== $* =====$(RESET_COLOR)"
 	@mkdir -p $*
 	@$(HACHA) -o $@ $<
-	@for i in $(wildcard $**.png) ; do mv -vf $$i $*/ ; done
+	@for i in $(wildcard $**.png) ; do cp -pvf $$i $*/ ; done
 
-### INSTALL
+#
+# INSTALL
+#
+##############################################################################
 
 .PHONY: install
 
@@ -162,34 +184,43 @@ install_html_quickstart: $(QUICKSTART).html
 
 install_html_refman: $(REFMAN)/index.html
 	@$(INSTALL_DIR) $(HTMLDIR)/$(REFMAN)
-	@for i in $(REFMAN)/* ; do\
+	@for i in $(wildcard $(REFMAN)/*) ; do\
 	  $(INSTALL_DATA) $$i $(HTMLDIR)/$(REFMAN) ; done
 
-### ARCHIVES
+#
+# ARCHIVES
+#
+##############################################################################
 
 .PHONY: archive
 
 archive: archive.tar
 
 archive.tar: $(ARCH_FILES)
-	@$(TAR) -cf $@ --xform 's|^|$(DIST_NAME)/doc/|' $^
+	@$(TAR) -cpf $@ --xform 's|^|$(DIST_NAME)/doc/|' $^
 
-### OTHER TARGETS
+#
+# OTHER TARGETS
+#
+##############################################################################
 
 .PHONY: clean_tex clean_hevea clean distclean
 
+mostlyclean:
+	@rm -rvf $(TARGETS)
+
 clean_tex:
-	@find . \( -name \*.aux -o -name \*.bbl -o -name \*.blg \
-	  -o -name \*.log -o -name \*.idx -o -name \*.ilg -o -name \*.ind \
-	  -o -name \*.out -o -name \*.nav -o -name \*.snm -o -name \*.lox \
-	  -o -name \*.toc -o -name \*.lot -o -name \*.lof -o -name \*.vrb \) \
-	  -exec rm -vf {} \;
+	@rm -vf *.aux *.bbl *.blg *.log *.idx *.ilg *.ind *.out *.nav \
+	  *.snm *.lox *.toc *.lot *.lof *.vrb include/tex/*.aux
 
 clean_hevea:
-	@rm -fv *.haux *.html *.blg *.hbbl *.image.tex \
-	  *.htoc *.hidx *.hind *_motif.gif *.css
+	@rm -vf *.haux *.hbbl *.blg *.hidx *.hind *.image.tex *.image.out \
+	  *.htoc *.png $(REFMAN)/*_motifs.gif
+
+clean: mostlyclean clean_tex clean_hevea
+	@$(FIND) . -name '*~' -exec rm -vf \{\} \;
+	@rm -vf $(DVI_FILES) $(PS_FILES) $(PDF_FILES) $(REFMAN).html archive.tar
 	@rm -rvf $(REFMAN)
 
-clean: clean_tex clean_hevea
-	@$(FIND) . -name '*~' -exec rm -vf \{\} \;
-	@rm -vf *.dvi *.ps *.gz *.pdf *.tar
+distclean: clean
+	@rm -vf *.dvi *.ps *.pdf *.gz *.tar *.html

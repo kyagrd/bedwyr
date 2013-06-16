@@ -1,0 +1,19 @@
+Kind ch type.
+
+Type z  ch.
+Type s  ch -> ch.
+
+% The predicate a holds for 3, 5, and 2.
+Define a : ch -> prop by
+  a (s (s (s z))) ;
+  a (s (s (s (s (s z))))) ;
+  a (s (s z)).
+
+% The less-than-or-equal relation
+Define inductive leq : ch -> ch -> prop by
+  leq z N ;
+  leq (s N) (s M) := leq N M.
+
+% Compute the maximum of a
+Define maxa : ch -> prop by
+  maxa N := a N /\ forall x, a x -> leq x N.
