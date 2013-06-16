@@ -1,6 +1,6 @@
 (****************************************************************************)
 (* Bedwyr prover                                                            *)
-(* Copyright (C) 2006-2011 David Baelde, Alwen Tiu                          *)
+(* Copyright (C) 2006-2013 David Baelde, Alwen Tiu, Quentin Heath           *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -53,6 +53,9 @@ val access :
   switch_vars:bool ->
   'a t -> Term.term list ->
   ('a -> 'a t) * 'a option * (unit -> 'a t)
+
+val filter:
+  'a t -> Term.term list -> ('a -> unit) -> unit
 
 (** {6 Fold} *)
 
