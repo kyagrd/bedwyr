@@ -195,6 +195,10 @@ let fresh_id =
 
 (* Generate a fresh variable, attach a naming hint to it. *)
 let fresh ?name ~lts ~ts tag =
+  let ts,lts = match tag with
+    | Constant -> 0,0
+    | _ -> ts,lts
+  in
   let v = {id=fresh_id();tag=tag;ts=ts;lts=lts} in
   begin match name with
     | Some name -> Hint.add v name
