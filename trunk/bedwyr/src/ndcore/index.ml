@@ -114,34 +114,28 @@ let update_leaf (max_vid,vid,map) bindings data =
   in
   max_vid,vid,map
 
-exception StopIter
-
 let find_leaf (_,_,map) bindings =
   let constraints = get_constraints bindings in
   try Some (ConstraintsMap.find constraints map)
-  with Not_found ->
-    (* an exact match was not found,
-     * now looking for an instantiation *)
-    let data = ref None in
-    begin try
-      ConstraintsMap.iter
-        (fun c d ->
-           try
-             Array.iteri
-               (fun i j ->
-                  if (constraints.eq.(i) <> constraints.eq.(j))
-                    || (c.lts.(i) <> constraints.lts.(i))
-                  then raise (Found i))
-               c.eq ;
-             (* if the term has equalities where the pattern does,
-              * and has the same local timestamps,
-              * then it is an instance of the pattern *)
-             data := Some d ;
-             raise StopIter
-           with Found _ -> ())
-        map
-    with StopIter -> () end ;
-    !data
+  with Not_found -> None
+
+let filter_leaf (_,_,map) bindings f =
+  let constraints = get_constraints bindings in
+  ConstraintsMap.iter
+    (fun c d ->
+       try
+         Array.iteri
+           (fun i j ->
+              if (constraints.eq.(i) <> constraints.eq.(j))
+                || (c.lts.(i) <> constraints.lts.(i))
+              then raise (Found i))
+           c.eq ;
+         (* if the term has equalities where the pattern does,
+          * and has the same local timestamps,
+          * then it is an instance of the pattern *)
+         f d
+       with Found _ -> ())
+    map
 
 
 (* == Indexing ============================================================= *)
@@ -170,9 +164,12 @@ and 'a children = Leaf of 'a leaf | Refine
 and 'a leaf     = int * int array * 'a ConstraintsMap.t
 and 'a node     = Node of (pattern list * 'a index)
 
+(* Zipper used for an index traversal with on-the-fly adding
+ * and variable-aware matching. *)
 type 'a zipper =
   | Top
-  | Zip of 'a children                           (* flag of our father *)
+  | Zip of Term.term list                        (* requested term vector *)
+    * (int * Term.var) list                      (* CID-var bindings *)
     * 'a node list * pattern list * 'a node list (* siblings and arc *)
     * 'a zipper                                  (* location of our father *)
 type 'a t = 'a index * 'a zipper
@@ -181,9 +178,9 @@ let empty = (Refine,[]),Top
 
 let rec z_top = function
   | index,Top -> index
-  | index,Zip (children,older,patterns,younger,zipper) ->
+  | index,Zip (_,_,older,patterns,younger,zipper) ->
       let index =
-        children,(List.rev_append older ((Node (patterns,index))::younger))
+        Refine,(List.rev_append older ((Node (patterns,index))::younger))
       in
       z_top (index,zipper)
 
@@ -461,7 +458,7 @@ let access ~switch_vars zindex terms =
     let (changed,bindings,rev_catches),patterns =
       access_patterns bindings patterns terms
     in
-    let zipper = Zip (Refine,older_nodes,patterns,nodes,zipper) in
+    let zipper = Zip (terms,bindings,older_nodes,patterns,nodes,zipper) in
     let sub_patterns,sub_terms =
       List.fold_left
         (fun (sub_patterns,sub_terms) (pattern,term) -> (pattern::sub_patterns,term::sub_terms))
@@ -493,7 +490,7 @@ let access ~switch_vars zindex terms =
              create_node ~switch_vars bindings terms data
            in
            let index = children,[] in
-           let zipper = Zip (Refine,older_nodes,patterns,[],zipper) in
+           let zipper = Zip (terms,bindings,older_nodes,patterns,[],zipper) in
            z_top (index,zipper),Top),
         None
     | (Node (patterns,index) as node)::nodes ->
@@ -519,10 +516,115 @@ let access ~switch_vars zindex terms =
   let terms =
     if !eqvt_index then (Norm.nb_rename terms) else (List.map Norm.hnorm terms)
   in
+  let zindex = z_top zindex,Top in
   let update,found = access ~switch_vars zindex terms in
   (* TODO implement a real [delete] *)
   let delete () = zindex in
   update,found,delete
+
+let filter zindex terms f =
+  let terms =
+    if !eqvt_index then (Norm.nb_rename terms) else (List.map Norm.hnorm terms)
+  in
+  let zindex = z_top zindex,Top in
+  let access_patterns bindings patterns terms =
+    let rec access_pattern
+          (changed,bindings,rev_catches as accum)
+          rev_patterns zipaterm pattern term patterns terms =
+      let term = Norm.hnorm term in
+      let accum,new_pattern,sub_patterns,sub_terms = match pattern, Term.observe term with
+        | QString s1, Term.QString s2 when s1=s2 ->
+            accum,ZQString s1,[],[]
+        | Nat i, Term.Nat j when i = j ->
+            accum,ZNat i,[],[]
+        | DB i, Term.DB j when i = j ->
+            accum,ZDB i,[],[]
+        | NB i, Term.NB j when i = j ->
+            accum,ZNB i,[],[]
+        | UVar v, Term.Var ({Term.tag=Term.Eigen} as var) ->
+            let bindings = (v,var)::bindings in
+            (changed,bindings,rev_catches),ZVar v,[],[]
+        | Cst (t,c), Term.Var c' when c==c' ->
+            accum,ZCst (t,c),[],[]
+        | True, Term.True ->
+            accum,ZTrue,[],[]
+        | False, Term.False ->
+            accum,ZFalse,[],[]
+        | Binop (b1,p1,p2), Term.Binop (b2,t1,t2) when b1=b2 ->
+            accum,ZBinop b1,[p1;p2],[t1;t2]
+        | Binder (b1,n1,p), Term.Binder (b2,n2,t) when b1=b2 && n1=n2 ->
+            accum,ZBinder (b1,n1),[p],[t]
+        | Lam (i,p), Term.Lam (j,t) when i = j ->
+            accum,ZLam i,[p],[t]
+        | App (i,pats), Term.App (h,l) when i = 1 + List.length l ->
+            assert (List.length pats = i) ;
+            accum,ZApp i,pats,h::l
+        | _ ->
+            let changed = changed || (pattern<>Hole) in
+            let rev_catches = (pattern,term)::rev_catches in
+            (changed,bindings,rev_catches),ZHole,[],[]
+      in
+      let zipaterm = PZip (rev_patterns,new_pattern,patterns,terms,zipaterm) in
+      aux accum ([],zipaterm,sub_patterns,sub_terms)
+    and aux accum (rev_patterns,zipaterm,patterns,terms) = match patterns,terms with
+      | [],[] ->
+          begin match zipaterm with
+            | PTop -> accum,List.rev rev_patterns
+            | PZip (rev_patterns',zpattern,patterns,terms,zipaterm) ->
+                assert (List.length patterns = List.length terms) ;
+                let pattern = merge_pattern zpattern rev_patterns in
+                aux accum (pattern::rev_patterns',zipaterm,patterns,terms)
+          end
+      | pattern::patterns,term::terms ->
+          (* Go through one pattern, enrich catches and bindings,
+           * and build the updated pattern. *)
+          access_pattern accum rev_patterns zipaterm pattern term patterns terms
+      | _ -> assert false
+    in
+    aux (false,bindings,[]) ([],PTop,patterns,terms)
+  in
+  (* Expects hnorm-ed terms. *)
+  let rec filter_node bindings terms zipper older_nodes nodes patterns index =
+    if superficial_match ~switch_vars:false patterns terms then
+      let (_,bindings,rev_catches),patterns =
+        access_patterns bindings patterns terms
+      in
+      let zipper = Zip (terms,bindings,older_nodes,patterns,nodes,zipper) in
+      let sub_patterns,sub_terms =
+        List.fold_left
+          (fun (sub_patterns,sub_terms) (pattern,term) -> (pattern::sub_patterns,term::sub_terms))
+          ([],[])
+          rev_catches
+      in
+      filter_index bindings sub_terms (index,zipper)
+    else
+      filter_nodes bindings terms zipper ((Node (patterns,index))::older_nodes) nodes
+  and filter_nodes bindings terms zipper older_nodes = function
+    | [] ->
+        begin match zipper with
+          | Top -> ()
+          | Zip (terms',bindings',older',patterns',younger',zipper') ->
+              let node = Node (patterns',(Refine,(List.rev older_nodes))) in
+              filter_nodes bindings' terms' zipper' (node::older') younger'
+        end
+    | (Node (patterns,index))::nodes ->
+        filter_node bindings terms zipper older_nodes nodes patterns index
+  (* access an index, i.e. an (unordered) list of alternative nodes.
+   * Expects hnorm-ed terms. *)
+  and filter_index bindings terms (index,zipper) = match terms,index with
+    | [],(Leaf leaf,[]) ->
+        filter_leaf leaf bindings f ;
+        begin match zipper with
+          | Top -> ()
+          | Zip (terms',bindings',older',patterns',younger',zipper') ->
+              let node = Node (patterns',index) in
+              filter_nodes bindings' terms' zipper' (node::older') younger'
+        end
+    | _,(Refine,nodes) ->
+        filter_nodes bindings terms zipper [] nodes
+    | _ -> assert false
+  in
+  filter_index [] terms zindex
 
 
 (* == FOLD ================================================================== *)

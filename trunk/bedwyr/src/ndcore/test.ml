@@ -78,15 +78,11 @@ let eig nm ts = fresh ~tag:Eigen ~name:nm ~ts:ts ~lts:0
 let const nm = fresh ~tag:Constant ~name:nm ~ts:0 ~lts:0
 
 let add index terms =
-  let add,_,_ =
-    Index.access ~switch_vars:false index terms
-  in
+  let add,_,_ = Index.access ~switch_vars:false index terms in
   add
 
 let find index terms =
-  let _,found,_ =
-    Index.access ~switch_vars:false index terms
-  in
+  let _,found,_ = Index.access ~switch_vars:false index terms in
   found
 
 let test =
@@ -601,7 +597,6 @@ let test =
            let z = eig "z" 0 in
            let index = add Index.empty [(db 1) ^^ [ x ; y ; y ]] 42 in
            assert (Some 42 = find index [(db 1) ^^ [ y ; z ; z ]]) ;
-           assert (Some 42 = find index [(db 1) ^^ [ z ; z ; z ]]) ;
            assert (None = find index [(db 1) ^^ [ x ; x ; y ]])) ;
 
         "Mixed with nominal variables" >::
