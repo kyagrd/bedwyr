@@ -86,6 +86,7 @@ let get_vars max_vid vid c =
   for i = 0 to Array.length c.eq - 1 do
     table.(vid.(i)) <-
     if c.eq.(i) = i then begin
+      (* TODO use ~lts:(c.ts.(i)) *)
       let t = Term.fresh Term.Eigen ~ts:0 ~lts:0 in
       l := t :: !l ;
       t
@@ -186,12 +187,51 @@ let rec z_top = function
       in
       z_top (index,zipper)
 
+type zpattern =
+  | ZQString of string
+  | ZNat    of int
+  | ZDB     of int
+  | ZNB     of int
+  | ZVar    of int
+  | ZCst    of Term.term * Term.var
+  | ZTrue
+  | ZFalse
+  | ZBinop  of Term.binop
+  | ZBinder of Term.binder * int
+  | ZLam    of int
+  | ZApp    of int
+  | ZHole
+
+(* Asymetric zipper designed for an on-the-fly patternization of terms. *)
+type pattern_zipper =
+  | PTop
+  | PZip of pattern list * zpattern * pattern list * Term.term list * pattern_zipper
+
+let merge_pattern zpattern rev_patterns = match zpattern,rev_patterns with
+  | ZQString s,[] -> QString s
+  | ZNat i,[] -> Nat i
+  | ZDB i,[]  -> DB i
+  | ZNB i,[]  -> NB i
+  | ZVar i,[] -> UVar i
+  | ZCst (t,c),[] -> Cst (t,c)
+  | ZTrue,[] -> True
+  | ZFalse,[] -> False
+  | ZBinop b,[p2;p1] ->
+      Binop (b,p1,p2)
+  | ZBinder (b,n),[p] ->
+      Binder (b,n,p)
+  | ZLam n,[p] ->
+      Lam (n,p)
+  | ZApp n,_ when n = List.length rev_patterns ->
+      App (n,List.rev rev_patterns)
+  | ZHole,[] -> Hole
+  | _ -> assert false
+
 
 exception Cannot_table
 
 (* [create_node bindings terms data] compiles the terms into patterns
- * and associates them with a leaf containing the data.
- * [terms] is expected to be reversed. *)
+ * and associates them with a leaf containing the data. *)
 let create_node ~switch_vars bindings terms data =
   let allow_universal = not switch_vars in
   let bindings = List.sort (fun (i,_) (j,_) -> compare i j) bindings in
@@ -217,16 +257,6 @@ let create_node ~switch_vars bindings terms data =
           UVar i, bindings
       | Term.Var ({Term.tag=Term.Constant} as v) ->
           Cst (Term.deref term,v), bindings
-                                     (*
-      | Term.Var ({Term.tag=Term.Logic} as var)
-          when (not switch_vars) & allow_existential ->
-          let i,bindings = add bindings var in
-          EVar i, bindings
-      | Term.Var ({Term.tag=Term.Eigen} as var)
-          when switch_vars & allow_existential ->
-          let i,bindings = add bindings var in
-          EVar i, bindings
-                                      *)
       | Term.DB i -> DB i, bindings
       | Term.NB i -> NB i, bindings
       | Term.True -> True, bindings
@@ -261,7 +291,7 @@ let create_node ~switch_vars bindings terms data =
          let pat,binds = compile binds term in
            pat::pats,binds)
       ([],bindings)
-      terms
+      (List.rev terms)
   in
   patterns,Leaf (new_leaf bindings data)
 
@@ -360,117 +390,94 @@ let superficial_sort nodes =
 
 (* Expects head-normalized terms. *)
 let access ~switch_vars zindex terms =
-  (* [access_pattern] filters a term through a pattern,
-   * XXX whatup on mismatch? XXX
-   * returns the list of CID-var bindings,
-   * the reversed list of catches,
-   * and the reversed list of former patterns.
+  (* [access_patterns] filters a list of terms through a list of patterns,
+   * returns a new pattern list (their pairwise GCDs),
+   * the reversed list of catches (their respective remainders),
+   * and the updated list of CID-var bindings.
    * XXX beware of switch_vars! XXX
    * Returns hnorm-ed terms. *)
-  let rec access_pattern bindings catches former_pats pattern term =
-    let term = Norm.hnorm term in
-    match pattern, Term.observe term with
-      | QString s1, Term.QString s2 when s1=s2 ->
-          (false, pattern, bindings, catches, former_pats)
-      | Nat i, Term.Nat j
-      | DB i, Term.DB j
-      | NB i, Term.NB j when i = j ->
-          (false, pattern, bindings, catches, former_pats)
-      | UVar v, Term.Var ({Term.tag=Term.Eigen} as var)
-          when (not switch_vars) & (not switch_vars) ->
-          (false, pattern, (v,var)::bindings, catches, former_pats)
-      | UVar v, Term.Var ({Term.tag=Term.Logic})
-          when switch_vars & (not switch_vars) ->
-          failwith "logic variable forbidden here"
-          (*(false, pattern, (v,var)::bindings, catches, former_pats)*)
-            (*
-      | UVar v, Term.Var ({Term.tag=Term.Constant} as var) ->
-          Format.eprintf "comparaison UVar/Constant@." ;
-          (false, pattern, (v,var)::bindings, catches, former_pats)
-             *)
-      | Cst (_,c), Term.Var c' when c==c' ->
-          (false, pattern, bindings, catches, former_pats)
-            (*
-      | Cst (_,_), Term.Var ({Term.tag=Term.Logic})
-          when (not switch_vars) ->
-          Format.eprintf "comparaison Const/Logic@." ;
-          (false, pattern, bindings, catches, former_pats)
-             *)
-            (*
-      | Cst (_,_), Term.Var ({Term.tag=Term.Eigen})
-          when switch_vars ->
-          Format.eprintf "comparaison Const/Eigen@." ;
-          (false, pattern, bindings, catches, former_pats)
-             *)
-                                     (*
-      | EVar v, Term.Var ({Term.tag=Term.Logic} as var)
-          when (not switch_vars) & allow_existential ->
-          (false, pattern, (v,var)::bindings, catches, former_pats)
-      | EVar v, Term.Var ({Term.tag=Term.Eigen} as var)
-          when switch_vars & allow_existential ->
-          (false, pattern, (v,var)::bindings, catches, former_pats)
-                                      *)
-      | True, Term.True | False, Term.False ->
-          (false, pattern, bindings, catches, former_pats)
-      | Binop (b1,pat1,pat2), Term.Binop (b2,t1,t2) when b1=b2 ->
-          let (changed1,pat1,bindings,catches,former_pats) =
-            access_pattern bindings catches former_pats pat1 t1
-          in
-          let (changed2,pat2,bindings,catches,former_pats) =
-            access_pattern bindings catches former_pats pat2 t2
-          in
-          (changed1 || changed2, Binop (b1,pat1,pat2), bindings, catches, former_pats)
-      | Binder (b1,n1,pat), Term.Binder (b2,n2,t) when b1=b2 && n1=n2 ->
-          let (changed,pat,bindings,catches,former_pats) =
-            access_pattern bindings catches former_pats pat t
-          in
-          (changed, Binder (b1,n1,pat), bindings, catches, former_pats)
-      | Lam (i,pattern), Term.Lam (j,term) when i = j ->
-          let (changed,pattern,bindings,catches,former_pats) =
-            access_pattern bindings catches former_pats pattern term
-          in
-          (changed, Lam (i,pattern), bindings, catches, former_pats)
-      | App (i,patterns), Term.App (h,l) when i = 1 + List.length l ->
-          let (changed,patterns,bindings,catches,former_pats) =
-            access_patterns bindings catches former_pats patterns (h::l)
-          in
-          let patterns = List.rev patterns in
-          assert (List.length patterns = i) ;
-          (changed, App (i,patterns), bindings, catches, former_pats)
-      | Hole,_ ->
-          (false, Hole, bindings, term::catches, Hole::former_pats)
-      | _ ->
-          (true, Hole, bindings, term::catches, pattern::former_pats)
-  and access_patterns bindings catches former_pats patterns terms =
-    List.fold_left2
-      (fun (changed,patterns,bindings,catches,former_pats) pattern term ->
-         (* Go through one pattern, enrich catches and bindings,
-          * and build the updated pattern. *)
-         let (changed',pattern',bindings',catches',former_pats') =
-           access_pattern bindings catches former_pats pattern term
-         in
-         changed'||changed,pattern'::patterns,bindings',catches',former_pats')
-      (false,[],bindings,catches,former_pats)
-      patterns
-      terms
+  let access_patterns bindings patterns terms =
+    let rec access_pattern
+          (changed,bindings,rev_catches as accum)
+          rev_patterns zipaterm pattern term patterns terms =
+      let term = Norm.hnorm term in
+      let accum,new_pattern,sub_patterns,sub_terms = match pattern, Term.observe term with
+        | QString s1, Term.QString s2 when s1=s2 ->
+            accum,ZQString s1,[],[]
+        | Nat i, Term.Nat j when i = j ->
+            accum,ZNat i,[],[]
+        | DB i, Term.DB j when i = j ->
+            accum,ZDB i,[],[]
+        | NB i, Term.NB j when i = j ->
+            accum,ZNB i,[],[]
+        | UVar v, Term.Var ({Term.tag=Term.Eigen} as var)
+            when (not switch_vars) & (not switch_vars) ->
+            let bindings = (v,var)::bindings in
+            (changed,bindings,rev_catches),ZVar v,[],[]
+        | UVar v, Term.Var ({Term.tag=Term.Logic})
+            when switch_vars & (not switch_vars) ->
+            failwith "logic variable forbidden here"
+        | Cst (t,c), Term.Var c' when c==c' ->
+            accum,ZCst (t,c),[],[]
+        | True, Term.True ->
+            accum,ZTrue,[],[]
+        | False, Term.False ->
+            accum,ZFalse,[],[]
+        | Binop (b1,p1,p2), Term.Binop (b2,t1,t2) when b1=b2 ->
+            accum,ZBinop b1,[p1;p2],[t1;t2]
+        | Binder (b1,n1,p), Term.Binder (b2,n2,t) when b1=b2 && n1=n2 ->
+            accum,ZBinder (b1,n1),[p],[t]
+        | Lam (i,p), Term.Lam (j,t) when i = j ->
+            accum,ZLam i,[p],[t]
+        | App (i,pats), Term.App (h,l) when i = 1 + List.length l ->
+            assert (List.length pats = i) ;
+            accum,ZApp i,pats,h::l
+        | _ ->
+            let changed = changed || (pattern<>Hole) in
+            let rev_catches = (pattern,term)::rev_catches in
+            (changed,bindings,rev_catches),ZHole,[],[]
+      in
+      let zipaterm = PZip (rev_patterns,new_pattern,patterns,terms,zipaterm) in
+      aux accum ([],zipaterm,sub_patterns,sub_terms)
+    and aux accum (rev_patterns,zipaterm,patterns,terms) = match patterns,terms with
+      | [],[] ->
+          begin match zipaterm with
+            | PTop -> accum,List.rev rev_patterns
+            | PZip (rev_patterns',zpattern,patterns,terms,zipaterm) ->
+                assert (List.length patterns = List.length terms) ;
+                let pattern = merge_pattern zpattern rev_patterns in
+                aux accum (pattern::rev_patterns',zipaterm,patterns,terms)
+          end
+      | pattern::patterns,term::terms ->
+          (* Go through one pattern, enrich catches and bindings,
+           * and build the updated pattern. *)
+          access_pattern accum rev_patterns zipaterm pattern term patterns terms
+      | _ -> assert false
+    in
+    aux (false,bindings,[]) ([],PTop,patterns,terms)
   in
   (* Expects hnorm-ed terms. *)
   let rec access_node bindings terms zipper older_nodes nodes patterns index =
-    let changed,patterns,bindings,catches,former_pats =
-      access_patterns bindings [] [] patterns terms
+    let (changed,bindings,rev_catches),patterns =
+      access_patterns bindings patterns terms
     in
-    let patterns = List.rev patterns in
     let zipper = Zip (Refine,older_nodes,patterns,nodes,zipper) in
+    let sub_patterns,sub_terms =
+      List.fold_left
+        (fun (sub_patterns,sub_terms) (pattern,term) -> (pattern::sub_patterns,term::sub_terms))
+        ([],[])
+        rev_catches
+    in
     if changed then
       (* The new patterns have some new holes, we separate the new and the
        * former terms by adding an intermediate index.
        * We need to compile the caught terms into patterns. *)
       (fun data ->
          let patterns,children =
-           create_node ~switch_vars bindings catches data
+           create_node ~switch_vars bindings sub_terms data
          in
          let newnode = Node (patterns,(children,[])) in
-         let oldnode = Node (List.rev former_pats,index) in
+         let oldnode = Node (sub_patterns,index) in
          let index = Refine,[newnode ; oldnode] in
          z_top (index,zipper),Top),
       None
@@ -478,12 +485,12 @@ let access ~switch_vars zindex terms =
       (* The terms were fully matched by the patterns,
        * the new [patterns] is the same as the former one,
        * the access gets propagated deeper without changing anything here. *)
-      access_index bindings (List.rev catches) (index,zipper)
+      access_index bindings sub_terms (index,zipper)
   and access_nodes bindings terms zipper older_nodes = function
     | [] ->
         (fun data ->
            let patterns,children =
-             create_node ~switch_vars bindings (List.rev terms) data
+             create_node ~switch_vars bindings terms data
            in
            let index = children,[] in
            let zipper = Zip (Refine,older_nodes,patterns,[],zipper) in
@@ -533,22 +540,7 @@ end
 module MZ : MZ_t =
 struct
 
-  type item =
-    | ZQString of string
-    | ZNat    of int
-    | ZDB     of int
-    | ZNB     of int
-    | ZVar    of int
-    | ZCst    of Term.term * Term.var
-    | ZTrue
-    | ZFalse
-    | ZBinop  of Term.binop
-    | ZBinder of Term.binder * int
-    | ZLam    of int
-    | ZApp    of int
-    | ZHole
-
-  type t = item list list
+  type t = zpattern list list
 
   let arity = function
     | ZBinop _ -> 2
@@ -639,8 +631,8 @@ struct
     let rec zip terms row =
       let out,terms =
         List.fold_left
-          (fun (out,terms) item ->
-             let t,terms = zip_step terms item in
+          (fun (out,terms) zpattern ->
+             let t,terms = zip_step terms zpattern in
              t::out,terms)
           ([],terms)
           row
@@ -651,30 +643,6 @@ struct
     List.fold_left zip [] mz
 
 end
-
-let iter f x =
-  let rec iter_node mz (Node (patterns,index)) =
-    iter_index (MZ.refine mz patterns) index
-  and iter_index mz = function
-    | Leaf (max_vid,vid,map),[] ->
-        ConstraintsMap.iter
-          (fun c v ->
-             let table,l = (get_vars max_vid vid c) in
-             let head = Term.fresh Term.Eigen ~ts:0 ~lts:0 in
-             let t = Term.app head (MZ.zip table mz) in
-             let t =
-               List.fold_left
-                 (fun t v -> Term.abstract v t)
-                 t
-                 l
-             in
-             f (Term.abstract head t) v)
-          map
-    | Refine,nodes -> List.iter (iter_node mz) (superficial_sort nodes)
-    | _ -> assert false
-  in
-  let index = z_top x in
-  iter_index MZ.empty index
 
 let fold f x y =
   let rec fold_node mz y (Node (patterns,index)) =
@@ -699,3 +667,6 @@ let fold f x y =
   in
   let index = z_top x in
   fold_index MZ.empty index y
+
+let iter f x =
+  fold (fun t v () -> f t v) x ()
