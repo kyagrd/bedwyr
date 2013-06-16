@@ -37,14 +37,13 @@ module I = struct
   let create () = ref Index.empty
 
   let access ~switch_vars table args =
-    let update,found,_ =
+    let update,found =
       Index.access ~switch_vars !table args
     in
     let update tag =
       try table := update tag ; true
       with Index.Cannot_table -> false
     in
-    (*let delete () = table := delete () in*)
     let delete () = update (ref Unset) in
     update,found,delete
 
