@@ -73,17 +73,23 @@ let rec extract path t =
 
 let fresh ~ts ~lts ~name ~tag = fresh ~ts ~lts ~name tag
 
-let var nm ts = fresh ~tag:Logic ~name:nm ~ts:ts ~lts:0
-let eig nm ts = fresh ~tag:Eigen ~name:nm ~ts:ts ~lts:0
+let var ?(lts=0) nm ts = fresh ~tag:Logic ~name:nm ~ts:ts ~lts
+let eig ?(lts=0) nm ts = fresh ~tag:Eigen ~name:nm ~ts:ts ~lts
 let const nm = fresh ~tag:Constant ~name:nm ~ts:0 ~lts:0
 
 let add index terms =
-  let add,_,_ = Index.access ~switch_vars:false index terms in
+  let add,_ = Index.access ~switch_vars:false index terms in
   add
 
 let find index terms =
-  let _,found,_ = Index.access ~switch_vars:false index terms in
+  let _,found = Index.access ~switch_vars:false index terms in
   found
+
+let filter_count index terms n =
+  assert (None = find index terms) ;
+  let total = ref 0 in
+  Index.filter ~switch_vars:false index terms (fun _ _ -> incr total) ;
+  assert (!total = n)
 
 let test =
   "NdCore" >:::
@@ -556,7 +562,6 @@ let test =
 
     "Indexing" >:::
     [
-
       "Ground terms" >::
       (fun () ->
          let d = db in
@@ -577,37 +582,51 @@ let test =
          assert (Some 42 = find i5 [t4])) ;
 
       "Eigenvariables" >:::
-      [
-        "Plain" >::
-        (fun () ->
-           let x = eig "x" 0 in
-           let y = eig "y" 0 in
-           let z = eig "z" 0 in
-           let t1 = (db 1) ^^ [ x ; y ; y ] in
-           let t2 = (db 1) ^^ [ y ; y ; y ] in
-           let index = add (add Index.empty [t1] 1) [t2] 2 in
-           assert (Some 1 = find index [(db 1) ^^ [ y ; z ; z ]]) ;
-           assert (Some 2 = find index [(db 1) ^^ [ x ; x ; x ]]) ;
-           assert (None = find index [(db 1) ^^ [ x ; z ; x ]])) ;
+      (let x = eig "x" 0 in
+       let y = eig "y" 0 in
+       let z = eig "z" 0 in
+       [
+         "Plain" >::
+         (fun () ->
+            let t1 = (db 1) ^^ [ x ; y ; y ] in
+            let t2 = (db 1) ^^ [ y ; y ; y ] in
+            let index = add (add Index.empty [t1] 1) [t2] 2 in
+            assert (Some 1 = find index [(db 1) ^^ [ y ; z ; z ]]) ;
+            assert (Some 2 = find index [(db 1) ^^ [ x ; x ; x ]]) ;
+            assert (None = find index [(db 1) ^^ [ x ; z ; x ]])) ;
 
-        "Instantiated with eigenvariables" >::
-        (fun () ->
-           let x = eig "x" 0 in
-           let y = eig "y" 0 in
-           let z = eig "z" 0 in
-           let index = add Index.empty [(db 1) ^^ [ x ; y ; y ]] 42 in
-           assert (Some 42 = find index [(db 1) ^^ [ y ; z ; z ]]) ;
-           assert (None = find index [(db 1) ^^ [ x ; x ; y ]])) ;
+         "Instantiated with eigenvariables" >::
+         (fun () ->
+            let index = add Index.empty [(db 1) ^^ [ x ; y ; y ]] 42 in
+            assert (Some 42 = find index [(db 1) ^^ [ y ; z ; z ]]) ;
+            filter_count index [(db 1) ^^ [ z ; z ; z ]] 1 ;
+            filter_count index [(db 1) ^^ [ x ; x ; y ]] 0) ;
 
-        "Mixed with nominal variables" >::
-        (fun () ->
-           let x = fresh ~tag:Eigen ~name:"x" ~lts:0 ~ts:0 in
-           let y = fresh ~tag:Eigen ~name:"y" ~lts:1 ~ts:0 in
-           let z = fresh ~tag:Eigen ~name:"z" ~lts:2 ~ts:0 in
-           let index = add Index.empty [(db 1) ^^ [ x ; y ]] 42 in
-           assert (None = find index [(db 1) ^^ [ y ; z ]]) ;
-           assert (None = find index [(db 1) ^^ [ y ; x ]])) ;
-      ] ;
+         "Instantiated with constants" >::
+         (fun () ->
+            let a = const "a" in
+            let b = const "b" in
+            let t1 = (db 1) ^^ [ a ; x ; x ] in
+            let t2 = (db 1) ^^ [ x ; b ; y ] in
+            let index = add (add Index.empty [t1] 1) [t2] 2 in
+            assert (Some 1 = find index [t1]) ;
+            assert (Some 2 = find index [t2]) ;
+            let t3 = (db 1) ^^ [ a ; x ; y ] in
+            filter_count index [t3] 0 ;
+            let t4 = (db 1) ^^ [ x ; b ; x ] in
+            filter_count index [t4] 1 ;
+            let t5 = (db 1) ^^ [ a ; b ; b ] in
+            filter_count index [t5] 2) ;
+
+         "Mixed with nominal variables" >::
+         (fun () ->
+            let x = eig "x" ~lts:0 0 in
+            let y = eig "y" ~lts:1 0 in
+            let z = eig "z" ~lts:2 0 in
+            let index = add Index.empty [(db 1) ^^ [ x ; y ]] 42 in
+            assert (None = find index [(db 1) ^^ [ y ; z ]]) ;
+            assert (None = find index [(db 1) ^^ [ y ; x ]])) ;
+       ]) ;
 
       "Nominal variables" >:::
       [

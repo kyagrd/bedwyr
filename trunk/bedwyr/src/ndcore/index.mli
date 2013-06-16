@@ -52,10 +52,14 @@ exception Cannot_table
 val access :
   switch_vars:bool ->
   'a t -> Term.term list ->
-  ('a -> 'a t) * 'a option * (unit -> 'a t)
+  ('a -> 'a t) * 'a option
+
+type match_status = Over | Exact | Under
 
 val filter:
-  'a t -> Term.term list -> ('a -> unit) -> unit
+  switch_vars:bool ->
+  'a t -> Term.term list ->
+  ('a -> match_status -> unit) -> unit
 
 (** {6 Fold} *)
 
