@@ -1,6 +1,6 @@
 ##############################################################################
 #  Bedwyr prover                                                             #
-#  Copyright (C) 2012 Quentin Heath                                          #
+#  Copyright (C) 2012-2013 Quentin Heath                                     #
 #                                                                            #
 #  This program is free software; you can redistribute it and/or modify      #
 #  it under the terms of the GNU General Public License as published by      #
@@ -68,7 +68,8 @@ docdir		= $(patsubst %$(PACKAGE_TARNAME),%$(TARGET_NAME),@docdir@)
 #dvidir		= @dvidir@
 #pdfdir		= @pdfdir@
 #psdir		= @psdir@
-pkglibdir	= @libdir@/ocaml/@PROJECT_TARNAME@
+#libdir		= @libdir@
+ocamllibdir	= @libdir@/ocaml/
 #localedir	= @localedir@
 mandir		= @mandir@
 
@@ -90,7 +91,8 @@ DOCDIR		= $(DESTDIR)$(docdir)
 #DVIDIR		= $(DESTDIR)$(dvidir)
 #PDFDIR		= $(DESTDIR)$(pdfdir)
 #PSDIR		= $(DESTDIR)$(psdir)
-PKGLIBDIR	= $(DESTDIR)$(pkglibdir)
+#LIBDIR		= $(DESTDIR)$(libdir)
+OCAMLLIBDIR	= $(DESTDIR)$(ocamllibdir)
 #LOCALEDIR	= $(DESTDIR)$(localedir)
 MANDIR		= $(DESTDIR)$(mandir)
 
@@ -111,11 +113,12 @@ GZIP		= @GZIP@ -4 -f
 BZIP2		= @BZIP2@ -9 -f
 OCAMLC		= @OCAMLC@
 OCAMLDEBUG	= @OCAMLDEBUG@
-OCAMLBUILD	= @OCAMLBUILD@ -classic-display -yaccflag -v \
+OCAMLBUILD	= @OCAMLBUILD@ -use-ocamlfind -classic-display -yaccflag -v \
 		  -Xs debian,$(DEB_DIST_NAME),nsis-files,nsis-build
 OCAMLBUILDWIN32	= $(OCAMLBUILD) -ocamlopt @MINGW32_OCAMLOPT@
 MINGW32_WINDRES	= @MINGW32_WINDRES@ -c0xfde9 -l0x0890
 OCAMLDOC	= @OCAMLDOC@
+FINDLIB_INSTALL	= @OCAMLFIND@ install -destdir $(OCAMLLIBDIR) @PROJECT_TARNAME@
 
 INSTALL		= @INSTALL@
 INSTALL_OPTS	= -v
@@ -139,6 +142,7 @@ OCAML_IN_FILES	= myocamlbuild.ml.in _tags.in @OCAML_IN_FILES@
 .SECONDARY: $(OCAML_IN_FILES:.in=)
 NDCORE_FILES	= README.ndcore
 BEDWYR_FILES	= ChangeLog README TODO
+BEDWYR_MODULES	= ndcore batyping input prover
 MAN_FILES	= $(wildcard man/*.in)
 VIM_CONTRIB	= @VIM_CONTRIB@
 EMACS_CONTRIB	= bedwyr.el
@@ -162,6 +166,9 @@ DEBIAN_FILES	=  \
   bedwyr-doc.doc-base.libref \
   bedwyr-doc.doc-base.refman \
   bedwyr-doc.lintian-overrides \
+  bedwyr-dev.install \
+  bedwyr-dev.links \
+  bedwyr-dev.lintian-overrides \
   watch \
   compat \
   source/format

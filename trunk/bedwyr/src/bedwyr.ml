@@ -35,8 +35,7 @@ let welcome_msg =
   Printf.sprintf
     "%s %s%s welcomes you.\n\
     \n\
-    This software is under GNU General Public License version 2.\n\
-    Copyright (C) 2005-2012 Slimmer project.\n\
+    Software under GPLv2, Copyright (C) 2005-2013 Slimmer project.\n\
     \n\
     For a little help, type \"#help.\"\n\n"
     Config.package_name
@@ -49,17 +48,16 @@ let welcome_msg =
  * and internal (oUnit version, ndcore version, etc). *)
 let usage_msg =
   Printf.sprintf
-    "%s prover version %s (%s).\n\
-    This software is under GNU General Public License version 2.\n\
-    Copyright (c) 2005-2012 Slimmer project.\n\
-    Built with OCaml %s on the %s.\n\
+    "%s prover %s, Copyright (C) 2005-2013 Slimmer project.\n\
+    This software is under the GNU General Public License version 2.\n\
+    %s (built with OCaml %s on the %s).\n\
     Features (+/-):%s\n\
     \n\
     Usage: bedwyr [filename | option]*\n"
     Config.package_name
     Config.package_version
-    (if Config.build="" then "unknown revision"
-     else "revision " ^ Config.build ^ "")
+    (if Config.build="" then "Unknown revision"
+     else "Rev. " ^ Config.build ^ "")
     Config.ocaml_version
     Config.build_date
     (String.concat ""
@@ -225,7 +223,7 @@ let rec process ?(test=false) ?(interactive=false) parse lexbuf =
             "Unmatched comment delimiter in string."
       | Input.Illegal_token (n1,n2) ->
           eprintf lexer_error
-            "%S is an illegal token, did you mean %S?"
+            "%S is illegal in a token, did you mean %S?"
             (Lexing.lexeme lexbuf)
             (String.concat " " [n1;n2])
       | Input.Unknown_command n ->
@@ -513,11 +511,10 @@ and command ~test c reset =
 let _ =
   begin try load_session ()
   with IO.File_error (s1,n,s2) ->
-    Format.kfprintf
-      (fun _ -> exit 5)
-      Format.err_formatter
-      ("@[Couldn't %s@ input file %S:@ %s.@]@.")
-      s1 n s2
+    Format.eprintf
+      ("@[Couldn't %s@ %S:@ %s.@]@.")
+      s1 n s2 ;
+    exit 5
   end ;
   List.iter
     (fun s -> input_queries ~test:!test (Lexing.from_string s)) !queries ;

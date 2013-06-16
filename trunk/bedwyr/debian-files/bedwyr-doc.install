@@ -1,6 +1,6 @@
-usr/share/doc/bedwyr/*.odoc.* usr/share/bedwyr-doc
-usr/share/doc/bedwyr/libref usr/share/bedwyr-doc
-usr/share/doc/bedwyr/refman usr/share/bedwyr-doc
-usr/share/doc/bedwyr/*.html usr/share/bedwyr-doc
-usr/share/doc/bedwyr/*.pdf.* usr/share/bedwyr-doc
-usr/share/doc/bedwyr/*.ps.* usr/share/bedwyr-doc
+usr/share/doc/bedwyr/*.odoc.*
+usr/share/doc/bedwyr/libref
+usr/share/doc/bedwyr/refman
+usr/share/doc/bedwyr/*.html
+usr/share/doc/bedwyr/*.pdf.*
+usr/share/doc/bedwyr/*.ps.*

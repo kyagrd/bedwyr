@@ -6,6 +6,7 @@ Fix:
   - assertions not type-checked when not checked
   - assertions not checked in queries
   - incorrect tabled results within co-inductive loops
+  - "-1" not recognised by #freezing and #saturation
 Changes:
   - port of the build system (bin and odoc) to ocamlbuild
   - zipper-based indexing with get-and-set functionality
@@ -22,7 +23,11 @@ New:
   - #show_def to peek in a predicate at run-time
   - stratification checking
   - better tabling via simple hypothesis support (eg "p 0 , p 1  |-  p 2")
+    and variable instantiation
   - proof skeleton XML export
+  - Quick-Start Guide
+  - #! marks a single-line comment (like %)
+
 
 1.3 (2012-02-29)
 ================

@@ -28,9 +28,7 @@ let _ =
         flag ["ocaml" ; "compile"] (S [A "-warn-error" ; A "A"]) ;
         flag ["ocaml" ; "native" ; "compile"] (A "-nodynlink") ;
         flag ["ocaml" ; "doc"] (S [A "-stars" ; A "-m" ; A "A"]) ;
-        (* flag ["ocaml" ; "link" ; "program"] (A "-linkpkg") ; *)
 
-        ocaml_lib ~extern:true ~dir:"+xmlm" "xmlm" ;
         ocaml_lib "src/oUnit/oUnit" ;
 
         ocaml_lib "src/ndcore/ndcore" ;

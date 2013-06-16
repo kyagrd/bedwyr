@@ -7,7 +7,7 @@ build:
 	dh_testdir
 	autoconf
 	dh_auto_configure -- --no-create \
-	  --enable-nativecode --enable-doc --with-vimfiles
+	  --enable-nativecode --enable-doc --with-vimfiles --with-xmlm
 	dh_auto_build
 	dh_auto_build -- doc
 	dh_auto_test
@@ -34,6 +34,9 @@ override_dh_fixperms-arch:
 	dh_fixperms
 	chmod +x debian/bedwyr/usr/share/bedwyr/examples/mute.pl
 	chmod +x debian/bedwyr/usr/share/bedwyr/examples/ccs_vp/timing/sq
+
+override_dh_link:
+	dh_link -X.vim
 
 %:
 	dh $@
