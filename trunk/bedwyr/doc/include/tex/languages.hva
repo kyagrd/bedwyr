@@ -1,0 +1,30 @@
+% lambdaProlog definition
+\lstdefinelanguage{lprolog}{
+  morecomment=[l]{\%},%
+  morecomment=[n]{/*}{*/},%
+  morestring=[b]",%
+  showstringspaces=false,%
+  sensitive=true,%
+  morekeywords={:,:-,=>,->},%
+  morekeywords={[2]o,int,string,list,nil,true,+,-,*,=,!,pi,sigma,is},%
+  morekeywords={[3]sig,module,accum_sig,accumulate,end,kind,type},%
+  alsoletter={=>:-+*?`'\$!},%
+}[keywords,comments,strings]
+
+% Bedwyr definition
+\lstdefinelanguage{bedwyr}{
+  morecomment=[l]{\%},%
+  morecomment=[n]{/*}{*/},%
+  morestring=[b]",%
+  showstringspaces=false,%
+  sensitive=true,%
+  morekeywords={:,:=,->,::},%
+  morekeywords={[2]type,prop,nat,list,nil,true,false,forall,exists,nabla,=},%
+  morekeywords={[3]Kind,Type,Define,inductive,coinductive,by,Theorem},%
+  morekeywords={[4]?=,Yes,Solution,found:,More,No,more,solutions},%
+  moredelim=[s][directivestyle]{\#}{\ },% not in latex
+  alsoletter={=>:-+/*?|`'\$!},%
+}[keywords,comments,strings,directives]
+
+% identifier coloration (without variables highlighting)
+\newcommand*\idstyle{\mdseries\color{black}}

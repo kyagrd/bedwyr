@@ -1,0 +1,94 @@
+% convenient
+\usepackage[utf8]{inputenc}
+
+% OT1 font encoding is ancient and unsuitable for special chars
+\usepackage[T1]{fontenc}
+
+% amsmath must be included before txfonts
+\usepackage{amsmath} % text in math, operators, bold symbols, etc
+%\usepackage{amsthm} % theorems
+%\usepackage{amssymb} %fonts and more
+
+% Type 1 fonts (vectorial) instead of Type 3 (bitmap)
+%\usepackage{lmodern} % Computer Modern
+\usepackage{txfonts} % Adobe Times
+
+% wrapper around xy (preferred since understood by hevea)
+\usepackage[all]{xypic}
+
+% all sorts of links: internal, external, multi-line...
+\usepackage[
+% linkbordercolor={1 0 0}, % default: red
+% citebordercolor={0 1 0}, % default: green
+% filebordercolor={1 0 1}, % default: magenta
+% urlbordercolor={0 1 1},  % default: cyan
+]{hyperref}
+\usepackage{breakurl}
+
+% hevea commands, to be ignored by latex
+\usepackage{hevea}
+\loadcssfile{http://slimmer.gforge.inria.fr/bedwyr/bd.css}
+
+% MATHs PARagraphs and Type Inference Rules
+\usepackage{mathpartir}
+
+% source code highlighting
+\usepackage{color}
+\definecolor{commentcolour}{rgb}{0.5,0.5,0.5}
+\definecolor{stringcolour}{rgb}{0.58,0,0.82}
+\definecolor{keywordcolour}{rgb}{.3,.1,.1}
+\definecolor{constantcolour}{rgb}{.1,.1,.3}
+\definecolor{variablecolour}{rgb}{.3,.5,.9}
+\definecolor{punctiationcolour}{rgb}{.3,.3,0}
+\definecolor{red}{rgb}{1,0,0}
+\definecolor{green}{rgb}{0,1,0}
+\definecolor{blue}{rgb}{0,0,1}
+\definecolor{pathcolour}{rgb}{1,.9,.8}
+% source code syntax
+\usepackage{listings}
+\lstset{
+  frame=lines,%
+  emptylines=1,%
+  captionpos=t,%
+  columns=fullflexible,%
+}
+\usepackage{include/tex/languages}
+\lstdefinestyle{lprolog}{
+  language=lprolog,%
+  basicstyle=\ttfamily\small\color{black},%
+  commentstyle=\color{commentcolour},,%
+  stringstyle=\color{stringcolour},%
+  identifierstyle=\idstyle,%
+  keywordstyle={\color{punctiationcolour}},%
+  keywordstyle={[2]\color{constantcolour}\bfseries},%
+  keywordstyle={[3]\color{keywordcolour}\underline},%
+}
+\lstdefinestyle{bedwyr}{
+  language=bedwyr,%
+  basicstyle=\ttfamily\small\color{black},%
+  commentstyle=\color{commentcolour},%
+  stringstyle=\color{stringcolour},%
+  identifierstyle=\color{black},%
+  identifierstyle=\idstyle,%
+  keywordstyle={\color{punctiationcolour}},%
+  keywordstyle={[2]\color{constantcolour}\bfseries},%
+  keywordstyle={[3]\color{keywordcolour}\underline},%
+  keywordstyle={[4]},%
+  directivestyle={\color{keywordcolour}},%
+}
+\lstdefinestyle{bedwyr-repl}{
+  style=bedwyr,%
+  identifierstyle=,%
+  keywordstyle={[4]\sffamily\bfseries\upshape\color{black}},%
+}
+
+\bibliographystyle{alpha}
+
+% macros
+\newcommand{\lp}{$\lambda$Prolog}
+\newcommand{\Ll}{$L_\lambda$}
+\newcommand{\muDef}{\overset{\mu}{=}}
+\newcommand{\nuDef}{\overset{\nu}{=}}
+%\newcommand{\deDef}{\overset{\Delta}{=}}
+\newcommand{\qs}{\, .\,}
+\providecommand{\path}[1]{\colorbox{pathcolour}{\ttfamily#1}}

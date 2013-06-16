@@ -1,59 +1,145 @@
 \documentclass[a4paper]{article} % defaults to letter
+\input{include/tex/preamble.tex}
 
-% xypic is simply a wrapper for xy,
-% but is preferred since it is understood by hevea
-\usepackage[all]{xypic}
-
-% we want Type 1 fonts instead of CM/Type 3 (vectorial vs bitmap),
-% plus math fonts
-\usepackage{ae,aecompl}
-\usepackage{amsfonts}
-
-% all sorts of links: internal, external, multi-line...
-\usepackage[
-% linkbordercolor={1 0 0}, % default: red
-% citebordercolor={0 1 0}, % default: green
-% filebordercolor={1 0 1}, % default: magenta
-% urlbordercolor={0 1 1},  % default: cyan
-  pdftitle={Bedwyr QuickStart 1.4}
-]{hyperref}
-\usepackage{breakurl}
-
-% hevea commands, to be ignored by latex
-\usepackage{hevea}
-\loadcssfile{http://slimmer.gforge.inria.fr/bedwyr/bd.css}
-
-\bibliographystyle{alpha}
-
-% draw a nice tilde in the Verbatim environment
-\usepackage{fancyvrb}
-\newcommand{\mytilde}{\raise.3ex\hbox{$\scriptstyle\sim$}}
-\RecustomVerbatimEnvironment{Verbatim}{Verbatim}{commandchars=\\\{\}}
-
-\newcommand{\lp}{$\lambda$Prolog}
-\newcommand{\Ll}{$L_\lambda$}
-\newcommand{\qs}{\; . \;}
+\hypersetup{pdftitle={Bedwyr 1.4 QuickStart}}
+\lstset{style=bedwyr}
 
 \title{{\Huge A Quick-Start Guide to Bedwyr v1.4}}
-\author{Quentin Heath\\INRIA Saclay and LIX/\'Ecole Polytechnique}
+\author{Quentin Heath\\
+        INRIA Saclay and LIX/\'Ecole polytechnique}
 
 \begin{document}
 \maketitle
 
-\begin{abstract}
-intro (what-who-where-how, quick start)
-\end{abstract}
-
 % ============================================================================
 \section{Overview}
+
+Bedwyr is a generalization of logic programming that allows model checking
+directly on syntactic expression possibly containing bindings.  It identifies
+finite successes and finite failures under the closed world assumption.  The
+logic manipulated, a subset of LINC (for \emph{lambda, induction, nabla,
+co-induction}), contains object-level $\lambda$-abstractions, three quantifiers
+(including the $\nabla$ quantifier), and inductive and co-inductive
+definitions.  While LINC is a extension of higher-order intuitionistic logic,
+formulae are restricted to a fragment where connectives on the left of an
+implication must have invertible rules (i.e. no universal quantifier nor
+implication -- this enables the closed-world assumption), while equalities are
+restricted to the \Ll{} fragment (allowing for the use of higher-order pattern
+unification).
+
+The system, written in OCaml, is part of an open source project.
+The \href{http://slimmer.gforge.inria.fr/bedwyr/#download}{web page}
+offers multiple ways to get it:
+\begin{itemize}
+  \item read-only SVN repository
+  \item sources tarball
+  \item precompiled binaries (win32, GNU/Linux, OCaml bytecode)
+  \item GNU/Linux (Gentoo and Debian) unofficial packages
+  \item Windows installer
+\end{itemize}
+
+The \href{http://slimmer.gforge.inria.fr/bedwyr/#documentation}{documentation}
+includes this quick-start guide, a reference manual and the source-code
+documentation.
 
 % ============================================================================
 \section{Input format}
 
+Bedwyr accepts three kinds of input: commands, queries and meta-commands.
+
+Commands are grouped in definition files (plain text files,
+usually named \path{*.def}).  They declare new types and constants,
+declare and define new predicates, and define theorems
+(note that theorems are not proved, but are used as lemmas).
+
+Queries are entered at the toplevel (either in batch-mode or interactively).
+They are plain formulae that Bedwyr attempts to solve.
+If it succeeds in its search, it either displays the list of solutions
+(substitutions of the free variables) or a negative answer; otherwise,
+if the formula is not handled by the prover (non-invertible connective on the
+left) or by the unifier (not \Ll{}), it aborts with an appropriate error
+message.
+
+Meta-commands can be entered either in files or at the toplevel.
+Most of them aim at improving the user experience by executing strictly
+non-logical tasks, mainly input (\lstinline+#include "inc.def".+), output
+(\lstinline+#debug on.+, \lstinline+#typeof X Y :: nil.+) and testing
+(\lstinline+#assert true.+, \lstinline+#assert_not false.+).
+A few of them change the order of computations, and thus performances, but not
+provability (\lstinline+#freezing 4.+, \lstinline+#saturation 2.+).
+
 % ============================================================================
 \section{Sample files}
 
+Listing~\ref{def:maxa} shows a complete sample definition file,
+with the declarations for a type and two constants, along with a few predicates.
+
+\begin{figure}
+\lstinputlisting[caption={\protect\path{maxa.def}},label=def:maxa]
+  {include/linc/maxa.def}
+\end{figure}
+
+The predicate \lstinline+a+ is a typical example of what must be done to build
+a Bedwyr example: even with a theoretically infinite search space
+(here, Church numerals), Bedwyr only does finite reasoning, and hence must be
+given an explicit description of its finite actual search space.
+
+The use of the \lstinline+inductive+ keyword has two consequences.
+Firstly, memoization is used on the corresponding predicate;
+secondly, it has an impact on the way loops in computation are handled.
+Since the \lstinline+leq+ predicate obviously cannot loop,
+only the first aspect is used here (meaning we might as well have used the
+\lstinline+coinductive+ keyword instead).
+
 % ============================================================================
 \section{REPL demo}
+
+Listing~\ref{repl:maxa} shows an example of use of the interactive toplevel
+following the invocation of \verb+bedwyr maxa.def+.
+
+\begin{figure}[h]
+\begin{lstlisting}[style=bedwyr-repl,caption={Interactive session},label=repl:maxa]
+?= #env.
+*** Types ***
+   list : * -> *
+   ch : *
+*** Constants ***
+   (::) : A -> (list A) -> list A
+   nil : list A
+   s : ch -> ch
+   z : ch
+*** Predicates ***
+   a : ch -> prop
+ I leq : ch -> ch -> prop
+   maxa : ch -> prop
+   member : A -> (list A) -> prop
+?= leq X (s (s z)).
+Solution found:
+ X = z
+More [y] ? y
+Solution found:
+ X = s z
+More [y] ? y
+Solution found:
+ X = s (s z)
+More [y] ? y
+No more solutions.
+?= maxa X.
+Solution found:
+ X = s (s (s (s (s z))))
+More [y] ? y
+No more solutions.
+?= #exit.
+\end{lstlisting}
+\end{figure}
+
+The \lstinline+#env.+ meta-command shows all declared objects
+(including the standard pre-declared list-related objects),
+and displays \lstinline+leq+ as inductive.
+The call to the query \lstinline+leq X (s (s z)).+ offers to display all
+solutions, one by one.
+The call to the query \lstinline+maxa X.+ does the same,
+but a subsequent call to \lstinline+#show_table leq.+ would then show the table
+filled with \lstinline+leq+-headed atoms, either marked as proved or disproved.
 
 \end{document}

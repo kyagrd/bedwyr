@@ -1,0 +1,54 @@
+% lambdaProlog definition
+\lstdefinelanguage{lprolog}{
+  morecomment=[l]{\%},%
+  morecomment=[n]{/*}{*/},%
+  morestring=[b]",%
+  showstringspaces=false,%
+  sensitive=true,%
+  otherkeywords={.,;,\\,(,),\,}, % not in hevea
+  morekeywords={:,:-,=>,->},%
+  morekeywords={[2]o,int,string,list,nil,true,+,-,*,=,!,pi,sigma,is},%
+  morekeywords={[3]sig,module,accum_sig,accumulate,end,kind,type},%
+  alsoletter={=>:-+*?`'\$!},%
+}[keywords,comments,strings]
+
+% Bedwyr definition
+\lstdefinelanguage{bedwyr}{
+  morecomment=[l]{\%},%
+  morecomment=[n]{/*}{*/},%
+  morestring=[b]",%
+  showstringspaces=false,%
+  sensitive=true,%
+  otherkeywords={.,/\\,\\/,;,(,),\,}, % not in hevea
+  morekeywords={:,:=,->,::},%
+  morekeywords={[2]type,prop,nat,list,nil,true,false,forall,exists,nabla,=},%
+  morekeywords={[3]Kind,Type,Define,inductive,coinductive,by,Theorem},%
+  morekeywords={[4]?=,Yes,Solution,found:,More,No,more,solutions},%
+  moredelim=*[directive]\#,% not in hevea
+  moredirectives={env,show_table,exit,assert,assert_not,include,debug,typeof,%
+    freezing,saturation,clear_table,clear_tables},% not in hevea
+  alsoletter={=>:-+/*?|`'\$!},%
+}[keywords,comments,strings,directives]
+
+% identifier coloration (with variables highlighting)
+\makeatletter
+\newcommand*\idstyle{%
+  \expandafter\id@style\the\lst@token\relax
+}
+\def\id@style#1#2\relax{%
+  % XXX [QH] I have no idea why, but the following \ifcat
+  % compares #1 to 0 (instead of trying to read the 10th argument),%
+  % succeeds for a lot or characters (including '=', ',', etc)
+  % but not on '-', which helps because calling `#1 when #1 is '-'
+  % raises "Improper alphabetic constant".
+  % Btw, I can't even use catcodes, because listings sets most of them
+  % to 13 anyway. Weird package.
+  % Moreover, this obviously doesn't work at all in hevea.
+  \mdseries\color{black}%
+  \ifcat#10%
+    \ifnum`#1=\uccode`#1%
+      \bfseries\color{variablecolour}%
+    \fi
+  \fi
+}
+\makeatother
