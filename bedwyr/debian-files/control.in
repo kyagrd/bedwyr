@@ -47,7 +47,7 @@ Description: the not-so-complete documentation
 
 Package: @PACKAGE_TARNAME@-dev
 Architecture: any
-Depends: ${misc:Depends}, ${shlibs:Depends}, ocaml-base-@OCAML_VERSION@
+Depends: ${misc:Depends}, ${shlibs:Depends}, ocaml-base-nox-@OCAML_VERSION@
 Recommends: @PACKAGE_TARNAME@
 Suggests: @PACKAGE_TARNAME@-doc, ocaml-findlib
 Enhances: @PACKAGE_TARNAME@
