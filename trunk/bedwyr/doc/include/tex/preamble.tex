@@ -17,7 +17,7 @@
 \usepackage[all]{xypic}
 
 % all sorts of links: internal, external, multi-line...
-\usepackage[
+\usepackage[%
 % linkbordercolor={1 0 0}, % default: red
 % citebordercolor={0 1 0}, % default: green
 % filebordercolor={1 0 1}, % default: magenta
@@ -46,14 +46,14 @@
 \definecolor{pathcolour}{rgb}{1,.9,.8}
 % source code syntax
 \usepackage{listings}
-\lstset{
+\lstset{%
   frame=lines,%
   emptylines=1,%
   captionpos=t,%
   columns=fullflexible,%
 }
 \usepackage{include/tex/languages}
-\lstdefinestyle{lprolog}{
+\lstdefinestyle{lprolog}{%
   language=lprolog,%
   basicstyle=\ttfamily\small\color{black},%
   commentstyle=\color{commentcolour},,%
@@ -63,7 +63,7 @@
   keywordstyle={[2]\color{constantcolour}\bfseries},%
   keywordstyle={[3]\color{keywordcolour}\underline},%
 }
-\lstdefinestyle{bedwyr}{
+\lstdefinestyle{bedwyr}{%
   language=bedwyr,%
   basicstyle=\ttfamily\small\color{black},%
   commentstyle=\color{commentcolour},%
@@ -76,7 +76,7 @@
   keywordstyle={[4]},%
   directivestyle={\color{keywordcolour}},%
 }
-\lstdefinestyle{bedwyr-repl}{
+\lstdefinestyle{bedwyr-repl}{%
   style=bedwyr,%
   identifierstyle=,%
   keywordstyle={[4]\sffamily\bfseries\upshape\color{black}},%
@@ -85,7 +85,11 @@
 \bibliographystyle{alpha}
 
 % macros
+\newcommand{\lstlp}[1]{\lstinline[style=lprolog]{#1}}
+\newcommand{\lstbd}[1]{\lstinline[style=bedwyr]{#1}}
 \newcommand{\lp}{$\lambda$Prolog}
+\newcommand{\pc}{$\pi$-calcul}
+\newcommand{\lc}{$\lambda$-calcul}
 \newcommand{\Ll}{$L_\lambda$}
 \newcommand{\muDef}{\overset{\mu}{=}}
 \newcommand{\nuDef}{\overset{\nu}{=}}

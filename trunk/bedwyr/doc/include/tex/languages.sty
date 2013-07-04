@@ -21,12 +21,15 @@
   sensitive=true,%
   otherkeywords={.,/\\,\\/,;,(,),\,}, % not in hevea
   morekeywords={:,:=,->,::},%
-  morekeywords={[2]type,prop,nat,list,nil,true,false,forall,exists,nabla,=},%
-  morekeywords={[3]Kind,Type,Define,inductive,coinductive,by,Theorem},%
+  morekeywords={[2]type,prop,nat,string,list,nil,true,false,%
+    forall,exists,nabla,=},%
+  morekeywords={[3]Kind,Type,Define,inductive,coinductive,by,Theorem,%
+    Specification},%
   morekeywords={[4]?=,Yes,Solution,found:,More,No,more,solutions},%
   moredelim=*[directive]\#,% not in hevea
-  moredirectives={env,show_table,exit,assert,assert_not,include,debug,typeof,%
-    freezing,saturation,clear_table,clear_tables},% not in hevea
+  moredirectives={env,show_table,exit,assert,assert_not,assert_raise,include,%
+    debug,typeof,freezing,saturation,clear_table,clear_tables,export,show_def,%
+    time,help,reload,reset,session,save_table,equivariant},% not in hevea
   alsoletter={=>:-+/*?|`'\$!},%
 }[keywords,comments,strings,directives]
 

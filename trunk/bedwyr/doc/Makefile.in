@@ -204,7 +204,7 @@ archive.tar: $(ARCH_FILES)
 #
 ##############################################################################
 
-.PHONY: clean_tex clean_hevea clean distclean
+.PHONY: mostlyclean clean_tex clean_hevea clean distclean
 
 mostlyclean:
 	@rm -rvf $(TARGETS)
@@ -218,9 +218,9 @@ clean_hevea:
 	  *.htoc *.png $(REFMAN)/*_motifs.gif
 
 clean: mostlyclean clean_tex clean_hevea
-	@$(FIND) . -name '*~' -exec rm -vf \{\} \;
 	@rm -vf $(DVI_FILES) $(PS_FILES) $(PDF_FILES) $(REFMAN).html archive.tar
 	@rm -rvf $(REFMAN)
 
 distclean: clean
+	@$(FIND) . -name '*~' -exec rm -vf \{\} \;
 	@rm -vf *.dvi *.ps *.pdf *.gz *.tar *.html
