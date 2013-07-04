@@ -62,7 +62,7 @@ Kind proc type.
 Kind action type.
 
 Type z proc.
-Type in name -> agent -> proc. 
+Type in name -> agent -> proc.
 Type out name -> agent -> proc.
 Type par proc -> proc -> proc.
 Type plus proc -> proc -> proc.
@@ -76,9 +76,10 @@ Type abs (name -> agent) -> agent.
 Type new (name -> agent) -> agent.
 
 
-Define process : proc -> prop, 
-       absAgent : agent -> prop, 
-       conAgent : agent -> prop
+Define
+  process : proc -> prop,
+  absAgent : agent -> prop,
+  conAgent : agent -> prop
 by
 % processes
   process z;
@@ -100,8 +101,8 @@ by
   conAgent (new P) := nabla x, conAgent (P x);
   conAgent (con M P) := conAgent P.
 
-Define is_agent : agent -> prop by
-  is_agent A := absAgent A \/ conAgent A.
+Define agent : agent -> prop by
+  agent A := absAgent A \/ conAgent A.
 
 
 
@@ -123,7 +124,7 @@ Define canonCon : agent -> prop by
   canonCon (new x\ con x (P x)) := nabla x, canonCon (P x).
 
 Define canonical : agent -> prop by
-  canonical A := is_agent A /\ (canonAbs A \/ canonCon A).
+  canonical A := agent A /\ (canonAbs A \/ canonCon A).
 
 
 % == Some auxiliary predicates ==========================================
@@ -192,8 +193,9 @@ Define one : proc -> action -> agent -> prop by
 % We can assume without loss of generality that the agents are in
 % canonical forms.
 
-Define coinductive bisimAgent : agent -> agent -> prop, 
-       coinductive bisim : proc -> proc -> prop 
+Define
+  coinductive bisimAgent : agent -> agent -> prop,
+  coinductive bisim : proc -> proc -> prop
 by
   bisimAgent (ag P) (ag Q) := bisim P Q;
   bisimAgent (abs M) (abs N) := forall x, bisimAgent (M x) (N x);

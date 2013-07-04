@@ -192,16 +192,22 @@ Define coinductive sim :  p -> p -> prop by
 
 Define coinductive bisim : p -> p -> prop by
   bisim P Q :=
-	(forall A P1, one P A P1 -> exists Q1, one Q A Q1 /\ bisim P1 Q1) /\
-	(forall X M, onep P (dn X) M -> exists N, onep Q (dn X) N /\
-					forall w, bisim (M w) (N w)) /\
-	(forall X M, onep P (up X) M -> exists N, onep Q (up X) N /\
-					nabla w, bisim (M w) (N w)) /\
-	(forall A Q1, one Q A Q1 -> exists P1, one P A P1 /\ bisim P1 Q1) /\
-	(forall X N, onep Q (dn X) N -> exists M, onep P (dn X) M /\
-					forall w, bisim (M w) (N w)) /\
-	(forall X N, onep Q (up X) N -> exists M, onep P (up X) M /\
-					nabla w, bisim (M w) (N w)).
+    (forall A P1, one P A P1 ->
+      exists Q1, one Q A Q1 /\ bisim P1 Q1) /\
+    (forall X M, onep P (dn X) M ->
+      exists N, onep Q (dn X) N /\
+      forall w, bisim (M w) (N w)) /\
+    (forall X M, onep P (up X) M ->
+      exists N, onep Q (up X) N /\
+      nabla w, bisim (M w) (N w)) /\
+    (forall A Q1, one Q A Q1 ->
+      exists P1, one P A P1 /\ bisim P1 Q1) /\
+    (forall X N, onep Q (dn X) N ->
+      exists M, onep P (dn X) M /\
+      forall w, bisim (M w) (N w)) /\
+    (forall X N, onep Q (up X) N ->
+      exists M, onep P (up X) M /\
+      nabla w, bisim (M w) (N w)).
 
 %% Of the finite pi-calculus examples above (numbered 1-11), the following
 %% three pairs name (open) bisimilar pi-expressions:
