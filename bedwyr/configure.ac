@@ -1,6 +1,6 @@
 ##############################################################################
 #  Bedwyr prover                                                             #
-#  Copyright (C) 2012 Quentin Heath                                          #
+#  Copyright (C) 2012-2013 Quentin Heath                                     #
 #                                                                            #
 #  This program is free software; you can redistribute it and/or modify      #
 #  it under the terms of the GNU General Public License as published by      #
@@ -21,7 +21,7 @@ m4_define([M4_VERSION_MAJOR],1)
 m4_define([M4_VERSION_MINOR],4)
 m4_define([M4_VERSION_PATCH],0)
 m4_define([M4_VERSION_BUILD],0)
-m4_define([M4_VERSION_DEV],alpha14)
+m4_define([M4_VERSION_DEV],alpha15)
 m4_define([M4_VERSION1],[M4_VERSION_MAJOR.M4_VERSION_MINOR])
 m4_define([M4_VERSION2],m4_if(M4_VERSION_PATCH,0,
           [M4_VERSION1],[M4_VERSION1.M4_VERSION_PATCH]))
@@ -72,6 +72,10 @@ AS_IF([test "X$BZIP2" = Xno],
 #
 ##############################################################################
 
+AC_PATH_PROGS(OCAMLFIND,ocamlfind.opt ocamlfind,no)
+AS_IF([test "X$OCAMLFIND" = Xno],
+      [AC_MSG_ERROR(Cannot find ocamlfind. Install findlib.)])
+
 WIN32_BIN_SUFFIX="exe"
 AC_MSG_CHECKING(if debugging information should be added)
 AC_ARG_ENABLE([debug],
@@ -97,16 +101,15 @@ AC_ARG_ENABLE([win32],
               [AC_MSG_RESULT($enable_win32)],
               [AC_MSG_RESULT(no)])
 if test "X$enable_win32" = Xyes ; then
-	AC_PATH_PROGS(MINGW32_OCAMLOPT,
-	              i686-w64-mingw32-ocamlopt.opt i686-w64-mingw32-ocamlopt \
-	                i586-mingw32msvc-ocamlopt.opt i586-mingw32msvc-ocamlopt,
-	              no)
-	AS_IF([test "X$MINGW32_OCAMLOPT" = Xno],
-	      [AC_MSG_ERROR(Cannot find a native win32 code compiler. Install mingw32-ocaml.)])
+	MINGW32_OCAMLFIND_CONF=/etc/i686-w64-mingw32-ocamlfind.conf
+	AC_CHECK_FILE($MINGW32_OCAMLFIND_CONF,,
+	              MINGW32_OCAMLFIND_CONF=no)
+	AS_IF([test "X$MINGW32_OCAMLFIND_CONF" = Xno],
+              [AC_MSG_ERROR(Cannot find findlib support for native win32 code generation. Install mingw32-ocaml.)])
 	BIN_SUFFIXES="$BIN_SUFFIXES $WIN32_BIN_SUFFIX"
 	BEST_SUFFIX="$WIN32_BIN_SUFFIX"
-	OCAML_VERSION=$("$MINGW32_OCAMLOPT" -version)
-	OCAML_WHERE=$("$MINGW32_OCAMLOPT" -where)
+	OCAML_VERSION=$(OCAMLFIND_CONF="$MINGW32_OCAMLFIND_CONF" "$OCAMLFIND" ocamlopt -version)
+	OCAML_WHERE=$(OCAMLFIND_CONF="$MINGW32_OCAMLFIND_CONF" "$OCAMLFIND" ocamlopt -where)
 
 	AC_PATH_PROGS(MINGW32_WINDRES,
 	              i686-w64-mingw32-windres.opt i686-w64-mingw32-windres \
@@ -172,10 +175,6 @@ else
 	AS_IF([test "X$OCAMLYACC" = Xno],
 	      [AC_MSG_ERROR(Cannot find ocamlyacc.)])
 
-	AC_PATH_PROGS(OCAMLFIND,ocamlfind.opt ocamlfind,no)
-	AS_IF([test "X$OCAMLFIND" = Xno],
-	      [AC_MSG_ERROR(Cannot find ocamlfind. Install findlib.)])
-
 	AC_PATH_PROGS(OCAMLBUILD,ocamlbuild.opt ocamlbuild.native ocamlbuild ocamlbuild.byte,no)
 	AS_IF([test "X$OCAMLBUILD" = Xno],
 	      [AC_MSG_ERROR(Cannot find ocamlbuild.)])
@@ -198,6 +197,8 @@ else
 		AC_MSG_RESULT(${ocamlfind_xmlm})
 		TABLE_XML_EXPORT_MODULE="TableXmlExport"
 		TABLE_XML_EXPORT_MODULE_DOT="${TABLE_XML_EXPORT_MODULE}."
+		TABLE_XML_EXPORT_MODULE_NL="${TABLE_XML_EXPORT_MODULE}
+"
 		XMLM_TAG="xmlm"
 	else
 		AC_MSG_RESULT(no)
@@ -409,9 +410,11 @@ AC_SUBST(BIN_SUFFIXES)
 AC_SUBST(BEST_SUFFIX)
 AC_SUBST(OCAML_VERSION)
 AC_SUBST(OCAML_WHERE)
+AC_SUBST(MINGW32_OCAMLFIND_CONF)
 
 AC_SUBST(TABLE_XML_EXPORT_MODULE)
 AC_SUBST(TABLE_XML_EXPORT_MODULE_DOT)
+AC_SUBST(TABLE_XML_EXPORT_MODULE_NL)
 AC_SUBST(XMLM_TAG)
 
 AC_SUBST(INSTALL)

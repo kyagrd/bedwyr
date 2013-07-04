@@ -1,6 +1,6 @@
 ##############################################################################
 #  Bedwyr prover                                                             #
-#  Copyright (C) 2012 Quentin Heath                                          #
+#  Copyright (C) 2012-2013 Quentin Heath                                     #
 #                                                                            #
 #  This program is free software; you can redistribute it and/or modify      #
 #  it under the terms of the GNU General Public License as published by      #
@@ -410,7 +410,7 @@ endif
 
 nsis: nsis_orig_files nsis_files
 	@CONFIGURE_OPTS="$(CONFIGURE_OPTS) --enable-nsis \
-	  --enable-bytecode --enable-win32 --enable-doc" \
+	  --enable-bytecode --enable-win32 --enable-doc --without-xmlm" \
 	  $(MAKE) -C nsis-build nsis_pkg
 	@cp -pvf nsis-build/$(DIST_NAME)-installer.exe .
 

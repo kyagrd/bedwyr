@@ -1,3 +1,14 @@
+bedwyr (1.4~alpha14-1) unstable; urgency=low
+
+  * new upstream release
+  * fix broken vimfiles symlinks
+  * add build dependencies on bash, libxmlm-ocaml-dev and ocaml-findlib
+  * relax dependency on ocaml (ocaml-base-nox is enough)
+  * split architecture-dependent package in bedwyr and bedwyr-dev
+  * put the doc back in /usr/share/doc/bedwyr
+
+ -- Quentin Heath <quentin.heath@inria.fr>  Sun, 16 Jun 2013 05:21:21 +0200
+
 bedwyr (1.4~alpha9-1) unstable; urgency=low
 
   * new upstream release
