@@ -1,5 +1,5 @@
 (****************************************************************************)
-(* Bedwyr prover                                                            *)
+(* Prenex polymorphic typing                                                *)
 (* Copyright (C) 2012-2013 Quentin Heath, Alwen Tiu                         *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
@@ -83,6 +83,9 @@ module type S = sig
   (** Kind checking error. *)
   exception Type_kinding_error of string * pos option * ki * ki
 
+  (** Polymorphism error. *)
+  exception Undefinite_type of pos option * ty * int list
+
   (** [kind_check ty atomic_kind] checks that type [ty] and all its subtypes
     * are of the kind [TKind].
     *
@@ -92,6 +95,7 @@ module type S = sig
     * contains unresolved type parameters, ends with [TProp]
     * or contains [TProp] somewhere else than as target) *)
   val kind_check :
+    ?definite:bool ->
     ?p:pos ->
     ty ->
     atomic_kind:(pos * string -> ki) ->
@@ -135,8 +139,11 @@ module type S = sig
     * use the same representation for a given type parameter
     * or variable. It can be used to display the types of multiple
     * formulae with consistency. *)
-  val type_to_string :
-    ?unifier:type_unifier -> ty -> string
+
+  (** Convert a type to a string. *)
+  val get_type_to_string :
+    ?unifier:type_unifier -> unit -> ty -> string
+  (** [get_type_to_string ()] works like [get_pp_type ()]. *)
 end
 
 (** Functor building an implementation of the typing structure,
