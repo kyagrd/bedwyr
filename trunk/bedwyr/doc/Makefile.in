@@ -1,6 +1,6 @@
 ##############################################################################
 #  Bedwyr prover                                                             #
-#  Copyright (C) 2013-2013 Quentin Heath                                     #
+#  Copyright (C) 2012-2013 Quentin Heath                                     #
 #                                                                            #
 #  This program is free software; you can redistribute it and/or modify      #
 #  it under the terms of the GNU General Public License as published by      #
@@ -92,7 +92,7 @@ ARCH_FILES	= $(TEX_INCLUDES) $(STY_INCLUDES) $(HVA_INCLUDES) \
 		  $(LPROLOG_FILES) $(BEDWYR_FILES) \
 		  $(BIB_DEPS) $(TEX_FILES) Makefile.in
 
-TARGETS		= $(PSGZ_FILES) $(PDFGZ_FILES) $(HTML_FILES)
+TARGETS		= $(PSGZ_FILES) $(PDF_FILES) $(PDFGZ_FILES) $(HTML_FILES)
 
 RESET_COLOR	= \e[0m
 SET_BLACK	= \e[0;30m
