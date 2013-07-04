@@ -1,0 +1,65 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN"
+            "http://www.w3.org/TR/REC-html40/loose.dtd">
+<HTML>
+<HEAD>
+
+<META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<META name="GENERATOR" content="hevea 1.10">
+<LINK REL=STYLESHEET type="text/css" HREF="http://slimmer.gforge.inria.fr/bedwyr/bd.css">
+<LINK rel="stylesheet" type="text/css" href="refman.css">
+<TITLE>Getting Bedwyr</TITLE>
+</HEAD>
+<BODY >
+<A HREF="refman003.html"><IMG SRC="previous_motif.gif" ALT="Previous"></A>
+<A HREF="index.html"><IMG SRC="contents_motif.gif" ALT="Up"></A>
+<A HREF="refman005.html"><IMG SRC="next_motif.gif" ALT="Next"></A>
+<HR>
+<H2 CLASS="section"><A NAME="htoc3">2</A>  Getting Bedwyr</H2><UL>
+<LI><A HREF="refman004.html#toc1">Distribution layout</A>
+</LI><LI><A HREF="refman004.html#toc2">Build</A>
+</LI><LI><A HREF="refman004.html#toc3">Test</A>
+</LI></UL>
+<P>Different means of getting Bedwyr are listed on Slimmer’s INRIA Gforge
+project site: <TT><A HREF="http://slimmer.gforge.inria.fr/bedwyr/#download">http://slimmer.gforge.inria.fr/bedwyr/#download</A></TT>.
+You can either download tarballs, get any development version using SVN,
+or use Slimmer’s unofficial Apt repository – instructions are provided
+on the project page. The development of Bedwyr is meant to be an open
+source project. If you are keen to work on the source code and/or
+examples, please contact one of the “Project Admins” of the project
+(as listed at <TT><A HREF="https://gforge.inria.fr/projects/slimmer/">https://gforge.inria.fr/projects/slimmer/</A></TT>).</P><H3 CLASS="subsection"><A NAME="toc1"></A><A NAME="htoc4">2.1</A>  Distribution layout</H3><P>The Bedwyr distribution is organized as follows:</P><TABLE CELLSPACING=6 CELLPADDING=0><TR><TD ALIGN=right NOWRAP> <SPAN STYLE="background-color:#FFE5CC"><TT>src/</TT></SPAN></TD><TD VALIGN=top ALIGN=center NOWRAP>  </TD><TD ALIGN=left NOWRAP>Source code</TD></TR>
+<TR><TD ALIGN=right NOWRAP> <SPAN STYLE="background-color:#FFE5CC"><TT>doc/</TT></SPAN></TD><TD VALIGN=top ALIGN=center NOWRAP>  </TD><TD ALIGN=left NOWRAP>Documentation – you’re reading it</TD></TR>
+<TR><TD ALIGN=right NOWRAP> <SPAN STYLE="background-color:#FFE5CC"><TT>contrib/</TT></SPAN></TD><TD VALIGN=top ALIGN=center NOWRAP>  </TD><TD ALIGN=left NOWRAP>Auxiliary files – e.g. Emacs and Vim support</TD></TR>
+<TR><TD ALIGN=right NOWRAP> <SPAN STYLE="background-color:#FFE5CC"><TT>examples/</TT></SPAN></TD><TD VALIGN=top ALIGN=center NOWRAP>  </TD><TD ALIGN=left NOWRAP>Examples – reading them helps</TD></TR>
+</TABLE><H3 CLASS="subsection"><A NAME="toc2"></A><A NAME="htoc5">2.2</A>  Build</H3><P>Bedwyr’s main build dependency is on the OCaml compiler suite. You also
+need some standard tools you probably already have, especially the GNU
+build system (a.k.a. the autotools, especially autoconf and GNU make),
+bash, tar, gzip, bzip2, etc. Most of these are looked for by the
+configuration step.</P><P>Then, the procedure is quite simple:</P><PRE CLASS="verbatim"> $ make
+</PRE><P>You’ll get a link to the Bedwyr executable as <SPAN STYLE="background-color:#FFE5CC"><TT>./bedwyr</TT></SPAN>. You can
+also use the expanded form to choose your building options:</P><PRE CLASS="verbatim"> $ autoconf
+ $ ./configure &lt;configure-options&gt;
+ $ make &lt;make-targets&gt;
+</PRE><P>The available options and targets are listed with</P><PRE CLASS="verbatim"> $ ./configure --help
+ $ make help
+</PRE><P>By default, Bedwyr is built using the bytecode compiler <CODE>ocamlc</CODE>,
+since compilation with it is much faster. If you don’t want this (no
+frequent recompilation, no need for debugging), you can generate more
+efficient native-code instead with <CODE>ocamlopt</CODE> by passing the option
+<CODE>--enable-nativecode</CODE> to <CODE>./configure</CODE>.</P><P>You can also enable the documentation generation by using
+<CODE>--enable-doc</CODE> and then <CODE>make doc</CODE>. This userguide, the
+quick-start guide the <CODE>ocamldoc</CODE> documentation will be generated
+in <SPAN STYLE="background-color:#FFE5CC"><TT>doc/</TT></SPAN>.</P><P>Last, <CODE>--with-xmlm</CODE>/<CODE>--without-xmlm</CODE> will add/remove a
+dependency on the <CODE>xmlm</CODE> OCaml library, needed to produce XML
+output. By default, the library is not required, and the feature is
+included if and only if the library is found.</P><H3 CLASS="subsection"><A NAME="toc3"></A><A NAME="htoc6">2.3</A>  Test</H3><P>Individual components can be tested for bugs with individual targets:</P><PRE CLASS="verbatim"> $ make test_ndcore
+ $ make test_batyping
+ $ make test_input
+ $ make test_prover
+</PRE><P>This longer test runs the complete program on a set of example files:</P><PRE CLASS="verbatim"> $ make test_bedwyr
+</PRE><P>The <CODE>test</CODE> target runs all the previous tests, and serves as a
+correctness and performance test.</P><HR>
+<A HREF="refman003.html"><IMG SRC="previous_motif.gif" ALT="Previous"></A>
+<A HREF="index.html"><IMG SRC="contents_motif.gif" ALT="Up"></A>
+<A HREF="refman005.html"><IMG SRC="next_motif.gif" ALT="Next"></A>
+</BODY>
+</HTML>

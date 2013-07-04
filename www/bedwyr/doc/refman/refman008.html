@@ -1,0 +1,125 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN"
+            "http://www.w3.org/TR/REC-html40/loose.dtd">
+<HTML>
+<HEAD>
+
+<META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<META name="GENERATOR" content="hevea 1.10">
+<LINK REL=STYLESHEET type="text/css" HREF="http://slimmer.gforge.inria.fr/bedwyr/bd.css">
+<LINK rel="stylesheet" type="text/css" href="refman.css">
+<TITLE>The π-calculus example in more detail</TITLE>
+</HEAD>
+<BODY >
+<A HREF="refman007.html"><IMG SRC="previous_motif.gif" ALT="Previous"></A>
+<A HREF="index.html"><IMG SRC="contents_motif.gif" ALT="Up"></A>
+<A HREF="refman009.html"><IMG SRC="next_motif.gif" ALT="Next"></A>
+<HR>
+<H2 CLASS="section"><A NAME="htoc20">6</A>  The π-calculus example in more detail</H2><P>
+<A NAME="pi-examples"></A></P><P>To illustrate another example and how it can be used, consider the
+implementation of the π-calculus that is contained in the example file
+<SPAN STYLE="background-color:#FFE5CC"><TT>pi/pi.def</TT></SPAN>. Of the several things defined in that file, the
+operational semantics for the π-calculus is given using one-step transitions:
+for a specific example, see <A HREF="#bd:pi-one-step">4</A>.</P><P>Beyond the syntactic differences, the operational semantics of λProlog and
+Bedwyr differ significantly. If a specification is simply a Horn clause
+program, the two systems coincide. They differ in the operational
+interpretation of implication: in Bedwyr, to prove <I>A</I>⊃ <I>B</I>, all
+possible ways to prove <I>A</I> are explored and for each answer substitution
+θ that is found, the goal <I>B</I>θ is attempted (see
+<A HREF="refman009.html#psearch">7.5</A>). Bedwyr also contains the ∇-quantifier
+[<A HREF="refman016.html#miller05tocl">MT05</A>].</P><BLOCKQUOTE CLASS="figure"><DIV CLASS="center"><DIV CLASS="center"><HR WIDTH="80%" SIZE=2></DIV>
+
+<DIV CLASS="center">Listing 4: <A NAME="bd:pi-one-step"></A>Some one-step transitions (from
+<SPAN STYLE="background-color:#FFE5CC">examples/pi/pi.def</SPAN>).</DIV><BR>
+<TABLE CLASS="lstframe" STYLE="padding:1ex;border-style:solid none;"><TR><TD CLASS="lstlisting"><FONT COLOR="#4C1919"><U>Define</U></FONT>
+  <FONT COLOR="black">one  <FONT COLOR="#4C4C00">:</FONT>  p <FONT COLOR="#4C4C00">-&gt;</FONT>          a  <FONT COLOR="#4C4C00">-&gt;</FONT>          p  <FONT COLOR="#4C4C00">-&gt;</FONT> <FONT COLOR="#19194C"><B>prop</B></FONT>,
+  onep <FONT COLOR="#4C4C00">:</FONT>  p <FONT COLOR="#4C4C00">-&gt;</FONT> (name <FONT COLOR="#4C4C00">-&gt;</FONT> a) <FONT COLOR="#4C4C00">-&gt;</FONT> (name <FONT COLOR="#4C4C00">-&gt;</FONT> p) <FONT COLOR="#4C4C00">-&gt;</FONT> <FONT COLOR="#19194C"><B>prop</B></FONT>
+<FONT COLOR="#4C1919"><U>by</U></FONT>
+  onep (in X M) (dn X) M;
+  one  (out X Y P) (up X Y) P;
+  one  (taup P) tau P;
+  one  (match X X P) A Q <FONT COLOR="#4C4C00">:=</FONT> one P A Q;
+  onep (match X X P) A M <FONT COLOR="#4C4C00">:=</FONT> onep P A M;</FONT></TD></TR>
+</TABLE>
+<DIV CLASS="center"><HR WIDTH="80%" SIZE=2></DIV></DIV></BLOCKQUOTE><BLOCKQUOTE CLASS="figure"><DIV CLASS="center"><DIV CLASS="center"><HR WIDTH="80%" SIZE=2></DIV>
+
+<DIV CLASS="center">Listing 5: <A NAME="bd:pi-bisim"></A>(Open) bisimulation (from
+<SPAN STYLE="background-color:#FFE5CC">examples/pi/pi.def</SPAN>).</DIV><BR>
+<TABLE CLASS="lstframe" STYLE="padding:1ex;border-style:solid none;"><TR><TD CLASS="lstlisting"><FONT COLOR="#4C1919"><U>Define</U></FONT> <FONT COLOR="#4C1919"><U>coinductive</U></FONT> <FONT COLOR="black">bisim <FONT COLOR="#4C4C00">:</FONT> p <FONT COLOR="#4C4C00">-&gt;</FONT> p <FONT COLOR="#4C4C00">-&gt;</FONT> <FONT COLOR="#19194C"><B>prop</B></FONT> <FONT COLOR="#4C1919"><U>by</U></FONT>
+  bisim P Q <FONT COLOR="#4C4C00">:=</FONT>
+    (<FONT COLOR="#19194C"><B>forall</B></FONT> A P1, one P A P1 <FONT COLOR="#4C4C00">-&gt;</FONT>
+      <FONT COLOR="#19194C"><B>exists</B></FONT> Q1, one Q A Q1 /\ bisim P1 Q1) /\
+    (<FONT COLOR="#19194C"><B>forall</B></FONT> X M, onep P (dn X) M <FONT COLOR="#4C4C00">-&gt;</FONT>
+      <FONT COLOR="#19194C"><B>exists</B></FONT> N, onep Q (dn X) N /\
+      <FONT COLOR="#19194C"><B>forall</B></FONT> w, bisim (M w) (N w)) /\
+    (<FONT COLOR="#19194C"><B>forall</B></FONT> X M, onep P (up X) M <FONT COLOR="#4C4C00">-&gt;</FONT>
+      <FONT COLOR="#19194C"><B>exists</B></FONT> N, onep Q (up X) N /\
+      <FONT COLOR="#19194C"><B>nabla</B></FONT> w, bisim (M w) (N w)) /\
+    (<FONT COLOR="#19194C"><B>forall</B></FONT> A Q1, one Q A Q1 <FONT COLOR="#4C4C00">-&gt;</FONT>
+      <FONT COLOR="#19194C"><B>exists</B></FONT> P1, one P A P1 /\ bisim P1 Q1) /\
+    (<FONT COLOR="#19194C"><B>forall</B></FONT> X N, onep Q (dn X) N <FONT COLOR="#4C4C00">-&gt;</FONT>
+      <FONT COLOR="#19194C"><B>exists</B></FONT> M, onep P (dn X) M /\
+      <FONT COLOR="#19194C"><B>forall</B></FONT> w, bisim (M w) (N w)) /\
+    (<FONT COLOR="#19194C"><B>forall</B></FONT> X N, onep Q (up X) N <FONT COLOR="#4C4C00">-&gt;</FONT>
+      <FONT COLOR="#19194C"><B>exists</B></FONT> M, onep P (up X) M /\
+      <FONT COLOR="#19194C"><B>nabla</B></FONT> w, bisim (M w) (N w)).</FONT></TD></TR>
+</TABLE>
+<DIV CLASS="center"><HR WIDTH="80%" SIZE=2></DIV></DIV></BLOCKQUOTE><P>Returning to the example in <A HREF="#bd:pi-one-step">4</A>, notice that two
+predicates are defined: 
+<FONT COLOR="black"><CODE>one</CODE></FONT> and 
+<FONT COLOR="black"><CODE>onep</CODE></FONT>. The first
+one relates a process, an action, and a process. The second one relates
+a process, an abstraction of an action, and an abstraction of a process.
+The 
+<FONT COLOR="black"><CODE>one</CODE></FONT> predicate is used to capture “free transitions”
+and the “τ-transition” while the second is used to capture
+bounded transitions. See [<A HREF="refman016.html#tiu04fguc">TM04</A>, <A HREF="refman016.html#tiu05concur">Tiu05</A>] for more details
+on this encoding strategy for the π-calculus.</P><P><A HREF="#bd:pi-bisim">5</A> provides all that is necessary to specify (open)
+bisimulation for (finite) π-calculus. The keyword 
+<FONT COLOR="#4C1919"><U><CODE>coinductive</CODE></U></FONT>
+tells the system that it will be attempting to explore a greatest fixed
+point. That keyword also enables tabling, which avoids redundant
+computations and accept loops as successes (see <A HREF="refman014.html#tabling">12</A>). The
+other cases should look natural, at least once one understands the
+λ-tree approach to representing syntax and the use of the
+∇-quantifier. The main thing to point out here is that in the
+specification, no special side conditions need to be added to the
+system: all the familiar side conditions from the usual papers on the
+π-calculus are treated by the implementation of the Bedwyr logic: the user of
+the system no longer needs to deal with them explicitly but implicitly
+and declaratively (via quantifier scope, αβη-conversion,
+etc.).</P><P>It is now possible to test some simple examples in the system, for
+example <A HREF="#bd:pi-run">6</A>.
+</P><BLOCKQUOTE CLASS="figure"><DIV CLASS="center"><DIV CLASS="center"><HR WIDTH="80%" SIZE=2></DIV>
+
+<DIV CLASS="center">Listing 6: <A NAME="bd:pi-run"></A>Run on <SPAN STYLE="background-color:#FFE5CC">examples/pi/pi.def</SPAN></DIV><BR>
+<TABLE CLASS="lstframe" STYLE="padding:1ex;border-style:solid none;"><TR><TD CLASS="lstlisting"><FONT COLOR="black"><B>?=</B> bisim (in a x\ in a y\ z)
+     (in a x\ nu w\ in a y\ out w w z).
+<B>Yes</B>.
+<B>More</B> [y] ? y
+<B>No more solutions</B>.
+<B>?=</B> bisim (in a x\ nu y\ match x y (out c c z))
+     (in a x\ z).
+<B>Yes</B>.
+<B>More</B> [y] ? y
+<B>No more solutions</B>.
+<B>?=</B> bisim (nu x\ out a x (in c y\ match x y (out c c z)))
+     (nu x\ out a x (in c y\ z)).
+<B>No</B>.
+<B>?=</B></FONT></TD></TR>
+</TABLE><DIV CLASS="center"><HR WIDTH="80%" SIZE=2></DIV></DIV></BLOCKQUOTE><P>
+These query prove that <I>a</I>(<I>x</I>).<I>a</I>(<I>y</I>).0 and <I>a</I>(<I>x</I>).(ν <I>w</I>).<I>a</I>(<I>y</I>).<I>w</I>!<I>w</I>.0 are
+bisimilar, that <I>a</I>(<I>x</I>).(ν <I>y</I>).[<I>x</I>=<I>y</I>].<I>c</I>!<I>c</I>.0 and <I>a</I>(<I>x</I>).0 are bisimilar,
+and that (ν <I>x</I>).<I>a</I>!<I>x</I>.<I>c</I>(<I>y</I>).[<I>x</I>=<I>y</I>].<I>c</I>!<I>c</I>.0 and (ν <I>x</I>).<I>a</I>!<I>x</I>.<I>c</I>(<I>y</I>).0 are not
+bisimilar.</P><P>Several other aspects of the π-calculus are explored in the examples files of
+the distribution. For example, the file <SPAN STYLE="background-color:#FFE5CC"><TT>pi/pi_modal.def</TT></SPAN> contains
+a specification of the modal logics for mobility described in
+[<A HREF="refman016.html#milner93tcs">MPW93</A>], the file <SPAN STYLE="background-color:#FFE5CC"><TT>pi/corr-assert.def</TT></SPAN> specifies the
+checking of “correspondence assertions” for the π-calculus as described in
+[<A HREF="refman016.html#gordon03tcs">GJ03</A>], and the file <SPAN STYLE="background-color:#FFE5CC"><TT>pi/pi_abscon.def</TT></SPAN> specifies the
+polyadic π-calculus following [<A HREF="refman016.html#milner99book">Mil99</A>].
+</P><HR>
+<A HREF="refman007.html"><IMG SRC="previous_motif.gif" ALT="Previous"></A>
+<A HREF="index.html"><IMG SRC="contents_motif.gif" ALT="Up"></A>
+<A HREF="refman009.html"><IMG SRC="next_motif.gif" ALT="Next"></A>
+</BODY>
+</HTML>

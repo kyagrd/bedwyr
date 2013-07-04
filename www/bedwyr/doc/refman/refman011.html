@@ -1,0 +1,85 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN"
+            "http://www.w3.org/TR/REC-html40/loose.dtd">
+<HTML>
+<HEAD>
+
+<META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<META name="GENERATOR" content="hevea 1.10">
+<LINK REL=STYLESHEET type="text/css" HREF="http://slimmer.gforge.inria.fr/bedwyr/bd.css">
+<LINK rel="stylesheet" type="text/css" href="refman.css">
+<TITLE>Typing</TITLE>
+</HEAD>
+<BODY >
+<A HREF="refman010.html"><IMG SRC="previous_motif.gif" ALT="Previous"></A>
+<A HREF="index.html"><IMG SRC="contents_motif.gif" ALT="Up"></A>
+<A HREF="refman012.html"><IMG SRC="next_motif.gif" ALT="Next"></A>
+<HR>
+<H2 CLASS="section"><A NAME="htoc29">9</A>  Typing</H2><P>
+<A NAME="typing"></A></P><P>Terms in Bedwyr form a strongly typed language with polymorphism and
+type constructors. This language is statically type-checked; once
+definition files are loaded and queries are read, types are discarded
+and the prover handles only untyped terms. Therefore, to ensure that
+“well-typed formulae don’t go wrong”, a form of the Hindley-Milner
+type system is used instead of the full System F<SUB>ω</SUB>. The
+polymorphism has therefore those properties:
+</P><DL CLASS="description"><DT CLASS="dt-description">
+<B>parametric</B></DT><DD CLASS="dd-description"> type parameters are given as uppercase letters in
+constant or predicate declarations</DD><DT CLASS="dt-description"><B>predicative</B></DT><DD CLASS="dd-description"> terms are always monomorphic (apart from
+definitions), so the type parameters of a polymorphic object have to
+be instantiated with monotypes whenever it is used in a term</DD><DT CLASS="dt-description"><B>prenex</B></DT><DD CLASS="dd-description"> type quantifiers can only occur at the outermost level
+of a type, and therefore can be omitted
+</DD></DL><P>As the language is fairly specific, what we have is not
+<EM>let-polymorphism</EM> but “<EM>define-polymorphism</EM>”: while it is
+not possible to give a polytype to a bound variable (whether it is bound
+by an abstraction or a quantifier), a definition can be polymorphic, and
+must be if the predicate was declared so. With the syntax Bedwyr uses
+for clauses, this means that the type of the occurence of a predicate at
+the head of the application that is itself the head of a clause is not
+instantiated. In <A >??</A>, the commented out clause
+wouldn’t type-check as it assumes 
+<FONT COLOR="black"><CODE>print?</CODE></FONT> has type
+
+<CODE><FONT COLOR="black">option</FONT> <FONT COLOR="black">int</FONT></CODE> instead of 
+<CODE><FONT COLOR="black">option</FONT> <FONT COLOR="black">A</FONT></CODE>, and the last
+clause type-checks as 
+<FONT COLOR="black"><CODE>println</CODE></FONT> is itself polymorphic and adds
+no constraints on the type of 
+<FONT COLOR="black"><CODE>X</CODE></FONT>.</P><BLOCKQUOTE CLASS="figure"><DIV CLASS="center"><DIV CLASS="center"><HR WIDTH="80%" SIZE=2></DIV>
+
+<DIV CLASS="center">Listing 9: <A NAME="bd:polymorphism
+"></A>Polymorphism in Bedwyr.</DIV><BR>
+<TABLE CLASS="lstframe" STYLE="padding:1ex;border-style:solid none;"><TR><TD CLASS="lstlisting"><FONT COLOR="#4C1919"><U>Kind</U></FONT> <FONT COLOR="black">option   <FONT COLOR="#19194C"><B>type</B> <FONT COLOR="#4C4C00">-&gt;</FONT> <B>type</B></FONT>.
+<FONT COLOR="#4C1919"><U>Type</U></FONT> none     option A.
+<FONT COLOR="#4C1919"><U>Type</U></FONT> some     A <FONT COLOR="#4C4C00">-&gt;</FONT> option A.
+
+<FONT COLOR="#4C1919"><U>Define</U></FONT> print? <FONT COLOR="#4C4C00">:</FONT> option A <FONT COLOR="#4C4C00">-&gt;</FONT> <FONT COLOR="#19194C"><B>prop</B></FONT> <FONT COLOR="#4C1919"><U>by</U></FONT>
+  print? none ;
+% print? (some 42) ;
+  print? (some X) <FONT COLOR="#4C4C00">:=</FONT> println X.</FONT></TD></TR>
+</TABLE>
+<DIV CLASS="center"><HR WIDTH="80%" SIZE=2></DIV></DIV></BLOCKQUOTE><P>The only two constraints on type parameters are that they must be of
+kind 
+<FONT COLOR="#19194C"><B><CODE>type</CODE></B></FONT>, and therefore cannot appear at the head of an
+type application, and that types must be definite, i.e. a type parameter
+that appears in a type must appear in the goal of that type, so as to
+forbid heterogeneous wrappers like 
+<CODE><FONT COLOR="#4C1919"><U>Type</U></FONT> <FONT COLOR="black">c</FONT> <FONT COLOR="black">A</FONT> <FONT COLOR="#4C4C00">-&gt;</FONT> <FONT COLOR="black">t</FONT></CODE>.</P><P>Recursive algebraic types are de facto available via constant
+declarations, e.g. the predeclared type constructor 
+<FONT COLOR="#19194C"><B><CODE>list</CODE></B></FONT> is
+morally defined as
+</P><DIV CLASS="center">
+
+<CODE><FONT COLOR="#19194C"><B>list</B></FONT> <FONT COLOR="black">A</FONT> <FONT COLOR="#19194C"><B>=</B></FONT> <FONT COLOR="#19194C"><B>nil</B></FONT> <FONT COLOR="black">|</FONT> (<FONT COLOR="#4C4C00">::</FONT>) <FONT COLOR="black">of</FONT> (<FONT COLOR="black">A</FONT> <FONT COLOR="black">*</FONT> <FONT COLOR="#19194C"><B>list</B></FONT> <FONT COLOR="black">A</FONT>)</CODE>
+</DIV><P>
+in pseudo-OCaml notation. It is even possible to emulate type
+deconstruction (matching) by using clause heads that cannot unify
+simultaneously with a ground term, as is done in
+<A >??</A> with the constants 
+<FONT COLOR="black"><CODE>none</CODE></FONT> and
+
+<FONT COLOR="black"><CODE>some</CODE></FONT>.</P><HR>
+<A HREF="refman010.html"><IMG SRC="previous_motif.gif" ALT="Previous"></A>
+<A HREF="index.html"><IMG SRC="contents_motif.gif" ALT="Up"></A>
+<A HREF="refman012.html"><IMG SRC="next_motif.gif" ALT="Next"></A>
+</BODY>
+</HTML>

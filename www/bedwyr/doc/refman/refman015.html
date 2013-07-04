@@ -1,0 +1,116 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN"
+            "http://www.w3.org/TR/REC-html40/loose.dtd">
+<HTML>
+<HEAD>
+
+<META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<META name="GENERATOR" content="hevea 1.10">
+<LINK REL=STYLESHEET type="text/css" HREF="http://slimmer.gforge.inria.fr/bedwyr/bd.css">
+<LINK rel="stylesheet" type="text/css" href="refman.css">
+<TITLE>Limitations of the interpreter</TITLE>
+</HEAD>
+<BODY >
+<A HREF="refman014.html"><IMG SRC="previous_motif.gif" ALT="Previous"></A>
+<A HREF="index.html"><IMG SRC="contents_motif.gif" ALT="Up"></A>
+<A HREF="refman016.html"><IMG SRC="next_motif.gif" ALT="Next"></A>
+<HR>
+<H2 CLASS="section"><A NAME="htoc40">13</A>  Limitations of the interpreter</H2><UL>
+<LI><A HREF="refman015.html#toc19"><I>L</I><SUB>λ</SUB> and
+non-<I>L</I><SUB>λ</SUB> unification problems</A>
+</LI><LI><A HREF="refman015.html#toc20">Restriction on the occurrences of logic variables</A>
+</LI></UL>
+<P>The strategy used by Bedwyr for attempting proofs is not complete. That
+strategy involves using two provers (prover-0 and prover-1), tabling, and
+depth-first search. Many of the incompleteness that one encounters in
+traditional logic programming languages, such as Prolog and λProlog, resulting
+from depth-first search certainly reappear in Bedwyr. We mention two
+additional sources of incompleteness in the proof search engine of Bedwyr.</P><H3 CLASS="subsection"><A NAME="toc19"></A><A NAME="htoc41">13.1</A>  <I>L</I><SUB>λ</SUB> and
+non-<I>L</I><SUB>λ</SUB> unification problems</H3><P>
+Bedwyr allows for unrestricted applications of variables to argument but it is
+only willing to solve <I>L</I><SUB>λ</SUB>-unification problems. As a result, Bedwyr will
+occasionally complain that it needs to solve a “not LLambda unification
+problem” and stop searching for a proof.</P><P>To illustrate this aspect of Bedwyr’s incompleteness, consider the problem of
+specifying the instantiation of a first-order quantifier. In particular,
+consider the specification
+</P><DIV CLASS="center">
+<TABLE CLASS="lstframe" STYLE="padding:1ex;border-style:solid none;"><TR><TD CLASS="lstlisting"><FONT COLOR="#4C1919"><U>Kind</U></FONT> <FONT COLOR="black">tm, fm   <FONT COLOR="#19194C"><B>type</B></FONT>.
+<FONT COLOR="#4C1919"><U>Type</U></FONT> all   (tm <FONT COLOR="#4C4C00">-&gt;</FONT> fm) <FONT COLOR="#4C4C00">-&gt;</FONT> fm.
+<FONT COLOR="#4C1919"><U>Type</U></FONT> p         tm <FONT COLOR="#4C4C00">-&gt;</FONT> fm.
+<FONT COLOR="#4C1919"><U>Type</U></FONT> a         tm.
+<FONT COLOR="#4C1919"><U>Define</U></FONT> instan <FONT COLOR="#4C4C00">:</FONT> fm <FONT COLOR="#4C4C00">-&gt;</FONT> tm <FONT COLOR="#4C4C00">-&gt;</FONT> fm <FONT COLOR="#4C4C00">-&gt;</FONT> <FONT COLOR="#19194C"><B>prop</B></FONT> <FONT COLOR="#4C1919"><U>by</U></FONT>
+   instan X T (B T) <FONT COLOR="#4C4C00">:=</FONT> X <FONT COLOR="#19194C"><B>=</B></FONT> (all B).</FONT></TD></TR>
+</TABLE></DIV><P>
+Thus, 
+<FONT COLOR="black"><CODE>instan</CODE></FONT> relates a universally quantified formula and a term
+to the result of instantiating that quantifier with that term. It is the
+case, however, that a unification problem containing 
+<CODE>(<FONT COLOR="black">B</FONT> <FONT COLOR="black">T</FONT>)</CODE> does
+not belong to the <I>L</I><SUB>λ</SUB> subset. As a result, the following query results in a
+runtime error.
+</P><DIV CLASS="center">
+<TABLE CLASS="lstframe" STYLE="padding:1ex;border-style:solid none;"><TR><TD CLASS="lstlisting"><FONT COLOR="black"><B>?=</B> instan (all x\ p x) a (p X).
+At line 1, byte 28<FONT COLOR="#4C4C00">:</FONT> Not LLambda unification encountered: a.
+<B>?=</B></FONT></TD></TR>
+</TABLE></DIV><P>
+In some situations, a specification can be written so that the problematic
+unification is delayed to a point where the unification problem is within the
+<I>L</I><SUB>λ</SUB> restriction. In this particular case, if the definition of
+
+<FONT COLOR="black"><CODE>instan</CODE></FONT> is rewritten with the logically equivalent clause
+</P><DIV CLASS="center">
+<TABLE CLASS="lstframe" STYLE="padding:1ex;border-style:solid none;"><TR><TD CLASS="lstlisting"><FONT COLOR="#4C1919"><U>Define</U></FONT> <FONT COLOR="black">instan <FONT COLOR="#4C4C00">:</FONT> fm <FONT COLOR="#4C4C00">-&gt;</FONT> tm <FONT COLOR="#4C4C00">-&gt;</FONT> fm <FONT COLOR="#4C4C00">-&gt;</FONT> <FONT COLOR="#19194C"><B>prop</B></FONT> <FONT COLOR="#4C1919"><U>by</U></FONT>
+   instan X T Y <FONT COLOR="#4C4C00">:=</FONT> X <FONT COLOR="#19194C"><B>=</B></FONT> (all B) /\ Y <FONT COLOR="#19194C"><B>=</B></FONT> (B T).</FONT></TD></TR>
+</TABLE></DIV><P>
+this same query now returns an appropriate solution.
+</P><DIV CLASS="center">
+<TABLE CLASS="lstframe" STYLE="padding:1ex;border-style:solid none;"><TR><TD CLASS="lstlisting"><FONT COLOR="black"><B>?=</B> instan (all x\ p x) a (p X).
+<B>Solution found:</B>
+ X <FONT COLOR="#19194C"><B>=</B></FONT> a
+<B>More</B> [y] ?
+<B>No more solutions</B>.
+<B>?=</B></FONT></TD></TR>
+</TABLE></DIV><P>
+An improvement to Bedwyr would be for it to automatically delay unification
+problems that are outside the <I>L</I><SUB>λ</SUB>-subset: delaying “difficult” unification
+problems in the hope that future instantiations and β-reduction will
+make them “simple” is employed in such systems as Twelf and the second
+version of the Teyjus implementation of λProlog [<A HREF="refman016.html#teyjus.website">GHN+08</A>].</P><H3 CLASS="subsection"><A NAME="toc20"></A><A NAME="htoc42">13.2</A>  Restriction on the occurrences of logic variables</H3><P>
+<A NAME="restrict-logic-variables"></A></P><P>As we have already noted, in the current implementation of Bedwyr there are
+restrictions on negative occurrences of logic variables – i.e. to the left of
+an implication. This restriction arises from the fact that we do not have a
+satisfactory and comprehensive understanding of unification in the prover-1
+that incorporates such variables. As a result, Bedwyr is incomplete since it
+generates a run-time error in these cases. Consider the following two
+queries.
+</P><DIV CLASS="center">
+<TABLE CLASS="lstframe" STYLE="padding:1ex;border-style:solid none;"><TR><TD CLASS="lstlisting"><FONT COLOR="black"><B>?= <FONT COLOR="#19194C">nabla</FONT></B> f, <FONT COLOR="#19194C"><B>exists</B></FONT> X, X <FONT COLOR="#19194C"><B>=</B></FONT> 42 <FONT COLOR="#4C4C00">-&gt;</FONT> <FONT COLOR="#19194C"><B>false</B></FONT>.
+At line 1, byte 35<FONT COLOR="#4C4C00">:</FONT> Logic variable encountered on the left: H.
+<B>?= <FONT COLOR="#19194C">nabla</FONT></B> f, <FONT COLOR="#19194C"><B>exists</B></FONT> X, f X <FONT COLOR="#19194C"><B>=</B></FONT> 42 <FONT COLOR="#4C4C00">-&gt;</FONT> <FONT COLOR="#19194C"><B>false</B></FONT>.
+<B>Yes</B>.
+<B>More</B> [y] ?
+<B>No more solutions</B>.
+<B>?=</B></FONT></TD></TR>
+</TABLE></DIV><P>
+The first query is certainly meaningful and is provable if there is a term
+different from 42 (say, 43): in Bedwyr, this query generates a run-time error
+since it requires dealing with a prover-1 existential variable within prover-0
+unification. The second query illustrates that some instances of prover-0
+unification can tolerate the occurrences of prover-1 existential variables.</P><P>Sometimes, one can change a specification to avoid this runtime error. A
+simple example is provided by the following two queries.
+</P><DIV CLASS="center">
+<TABLE CLASS="lstframe" STYLE="padding:1ex;border-style:solid none;"><TR><TD CLASS="lstlisting"><FONT COLOR="black"><B>?= <FONT COLOR="#19194C">exists</FONT></B> X, (X <FONT COLOR="#19194C"><B>=</B></FONT> 42 <FONT COLOR="#4C4C00">-&gt;</FONT> <FONT COLOR="#19194C"><B>false</B></FONT>) /\ X <FONT COLOR="#19194C"><B>=</B></FONT> 17.
+At line 1, byte 38<FONT COLOR="#4C4C00">:</FONT> Logic variable encountered on the left: H.
+<B>?= <FONT COLOR="#19194C">exists</FONT></B> X, X <FONT COLOR="#19194C"><B>=</B></FONT> 17 /\ (X <FONT COLOR="#19194C"><B>=</B></FONT> 42 <FONT COLOR="#4C4C00">-&gt;</FONT> <FONT COLOR="#19194C"><B>false</B></FONT>).
+<B>Yes</B>.
+<B>More</B> [y] ?
+<B>No more solutions</B>.
+<B>?=</B></FONT></TD></TR>
+</TABLE></DIV><P>
+Such reordering of goals is something a future version of Bedwyr might attempt
+to do automatically.
+</P><HR>
+<A HREF="refman014.html"><IMG SRC="previous_motif.gif" ALT="Previous"></A>
+<A HREF="index.html"><IMG SRC="contents_motif.gif" ALT="Up"></A>
+<A HREF="refman016.html"><IMG SRC="next_motif.gif" ALT="Next"></A>
+</BODY>
+</HTML>

@@ -1,0 +1,194 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN"
+            "http://www.w3.org/TR/REC-html40/loose.dtd">
+<HTML>
+<HEAD>
+
+<META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<META name="GENERATOR" content="hevea 1.10">
+<LINK REL=STYLESHEET type="text/css" HREF="http://slimmer.gforge.inria.fr/bedwyr/bd.css">
+<LINK rel="stylesheet" type="text/css" href="refman.css">
+<TITLE>User interface</TITLE>
+</HEAD>
+<BODY >
+<A HREF="refman004.html"><IMG SRC="previous_motif.gif" ALT="Previous"></A>
+<A HREF="index.html"><IMG SRC="contents_motif.gif" ALT="Up"></A>
+<A HREF="refman006.html"><IMG SRC="next_motif.gif" ALT="Next"></A>
+<HR>
+<H2 CLASS="section"><A NAME="htoc7">3</A>  User interface</H2><UL>
+<LI><A HREF="refman005.html#toc4">Definition files</A>
+</LI><LI><A HREF="refman005.html#toc5">Toplevel</A>
+</LI><LI><A HREF="refman005.html#toc6">Meta-commands</A>
+</LI></UL>
+<P>When you run Bedwyr, you specify a list of definition files, which
+contain objects to be declared and defined. You can then use the
+toplevel to ask queries against those definitions.</P><P>There is also a special brand of commands, meta-commands, which can
+appear anywhere.</P><P>As a general rule, any kind of input ends with a full-stop. Commands
+start with uppercase letters, meta-commands with hashes, and queries
+are just formulae.</P><H3 CLASS="subsection"><A NAME="toc4"></A><A NAME="htoc8">3.1</A>  Definition files</H3><P>Definition files are usually named with a <CODE>.def</CODE> extension. You
+can find several of them in the <SPAN STYLE="background-color:#FFE5CC"><TT>examples/</TT></SPAN> directory of the Bedwyr
+distribution. They contain declarations for types
+(
+<CODE><FONT COLOR="#4C1919"><U>Kind</U></FONT> &lt;<FONT COLOR="black">id&gt;</FONT> <FONT COLOR="#19194C"><B>type</B></FONT>.</CODE>), declarations for constants
+(
+<CODE><FONT COLOR="#4C1919"><U>Type</U></FONT> &lt;<FONT COLOR="black">id&gt;</FONT> <FONT COLOR="#19194C"><B>type</B></FONT>.</CODE>), declarations and definitions for
+predicates (
+<CODE><FONT COLOR="#4C1919"><U>Define</U></FONT> &lt;<FONT COLOR="black">id&gt;</FONT> <FONT COLOR="#4C4C00">:</FONT> &lt;<FONT COLOR="black">type&gt;</FONT> <FONT COLOR="#4C1919"><U>by</U></FONT> &lt;<FONT COLOR="black">definitions&gt;</FONT>.</CODE>), and
+theorems (
+<CODE><FONT COLOR="#4C1919"><U>Theorem</U></FONT> &lt;<FONT COLOR="black">id&gt;</FONT> <FONT COLOR="#4C4C00">:</FONT> &lt;<FONT COLOR="black">formula&gt;</FONT>.</CODE>).</P><P>The only meta-command that is really intended for definition files is
+the include command: 
+<CODE><FONT COLOR="#4C1919">#include </FONT><FONT COLOR="#9300D1">"another/file.def"</FONT></CODE>. This can
+really be seen as the plain inclusion of another file, as Bedwyr doesn’t
+have any namespace or module system. If the path is not absolute, it is
+relative to the path of the current file, or the execution path for the
+toplevel.</P><H4 CLASS="subsubsection"><A NAME="htoc9">3.1.1</A>  Emacs mode</H4><P>Assuming Bedwyr is installed in standard Linux system folders, you can
+use the Emacs mode for Bedwyr by adding these two lines to your
+<SPAN STYLE="background-color:#FFE5CC"><TT> /.emacs</TT></SPAN> file:
+</P><PRE CLASS="verbatim">(load "/usr/share/bedwyr/contrib/emacs/bedwyr.el")
+(setq bedwyr-program "/usr/bin/bedwyr")
+;; Of course you can change both locations to wherever you want.
+</PRE><P>Then you should be able to load any <CODE>.def</CODE> file and have syntax
+highlighting and some rough auto-indenting. Also if you do
+<CODE>C-c C-c</CODE> it will start Bedwyr and load the current file you are
+working on.</P><H4 CLASS="subsubsection"><A NAME="htoc10">3.1.2</A>  Vim syntax highlighting</H4><P>There is also a basic syntax highlighting file for Vim. With a standard
+system installation, the files
+<SPAN STYLE="background-color:#FFE5CC"><TT>/usr/share/vim/vimfiles/[ftdetect|syntax]/bedwyr.vim</TT></SPAN> should
+suffice; otherwise do the following:
+</P><UL CLASS="itemize"><LI CLASS="li-itemize">
+copy <SPAN STYLE="background-color:#FFE5CC"><TT>contrib/vim/syntax/bedwyr.vim</TT></SPAN> to your
+<SPAN STYLE="background-color:#FFE5CC"><TT> /.vim/syntax/</TT></SPAN> to make highlighting available
+</LI><LI CLASS="li-itemize">copy <SPAN STYLE="background-color:#FFE5CC"><TT>contrib/vim/ftdetect/bedwyr.vim</TT></SPAN> to your
+<SPAN STYLE="background-color:#FFE5CC"><TT> /.vim/ftdetect/</TT></SPAN> to have it used automatically for all
+<CODE>.def</CODE> files
+</LI></UL><H3 CLASS="subsection"><A NAME="toc5"></A><A NAME="htoc11">3.2</A>  Toplevel</H3><P>The interactive toplevel is automatically launched once the files have
+been parsed, unless the flag <CODE>-I</CODE> is passed to Bedwyr. In it, you
+can either query a formula, or run a meta-command. In queries, free and
+bound variables are the only objects that can be used without prior
+declaration, and the solutions are displayed as instantiations of free
+variables.</P><P>Queries can also be given in batch mode, to a non-interactive toplevel,
+via the command-line option <CODE>-e</CODE> (e.g. <CODE>bedwyr -e 'X = 0.'</CODE>).
+In this case, they are processed after the files and before the
+interactive toplevel.</P><P>In <A HREF="#bd:lambda-run">1</A> we load a set of definitions and prove
+(twice) that the untyped λ-term λ <I>x</I>.<I>x</I> <I>x</I> has no simple
+type.</P><BLOCKQUOTE CLASS="figure"><DIV CLASS="center"><DIV CLASS="center"><HR WIDTH="80%" SIZE=2></DIV>
+
+<DIV CLASS="center">Listing 1: <A NAME="bd:lambda-run"></A>Run on <SPAN STYLE="background-color:#FFE5CC">examples/lambda.def</SPAN>.</DIV><BR>
+<TABLE CLASS="lstframe" STYLE="padding:1ex;border-style:solid none;"><TR><TD CLASS="lstlisting"><FONT COLOR="black"><B>?=</B> (<FONT COLOR="#19194C"><B>exists</B></FONT> T, wt void (abs x\ app x x) T).
+<B>No</B>.
+<B>?=</B> (<FONT COLOR="#19194C"><B>exists</B></FONT> T, wt void (abs x\ app x x) T) <FONT COLOR="#4C4C00">-&gt;</FONT> <FONT COLOR="#19194C"><B>false</B></FONT>.
+<B>Yes</B>.
+<B>More</B> [y] ?
+<B>No more solutions</B>.
+<B>?=</B></FONT></TD></TR>
+</TABLE><DIV CLASS="center"><HR WIDTH="80%" SIZE=2></DIV></DIV></BLOCKQUOTE><P>Notice that we had to use the term 
+<CODE>(<FONT COLOR="black">abs</FONT> <FONT COLOR="black">x</FONT>\ <FONT COLOR="black">app</FONT> <FONT COLOR="black">x</FONT> <FONT COLOR="black">x</FONT>)</CODE> instead
+of 
+<CODE>(<FONT COLOR="black">x1</FONT>\ <FONT COLOR="black">x1</FONT> <FONT COLOR="black">x1</FONT>)</CODE>: the former encodes the untyped
+λ-term λ <I>x</I>.<I>x</I> <I>x</I> by mapping object-level abstraction to
+
+<FONT COLOR="black"><CODE>abs</CODE></FONT> and object-level application to 
+<FONT COLOR="black"><CODE>app</CODE></FONT>, while
+the latter would map them directly to logic-level abstraction and
+application, and therefore is not a legal term in Bedwyr. (Prior to
+version 1.3, this was allowed as Bedwyr did not use simple typing on its
+own terms.)</P><P>Most of the errors that can stop the reading of a file (parsing or
+typing error, undeclared object, etc.) are correctly caught by the
+toplevel, though the line number reported for the error is often not
+useful.</P><H4 CLASS="subsubsection"><A NAME="htoc12">3.2.1</A>  Line editing</H4><P>Bedwyr has no line editing facilities at all. Thus, we recommend using
+<CODE>ledit</CODE> or <CODE>rlwrap</CODE>, which provides such features. Get one
+of them from your usual package manager or at
+<TT><A HREF="http://pauillac.inria.fr/~ddr/ledit/">http://pauillac.inria.fr/~ddr/ledit/</A></TT> or
+<TT><A HREF="http://utopia.knoware.nl/~hlub/rlwrap/#rlwrap">http://utopia.knoware.nl/~hlub/rlwrap/#rlwrap</A></TT>.</P><P>Then you can simply run <CODE>ledit bedwyr</CODE>. One can also define an
+alias in his <SPAN STYLE="background-color:#FFE5CC"><TT> /.bashrc</TT></SPAN>, such as the following which also makes use
+of <SPAN STYLE="background-color:#FFE5CC"><TT> /.bedwyr_history</TT></SPAN> to remember history from one session to
+another:
+</P><PRE CLASS="verbatim">alias bedwyr="ledit -h ~/.bedwyr_history -x /path/to/bedwyr"
+</PRE><H3 CLASS="subsection"><A NAME="toc6"></A><A NAME="htoc13">3.3</A>  Meta-commands</H3><P>Meta-commands are used to change the state or the program, or for
+non-logical tasks. They can be used any time a command or query is
+allowed.</P><H4 CLASS="subsubsection"><A NAME="htoc14">3.3.1</A>  Session management</H4><P>Those commands alter the set of definitions the current session of
+Bedwyr holds. An empty session actually means that only pervasive
+types, constants and predicates are known. The session’s initial state
+is the list of files given on the command-line, and it can grow anytime
+with the use of 
+<FONT COLOR="#4C1919"><CODE>#include</CODE></FONT>. It should be noted that, although
+Bedwyr has no solid notion of what a module is, it tries to do the smart
+thing by ignoring the request to include a file if it appears to be
+already loaded in the current session, as failure to do this would
+result in fatal multiple declarations. This only works if the same path
+is used for each inclusion; for instance, <SPAN STYLE="background-color:#FFE5CC"><TT>./file.def</TT></SPAN> and
+<SPAN STYLE="background-color:#FFE5CC"><TT>file.def</TT></SPAN> will be seen as different files.
+</P><UL CLASS="itemize"><LI CLASS="li-itemize">
+
+<FONT COLOR="#4C1919"><CODE>#include</CODE></FONT> adds a <CODE>.def</CODE> file to the current
+session. It is designed to be used in definition files.</LI><LI CLASS="li-itemize">
+<FONT COLOR="#4C1919"><CODE>#session</CODE></FONT> is an advanced 
+<FONT COLOR="#4C1919"><CODE>#include</CODE></FONT> meant
+for query mode. It accepts any number of filenames as parameters,
+and this set of files will be remembered as the new session. When
+you pass filenames on Bedwyr’s command line, it is equivalent to a
+call to 
+<FONT COLOR="#4C1919"><CODE>#session</CODE></FONT> with these definition files.</LI><LI CLASS="li-itemize">
+<FONT COLOR="#4C1919"><CODE>#reload</CODE></FONT> clears all the definitions, and then reloads
+the session’s initial state, i.e. the definition files given on the
+command-line. It is useful if they have been changed.</LI><LI CLASS="li-itemize">
+<FONT COLOR="#4C1919"><CODE>#reset</CODE></FONT> clears all the definitions and empties the
+session. It is synonymous to 
+<FONT COLOR="#4C1919"><CODE>#session</CODE></FONT> with no
+arguments.
+</LI></UL><H4 CLASS="subsubsection"><A NAME="htoc15">3.3.2</A>  Assertions</H4><P>Three kinds of assertions can be used in definition files. These tests
+are not executed unless the <CODE>-t</CODE> flag has been passed on Bedwyr’s
+command-line, in which case any assertion failure is fatal.
+</P><UL CLASS="itemize"><LI CLASS="li-itemize">
+
+<FONT COLOR="#4C1919"><CODE>#assert</CODE></FONT> checks that a formula has at least one
+solution.</LI><LI CLASS="li-itemize">
+<FONT COLOR="#4C1919"><CODE>#assert_not</CODE></FONT> checks that a formula has no solution.</LI><LI CLASS="li-itemize">
+<FONT COLOR="#4C1919"><CODE>#assert_raise</CODE></FONT> checks that the proof-search for a
+formula triggers a runtime error.
+</LI></UL><P>Our examples include a lot of assertions, to make sure that definitions
+have (and keep) the intended meaning. These assertions are also the
+basis of Bedwyr’s correctness and performance tests ran using
+<CODE>make test</CODE>.</P><H4 CLASS="subsubsection"><A NAME="htoc16">3.3.3</A>  Other commands</H4><UL CLASS="itemize"><LI CLASS="li-itemize">
+Output
+<UL CLASS="itemize"><LI CLASS="li-itemize">
+
+<FONT COLOR="#4C1919"><CODE>#env</CODE></FONT> displays the current session (types,
+constants and predicates).</LI><LI CLASS="li-itemize">
+<FONT COLOR="#4C1919"><CODE>#typeof</CODE></FONT> displays the (monomorphic) type of a
+formula and of its free variables.</LI><LI CLASS="li-itemize">
+<FONT COLOR="#4C1919"><CODE>#show_def</CODE></FONT> displays the definition of a
+predicate.</LI><LI CLASS="li-itemize">
+<FONT COLOR="#4C1919"><CODE>#show_table</CODE></FONT> displays the content of the table of
+an inductive of co-inductive predicate.</LI><LI CLASS="li-itemize">
+<FONT COLOR="#4C1919"><CODE>#save_table</CODE></FONT> writes the table of an inductive of
+co-inductive predicate in a fresh definition file.</LI><LI CLASS="li-itemize">
+<FONT COLOR="#4C1919"><CODE>#export</CODE></FONT> exports a structured aggregate of all
+tables in a file. This functionality has to be enabled at
+compile-time.
+</LI></UL></LI><LI CLASS="li-itemize">Tabling (i.e. memoization or caching)
+<UL CLASS="itemize"><LI CLASS="li-itemize">
+
+<FONT COLOR="#4C1919"><CODE>#equivariant</CODE></FONT> enables an alternative tabling
+mode.</LI><LI CLASS="li-itemize">
+<FONT COLOR="#4C1919"><CODE>#clear_table</CODE></FONT> clears the results cached for a
+predicate.</LI><LI CLASS="li-itemize">
+<FONT COLOR="#4C1919"><CODE>#clear_tables</CODE></FONT> clears all cached results.</LI><LI CLASS="li-itemize">
+<FONT COLOR="#4C1919"><CODE>#freezing</CODE></FONT> sets the depth of backward-chaining
+during proof-search.</LI><LI CLASS="li-itemize">
+<FONT COLOR="#4C1919"><CODE>#saturation</CODE></FONT> sets the depth of forward-chaining
+during proof-search.
+</LI></UL></LI><LI CLASS="li-itemize">General purpose
+<UL CLASS="itemize"><LI CLASS="li-itemize">
+
+<FONT COLOR="#4C1919"><CODE>#debug</CODE></FONT> adds a lot of output during the proof
+search.</LI><LI CLASS="li-itemize">
+<FONT COLOR="#4C1919"><CODE>#time</CODE></FONT> displays computation times between two
+results.</LI><LI CLASS="li-itemize">
+<FONT COLOR="#4C1919"><CODE>#help</CODE></FONT> is what you should type first.</LI><LI CLASS="li-itemize">
+<FONT COLOR="#4C1919"><CODE>#exit</CODE></FONT> is what you should type last.
+</LI></UL>
+</LI></UL><HR>
+<A HREF="refman004.html"><IMG SRC="previous_motif.gif" ALT="Previous"></A>
+<A HREF="index.html"><IMG SRC="contents_motif.gif" ALT="Up"></A>
+<A HREF="refman006.html"><IMG SRC="next_motif.gif" ALT="Next"></A>
+</BODY>
+</HTML>

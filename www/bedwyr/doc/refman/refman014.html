@@ -1,0 +1,235 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN"
+            "http://www.w3.org/TR/REC-html40/loose.dtd">
+<HTML>
+<HEAD>
+
+<META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<META name="GENERATOR" content="hevea 1.10">
+<LINK REL=STYLESHEET type="text/css" HREF="http://slimmer.gforge.inria.fr/bedwyr/bd.css">
+<LINK rel="stylesheet" type="text/css" href="refman.css">
+<TITLE>Tabling</TITLE>
+</HEAD>
+<BODY >
+<A HREF="refman013.html"><IMG SRC="previous_motif.gif" ALT="Previous"></A>
+<A HREF="index.html"><IMG SRC="contents_motif.gif" ALT="Up"></A>
+<A HREF="refman015.html"><IMG SRC="next_motif.gif" ALT="Next"></A>
+<HR>
+<H2 CLASS="section"><A NAME="htoc35">12</A>  Tabling</H2><UL>
+<LI><A HREF="refman014.html#toc15">Table output</A>
+</LI><LI><A HREF="refman014.html#toc16">Table extraction</A>
+</LI><LI><A HREF="refman014.html#toc17">Tabling modulo</A>
+</LI><LI><A HREF="refman014.html#toc18">A bisimulation example</A>
+</LI></UL>
+<P>
+<A NAME="tabling"></A></P><P>Proof search for a defined atom is done by unfolding the definition for
+the atom, i.e. by replacing it with the body of the definition. Since
+(mutually) recursive definitions are allowed, it is possible that loops
+occur in the proof search. The same goals can also arise several times
+in different searches. By default, Bedwyr doesn’t detect any of these
+issues, which makes the proof search much longer than needed, or even
+infinite. To address this, Bedwyr can use tabling to keep records of
+certain proved, disproved or ongoing formulae, hence avoiding redundant
+search.</P><P>Tabling is used in both prover-0 and prover-1 (see
+Section <A HREF="refman009.html#psearch">7.5</A>). The current implementation restricts tabling to
+atomic goals with no occurrence of existential variables in prover-1.
+In prover-0, only ground atomic goals (no occurrence of existential or
+universal variables) are tabled.
+</P><P>The use of tabling as a memoization mechanism is straightforward: once
+an atom is <EM>proved</EM> or <EM>disproved</EM>, it is marked as such in
+the table, and this result can be reused in any later computation. On
+the other hand, while the proof search for an atom is still ongoing, the
+atom is marked as <EM>working</EM>, and any new occurrence of it will mean
+that a loop in the search has been found. This can have several
+interpretations, depending on whether we consider the predicate as
+<EM>inductive</EM> or <EM>co-inductive</EM>. In the former case, that means
+that the atom is not provable, since otherwise it would contradict the
+well-foundedness of inductive definitions. In the latter case, we would
+have a proof of the atom. This simple loop checking makes it possible
+to do proof search for some non-terminating definitions.</P><P>Tabling is by default not enabled in Bedwyr. To enable it, two keywords
+are provided: 
+<FONT COLOR="#4C1919"><U><CODE>inductive</CODE></U></FONT> and 
+<FONT COLOR="#4C1919"><U><CODE>coinductive</CODE></U></FONT>. To use
+tabling on a predicate 
+<FONT COLOR="black"><CODE>p</CODE></FONT>, one of them has to be added in the
+declaration of 
+<FONT COLOR="black"><CODE>p</CODE></FONT>, in the header of the definition block.
+Note that, while one can mix tabled and non-tabled predicates in the
+same definition block by only applying such a keyword to some of the
+predicates, the scope of the inductive or co-inductive trait is the
+whole block of mutually recursive definitions. This means that a
+definition block cannot contain both inductive and co-inductive
+predicates at the same time, as it might lead to contradictions – see
+[<A HREF="refman016.html#momigliano03types">MT03</A>] for more details.</P><H3 CLASS="subsection"><A NAME="toc15"></A><A NAME="htoc36">12.1</A>  Table output</H3><P>The command 
+<CODE><FONT COLOR="#4C1919">#show_table </FONT><FONT COLOR="black">pred</FONT>.</CODE> allows one to inspect the
+contents of 
+<FONT COLOR="black"><CODE>pred</CODE></FONT>’s table outside of any computation, when it
+only contains proved and disproved atoms. The output displays one
+formula per line, with the prefix <TT>[P]</TT> for proved and
+<TT>[D]</TT> for disproved. The formulas are abstracted over by their
+generic and universal variables. The relative scopings of generic and
+universal variables is not displayed although that information is
+present internally: such information is needed, for example, to avoid
+that a proof of (∀ <I>x</I>∇ <I>y</I>  .  <I>p</I> <I>x</I> <I>y</I>) is used as a proof for
+(∇ <I>y</I>∀ <I>x</I>  .  <I>p</I> <I>x</I> <I>y</I>). The displaying of this information will
+be fixed with planned extensions of the tabling mechanisms that will
+implicitly allow extra axioms on ∇ (see [<A HREF="refman016.html#tiu06lfmtp">Tiu06</A>]) in
+order to be able to inspect in a meaningful way one predicate’s table
+from another logic program.</P><P>For example, if we define
+</P><DIV CLASS="center">
+<TABLE CLASS="lstframe" STYLE="padding:1ex;border-style:solid none;"><TR><TD CLASS="lstlisting"><FONT COLOR="#4C1919"><U>Define</U></FONT> <FONT COLOR="#4C1919"><U>inductive</U></FONT> <FONT COLOR="black">neq <FONT COLOR="#4C4C00">: <FONT COLOR="#19194C"><B>nat</B></FONT> -&gt; <FONT COLOR="#19194C"><B>nat</B></FONT> -&gt;</FONT> <FONT COLOR="#19194C"><B>prop</B></FONT> <FONT COLOR="#4C1919"><U>by</U></FONT>
+  neq X Y <FONT COLOR="#4C4C00">:=</FONT> X <FONT COLOR="#19194C"><B>=</B></FONT> Y <FONT COLOR="#4C4C00">-&gt;</FONT> <FONT COLOR="#19194C"><B>false</B></FONT>.
+
+<FONT COLOR="#4C1919"><U>Define</U></FONT> query1 <FONT COLOR="#4C4C00">:</FONT> <FONT COLOR="#19194C"><B>prop</B></FONT>, query2 <FONT COLOR="#4C4C00">:</FONT> <FONT COLOR="#19194C"><B>prop</B></FONT> <FONT COLOR="#4C1919"><U>by</U></FONT>
+  query1 <FONT COLOR="#4C4C00">:=</FONT> <FONT COLOR="#19194C"><B>forall</B></FONT> x, <FONT COLOR="#19194C"><B>nabla</B></FONT> y, neq x y ; % true
+  query2 <FONT COLOR="#4C4C00">:=</FONT> <FONT COLOR="#19194C"><B>nabla</B></FONT> y, <FONT COLOR="#19194C"><B>forall</B></FONT> x, neq x y.  % false</FONT></TD></TR>
+</TABLE></DIV><P>
+and ask the queries 
+<CODE><FONT COLOR="black">query1</FONT>.</CODE> and 
+<CODE><FONT COLOR="black">query2</FONT>.</CODE> , we end
+up with the following puzzling table:
+</P><DIV CLASS="center">
+<TABLE CLASS="lstframe" STYLE="padding:1ex;border-style:solid none;"><TR><TD CLASS="lstlisting"><FONT COLOR="black"><B>?=</B> #show_table neq.
+Table for neq contains (P=Proved, D=Disproved)<FONT COLOR="#4C4C00">:</FONT>
+ [P] <FONT COLOR="#19194C"><B>nabla</B></FONT> x1, x2\ neq x2 x1
+ [D] <FONT COLOR="#19194C"><B>nabla</B></FONT> x1, x2\ neq x2 x1
+<B>?=</B></FONT></TD></TR>
+</TABLE></DIV><P>
+The two entries are indistinguishable by the user, but internally some
+extra information does separate them.</P><P>Tables can be reset with the commands 
+<FONT COLOR="#4C1919"><CODE>#clear_table</CODE></FONT> and
+
+<FONT COLOR="#4C1919"><CODE>#clear_tables</CODE></FONT>.</P><H3 CLASS="subsection"><A NAME="toc16"></A><A NAME="htoc37">12.2</A>  Table extraction</H3><P>Two means of extracting tabled information exist in Bedwyr. The first
+is the 
+<FONT COLOR="#4C1919"><CODE>#save_table</CODE></FONT> command, which is similar to
+
+<FONT COLOR="#4C1919"><CODE>#show_table</CODE></FONT> but outputs the table in a definition file as a
+pair of predicates (<A HREF="#bd:save-table">10</A>), 
+<FONT COLOR="black"><CODE>proved</CODE></FONT> and
+
+<FONT COLOR="black"><CODE>disproved</CODE></FONT>. This way, it is possible for Bedwyr to reason
+about its own tables.</P><BLOCKQUOTE CLASS="figure"><DIV CLASS="center"><DIV CLASS="center"><HR WIDTH="80%" SIZE=2></DIV>
+
+<DIV CLASS="center">Listing 10: <A NAME="bd:save-table"></A>#save_table path "path-table.def".</DIV><BR>
+<TABLE CLASS="lstframe" STYLE="padding:1ex;border-style:solid none;"><TR><TD CLASS="lstlisting"><FONT COLOR="black">% Table for path contains :
+<FONT COLOR="#4C1919"><U>Define</U></FONT> proved <FONT COLOR="#4C4C00">:</FONT> (s <FONT COLOR="#4C4C00">-&gt;</FONT> s <FONT COLOR="#4C4C00">-&gt;</FONT> <FONT COLOR="#19194C"><B>prop</B></FONT>) <FONT COLOR="#4C4C00">-&gt;</FONT> s <FONT COLOR="#4C4C00">-&gt;</FONT> s <FONT COLOR="#4C4C00">-&gt;</FONT> <FONT COLOR="#19194C"><B>prop</B></FONT>,
+  disproved <FONT COLOR="#4C4C00">:</FONT> (s <FONT COLOR="#4C4C00">-&gt;</FONT> s <FONT COLOR="#4C4C00">-&gt;</FONT> <FONT COLOR="#19194C"><B>prop</B></FONT>) <FONT COLOR="#4C4C00">-&gt;</FONT> s <FONT COLOR="#4C4C00">-&gt;</FONT> s <FONT COLOR="#4C4C00">-&gt;</FONT> <FONT COLOR="#19194C"><B>prop</B></FONT> <FONT COLOR="#4C1919"><U>by</U></FONT>
+  disproved path (state 1 1 0) (state 5 5 1) ;
+  disproved path (state 1 1 0) (state 5 5 1) ;
+[...]
+  disproved path (state 1 1 0) (state 5 5 0) ;
+  disproved path (state 2 1 1) (state 5 5 0).</FONT></TD></TR>
+</TABLE><DIV CLASS="center"><HR WIDTH="80%" SIZE=2></DIV></DIV></BLOCKQUOTE><P>The other method is the 
+<FONT COLOR="#4C1919"><CODE>#export</CODE></FONT> command. It outputs the
+whole set of tabled atoms of the current session in a structured way
+(<A HREF="#xml:export">11</A>), not unlike the <EM>trees of multicut
+derivations</EM> described in [<A HREF="refman016.html#nigam08cie">Nig08</A>]. Note that this tree can
+contain atoms from multiple predicates, and therefore cannot be built if
+some tables were selectively removed by 
+<FONT COLOR="#4C1919"><CODE>#clear_table</CODE></FONT>.</P><BLOCKQUOTE CLASS="figure"><DIV CLASS="center"><DIV CLASS="center"><HR WIDTH="80%" SIZE=2></DIV>
+
+<DIV CLASS="center">Listing 11: <A NAME="xml:export"></A>#export "tables.xml".</DIV><BR>
+<TABLE CLASS="lstframe" STYLE="padding:1ex;border-style:solid none;"><TR><TD CLASS="lstlisting"><FONT COLOR="black">&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;!DOCTYPE skeleton SYSTEM "bedwyr.dtd"&gt;
+&lt;?xml-stylesheet type="text/xsl" href="bedwyr-skeleton.xsl"?&gt;
+&lt;skeleton timestamp="1365771164"&gt;
+  &lt;son value="disproved" id="57"&gt;
+    &lt;atom&gt;path (state 3 1 1) (state 5 5 1)&lt;/atom&gt;
+    &lt;son value="disproved" id="113"&gt;
+      &lt;atom&gt;path (state 1 1 0) (state 5 5 1)&lt;/atom&gt;
+      &lt;son value="disproved" id="33"&gt;
+        &lt;atom&gt;path (state 2 1 1) (state 5 5 1)&lt;/atom&gt;
+        &lt;loop value="disproved" ref="57"&gt;
+          path (state 3 1 1) (state 5 5 1)
+        &lt;/loop&gt;
+[...]</FONT></TD></TR>
+</TABLE><DIV CLASS="center"><HR WIDTH="80%" SIZE=2></DIV></DIV></BLOCKQUOTE><H3 CLASS="subsection"><A NAME="toc17"></A><A NAME="htoc38">12.3</A>  Tabling modulo</H3><P>Version 1.3 introduced tabling modulo theorems, where simples lemmas can
+be used to improve the efficiency of tabling in two ways:
+</P><DL CLASS="description"><DT CLASS="dt-description">
+<B>backward-chaining</B></DT><DD CLASS="dd-description"> uses a lemma as an additional definition
+clause, and unifies its head with a queried atom to expand the range
+of the search in the table. For instance, if the lemma <I>A</I>∧
+<I>B</I>⇒ <I>C</I> is known and the table contains <I>A</I>θ and
+<I>B</I>θ, then the query <I>C</I>θ can be solved without unfolding
+a (possibly complicated) definition.</DD><DT CLASS="dt-description"><B>forward-chaining</B></DT><DD CLASS="dd-description"> uses a lemma to fill the table faster: with
+the same lemma, if the table contains <I>A</I>θ, then upon solving
+and tabling <I>B</I>θ, <I>C</I>θ is de facto solved and can be
+tabled without even having been queried.
+</DD></DL><P>Lemmas obviously have to be admissible by the definitions; they are
+merely shortcuts that ease the access to results too complex for Bedwyr
+to compute quickly or at all. The first examples that come to mind are
+symmetry or transitivity lemmas. They can be added to files as
+theorems, using the Abella syntax, and the subsequent text is ignored
+until the command 
+<FONT COLOR="#4C1919"><U><CODE>Qed</CODE></U></FONT> is met. That way, parsing and
+checking the proof is left to Abella.</P><H3 CLASS="subsection"><A NAME="toc18"></A><A NAME="htoc39">12.4</A>  A bisimulation example</H3><P>In some cases the table contents has important uses: for example, once
+the co-inductive predicate 
+<FONT COLOR="black"><CODE>bisim</CODE></FONT> (for bisimulation in some
+of the example files) has been checked, the table for the predicate
+
+<FONT COLOR="black"><CODE>bisim</CODE></FONT> describes a bisimulation. We give here a simple
+example of checking bisimulation of finite state automata. The example
+is distributed with Bedwyr as <SPAN STYLE="background-color:#FFE5CC"><TT>bisim.def</TT></SPAN>. For more sophisticated
+examples involving the π-calculus, we refer the reader to
+<A HREF="refman008.html#pi-examples">6</A>.</P><P>Consider the following transition system (taken from
+[<A HREF="refman016.html#milner99book">Mil99</A>], page 19):
+</P><TABLE CLASS="display dcenter"><TR VALIGN="middle"><TD CLASS="dcell"><IMG SRC="refman001.png">
+    
+<IMG SRC="refman002.png">
+</TD></TR>
+</TABLE><P>
+The state 
+<FONT COLOR="black"><CODE>p0</CODE></FONT> and 
+<FONT COLOR="black"><CODE>q0</CODE></FONT> are bisimilar (see
+[<A HREF="refman016.html#milner99book">Mil99</A>] for a proof). This transition system and the
+bisimulation relation are encoded in Bedwyr as shown in
+<A HREF="#bd:bisim">12</A>. Using this definition of bisimulation, Bedwyr is
+able to prove that 
+<FONT COLOR="black"><CODE>p0</CODE></FONT> and 
+<FONT COLOR="black"><CODE>q0</CODE></FONT> are indeed
+bisimilar (<A HREF="#bd:bisim-run">13</A>).</P><BLOCKQUOTE CLASS="figure"><DIV CLASS="center"><DIV CLASS="center"><HR WIDTH="80%" SIZE=2></DIV>
+
+<DIV CLASS="center">Listing 12: <A NAME="bd:bisim"></A>Excerpt from <SPAN STYLE="background-color:#FFE5CC">examples/bisim.def</SPAN>.</DIV><BR>
+<TABLE CLASS="lstframe" STYLE="padding:1ex;border-style:solid none;"><TR><TD CLASS="lstlisting"><FONT COLOR="#4C1919"><U>Define</U></FONT> <FONT COLOR="black">next <FONT COLOR="#4C4C00">:</FONT> state <FONT COLOR="#4C4C00">-&gt;</FONT> trans <FONT COLOR="#4C4C00">-&gt;</FONT> state <FONT COLOR="#4C4C00">-&gt;</FONT> <FONT COLOR="#19194C"><B>prop</B></FONT> <FONT COLOR="#4C1919"><U>by</U></FONT>
+  next p0 a p1;
+  next p0 a p2;
+  next p1 b p0;
+  next p1 a p2;
+  next p2 a p2;
+  next p2 b p0;
+  next q0 a q1;
+  next q1 a q1;
+  next q1 b q2;
+  next q2 a q1.
+
+<FONT COLOR="#4C1919"><U>Define</U> <U>coinductive</U></FONT> bisim <FONT COLOR="#4C4C00">:</FONT> state <FONT COLOR="#4C4C00">-&gt;</FONT> state <FONT COLOR="#4C4C00">-&gt;</FONT> <FONT COLOR="#19194C"><B>prop</B></FONT> <FONT COLOR="#4C1919"><U>by</U></FONT>
+  bisim P Q <FONT COLOR="#4C4C00">:=</FONT>
+    (<FONT COLOR="#19194C"><B>forall</B></FONT> P1 A, next P A P1 <FONT COLOR="#4C4C00">-&gt;</FONT>
+                     <FONT COLOR="#19194C"><B>exists</B></FONT> Q1, next Q A Q1 /\ bisim P1 Q1) /\
+    (<FONT COLOR="#19194C"><B>forall</B></FONT> Q1 A, next Q A Q1 <FONT COLOR="#4C4C00">-&gt;</FONT>
+                     <FONT COLOR="#19194C"><B>exists</B></FONT> P1, next P A P1 /\ bisim P1 Q1).</FONT></TD></TR>
+</TABLE>
+<DIV CLASS="center"><HR WIDTH="80%" SIZE=2></DIV></DIV></BLOCKQUOTE><BLOCKQUOTE CLASS="figure"><DIV CLASS="center"><DIV CLASS="center"><HR WIDTH="80%" SIZE=2></DIV>
+
+<DIV CLASS="center">Listing 13: <A NAME="bd:bisim-run"></A>Run on <SPAN STYLE="background-color:#FFE5CC">examples/bisim.def</SPAN>.</DIV><BR>
+<TABLE CLASS="lstframe" STYLE="padding:1ex;border-style:solid none;"><TR><TD CLASS="lstlisting"><FONT COLOR="black"><B>?=</B> bisim p0 q0.
+<B>Yes</B>.
+<B>More</B> [y] ? y
+<B>No more solutions</B>.
+<B>?=</B> #show_table bisim.
+Table for bisim contains (P=Proved, D=Disproved)<FONT COLOR="#4C4C00">:</FONT>
+ [P] bisim p0 q0
+ [P] bisim p0 q2
+ [P] bisim p1 q1
+ [P] bisim p2 q1
+<B>?=</B></FONT></TD></TR>
+</TABLE><DIV CLASS="center"><HR WIDTH="80%" SIZE=2></DIV></DIV></BLOCKQUOTE><P>
+The table produced gives exactly the bisimulation set
+needed to prove the bisimilarity of 
+<FONT COLOR="black"><CODE>p0</CODE></FONT> and 
+<FONT COLOR="black"><CODE>q0</CODE></FONT>,
+i.e. the set {(<I>p</I>0,<I>q</I>0), (<I>p</I>0, <I>q</I>2), (<I>p</I>1,<I>q</I>1), (<I>p</I>2,<I>q</I>1) }.</P><HR>
+<A HREF="refman013.html"><IMG SRC="previous_motif.gif" ALT="Previous"></A>
+<A HREF="index.html"><IMG SRC="contents_motif.gif" ALT="Up"></A>
+<A HREF="refman015.html"><IMG SRC="next_motif.gif" ALT="Next"></A>
+</BODY>
+</HTML>

@@ -1,0 +1,117 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN"
+            "http://www.w3.org/TR/REC-html40/loose.dtd">
+<HTML>
+<HEAD>
+
+<META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<META name="GENERATOR" content="hevea 1.10">
+<LINK REL=STYLESHEET type="text/css" HREF="http://slimmer.gforge.inria.fr/bedwyr/bd.css">
+<LINK rel="stylesheet" type="text/css" href="refman.css">
+<TITLE>Definition files</TITLE>
+</HEAD>
+<BODY >
+<A HREF="refman011.html"><IMG SRC="previous_motif.gif" ALT="Previous"></A>
+<A HREF="index.html"><IMG SRC="contents_motif.gif" ALT="Up"></A>
+<A HREF="refman013.html"><IMG SRC="next_motif.gif" ALT="Next"></A>
+<HR>
+<H2 CLASS="section"><A NAME="htoc30">10</A>  Definition files</H2><P>Type declarations only use 
+<FONT COLOR="#19194C"><B><CODE>type</CODE></B></FONT> and 
+<FONT COLOR="#4C4C00"><CODE>-&gt;</CODE></FONT>, and as
+type constructors can only be applied on proper types, 
+<FONT COLOR="#19194C"><B><CODE>type</CODE></B></FONT>
+never appears under more than one 
+<FONT COLOR="#4C4C00"><CODE>-&gt;</CODE></FONT> (<A HREF="#bnf:kind">1</A>).
+</P><BLOCKQUOTE CLASS="figure"><DIV CLASS="center"><DIV CLASS="center"><HR WIDTH="80%" SIZE=2></DIV>
+<TABLE CELLSPACING=6 CELLPADDING=0><TR><TD ALIGN=left NOWRAP> type_decl</TD><TD ALIGN=right NOWRAP>::=</TD><TD ALIGN=left NOWRAP>
+<CODE><FONT COLOR="#4C1919"><U>Kind</U></FONT> </CODE>&lt;id&gt; &lt;kind&gt;.</TD></TR>
+<TR><TD ALIGN=left NOWRAP> kind</TD><TD ALIGN=right NOWRAP>::=</TD><TD ALIGN=left NOWRAP>
+<CODE><FONT COLOR="#19194C"><B>type</B></FONT> <FONT COLOR="#4C4C00">-&gt;</FONT> </CODE>&lt;kind&gt;</TD></TR>
+<TR><TD ALIGN=left NOWRAP>&nbsp;</TD><TD ALIGN=right NOWRAP>|</TD><TD ALIGN=left NOWRAP>
+<FONT COLOR="#19194C"><B><CODE>type</CODE></B></FONT></TD></TR>
+</TABLE>
+<DIV CLASS="caption"><TABLE CELLSPACING=6 CELLPADDING=0><TR><TD VALIGN=top ALIGN=left>Figure 1: Grammar of type declarations.<A NAME="bnf:kind"></A></TD></TR>
+</TABLE></DIV>
+<DIV CLASS="center"><HR WIDTH="80%" SIZE=2></DIV></DIV></BLOCKQUOTE><P>Constant declarations have the structure described in
+<A HREF="#bnf:type">2</A>, with additional constraints on type variables as
+described in <A HREF="refman011.html#typing">9</A>.
+</P><BLOCKQUOTE CLASS="figure"><DIV CLASS="center"><DIV CLASS="center"><HR WIDTH="80%" SIZE=2></DIV>
+<TABLE CELLSPACING=6 CELLPADDING=0><TR><TD ALIGN=left NOWRAP> constant_decl</TD><TD ALIGN=right NOWRAP>::=</TD><TD ALIGN=left NOWRAP>
+<CODE><FONT COLOR="#4C1919"><U>Type</U></FONT> </CODE>&lt;id&gt; &lt;type&gt;.</TD></TR>
+<TR><TD ALIGN=left NOWRAP> type</TD><TD ALIGN=right NOWRAP>::=</TD><TD ALIGN=left NOWRAP>&lt;type&gt; 
+<FONT COLOR="#4C4C00"><CODE>-&gt;</CODE></FONT> &lt;type&gt;</TD></TR>
+<TR><TD ALIGN=left NOWRAP>&nbsp;</TD><TD ALIGN=right NOWRAP>|</TD><TD ALIGN=left NOWRAP>&lt;type_atom&gt;</TD></TR>
+<TR><TD ALIGN=left NOWRAP> type_atom</TD><TD ALIGN=right NOWRAP>::=</TD><TD ALIGN=left NOWRAP>&lt;type_atom&gt; (&lt;type_atom&gt;)</TD></TR>
+<TR><TD ALIGN=left NOWRAP>&nbsp;</TD><TD ALIGN=right NOWRAP>|</TD><TD ALIGN=left NOWRAP>&lt;type_atom&gt; &lt;type_variable&gt;</TD></TR>
+<TR><TD ALIGN=left NOWRAP>&nbsp;</TD><TD ALIGN=right NOWRAP>|</TD><TD ALIGN=left NOWRAP>&lt;id&gt;</TD></TR>
+</TABLE>
+<DIV CLASS="caption"><TABLE CELLSPACING=6 CELLPADDING=0><TR><TD VALIGN=top ALIGN=left>Figure 2: Grammar of constant declarations.<A NAME="bnf:type"></A></TD></TR>
+</TABLE></DIV>
+<DIV CLASS="center"><HR WIDTH="80%" SIZE=2></DIV></DIV></BLOCKQUOTE><P>Definitions are given as blocks with a header containing predicate
+declarations, and an optional body containing a set of clauses, in which
+uppercase variables are implicitly universally quantified
+(<A HREF="#bnf:define">3</A>). A predicate with no definition clauses is
+always false; the head of a bodiless clause is always true. A predicate
+can only depend on predicates defined up to its definition block, so
+multiple predicates in one block is the only way to achieve mutual
+recursion. One can see definition blocks as groups of predicates
+belonging to the same stratum; stratification forbids predicates from
+the same block to depend negatively one on the other, as usual, but here
+it also forbids the use of 
+<FONT COLOR="#4C1919"><U><CODE>inductive</CODE></U></FONT> and
+
+<FONT COLOR="#4C1919"><U><CODE>coinductive</CODE></U></FONT> in the same block for similar reasons.
+</P><BLOCKQUOTE CLASS="figure"><DIV CLASS="center"><DIV CLASS="center"><HR WIDTH="80%" SIZE=2></DIV>
+<TABLE CELLSPACING=6 CELLPADDING=0><TR><TD ALIGN=left NOWRAP> definition_block</TD><TD ALIGN=right NOWRAP>::=</TD><TD ALIGN=left NOWRAP>
+<FONT COLOR="#4C1919"><U><CODE>Define</CODE></U></FONT>
+&lt;declarations&gt;
+<CODE>.</CODE></TD></TR>
+<TR><TD ALIGN=left NOWRAP>&nbsp;</TD><TD ALIGN=right NOWRAP>|</TD><TD ALIGN=left NOWRAP>
+<FONT COLOR="#4C1919"><U><CODE>Define</CODE></U></FONT> &lt;declarations&gt;
+
+<FONT COLOR="#4C1919"><U><CODE>by</CODE></U></FONT> &lt;clauses&gt;
+<CODE>.</CODE></TD></TR>
+<TR><TD ALIGN=left NOWRAP> declarations</TD><TD ALIGN=right NOWRAP>::=</TD><TD ALIGN=left NOWRAP>&lt;declaration&gt; 
+<CODE>,</CODE> &lt;declarations&gt;</TD></TR>
+<TR><TD ALIGN=left NOWRAP>&nbsp;</TD><TD ALIGN=right NOWRAP>|</TD><TD ALIGN=left NOWRAP>&lt;declaration&gt;</TD></TR>
+<TR><TD ALIGN=left NOWRAP> declaration</TD><TD ALIGN=right NOWRAP>::=</TD><TD ALIGN=left NOWRAP>&lt;flavour&gt; &lt;id&gt; 
+<FONT COLOR="#4C4C00"><CODE>:</CODE></FONT> &lt;type&gt;</TD></TR>
+<TR><TD ALIGN=left NOWRAP> flavour</TD><TD ALIGN=right NOWRAP>::=</TD><TD ALIGN=left NOWRAP>
+<FONT COLOR="#4C1919"><U><CODE>inductive</CODE></U></FONT></TD></TR>
+<TR><TD ALIGN=left NOWRAP>&nbsp;</TD><TD ALIGN=right NOWRAP>|</TD><TD ALIGN=left NOWRAP>
+<FONT COLOR="#4C1919"><U><CODE>coinductive</CODE></U></FONT></TD></TR>
+<TR><TD ALIGN=left NOWRAP>&nbsp;</TD><TD ALIGN=right NOWRAP>|</TD><TD ALIGN=left NOWRAP>&nbsp;</TD></TR>
+<TR><TD ALIGN=left NOWRAP> clauses</TD><TD ALIGN=right NOWRAP>::=</TD><TD ALIGN=left NOWRAP>&lt;clause&gt; 
+<CODE>;</CODE> &lt;clauses&gt;</TD></TR>
+<TR><TD ALIGN=left NOWRAP>&nbsp;</TD><TD ALIGN=right NOWRAP>|</TD><TD ALIGN=left NOWRAP>&lt;clause&gt;</TD></TR>
+<TR><TD ALIGN=left NOWRAP> clause</TD><TD ALIGN=right NOWRAP>::=</TD><TD ALIGN=left NOWRAP>&lt;head&gt; 
+<FONT COLOR="#4C4C00"><CODE>:=</CODE></FONT> &lt;body&gt;</TD></TR>
+<TR><TD ALIGN=left NOWRAP>&nbsp;</TD><TD ALIGN=right NOWRAP>|</TD><TD ALIGN=left NOWRAP>&lt;head&gt;</TD></TR>
+<TR><TD ALIGN=left NOWRAP> head</TD><TD ALIGN=right NOWRAP>::=</TD><TD ALIGN=left NOWRAP>&lt;id&gt; &lt;atom&gt;*</TD></TR>
+<TR><TD ALIGN=left NOWRAP> body</TD><TD ALIGN=right NOWRAP>::=</TD><TD ALIGN=left NOWRAP>&lt;formula&gt;</TD></TR>
+</TABLE>
+<DIV CLASS="caption"><TABLE CELLSPACING=6 CELLPADDING=0><TR><TD VALIGN=top ALIGN=left>Figure 3: Grammar of predicates declarations and
+definitions.<A NAME="bnf:define"></A></TD></TR>
+</TABLE></DIV>
+<DIV CLASS="center"><HR WIDTH="80%" SIZE=2></DIV></DIV></BLOCKQUOTE><P>Theorems are horn-like formulae which head must be an atom obtained by
+the application of an already defined predicate (<A HREF="#bnf:theorem">4</A>).
+For a non-recursive predicate, they can be seen as additional clauses,
+admissible by the definition with respect to the logic, if not to
+Bedwyr. Their names holds no semantic value.
+</P><BLOCKQUOTE CLASS="figure"><DIV CLASS="center"><DIV CLASS="center"><HR WIDTH="80%" SIZE=2></DIV>
+<TABLE CELLSPACING=6 CELLPADDING=0><TR><TD ALIGN=left NOWRAP> theorem</TD><TD ALIGN=right NOWRAP>::=</TD><TD ALIGN=left NOWRAP>
+<FONT COLOR="#4C1919"><U><CODE>Theorem</CODE></U></FONT> &lt;id&gt; 
+<FONT COLOR="#4C4C00"><CODE>:</CODE></FONT> &lt;body&gt;
+
+<FONT COLOR="#4C4C00"><CODE>-&gt;</CODE></FONT> &lt;head&gt;
+<CODE>.</CODE>
+&lt;proof&gt; 
+<CODE><FONT COLOR="#4C1919"><U>Qed</U></FONT>.</CODE></TD></TR>
+</TABLE>
+<DIV CLASS="caption"><TABLE CELLSPACING=6 CELLPADDING=0><TR><TD VALIGN=top ALIGN=left>Figure 4: Grammar of theorems specifications.<A NAME="bnf:theorem"></A></TD></TR>
+</TABLE></DIV>
+<DIV CLASS="center"><HR WIDTH="80%" SIZE=2></DIV></DIV></BLOCKQUOTE><HR>
+<A HREF="refman011.html"><IMG SRC="previous_motif.gif" ALT="Previous"></A>
+<A HREF="index.html"><IMG SRC="contents_motif.gif" ALT="Up"></A>
+<A HREF="refman013.html"><IMG SRC="next_motif.gif" ALT="Next"></A>
+</BODY>
+</HTML>

@@ -1,0 +1,81 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN"
+            "http://www.w3.org/TR/REC-html40/loose.dtd">
+<HTML>
+<HEAD>
+
+<META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<META name="GENERATOR" content="hevea 1.10">
+<LINK REL=STYLESHEET type="text/css" HREF="http://slimmer.gforge.inria.fr/bedwyr/bd.css">
+<LINK rel="stylesheet" type="text/css" href="refman.css">
+<TITLE>Hypothetical reasoning</TITLE>
+</HEAD>
+<BODY >
+<A HREF="refman006.html"><IMG SRC="previous_motif.gif" ALT="Previous"></A>
+<A HREF="index.html"><IMG SRC="contents_motif.gif" ALT="Up"></A>
+<A HREF="refman008.html"><IMG SRC="next_motif.gif" ALT="Next"></A>
+<HR>
+<H2 CLASS="section"><A NAME="htoc19">5</A>  Hypothetical reasoning</H2><P>For those familiar with λProlog, a key difference between Bedwyr and λProlog
+is that the latter allows for “hypothetical” reasoning and such
+reasoning is central to the way that λProlog treats bindings in syntax.
+Bedwyr treats implication and universals in goal formulas in a
+completely different way: via the closed world assumption.</P><P>Sometimes, when dealing with λ-tree syntax in Bedwyr, one
+wishes to program operations as one might do in λProlog. This is possible
+in the sense that one can write in Bedwyr an interpreter for suitable
+fragments of λProlog. This is done, for example, in the <SPAN STYLE="background-color:#FFE5CC"><TT>seq.def</TT></SPAN>
+definition file. There is a goal-directed proof search procedure for a
+small part of hereditary Harrop formulas (in particular, the minimal
+theory of the fragment based on ⊤, ∧, ⊃, and
+∀). This interpreter is prepared to use a logic program that
+is stored as a binary predicate. For example, in λProlog, one would write
+type checking for simple types over the untyped λ-calculus
+encoded using 
+<FONT COLOR="black"><CODE>app</CODE></FONT> and 
+<FONT COLOR="black"><CODE>abs</CODE></FONT> as in <A HREF="#lp:typeof">2</A>.
+The hypothetical reasoning that is involved in typing the object-level
+λ-binder in the second clause above is not available directly
+in Bedwyr. One can, however, rewrite these clauses as simply
+“facts” in Bedwyr (<A HREF="#bd:typeof">3</A>).</P><BLOCKQUOTE CLASS="figure"><DIV CLASS="center"><DIV CLASS="center"><HR WIDTH="80%" SIZE=2></DIV>
+
+<DIV CLASS="center">Listing 2: <A NAME="lp:typeof"></A>Simple typing in Teyjus.</DIV><BR>
+<TABLE CLASS="lstframe" STYLE="padding:1ex;border-style:solid none;"><TR><TD CLASS="lstlisting"><FONT COLOR="black">typeof (app M N) B <FONT COLOR="#4C4C00">:-</FONT> typeof M (arrow A B), typeof N A.
+typeof (abs R) (arrow A B) <FONT COLOR="#4C4C00">:-</FONT> <FONT COLOR="#19194C"><B>pi</B></FONT> x\ typeof x A <FONT COLOR="#4C4C00">=&gt;</FONT> typeof (R x) B.</FONT></TD></TR>
+</TABLE><DIV CLASS="center"><HR WIDTH="80%" SIZE=2></DIV></DIV></BLOCKQUOTE><BLOCKQUOTE CLASS="figure"><DIV CLASS="center"><DIV CLASS="center"><HR WIDTH="80%" SIZE=2></DIV>
+
+<DIV CLASS="center">Listing 3: <A NAME="bd:typeof"></A>Simple typing in Bedwyr (from
+<SPAN STYLE="background-color:#FFE5CC">examples/progs_small.def</SPAN>).</DIV><BR>
+<TABLE CLASS="lstframe" STYLE="padding:1ex;border-style:solid none;"><TR><TD CLASS="lstlisting"><FONT COLOR="#4C1919"><U>Define</U> <FONT COLOR="black">simple</FONT> <FONT COLOR="#4C4C00">: <FONT COLOR="black">form</FONT> -&gt; <FONT COLOR="black">form</FONT> -&gt;</FONT> <FONT COLOR="#19194C"><B>prop</B></FONT> <U>by</U>
+  <FONT COLOR="black">simple (type_of (app M N) Tb)
+    (type_of M (Ta ~&gt; Tb) &amp;&amp; type_of N Ta);
+  simple (type_of (abs R) (Ta ~&gt; Tb))
+    (for_all x\ type_of x Ta --&gt; type_of (R x) Tb).</FONT>
+
+<U>Define</U> <FONT COLOR="black">atom</FONT> <FONT COLOR="#4C4C00">: <FONT COLOR="black">form</FONT> -&gt;</FONT> <FONT COLOR="#19194C"><B>prop</B></FONT> <U>by</U></FONT>
+  <FONT COLOR="black">atom</FONT><FONT COLOR="black"> (</FONT><FONT COLOR="black">type_of</FONT> <FONT COLOR="black">X</FONT> <FONT COLOR="black">T</FONT><FONT COLOR="black">).</FONT></TD></TR>
+</TABLE>
+<DIV CLASS="center"><HR WIDTH="80%" SIZE=2></DIV></DIV></BLOCKQUOTE><P>The first definition describes a logic program called 
+<FONT COLOR="black"><CODE>simple</CODE></FONT>
+that directly encodes the above λProlog program; the second definition
+tells the interpreter in 
+<CODE><FONT COLOR="black">seq</FONT>.<FONT COLOR="black">def</FONT></CODE> how to recognize an
+object-level atomic formula. A call to
+
+<CODE><FONT COLOR="black">seq</FONT> <FONT COLOR="black">atom</FONT> <FONT COLOR="black">simple</FONT> <FONT COLOR="black">tt</FONT> (<FONT COLOR="black">type_of</FONT> <FONT COLOR="black">Term</FONT> <FONT COLOR="black">Ty</FONT>)</CODE> will now attempt to
+perform simple type checking on 
+<FONT COLOR="black"><CODE>Term</CODE></FONT>. Specifically, it is
+possible to prove in Bedwyr the goal
+</P><DIV CLASS="center">
+<TABLE CLASS="lstframe" STYLE="padding:1ex;border-style:solid none;"><TR><TD CLASS="lstlisting"><FONT COLOR="black">(<FONT COLOR="#19194C"><B>exists</B></FONT> Ty, seq atom simple tt (type_of (abs x\ app x x) Ty))
+  <FONT COLOR="#4C4C00">-&gt;</FONT> <FONT COLOR="#19194C"><B>false</B></FONT>.</FONT></TD></TR>
+</TABLE></DIV><P>
+or, in other words, that the self-application λ <I>x</I>(<I>x x</I>) does not
+have a simple type.</P><P>This “two-level approach” of specification uses Bedwyr as a
+meta-language in which a simple intuitionistic logic is encoded as an
+object logic: computations can then be specified in the object-logic in
+the usual way and then Bedwyr can be used to reason about that
+specification. This general approach has been described in more detail
+in [<A HREF="refman016.html#miller06ijcar">Mil06</A>, <A HREF="refman016.html#gacek.twolevel">GMN10</A>].</P><HR>
+<A HREF="refman006.html"><IMG SRC="previous_motif.gif" ALT="Previous"></A>
+<A HREF="index.html"><IMG SRC="contents_motif.gif" ALT="Up"></A>
+<A HREF="refman008.html"><IMG SRC="next_motif.gif" ALT="Next"></A>
+</BODY>
+</HTML>

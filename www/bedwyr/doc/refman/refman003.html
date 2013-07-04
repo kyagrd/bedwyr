@@ -1,0 +1,96 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN"
+            "http://www.w3.org/TR/REC-html40/loose.dtd">
+<HTML>
+<HEAD>
+
+<META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<META name="GENERATOR" content="hevea 1.10">
+<LINK REL=STYLESHEET type="text/css" HREF="http://slimmer.gforge.inria.fr/bedwyr/bd.css">
+<LINK rel="stylesheet" type="text/css" href="refman.css">
+<TITLE>Overview</TITLE>
+</HEAD>
+<BODY >
+<A HREF="refman002.html"><IMG SRC="previous_motif.gif" ALT="Previous"></A>
+<A HREF="index.html"><IMG SRC="contents_motif.gif" ALT="Up"></A>
+<A HREF="refman004.html"><IMG SRC="next_motif.gif" ALT="Next"></A>
+<HR>
+<H2 CLASS="section"><A NAME="htoc2">1</A>  Overview</H2><P>Some recent theoretical work in proof search has illustrated that it is
+possible to combine the following two computational principles into one
+computational logic:
+</P><OL CLASS="enumerate" type=1><LI CLASS="li-enumerate">
+a symmetric treatment of finite success and finite failure –
+this allows capturing both aspects of <EM>may</EM> and <EM>must</EM>
+behavior in operational semantics, and mixing model checking and
+logic programming;</LI><LI CLASS="li-enumerate">direct support for λ-tree syntax, as in λProlog, via
+term-level λ-binders, higher-order pattern unification, and
+the ∇ quantifier.
+</LI></OL><P>
+All these features have a clean proof theory. The combination of these
+features allow, for example, specifying rather declarative approaches to
+model checking syntactic expressions containing bindings. The Bedwyr
+system is intended as an implementation of these computational logic
+principles.</P><H5 CLASS="paragraph">Why the name Bedwyr?</H5><P>
+In the legend of King Arthur and the round table, several knights shared
+in the search for the holy grail. The name of one of them, Parsifal, is
+used for an INRIA team where Bedwyr is currently developed. Bedwyr was
+another one of those knights. Wikipedia (using the spelling
+“Bedivere”) mentions that Bedwyr appears in <EM>Monty Python and the
+Holy Grail</EM> where he is “portrayed as a master of the extremely odd
+logic of ancient times”. Bedwyr is a re-implementation and rethinking
+of an earlier system called Level 0/1 written by Alwen Tiu and described
+in [<A HREF="refman016.html#tiu05eshol">TNM05</A>]. It was an initial offering from “Slimmer”, a
+jointly funded effort between INRIA and the University of Minnesota on
+“Sophisticated logic implementations for modeling and mechanical
+reasoning” from 2005 to 2010. For more information, see
+<TT><A HREF="http://slimmer.gforge.inria.fr/">http://slimmer.gforge.inria.fr/</A></TT>.</P><H5 CLASS="paragraph">What is the difference between <EM>hoas</EM> and
+<EM>λ-tree syntax</EM>?</H5><P>
+The term “higher-order abstract syntax” (hoas) was originally coined
+by Pfenning and Elliott in [<A HREF="refman016.html#pfenning88pldi">PE88</A>] and names the general
+practice (that was common then in, say, λProlog [<A HREF="refman016.html#miller87slp">MN87</A>]) of
+using an abstraction in a programming or specification language to
+encode binders in an object-language. Since the choice of
+“meta-language” can vary a great deal, the term “hoas” has come to
+mean different things to different people. When hoas is used directly
+within functional programming or constructive type systems, syntax with
+bindings contains functional objects, which make rich syntactic
+manipulations difficult. Bedwyr, on the other hand, follows the
+<EM>λ-tree</EM> approach [<A HREF="refman016.html#miller00cl">Mil00</A>] to hoas: in particular,
+Bedwyr’s use of λ-abstraction is meant to provide an abstract
+form of syntax in which only the names of bindings are hidden: the rest
+of the structure of syntactic expressions remains.</P><H5 CLASS="paragraph">Is Bedwyr efficient?</H5><P>
+Some care has been taken to implement the novel logical principles that
+appear in Bedwyr. In particular, the system makes extensive use of the
+implementation of the suspension calculus [<A HREF="refman016.html#nadathur99jflp">Nad99</A>] and
+other implementation ideas developed within the Teyjus
+[<A HREF="refman016.html#nadathur99cade">NM99</A>] implementation of λProlog [<A HREF="refman016.html#nadathur88iclp">NM88</A>].
+Aspects of tabled deduction have also been added to the system
+[<A HREF="refman016.html#ramakrishna97cav">RRR+97</A>, <A HREF="refman016.html#pientka05cade">Pie05</A>]. We have found that Bedwyr’s
+performance is good enough to explore a number of interesting examples.
+It is not likely, however, that the current implementation will support
+large examples. For example, the system implements the occur-check
+within logic: this is, of course, necessary for sound deduction but it
+does slow unification a lot. As a result, the append program is
+quadratic in the size of its first argument. There are a number of
+well-known improvements to unification that make it possible to remove
+many instances of the occur-check (and making append linear). As of
+this time, such an improvement has not been added to Bedwyr.</P><H5 CLASS="paragraph">An open source effort: Can I help?</H5><P>
+The Bedwyr system was conceived as a prototype that could help validate
+certain proof theory and proof search topic. In the end, this prototype
+has illustrated the main principles that we hoped that it would. It has
+also pointed out a number of new topics to be explored. If you are
+interested in contributing examples, features, or performance
+enhancements, or if you are interested in considering the next
+generation of a system like this, please let an author of this guide
+know: we are looking for contributions.</P><H5 CLASS="paragraph">Background assumed</H5><P>
+To read this guide, we shall assume that the reader is familiar with the
+implementation of proof search that is found in, say, Prolog, λProlog, or
+Twelf. While familiarity with various foundations-oriented papers
+(particularly,
+[<A HREF="refman016.html#mcdowell03tcs">MMP03</A>, <A HREF="refman016.html#miller05tocl">MT05</A>, <A HREF="refman016.html#tiu04phd">Tiu04</A>, <A HREF="refman016.html#baelde08lfmtp">Bae08b</A>, <A HREF="refman016.html#tiu10tocl">TM10</A>]) is
+important for understanding fully this system, much can be learned from
+studying the examples provided in the distribution.</P><HR>
+<A HREF="refman002.html"><IMG SRC="previous_motif.gif" ALT="Previous"></A>
+<A HREF="index.html"><IMG SRC="contents_motif.gif" ALT="Up"></A>
+<A HREF="refman004.html"><IMG SRC="next_motif.gif" ALT="Next"></A>
+</BODY>
+</HTML>

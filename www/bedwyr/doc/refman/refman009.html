@@ -1,0 +1,207 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN"
+            "http://www.w3.org/TR/REC-html40/loose.dtd">
+<HTML>
+<HEAD>
+
+<META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<META name="GENERATOR" content="hevea 1.10">
+<LINK REL=STYLESHEET type="text/css" HREF="http://slimmer.gforge.inria.fr/bedwyr/bd.css">
+<LINK rel="stylesheet" type="text/css" href="refman.css">
+<TITLE>The logic LINC</TITLE>
+</HEAD>
+<BODY >
+<A HREF="refman008.html"><IMG SRC="previous_motif.gif" ALT="Previous"></A>
+<A HREF="index.html"><IMG SRC="contents_motif.gif" ALT="Up"></A>
+<A HREF="refman010.html"><IMG SRC="next_motif.gif" ALT="Next"></A>
+<HR>
+<H2 CLASS="section"><A NAME="htoc22">7</A>  The logic LINC</H2><UL>
+<LI><A HREF="refman009.html#toc7">Built-in treatment of bindings</A>
+</LI><LI><A HREF="refman009.html#toc8">Syntax and semantics of definitions</A>
+</LI><LI><A HREF="refman009.html#toc9">Symmetry of finite success and finite failure</A>
+</LI><LI><A HREF="refman009.html#toc10">The ∇ quantifier</A>
+</LI><LI><A HREF="refman009.html#toc11">Proof search within LINC</A>
+</LI></UL>
+<P>
+<A NAME="linc"></A></P><P>The logic behind Bedwyr, named LINC, is an extension to a higher-order
+version of intuitionistic logic that has been developed over the past
+few years. The acronym LINC, which stands for “lambda, induction,
+nabla, and co-induction”, lists the main novel components of the logic.
+In particular, λ-terms are supported directly (and, hence, the
+λ-tree syntax approach to higher-order abstract syntax is
+supported [<A HREF="refman016.html#miller00cl">Mil00</A>]). Induction and co-induction are also
+available. The nabla (∇) quantifier has been added to this logic
+in order to increase the expressiveness of programs using λ-tree
+syntax in negated situations. The proof theory of LINC is given in
+[<A HREF="refman016.html#miller05tocl">MT05</A>, <A HREF="refman016.html#tiu04phd">Tiu04</A>]. Since this earlier work on LINC, more
+recent work on the logic <FONT COLOR=red><I>G</I></FONT> [<A HREF="refman016.html#gacek.twolevel">GMN10</A>, <A HREF="refman016.html#gacek11ic">GMN11</A>]
+and with fixed points in linear logic [<A HREF="refman016.html#baelde08phd">Bae08a</A>, <A HREF="refman016.html#baelde12tocl">Bae12</A>]
+has further improved our understanding of using fixed points, induction,
+co-induction, and ∇-quantification.</P><P>Below we provide a high-level overview of the logical aspects of Bedwyr.
+More explicit information on this system can be found in
+[<A HREF="refman016.html#tiu05eshol">TNM05</A>]. (N.b. the name “Level 0/1” in that paper has now
+been replaced by Bedwyr) Next, we describe the two orthogonal
+extensions to higher-order intuitionistic logic that have been
+incorporated into Bedwyr.</P><H3 CLASS="subsection"><A NAME="toc7"></A><A NAME="htoc23">7.1</A>  Built-in treatment of bindings</H3><P>Bedwyr treats λ-abstractions within terms as primitives as well
+as allowing for variables of function type and quantifiers within
+formulas (∀, ∃, ∇). The system implements
+“higher-order pattern unification” (see <A HREF="refman010.html#unification">8</A>). This
+kind of unification appears to be the weakest extension to first-order
+unification that treats bindings as a primitive. A number of automated
+deduction systems implement this kind of unification (e.g. Twelf,
+Teyjus, Coq, and Minlog). Full β-conversion is implemented by
+Bedwyr as well.</P><H3 CLASS="subsection"><A NAME="toc8"></A><A NAME="htoc24">7.2</A>  Syntax and semantics of definitions</H3><BLOCKQUOTE CLASS="figure"><DIV CLASS="center"><DIV CLASS="center"><HR WIDTH="80%" SIZE=2></DIV>
+
+<DIV CLASS="center">Listing 7: <A NAME="lp:maxa"></A>Computing the maximum of a defined predicate (λProlog).</DIV><BR>
+<TABLE CLASS="lstframe" STYLE="padding:1ex;border-style:solid none;"><TR><TD CLASS="lstlisting"><FONT COLOR="black">% The predicate a holds for 3, 5, and 2.
+a (s (s (s z))).
+a (s (s (s (s (s z))))).
+a (s (s z)).
+
+% The less-than-or-equal relation
+leq z N.
+leq (s N) (s M) <FONT COLOR="#4C4C00">:-</FONT> leq N M.
+
+% Compute the maximum of a
+maxa N <FONT COLOR="#4C4C00">:-</FONT> a N, <FONT COLOR="#19194C"><B>pi</B></FONT> x\ a x <FONT COLOR="#4C4C00">=&gt;</FONT> leq x N.</FONT></TD></TR>
+</TABLE>
+<DIV CLASS="center"><HR WIDTH="80%" SIZE=2></DIV></DIV></BLOCKQUOTE><P>Some systems implementing aspects of higher-order logic programming,
+such as λProlog, accept the “open-world assumption”: any conclusion
+drawn in their logic will hold in any extension of the underlying logic
+programming language. For example, consider the λProlog program in
+<A HREF="#lp:maxa">7</A> (the signature has been left out), where the last
+clause has an implication 
+<FONT COLOR="#4C4C00"><CODE>=&gt;</CODE></FONT> in the goal. During proof
+search, this implication causes λProlog to add a new eigenvariable, say
+
+<FONT COLOR="black"><CODE>c</CODE></FONT>, to the runtime signature and to extend the current
+program with an atomic fact about it: 
+<CODE>(<FONT COLOR="black">a</FONT> <FONT COLOR="black">c</FONT>)</CODE>. In such a new
+world, however, the 
+<FONT COLOR="black"><CODE>leq</CODE></FONT> relation does not have any
+information about this “non-standard” number 
+<FONT COLOR="black"><CODE>c</CODE></FONT>.
+</P><BLOCKQUOTE CLASS="figure"><DIV CLASS="center"><DIV CLASS="center"><HR WIDTH="80%" SIZE=2></DIV>
+
+<DIV CLASS="center">Listing 8: <A NAME="bd:maxa"></A>Computing the maximum of a defined predicate (Bedwyr).</DIV><BR>
+<TABLE CLASS="lstframe" STYLE="padding:1ex;border-style:solid none;"><TR><TD CLASS="lstlisting"><FONT COLOR="#4C1919"><U>Kind</U></FONT> <FONT COLOR="black">ch <FONT COLOR="#19194C"><B>type</B></FONT>.
+
+<FONT COLOR="#4C1919"><U>Type</U></FONT> z  ch.
+<FONT COLOR="#4C1919"><U>Type</U></FONT> s  ch <FONT COLOR="#4C4C00">-&gt;</FONT> ch.
+
+% The predicate a holds for 3, 5, and 2.
+<FONT COLOR="#4C1919"><U>Define</U></FONT> a <FONT COLOR="#4C4C00">:</FONT> ch <FONT COLOR="#4C4C00">-&gt;</FONT> <FONT COLOR="#19194C"><B>prop</B></FONT> <FONT COLOR="#4C1919"><U>by</U></FONT>
+  a (s (s (s z))) ;
+  a (s (s (s (s (s z))))) ;
+  a (s (s z)).
+
+% The less-than-or-equal relation
+<FONT COLOR="#4C1919"><U>Define</U> <U>inductive</U></FONT> leq <FONT COLOR="#4C4C00">:</FONT> ch <FONT COLOR="#4C4C00">-&gt;</FONT> ch <FONT COLOR="#4C4C00">-&gt;</FONT> <FONT COLOR="#19194C"><B>prop</B></FONT> <FONT COLOR="#4C1919"><U>by</U></FONT>
+  leq z N ;
+  leq (s N) (s M) <FONT COLOR="#4C4C00">:=</FONT> leq N M.
+
+% Compute the maximum of a
+<FONT COLOR="#4C1919"><U>Define</U></FONT> maxa <FONT COLOR="#4C4C00">:</FONT> ch <FONT COLOR="#4C4C00">-&gt;</FONT> <FONT COLOR="#19194C"><B>prop</B></FONT> <FONT COLOR="#4C1919"><U>by</U></FONT>
+  maxa N <FONT COLOR="#4C4C00">:=</FONT> a N /\ <FONT COLOR="#19194C"><B>forall</B></FONT> x, a x <FONT COLOR="#4C4C00">-&gt;</FONT> leq x N.</FONT></TD></TR>
+</TABLE>
+<DIV CLASS="center"><HR WIDTH="80%" SIZE=2></DIV></DIV></BLOCKQUOTE><P>Bedwyr on the contrary accepts the “closed-world assumption”: the
+notion of programs is replaced by <EM>definitions</EM> that capture the
+“if-and-only-if” closure of logic programs (<A HREF="#bd:maxa">8</A>). One
+of the syntactic difference between the syntax of clauses and that used
+in λProlog is that the head and body of clauses are separated from each
+other using the 
+<FONT COLOR="#4C4C00"><CODE>:=</CODE></FONT> instead of the
+
+<FONT COLOR="#4C4C00"><CODE>:-</CODE></FONT> (turnstile). The former symbol is used to
+remind the Bedwyr user of that “if and only if” completion of
+specifications.</P><P>Bedwyr takes the assumption 
+<CODE>(<FONT COLOR="black">a</FONT> <FONT COLOR="black">c</FONT>)</CODE> and asks “Given the
+assumption that 
+<CODE>(<FONT COLOR="black">a</FONT> <FONT COLOR="black">c</FONT>)</CODE> is true, how could have it been
+proved?” The natural answer to this is that that assumption could have
+been proved if 
+<FONT COLOR="black"><CODE>c</CODE></FONT> was either 3 or 5 or 2. Thus, this will
+cause a case analysis: in particular, the query 
+<CODE>(<FONT COLOR="black">maxa</FONT> <FONT COLOR="black">N</FONT>)</CODE>
+will cause the following goals to be considered:
+</P><DIV CLASS="center">
+
+<CODE>(<FONT COLOR="black">a</FONT> <FONT COLOR="black">N</FONT>)</CODE>    
+<CODE>(<FONT COLOR="black">leq</FONT> 3 <FONT COLOR="black">N</FONT>)</CODE>    
+<CODE>(<FONT COLOR="black">leq</FONT> 5 <FONT COLOR="black">N</FONT>)</CODE>    
+<CODE>(<FONT COLOR="black">leq</FONT> 2 <FONT COLOR="black">N</FONT>)</CODE>
+</DIV><P>
+Here we use the numeric symbols ‘2’, ‘3’, etc., as abbreviations of the
+corresponding terms formed using 
+<FONT COLOR="black"><CODE>z</CODE></FONT> and 
+<FONT COLOR="black"><CODE>s</CODE></FONT>. The
+usual approach to unification and depth-first proof search will now
+produce the proper maximum value. This change allows Bedwyr to give a
+computational interpretation to finite failure and to do deduction that
+encodes model checking.</P><H3 CLASS="subsection"><A NAME="toc9"></A><A NAME="htoc25">7.3</A>  Symmetry of finite success and finite failure</H3><P>The underlying logic of <EM>fixed points</EM> (also known as
+<EM>definitions</EM>)
+[<A HREF="refman016.html#girard92mail">Gir92</A>, <A HREF="refman016.html#schroeder-Heister93lics">SH93</A>, <A HREF="refman016.html#mcdowell03tcs">MMP03</A>, <A HREF="refman016.html#momigliano03types">MT03</A>]
+contains an inference rule that allows for failure in unification (and,
+hence, in simple proof search) to be turned into a success. Thus,
+simple forms of “negation-as-failure” can be naturally captured in
+Bedwyr and the underlying logic. It is also possible to describe both
+<EM>may</EM> and <EM>must</EM> behaviors in process calculi. For example,
+not only can one code reachability in process calculus but bisimulation
+is also possible. One way to view this enhancement to proof search is
+the following: Let <I>A</I> and <I>B</I> be two atomic formulas. Then, finite
+success is captured by proving the sequent —→ <I>A</I>, finite
+failure is captured by proving the sequent <I>A</I>—→, and
+simulation is captured by proving the sequent <I>A</I>—→ <I>B</I>.</P><H3 CLASS="subsection"><A NAME="toc10"></A><A NAME="htoc26">7.4</A>  The ∇ quantifier</H3><P>In order to treat specifications using λ-tree syntax properly,
+it appears that a new quantifier, called ∇, is necessary. If
+finite success is all that is needed, the ∇ can be replaced with
+the universal quantifier. When finite failure is involved, however, the
+∇ quantifier plays an independent role. See
+[<A HREF="refman016.html#miller05tocl">MT05</A>, <A HREF="refman016.html#tiu04phd">Tiu04</A>, <A HREF="refman016.html#tiu05concur">Tiu05</A>] for more on this quantifier.
+It is worth pointing out that we know of no examples involving ∇
+that do not also involve λ-tree syntax.</P><H3 CLASS="subsection"><A NAME="toc11"></A><A NAME="htoc27">7.5</A>  Proof search within LINC</H3><P>
+<A NAME="psearch"></A></P><P>Bedwyr is a proof search engine for a small fragment of the LINC logic.
+In principle, Bedwyr uses two provers. <EM>Prover-1</EM> is similar to
+the depth-first interpreter used in λProlog. The main difference is in
+the proof of an implication. To prove an implication <I>A</I>⇒ <I>B</I>,
+prover-1 calls <EM>prover-0</EM> to enumerate all possible solutions
+{θ<I><SUB>i</SUB></I> | <I>i</I>=1,…,<I>n</I>} for <I>A</I>, and then prover-1 tries to
+prove <I>B</I>θ<SUB>1</SUB>∧…∧ <I>B</I>θ<I><SUB>n</SUB></I>. If <I>A</I> has no solution
+(that is, if <I>n</I>=0), the implication is true. The substitutions
+generated by prover-1 are for existential<SUP><A NAME="text2" HREF="refman017.html#note2">1</A></SUP> variables, as usual in logic programming. On the other hand, the
+substitutions generated by prover-0 are for universal variables.</P><P>To illustrate this, consider the following goal:
+</P><TABLE CLASS="display dcenter"><TR VALIGN="middle"><TD CLASS="dcell">∀ <I>x</I>  .  (∃ <I>y</I>  .  <I>x</I>=<I>s</I> <I>y</I>) ⇒ <I>x</I>=0 ⇒ <I>false</I></TD></TR>
+</TABLE><P>
+(This formula formalizes the fact that if <I>x</I> is the successor of some
+number then <I>x</I> is not zero.) Bedwyr will call prover-1 on it. The
+prover introduces a universal variable and reaches the first
+implication. It then calls prover-0 on (∃ <I>y</I>   .  <I>x</I> = <I>s</I> <I>y</I>).
+Prover-0 introduces an existential variable <I>y</I>, and the unification
+instantiates <I>x</I> to get the only solution. Back to prover-1, we have to
+prove (<I>s</I> <I>y</I> = 0 ⇒ <I>false</I>) where <I>y</I> is still an existential
+variable. Prover-0 is given <I>s</I> <I>y</I>=0 to prove and fails to do so: that
+failure is a success for prover-1.</P><P>We’ve seen in <A HREF="#linc">7</A> with the <TT>maxa</TT> example
+(<A HREF="#bd:maxa">8</A>) how this treatment of the implication allows Bedwyr
+to check formulas which are not provable in traditional (pure) logic
+programming languages such as λProlog. As often, this novelty has a
+price. The systematic enumeration leads to infinite search for simple
+formulas like (<I>A</I> ⇒ <I>A</I>) as soon as <I>A</I> does not have a finite
+number of solutions. Further development of Bedwyr may provide
+real support for induction and co-induction.</P><P>Prover-0 is similar to prover-1. The first difference is this dual
+treatment of variables; soundness requires another one. Because it
+needs to completely destruct formulas in order to enumerate solutions,
+prover-0 requires its connectives to be <EM>asynchronous</EM> on the left:
+they can be immediately destructed (introduced, in sequent calculus
+terminology) without restricting provability. This means that
+implication and universal quantification are forbidden on the left of
+implications.</P><P>Prover-1 instantiates existential variables, and considers universal
+variables as (scoped) constants. Prover-0 produces substitutions for
+universal variables, considers existential variables introduced in
+prover-0 as constants, but we have no satisfactory answer for
+existential variables introduced in prover-1. As a consequence, in
+prover-0, unification raises an run-time error when the instantiation of
+an existential variable is needed. More details about that can be found
+in Section <A HREF="refman015.html#restrict-logic-variables">13.2</A>.</P><HR>
+<A HREF="refman008.html"><IMG SRC="previous_motif.gif" ALT="Previous"></A>
+<A HREF="index.html"><IMG SRC="contents_motif.gif" ALT="Up"></A>
+<A HREF="refman010.html"><IMG SRC="next_motif.gif" ALT="Next"></A>
+</BODY>
+</HTML>

@@ -1,0 +1,58 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN"
+            "http://www.w3.org/TR/REC-html40/loose.dtd">
+<HTML>
+<HEAD>
+
+<META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<META name="GENERATOR" content="hevea 1.10">
+<LINK REL=STYLESHEET type="text/css" HREF="http://slimmer.gforge.inria.fr/bedwyr/bd.css">
+<LINK rel="stylesheet" type="text/css" href="refman.css">
+<TITLE>Unification</TITLE>
+</HEAD>
+<BODY >
+<A HREF="refman009.html"><IMG SRC="previous_motif.gif" ALT="Previous"></A>
+<A HREF="index.html"><IMG SRC="contents_motif.gif" ALT="Up"></A>
+<A HREF="refman011.html"><IMG SRC="next_motif.gif" ALT="Next"></A>
+<HR>
+<H2 CLASS="section"><A NAME="htoc28">8</A>  Unification</H2><P>
+<A NAME="unification"></A></P><P>A subset of λProlog, called <I>L</I><SUB>λ</SUB>, was presented in [<A HREF="refman016.html#miller91jlc">Mil91</A>]
+where it was shown that an implementation of proof search could be
+written in which only a small subset of higher-order unification was
+required. Furthermore, that subset was decidable, unary, and did not
+need typing information. This subset of unification was called
+<I>L</I><SUB>λ</SUB>-unification in [<A HREF="refman016.html#miller91jlc">Mil91</A>] but is now more commonly
+referred to as <EM>higher-order pattern unification</EM>
+[<A HREF="refman016.html#nipkow93lics">Nip93</A>, <A HREF="refman016.html#nadathur05iclp">NL05</A>]. In that subset, variables in
+functional position are applied to distinct variables which must be
+bound in the scope of the binding of the functional variable.</P><P>For instance,
+</P><DIV CLASS="center">
+
+<CODE><FONT COLOR="#19194C"><B>exists</B></FONT> <FONT COLOR="black">X</FONT>, <FONT COLOR="#19194C"><B>forall</B></FONT> <FONT COLOR="black">y</FONT> <FONT COLOR="black">z</FONT>, <FONT COLOR="black">X</FONT> <FONT COLOR="black">y</FONT> <FONT COLOR="black">z</FONT> <FONT COLOR="#19194C"><B>=</B></FONT> <FONT COLOR="black">y</FONT></CODE>
+</DIV><P>
+can be solved, but
+</P><DIV CLASS="center">
+
+<CODE><FONT COLOR="#19194C"><B>exists</B></FONT> <FONT COLOR="black">X</FONT>, <FONT COLOR="#19194C"><B>forall</B></FONT> <FONT COLOR="black">y</FONT>, <FONT COLOR="black">X</FONT> <FONT COLOR="black">y</FONT> <FONT COLOR="black">y</FONT> <FONT COLOR="#19194C"><B>=</B></FONT> <FONT COLOR="black">y</FONT></CODE>
+</DIV><P>
+can’t, as it violates the first constraint (so that 
+<FONT COLOR="black"><CODE>X</CODE></FONT> can
+take at least two values, 
+<CODE><FONT COLOR="black">x1</FONT>\ <FONT COLOR="black">x2</FONT>\ <FONT COLOR="black">x1</FONT></CODE> and
+
+<CODE><FONT COLOR="black">x1</FONT>\ <FONT COLOR="black">x2</FONT>\ <FONT COLOR="black">x2</FONT></CODE>), and
+</P><DIV CLASS="center">
+
+<CODE><FONT COLOR="#19194C"><B>forall</B></FONT> <FONT COLOR="black">y</FONT>, <FONT COLOR="#19194C"><B>exists</B></FONT> <FONT COLOR="black">X</FONT>, <FONT COLOR="#19194C"><B>forall</B></FONT> <FONT COLOR="black">z</FONT>, <FONT COLOR="black">X</FONT> <FONT COLOR="black">y</FONT> <FONT COLOR="black">z</FONT> <FONT COLOR="#19194C"><B>=</B></FONT> <FONT COLOR="black">y</FONT></CODE>
+</DIV><P>
+can’t either, as it violates the second constraint and therefore could
+be rewritten
+</P><DIV CLASS="center">
+
+<CODE><FONT COLOR="#19194C"><B>exists</B></FONT> <FONT COLOR="black">X'</FONT>, <FONT COLOR="#19194C"><B>forall</B></FONT> <FONT COLOR="black">y</FONT> <FONT COLOR="black">z</FONT>, (<FONT COLOR="black">X'</FONT> <FONT COLOR="black">y</FONT>) <FONT COLOR="black">y</FONT> <FONT COLOR="black">z</FONT> <FONT COLOR="#19194C"><B>=</B></FONT> <FONT COLOR="black">y</FONT></CODE>
+</DIV><P>Bedwyr uses an extension of this higher-order pattern unification which
+handles ∇.</P><HR>
+<A HREF="refman009.html"><IMG SRC="previous_motif.gif" ALT="Previous"></A>
+<A HREF="index.html"><IMG SRC="contents_motif.gif" ALT="Up"></A>
+<A HREF="refman011.html"><IMG SRC="next_motif.gif" ALT="Next"></A>
+</BODY>
+</HTML>

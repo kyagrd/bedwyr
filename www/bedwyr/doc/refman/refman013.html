@@ -1,0 +1,219 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN"
+            "http://www.w3.org/TR/REC-html40/loose.dtd">
+<HTML>
+<HEAD>
+
+<META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<META name="GENERATOR" content="hevea 1.10">
+<LINK REL=STYLESHEET type="text/css" HREF="http://slimmer.gforge.inria.fr/bedwyr/bd.css">
+<LINK rel="stylesheet" type="text/css" href="refman.css">
+<TITLE>Concrete syntax</TITLE>
+</HEAD>
+<BODY >
+<A HREF="refman012.html"><IMG SRC="previous_motif.gif" ALT="Previous"></A>
+<A HREF="index.html"><IMG SRC="contents_motif.gif" ALT="Up"></A>
+<A HREF="refman014.html"><IMG SRC="next_motif.gif" ALT="Next"></A>
+<HR>
+<H2 CLASS="section"><A NAME="htoc31">11</A>  Concrete syntax</H2><UL>
+<LI><A HREF="refman013.html#toc12">Formulae</A>
+</LI><LI><A HREF="refman013.html#toc13">Terms</A>
+</LI><LI><A HREF="refman013.html#toc14">Tokens</A>
+</LI></UL>
+<P>Although the concrete syntax of Bedwyr was originally derived from that
+of λProlog in the Teyjus implementation[<A HREF="refman016.html#nadathur99cade">NM99</A>], it has now
+evolved in such a way that, by design, it resembles that of the Abella
+proof assistant [<A HREF="refman016.html#abella.website">Gac10</A>]. This explains the lack of
+syntactic compatibility with versions earlier than 1.3.</P><H3 CLASS="subsection"><A NAME="toc12"></A><A NAME="htoc32">11.1</A>  Formulae</H3><P>Formulae are described in <A HREF="#bnf:formulae">5</A>, separately from terms,
+as it is customary to have the former contain the later and not the
+other way around. However, one can actually write
+
+<CODE>((<FONT COLOR="black">x</FONT>\ (<FONT COLOR="black">p</FONT> <FONT COLOR="black">x</FONT> <FONT COLOR="black">/</FONT>\ <FONT COLOR="black">q</FONT> <FONT COLOR="black">x</FONT>)) <FONT COLOR="black">c</FONT>)</CODE> instead of 
+<CODE>(<FONT COLOR="black">p</FONT> <FONT COLOR="black">c</FONT> <FONT COLOR="black">/</FONT>\ <FONT COLOR="black">q</FONT> <FONT COLOR="black">c</FONT>)</CODE>,
+and the parser takes it into account by allowing a formula to be
+interpreted as a term.</P><P>Quantifiers are n-ary, and their scope extends to the
+right as far as possible:
+</P><DIV CLASS="center">
+
+<CODE>(<FONT COLOR="#19194C"><B>forall</B></FONT> <FONT COLOR="black">x</FONT> <FONT COLOR="black">y</FONT>, <FONT COLOR="black">f</FONT> <FONT COLOR="black">y</FONT> <FONT COLOR="black">x</FONT> <FONT COLOR="#19194C"><B>=</B></FONT> <FONT COLOR="black">g</FONT> <FONT COLOR="black">x</FONT> <FONT COLOR="black">y</FONT>)</CODE> ≡
+
+<CODE>(<FONT COLOR="#19194C"><B>forall</B></FONT> <FONT COLOR="black">x</FONT> <FONT COLOR="black">y</FONT>, (<FONT COLOR="black">f</FONT> <FONT COLOR="black">y</FONT> <FONT COLOR="black">x</FONT> <FONT COLOR="#19194C"><B>=</B></FONT> <FONT COLOR="black">g</FONT> <FONT COLOR="black">x</FONT> <FONT COLOR="black">y</FONT>))</CODE>
+</DIV><BLOCKQUOTE CLASS="figure"><DIV CLASS="center"><DIV CLASS="center"><HR WIDTH="80%" SIZE=2></DIV>
+<TABLE CELLSPACING=6 CELLPADDING=0><TR><TD ALIGN=left NOWRAP> formula</TD><TD ALIGN=right NOWRAP>::=</TD><TD ALIGN=left NOWRAP>&lt;term&gt; 
+<FONT COLOR="#19194C"><B><CODE>=</CODE></B></FONT> &lt;term&gt;</TD><TD ALIGN=left NOWRAP>equality</TD></TR>
+<TR><TD ALIGN=left NOWRAP>&nbsp;</TD><TD ALIGN=right NOWRAP>|</TD><TD ALIGN=left NOWRAP>&lt;formula&gt; 
+<CODE><FONT COLOR="black">/</FONT>\</CODE> &lt;formula&gt;</TD><TD ALIGN=left NOWRAP>conjunction</TD></TR>
+<TR><TD ALIGN=left NOWRAP>&nbsp;</TD><TD ALIGN=right NOWRAP>|</TD><TD ALIGN=left NOWRAP>&lt;formula&gt; 
+<CODE>\<FONT COLOR="black">/</FONT></CODE> &lt;formula&gt;</TD><TD ALIGN=left NOWRAP>disjunction</TD></TR>
+<TR><TD ALIGN=left NOWRAP>&nbsp;</TD><TD ALIGN=right NOWRAP>|</TD><TD ALIGN=left NOWRAP>&lt;formula&gt; 
+<FONT COLOR="#4C4C00"><CODE>-&gt;</CODE></FONT> &lt;formula&gt;</TD><TD ALIGN=left NOWRAP>implication</TD></TR>
+<TR><TD ALIGN=left NOWRAP>&nbsp;</TD><TD ALIGN=right NOWRAP>|</TD><TD ALIGN=left NOWRAP>&lt;quantifier&gt; &lt;bound_variable&gt;+
+<CODE>,</CODE>
+&lt;formula&gt;</TD><TD ALIGN=left NOWRAP>&nbsp;</TD></TR>
+<TR><TD ALIGN=left NOWRAP>&nbsp;</TD><TD ALIGN=right NOWRAP>|</TD><TD ALIGN=left NOWRAP>&lt;term&gt;</TD><TD ALIGN=left NOWRAP>&nbsp;</TD></TR>
+<TR><TD ALIGN=left NOWRAP> quantifier</TD><TD ALIGN=right NOWRAP>::=</TD><TD ALIGN=left NOWRAP>
+<FONT COLOR="#19194C"><B><CODE>forall</CODE></B></FONT></TD><TD ALIGN=left NOWRAP>universal</TD></TR>
+<TR><TD ALIGN=left NOWRAP>&nbsp;</TD><TD ALIGN=right NOWRAP>|</TD><TD ALIGN=left NOWRAP>
+<FONT COLOR="#19194C"><B><CODE>exists</CODE></B></FONT></TD><TD ALIGN=left NOWRAP>existential</TD></TR>
+<TR><TD ALIGN=left NOWRAP>&nbsp;</TD><TD ALIGN=right NOWRAP>|</TD><TD ALIGN=left NOWRAP>
+<FONT COLOR="#19194C"><B><CODE>nabla</CODE></B></FONT></TD><TD ALIGN=left NOWRAP>generic</TD></TR>
+</TABLE>
+<DIV CLASS="caption"><TABLE CELLSPACING=6 CELLPADDING=0><TR><TD VALIGN=top ALIGN=left>Figure 5: Grammar of formulae.<A NAME="bnf:formulae"></A></TD></TR>
+</TABLE></DIV>
+<DIV CLASS="center"><HR WIDTH="80%" SIZE=2></DIV></DIV></BLOCKQUOTE><H3 CLASS="subsection"><A NAME="toc13"></A><A NAME="htoc33">11.2</A>  Terms</H3><P>Within terms, the highest priority goes to the regular application
+(<A HREF="#bnf:terms">6</A>). In particular, it has precedence over the
+application of an infix constant:
+</P><DIV CLASS="center">
+
+<CODE>(<FONT COLOR="black">w</FONT> <FONT COLOR="black">x</FONT> <FONT COLOR="black">**</FONT> <FONT COLOR="black">y</FONT> <FONT COLOR="black">z</FONT>)</CODE> ≡
+
+<CODE>(<FONT COLOR="black">w</FONT> <FONT COLOR="black">x</FONT>) <FONT COLOR="black">**</FONT> (<FONT COLOR="black">y</FONT> <FONT COLOR="black">z</FONT>)</CODE>
+</DIV><P>
+All infix constants have the same priority, and are right-associative,
+to mimic the behavior of 
+<FONT COLOR="#4C4C00"><CODE>-&gt;</CODE></FONT>.</P><P>An infix constant usually has to be at least of arity 2 to be read:
+
+<CODE>(<FONT COLOR="black">x</FONT> <FONT COLOR="black">**</FONT>)</CODE> raises a parsing error, while 
+<CODE>(<FONT COLOR="black">x</FONT> <FONT COLOR="black">**</FONT> <FONT COLOR="black">y</FONT>)</CODE>
+can be applied to another term if 
+<FONT COLOR="black"><CODE>**</CODE></FONT> is of arity 3 or more.
+It is also possible to use the prefix version of an infix constant by
+surrounding it with parentheses, in which case any arity is permitted:
+
+<CODE>((<FONT COLOR="black">**</FONT>) <FONT COLOR="black">x</FONT>)</CODE> and 
+<CODE>((<FONT COLOR="black">**</FONT>) <FONT COLOR="black">x</FONT> <FONT COLOR="black">y</FONT> <FONT COLOR="black">z</FONT>)</CODE> are both syntactically
+legal.</P><P>The abstraction over variable 
+<FONT COLOR="black"><CODE>x</CODE></FONT> in 
+<FONT COLOR="black"><CODE>term</CODE></FONT> is
+denoted by 
+<CODE><FONT COLOR="black">x</FONT>\ <FONT COLOR="black">term</FONT></CODE> – which is read as λ <I>x</I>. <I>term</I>.
+The scope of the infix λ-abstraction extends to the right as far
+as possible inside of a term, but not across formula operators:
+</P><DIV CLASS="center">
+
+<CODE>(<FONT COLOR="black">x</FONT>\ <FONT COLOR="black">y</FONT>\ <FONT COLOR="black">f</FONT> <FONT COLOR="black">y</FONT> <FONT COLOR="black">x</FONT> <FONT COLOR="#19194C"><B>=</B></FONT> <FONT COLOR="black">g</FONT> <FONT COLOR="black">x</FONT> <FONT COLOR="black">y</FONT>)</CODE> ≡
+
+<CODE>((<FONT COLOR="black">x</FONT>\ (<FONT COLOR="black">y</FONT>\ (<FONT COLOR="black">f</FONT> <FONT COLOR="black">y</FONT> <FONT COLOR="black">x</FONT>))) <FONT COLOR="#19194C"><B>=</B></FONT> (<FONT COLOR="black">g</FONT> <FONT COLOR="black">x</FONT> <FONT COLOR="black">y</FONT>))</CODE>
+</DIV><BLOCKQUOTE CLASS="figure"><DIV CLASS="center"><DIV CLASS="center"><HR WIDTH="80%" SIZE=2></DIV>
+<TABLE CELLSPACING=6 CELLPADDING=0><TR><TD ALIGN=left NOWRAP> term</TD><TD ALIGN=right NOWRAP>::=</TD><TD ALIGN=left NOWRAP>&lt;atom&gt;+</TD><TD ALIGN=left NOWRAP>application</TD></TR>
+<TR><TD ALIGN=left NOWRAP>&nbsp;</TD><TD ALIGN=right NOWRAP>|</TD><TD ALIGN=left NOWRAP>&lt;atom&gt;* &lt;abstraction&gt;</TD><TD ALIGN=left NOWRAP>application on an
+abstraction</TD></TR>
+<TR><TD ALIGN=left NOWRAP>&nbsp;</TD><TD ALIGN=right NOWRAP>|</TD><TD ALIGN=left NOWRAP>&lt;term&gt; &lt;infix_id&gt; &lt;term&gt;</TD><TD ALIGN=left NOWRAP>(partial) infix
+application</TD></TR>
+<TR><TD ALIGN=left NOWRAP> abstraction</TD><TD ALIGN=right NOWRAP>::=</TD><TD ALIGN=left NOWRAP>&lt;bound_variable&gt;
+<CODE>\</CODE> &lt;term&gt;</TD><TD ALIGN=left NOWRAP>&nbsp;</TD></TR>
+<TR><TD ALIGN=left NOWRAP> atom</TD><TD ALIGN=right NOWRAP>::=</TD><TD ALIGN=left NOWRAP>
+<FONT COLOR="#19194C"><B><CODE>true</CODE></B></FONT></TD><TD ALIGN=left NOWRAP>
+<FONT COLOR="#19194C"><B><CODE>prop</CODE></B></FONT></TD></TR>
+<TR><TD ALIGN=left NOWRAP>&nbsp;</TD><TD ALIGN=right NOWRAP>|</TD><TD ALIGN=left NOWRAP>
+<FONT COLOR="#19194C"><B><CODE>false</CODE></B></FONT></TD><TD ALIGN=left NOWRAP>
+<FONT COLOR="#19194C"><B><CODE>prop</CODE></B></FONT></TD></TR>
+<TR><TD ALIGN=left NOWRAP>&nbsp;</TD><TD ALIGN=right NOWRAP>|</TD><TD ALIGN=left NOWRAP>
+<FONT COLOR="#9300D1"><CODE>"&lt;string&gt;"</CODE></FONT></TD><TD ALIGN=left NOWRAP>
+<FONT COLOR="#19194C"><B><CODE>string</CODE></B></FONT></TD></TR>
+<TR><TD ALIGN=left NOWRAP>&nbsp;</TD><TD ALIGN=right NOWRAP>|</TD><TD ALIGN=left NOWRAP>[0-9]+</TD><TD ALIGN=left NOWRAP>
+<FONT COLOR="#19194C"><B><CODE>nat</CODE></B></FONT></TD></TR>
+<TR><TD ALIGN=left NOWRAP>&nbsp;</TD><TD ALIGN=right NOWRAP>|</TD><TD ALIGN=left NOWRAP>
+<CODE>(</CODE>&lt;formula&gt;
+<CODE>)</CODE></TD><TD ALIGN=left NOWRAP>&nbsp;</TD></TR>
+<TR><TD ALIGN=left NOWRAP>&nbsp;</TD><TD ALIGN=right NOWRAP>|</TD><TD ALIGN=left NOWRAP>
+<CODE>(</CODE>&lt;infix_id&gt;
+<CODE>)</CODE></TD><TD ALIGN=left NOWRAP>prefix
+form of an infix
+constant</TD></TR>
+<TR><TD ALIGN=left NOWRAP>&nbsp;</TD><TD ALIGN=right NOWRAP>|</TD><TD ALIGN=left NOWRAP>&lt;id&gt;</TD><TD ALIGN=left NOWRAP>declared object</TD></TR>
+<TR><TD ALIGN=left NOWRAP>&nbsp;</TD><TD ALIGN=right NOWRAP>|</TD><TD ALIGN=left NOWRAP>&lt;bound_variable&gt;</TD><TD ALIGN=left NOWRAP>bound (or free)
+variable</TD></TR>
+</TABLE>
+<DIV CLASS="caption"><TABLE CELLSPACING=6 CELLPADDING=0><TR><TD VALIGN=top ALIGN=left>Figure 6: Grammar of terms.<A NAME="bnf:terms"></A></TD></TR>
+</TABLE></DIV>
+<DIV CLASS="center"><HR WIDTH="80%" SIZE=2></DIV></DIV></BLOCKQUOTE><H3 CLASS="subsection"><A NAME="toc14"></A><A NAME="htoc34">11.3</A>  Tokens</H3><P>Names for objects such as types, predicates, constants and variables are
+character strings built with letters, digits and the special characters
+{
+<CODE><FONT COLOR="black">-</FONT>^&lt;<FONT COLOR="black">&gt;=</FONT>~<FONT COLOR="black">+*</FONT>&amp;<FONT COLOR="black">:|</FONT></CODE>}, {
+<CODE><FONT COLOR="black">`'</FONT>\<FONT COLOR="black">$?</FONT></CODE>} and
+{
+<CODE><FONT COLOR="black">_/@</FONT><FONT COLOR="#4C1919">#!</FONT></CODE>}
+(<A HREF="#bnf:tokens">7</A>). Names must
+be separated by space characters (<TT>SPACE</TT>, <TT>TAB</TT>,
+<TT>CR</TT>, <TT>LF</TT>), parentheses or C-style inline nested comments
+(
+<CODE><FONT COLOR="black">/*</FONT> <FONT COLOR="black">*/</FONT></CODE>). As a general rule, the first character of a name
+determines the kind of name it is, and cannot be a digit.</P><P>More precisely, we divide the special characters into three categories:
+</P><UL CLASS="itemize"><LI CLASS="li-itemize">
+infix characters: 
+<CODE><FONT COLOR="black">-</FONT>^&lt;<FONT COLOR="black">&gt;=</FONT>~<FONT COLOR="black">+*</FONT>&amp;<FONT COLOR="black">:|</FONT></CODE>
+</LI><LI CLASS="li-itemize">prefix characters: 
+<CODE><FONT COLOR="black">`'</FONT>\<FONT COLOR="black">$?</FONT></CODE>
+</LI><LI CLASS="li-itemize">tail characters: 
+<CODE><FONT COLOR="black">_/@</FONT><FONT COLOR="#4C1919">#!</FONT></CODE>
+</LI></UL><P>
+which gives us three token categories:
+</P><DL CLASS="description"><DT CLASS="dt-description">
+<B>upper names</B></DT><DD CLASS="dd-description"> start with 
+<FONT COLOR="black"><CODE>A</CODE></FONT>-
+<FONT COLOR="black"><CODE>Z</CODE></FONT>; contain any
+letter, digit, prefix character or tail character (i.e. anything but
+an infix): 
+<FONT COLOR="black"><CODE>Foo?0</CODE></FONT>, 
+<FONT COLOR="black"><CODE>B@r</CODE></FONT>, 
+<FONT COLOR="black"><CODE>My_Var'</CODE></FONT></DD><DT CLASS="dt-description"><B>prefix names</B></DT><DD CLASS="dd-description"> start with 
+<FONT COLOR="black"><CODE>a</CODE></FONT>-
+<FONT COLOR="black"><CODE>z</CODE></FONT> or a prefix
+character; contain any letter, digit, or prefix or tail character
+(i.e., anything but an infix): 
+<FONT COLOR="black"><CODE>l33t</CODE></FONT>, 
+<CODE><FONT COLOR="black">h</FONT><FONT COLOR="#4C1919">#sh</FONT></CODE>,
+
+<FONT COLOR="black"><CODE>?Your_Var</CODE></FONT></DD><DT CLASS="dt-description"><B>infix names</B></DT><DD CLASS="dd-description"> contain only infix characters: 
+<FONT COLOR="black"><CODE>--&gt;</CODE></FONT>,
+
+<FONT COLOR="black"><CODE>|=</CODE></FONT>, 
+<CODE>^^</CODE>
+</DD></DL><P>
+Keywords are implicitly excluded from those definitions.</P><P>Types and predicates must have prefix names, constants can have either
+prefix or infix names, and bound variables (from quantifiers of
+λ-abstractions) can have either upper or prefix names, though it
+is customary to use an upper name for an existentially quantified
+variable and a prefix name for the others.</P><P>In a term or a type, all unbound infix or prefix names must be declared,
+and unbound upper names (which cannot be declared objects) are free
+variables. Those are implicitly universally quantified in files (i.e.
+in types and clauses), and existentially quantified in queries. Though
+no name can begin with the special character 
+<FONT COLOR="black"><CODE>_</CODE></FONT><SUP><A NAME="text3" HREF="refman017.html#note3">2</A></SUP>, it can serve as a placeholder: it is a fresh one-time free variable,
+except when used instead of a variable name in a binding, where it
+denotes a vacuous abstraction.</P><P>One more constraint restrict the range of names. As already said, names
+must be separated by space characters or comments. This is true even if
+they are not names of the same kind, e.g. infix characters and other
+characters cannot be contiguous. This explains why the spaces are
+mandatory in 
+<CODE>(<FONT COLOR="black">X</FONT> <FONT COLOR="#4C4C00">-&gt;</FONT> <FONT COLOR="black">Y</FONT>)</CODE> or even 
+<CODE>(<FONT COLOR="black">X</FONT> <FONT COLOR="#19194C"><B>=</B></FONT> <FONT COLOR="black">Y</FONT>)</CODE>. The only
+allowed exceptions are the special sequences 
+<FONT COLOR="black"><CODE>/*</CODE></FONT> and
+
+<FONT COLOR="black"><CODE>*/</CODE></FONT>, which can appear right after (resp. before) a prefix
+name, and which always start (resp. end) a level of inline comment<SUP><A NAME="text4" HREF="refman017.html#note4">3</A></SUP>, except when in a quoted string or a single-line comment.</P><BLOCKQUOTE CLASS="figure"><DIV CLASS="center"><DIV CLASS="center"><HR WIDTH="80%" SIZE=2></DIV>
+<TABLE CELLSPACING=6 CELLPADDING=0><TR><TD ALIGN=left NOWRAP> id</TD><TD ALIGN=right NOWRAP>::=</TD><TD ALIGN=left NOWRAP>&lt;prefix_name&gt;</TD></TR>
+<TR><TD ALIGN=left NOWRAP>&nbsp;</TD><TD ALIGN=right NOWRAP>|</TD><TD ALIGN=left NOWRAP>&lt;infix_name&gt;</TD></TR>
+<TR><TD ALIGN=left NOWRAP> bound_variable</TD><TD ALIGN=right NOWRAP>::=</TD><TD ALIGN=left NOWRAP>&lt;upper_name&gt;</TD></TR>
+<TR><TD ALIGN=left NOWRAP>&nbsp;</TD><TD ALIGN=right NOWRAP>|</TD><TD ALIGN=left NOWRAP>&lt;prefix_name&gt;</TD></TR>
+<TR><TD ALIGN=left NOWRAP> type_variable</TD><TD ALIGN=right NOWRAP>::=</TD><TD ALIGN=left NOWRAP>&lt;upper_name&gt;</TD></TR>
+<TR><TD ALIGN=left NOWRAP> infix_id</TD><TD ALIGN=right NOWRAP>::=</TD><TD ALIGN=left NOWRAP>&lt;infix_name&gt;</TD></TR>
+<TR><TD ALIGN=left NOWRAP>
+upper_name</TD><TD ALIGN=right NOWRAP>::=</TD><TD ALIGN=left NOWRAP> [
+<FONT COLOR="black"><CODE>A-Z</CODE></FONT>][
+<CODE><FONT COLOR="black">a-zA-Z0-9`'</FONT>\<FONT COLOR="black">$?_/@</FONT><FONT COLOR="#4C1919">#!</FONT></CODE>]*</TD></TR>
+<TR><TD ALIGN=left NOWRAP> prefix_name</TD><TD ALIGN=right NOWRAP>::=</TD><TD ALIGN=left NOWRAP> [
+<CODE><FONT COLOR="black">a-z`'</FONT>\<FONT COLOR="black">$?</FONT></CODE>][
+<CODE><FONT COLOR="black">a-zA-Z0-9`'</FONT>\<FONT COLOR="black">$?_/@</FONT><FONT COLOR="#4C1919">#</FONT></CODE>]*</TD></TR>
+<TR><TD ALIGN=left NOWRAP> infix_name</TD><TD ALIGN=right NOWRAP>::=</TD><TD ALIGN=left NOWRAP>[
+<CODE><FONT COLOR="black">-</FONT>^&lt;<FONT COLOR="black">&gt;=</FONT>~<FONT COLOR="black">+*</FONT>&amp;<FONT COLOR="black">:|</FONT></CODE>]+</TD></TR>
+</TABLE>
+<DIV CLASS="caption"><TABLE CELLSPACING=6 CELLPADDING=0><TR><TD VALIGN=top ALIGN=left>Figure 7: Grammar of type declarations.<A NAME="bnf:tokens"></A></TD></TR>
+</TABLE></DIV>
+<DIV CLASS="center"><HR WIDTH="80%" SIZE=2></DIV></DIV></BLOCKQUOTE><HR>
+<A HREF="refman012.html"><IMG SRC="previous_motif.gif" ALT="Previous"></A>
+<A HREF="index.html"><IMG SRC="contents_motif.gif" ALT="Up"></A>
+<A HREF="refman014.html"><IMG SRC="next_motif.gif" ALT="Next"></A>
+</BODY>
+</HTML>
