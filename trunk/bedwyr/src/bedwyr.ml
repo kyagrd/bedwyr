@@ -19,6 +19,7 @@
 
 exception Invalid_command
 exception Assertion_failed
+exception Uncleared_tables
 
 let stdlib = "\
 Kind    list    type -> type.
@@ -91,6 +92,7 @@ let queries     = ref []
 let inclfiles   = ref []
 let exit_status = ref None
 let strict_mode = ref false
+let clean_tables = ref true
 
 let _ =
   Arg.parse
@@ -342,7 +344,7 @@ let rec process ?(test=false) ?(interactive=false) parse lexbuf =
             "Typing error: type incompletely inferred for %s."
             n
 
-      (* Using predicates *)
+      (* Using predicates and tables *)
       | System.Missing_definition (n,p) ->
           eprintf def_error ?p
             "Undefined predicate (%s was declared as a constant)."
@@ -351,6 +353,10 @@ let rec process ?(test=false) ?(interactive=false) parse lexbuf =
           eprintf def_error ?p
             "No table (%s is neither inductive nor coinductive)."
             n
+      | Uncleared_tables ->
+          eprintf def_error
+            "Unable to export tables (some have been cleared, \
+              state might be inconsistent).@ Run #clear_tables to fix."
 
       (* Core *)
       | Unify.NotLLambda t ->
@@ -443,6 +449,12 @@ and include_file ?(test=false) fname =
     IO.chdir cwd
   end
 
+(* Execute meta-commands.
+ * @raise Invalid_command if an argument is unexpected
+ * (especially if a boolean flag is given something other than
+ * "", "true", "on", "false" or "off")
+ * @raise Assertion_failed if [#assert formula.], [#assert_not formula.]
+ * or [#assert_raise formula.] fails *)
 and command ~test c reset =
   let aux = function
     | Input.Exit ->
@@ -474,14 +486,18 @@ and command ~test c reset =
         System.show_def (p,Term.atom ~tag:Term.Constant name)
     | Input.Show_table (p,name) ->
         System.show_table (p,Term.atom ~tag:Term.Constant name)
-    | Input.Clear_tables -> System.clear_tables ()
+    | Input.Clear_tables ->
+        clean_tables := true ;
+        System.clear_tables ()
     | Input.Clear_table (p,name) ->
+        clean_tables := false ;
         System.clear_table (p,Term.atom ~tag:Term.Constant name)
     (* save the content of a table to a file. An exception is thrown if
      * file already exists. *)
     | Input.Save_table (p,name,file) ->
         System.save_table (p,Term.atom ~tag:Term.Constant name) name file
-    | Input.Export name -> System.export name
+    | Input.Export name ->
+        if !clean_tables then System.export name else raise Uncleared_tables
 
     (* Testing commands *)
     | Input.Assert pre_query ->

@@ -12,28 +12,17 @@
 (* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            *)
 (* GNU General Public License for more details.                             *)
 (*                                                                          *)
-(* You should have received a copy of the GNU General Public License        *)
-(* along with this code; if not, write to the Free Software Foundation,     *)
-(* Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA             *)
+(* You should have received a copy of the GNU General Public License along  *)
+(* with this program; if not, write to the Free Software Foundation, Inc.,  *)
+(* 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.              *)
 (****************************************************************************)
 
-(** Bedwyr's exceptions handling. *)
-
-exception Invalid_command
-exception Assertion_failed
+(** Bedwyr's main loop. *)
 
 (** Read a *.def file. *)
-val input_defs : test:bool -> Lexing.lexbuf -> unit
+val include_file : ?test:bool -> string -> unit
 
 (** Read the REPL or a script.
   * @param interactive intended for the REPL,
   * gives additional error messages *)
 val input_queries : test:bool -> ?interactive:bool -> Lexing.lexbuf -> unit
-
-(** Execute meta-commands ([#debug.], etc).
-  * @raise Invalid_command if an argument is unexpected
-  * (especially if a boolean flag is given something other than
-  * "", "true", "on", "false" or "off")
-  * @raise Assertion_failed if [#assert formula.], [#assert_not formula.]
-  * or [#assert_raise formula.] fails *)
-val command : test:bool -> Input.command -> (unit -> unit) -> unit
