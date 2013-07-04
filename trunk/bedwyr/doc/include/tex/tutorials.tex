@@ -1,0 +1,211 @@
+\part{Tutorials}
+\label{tutorials}
+
+
+% ============================================================================
+% ============================================================================
+\section{Released examples}
+
+\begin{flushright}
+Few things are harder to put up with \\
+than the annoyance of a good example. \\ -- Mark Twain
+\end{flushright}
+
+The distribution of Bedwyr comes with several examples of its use.
+These examples can be classified roughly as follows.
+
+\begin{description}
+  % TODO check that said examples were translated,
+  % remove old ones, and put them in folders according to
+  % the following list, and add examples of use for files under each
+  % item, including items with BC/FC
+  \item[Basic examples] These examples are small and illustrate some
+    simple aspects of the system.
+
+  \item[Model checking] Some simple model-checking-style examples are
+    provided.
+
+  \item[Games] Bedwyr allows for a simple approach to explore for
+    winning strategies in some simple games, such as tic-tac-toe.
+
+  \item[\lc{}] Various relations and properties of the
+    \lc{} are developed in some definition files.
+
+  \item[Simulation and bisimulation] These relationships between
+    processes where an important class of examples for which the theory
+    behind Bedwyr was targeted.  Examples of checking simulation is done
+    for abstract transition systems, value-passing CCS, and the
+    \pc{}.  The \pc{} examples are of particular note:
+    all side-conditions for defining the operational semantics and
+    bisimulation are handled directly and declaratively by the logic
+    underlying Bedwyr.  See \autoref{pi-examples} below for some more
+    details about the \pc{} in Bedwyr.
+\end{description}
+
+
+% ============================================================================
+% ============================================================================
+\section{Hypothetical reasoning}
+
+For those familiar with \lp{}, a key difference between Bedwyr and \lp{}
+is that the latter allows for ``hypothetical'' reasoning and such
+reasoning is central to the way that \lp{} treats bindings in syntax.
+Bedwyr treats implication and universals in goal formulas in a
+completely different way: via the closed world assumption.
+
+Sometimes, when dealing with $\lambda$-tree syntax in Bedwyr, one
+wishes to program operations as one might do in \lp{}.  This is possible
+in the sense that one can write in Bedwyr an interpreter for suitable
+fragments of \lp{}.  This is done, for example, in the \path{seq.def}
+definition file.  There is a goal-directed proof search procedure for a
+small part of hereditary Harrop formulas (in particular, the minimal
+theory of the fragment based on $\top$, $\land$, $\supset$, and
+$\forall$).  This interpreter is prepared to use a logic program that
+is stored as a binary predicate.  For example, in \lp{}, one would write
+type checking for simple types over the untyped \lc{}
+encoded using \lstinline{app} and \lstinline{abs} as in \autoref{lp:typeof}.
+The hypothetical reasoning that is involved in typing the object-level
+$\lambda$-binder in the second clause above is not available directly
+in Bedwyr.  One can, however, rewrite these clauses as simply
+``facts'' in Bedwyr (\autoref{bd:typeof}).
+
+\begin{figure}
+  \centering
+  \begin{lstlisting}[%
+    style=lprolog,caption={Simple typing in Teyjus.},label={lp:typeof}]
+typeof (app M N) B :- typeof M (arrow A B), typeof N A.
+typeof (abs R) (arrow A B) :- pi x\ typeof x A => typeof (R x) B.
+  \end{lstlisting}
+\end{figure}
+\begin{figure}
+  \centering
+  \lstinputlisting[%
+    firstline=12,lastline=19,%
+    caption={Simple typing in Bedwyr (from
+    \protect\path{examples/progs_small.def}).},%
+    label=bd:typeof%
+  ]{include/linc/typeof.def}
+\end{figure}
+
+The first definition describes a logic program called \lstinline{simple}
+that directly encodes the above \lp{} program; the second definition
+tells the interpreter in \lstinline{seq.def} how to recognize an
+object-level atomic formula.  A call to
+\lstinline{seq atom simple tt (type_of Term Ty)} will now attempt to
+perform simple type checking on \lstinline{Term}.  Specifically, it is
+possible to prove in Bedwyr the goal
+\begin{center}\begin{lstlisting}
+(exists Ty, seq atom simple tt (type_of (abs x\ app x x) Ty))
+  -> false.
+\end{lstlisting}\end{center}
+or, in other words, that the self-application $\lambda x(x x)$ does not
+have a simple type.
+
+This ``two-level approach'' of specification uses Bedwyr as a
+meta-language in which a simple intuitionistic logic is encoded as an
+object logic: computations can then be specified in the object-logic in
+the usual way and then Bedwyr can be used to reason about that
+specification.  This general approach has been described in more detail
+in \cite{miller06ijcar,gacek.twolevel}.
+
+
+% ============================================================================
+% ============================================================================
+\section{The \texorpdfstring{\pc{}}{pi-calculus} example in more detail}
+\label{pi-examples}
+
+To illustrate another example and how it can be used, consider the
+implementation of the \pc{} that is contained in the example file
+\path{pi/pi.def}.  Of the several things defined in that file, the
+operational semantics for the \pc{} is given using one-step transitions:
+for a specific example, see \autoref{bd:pi-one-step}.
+
+Beyond the syntactic differences, the operational semantics of \lp{} and
+Bedwyr differ significantly.  If a specification is simply a Horn clause
+program, the two systems coincide.  They differ in the operational
+interpretation of implication: in Bedwyr, to prove $A\supset B$, all
+possible ways to prove $A$ are explored and for each answer substitution
+$\theta$ that is found, the goal $B\theta$ is attempted (see
+\autoref{psearch}).  Bedwyr also contains the $\nabla$-quantifier
+\cite{miller05tocl}.
+
+\begin{figure}
+  \centering
+  \lstinputlisting[%
+    linerange={117-121,124-124,127-127,130-131},%
+    caption={Some one-step transitions (from
+    \protect\path{examples/pi/pi.def}).},%
+    label=bd:pi-one-step%
+  ]{include/linc/pi.def}
+\end{figure}
+
+\begin{figure}
+  \centering
+  \lstinputlisting[%
+    firstline=193,lastline=210,%
+    caption={(Open) bisimulation (from
+    \protect\path{examples/pi/pi.def}).},%
+    label=bd:pi-bisim%
+  ]{include/linc/pi.def}
+\end{figure}
+
+Returning to the example in \autoref{bd:pi-one-step}, notice that two
+predicates are defined: \lstinline{one} and \lstinline{onep}.  The first
+one relates a process, an action, and a process.  The second one relates
+a process, an abstraction of an action, and an abstraction of a process.
+The \lstinline{one} predicate is used to capture ``free transitions''
+and the ``$\tau$-transition'' while the second is used to capture
+bounded transitions.  See \cite{tiu04fguc,tiu05concur} for more details
+on this encoding strategy for the \pc{}.
+
+\autoref{bd:pi-bisim} provides all that is necessary to specify (open)
+bisimulation for (finite) \pc{}.  The keyword \lstinline{coinductive}
+tells the system that it will be attempting to explore a greatest fixed
+point.  That keyword also enables tabling, which avoids redundant
+computations and accept loops as successes (see \autoref{tabling}).  The
+other cases should look natural, at least once one understands the
+$\lambda$-tree approach to representing syntax and the use of the
+$\nabla$-quantifier.  The main thing to point out here is that in the
+specification, no special side conditions need to be added to the
+system: all the familiar side conditions from the usual papers on the
+\pc{} are treated by the implementation of the Bedwyr logic: the user of
+the system no longer needs to deal with them explicitly but implicitly
+and declaratively (via quantifier scope, $\alpha\beta\eta$-conversion,
+etc.).
+
+It is now possible to test some simple examples in the system, for
+example \autoref{bd:pi-run}.
+\begin{figure}
+  \centering
+  \begin{lstlisting}[%
+    style=bedwyr-repl,%
+    caption={Run on \protect\path{examples/pi/pi.def}},%
+    label=bd:pi-run]
+?= bisim (in a x\ in a y\ z)
+     (in a x\ nu w\ in a y\ out w w z).
+Yes.
+More [y] ? y
+No more solutions.
+?= bisim (in a x\ nu y\ match x y (out c c z))
+     (in a x\ z).
+Yes.
+More [y] ? y
+No more solutions.
+?= bisim (nu x\ out a x (in c y\ match x y (out c c z)))
+     (nu x\ out a x (in c y\ z)).
+No.
+?=
+  \end{lstlisting}
+\end{figure}
+These query prove that $a(x).a(y).0$ and $a(x).(\nu w).a(y).w!w.0$ are
+bisimilar, that $a(x).(\nu y).[x=y].c!c.0$ and $a(x).0$ are bisimilar,
+and that $(\nu x).a!x.c(y).[x=y].c!c.0$ and $(\nu x).a!x.c(y).0$ are not
+bisimilar.
+
+Several other aspects of the \pc{} are explored in the examples files of
+the distribution.  For example, the file \path{pi/pi_modal.def} contains
+a specification of the modal logics for mobility described in
+\cite{milner93tcs}, the file \path{pi/corr-assert.def} specifies the
+checking of ``correspondence assertions'' for the \pc{} as described in
+\cite{gordon03tcs}, and the file \path{pi/pi_abscon.def} specifies the
+polyadic \pc{} following \cite{milner99book}.

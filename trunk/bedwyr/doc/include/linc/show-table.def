@@ -1,0 +1,6 @@
+Define inductive neq : nat -> nat -> prop by
+  neq X Y := X = Y -> false.
+
+Define query1 : prop, query2 : prop by
+  query1 := forall x, nabla y, neq x y ; % true
+  query2 := nabla y, forall x, neq x y.  % false

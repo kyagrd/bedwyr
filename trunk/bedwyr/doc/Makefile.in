@@ -126,7 +126,7 @@ all: $(TARGETS)
 	@echo -e "$(SET_RED)===== BBL -> DVI Pass ==== $* =====$(RESET_COLOR)"
 	@$(LATEX) $*
 	@while ( grep -q "Rerun to get cross-references right" $*.log ) ; do \
-	  echo -e "$(SET_RED)===== AUX -> DVI (cross-references) Pass ==== $* =====$(RESET_COLOR)" ; \
+	  echo -e "$(SET_RED)===== DVI -> DVI (cross-references) Pass ==== $* =====$(RESET_COLOR)" ; \
 	  $(LATEX) $* ; \
 	  done
 
@@ -157,7 +157,7 @@ all: $(TARGETS)
 	@echo -e "$(SET_MAG)===== HTML -> HTMLs Pass ==== $* =====$(RESET_COLOR)"
 	@mkdir -p $*
 	@$(HACHA) -o $@ $<
-	@for i in $(wildcard $**.png) ; do cp -pvf $$i $*/ ; done
+	@for i in $**.png ; do [ -f $$i ] && cp -pvf $$i $*/ ; done
 
 #
 # INSTALL

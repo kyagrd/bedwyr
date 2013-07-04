@@ -1,0 +1,8 @@
+Kind option   type -> type.
+Type none     option A.
+Type some     A -> option A.
+
+Define print? : option A -> prop by
+  print? none ;
+% print? (some 42) ;
+  print? (some X) := println X.
