@@ -1,4 +1,4 @@
-% Example from Section 5.2.1 (Tabling) of the Userguide.
+% Example from the section Tabling of the Reference Manual.
 
 Kind state,trans type.
 Type p0,p1,p2,
