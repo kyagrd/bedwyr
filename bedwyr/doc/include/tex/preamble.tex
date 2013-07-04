@@ -55,6 +55,7 @@
 \usepackage{include/tex/languages}
 \lstdefinestyle{lprolog}{%
   language=lprolog,%
+  columns=fixed,%
   basicstyle=\ttfamily\small\color{black},%
   commentstyle=\color{commentcolour},,%
   stringstyle=\color{stringcolour},%
@@ -62,9 +63,11 @@
   keywordstyle={\color{punctiationcolour}},%
   keywordstyle={[2]\color{constantcolour}\bfseries},%
   keywordstyle={[3]\color{keywordcolour}\underline},%
+  keepspaces,%
 }
 \lstdefinestyle{bedwyr}{%
   language=bedwyr,%
+  columns=fixed,%
   basicstyle=\ttfamily\small\color{black},%
   commentstyle=\color{commentcolour},%
   stringstyle=\color{stringcolour},%
@@ -75,6 +78,8 @@
   keywordstyle={[3]\color{keywordcolour}\underline},%
   keywordstyle={[4]},%
   directivestyle={\color{keywordcolour}},%
+  literate={\\\$}{{\$}}1,%
+  keepspaces,%
 }
 \lstdefinestyle{bedwyr-repl}{%
   style=bedwyr,%
@@ -85,14 +90,15 @@
 \bibliographystyle{alpha}
 
 % macros
-\newcommand{\lstlp}[1]{\lstinline[style=lprolog]{#1}}
-\newcommand{\lstbd}[1]{\lstinline[style=bedwyr]{#1}}
 \newcommand{\lp}{$\lambda$Prolog}
-\newcommand{\pc}{$\pi$-calcul}
-\newcommand{\lc}{$\lambda$-calcul}
+\newcommand{\pc}{$\pi$-calculus}
+\newcommand{\lc}{$\lambda$-calculus}
 \newcommand{\Ll}{$L_\lambda$}
 \newcommand{\muDef}{\overset{\mu}{=}}
 \newcommand{\nuDef}{\overset{\nu}{=}}
 %\newcommand{\deDef}{\overset{\Delta}{=}}
 \newcommand{\qs}{\, .\,}
 \providecommand{\path}[1]{\colorbox{pathcolour}{\ttfamily#1}}
+\providecommand{\autoref}[1]{\ref{#1}}
+
+\sloppy

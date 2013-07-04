@@ -1,0 +1,6 @@
+Kind tm, fm   type.
+Type all   (tm -> fm) -> fm.
+Type p         tm -> fm.
+Type a         tm.
+Define instan : fm -> tm -> fm -> prop by
+   instan X T (B T) := X = (all B).

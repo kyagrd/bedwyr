@@ -1,0 +1,2 @@
+Define instan : fm -> tm -> fm -> prop by
+   instan X T Y := X = (all B) /\ Y = (B T).

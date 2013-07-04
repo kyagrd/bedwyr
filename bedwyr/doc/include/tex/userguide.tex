@@ -1,0 +1,432 @@
+\part{A User's Guide to Bedwyr}
+
+
+% ============================================================================
+% ============================================================================
+\section{Overview}
+
+Some recent theoretical work in proof search has illustrated that it is
+possible to combine the following two computational principles into one
+computational logic:
+\begin{enumerate}
+  \item a symmetric treatment of finite success and finite failure --
+    this allows capturing both aspects of \emph{may} and \emph{must}
+    behavior in operational semantics, and mixing model checking and
+    logic programming;
+
+  \item direct support for $\lambda$-tree syntax, as in \lp{}, via
+    term-level $\lambda$-binders, higher-order pattern unification, and
+    the $\nabla$ quantifier.
+\end{enumerate}
+All these features have a clean proof theory.  The combination of these
+features allow, for example, specifying rather declarative approaches to
+model checking syntactic expressions containing bindings.  The Bedwyr
+system is intended as an implementation of these computational logic
+principles.
+
+\paragraph{Why the name Bedwyr?}
+In the legend of King Arthur and the round table, several knights shared
+in the search for the holy grail.  The name of one of them, Parsifal, is
+used for an INRIA team where Bedwyr is currently developed. Bedwyr was
+another one of those knights.  Wikipedia (using the spelling
+``Bedivere'') mentions that Bedwyr appears in \emph{Monty Python and the
+Holy Grail} where he is ``portrayed as a master of the extremely odd
+logic of ancient times''.  Bedwyr is a re-implementation and rethinking
+of an earlier system called Level 0/1 written by Alwen Tiu and described
+in \cite{tiu05eshol}. It was an initial offering from ``Slimmer'', a
+jointly funded effort between INRIA and the University of Minnesota on
+``Sophisticated logic implementations for modeling and mechanical
+reasoning'' from 2005 to 2010. For more information, see
+\url{http://slimmer.gforge.inria.fr/}.
+
+\paragraph{What is the difference between \emph{hoas} and
+  \emph{$\lambda$-tree syntax}?}
+The term ``higher-order abstract syntax'' (hoas) was originally coined
+by Pfenning and Elliott in \cite{pfenning88pldi} and names the general
+practice (that was common then in, say, \lp{} \cite{miller87slp}) of
+using an abstraction in a programming or specification language to
+encode binders in an object-language.  Since the choice of
+``meta-language'' can vary a great deal, the term ``hoas'' has come to
+mean different things to different people.  When hoas is used directly
+within functional programming or constructive type systems, syntax with
+bindings contains functional objects, which make rich syntactic
+manipulations difficult.  Bedwyr, on the other hand, follows the
+\emph{$\lambda$-tree} approach \cite{miller00cl} to hoas: in particular,
+Bedwyr's use of $\lambda$-abstraction is meant to provide an abstract
+form of syntax in which only the names of bindings are hidden: the rest
+of the structure of syntactic expressions remains.
+
+\paragraph{Is Bedwyr efficient?}
+Some care has been taken to implement the novel logical principles that
+appear in Bedwyr.  In particular, the system makes extensive use of the
+implementation of the suspension calculus \cite{nadathur99jflp} and
+other implementation ideas developed within the Teyjus
+\cite{nadathur99cade} implementation of \lp{} \cite{nadathur88iclp}.
+Aspects of tabled deduction have also been added to the system
+\cite{ramakrishna97cav,pientka05cade}.  We have found that Bedwyr's
+performance is good enough to explore a number of interesting examples.
+It is not likely, however, that the current implementation will support
+large examples.  For example, the system implements the occur-check
+within logic: this is, of course, necessary for sound deduction but it
+does slow unification a lot.  As a result, the append program is
+quadratic in the size of its first argument.  There are a number of
+well-known improvements to unification that make it possible to remove
+many instances of the occur-check (and making append linear).  As of
+this time, such an improvement has not been added to Bedwyr.
+
+\paragraph{An open source effort: Can I help?}
+The Bedwyr system was conceived as a prototype that could help validate
+certain proof theory and proof search topic.  In the end, this prototype
+has illustrated the main principles that we hoped that it would.  It has
+also pointed out a number of new topics to be explored.  If you are
+interested in contributing examples, features, or performance
+enhancements, or if you are interested in considering the next
+generation of a system like this, please let an author of this guide
+know: we are looking for contributions.
+
+\paragraph{Background assumed}
+To read this guide, we shall assume that the reader is familiar with the
+implementation of proof search that is found in, say, Prolog, \lp{}, or
+Twelf.  While familiarity with various foundations-oriented papers
+(particularly,
+\cite{mcdowell03tcs,miller05tocl,tiu04phd,baelde08lfmtp,tiu10tocl}) is
+important for understanding fully this system, much can be learned from
+studying the examples provided in the distribution.
+
+
+% ============================================================================
+% ============================================================================
+\section{Getting Bedwyr}
+
+Different means of getting Bedwyr are listed on Slimmer's INRIA Gforge
+project site: \url{http://slimmer.gforge.inria.fr/bedwyr/#download}.
+You can either download tarballs, get any development version using SVN,
+or use Slimmer's unofficial Apt repository -- instructions are provided
+on the project page.  The development of Bedwyr is meant to be an open
+source project.  If you are keen to work on the source code and/or
+examples, please contact one of the ``Project Admins'' of the project
+(as listed at \url{https://gforge.inria.fr/projects/slimmer/}).
+
+% ============================================================================
+\subsection{Distribution layout}
+
+The Bedwyr distribution is organized as follows:
+
+\begin{tabular}{r@{\quad}l}
+  \path{src/}      & Source code \\
+  \path{doc/}      & Documentation -- you're reading it \\
+  \path{contrib/}  & Auxiliary files -- e.g. Emacs and Vim support \\
+  \path{examples/} & Examples -- reading them helps
+\end{tabular}
+
+% ============================================================================
+\subsection{Build}
+
+Bedwyr's main build dependency is on the OCaml compiler suite.  You also
+need some standard tools you probably already have, especially the GNU
+build system (a.k.a. the autotools, especially autoconf and GNU make),
+bash, tar, gzip, bzip2, etc.  Most of these are looked for by the
+configuration step.
+
+Then, the procedure is quite simple:
+
+\begin{verbatim}
+ $ make
+\end{verbatim}
+
+You'll get a link to the Bedwyr executable as \path{./bedwyr}.  You can
+also use the expanded form to choose your building options:
+
+\begin{verbatim}
+ $ autoconf
+ $ ./configure <configure-options>
+ $ make <make-targets>
+\end{verbatim}
+
+The available options and targets are listed with
+
+\begin{verbatim}
+ $ ./configure --help
+ $ make help
+\end{verbatim}
+
+By default, Bedwyr is built using the bytecode compiler \verb.ocamlc.,
+since compilation with it is much faster.  If you don't want this (no
+frequent recompilation, no need for debugging), you can generate more
+efficient native-code instead with \verb.ocamlopt. by passing the option
+\verb.--enable-nativecode. to \verb|./configure|.
+
+You can also enable the documentation generation by using
+\verb|--enable-doc| and then \verb|make doc|.  This userguide, the
+quick-start guide the \verb|ocamldoc| documentation will be generated
+in \path{doc/}.
+
+Last, \verb|--with-xmlm|/\verb|--without-xmlm| will add/remove a
+dependency on the \verb|xmlm| OCaml library, needed to produce XML
+output.  By default, the library is not required, and the feature is
+included if and only if the library is found.
+
+% ============================================================================
+\subsection{Test}
+
+Individual components can be tested for bugs with individual targets:
+
+\begin{verbatim}
+ $ make test_ndcore
+ $ make test_batyping
+ $ make test_input
+ $ make test_prover
+\end{verbatim}
+
+This longer test runs the complete program on a set of example files:
+
+\begin{verbatim}
+ $ make test_bedwyr
+\end{verbatim}
+
+The \verb.test. target runs all the previous tests, and serves as a
+correctness and performance test.
+
+
+% ============================================================================
+% ============================================================================
+\section{User interface}
+
+When you run Bedwyr, you specify a list of definition files, which
+contain objects to be declared and defined.  You can then use the
+toplevel to ask queries against those definitions.
+
+There is also a special brand of commands, meta-commands, which can
+appear anywhere.
+
+As a general rule, any kind of input ends with a full-stop. Commands
+start with uppercase letters, meta-commands with hashes, and queries
+are just formulae.
+
+% ============================================================================
+\subsection{Definition files}
+
+Definition files are usually named with a \verb|.def| extension.  You
+can find several of them in the \path{examples/} directory of the Bedwyr
+distribution.  They contain declarations for types
+(\lstinline{Kind <id> type.}), declarations for constants
+(\lstinline{Type <id> type.}), declarations and definitions for
+predicates (\lstinline{Define <id> : <type> by <definitions>.}), and
+theorems (\lstinline{Theorem <id> : <formula>.}).
+
+The only meta-command that is really intended for definition files is
+the include command: \lstinline{#include "another/file.def"}.  This can
+really be seen as the plain inclusion of another file, as Bedwyr doesn't
+have any namespace or module system.  If the path is not absolute, it is
+relative to the path of the current file, or the execution path for the
+toplevel.
+
+\subsubsection{Emacs mode}
+
+Assuming Bedwyr is installed in standard Linux system folders, you can
+use the Emacs mode for Bedwyr by adding these two lines to your
+\path{~/.emacs} file:
+\begin{verbatim}
+(load "/usr/share/bedwyr/contrib/emacs/bedwyr.el")
+(setq bedwyr-program "/usr/bin/bedwyr")
+;; Of course you can change both locations to wherever you want.
+\end{verbatim}
+
+Then you should be able to load any \verb:.def: file and have syntax
+highlighting and some rough auto-indenting.  Also if you do
+\verb.C-c C-c. it will start Bedwyr and load the current file you are
+working on.
+
+\subsubsection{Vim syntax highlighting}
+
+There is also a basic syntax highlighting file for Vim. With a standard
+system installation, the files
+\path{/usr/share/vim/vimfiles/[ftdetect|syntax]/bedwyr.vim} should
+suffice; otherwise do the following:
+\begin{itemize}
+  \item copy \path{contrib/vim/syntax/bedwyr.vim} to your
+    \path{~/.vim/syntax/} to make highlighting available
+  \item copy \path{contrib/vim/ftdetect/bedwyr.vim} to your
+    \path{~/.vim/ftdetect/} to have it used automatically for all
+    \verb|.def| files
+\end{itemize}
+
+% ============================================================================
+\subsection{Toplevel}
+
+The interactive toplevel is automatically launched once the files have
+been parsed, unless the flag \verb.-I. is passed to Bedwyr.  In it, you
+can either query a formula, or run a meta-command.  In queries, free and
+bound variables are the only objects that can be used without prior
+declaration, and the solutions are displayed as instantiations of free
+variables.
+
+Queries can also be given in batch mode, to a non-interactive toplevel,
+via the command-line option \verb.-e. (e.g.  \verb|bedwyr -e 'X = 0.'|).
+In this case, they are processed after the files and before the
+interactive toplevel.
+
+In \autoref{bd:lambda-run} we load a set of definitions and prove
+(twice) that the untyped $\lambda$-term $\lambda x.x\;x$ has no simple
+type.
+
+\begin{figure}
+  \centering
+  \begin{lstlisting}[%
+    style=bedwyr-repl,%
+    caption={Run on \protect\path{examples/lambda.def}.},%
+    label=bd:lambda-run]
+?= (exists T, wt void (abs x\ app x x) T).
+No.
+?= (exists T, wt void (abs x\ app x x) T) -> false.
+Yes.
+More [y] ?
+No more solutions.
+?=
+  \end{lstlisting}
+\end{figure}
+
+Notice that we had to use the term \lstinline{(abs x\ app x x)} instead
+of \lstinline{(x1\ x1 x1)}: the former encodes the untyped
+$\lambda$-term $\lambda x.x\;x$ by mapping object-level abstraction to
+\lstinline{abs} and object-level application to \lstinline{app}, while
+the latter would map them directly to logic-level abstraction and
+application, and therefore is not a legal term in Bedwyr.  (Prior to
+version 1.3, this was allowed as Bedwyr did not use simple typing on its
+own terms.)
+
+Most of the errors that can stop the reading of a file (parsing or
+typing error, undeclared object, etc.) are correctly caught by the
+toplevel, though the line number reported for the error is often not
+useful.
+
+\subsubsection{Line editing}
+
+Bedwyr has no line editing facilities at all. Thus, we recommend using
+\verb|ledit| or \verb|rlwrap|, which provides such features. Get one
+of them from your usual package manager or at
+\url{http://pauillac.inria.fr/~ddr/ledit/} or
+\url{http://utopia.knoware.nl/~hlub/rlwrap/#rlwrap}.
+
+Then you can simply run \verb.ledit bedwyr.. One can also define an
+alias in his \path{~/.bashrc}, such as the following which also makes use
+of \path{~/.bedwyr_history} to remember history from one session to
+another:
+\begin{verbatim}
+alias bedwyr="ledit -h ~/.bedwyr_history -x /path/to/bedwyr"
+\end{verbatim}
+
+% ============================================================================
+\subsection{Meta-commands}
+
+Meta-commands are used to change the state or the program, or for
+non-logical tasks.  They can be used any time a command or query is
+allowed.
+
+\subsubsection{Session management}
+
+Those commands alter the set of definitions the current session of
+Bedwyr holds.  An empty session actually means that only pervasive
+types, constants and predicates are known.  The session's initial state
+is the list of files given on the command-line, and it can grow anytime
+with the use of \lstinline{#include}.  It should be noted that, although
+Bedwyr has no solid notion of what a module is, it tries to do the smart
+thing by ignoring the request to include a file if it appears to be
+already loaded in the current session, as failure to do this would
+result in fatal multiple declarations.  This only works if the same path
+is used for each inclusion; for instance, \path{./file.def} and
+\path{file.def} will be seen as different files.
+\begin{itemize}
+  \item \lstinline{#include} adds a \verb|.def| file to the current
+    session.  It is designed to be used in definition files.
+
+  \item \lstinline{#session} is an advanced \lstinline{#include} meant
+    for query mode.  It accepts any number of filenames as parameters,
+    and this set of files will be remembered as the new session.  When
+    you pass filenames on Bedwyr's command line, it is equivalent to a
+    call to \lstinline{#session} with these definition files.
+
+  \item \lstinline{#reload} clears all the definitions, and then reloads
+    the session's initial state, i.e. the definition files given on the
+    command-line.  It is useful if they have been changed.
+
+  \item \lstinline{#reset} clears all the definitions and empties the
+    session.  It is synonymous to \lstinline{#session} with no
+    arguments.
+\end{itemize}
+
+\subsubsection{Assertions}
+
+Three kinds of assertions can be used in definition files.  These tests
+are not executed unless the \verb.-t. flag has been passed on Bedwyr's
+command-line, in which case any assertion failure is fatal.
+\begin{itemize}
+  \item \lstinline{#assert} checks that a formula has at least one
+    solution.
+
+  \item \lstinline{#assert_not} checks that a formula has no solution.
+
+  \item \lstinline{#assert_raise} checks that the proof-search for a
+    formula triggers a runtime error.
+\end{itemize}
+
+Our examples include a lot of assertions, to make sure that definitions
+have (and keep) the intended meaning.  These assertions are also the
+basis of Bedwyr's correctness and performance tests ran using
+\verb.make test..
+
+\subsubsection{Other commands}
+
+\begin{itemize}
+  \item Output
+    \begin{itemize}
+      \item \lstinline{#env} displays the current session (types,
+        constants and predicates).
+
+      \item \lstinline{#typeof} displays the (monomorphic) type of a
+        formula and of its free variables.
+
+      \item \lstinline{#show_def} displays the definition of a
+        predicate.
+
+      \item \lstinline{#show_table} displays the content of the table of
+        an inductive of co-inductive predicate.
+
+      \item \lstinline{#save_table} writes the table of an inductive of
+        co-inductive predicate in a fresh definition file.
+
+      \item \lstinline{#export} exports a structured aggregate of all
+        tables in a file. This functionality has to be enabled at
+        compile-time.
+    \end{itemize}
+
+  \item Tabling (i.e. memoization or caching)
+    \begin{itemize}
+      \item \lstinline{#equivariant} enables an alternative tabling
+        mode.
+
+      \item \lstinline{#clear_table} clears the results cached for a
+        predicate.
+
+      \item \lstinline{#clear_tables} clears all cached results.
+
+      \item \lstinline{#freezing} sets the depth of backward-chaining
+        during proof-search.
+
+      \item \lstinline{#saturation} sets the depth of forward-chaining
+        during proof-search.
+    \end{itemize}
+
+  \item General purpose
+    \begin{itemize}
+      \item \lstinline{#debug} adds a lot of output during the proof
+        search.
+
+      \item \lstinline{#time} displays computation times between two
+        results.
+
+      \item \lstinline{#help} is what you should type first.
+
+      \item \lstinline{#exit} is what you should type last.
+    \end{itemize}
+\end{itemize}

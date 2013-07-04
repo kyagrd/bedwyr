@@ -22,7 +22,7 @@
   morekeywords={[2]type,prop,nat,string,list,nil,true,false,%
     forall,exists,nabla,=},%
   morekeywords={[3]Kind,Type,Define,inductive,coinductive,by,Theorem,%
-    Specification},%
+    Qed,Specification},%
   morekeywords={[4]?=,Yes,Solution,found:,More,No,more,solutions},%
   moredelim=[s][directivestyle]{\#}{\ },% not in latex
   alsoletter={=>:-+/*?|`'\$!},%

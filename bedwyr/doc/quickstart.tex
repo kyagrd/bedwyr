@@ -71,12 +71,14 @@ provability (\lstinline+#freezing 4.+, \lstinline+#saturation 2.+).
 % ============================================================================
 \section{Sample files}
 
-Listing~\ref{def:maxa} shows a complete sample definition file,
+\autoref{def:maxa} shows a complete sample definition file,
 with the declarations for a type and two constants, along with a few predicates.
 
 \begin{figure}
-\lstinputlisting[caption={\protect\path{maxa.def}},label=def:maxa]
-  {include/linc/maxa.def}
+  \lstinputlisting[%
+    caption={\protect\path{maxa.def}},%
+    label=def:maxa%
+  ]{include/linc/maxa.def}
 \end{figure}
 
 The predicate \lstinline+a+ is a typical example of what must be done to build
@@ -94,11 +96,11 @@ only the first aspect is used here (meaning we might as well have used the
 % ============================================================================
 \section{REPL demo}
 
-Listing~\ref{repl:maxa} shows an example of use of the interactive toplevel
+\autoref{repl:maxa} shows an example of use of the interactive toplevel
 following the invocation of \verb+bedwyr maxa.def+.
 
-\begin{figure}[h]
-\begin{lstlisting}[style=bedwyr-repl,caption={Interactive session},label=repl:maxa]
+\begin{figure}\begin{lstlisting}[%
+  style=bedwyr-repl,caption={Interactive session},label=repl:maxa]
 ?= #env.
 *** Types ***
    list : * -> *
@@ -130,8 +132,7 @@ Solution found:
 More [y] ? y
 No more solutions.
 ?= #exit.
-\end{lstlisting}
-\end{figure}
+\end{lstlisting}\end{figure}
 
 The \lstinline+#env.+ meta-command shows all declared objects
 (including the standard pre-declared list-related objects),
