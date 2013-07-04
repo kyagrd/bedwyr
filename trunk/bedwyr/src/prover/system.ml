@@ -93,8 +93,8 @@ let atomic_kind (p,name) =
   try Hashtbl.find type_kinds type_var
   with Not_found -> raise (Missing_type (name,p))
 
-let kind_check p ty =
-  Ty.kind_check ~p ty ~atomic_kind
+let kind_check ?definite p ty =
+  Ty.kind_check ?definite ~p ty ~atomic_kind
 
 
 (* Constants and predicates declarations *)
@@ -146,12 +146,12 @@ let create_def stratum global_flavour (flavour,p,name,ty) =
   else if List.mem head_var Logic.predefined then
     raise (Invalid_pred_declaration
              (name,p,ty,"name conflict with a predefined predicate"))
-  else let (arity,flex_head,_,propositional,_) = kind_check p ty in
+  else let (arity,flex_head,_,propositional,_) = kind_check ~definite:false p ty in
   if not (propositional || flex_head) then
     raise (Invalid_pred_declaration
              (name,p,ty,Format.sprintf
                           "target type can only be %s"
-                          (Ty.type_to_string Ty.tprop)))
+                          (Ty.get_type_to_string () Ty.tprop)))
   else let global_flavour,flavour = match global_flavour,flavour with
     | _,Input.Normal -> global_flavour,Normal
     | Input.Inductive,Input.CoInductive

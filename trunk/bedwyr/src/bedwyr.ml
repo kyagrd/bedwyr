@@ -37,23 +37,18 @@ let welcome_msg =
     \n\
     Software under GPLv2, Copyright (C) 2005-2013 Slimmer project.\n\
     \n\
-    For a little help, type \"#help.\"\n\n"
+    For a little help, type \"#help.\"\n"
     Config.package_name
     Config.package_version
     (if Config.build="v"^Config.package_version || Config.build="" then ""
      else " (revision " ^ Config.build ^ ")")
 
-(* TODO split into usage_msg and info_msg,
- * add support, both external (Abella version supported, etc)
- * and internal (oUnit version, ndcore version, etc). *)
-let usage_msg =
-  Printf.sprintf
+let print_version () : unit =
+  Printf.printf
     "%s prover %s, Copyright (C) 2005-2013 Slimmer project.\n\
     This software is under the GNU General Public License version 2.\n\
     %s (built with OCaml %s on the %s).\n\
-    Features (+/-):%s\n\
-    \n\
-    Usage: bedwyr [filename | option]*\n"
+    Features (+/-):%s\n"
     Config.package_name
     Config.package_version
     (if Config.build="" then "Unknown revision"
@@ -63,7 +58,12 @@ let usage_msg =
     (String.concat ""
        (List.map
           (fun (s1,s2) -> (match s2 with "" -> "\n - " | _ -> "\n + ") ^ s1)
-          Config.features))
+          Config.features)) ;
+  exit 0
+
+let usage_msg =
+  Printf.sprintf
+    "Usage: bedwyr [filename | option]*\n"
 
 let help_msg =
   "Useful commands in query mode:\n\
@@ -106,7 +106,9 @@ let _ =
          "--freezing", Arg.Set_int Prover.freezing_point,
            "<n> Enable backward chaining and set its limit" ;
          "--saturation", Arg.Set_int Prover.saturation_pressure,
-           "<n> Enable forward chaining and set its limit"
+           "<n> Enable forward chaining and set its limit" ;
+         "--version", Arg.Unit print_version,
+           " Display version info and exit"
        ])
     (fun f -> session := f::!session)
     usage_msg ;
@@ -307,6 +309,18 @@ let rec process ?(test=false) ?(interactive=false) parse lexbuf =
             n
             Input.Typing.pp_kind ki2
             Input.Typing.pp_kind ki1
+      | Input.Typing.Undefinite_type (p,ty,tp) ->
+          let type_to_string = Input.Typing.get_type_to_string () in
+          eprintf def_error ?p
+            "Polymorphism error: parameter%s %s@ of type %s@ \
+              %s not transparant."
+            (if List.length tp > 1 then "s" else "")
+            (String.concat ", "
+               (List.map
+                  (fun i -> Format.sprintf "%s"
+                              (type_to_string (Input.Typing.tparam i))) tp))
+            (type_to_string ty)
+            (if List.length tp > 1 then "are" else "is")
       | Input.Term_typing_error (p,ty1,ty2,unifier) ->
           eprintf def_error ~p
             "Typing error: this term has type %a but is used as %a."
@@ -521,7 +535,7 @@ let _ =
   match !exit_status with
     | None ->
         if !interactive then begin
-          Format.printf "%s%!" welcome_msg ;
+          Format.printf "%s@." welcome_msg ;
           input_queries ~test:!test ~interactive:true
             (Lexing.from_channel stdin)
         end
