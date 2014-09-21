@@ -1,6 +1,6 @@
 (****************************************************************************)
 (* Bedwyr prover                                                            *)
-(* Copyright (C) 2012-2013 Quentin Heath                                    *)
+(* Copyright (C) 2013 Quentin Heath                                         *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -17,26 +17,28 @@
 (* 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.              *)
 (****************************************************************************)
 
-(* @configure_input@ *)
-
-open Ocamlbuild_plugin ;;
-
-let _ =
-  dispatch begin function
-    | After_rules ->
-        flag ["ocaml" ; "compile"] (A "-annot") ;
-        flag ["ocaml" ; "compile"] (S [A "-warn-error" ; A "A"]) ;
-        flag ["ocaml" ; "native" ; "compile"] (A "-nodynlink") ;
-        flag ["ocaml" ; "doc"] (S [A "-stars" ; A "-m" ; A "A"]) ;
-
-        ocaml_lib "src/oUnit/oUnit" ;
-
-        ocaml_lib "src/ndcore/ndcore" ;
-        ocaml_lib "src/batyping/batyping" ;
-        ocaml_lib "src/input/input" ;
-        ocaml_lib "src/prover/prover" ;
-
-        ()
-    | _ -> ()
-  end
-
+module type INPUT = sig
+  type son = Son of tag ref | Loop of tag ref | Cut of tag ref
+  and tag =
+      Proved of son list ref
+    | Working of
+        (son list ref * (bool ref * tag ref list ref * tag ref list ref))
+    | Disproved of son list ref
+    | Unset
+  type t = tag ref Index.t ref
+  val set_eqvt : bool -> unit
+  val create : unit -> t
+  val access :
+    switch_vars:bool ->
+    t ->
+    Term.term list -> (tag ref -> bool) * tag ref option * (unit -> bool)
+  val filter :
+    switch_vars:bool -> t -> Term.term list -> bool option
+  val nabla_abstract : Term.term -> Term.term
+  val reset : t -> unit
+  val iter : (Term.term -> tag -> unit) -> t -> unit
+  val fold : (Term.term -> tag -> 'a -> 'a) -> t -> 'a -> 'a
+  val print : Term.term -> t -> unit
+  val fprint : out_channel -> Term.term -> t -> Input.Typing.ty -> unit
+  val export : string -> (Term.term * t) list -> son list -> unit
+end

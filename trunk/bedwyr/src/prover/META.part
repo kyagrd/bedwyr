@@ -1,2 +1,6 @@
 version = "[internal]"
-requires = "str,xmlm"
+description = "Bedwyr prover"
+requires = "str,xmlm,slimmer.ndcore,slimmer.input"
+#directory = "^"
+archive(byte) = "prover.cma"
+archive(native) = "prover.cmxa"

@@ -21,7 +21,7 @@ m4_define([M4_VERSION_MAJOR],1)
 m4_define([M4_VERSION_MINOR],4)
 m4_define([M4_VERSION_PATCH],0)
 m4_define([M4_VERSION_BUILD],0)
-m4_define([M4_VERSION_DEV],alpha15)
+m4_define([M4_VERSION_DEV],alpha16)
 m4_define([M4_VERSION1],[M4_VERSION_MAJOR.M4_VERSION_MINOR])
 m4_define([M4_VERSION2],m4_if(M4_VERSION_PATCH,0,
           [M4_VERSION1],[M4_VERSION1.M4_VERSION_PATCH]))
@@ -197,8 +197,8 @@ else
 		AC_MSG_RESULT(${ocamlfind_xmlm})
 		TABLE_XML_EXPORT_MODULE="TableXmlExport"
 		TABLE_XML_EXPORT_MODULE_DOT="${TABLE_XML_EXPORT_MODULE}."
-		TABLE_XML_EXPORT_MODULE_NL="${TABLE_XML_EXPORT_MODULE}
-"
+		TABLE_XML_EXPORT_MODULE_NL="
+${TABLE_XML_EXPORT_MODULE}"
 		XMLM_TAG="xmlm"
 	else
 		AC_MSG_RESULT(no)
@@ -335,7 +335,8 @@ fi
 
 AC_MSG_CHECKING(if a Windows installer should be built)
 AC_ARG_ENABLE([nsis],
-	AC_HELP_STRING([--enable-nsis],[build a Nullsoft installer for Windows (no)]),
+	AC_HELP_STRING([--enable-nsis],
+                       [build a Nullsoft installer for Windows (no)]),
 	[AC_MSG_RESULT($enable_nsis)],
 	[AC_MSG_RESULT(no)])
 if test "X$enable_nsis" = Xyes ; then
@@ -360,7 +361,6 @@ PROGRAM_ICON=dutch-wick-0.3.ico
 FILE_ICON=dutch-wick-0.3-file.ico
 
 AC_CONFIG_FILES([Makefile.include],[chmod a-w Makefile.include])
-AC_CONFIG_FILES([myocamlbuild.ml],[chmod a-w myocamlbuild.ml])
 AC_CONFIG_FILES([_tags],[chmod a-w _tags])
 AC_CONFIG_FILES([src/config.ml],[chmod a-w src/config.ml])
 AC_CONFIG_FILES([src/prover/table.ml],[chmod a-w src/prover/table.ml])
@@ -383,12 +383,6 @@ OCAML_FILES=$(for i in $($FIND src -type f '!' -path '*.svn*' \
 OCAML_IN_FILES=$(for i in $($FIND src -type f '!' -path '*.svn*' \
                  -name '*.ml*.in') ; do \
                  echo -n -e ' \\\n\t'"$i" ; done)
-VIM_CONTRIB=$($FIND contrib/vim -type f '!' -path '*.svn*' \
-              '!' -name '*~' '!' -name '.*.sw*' \
-              -printf ' \\\n\t%P')
-HICOLOR_ICONS=$($FIND contrib/icons/hicolor -type f '!' -path '*.svn*' \
-                '!' -name '*~' '!' -name '.*.sw*' \
-                -printf ' \\\n\thicolor/%P')
 EXAMPLES_FILES=$($FIND examples -type f '!' -path '*.svn*' \
                  '!' -name '*~' '!' -name '.*.sw*' '!' -name '*.old' \
                  -printf ' \\\n\t%p')
@@ -412,7 +406,6 @@ AC_SUBST(OCAML_VERSION)
 AC_SUBST(OCAML_WHERE)
 AC_SUBST(MINGW32_OCAMLFIND_CONF)
 
-AC_SUBST(TABLE_XML_EXPORT_MODULE)
 AC_SUBST(TABLE_XML_EXPORT_MODULE_DOT)
 AC_SUBST(TABLE_XML_EXPORT_MODULE_NL)
 AC_SUBST(XMLM_TAG)
@@ -435,8 +428,6 @@ AC_SUBST(FILE_ICON)
 AC_SUBST(ac_config_files)
 AC_SUBST(OCAML_FILES)
 AC_SUBST(OCAML_IN_FILES)
-AC_SUBST(VIM_CONTRIB)
-AC_SUBST(HICOLOR_ICONS)
 AC_SUBST(EXAMPLES_FILES)
 
 AC_OUTPUT

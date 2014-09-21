@@ -1,4 +1,5 @@
 IO
-@TABLE_XML_EXPORT_MODULE_NL@Table
+TableTypes
+Table@TABLE_XML_EXPORT_MODULE_NL@
 System
 Prover

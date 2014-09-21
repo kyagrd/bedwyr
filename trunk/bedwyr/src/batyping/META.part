@@ -1,1 +1,6 @@
 version = "[internal]"
+description = "Prenex polymorphic typing"
+#requires = ""
+#directory = "^"
+archive(byte) = "batyping.cma"
+archive(native) = "batyping.cmxa"

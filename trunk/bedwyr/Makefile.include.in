@@ -138,39 +138,40 @@ MAKENSIS	= @MAKENSIS@ -V2 -NOCD \
 
 ac_config_files	= @ac_config_files@
 OCAML_FILES	= @OCAML_FILES@
-OCAML_IN_FILES	= myocamlbuild.ml.in _tags.in @OCAML_IN_FILES@
+OCAML_IN_FILES	= _tags.in @OCAML_IN_FILES@
 .SECONDARY: $(OCAML_IN_FILES:.in=)
-NDCORE_FILES	= README.ndcore
-BEDWYR_FILES	= ChangeLog README TODO
-BEDWYR_MODULES	= ndcore batyping input prover
+SLIMMER_FILES	= ChangeLog TODO
+BEDWYR_FILES	= README
+BEDWYR_LIBS	= ndcore batyping input prover
 MAN_FILES	= $(wildcard man/*.in)
-VIM_CONTRIB	= @VIM_CONTRIB@
+VIM_CONTRIB	= ftdetect/bedwyr.vim ftplugin/bedwyr.vim \
+		  indent/bedwyr.vim syntax/bedwyr.vim
 EMACS_CONTRIB	= bedwyr.el
 CONTRIB_FILES	= $(addprefix contrib/emacs/,$(EMACS_CONTRIB)) \
 		  $(addprefix contrib/vim/,$(VIM_CONTRIB))
-HICOLOR_ICONS	= @HICOLOR_ICONS@
-ICONS		= contrib/icons/bedwyr_32x32.xpm \
-		  $(addprefix contrib/icons/,$(HICOLOR_ICONS))
+HICOLOR_ICONS	= hicolor/16x16/apps/bedwyr.png hicolor/32x32/apps/bedwyr.png \
+		  hicolor/48x48/apps/bedwyr.png hicolor/256x256/apps/bedwyr.png
+PIXMAP_ICONS	= bedwyr_32x32.xpm
+ICONS_FILES	= $(addprefix contrib/icons/,$(HICOLOR_ICONS)) \
+		  $(addprefix contrib/icons/,$(PIXMAP_ICONS))
 DESKTOP_FILES	= contrib/bedwyr.desktop.in
 EXAMPLES_FILES	= @EXAMPLES_FILES@
-DEBIAN_FILES	=  \
-  control \
-  copyright \
-  changelog \
-  rules \
-  bedwyr.install \
-  bedwyr.lintian-overrides \
-  bedwyr.menu \
-  bedwyr-doc.install \
-  bedwyr-doc.doc-base.quickstart \
-  bedwyr-doc.doc-base.libref \
-  bedwyr-doc.doc-base.refman \
-  bedwyr-doc.lintian-overrides \
-  bedwyr-dev.install \
-  bedwyr-dev.lintian-overrides \
-  watch \
-  compat \
-  source/format
-NSIS_FILES	= \
-  bedwyr.nsi EnvVarUpdate.nsh FileAssociation.nsh \
-  bedwyr.rc $(NSIS_ICONS)
+DEBIAN_FILES	= control \
+		  copyright \
+		  changelog \
+		  rules \
+		  bedwyr.install \
+		  bedwyr.lintian-overrides \
+		  bedwyr.menu \
+		  bedwyr-doc.install \
+		  bedwyr-doc.doc-base.quickstart \
+		  bedwyr-doc.doc-base.libref \
+		  bedwyr-doc.doc-base.refman \
+		  bedwyr-doc.lintian-overrides \
+		  bedwyr-dev.install \
+		  bedwyr-dev.lintian-overrides \
+		  watch \
+		  compat \
+		  source/format
+NSIS_FILES	= bedwyr.nsi EnvVarUpdate.nsh FileAssociation.nsh \
+		  bedwyr.rc $(NSIS_ICONS)
