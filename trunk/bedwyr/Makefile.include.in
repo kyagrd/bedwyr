@@ -32,11 +32,6 @@ DIST_NAME	= $(PACKAGE_TARNAME)-$(PACKAGE_VERSION)
 DEBIAN_VERSION	= $(subst -,~,$(subst -p,+p,$(PACKAGE_VERSION)))
 DEB_DIST_NAME	= $(PACKAGE_TARNAME)-$(DEBIAN_VERSION)
 DEB_NAME	= $(PACKAGE_TARNAME)_$(DEBIAN_VERSION)
-ifeq ($(TARGET),)
-  TARGET_NAME	= $(PACKAGE_TARNAME)
-else
-  TARGET_NAME	= $(TARGET)
-endif
 ARCH_SUFFIXES	= @ARCH_SUFFIXES@
 LIB_SUFFIXES	= @LIB_SUFFIXES@
 BIN_SUFFIXES	= @BIN_SUFFIXES@
@@ -56,13 +51,13 @@ bindir		= @bindir@
 #sbindir	= @sbindir@
 #libexecdir	= @libexecdir@
 datarootdir	= @datarootdir@
-pkgdatadir	= @datadir@/$(TARGET_NAME)
+pkgdatadir	= @datadir@/$(PACKAGE_TARNAME)
 #sysconfdir	= @sysconfdir@
 #sharedstatedir	= @sharedstatedir@
 #localstatedir	= @localstatedir@
 #includedir	= @includedir@
 #oldincludedir	= @oldincludedir@
-docdir		= $(patsubst %$(PACKAGE_TARNAME),%$(TARGET_NAME),@docdir@)
+docdir		= @docdir@
 #infodir	= @infodir@
 #htmldir	= @htmldir@
 #dvidir		= @dvidir@

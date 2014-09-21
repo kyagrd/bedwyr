@@ -348,7 +348,7 @@ dist: archive deb nsis
 archive: $(BEDWYR_ARCH)
 
 archive.tar: $(ARCH_FILES)
-	@$(TAR) -cpf $@ --xform 's|^|$(DIST_NAME)/|' $^
+	@$(TAR) -cpf $@ --xform 's|^|$(DIST_NAME)/|S' $^
 
 doc/archive.tar: doc/Makefile
 	@$(MAKE) -C $$(dirname $<) archive
@@ -376,12 +376,12 @@ $(DEB_NAME).orig.tar.gz: $(DIST_NAME).tgz
 	@mkdir -p $(DEB_DIST_NAME)
 	@find $(DEB_DIST_NAME) -maxdepth 1 -mindepth 1 \
 	  -path $(DEB_DIST_NAME)/debian -prune -o -exec rm -rf {} +
-	@$(TAR) -xpf $< --xform 's|^$(DIST_NAME)/|$(DEB_DIST_NAME)/|'
+	@$(TAR) -xvpf $< --xform 's|^$(DIST_NAME)/|$(DEB_DIST_NAME)/|S'
 	@$(TAR) -cpzf $@ $(DEB_DIST_NAME)
 
 deb_debian: $(addprefix debian-files/,$(DEBIAN_FILES))
 	@rm -rf $(DEB_DIST_NAME)/debian
-	@$(TAR) -cpf - $^ --xform 's|^debian-files/|$(DEB_DIST_NAME)/debian/|' \
+	@$(TAR) -cpf - $^ --xform 's|^debian-files/|$(DEB_DIST_NAME)/debian/|S' \
 	  | $(TAR) -xpf -
 
 ifeq (0,$(MAKELEVEL))
@@ -403,11 +403,11 @@ nsis_orig_files: $(DIST_NAME).tgz
 	@mkdir -p nsis-build
 	@find nsis-build -maxdepth 1 -mindepth 1 \
 	  -path nsis-build/nsis-files -prune -o -exec rm -rf {} +
-	@$(TAR) -xpf $< --xform 's|^$(DIST_NAME)/|nsis-build/|'
+	@$(TAR) -xpf $< --xform 's|^$(DIST_NAME)/|nsis-build/|S'
 
 nsis_files: $(addprefix nsis-files/,$(NSIS_FILES))
 	@rm -rf nsis-build/nsis-files
-	@$(TAR) -cpf - $^ --xform 's|^|nsis-build/|' | $(TAR) -xpf -
+	@$(TAR) -cpf - $^ --xform 's|^|nsis-build/|S' | $(TAR) -xpf -
 	@sed -e 's|$$|\r|' COPYING > nsis-build/nsis-files/COPYING.txt
 
 ifeq (0,$(MAKELEVEL))
@@ -434,7 +434,7 @@ help:
 	@echo
 	@echo '   check out "./configure --help" for more reading'
 	@echo
-	@echo ' build          default: build binaries (bedwyr.($(BIN_SUFFIXES)))'
+	@echo ' build          default: build binaries ($(PACKAGE_TARNAME).($(BIN_SUFFIXES)))'
 	@echo ' test           run all sorts of tests'
 	@echo ' doc            build all sorts of doc'
 	@echo ' install        install files wrt to $$DESTDIR and'
