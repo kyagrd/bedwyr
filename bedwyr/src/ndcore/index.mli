@@ -54,7 +54,10 @@ val access :
   'a t -> Term.term list ->
   ('a -> 'a t) * 'a option
 
-type match_status = Over | Exact | Under of (Term.var * Term.var) list
+type match_status =
+  | Over
+  | Exact
+  | Under
 
 val filter:
   switch_vars:bool ->

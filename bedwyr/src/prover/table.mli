@@ -42,6 +42,19 @@ module O : sig
     t -> Term.term list ->
     (tag ref -> bool) * tag ref option * (unit -> bool)
 
+  (** [filter switch_vars t args] is a fallback to be used when [access
+    * switch_vars t args] returns [(_,None,_)], and currently crashes when
+    * the latter could return [(_,Some _,_)].
+    * As it never adds atoms to the table, it currently doesn't carry
+    * proof skeleton information.
+    * @returns [(Some true)] if the queried atom is implied by a proved
+    * atom, [(Some false)] if it implies a disproved atom, [None]
+    * otherwise *)
+  val filter:
+    switch_vars:bool ->
+    t -> Term.term list ->
+    bool option
+
   (** Abstract nabla variables in a term.
     * If equivariant tabling is used then use only nabla variables appearing in
     * the term. Otherwise, add vacuous nabla's as neccessary. *)
@@ -91,5 +104,5 @@ module O : sig
 
   (** Export the provided tables in an XML file. *)
   val export : string -> ((Term.term * t) list) -> (son list) -> unit
-  (** XXX This currently crashes if [#clear_table] was used on any of those tables. *)
+  (** No-op in this module. *)
 end

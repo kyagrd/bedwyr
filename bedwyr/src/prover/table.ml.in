@@ -47,6 +47,21 @@ module I = struct
     let delete () = update (ref Unset) in
     update,found,delete
 
+  exception OverMatch
+  exception UnderMatch
+
+  let filter ~switch_vars table args =
+    let f tag match_status = match !tag,match_status with
+      | Working _,_ -> assert false
+      | _,Index.Exact -> assert false
+      | Proved _,Index.Over -> raise OverMatch
+      | Disproved _,Index.Under -> raise UnderMatch
+      | _ -> ()
+    in
+    try Index.filter ~switch_vars !table args f ; None with
+      | OverMatch -> Some true
+      | UnderMatch -> Some false
+
 
   (* TODO factorize this with nb_rename *)
   (* FIXME the display depends on the current value of Index.eqvt_index,
