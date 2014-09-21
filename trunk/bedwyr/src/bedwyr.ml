@@ -88,6 +88,7 @@ let help_msg =
 let interactive = ref true
 let test        = ref false
 let session     = ref []
+let definitions = ref []
 let queries     = ref []
 let inclfiles   = ref []
 let exit_status = ref None
@@ -103,6 +104,8 @@ let _ =
            " Run tests in definition files" ;
          "--strict", Arg.Set strict_mode,
            " Quit at the first non-interactive error" ;
+         "-d", Arg.String (fun s -> definitions := s::!definitions),
+           "<s> Add definition" ;
          "-e", Arg.String (fun s -> queries := s::!queries),
            "<s> Execute query" ;
          "--freezing", Arg.Set_int Prover.freezing_point,
@@ -110,11 +113,14 @@ let _ =
          "--saturation", Arg.Set_int Prover.saturation_pressure,
            "<n> Enable forward chaining and set its limit" ;
          "--version", Arg.Unit print_version,
-           " Display version info and exit"
+           " Display version info and exit" ;
+         "-D", Arg.Set System.debug,
+           " Print debugging information"
        ])
     (fun f -> session := f::!session)
     usage_msg ;
   session := List.rev (!session) ;
+  definitions := List.rev (!definitions) ;
   queries := List.rev (!queries)
 
 let position_range (start,curr) =
@@ -416,11 +422,11 @@ let rec process ?(test=false) ?(interactive=false) parse lexbuf =
 and input_from_file ~test file =
   let channel = IO.open_in file in
   let lexbuf = Lexing.from_channel channel in
+  input_defs ~test lexbuf file ;
+  IO.close_in file channel
+and input_defs ~test lexbuf file =
   lexbuf.Lexing.lex_curr_p <- {
     lexbuf.Lexing.lex_curr_p with Lexing.pos_fname = file } ;
-  input_defs ~test lexbuf ;
-  IO.close_in file channel
-and input_defs ~test lexbuf =
   process ~test Parser.input_def lexbuf
 and input_queries ~test ?(interactive=false) lexbuf =
   process ~test ~interactive Parser.input_query lexbuf
@@ -429,9 +435,7 @@ and load_session () =
   System.reset_decls () ;
   Input.Typing.clear () ;
   let lexbuf = (Lexing.from_string stdlib) in
-  lexbuf.Lexing.lex_curr_p <- {
-    lexbuf.Lexing.lex_curr_p with Lexing.pos_fname = "Bedwyr::stdlib" } ;
-  input_defs ~test:false lexbuf ;
+  input_defs ~test:false lexbuf "Bedwyr::stdlib" ;
   inclfiles := [] ;
   List.iter (include_file ~test:!test) !session
 
@@ -550,6 +554,8 @@ let _ =
       s1 n s2 ;
     exit 5
   end ;
+  List.iter
+    (fun s -> input_defs ~test:!test (Lexing.from_string s) "") !definitions ;
   List.iter
     (fun s -> input_queries ~test:!test (Lexing.from_string s)) !queries ;
   match !exit_status with

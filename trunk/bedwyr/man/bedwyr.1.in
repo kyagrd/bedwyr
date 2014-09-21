@@ -19,7 +19,7 @@
 .\"
 .\" @configure_input@
 .\"
-.Dd July 4, 2013
+.Dd July 15, 2013
 .Os @PACKAGE_NAME@ v@PACKAGE_VERSION@
 .Dt BEDWYR 1 URM
 .\"
@@ -35,10 +35,12 @@
 .Nm Op Fl I
 .Op Fl t
 .Op Fl \-strict
+.Op Fl d Ar command
 .Op Fl e Ar query
 .Op Fl \-freezing Ar fp
 .Op Fl \-saturation Ar sp
 .Op Fl \-version
+.Op Fl D
 .Op Fl help | Fl \-help
 .Op Ar
 .\"
@@ -91,13 +93,20 @@ see
 but will exit at the end of the non-interactive stage with the exit
 status of the first non-interactive error (this is useful to typecheck a
 whole file at once).
+.It Fl d Ar command
+Run
+.Ar command
+(declaration of definition, see
+.Sx INPUT FILES ) .
+Multiple commands can be given.  They are run after all the input files
+are read, and before executing queries.
 .It Fl e Ar query
 Execute
 .Ar query
 (see
 .Sx TOPLEVEL QUERIES ) .
-Multiple queries can be given.  They are executed after all the input
-files a read, and before entering the interactive loop.
+Multiple queries can be given.  They are executed after all the commands
+are run, and before entering the interactive loop.
 .It Fl \-freezing Ar fp
 Enable backward chaining and set its limit (the so-called
 .Ar freezing-point )
@@ -116,6 +125,10 @@ setting it to \-1 allows infinite chaining and therefore actual saturation
 of the table wrt the theorem.
 .It Fl \-version
 Display version information and a list of compiled features.
+.It Fl D
+Print debugging information on stderr.  Can be enabled/disabled at
+run-time with
+.Ic #debug .
 .It Fl help , \-help
 Display the list of command-line options.
 .El
@@ -178,7 +191,7 @@ are predeclared.
 .It Ic Define Ar member Ic \&: A \-> list A \-> prop by\
   Ar member X (X :: _) Ic \&;\
   Ar member X (_ :: L) := member X L Ns Ic \&.
-.Ic print , println , println , printstr , fprint , fprintln ,
+.Ic print , println , printstr , fprint , fprintln ,
 .Ic fprintstr , fopen_out
 and
 .Ic fclose_out
@@ -204,7 +217,7 @@ executed, or a formula, which is solved (
 searches for all substitutions of free variables satisfying
 .Ar query
 and offers to display them one by one).
-.It Nm Fl e Qo Ar query Qc Ns Ic \&.
+.It Nm Fl e Qo Ar query Ns Ic \&. Qc
 Queries given via this option are dealt with in the exact same way.
 .El
 .\"
