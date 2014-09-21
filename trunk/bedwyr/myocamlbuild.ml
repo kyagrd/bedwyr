@@ -27,8 +27,6 @@ let _ =
         flag ["ocaml" ; "native" ; "compile"] (A "-nodynlink") ;
         flag ["ocaml" ; "doc"] (S [A "-stars" ; A "-m" ; A "A"]) ;
 
-        ocaml_lib "src/oUnit/oUnit" ;
-
         ocaml_lib "src/ndcore/ndcore" ;
         ocaml_lib "src/batyping/batyping" ;
         ocaml_lib "src/input/input" ;
