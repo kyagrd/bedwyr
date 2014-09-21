@@ -135,11 +135,11 @@ let filter_leaf match_status (_,_,map) bindings f =
       Array.iteri
         (fun i j ->
            if (constraints.eq.(i) <> constraints.eq.(j))
-             || (c.lts.(i) <> constraints.lts.(i))
+             || (c.lts.(i) < constraints.lts.(i))
            then raise Not_found)
         c.eq ;
       (* if the term has equalities where the pattern does,
-       * and has the same local timestamps,
+       * and doesn't have higher local timestamps,
        * then it is an instance of the pattern *)
       f d Over
     with Not_found -> ()
@@ -155,11 +155,11 @@ let filter_leaf match_status (_,_,map) bindings f =
       Array.iteri
         (fun i j ->
            if (c.eq.(i) <> c.eq.(j))
-             || (c.lts.(i) <> constraints.lts.(i))
+             || (c.lts.(i) > constraints.lts.(i))
            then raise Not_found)
         constraints.eq ;
       (* if the pattern has equalities where the term does,
-       * and has the same local timestamps,
+       * and doesn't have higher local timestamps,
        * then the term is a generalization of the pattern *)
       f d Under
     with Not_found -> ()

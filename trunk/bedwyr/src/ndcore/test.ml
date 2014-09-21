@@ -636,9 +636,19 @@ let test =
             let x = eig "x" ~lts:0 0 in
             let y = eig "y" ~lts:1 0 in
             let z = eig "z" ~lts:2 0 in
-            let index = add Index.empty [(db 1) ^^ [ x ; y ]] 42 in
-            assert (None = find index [(db 1) ^^ [ y ; z ]]) ;
-            assert (None = find index [(db 1) ^^ [ y ; x ]])) ;
+            let t1 = (db 1) ^^ [ x ; y ] in
+            let t2 = (db 1) ^^ [ x ; z ] in
+            let t3 = (db 1) ^^ [ y ; z ] in
+            let index = add (add (add Index.empty [t1] 1) [t2] 2) [t3] 3 in
+            assert (Some 1 = find index [t1]) ;
+            assert (Some 2 = find index [t2]) ;
+            assert (Some 3 = find index [t3]) ;
+            filter_count index [(db 1) ^^ [ y ; x ]] ~o:1 ;
+            filter_count index [(db 1) ^^ [ z ; x ]] ;
+            filter_count index [(db 1) ^^ [ z ; y ]] ~u:1 ;
+            filter_count index [t1] ~o:2 ~e:1 ~u:0 ;
+            filter_count index [t2] ~o:1 ~e:1 ~u:1 ;
+            filter_count index [t3] ~o:0 ~e:1 ~u:2) ;
        ]) ;
 
       "Nominal variables" >:::
