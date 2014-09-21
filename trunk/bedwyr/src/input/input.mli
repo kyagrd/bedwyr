@@ -1,6 +1,6 @@
 (****************************************************************************)
-(* Bedwyr prover                                                            *)
-(* Copyright (C) 2012 Quentin Heath, Alwen Tiu                              *)
+(* Parsing and type-checking for the Bedwyr prover                          *)
+(* Copyright (C) 2012-2013 Quentin Heath, Alwen Tiu                         *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -19,7 +19,7 @@
 
 (** Pre-terms and pre-AST, translation to terms and checking. *)
 
-(** Type of the position information during parsing. For error messages only. *)
+(** Position information during parsing. For error messages only. *)
 type pos = Lexing.position * Lexing.position
 
 (** Dummy position for post-parsing errors. *)
@@ -34,7 +34,8 @@ exception Illegal_string of char
 (** A "/*" or a "*/" was found in a quoted string.
   * In order to allow commenting a block of valid code without breaking the whole file,
   * those must be escaped (for instance "/\*" and "*\/").
-  * Note that "\*"^"/" and "\/"^"*" still raise this exception. *)
+  * Note that escaping the first character instead of the second doesn't
+  * prevent this exception. *)
 exception Illegal_string_comment
 
 (** Some characters that are only allowed in prefix names
@@ -197,50 +198,52 @@ type input =
 
 (** {6 Pre-terms' type checking} *)
 
-(** Type checking error on a term. *)
+(** Type checking error. *)
 exception Term_typing_error of pos * Typing.ty * Typing.ty *
             Typing.type_unifier
 
-(** Type checking error on a free or bound variable. *)
-exception Var_typing_error of string option * pos * Typing.ty
-
-(** [type_check_and_translate pt ty (fv,do,ip,ak)] checks that the pre-term [pt]
-  * build by the parser has the type [ty] (usually [TProp]),
-  * and either translates it to the corresponding term
-  * and realizes the type unification as side effect,
-  * or raises an exception to indicate nonunifiability
-  * or to signal a case outside of the authorized types.
+(** [type_check_and_translate pt ty (fv,do,ip,ak)] checks that the
+  * pre-term [pt] built by the parser has the type [ty] (usually
+  * [TProp]), and either translates it to the corresponding term and
+  * realizes the type unification as side effect, or raises an exception
+  * to indicate non-unifiability or to signal a case outside of the
+  * authorized types.
+  *
+  * The algorithm is certainly close to {e Algorithm W}, with
+  * [Typing.unify_constraint] being the {e Var} rule.
   *
   * {e FIXME}
   * Whether it succeeds or not, a lot of fresh type variables are created
   * that aren't needed after this stage, and nothing is done to clean up
   * the global type unifier at present, so this function has a memory leak.
   *
-  * [fv], [do] and [ip] are functions returning the type (and,
-  * depending on the case, the corresponding term) of a free variable,
-  * declared object (constant or predicate) or intern predicate.
+  * [fv], [do] and [ip] are functions returning the type (and, depending
+  * on the case, the corresponding term) of a free variable, declared
+  * object (constant or predicate) or intern predicate.
   * [ak] returns the kind of a type constant.
-  * @param stratum stratum of the predicate this term defines
-  * @param instantiate_head whether the type of the head of the term must be
-  * instantiated (false for the head of a clause)
-  * @param free_args names of the free variables used as argument of a top-level
-  * (wrt a definition) application, ie which will be abstracted on,
-  * and whose type are therefore allowed to contain [TProp]
-  * @param infer whether the result of the inference is to be kept in the
-  * global type unifier or not
-  * @param iter_free_types function that maps a provided action
-  * on a set of types once the type unification is done
-  * (and before the corresponding unifier is lost, if [infer] is false)
+  * @param stratum stratum of the predicate where this term belongs
+  * @param head whether the term is the head of a clause (in which case
+  * the type of its head must not be instantiated)
+  * @param free_args names of the free variables used as argument of a
+  * top-level (wrt a definition) application, ie which will be
+  * abstracted on, and whose type can allowed to contain [TProp]
+  * @param iter_free_types function that maps a provided action on a set
+  * of types once the type unification is done
   * @param fresh_tyinst polymorphic type instantier
   * @return a type-checked Term.term and its type
-  * @raise Var_typing_error if a free variable of type [prop] is found
+  * @raise Invalid_pred_declaration if the target type of a predicate is
+  * not [prop]
+  * @raise Type_order_error if the type of a quantified or free variable
+  * contains [prop]
+  * @raise Undefinite_type if some type parameters are not transparant
+  * @raise Type_kinding_error if a type constructor is applied on the
+  * wrong number of arguments
   * @raise Term_typing_error if the pre-tem isn't well typed *)
 val type_check_and_translate :
   ?stratum:int ->
-  instantiate_head:bool ->
+  head:bool ->
   free_args:string list ->
-  infer:bool ->
-  iter_free_types:((Term.var -> Typing.ty -> Typing.ty) -> unit) ->
+  iter_free_types:((Term.var -> Typing.ty -> unit) -> unit) ->
   fresh_tyinst:(Typing.ty -> Typing.ty) ->
   preterm ->
   Typing.ty ->
@@ -248,4 +251,4 @@ val type_check_and_translate :
    (instantiate_head:bool -> ?stratum:int -> pos * string -> Term.term * Typing.ty) *
    (pos * string -> Term.term * Typing.ty) *
    (pos * string -> Typing.ki)) ->
-  Term.term * Typing.ty
+  Term.term

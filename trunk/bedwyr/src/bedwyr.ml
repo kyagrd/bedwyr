@@ -282,6 +282,13 @@ let rec process ?(test=false) ?(interactive=false) parse lexbuf =
             n
             (Input.Typing.get_pp_type ()) ty
             s
+      | Input.Typing.Invalid_pred_declaration (n,p,ty) ->
+          eprintf def_error ~p
+            "Cannot declare predicate %s of type %a:@ \
+              target type must be %s."
+            n
+            (Input.Typing.get_pp_type ()) ty
+            (Input.Typing.get_type_to_string () Input.Typing.tprop)
 
       (* Definitions and theorems *)
       | System.Missing_declaration (n,p) ->
@@ -305,17 +312,18 @@ let rec process ?(test=false) ?(interactive=false) parse lexbuf =
 
       (* Kind/type checking *)
       | Input.Typing.Type_kinding_error (n,p,ki1,ki2) ->
-          eprintf def_error ?p
+          eprintf def_error ~p
             "Kinding error: the type constructor %s has kind %a \
               but is used as %a."
             n
             Input.Typing.pp_kind ki2
             Input.Typing.pp_kind ki1
-      | Input.Typing.Undefinite_type (p,ty,tp) ->
+      | Input.Typing.Undefinite_type (n,p,ty,tp) ->
           let type_to_string = Input.Typing.get_type_to_string () in
-          eprintf def_error ?p
-            "Polymorphism error: parameter%s %s@ of type %s@ \
+          eprintf def_error ~p
+            "Polymorphism error for %s: parameter%s %s@ of type %s@ \
               %s not transparant."
+            n
             (if List.length tp > 1 then "s" else "")
             (String.concat ", "
                (List.map
@@ -323,12 +331,7 @@ let rec process ?(test=false) ?(interactive=false) parse lexbuf =
                               (type_to_string (Input.Typing.tparam i))) tp))
             (type_to_string ty)
             (if List.length tp > 1 then "are" else "is")
-      | Input.Term_typing_error (p,ty1,ty2,unifier) ->
-          eprintf def_error ~p
-            "Typing error: this term has type %a but is used as %a."
-            (Input.Typing.get_pp_type ~unifier ()) ty2
-            (Input.Typing.get_pp_type ~unifier ()) ty1
-      | Input.Var_typing_error (n,p,ty) ->
+      | Input.Typing.Type_order_error (n,p,ty) ->
           begin match n with
             | Some n ->
                 eprintf def_error ~p
@@ -339,10 +342,11 @@ let rec process ?(test=false) ?(interactive=false) parse lexbuf =
                   "Typing error: cannot quantify over type %a."
                   (Input.Typing.get_pp_type ()) ty
           end
-      | Input.Typing.Hollow_type n ->
-          eprintf def_error
-            "Typing error: type incompletely inferred for %s."
-            n
+      | Input.Term_typing_error (p,ty1,ty2,unifier) ->
+          eprintf def_error ~p
+            "Typing error: this term has type %a but is used as %a."
+            (Input.Typing.get_pp_type ~unifier ()) ty2
+            (Input.Typing.get_pp_type ~unifier ()) ty1
 
       (* Using predicates and tables *)
       | System.Missing_definition (n,p) ->
