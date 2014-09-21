@@ -85,11 +85,19 @@ let find index terms =
   let _,found = Index.access ~switch_vars:false index terms in
   found
 
-let filter_count index terms n =
-  assert (None = find index terms) ;
-  let total = ref 0 in
-  Index.filter ~switch_vars:false index terms (fun _ _ -> incr total) ;
-  assert (!total = n)
+let filter_count ?(o=0) ?(e=0) ?(u=0) index terms =
+  let over = ref 0 in
+  let exact = ref 0 in
+  let under = ref 0 in
+  Index.filter
+    ~switch_vars:false index terms
+    (fun _ ms -> match ms with
+         | Index.Over -> incr over
+         | Index.Exact -> incr exact
+         | Index.Under _ -> incr under) ;
+  assert (!over = o) ;
+  assert (!exact = e) ;
+  assert (!under = u)
 
 let test =
   "NdCore" >:::
@@ -581,42 +589,47 @@ let test =
          let i5 = add i4 [t4] 42 in
          assert (Some 42 = find i5 [t4])) ;
 
-      "Eigenvariables" >:::
+      "Eigen variables" >:::
       (let x = eig "x" 0 in
        let y = eig "y" 0 in
        let z = eig "z" 0 in
+       let t1 = (db 1) ^^ [ x ; y ; y ] in
+       let t2 = (db 1) ^^ [ y ; y ; y ] in
+       let a = const "a" in
+       let b = const "b" in
+       let t3 = (db 1) ^^ [ a ; x ; x ] in
+       let t4 = (db 1) ^^ [ x ; b ; y ] in
        [
          "Plain" >::
          (fun () ->
-            let t1 = (db 1) ^^ [ x ; y ; y ] in
-            let t2 = (db 1) ^^ [ y ; y ; y ] in
             let index = add (add Index.empty [t1] 1) [t2] 2 in
             assert (Some 1 = find index [(db 1) ^^ [ y ; z ; z ]]) ;
             assert (Some 2 = find index [(db 1) ^^ [ x ; x ; x ]]) ;
-            assert (None = find index [(db 1) ^^ [ x ; z ; x ]])) ;
+            assert (None = find index [(db 1) ^^ [ x ; z ; x ]]) ;
+            let index = add (add index [t3] 3) [t4] 4 in
+            assert (Some 3 = find index [t3]) ;
+            assert (Some 4 = find index [t4])) ;
 
-         "Instantiated with eigenvariables" >::
+         "Match with eigen variables" >::
          (fun () ->
-            let index = add Index.empty [(db 1) ^^ [ x ; y ; y ]] 42 in
-            assert (Some 42 = find index [(db 1) ^^ [ y ; z ; z ]]) ;
-            filter_count index [(db 1) ^^ [ z ; z ; z ]] 1 ;
-            filter_count index [(db 1) ^^ [ x ; x ; y ]] 0) ;
-
-         "Instantiated with constants" >::
-         (fun () ->
-            let a = const "a" in
-            let b = const "b" in
-            let t1 = (db 1) ^^ [ a ; x ; x ] in
-            let t2 = (db 1) ^^ [ x ; b ; y ] in
             let index = add (add Index.empty [t1] 1) [t2] 2 in
-            assert (Some 1 = find index [t1]) ;
-            assert (Some 2 = find index [t2]) ;
-            let t3 = (db 1) ^^ [ a ; x ; y ] in
-            filter_count index [t3] 0 ;
-            let t4 = (db 1) ^^ [ x ; b ; x ] in
-            filter_count index [t4] 1 ;
-            let t5 = (db 1) ^^ [ a ; b ; b ] in
-            filter_count index [t5] 2) ;
+            filter_count index [(db 1) ^^ [ y ; z ; z ]] ~e:1 ~u:1 ;
+            filter_count index [(db 1) ^^ [ z ; z ; z ]] ~o:1 ~e:1 ;
+            filter_count index [(db 1) ^^ [ x ; y ; z ]] ~u:2 ;
+            filter_count index [(db 1) ^^ [ x ; x ; y ]] ~u:1 ;
+            let index = add (add index [t3] 3) [t4] 4 in
+            filter_count index [(db 1) ^^ [ a ; x ; y ]] ~u:1 ;
+            filter_count index [(db 1) ^^ [ x ; b ; x ]] ~o:1) ;
+
+         "Match with constants" >::
+         (fun () ->
+            let index = add (add Index.empty [t3] 3) [t4] 4 in
+            filter_count index [(db 1) ^^ [ x ; y ; y ]] ~u:1 ;
+            filter_count index [(db 1) ^^ [ a ; b ; b ]] ~o:2 ;
+            filter_count index [(db 1) ^^ [ a ; a ; b ]] ~o:0 ;
+            let t5 = (db 1) ^^ [ a ; a ; b ] in
+            let index = add Index.empty [t5] 5 in
+            filter_count index [(db 1) ^^ [ a ; x ; x ]] ~u:0) ;
 
          "Mixed with nominal variables" >::
          (fun () ->
@@ -649,27 +662,39 @@ let test =
   ]
 
 let _ =
-  if Array.length Sys.argv > 1 then
-    (* Running a specific test (given its position in the tree)
-     * so you can trace exceptions or do whatever debugging you want.. *)
-    let id = int_of_string Sys.argv.(1) in
-    let lbl = ref "" in
-    let test =
-      let rec g n k t =
-        let next n = match k with
-          | [] -> raise Not_found
-          | t::tl -> g n tl t
+  let argv = Array.to_list Sys.argv in
+  (* option "-v" to display the names of the tests *)
+  let verbose = List.mem "-v" argv in
+  let rec get_ids accum = function
+    | [] -> List.rev accum
+    | h::t ->
+        let accum =
+          try (int_of_string h)::accum
+          with _ -> accum
         in
-        match t with
-          | TestCase f -> if n = id then f else next (n+1)
-          | TestList [] -> next n
-          | TestLabel (l,t) -> lbl := l ; g n k t
-          | TestList (h::tl) -> g n (tl@k) h
-      in
-      g 0 [] test
-    in
-    Printf.printf "Running test %d: %s\n%!" id !lbl ;
-    test ()
-  else
-    let l = run_test_tt ~verbose:true test in
-    if List.exists (function RSuccess _ -> false | _ -> true) l then exit 1
+        get_ids accum t
+  in
+  match get_ids [] argv with
+    | [] ->
+        let l = run_test_tt ~verbose test in
+        if List.exists (function RSuccess _ -> false | _ -> true) l then exit 1
+    | ids ->
+        (* Running specific tests (given positions in the tree) so you
+         * can trace exceptions or do whatever debugging you want. *)
+        let display_test id =
+          let rec get_test l n k t =
+            let next n = match k with
+              | [] -> raise Not_found
+              | t::tl -> get_test l n tl t
+            in
+            match t with
+              | TestCase f -> if n = id then l,f else next (n+1)
+              | TestList [] -> next n
+              | TestLabel (l,t) -> get_test l n k t
+              | TestList (h::tl) -> get_test l n (tl@k) h
+          in
+          let lbl,test = get_test "" 0 [] test in
+          Printf.printf "Running test %d: %s\n%!" id lbl ;
+          test ()
+        in
+        List.iter display_test ids

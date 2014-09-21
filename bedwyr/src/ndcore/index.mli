@@ -1,5 +1,5 @@
 (****************************************************************************)
-(* Bedwyr prover                                                            *)
+(* An implementation of substitution tree for term indexing                 *)
 (* Copyright (C) 2006-2013 David Baelde, Alwen Tiu, Quentin Heath           *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
@@ -54,7 +54,7 @@ val access :
   'a t -> Term.term list ->
   ('a -> 'a t) * 'a option
 
-type match_status = Over | Exact | Under
+type match_status = Over | Exact | Under of (Term.var * Term.var) list
 
 val filter:
   switch_vars:bool ->
