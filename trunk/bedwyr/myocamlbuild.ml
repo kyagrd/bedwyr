@@ -23,7 +23,7 @@ let _ =
   dispatch begin function
     | After_rules ->
         flag ["ocaml" ; "compile"] (A "-annot") ;
-        flag ["ocaml" ; "compile"] (S [A "-warn-error" ; A "A"]) ;
+        flag ["ocaml" ; "compile"] (S [A "-warn-error" ; A "A-28"]) ;
         flag ["ocaml" ; "native" ; "compile"] (A "-nodynlink") ;
         flag ["ocaml" ; "doc"] (S [A "-stars" ; A "-m" ; A "A"]) ;
 
