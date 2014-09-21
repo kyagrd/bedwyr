@@ -1,5 +1,5 @@
 (****************************************************************************)
-(* Bedwyr prover                                                            *)
+(* An implementation of substitution tree for term indexing                 *)
 (* Copyright (C) 2006-2013 David Baelde, Alwen Tiu, Quentin Heath           *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
@@ -119,66 +119,54 @@ let find_leaf (_,_,map) bindings =
   try Some (ConstraintsMap.find constraints map)
   with Not_found -> None
 
-let get_constraints_bis bindings =
-  let n = List.length bindings in
-  (* Sorting might be a useless precautions since we always parse the index
-   * in the same order, but it's not critical and I need the max anyway. *)
-  let bindings = List.sort (fun (i,_) (j,_) -> compare j i) bindings in
-    (*
-     *)
-  let vid = Array.make n 0 in
-  (* We prepare the constraints array,
-   * and transform the [(int*var) list] into a more convenient [var array]. *)
-  let c = {
-    eq      = Array.make n 0 ;
-    lts     = Array.make n 0 }
-  in
-  let v = Array.make n (Term.db (-1)) in
-  let _ =
-    List.fold_left
-      (fun j (i,t) ->
-         vid.(j) <- i ;
-         c.lts.(j) <-
-           (match Term.observe t with
-              | Term.Var v -> v.Term.lts
-              | _ -> assert false) ;
-         v.(j) <- t ;
-         (* [c.eq.(j)] gets the least index which has an equal value *)
-         c.eq.(j) <-
-           (try
-              for k = 0 to j do
-                if Term.eq v.(k) t then raise (Found k)
-              done ;
-              assert false
-            with Found k -> k) ;
-         j+1)
-      0 bindings
-  in
-  c
-
-type match_status = Over | Exact | Under
+type match_status = Over | Exact | Under of (Term.var * Term.var) list
 
 let filter_leaf match_status (_,_,map) bindings f =
-  match match_status with
-    | Under ->
-        assert false
-    | _ ->
-        let constraints = get_constraints_bis bindings in
-        ConstraintsMap.iter
-          (fun c d ->
-             try
-               Array.iteri
-                 (fun i j ->
-                    if (constraints.eq.(i) <> constraints.eq.(j))
-                      || (c.lts.(i) <> constraints.lts.(i))
-                    then raise (Found i))
-                 c.eq ;
-               (* if the term has equalities where the pattern does,
-                * and has the same local timestamps,
-                * then it is an instance of the pattern *)
-               f d match_status
-             with Found _ -> ())
-          map
+  let constraints = get_constraints bindings in
+  let check_over c d =
+    try
+      Array.iteri
+        (fun i j ->
+           if (constraints.eq.(i) <> constraints.eq.(j))
+             || (c.lts.(i) <> constraints.lts.(i))
+           then raise Not_found)
+        c.eq ;
+      (* if the term has equalities where the pattern does,
+       * and has the same local timestamps,
+       * then it is an instance of the pattern *)
+      f d Over
+    with Not_found -> ()
+  in
+  let check_under cst_bindings c d =
+    try
+      (* check that the two binding lists don't try to overlap *)
+      List.iter
+        (fun (var,_) ->
+           if List.exists (fun (_,v) -> v=var) bindings
+           then raise Not_found)
+        cst_bindings ;
+      Array.iteri
+        (fun i j ->
+           if (c.eq.(i) <> c.eq.(j))
+             || (c.lts.(i) <> constraints.lts.(i))
+           then raise Not_found)
+        constraints.eq ;
+      (* if the pattern has equalities where the term does,
+       * and has the same local timestamps,
+       * then the term is a generalization of the pattern *)
+      f d (Under cst_bindings)
+    with Not_found -> ()
+  in
+  let check_exact c d =
+    if constraints=c then f d Exact
+    else begin check_over c d ; check_under [] c d end
+  in
+  let check c d = match match_status with
+    | Over -> check_over c d
+    | Exact -> check_exact c d
+    | Under cst_bindings -> check_under cst_bindings c d
+  in
+  ConstraintsMap.iter check map
 
 
 (* == Indexing ============================================================= *)
@@ -218,7 +206,7 @@ type 'a path =
 type 'a path2 =
   | Top2
   | Zip2 of Term.term list                       (* requested term vector *)
-    * (int * Term.term) list                      (* CID-term bindings *)
+    * (int * Term.var) list                      (* CID-term bindings *)
     * match_status                               (* ... *)
     * 'a node list * pattern list * 'a node list (* siblings and arc *)
     * 'a path2                                   (* location of our father *)
@@ -598,15 +586,30 @@ let filter ~switch_vars index terms f =
             aux accum (patterns,terms)
         | NB i, Term.NB j when i = j ->
             aux accum (patterns,terms)
-        | UVar v, Term.Var ({Term.tag=Term.Eigen}) ->
-            let accum = (match_status,(v,term)::bindings,rev_sub_terms) in
+        | UVar v, Term.Var ({Term.tag=Term.Eigen} as var) ->
+            let accum = (match_status,(v,var)::bindings,rev_sub_terms) in
             aux accum (patterns,terms)
-        | UVar v,Term.Var _ ->
+        | UVar v,Term.Var ({Term.tag=Term.Constant} as var) ->
             begin match match_status with
-              | Under -> None
+              | Under _ -> None
               | _ ->
-                  let accum = (Over,(v,term)::bindings,rev_sub_terms) in
+                  let accum = (Over,(v,var)::bindings,rev_sub_terms) in
                   aux accum (patterns,terms)
+            end
+        | Cst (_,c),Term.Var ({Term.tag=Term.Eigen} as var) ->
+            begin match match_status with
+              | Over -> None
+              | Exact ->
+                  let accum = (Under [(var,c)],bindings,rev_sub_terms) in
+                  aux accum (patterns,terms)
+              | Under cst_bindings ->
+                  if List.mem_assoc var cst_bindings then
+                    if c = List.assoc var cst_bindings then
+                      aux accum (patterns,terms)
+                    else None
+                  else
+                    let accum = (Under ((var,c)::cst_bindings),bindings,rev_sub_terms) in
+                    aux accum (patterns,terms)
             end
         | EVar _,_ -> assert false
         | Cst (_,c), Term.Var c' when c==c' ->
