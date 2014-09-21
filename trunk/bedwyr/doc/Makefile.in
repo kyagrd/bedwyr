@@ -197,7 +197,7 @@ install_html_refman: $(REFMAN)/index.html
 archive: archive.tar
 
 archive.tar: $(ARCH_FILES)
-	@$(TAR) -cpf $@ --xform 's|^|$(DIST_NAME)/doc/|' $^
+	@$(TAR) -cpf $@ --xform 's|^|$(DIST_NAME)/doc/|S' $^
 
 #
 # OTHER TARGETS
@@ -211,7 +211,7 @@ mostlyclean:
 
 clean_tex:
 	@rm -vf *.aux *.bbl *.blg *.log *.idx *.ilg *.ind *.out *.nav \
-	  *.snm *.lox *.toc *.lot *.lof *.vrb include/tex/*.aux
+	  *.snm *.lox *.lol *.toc *.lot *.lof *.vrb include/tex/*.aux
 
 clean_hevea:
 	@rm -vf *.haux *.hbbl *.blg *.hidx *.hind *.image.tex *.image.out \
