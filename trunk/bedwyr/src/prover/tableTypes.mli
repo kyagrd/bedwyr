@@ -17,6 +17,11 @@
 (* 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.              *)
 (****************************************************************************)
 
+(** Internal interface of {!Table}. *)
+
+(** This module type describes the values and types needed by
+  * {!Table.Make}, and could be larger than the type of {!Table.O}. *)
+
 module type INPUT = sig
   type son = Son of tag ref | Loop of tag ref | Cut of tag ref
   and tag =
@@ -32,6 +37,8 @@ module type INPUT = sig
     switch_vars:bool ->
     t ->
     Term.term list -> (tag ref -> bool) * tag ref option * (unit -> bool)
+  val filter :
+    switch_vars:bool -> t -> Term.term list -> bool option
   val nabla_abstract : Term.term -> Term.term
   val reset : t -> unit
   val iter : (Term.term -> tag -> unit) -> t -> unit

@@ -119,7 +119,14 @@ let find_leaf (_,_,map) bindings =
   try Some (ConstraintsMap.find constraints map)
   with Not_found -> None
 
-type match_status = Over | Exact | Under of (Term.var * Term.var) list
+type match_status =
+  | Over
+  | Exact
+  | Under
+type match_status' =
+  | Over'
+  | Exact'
+  | Under' of (Term.var * Term.var) list
 
 let filter_leaf match_status (_,_,map) bindings f =
   let constraints = get_constraints bindings in
@@ -154,7 +161,7 @@ let filter_leaf match_status (_,_,map) bindings f =
       (* if the pattern has equalities where the term does,
        * and has the same local timestamps,
        * then the term is a generalization of the pattern *)
-      f d (Under cst_bindings)
+      f d Under
     with Not_found -> ()
   in
   let check_exact c d =
@@ -162,9 +169,9 @@ let filter_leaf match_status (_,_,map) bindings f =
     else begin check_over c d ; check_under [] c d end
   in
   let check c d = match match_status with
-    | Over -> check_over c d
-    | Exact -> check_exact c d
-    | Under cst_bindings -> check_under cst_bindings c d
+    | Over' -> check_over c d
+    | Exact' -> check_exact c d
+    | Under' cst_bindings -> check_under cst_bindings c d
   in
   ConstraintsMap.iter check map
 
@@ -207,7 +214,7 @@ type 'a path2 =
   | Top2
   | Zip2 of Term.term list                       (* requested term vector *)
     * (int * Term.var) list                      (* CID-term bindings *)
-    * match_status                               (* ... *)
+    * match_status'                              (* ... *)
     * 'a node list * pattern list * 'a node list (* siblings and arc *)
     * 'a path2                                   (* location of our father *)
 
@@ -591,24 +598,24 @@ let filter ~switch_vars index terms f =
             aux accum (patterns,terms)
         | UVar v,Term.Var ({Term.tag=Term.Constant} as var) ->
             begin match match_status with
-              | Under _ -> None
+              | Under' _ -> None
               | _ ->
-                  let accum = (Over,(v,var)::bindings,rev_sub_terms) in
+                  let accum = (Over',(v,var)::bindings,rev_sub_terms) in
                   aux accum (patterns,terms)
             end
         | Cst (_,c),Term.Var ({Term.tag=Term.Eigen} as var) ->
             begin match match_status with
-              | Over -> None
-              | Exact ->
-                  let accum = (Under [(var,c)],bindings,rev_sub_terms) in
+              | Over' -> None
+              | Exact' ->
+                  let accum = (Under' [(var,c)],bindings,rev_sub_terms) in
                   aux accum (patterns,terms)
-              | Under cst_bindings ->
+              | Under' cst_bindings ->
                   if List.mem_assoc var cst_bindings then
                     if c = List.assoc var cst_bindings then
                       aux accum (patterns,terms)
                     else None
                   else
-                    let accum = (Under ((var,c)::cst_bindings),bindings,rev_sub_terms) in
+                    let accum = (Under' ((var,c)::cst_bindings),bindings,rev_sub_terms) in
                     aux accum (patterns,terms)
             end
         | EVar _,_ -> assert false
@@ -675,7 +682,7 @@ let filter ~switch_vars index terms f =
         filter_nodes bindings terms match_status path [] nodes
     | _ -> assert false
   in
-  filter_index [] terms Exact zipper
+  filter_index [] terms Exact' zipper
 
 
 (* == FOLD ================================================================== *)
