@@ -47,7 +47,7 @@ module type S = sig
   val fresh_typaram : unit -> ty
   val get_typaram : string -> ty
   val fresh_tyvar : unit -> ty
-  val fresh_tyinst : unit -> ty -> ty
+  val get_fresh_tyinst : unit -> ty -> ty
   val build_abstraction_types : int -> ty list * ty
 
   exception Type_kinding_error of string * pos * ki * ki
@@ -175,7 +175,7 @@ module Make (I : INPUT) = struct
 
   (* Create a fresh instance of a polymorphic type.
    * All type parameters are replaced with fresh type variables. *)
-  let fresh_tyinst () =
+  let get_fresh_tyinst () =
     let bindings = ref [] in
     let rec aux accum = function
       | Ty (ty::tys,ty_base) ->
