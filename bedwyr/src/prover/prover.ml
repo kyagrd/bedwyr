@@ -26,7 +26,7 @@ exception Variable_leakage
 open Format
 open System
 open Term
-module Table = Table.O
+module T = Table.O
 
 (* Internal design of the prover has two levels, Zero and One.
  * On level One, logic vars are instantiated and eigenvars are constants.
@@ -70,7 +70,7 @@ let dependency_stack = Stack.create ()
 let clear_dependency_stack () =
   try
     while true do
-      let s,_ = Stack.pop dependency_stack in s := Table.Unset
+      let s,_ = Stack.pop dependency_stack in s := T.Unset
     done
   with Stack.Empty -> ()
 
@@ -105,15 +105,15 @@ let mark_dependent_until =
        * we need to make the previous atoms depend on them *)
       List.iter
         (fun st -> match !st with
-           | Table.Working (_,w) -> aux2 st w
+           | T.Working (_,w) -> aux2 st w
            | _ -> assert false)
         !final_influences
   in
   aux
 
 type 'a answer =
-  | Known of ('a ref -> bool) * 'a ref * Term.term * Table.t
-  | Unknown of ('a ref -> bool) * Term.term * Table.t
+  | Known of ('a ref -> bool) * 'a ref * Term.term * T.t
+  | Unknown of ('a ref -> bool) * Term.term * T.t
   | OffTopic
 
 
@@ -223,35 +223,30 @@ let rec prove sons
     let flavour,definition = get_flav_def d in
     (* first step, first sub-step: look at the table
      * (whether the atom is frozen or not is irrelevent at this point) *)
-    let status =
-      match flavour with
-        | Normal -> OffTopic
-        | Inductive {theorem=theorem;table=table}
-        | CoInductive {theorem=theorem;table=table} ->
-            try
-              let add,found,_ =
-                Table.access ~switch_vars:(level=Zero) table args
-              in
-              match found with
-                | Some c -> Known (add,c,theorem,table)
-                | None -> Unknown (add,theorem,table)
-            with Index.Cannot_table -> OffTopic
+    let status = match flavour with
+      | Normal -> OffTopic
+      | Inductive {theorem=theorem;table=table}
+      | CoInductive {theorem=theorem;table=table} ->
+          let add,found,_ = T.access ~switch_vars:(level=Zero) table args in
+          match found with
+            | Some c -> Known (add,c,theorem,table)
+            | None -> Unknown (add,theorem,table)
     in
     match status with
       | OffTopic ->
           prove sons temperatures (depth+1)
             ~level ~timestamp ~local ~success ~failure (app definition args)
-      | Known (_,({contents=Table.Proved _} as status),_,_) ->
+      | Known (_,({contents=T.Proved _} as status),_,_) ->
           if !debug || depth<=debug_max_depth then
             eprintf "Goal (%a) proved using table@." Pprint.pp_term g;
-          sons := Table.Cut status :: !sons ;
+          sons := T.Cut status :: !sons ;
           success timestamp failure
-      | Known (_,({contents=Table.Disproved _} as status),_,_) ->
+      | Known (_,({contents=T.Disproved _} as status),_,_) ->
           if !debug || depth<=debug_max_depth then
             eprintf "Known disproved@." ;
-          sons := Table.Cut status :: !sons ;
+          sons := T.Cut status :: !sons ;
           failure ()
-      | Known (_,({contents=Table.Working (_,w)} as status),_,_) ->
+      | Known (_,({contents=T.Working (_,w)} as status),_,_) ->
           (* this is an unsure atom *)
           begin match temperature with
             | Frozen _ ->
@@ -267,9 +262,9 @@ let rec prove sons
             | Unfrozen ->
                 let looping,_,_ = w in
                 if !looping then begin
-                  sons := Table.Loop status :: !sons
+                  sons := T.Loop status :: !sons
                 end else begin
-                  sons := Table.Cut status :: !sons
+                  sons := T.Cut status :: !sons
                 end ;
                 begin match flavour with
                   | Inductive _ ->
@@ -282,9 +277,15 @@ let rec prove sons
                 end
           end
       | Unknown (table_add,theorem,table)
-      | Known (table_add,{contents=Table.Unset},theorem,table) ->
+      | Known (table_add,{contents=T.Unset},theorem,table) ->
+          match T.filter ~switch_vars:(level=Zero) table args with
+            | Some true ->
+                success timestamp failure
+            | Some false ->
+                failure ()
+            | None ->
           (* This handles the cases where nothing is in the table,
-           * or Unset has been left, in which case the [Table.add]
+           * or Unset has been left, in which case the [T.add]
            * will overwrite it. *)
           (* This is a generic function that works both for unfrozen proof
            * and backward chaining. *)
@@ -295,7 +296,7 @@ let rec prove sons
                 | ([],_) :: l2 -> aux l2
                 | ((st :: l1),st') :: l2 ->
                     begin match !st with
-                      | Table.Working (sons',(_,fi,fd)) ->
+                      | T.Working (sons',(_,fi,fd)) ->
                           let fi1,fi2 =
                             let rec rem l1 = function
                               | [] -> assert false
@@ -316,7 +317,7 @@ let rec prove sons
               in
               (* we have to add a dumy dependency for the atom,
                * since [aux] decrements the number of dependencies *)
-              let r = ref Table.Unset in
+              let r = ref T.Unset in
               final_influences := r :: !final_influences ;
               aux [[status],r]
             in
@@ -326,8 +327,8 @@ let rec prove sons
                 | [] :: l2 -> aux l2
                 | (st :: l1) :: l2 ->
                     begin match !st with
-                      | Table.Working (_,(_,_,fd)) ->
-                          st := Table.Unset ;
+                      | T.Working (_,(_,_,fd)) ->
+                          st := T.Unset ;
                           aux (!fd :: l1 :: l2)
                       | _ -> aux (l1 :: l2)
                     end
@@ -335,22 +336,22 @@ let rec prove sons
               aux [[status]] ;
               status := result
             in
-            let sons' = ref [] in
+            let new_sons = ref [] in
             let process_success status final_influences =
               match temperature with
                 | Frozen _ ->
                     (* Theorems cannot handle loops,
                      * so no (in)validation. *)
-                    status := Table.Proved sons'
+                    status := T.Proved new_sons
                     (* TODO maybe remove this case, since final_dependencies
                      * and final_influences are empty anyway *)
                 | Unfrozen ->
                     begin match flavour with
                       | Inductive _ ->
-                          invalidate status (Table.Proved sons')
+                          invalidate status (T.Proved new_sons)
                       | CoInductive _ ->
                           validate status final_influences
-                            (fun sons'' -> Table.Proved sons'')
+                            (fun sons' -> T.Proved sons')
                       | _ -> assert false
                     end
             in
@@ -359,7 +360,7 @@ let rec prove sons
                 | Frozen _ ->
                     (* Theorems cannot handle negated atoms yet,
                      * so a failure means nothing. *)
-                    status := Table.Unset
+                    status := T.Unset
                     (* XXX (Frozen !freezing_point) never actually happens,
                      * instead the temperature is Unfrozen and the atom
                      * is incorrectly marked as Disproved,
@@ -370,9 +371,9 @@ let rec prove sons
                     begin match flavour with
                       | Inductive _ ->
                           validate status final_influences
-                            (fun sons'' -> Table.Disproved sons'')
+                            (fun sons' -> T.Disproved sons')
                       | CoInductive _ ->
-                          invalidate status (Table.Disproved sons')
+                          invalidate status (T.Disproved new_sons)
                       | _ -> assert false
                     end
             in
@@ -381,7 +382,7 @@ let rec prove sons
             in
             let status =
               let w = looping,final_influences,final_dependencies in
-              ref (Table.Working (sons',w))
+              ref (T.Working (new_sons,w))
             in
             let s0 = save_state () in
             let table_update_success ts _ =
@@ -451,32 +452,30 @@ let rec prove sons
                                 Pprint.pp_term (app d args);
                             let k () = fc k pressure copies in
                             let status =
-                              try
-                                let add,found,_ =
-                                  Table.access
-                                    ~switch_vars:(level=Zero) table args
-                                in
-                                match found with
-                                  | Some c -> Known (add,c,theorem,table)
-                                  | None -> Unknown (add,theorem,table)
-                              with Index.Cannot_table -> OffTopic
+                              let add,found,_ =
+                                T.access
+                                  ~switch_vars:(level=Zero) table args
+                              in
+                              match found with
+                                | Some c -> Known (add,c,theorem,table)
+                                | None -> Unknown (add,theorem,table)
                             in
                             match status with
                               | OffTopic -> k ()
-                              | Known (_,{contents=Table.Proved _},_,_) ->
+                              | Known (_,{contents=T.Proved _},_,_) ->
                                   if !debug || depth<=debug_max_depth then
                                     eprintf
                                       "Goal (%a) already proved!@."
                                       Pprint.pp_term (app d args);
                                   k ()
-                              | Known (_,{contents=Table.Disproved _},_,_) ->
+                              | Known (_,{contents=T.Disproved _},_,_) ->
                                   failwith "did our theorem just prove false?"
-                              | Known (_,{contents=Table.Working _},_,_) ->
+                              | Known (_,{contents=T.Working _},_,_) ->
                                   assert false
                               | Unknown (table_add,theorem,table)
-                              | Known (table_add,{contents=Table.Unset},theorem,table) ->
+                              | Known (table_add,{contents=T.Unset},theorem,table) ->
                                   (* XXX what [sons] to use here? *)
-                                  let status = ref (Table.Proved sons') in
+                                  let status = ref (T.Proved new_sons) in
                                   (* XXX switch_vars? *)
                                   if not (table_add status) then assert false ;
                                   if !debug || depth<=debug_max_depth then
@@ -504,7 +503,7 @@ let rec prove sons
                            * we must also use [args] at least once
                            * to improve performance *)
                           (* XXX check this sons! *)
-                          prove sons' ((v,Frozen 0)::temperatures)
+                          prove new_sons ((v,Frozen 0)::temperatures)
                             (depth+1) ~local ~timestamp
                             ~level:Zero ~success:store_subst ~failure th_body
                         end else k ()
@@ -516,16 +515,16 @@ let rec prove sons
             in
             let table_update_failure () =
               begin match !status with
-                | Table.Proved _ ->
+                | T.Proved _ ->
                     (* This is just backtracking, we are seeing the tabling
                      * entry corresponding to a previous goal.
                      * Never happens if we skipped the success continuation. *)
                     assert false
-                | Table.Working _ ->
+                | T.Working _ ->
                     ignore (Stack.pop dependency_stack) ;
                     looping := false ;
                     process_failure status final_influences
-                | Table.Disproved _ | Table.Unset -> assert false
+                | T.Disproved _ | T.Unset -> assert false
               end ;
               failure ()
             in
@@ -533,14 +532,20 @@ let rec prove sons
               (* TODO maybe do not add this when frozen *)
               Stack.push (status,final_influences) dependency_stack ;
               looping := true ;
-              sons := Table.Son status :: !sons ;
-              prove sons'
+              sons := T.Son status :: !sons ;
+              prove new_sons
                 temperatures (depth+1)
                 ~level ~local ~timestamp (app body args)
                 ~success:table_update_success
                 ~failure:table_update_failure
             end else
-              prove sons'
+              (* TODO so long as we can't table this atom,
+               * there is probably no point in doing backward-chaining,
+               * since we want to find an exhaustive list of solutions anyway,
+               * and while we're at it, there is no point in table_add-ing
+               * twice, part of this should be moved out of this local [prove]
+               *)
+              prove sons
                 temperatures (depth+1)
                 ~level ~local ~timestamp ~success ~failure (app body args)
           in
