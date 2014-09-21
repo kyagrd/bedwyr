@@ -207,6 +207,14 @@ ${TABLE_XML_EXPORT_MODULE}"
 	fi
 fi
 
+AC_MSG_CHECKING(for oUnit)
+if ocamlfind_oUnit=$("$OCAMLFIND" query oUnit 2>/dev/null) ; then
+	AC_MSG_RESULT(${ocamlfind_oUnit})
+	OCAMLFIND_OUNIT="${ocamlfind_oUnit}"
+else
+	AC_MSG_RESULT(no (library tests will be disabled))
+fi
+
 #
 # Documentation stuff
 #
@@ -409,6 +417,7 @@ AC_SUBST(MINGW32_OCAMLFIND_CONF)
 AC_SUBST(TABLE_XML_EXPORT_MODULE_DOT)
 AC_SUBST(TABLE_XML_EXPORT_MODULE_NL)
 AC_SUBST(XMLM_TAG)
+AC_SUBST(OCAMLFIND_OUNIT)
 
 AC_SUBST(INSTALL)
 AC_SUBST(INSTALL_DATA)

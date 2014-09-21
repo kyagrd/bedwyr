@@ -20,10 +20,9 @@
 # @configure_input@
 
 <src>: include
-# remove the following "include"s when using external libs
-<src/oUnit> or <src/ndcore> or <src/batyping> or <src/input> or <src/prover>: include
+<src/ndcore> or <src/batyping> or <src/input> or <src/prover>: include
 
-<**/test.{native,p.native,byte,d.byte}>: use_unix,use_oUnit
+<**/test.*>: package(unix),package(oUnit)
 
 <src/ndcore/*.{native,byte}>: use_ndcore
 <src/batyping/*.{native,byte}>: use_batyping

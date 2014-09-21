@@ -89,28 +89,28 @@ COFF_FILES	= $(NSIS_RC_FILES:.rc=.o)
 
 build: $(BUILT_FILES) bedwyr
 
-$(BUILD)/%.byte: $(OCAML_FILES:.in=)
+$(BUILD)/%.byte: $(OCAML_FILES:.in=) _tags
 	@$(OCAMLBUILD) $*.byte
 
-$(BUILD)/%.native: $(OCAML_FILES:.in=)
+$(BUILD)/%.native: $(OCAML_FILES:.in=) _tags
 	@$(OCAMLBUILD) $*.native
 
-$(BUILD)/%.cmi: $(OCAML_FILES:.in=)
+$(BUILD)/%.cmi: $(OCAML_FILES:.in=) _tags
 	@$(OCAMLBUILD) $*.cmi
 
-$(BUILD)/%.cma: $(OCAML_FILES:.in=)
+$(BUILD)/%.cma: $(OCAML_FILES:.in=) _tags
 	@$(OCAMLBUILD) $*.cma
 
-$(BUILD)/%.cmxa %.a: $(OCAML_FILES:.in=)
+$(BUILD)/%.cmxa %.a: $(OCAML_FILES:.in=) _tags
 	@$(OCAMLBUILD) $*.cmxa
 
-$(BUILD)/%.docdir/index.html: $(OCAML_FILES:.in=) %.odocl
+$(BUILD)/%.docdir/index.html: $(OCAML_FILES:.in=) _tags %.odocl
 	$(OCAMLBUILD) $*.docdir/index.html
 
-$(BUILD)/%.odoc: $(OCAML_FILES:.in=)
+$(BUILD)/%.odoc: $(OCAML_FILES:.in=) _tags
 	@$(OCAMLBUILD) $*.odoc
 
-$(BUILD)/%.exe: $(OCAML_FILES:.in=) $(COFF_FILES)
+$(BUILD)/%.exe: $(OCAML_FILES:.in=) _tags $(COFF_FILES)
 	@$(OCAMLBUILD) -just-plugin
 	@$(OCAMLBUILDWIN32) $(addprefix $(l_cclib)../,$(COFF_FILES)) $*.native
 	@mv -vi $(BUILD)/$*.native $(BUILD)/$*.exe
@@ -153,11 +153,20 @@ bedwyr: $(bedwyr_prefix).$(BEST_SUFFIX)
 
 test:
 	@echo '** Testing bedwyr libraries **'
+ifeq ($(OCAMLFIND_OUNIT),)
+	@echo 'Unit testing disabled, install oUnit to enable.'
+else
 	@$(MAKE) test_libs
+endif
 	@echo '** Testing bedwyr on examples **'
 	@$(MAKE) test_bedwyr
 
-test_libs: test_ndcore test_batyping test_input test_prover
+ifeq ($(OCAMLFIND_OUNIT),)
+  test_libs:
+	@echo 'Unit testing disabled, install oUnit to enable.'
+else
+  test_libs: test_ndcore test_batyping test_input test_prover
+endif
 
 test_ndcore: $(BUILD)/src/ndcore/test.$(BEST_SUFFIX)
 	@$<
