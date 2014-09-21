@@ -299,11 +299,11 @@ let create_node ~switch_vars bindings terms data =
       | Term.QString s -> QString s,bindings
       | Term.Nat s -> Nat s,bindings
       | Term.Var ({Term.tag=Term.Eigen} as var)
-          when (not switch_vars) & allow_universal ->
+          when (not switch_vars) && allow_universal ->
           let i,bindings = add bindings var in
           UVar i, bindings
       | Term.Var ({Term.tag=Term.Logic} as var)
-          when switch_vars & allow_universal ->
+          when switch_vars && allow_universal ->
           let i,bindings = add bindings var in
           UVar i, bindings
       | Term.Var ({Term.tag=Term.Constant} as v) ->
@@ -462,11 +462,11 @@ let access ~switch_vars zipper terms =
         | NB i, Term.NB j when i = j ->
             accum,ZNB i,[],[]
         | UVar v, Term.Var ({Term.tag=Term.Eigen} as var)
-            when (not switch_vars) & (not switch_vars) ->
+            when (not switch_vars) && (not switch_vars) ->
             let bindings = (v,var)::bindings in
             (changed,bindings,rev_catches),ZVar v,[],[]
         | UVar v, Term.Var ({Term.tag=Term.Logic})
-            when switch_vars & (not switch_vars) ->
+            when switch_vars && (not switch_vars) ->
             failwith "logic variable forbidden here"
         | Cst (t,c), Term.Var c' when c==c' ->
             accum,ZCst (t,c),[],[]

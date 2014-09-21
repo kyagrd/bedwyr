@@ -235,7 +235,7 @@ module Make (I : INPUT) = struct
           print (aux true) ty (aux false) (Ty (tys,ty_base))
       | Ty ([],TConst (name,tys)) ->
           let print =
-            if par & List.length tys<>0
+            if par && List.length tys<>0
             then Format.fprintf chan "@[(%s%a)@]"
             else Format.fprintf chan "@[%s%a@]"
           in
