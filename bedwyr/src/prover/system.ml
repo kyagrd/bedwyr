@@ -17,6 +17,12 @@
 (* 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.              *)
 (****************************************************************************)
 
+module Ty = Input.Typing
+module T = Table.O
+
+(* TODO get the code from [Prover] here, so that internal/predefined
+ * predicates are declared and defined in one single place
+ * TODO add the word pervasive and remove some predecared/predefined *)
 module Logic =
 struct
   let not               = Term.atom ~tag:Term.Constant "_not"
@@ -28,16 +34,6 @@ struct
   let cutpred           = Term.atom ~tag:Term.Constant "_cut"
   let check_eqvt        = Term.atom ~tag:Term.Constant "_eqvt"
 
-  let print             = Term.atom ~tag:Term.Constant "print"
-  let println           = Term.atom ~tag:Term.Constant "println"
-  let printstr          = Term.atom ~tag:Term.Constant "printstr"
-  let fprint            = Term.atom ~tag:Term.Constant "fprint"
-  let fprintln          = Term.atom ~tag:Term.Constant "fprintln"
-  let fprintstr         = Term.atom ~tag:Term.Constant "fprintstr"
-  let fopen_out         = Term.atom ~tag:Term.Constant "fopen_out"
-  let fclose_out        = Term.atom ~tag:Term.Constant "fclose_out"
-
-
   let var_not           = Term.get_var not
   let var_ite           = Term.get_var ite
   let var_abspred       = Term.get_var abspred
@@ -46,6 +42,40 @@ struct
   let var_abort_search  = Term.get_var abort_search
   let var_cutpred       = Term.get_var cutpred
   let var_check_eqvt    = Term.get_var check_eqvt
+
+  let internal_t = Hashtbl.create 8
+  let _ = List.iter (fun (v,ty) -> Hashtbl.add internal_t v ty)
+            [ (* Non-logical extensions *)
+              var_not,
+                Ty.ty_arrow [Ty.tprop] Ty.tprop;
+              var_ite,
+                Ty.ty_arrow [Ty.tprop;Ty.tprop;Ty.tprop] Ty.tprop;
+              var_abspred,
+                (let ty0 = Ty.tparam 0 in
+                 let ty1 = Ty.ty_arrow [Ty.ty_arrow [Ty.tparam 1] ty0] ty0 in
+                 Ty.ty_arrow [ty0;ty1;ty0] Ty.tprop);
+              var_distinct,
+                Ty.ty_arrow [Ty.tprop] Ty.tprop;
+              var_assert_rigid,
+                Ty.ty_arrow [Ty.tparam 0] Ty.tprop;
+              var_abort_search,
+                Ty.tprop;
+              var_cutpred,
+                Ty.ty_arrow [Ty.tprop] Ty.tprop;
+              var_check_eqvt,
+                (let ty = Ty.tparam 0 in
+                 Ty.ty_arrow [ty;ty] Ty.tprop)
+            ]
+
+
+  let print             = Term.atom ~tag:Term.Constant "print"
+  let println           = Term.atom ~tag:Term.Constant "println"
+  let printstr          = Term.atom ~tag:Term.Constant "printstr"
+  let fprint            = Term.atom ~tag:Term.Constant "fprint"
+  let fprintln          = Term.atom ~tag:Term.Constant "fprintln"
+  let fprintstr         = Term.atom ~tag:Term.Constant "fprintstr"
+  let fopen_out         = Term.atom ~tag:Term.Constant "fopen_out"
+  let fclose_out        = Term.atom ~tag:Term.Constant "fclose_out"
 
   let var_print         = Term.get_var print
   let var_println       = Term.get_var println
@@ -56,22 +86,32 @@ struct
   let var_fopen_out     = Term.get_var fopen_out
   let var_fclose_out    = Term.get_var fclose_out
 
-
-  let predefined = [ var_not ; var_ite ; var_abspred ; var_distinct ;
-                     var_assert_rigid ; var_abort_search ; var_cutpred ;
-                     var_check_eqvt ;
-                     var_print ; var_println ; var_printstr ;
-                     var_fprint ; var_fprintln ; var_fprintstr ;
-                     var_fopen_out ; var_fclose_out ]
+  let predefined_t = Hashtbl.create 8
+  let _ = List.iter (fun (k,v) -> Hashtbl.add predefined_t k v)
+            [ (* I/O extensions *)
+              var_print,
+                Ty.ty_arrow [Ty.tparam 0] Ty.tprop;
+              var_println,
+                Ty.ty_arrow [Ty.tparam 0] Ty.tprop;
+              var_printstr,
+                Ty.ty_arrow [Ty.tstring] Ty.tprop;
+              var_fprint,
+                Ty.ty_arrow [Ty.tstring;Ty.tparam 0] Ty.tprop;
+              var_fprintln,
+                Ty.ty_arrow [Ty.tstring;Ty.tparam 0] Ty.tprop;
+              var_fprintstr,
+                Ty.ty_arrow [Ty.tstring;Ty.tstring] Ty.tprop;
+              var_fopen_out,
+                Ty.ty_arrow [Ty.tstring] Ty.tprop;
+              var_fclose_out,
+                Ty.ty_arrow [Ty.tstring] Ty.tprop
+            ]
 end
 
 let debug = ref false
 let time  = ref false
 let root_atoms = ref []
 
-
-module Ty = Input.Typing
-module T = Table.O
 
 (* Types declarations *)
 
@@ -132,7 +172,7 @@ let declare_const (p,name) ty =
   if Hashtbl.mem decls const_var then
     raise (Invalid_const_declaration
              (name,p,ty,"name conflict"))
-  else if List.mem const_var Logic.predefined then
+  else if Hashtbl.mem Logic.predefined_t const_var then
     raise (Invalid_const_declaration
              (name,p,ty,"name conflict with a predefined predicate"))
   else let _ = kind_check (Ty.Constant name) p ty in
@@ -143,7 +183,7 @@ let create_def stratum global_flavour (flavour,p,name,ty) =
   if Hashtbl.mem decls head_var then
     raise (Invalid_pred_declaration
              (name,p,ty,"name conflict"))
-  else if List.mem head_var Logic.predefined then
+  else if Hashtbl.mem Logic.predefined_t head_var then
     raise (Invalid_pred_declaration
              (name,p,ty,"name conflict with a predefined predicate"))
   else
@@ -196,7 +236,7 @@ let translate_term
       ?(expected_type=Ty.tprop)
       pre_term
       free_types =
-  let fresh_tyinst = Ty.fresh_tyinst () in
+  let fresh_tyinst = Ty.get_fresh_tyinst () in
   let iter_free_types f =
     Hashtbl.iter f free_types
   in
@@ -206,9 +246,7 @@ let translate_term
     let was_free = Term.is_free name in
     let t = Term.atom ~tag:Term.Logic name in
     let v = Term.get_var t in
-    try
-      let ty = Hashtbl.find free_types v in
-      t,ty
+    try t,(Hashtbl.find free_types v)
     with Not_found ->
       let t,v =
         if was_free then t,v else begin
@@ -238,56 +276,28 @@ let translate_term
               raise (Stratification_error (name,p))
             else ty
       with Not_found ->
-        match v with
-          | v when v = Logic.var_print || v = Logic.var_println ->
-              Ty.ty_arrow [Ty.tparam 0] Ty.tprop
-          | v when v = Logic.var_printstr ->
-              Ty.ty_arrow [Ty.tstring] Ty.tprop
-          | v when v = Logic.var_fprint || v = Logic.var_fprintln ->
-              Ty.ty_arrow [Ty.tstring;Ty.tparam 0] Ty.tprop
-          | v when v = Logic.var_fprintstr ->
-              Ty.ty_arrow [Ty.tstring;Ty.tstring] Ty.tprop
-          | v when v = Logic.var_fopen_out ->
-              Ty.ty_arrow [Ty.tstring] Ty.tprop
-          | v when v = Logic.var_fclose_out ->
-              Ty.ty_arrow [Ty.tstring] Ty.tprop
-          | _ ->
-              Term.free name ;
-              raise (Missing_declaration (name,Some p))
-    in t,(if instantiate_head then Ty.fresh_tyinst () ty else ty)
+        begin try Hashtbl.find Logic.predefined_t v
+        with Not_found ->
+          begin
+            Term.free name ;
+            raise (Missing_declaration (name,Some p))
+          end
+        end
+    in t,(if instantiate_head then Ty.get_fresh_tyinst () ty else ty)
   in
   (* return a typed variable corresponding to the name
    * of an internal constant *)
-  (* TODO regroup the following code and the one on prover.ml,
-   * so that internal predicates are declared/defined in one single place *)
   let typed_intern_pred (p,name) =
     let t = Term.atom ~tag:Term.Constant name in
     let v = Term.get_var t in
-    let ty = match v with
-      (* TODO use real predefined polymorphic types *)
-      | v when v = Logic.var_not ->
-          Ty.ty_arrow [Ty.tprop] Ty.tprop
-      | v when v = Logic.var_ite ->
-          Ty.ty_arrow [Ty.tprop;Ty.tprop;Ty.tprop] Ty.tprop
-      | v when v = Logic.var_abspred ->
-          let ty0 = Ty.tparam 0 in
-          let ty1 = Ty.ty_arrow [Ty.ty_arrow [Ty.tparam 1] ty0] ty0 in
-          Ty.ty_arrow [ty0;ty1;ty0] Ty.tprop
-      | v when v = Logic.var_distinct ->
-          Ty.ty_arrow [Ty.tprop] Ty.tprop
-      | v when v = Logic.var_assert_rigid ->
-          Ty.ty_arrow [Ty.tparam 0] Ty.tprop
-      | v when v = Logic.var_abort_search ->
-          Ty.tprop
-      | v when v = Logic.var_cutpred ->
-          Ty.ty_arrow [Ty.tprop] Ty.tprop
-      | v when v = Logic.var_check_eqvt ->
-          let ty = Ty.tparam 0 in
-          Ty.ty_arrow [ty;ty] Ty.tprop
-      | _ ->
+    let ty =
+      try Hashtbl.find Logic.internal_t v
+      with Not_found ->
+        begin
           Term.free name ;
           raise (Missing_declaration (name,Some p))
-    in t,Ty.fresh_tyinst () ty
+        end
+    in t,Ty.get_fresh_tyinst () ty
   in
   Input.type_check_and_translate
     ?stratum

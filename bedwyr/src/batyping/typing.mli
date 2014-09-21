@@ -82,9 +82,9 @@ module type S = sig
 
   (** Create a fresh instance of a polymorphic type.
     * All type parameters are replaced with fresh type variables. *)
-  val fresh_tyinst : unit -> ty -> ty
+  val get_fresh_tyinst : unit -> ty -> ty
   (** The mapping from type parameters to type variables will be kept across
-    * calls for a given [fresh_tyinst ()]. *)
+    * calls for a given [get_fresh_tyinst ()]. *)
 
   val build_abstraction_types : int -> ty list * ty
 
