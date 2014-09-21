@@ -19,22 +19,25 @@
 .\"
 .\" @configure_input@
 .\"
-.Dd July 15, 2013
+.Dd August 20, 2013
 .Os @PACKAGE_NAME@ v@PACKAGE_VERSION@
 .Dt BEDWYR 1 URM
 .\"
-.\"
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 .Sh NAME
 .Nm @PACKAGE_TARNAME@ ,
 .Nm Ns Nm .byte ,
 .Nm Ns Nm .native
 .Nd @PACKAGE_TAGLINE@
 .\"
-.\"
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 .Sh SYNOPSIS
 .Nm Op Fl I
 .Op Fl t
 .Op Fl \-strict
+.Op Fl \-filter
 .Op Fl d Ar command
 .Op Fl e Ar query
 .Op Fl \-freezing Ar fp
@@ -44,7 +47,8 @@
 .Op Fl help | Fl \-help
 .Op Ar
 .\"
-.\"
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 .Sh DESCRIPTION
 @PACKAGE_NAME@ is a tabled logic programming system for the Level-0/1
 fragment of the Linc logic.
@@ -72,7 +76,8 @@ the fastest available binary is used (i.e.
 if present; otherwise,
 .Nm Ns Nm .byte ) .
 .\"
-.\"
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 .Sh OPTIONS
 .Bl -tag -width Ic
 .It Fl I
@@ -93,6 +98,8 @@ see
 but will exit at the end of the non-interactive stage with the exit
 status of the first non-interactive error (this is useful to typecheck a
 whole file at once).
+.It Fl \-filter
+Use tabling with variables.  If not set, only strict matches are used.
 .It Fl d Ar command
 Run
 .Ar command
@@ -133,7 +140,8 @@ run-time with
 Display the list of command-line options.
 .El
 .\"
-.\"
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 .Sh EXIT STATUS
 .Ex -std
 .Bl -tag -width Ic
@@ -144,17 +152,19 @@ Definition error (wrong declaration, wrong definition or object misuse)
 .It Ar 3
 Core error (LLambda violation)
 .It Ar 4
-Solver error (Level 0/1 violation)
+Solver error (failed assertion, Level 0/1 violation)
 .It Ar 5
-Generic error (failed assertion, undefined error)
+Generic error (undefined error)
 .El
 .\"
-.\"
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 .Sh INPUT FILES
 A definition file can contain any meta-command (see
 .Sx META-COMMANDS ) ,
 in addition to any of the following commands.
 .\"
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 .Ss Type declaration
 .Bl -tag -width Ic
 .It Ic Kind Ar list Ic type \-> type.
@@ -166,6 +176,7 @@ are built in, and
 is predeclared.
 .El
 .\"
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 .Ss Constant declaration
 .Bl -tag -width Ic
 .It Ic Type Ar :: Ic A \-> list A \-> list A.
@@ -186,6 +197,7 @@ and
 are predeclared.
 .El
 .\"
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 .Ss Predicate declaration and definition
 .Bl -tag -width Ic
 .It Ic Define Ar member Ic \&: A \-> list A \-> prop by\
@@ -200,6 +212,7 @@ are built in,
 is predefined.
 .El
 .\"
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 .Ss Theorems
 .Bl -tag -width Ic
 .It Ic Theorem Ar thm Ic \&: Ar forall Y, body X Y \-> head X Ns Ic \&.
@@ -207,7 +220,8 @@ A theorem is a valid Abella theorem with some restrictions on its body
 (neither implication nor universal quantification).
 .El
 .\"
-.\"
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 .Sh TOPLEVEL QUERIES
 .Bl -tag -width Ic
 .It Ic ?= Ar query Ns Ic \&.
@@ -221,7 +235,8 @@ and offers to display them one by one).
 Queries given via this option are dealt with in the exact same way.
 .El
 .\"
-.\"
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 .Sh META-COMMANDS
 Meta-commands can be given both in a file and to the toplevel.
 .Bl -tag -width Ic
@@ -231,14 +246,16 @@ This command should give a starting point.
 And this one, an ending point.
 .El
 .\"
-.\"
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 .Sh OUTPUT
 Non-interactive output is offerd by
 .Ic #save_table Ar pred Qo Ar table.def Qc Ns Ic \&.
 or
 .Ic #export Qo Ar tables.xml Qc Ns Ic \&. .
 .\"
-.\"
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 .Sh FILES
 .Bl -tag -width Ic
 .It Pa +pkgdatadir+/examples/
@@ -249,7 +266,8 @@ Most of them have assertions that can be checked with the command-line option
 Text-mode goodies.
 .El
 .\"
-.\"
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 .Sh SEE ALSO
 .Xr abella 1 ,
 .Xr tac 1 ,

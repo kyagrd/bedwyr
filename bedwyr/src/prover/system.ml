@@ -111,6 +111,7 @@ end
 let debug = ref false
 let time  = ref false
 let root_atoms = ref []
+let use_filter = ref false
 
 
 (* Types declarations *)
