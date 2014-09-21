@@ -145,19 +145,15 @@ configure: configure.ac
 #
 ##############################################################################
 
+.PHONY: bedwyr test test_libs test_ndcore test_batyping test_input test_prover \
+  test_bedwyr debug
+
 bedwyr: $(bedwyr_prefix).$(BEST_SUFFIX)
 	@ln -svf $< $@
 
-.PHONY: test test_libs test_ndcore test_batyping test_input test_prover \
-  test_bedwyr debug
-
 test:
 	@echo '** Testing bedwyr libraries **'
-ifeq ($(OCAMLFIND_OUNIT),)
-	@echo 'Unit testing disabled, install oUnit to enable.'
-else
 	@$(MAKE) test_libs
-endif
 	@echo '** Testing bedwyr on examples **'
 	@$(MAKE) test_bedwyr
 
@@ -169,19 +165,19 @@ else
 endif
 
 test_ndcore: $(BUILD)/src/ndcore/test.$(BEST_SUFFIX)
-	@$<
+	@$< $(TEST_FLAGS)
 	@echo ' for the core LLambda library'
 
 test_batyping: $(BUILD)/src/batyping/test.$(BEST_SUFFIX)
-	@$<
+	@$< $(TEST_FLAGS)
 	@echo ' for the Bedwyr-Abella typing library'
 
 test_input: $(BUILD)/src/input/test.$(BEST_SUFFIX)
-	@$<
+	@$< $(TEST_FLAGS)
 	@echo ' for the *.def and REPL input library'
 
 test_prover: $(BUILD)/src/prover/test.$(BEST_SUFFIX)
-	@$<
+	@$< $(TEST_FLAGS)
 	@echo ' for the theorem prover library'
 
 test_bedwyr: bedwyr
@@ -224,7 +220,7 @@ endif
 bedwyr_doc: bedwyr_refman
 
 bedwyr_refman: doc/Makefile
-	@make -C doc
+	@$(MAKE) -C $$(dirname $<)
 
 slimmer_doc: src_odocs src_libref
 
@@ -234,8 +230,8 @@ src_libref: $(SRC_DOCDIR)/index.html
 
 src.odocl: $(foreach m,$(BEDWYR_LIBS),src/$m/$m.mllib)
 	@echo "src/Bedwyr" > $@
-	@for i in $(BEDWYR_LIBS) ; do \
-	  sed -e "s|^|src/$$i/|" -e '/Lexer\|Parser/d' src/$$i/$$i.mllib ; \
+	@for i in $^ ; do \
+	  sed -e "s|^|$$(dirname $$i)/|" -e '/Lexer\|Parser/d' $$i ; \
 	  done >> $@
 
 #
@@ -325,7 +321,7 @@ install_slimmer_files: $(SLIMMER_FILES:=.gz)
 install_bedwyr_doc: install_bedwyr_refman
 
 install_bedwyr_refman: doc/Makefile
-	@make -C doc install
+	@$(MAKE) -C $$(dirname $<) install
 
 install_slimmer_doc: install_src_odocs install_src_libref
 
@@ -355,7 +351,7 @@ archive.tar: $(ARCH_FILES)
 	@$(TAR) -cpf $@ --xform 's|^|$(DIST_NAME)/|' $^
 
 doc/archive.tar: doc/Makefile
-	@$(MAKE) -C doc archive
+	@$(MAKE) -C $$(dirname $<) archive
 
 $(DIST_NAME).tar: archive.tar doc/archive.tar
 	@$(TAR) -cpf $@ -T /dev/null
@@ -459,17 +455,17 @@ mostlyclean:
 	@$(OCAMLBUILD) -clean
 	@rm -vf nsis-files/*.o bedwyr
 
-clean: mostlyclean doc/Makefile
-	@$(MAKE) -C doc clean
+clean: doc/Makefile mostlyclean
+	@$(MAKE) -C $$(dirname $<) clean
 	@$(MAKE) -C examples/ccs_vp/timing clean
 	@rm -vf $(SLIMMER_META)
 	@rm -vf *.bz2 *.gz *.tar *.tbz *.tgz *.odocl $(MANPAGES)
 	@rm -vf *.build *.changes *.dsc *.deb *-installer.exe
 	@rm -rvf $(DEB_DIST_NAME) nsis-build
 
-distclean: clean doc/Makefile
+distclean: doc/Makefile clean
+	@$(MAKE) -C $$(dirname $<) distclean
 	@$(FIND) . -name '*~' -exec rm -vf \{\} \;
-	@$(MAKE) -C doc distclean
 	@rm -vf $(ac_config_files)
 	@rm -vf config.status config.log configure
 	@rm -rvf autom4te.cache
