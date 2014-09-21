@@ -21,7 +21,7 @@ m4_define([M4_VERSION_MAJOR],1)
 m4_define([M4_VERSION_MINOR],4)
 m4_define([M4_VERSION_PATCH],0)
 m4_define([M4_VERSION_BUILD],0)
-m4_define([M4_VERSION_DEV],alpha16)
+m4_define([M4_VERSION_DEV],alpha17)
 m4_define([M4_VERSION1],[M4_VERSION_MAJOR.M4_VERSION_MINOR])
 m4_define([M4_VERSION2],m4_if(M4_VERSION_PATCH,0,
           [M4_VERSION1],[M4_VERSION1.M4_VERSION_PATCH]))
@@ -76,7 +76,6 @@ AC_PATH_PROGS(OCAMLFIND,ocamlfind.opt ocamlfind,no)
 AS_IF([test "X$OCAMLFIND" = Xno],
       [AC_MSG_ERROR(Cannot find ocamlfind. Install findlib.)])
 
-WIN32_BIN_SUFFIX="exe"
 AC_MSG_CHECKING(if debugging information should be added)
 AC_ARG_ENABLE([debug],
               AC_HELP_STRING([--enable-debug],
@@ -95,6 +94,7 @@ else
 	NATIVE_LIBS_SUFFIX="a cmxa"
 fi
 
+WIN32_BIN_SUFFIX="exe"
 AC_MSG_CHECKING(if native win32 code should be generated)
 AC_ARG_ENABLE([win32],
               AC_HELP_STRING([--enable-win32],[output native win32 code (no)]),
@@ -385,12 +385,12 @@ AC_CONFIG_FILES([nsis-files/bedwyr.nsi],[chmod a-w nsis-files/bedwyr.nsi])
 AC_CONFIG_FILES([nsis-files/bedwyr.rc],[chmod a-w nsis-files/bedwyr.rc])
 
 OCAML_FILES=$(for i in $($FIND src -type f '!' -path '*.svn*' \
-              '!' -name '*~' '!' -name '.*.sw*') ; do \
+              '!' -name '*~' '!' -name '.*.sw*' '!' -name '*.in') ; do \
               bash -c "grep ' $i ' <<<' $ac_config_files ' -qv" && \
-              echo -n -e ' \\\n\t'"$i" ; done)
+              printf ' \\\n\t'"$i" ; done)
 OCAML_IN_FILES=$(for i in $($FIND src -type f '!' -path '*.svn*' \
-                 -name '*.ml*.in') ; do \
-                 echo -n -e ' \\\n\t'"$i" ; done)
+                 -name '*.in') ; do \
+                 printf ' \\\n\t'"$i" ; done)
 EXAMPLES_FILES=$($FIND examples -type f '!' -path '*.svn*' \
                  '!' -name '*~' '!' -name '.*.sw*' '!' -name '*.old' \
                  -printf ' \\\n\t%p')

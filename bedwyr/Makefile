@@ -50,7 +50,7 @@ ARCH_FILES	= $(OCAML_FILES) \
 		  $(SLIMMER_FILES) $(BEDWYR_FILES) COPYING $(MAN_FILES) \
 		  $(CONTRIB_FILES) $(DESKTOP_FILES) $(ICONS_FILES) $(EXAMPLES_FILES) \
 		  configure.ac Makefile Makefile.include.in \
-		  myocamlbuild.ml _tags.in install-sh
+		  myocamlbuild.ml install-sh
 
 BEDWYR_ARCH	= $(addprefix $(DIST_NAME).,$(ARCH_SUFFIXES))
 
@@ -89,28 +89,28 @@ COFF_FILES	= $(NSIS_RC_FILES:.rc=.o)
 
 build: $(BUILT_FILES) bedwyr
 
-$(BUILD)/%.byte: $(OCAML_FILES:.in=) _tags
+$(BUILD)/%.byte: $(OCAML_FILES:.in=)
 	@$(OCAMLBUILD) $*.byte
 
-$(BUILD)/%.native: $(OCAML_FILES:.in=) _tags
+$(BUILD)/%.native: $(OCAML_FILES:.in=)
 	@$(OCAMLBUILD) $*.native
 
-$(BUILD)/%.cmi: $(OCAML_FILES:.in=) _tags
+$(BUILD)/%.cmi: $(OCAML_FILES:.in=)
 	@$(OCAMLBUILD) $*.cmi
 
-$(BUILD)/%.cma: $(OCAML_FILES:.in=) _tags
+$(BUILD)/%.cma: $(OCAML_FILES:.in=)
 	@$(OCAMLBUILD) $*.cma
 
-$(BUILD)/%.cmxa %.a: $(OCAML_FILES:.in=) _tags
+$(BUILD)/%.cmxa %.a: $(OCAML_FILES:.in=)
 	@$(OCAMLBUILD) $*.cmxa
 
-$(BUILD)/%.docdir/index.html: $(OCAML_FILES:.in=) _tags %.odocl
+$(BUILD)/%.docdir/index.html: $(OCAML_FILES:.in=) %.odocl
 	$(OCAMLBUILD) $*.docdir/index.html
 
-$(BUILD)/%.odoc: $(OCAML_FILES:.in=) _tags
+$(BUILD)/%.odoc: $(OCAML_FILES:.in=)
 	@$(OCAMLBUILD) $*.odoc
 
-$(BUILD)/%.exe: $(OCAML_FILES:.in=) _tags $(COFF_FILES)
+$(BUILD)/%.exe: $(OCAML_FILES:.in=) $(COFF_FILES)
 	@$(OCAMLBUILD) -just-plugin
 	@$(OCAMLBUILDWIN32) $(addprefix $(l_cclib)../,$(COFF_FILES)) $*.native
 	@mv -vi $(BUILD)/$*.native $(BUILD)/$*.exe
@@ -273,7 +273,6 @@ install_bedwyr_files: $(BEDWYR_FILES:=.gz)
 	@$(INSTALL_DIR) $(DOCDIR)
 	@for i in $^ ; do $(INSTALL_DATA) $$i $(DOCDIR) ; done
 
-
 install_bedwyr_man: $(MANPAGES)
 	@$(INSTALL_DIR) $(MANDIR)/man1
 	@for i in $^ ; do $(INSTALL_DATA) $$i $(MANDIR)/man1 ; done
@@ -420,7 +419,6 @@ else
 	  -exec sed -i -e 's|\<index.html\>|index.htm|' {} \;
 	@$(MAKENSIS) nsis-files/bedwyr.nsi
 endif
-
 
 #
 # OTHER TARGETS
