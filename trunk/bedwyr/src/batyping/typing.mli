@@ -96,17 +96,16 @@ module type S = sig
   (** Polymorphism error. *)
   exception Undefinite_type of string * pos * ty * int list
 
-  (** "Type" of an object and its name, if relevant. *)
+  (** "Style" of an object and its name, if relevant. *)
   type obj =
     | Predicate of string
     | Constant of string
     | QuantVar of string option
     | AbsVar
 
-  (** [kind_check ~obj ~p ty ~atomic_kind] checks that type [ty] and all
-    * its subtypes are of the kind [TKind].
+  (** [kind_check ~obj ~p ty ~atomic_kind] checks that type [ty] of a
+    * [obj]-style object and all its subtypes are of the kind [TKind].
     *
-    * @param obj "type" of object
     * @param atomic_kind function returning the kind of a type
     * constructor
     * @return [arity] *)
@@ -122,7 +121,7 @@ module type S = sig
   (** Higher-order variable (free or quantified). *)
   exception Type_order_error of string option * pos * ty
 
-  (** ill-typed predicate. *)
+  (** Un-propositional predicate. *)
   exception Invalid_pred_declaration of string * pos * ty
 
   (** Type unifier type.

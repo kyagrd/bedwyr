@@ -1,5 +1,5 @@
 (****************************************************************************)
-(* An implementation of Higher-Order Pattern Unification                    *)
+(* Prenex polymorphic typing                                                *)
 (* Copyright (C) 2012-2013 Andrew Gacek, Quentin Heath                      *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
@@ -12,9 +12,9 @@
 (* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            *)
 (* GNU General Public License for more details.                             *)
 (*                                                                          *)
-(* You should have received a copy of the GNU General Public License        *)
-(* along with this code; if not, write to the Free Software Foundation,     *)
-(* Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA             *)
+(* You should have received a copy of the GNU General Public License along  *)
+(* with this program; if not, write to the Free Software Foundation, Inc.,  *)
+(* 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.              *)
 (****************************************************************************)
 
 open OUnit
@@ -52,14 +52,17 @@ type uterm =
   | UApp of pos * uterm * uterm
  *)
 
-(* TODO add occurs-check, self-application, Andrew's tests (from Abella), etc *)
+(* TODO add occurs-check, self-application, Andrew's tests (from Abella),
+ * definite types, etc *)
 
 let test =
   "BaTyping" >:::
   [
     "environment" >:::
     [
-      (type_to_string (fresh_typaram ())) ^ " <> " ^ (type_to_string (fresh_typaram ())) >::
+      (get_type_to_string () (fresh_typaram ())) ^
+        " <> " ^
+        (get_type_to_string () (fresh_typaram ())) >::
       (fun () ->
          assert_bool "polymorphic type variables should not be unifiable"
            (try
@@ -73,7 +76,9 @@ let test =
               | Type_unification_error _ -> true
               | _ -> false )) ;
 
-      (type_to_string (fresh_tyvar ())) ^ " ~~ " ^ (type_to_string (fresh_tyvar())) >::
+      (get_type_to_string () (fresh_tyvar ())) ^
+        " ~~ " ^
+        (get_type_to_string () (fresh_tyvar())) >::
       (fun () ->
          assert_bool "type inference parameters should be unifiable"
            (try
@@ -133,27 +138,39 @@ let test =
   ]
 
 let _ =
-  if Array.length Sys.argv > 1 then
-    (* Running a specific test (given its position in the tree)
-     * so you can trace exceptions or do whatever debugging you want.. *)
-    let id = int_of_string Sys.argv.(1) in
-    let lbl = ref "" in
-    let test =
-      let rec g n k t =
-        let next n = match k with
-          | [] -> raise Not_found
-          | t::tl -> g n tl t
+  let argv = Array.to_list Sys.argv in
+  (* option "-v" to display the names of the tests *)
+  let verbose = List.mem "-v" argv in
+  let rec get_ids accum = function
+    | [] -> List.rev accum
+    | h::t ->
+        let accum =
+          try (int_of_string h)::accum
+          with _ -> accum
         in
-          match t with
-            | TestCase f -> if n = id then f else next (n+1)
-            | TestList [] -> next n
-            | TestLabel (l,t) -> lbl := l ; g n k t
-            | TestList (h::tl) -> g n (tl@k) h
-      in g 0 [] test
-    in
-      Printf.printf "Running test %d: %s\n%!" id !lbl ;
-      test ()
-  else
-    let l = run_test_tt ~verbose:true test in
-      if List.exists (function RSuccess _ -> false | _ -> true) l then
-        exit 1
+        get_ids accum t
+  in
+  match get_ids [] argv with
+    | [] ->
+        let l = run_test_tt ~verbose test in
+        if List.exists (function RSuccess _ -> false | _ -> true) l then exit 1
+    | ids ->
+        (* Running specific tests (given positions in the tree) so you
+         * can trace exceptions or do whatever debugging you want. *)
+        let display_test id =
+          let rec get_test l n k t =
+            let next n = match k with
+              | [] -> raise Not_found
+              | t::tl -> get_test l n tl t
+            in
+            match t with
+              | TestCase f -> if n = id then l,f else next (n+1)
+              | TestList [] -> next n
+              | TestLabel (l,t) -> get_test l n k t
+              | TestList (h::tl) -> get_test l n (tl@k) h
+          in
+          let lbl,test = get_test "" 0 [] test in
+          Printf.printf "Running test %d: %s\n%!" id lbl ;
+          test ()
+        in
+        List.iter display_test ids
