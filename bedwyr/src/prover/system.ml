@@ -93,8 +93,8 @@ let atomic_kind (p,name) =
   try Hashtbl.find type_kinds type_var
   with Not_found -> raise (Missing_type (name,p))
 
-let kind_check ?definite p ty =
-  Ty.kind_check ?definite ~p ty ~atomic_kind
+let kind_check obj p ty =
+  Ty.kind_check ~obj ~p ty ~atomic_kind
 
 
 (* Constants and predicates declarations *)
@@ -135,7 +135,7 @@ let declare_const (p,name) ty =
   else if List.mem const_var Logic.predefined then
     raise (Invalid_const_declaration
              (name,p,ty,"name conflict with a predefined predicate"))
-  else let _ = kind_check p ty in
+  else let _ = kind_check (Ty.Constant name) p ty in
   Hashtbl.add decls const_var (Constant ty)
 
 let create_def stratum global_flavour (flavour,p,name,ty) =
@@ -146,32 +146,28 @@ let create_def stratum global_flavour (flavour,p,name,ty) =
   else if List.mem head_var Logic.predefined then
     raise (Invalid_pred_declaration
              (name,p,ty,"name conflict with a predefined predicate"))
-  else let (arity,flex_head,_,propositional,_) = kind_check ~definite:false p ty in
-  if not (propositional || flex_head) then
-    raise (Invalid_pred_declaration
-             (name,p,ty,Format.sprintf
-                          "target type can only be %s"
-                          (Ty.get_type_to_string () Ty.tprop)))
-  else let global_flavour,flavour = match global_flavour,flavour with
-    | _,Input.Normal -> global_flavour,Normal
-    | Input.Inductive,Input.CoInductive
-    | Input.CoInductive,Input.Inductive ->
-        raise (Invalid_flavour
-                 (name,p,global_flavour,flavour))
-    | _,Input.Inductive ->
-        flavour,
-        Inductive { theorem = Term.lambda arity Term.op_false ;
-                    table = T.create () }
-    | _,Input.CoInductive ->
-        flavour,
-        CoInductive { theorem = Term.lambda arity Term.op_false ;
+  else
+    let arity = kind_check (Ty.Predicate name) p ty in
+    let global_flavour,flavour = match global_flavour,flavour with
+      | _,Input.Normal -> global_flavour,Normal
+      | Input.Inductive,Input.CoInductive
+      | Input.CoInductive,Input.Inductive ->
+          raise (Invalid_flavour
+                   (name,p,global_flavour,flavour))
+      | _,Input.Inductive ->
+          flavour,
+          Inductive { theorem = Term.lambda arity Term.op_false ;
                       table = T.create () }
-  in
-  begin
-    Hashtbl.add decls head_var
-      (predicate flavour stratum (Term.lambda arity Term.op_false) ty) ;
-    global_flavour
-  end
+      | _,Input.CoInductive ->
+          flavour,
+          CoInductive { theorem = Term.lambda arity Term.op_false ;
+                        table = T.create () }
+    in
+    begin
+      Hashtbl.add decls head_var
+        (predicate flavour stratum (Term.lambda arity Term.op_false) ty) ;
+      global_flavour
+    end
 
 let declare_preds =
   let stratum = ref 0 in
@@ -195,24 +191,14 @@ exception Stratification_error of string * Input.pos
 
 let translate_term
       ?stratum
-      ?(instantiate_head=true)
+      ?(head=false)
       ?(free_args=[])
-      ?(infer=true)
       ?(expected_type=Ty.tprop)
       pre_term
       free_types =
   let fresh_tyinst = Ty.fresh_tyinst () in
   let iter_free_types f =
-    (* XXX [QH] yeah, reading-clearing-filling a hashtable is not elegant,
-     * but it is not safe to use Hashtbl.replace *during* the Hashtbl.iter,
-     * I don't want the unifier to leak from [Input.Typing],
-     * I don't want to build a new hashtable and to return it
-     * nor to have a hashtable of references (what good is a mutable structure
-     * if we don't mutate it?), so this will do until all the hashtables from System
-     * are replaced with maps (or not) *)
-    let l = Hashtbl.fold (fun v ty l -> (v,ty)::l) free_types [] in
-    Hashtbl.clear free_types ;
-    List.iter (fun (v,ty) -> Hashtbl.add free_types v (f v ty)) l
+    Hashtbl.iter f free_types
   in
   (* return (and create if needed) a typed variable
    * corresponding to the name of a free variable *)
@@ -305,9 +291,8 @@ let translate_term
   in
   Input.type_check_and_translate
     ?stratum
-    ~instantiate_head
+    ~head
     ~free_args
-    ~infer
     ~iter_free_types
     ~fresh_tyinst
     pre_term
@@ -318,7 +303,7 @@ let translate_query pre_term =
   let free_types : (Term.var,Ty.ty) Hashtbl.t =
     Hashtbl.create 10
   in
-  let term,_ = translate_term pre_term free_types in term
+  let term = translate_term pre_term free_types in term
 
 (* Replace the params by fresh variables and
  * put the constraints on the parameters in the body:
@@ -412,11 +397,11 @@ let add_def_clause stratum (p,pre_head,pre_body) =
   in
   let free_args = Input.free_args pre_head in
   (* XXX what about stratum in theorems? *)
-  let head,_ =
-    translate_term ~stratum ~free_args ~instantiate_head:false
+  let head =
+    translate_term ~stratum ~free_args ~head:true
       pre_head free_types
   in
-  let body,_ =
+  let body =
     translate_term ~stratum ~free_args
       pre_body free_types
   in
@@ -461,9 +446,10 @@ let mk_theorem_clauses (p,_) theorem =
     let vars =
       let rec aux l = function
         | n when n <= 0 -> l
-        (* XXX in case [translate_term] changes how it deals with free variables,
-         * we should depend on the level to create an instantiable variable,
-         * ie not always a Logic one (cf [mk_clause] and [translate_term])*)
+        (* XXX in case [translate_term] changes how it deals with free
+         * variables, we should depend on the level to create an
+         * instantiable variable, ie not always a Logic one (cf
+         * [mk_clause] and [translate_term])*)
         | n -> aux ((Term.fresh ~ts:0 ~lts:0 Term.Logic)::l) (n-1)
       in
       aux []
@@ -533,7 +519,7 @@ let add_theorem (p,n,pre_theorem) =
   let free_types : (Term.var,Ty.ty) Hashtbl.t =
     Hashtbl.create 10
   in
-  let theorem,_ = translate_term pre_theorem free_types in
+  let theorem = translate_term pre_theorem free_types in
   let clauses = mk_theorem_clauses (p,n) theorem in
   List.iter (add_theorem_clause p) clauses
 
@@ -642,9 +628,7 @@ let get_types pre_term =
     Hashtbl.create 10
   in
   let ty = Ty.fresh_tyvar () in
-  let t,ty =
-    translate_term ~infer:false ~expected_type:ty pre_term free_types
-  in
+  let t = translate_term ~expected_type:ty pre_term free_types in
   t,ty,free_types
 
 let print_type_of pre_term =

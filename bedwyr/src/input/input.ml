@@ -1,5 +1,5 @@
 (****************************************************************************)
-(* Bedwyr prover                                                            *)
+(* Parsing and type-checking for the Bedwyr prover                          *)
 (* Copyright (C) 2012-2013 Quentin Heath, Alwen Tiu                         *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
@@ -90,7 +90,7 @@ let set_pos p = function
 (* Pre-terms creation *)
 
 let pre_qstring p s = QString (p,s)
-let pre_nat p i = assert (i>=0) ; Nat (p,i)
+let pre_nat p i = Nat (p,i)
 let pre_freeid p s = FreeBoundID (p,s)
 let pre_predconstid p s = PredConstBoundID (p,s)
 let pre_internid p s = InternID (p,s)
@@ -177,18 +177,17 @@ type input =
 (* Pre-terms' type checking *)
 
 exception Term_typing_error of pos * Typing.ty * Typing.ty * Typing.type_unifier
-exception Var_typing_error of string option * pos * Typing.ty
 
 let type_check_and_translate
       ?stratum
-      ~instantiate_head
+      ~head
       ~free_args
-      ~infer
       ~iter_free_types
       ~fresh_tyinst
       pre_term
       expected_type
       (typed_free_var,typed_declared_obj,typed_intern_pred,atomic_kind) =
+  (* find the type corresponding to a De-Bruijn index *)
   let find_db s bvars =
     let rec aux n = function
       | [] -> None
@@ -197,7 +196,7 @@ let type_check_and_translate
     in
     aux 1 bvars
   in
-  let rec aux ?(instantiate_head=true) ~negative pt exty bvars u =
+  let rec aux ?(head=false) ~negative pt exty bvars u =
     let p = get_pos pt in
     try match pt with
       | QString (_,s) ->
@@ -224,7 +223,7 @@ let type_check_and_translate
             | None -> (* declared object *)
                 let stratum = (if negative then stratum else None) in
                 let t,ty =
-                  typed_declared_obj ~instantiate_head ?stratum (p,s)
+                  typed_declared_obj ~instantiate_head:(not head) ?stratum (p,s)
                 in
                 let u = Typing.unify_constraint u exty ty in
                 t,u
@@ -275,11 +274,11 @@ let type_check_and_translate
           List.iter
             (fun (p,ty) ->
                let ty = Typing.ty_norm ~unifier:u ty in
-               let (_,_,_,propositional,higher_order) =
-                 Typing.kind_check ~p ty ~atomic_kind
+               let _ =
+                 Typing.kind_check
+                   ~obj:(Typing.QuantVar None) ~p ty ~atomic_kind
                in
-               if higher_order || propositional
-               then raise (Var_typing_error (None,p,ty)))
+               ())
             r_vars ;
           Term.binder b arity t,u
       | Lam (_,vars,pt) ->
@@ -288,7 +287,9 @@ let type_check_and_translate
             List.fold_left
               (fun (bvars,r_tys) (p,name,ty) ->
                  let ty = fresh_tyinst ty in
-                 let _ = Typing.kind_check ~p ty ~atomic_kind in
+                 let _ = Typing.kind_check
+                           ~obj:Typing.AbsVar ~p ty ~atomic_kind
+                 in
                  ((name,ty)::bvars,ty::r_tys))
               (bvars,[])
               vars
@@ -302,7 +303,7 @@ let type_check_and_translate
           let arity = List.length pargs in
           let tys,ty = Typing.build_abstraction_types arity in
           let u = Typing.unify_constraint u exty ty in
-          let hd,u = aux ~instantiate_head ~negative phd (Typing.ty_arrow tys ty) bvars u in
+          let hd,u = aux ~head ~negative phd (Typing.ty_arrow tys ty) bvars u in
           let u,args = List.fold_left2
                          (fun (u,args) pt ty ->
                             let t,u = aux ~negative pt ty bvars u in u,t::args)
@@ -315,24 +316,21 @@ let type_check_and_translate
       raise (Term_typing_error (p,ty1,ty2,unifier))
   in
   let term,unifier =
-    aux ~instantiate_head ~negative:false
+    aux ~head ~negative:false
       pre_term expected_type [] !Typing.global_unifier
   in
+  Typing.global_unifier := unifier ;
+  let p = get_pos pre_term in
+  (* type-check free variables as quantified variables were, except if
+   * they are bound to be abstracted *)
   iter_free_types
     (fun v ty ->
-       let ty = Typing.ty_norm ~unifier:unifier ty in
        let n = Term.get_var_name v in
-       if not (List.mem n free_args) then begin
-         let (_,_,_,propositional,higher_order) =
-           Typing.kind_check ty ~atomic_kind
-         in
-         if infer && (higher_order || propositional)
-         then raise (Var_typing_error (Some n,get_pos pre_term,ty))
-       end ;
-       ty) ;
-  if infer then begin
-    Typing.global_unifier := unifier ;
-    term,expected_type
-  end else begin
-    term,(Typing.ty_norm ~unifier:unifier expected_type)
-  end
+       let obj =
+         if List.mem n free_args
+         then Typing.AbsVar
+         else (Typing.QuantVar (Some n))
+       in
+       let _ = Typing.kind_check ~obj ~p ty ~atomic_kind in
+       ()) ;
+  term

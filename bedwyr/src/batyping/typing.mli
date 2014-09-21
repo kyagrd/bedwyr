@@ -21,7 +21,7 @@
 
 (** Input signature of the functor {!Typing.Make}. *)
 module type INPUT = sig
-  (** Type of some additional information. *)
+  (** Some additional information. *)
   type pos
 
   (** Dummy information. *)
@@ -37,7 +37,11 @@ module type S = sig
 
   (** Kind (of type operators). *)
   type ki
+
+  (** Kind of proper types ([*]). *)
   val ktype : ki
+
+  (** Kind of type operators ([... -> *]). *)
   val ki_arrow : ki list -> ki -> ki
 
   (** Print a kind. *)
@@ -50,10 +54,16 @@ module type S = sig
     * including some predefined monomorphic ones. *)
   type ty
 
-  (** User-defined base type. *)
+  (** User-declared types and type operators. *)
   val tconst : string -> ty list -> ty
+
+  (** return type of predicates ([prop]). *)
   val tprop : ty
+
+  (** Type of quoted strings ([string]). *)
   val tstring : ty
+
+  (** Type of integers ([nat]). *)
   val tnat : ty
 
   (** Type parameters (for polymorphism). *)
@@ -81,27 +91,39 @@ module type S = sig
   (** {6 Kind checking} *)
 
   (** Kind checking error. *)
-  exception Type_kinding_error of string * pos option * ki * ki
+  exception Type_kinding_error of string * pos * ki * ki
 
   (** Polymorphism error. *)
-  exception Undefinite_type of pos option * ty * int list
+  exception Undefinite_type of string * pos * ty * int list
 
-  (** [kind_check ty atomic_kind] checks that type [ty] and all its subtypes
-    * are of the kind [TKind].
+  (** "Type" of an object and its name, if relevant. *)
+  type obj =
+    | Predicate of string
+    | Constant of string
+    | QuantVar of string option
+    | AbsVar
+
+  (** [kind_check ~obj ~p ty ~atomic_kind] checks that type [ty] and all
+    * its subtypes are of the kind [TKind].
     *
-    * @param atomic_kind function returning the kind of a type constructor
-    * @return [(arity,flex_head,hollow,propositional,higher_order)]
-    * (describing whether the type has an unresolved type parameter as target,
-    * contains unresolved type parameters, ends with [TProp]
-    * or contains [TProp] somewhere else than as target) *)
+    * @param obj "type" of object
+    * @param atomic_kind function returning the kind of a type
+    * constructor
+    * @return [arity] *)
   val kind_check :
-    ?definite:bool ->
-    ?p:pos ->
+    obj:obj ->
+    p:pos ->
     ty ->
     atomic_kind:(pos * string -> ki) ->
-    int * bool * bool * bool * bool
+    int
 
-  (** {6 Type unifying} *)
+  (** {6 Typing} *)
+
+  (** Higher-order variable (free or quantified). *)
+  exception Type_order_error of string option * pos * ty
+
+  (** ill-typed predicate. *)
+  exception Invalid_pred_declaration of string * pos * ty
 
   (** Type unifier type.
     * Used as an environment for the type variables
@@ -119,9 +141,6 @@ module type S = sig
   (** Display a type in its {i ground form}, ie a unique form with regards to the
     * unifier. *)
   val ty_norm : ?unifier:type_unifier -> ty -> ty
-
-  (** Type incompletely inferred. *)
-  exception Hollow_type of string
 
   (** Type unification impossible. *)
   exception Type_unification_error of ty * ty * type_unifier

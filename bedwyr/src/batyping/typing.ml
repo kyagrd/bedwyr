@@ -50,14 +50,21 @@ module type S = sig
   val fresh_tyinst : unit -> ty -> ty
   val build_abstraction_types : int -> ty list * ty
 
-  exception Type_kinding_error of string * pos option * ki * ki
-  exception Undefinite_type of pos option * ty * int list
+  exception Type_kinding_error of string * pos * ki * ki
+  exception Undefinite_type of string * pos * ty * int list
+  type obj =
+    | Predicate of string
+    | Constant of string
+    | QuantVar of string option
+    | AbsVar
   val kind_check :
-    ?definite:bool ->
-    ?p:pos ->
+    obj:obj ->
+    p:pos ->
     ty ->
     atomic_kind:(pos * string -> ki) ->
-    int * bool * bool * bool * bool
+    int
+  exception Type_order_error of string option * pos * ty
+  exception Invalid_pred_declaration of string * pos * ty
 
   type type_unifier
   val iter : (int -> ty -> unit) -> type_unifier -> unit
@@ -65,7 +72,6 @@ module type S = sig
   val clear : unit -> unit
   val ty_norm : ?unifier:type_unifier -> ty -> ty
 
-  exception Hollow_type of string
   exception Type_unification_error of ty * ty * type_unifier
   val unify_constraint : type_unifier -> ty -> ty -> type_unifier
 
@@ -102,7 +108,7 @@ module Make (I : INPUT) = struct
 
   let ktype = Ki ([],KType)
   let ki_arrow kis = function
-    | Ki (kis',ki)        -> Ki (kis@kis',ki)
+    | Ki (kis',ki) -> Ki (kis@kis',ki)
 
   let ktypes n =
     let rec aux tys m =
@@ -252,47 +258,72 @@ module Make (I : INPUT) = struct
 
   (* Kind checking *)
 
-  exception Type_kinding_error of string * pos option * ki * ki
-  exception Undefinite_type of pos option * ty * int list
+  exception Type_kinding_error of string * pos * ki * ki
+  exception Undefinite_type of string * pos * ty * int list
+  exception Type_order_error of string option * pos * ty
+  exception Invalid_pred_declaration of string * pos * ty
+
+  type obj =
+    | Predicate of string
+    | Constant of string
+    | QuantVar of string option
+    | AbsVar
 
   module TypeParams = Set.Make (struct type t = int let compare = compare end)
 
-  (* Run all kind of checks, and return
-   * (a,f,h,p,ho) = (arity,flex_head, hollow, propositional, higher order). *)
-  let kind_check ~definite ?p ty ~atomic_kind =
+  (* Run all kind of checks, and return the arity. *)
+  let kind_check ~obj ~p ty ~atomic_kind =
     let rec aux ty =
       let Ty (tys,ty_base) = ty in
-      let (a,h,ho),tp1 =
-        List.fold_left aux2 ((0,false,false),TypeParams.empty) tys
-      in
+      (* computes the number of source types, the set of their type
+       * parameters, and whether they contain [prop] *)
+      let (a,ho),tp1 = List.fold_left aux2 ((0,false),TypeParams.empty) tys in
       match ty_base with
         | TConst (name,tys) ->
             (* XXX real position of the type? *)
             let Ki (kis,KType) as ki = atomic_kind (dummy_pos,name) in
-            let (h,ho),tp2 =
-              try List.fold_left2 aux3 ((h,ho),TypeParams.empty) tys kis
+            let ho,tp2 =
+              (* apply the head of the source type on its arguments *)
+              try List.fold_left2 aux3 (ho,TypeParams.empty) tys kis
               with Invalid_argument _ ->
                 raise (Type_kinding_error
                          (name,p,
                           ktypes (List.length tys),ki))
             in
-            (a,false,h,false,ho),(tp1,tp2)
-        | TProp -> (a,false,h,true,ho),(tp1,TypeParams.empty)
-        | TString | TNat -> (a,false,h,false,ho),(tp1,TypeParams.empty)
-        | TParam i -> (a,false,h,false,ho),(tp1,TypeParams.singleton i)
-        | TVar _ -> (a,true,true,false,ho),(tp1,TypeParams.empty)
-    and aux2 ((a,h,ho),tp) ty =
-      let ((_,_,h',p',ho'),(tp1,tp2)) = aux ty in
-      (a+1,h || h',ho || p' || ho'),
+            (a,false,ho),(tp1,tp2)
+        | TProp -> (a,true,ho),(tp1,TypeParams.empty)
+        | TString | TNat -> (a,false,ho),(tp1,TypeParams.empty)
+        | TParam i -> (a,false,ho),(tp1,TypeParams.singleton i)
+        | TVar _ -> (a,false,ho),(tp1,TypeParams.empty)
+    and aux2 ((a,ho),tp) ty =
+      (* increment the number of source types and the set of type
+       * parameters *)
+      let ((_,pr',ho'),(tp1,tp2)) = aux ty in
+      (a+1,ho || pr' || ho'),
       (TypeParams.union tp (TypeParams.union tp1 tp2))
-    and aux3 ((h,ho),tp) ty ki =
+    and aux3 (ho,tp) ty ki =
+      (* increment the set of type parameters *)
       if ki<>ktype then assert false (* TODO raise something *)
-      else let (_,h,ho),tp = aux2 ((0,h,ho),tp) ty in (h,ho),tp
+      else let (_,ho),tp = aux2 ((0,ho),tp) ty in ho,tp
     in
-    let x,(tp1,tp2) = aux ty in
-    if not definite || TypeParams.subset tp1 tp2 then x
-    else raise (Undefinite_type
-                  (p,ty,TypeParams.elements (TypeParams.diff tp1 tp2)))
+    let (a,pr,ho),(tp1,tp2) = aux ty in
+    match obj with
+      | Predicate n ->
+          if pr then a else
+            (* the target type should be [prop] *)
+            raise (Invalid_pred_declaration (n,p,ty))
+      | Constant n ->
+          if TypeParams.subset tp1 tp2 then a else
+            (* the target type should contain all type parameters *)
+            raise (Undefinite_type
+                     (n,p,ty,TypeParams.elements
+                               (TypeParams.diff tp1 tp2)))
+      | QuantVar n ->
+          if ho || pr then
+            (* LINC is a first-order logic *)
+            raise (Type_order_error (n,p,ty))
+          else a
+      | AbsVar -> a
 
 
   (* type unifier type *)
@@ -321,8 +352,8 @@ module Make (I : INPUT) = struct
     in
     aux ty
 
-  let kind_check ?(definite=true) ?p ty ~atomic_kind =
-    kind_check ~definite ?p (ty_norm ty) ~atomic_kind
+  let kind_check ~obj ~p ty ~atomic_kind =
+    kind_check ~obj ~p (ty_norm ty) ~atomic_kind
 
   let get_pp_type ?unifier () =
     let pp_type = get_pp_type () in
@@ -333,8 +364,6 @@ module Make (I : INPUT) = struct
   let get_type_to_string ?unifier () =
     let pp_type = get_pp_type ?unifier () in
     fun ty -> do_formatter (fun () -> pp_type formatter ty)
-
-  exception Hollow_type of string
 
   let occurs unifier i ty =
     let rec aux = function
