@@ -104,6 +104,8 @@ let _ =
            " Run tests in definition files" ;
          "--strict", Arg.Set strict_mode,
            " Quit at the first non-interactive error" ;
+         "--filter", Arg.Set System.use_filter,
+           "Use tabling with variables" ;
          "-d", Arg.String (fun s -> definitions := s::!definitions),
            "<s> Add definition" ;
          "-e", Arg.String (fun s -> queries := s::!queries),

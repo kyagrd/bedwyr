@@ -181,6 +181,9 @@ val time : bool ref
 (** Root of the tree of tabled atoms. *)
 val root_atoms : Table.O.son list ref
 
+(** Enables the use of {!Table.O.filter}. *)
+val use_filter : bool ref
+
 (** {6 Type declarations} *)
 
 exception Invalid_type_declaration of
@@ -301,9 +304,10 @@ val show_table : Input.pos * Term.term -> unit
   * to the predicates [proved] and [disproved], respectively. *)
 val save_table : Input.pos * Term.term -> string -> string -> unit
 
-(** Export the current tables in an XML file. *)
+(** Export the current tables in an XML file.
+  * Doesn't work between a call to [#clear_table] and the following call
+  * to [#clear_tables]. *)
 val export : string -> unit
-(** XXX This currently crashes if [#clear_table] was ever used. *)
 
 (** {6 Misc} *)
 
@@ -317,5 +321,5 @@ exception Abort_search
 val reset_decls : unit -> unit
 
 (** @return [true] if a user interruption was detected since the last call to
-  * [check_interrupt], [false] otherwise. *)
+  * {!check_interrupt}, [false] otherwise. *)
 val check_interrupt : unit -> bool
