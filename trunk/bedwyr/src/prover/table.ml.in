@@ -53,6 +53,7 @@ module I = struct
   let filter ~switch_vars table args =
     let f tag match_status = match !tag,match_status with
       | Working _,_ -> assert false
+      | Unset,_ -> ()
       | _,Index.Exact -> assert false
       | Proved _,Index.Over -> raise OverMatch
       | Disproved _,Index.Under -> raise UnderMatch
