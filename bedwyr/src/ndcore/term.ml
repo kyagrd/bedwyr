@@ -66,7 +66,7 @@ let rec deref = function
   | t -> t
 
 let qstring s = QString s
-let nat i = assert (i>=0) ; Nat i
+let nat i = Nat i
 let db n = DB n
 let nabla n = NB n
 let op_true = True

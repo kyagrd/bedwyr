@@ -4,9 +4,3 @@
 
 * Unification optimization for "fresh" variables: avoid occurs-check. Hopefully
   this could help a lot on the efficiency of type checking.
-
-* Tail-rec indexing, to make it more flexible,
- have get-and-set or be able to use it for definition lookup.
-
-* Add a special predicate for inspecting the tables, consider tabling modulo
-  (congruence|...).
