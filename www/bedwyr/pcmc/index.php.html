@@ -61,6 +61,8 @@ $(function(){
     <a href="../#download">Bedwyr system</a>, for example with the
     command <code>bedwyr -t -I harness-XXX.thm</code>.
 
+    <p>The files presented on this page are available as an archive
+    (<a href="pcpm-examples.tbz">tbz</a>, <a href="pcpm-examples.zip">zip</a>).</p>
 
     <h2>Harness</h2>
 
@@ -70,26 +72,30 @@ $(function(){
         <code>cert-sig.thm</code> and, especially,
         <code>kernel.thm</code>)</li>
       <li>the modular part of the framework (<code>*-fpc.thm</code>)</li>
-      <li>definitions tu run as examples (<code>*-examples.thm</code>)</li>
+      <li>definitions to be used in test assertions
+        (<code>*-examples.thm</code>)</li>
     </ul>
-    The order is important: as there are no separate signature files,
+    As there are no separate signature files, the order is important:
     the FPC must be loaded between the logic and the kernel.
 <?php inc('harness-generic.thm')?>
 
     For simplicity reasons, the logic only uses abstraction on one type,
-    <code>i</code>, and Bedwyr's polymorphism is unused; these may change
-    in future versions of the framework.
+    <code>i</code>, and Bedwyr's polymorphism is unused; these details
+    may change in future versions of the framework.
 <?php inc('logic.thm')?>
 <?php inc('cert-sig.thm')?>
 
     The file <code>clerks-experts.thm</code> contains the signature of
-    FPCs: constants are used instead of (defined) predicates for clerks
-    and experts.  It is only a starting point for new FPCs.
+    FPCs: it contains constants instead of (defined) predicates for
+    clerks and experts.  It is only a starting point for writting new
+    FPCs.
 <?php inc('clerks-experts.thm')?>
 
-    The kernel is a direct implementation of the inference rules.  The
-    simple settings chosen ("switchable formulas") allows to avoid using
-    an explicit implication rule, except in the case of unification.
+    The kernel is a direct implementation of the inference rules.
+    Thanks to the simple settings chosen ("switchable formulas"), the
+    treatment of object-level implication can be done without Bedwyr's
+    own implication.  The latter is only used in the case of
+    unification.
 <?php inc('kernel.thm')?>
 
 
