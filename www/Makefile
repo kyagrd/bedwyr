@@ -5,3 +5,7 @@ RCP = rsync -vrLtOCz --delete --stats \
 upload:
 	$(MAKE) -C bedwyr/pcmc
 	$(RCP) . shell.gforge.inria.fr:/home/groups/slimmer/htdocs
+
+clean:
+	$(MAKE) -C bedwyr/pcmc clean
+	@find . -name '*~' -exec rm -v {} \;

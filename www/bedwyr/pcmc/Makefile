@@ -1,11 +1,11 @@
 TARGETS=index.html pcpm-examples.tbz pcpm-examples.zip
-EXAMPLES=cert-sig.thm clerks-experts.thm harness-generic.thm \
-	 harness-reachable.thm harness-unreachable.thm kernel.thm \
-	 logic.thm reachable-fpc.thm unreachable-fpc.thm
+EXAMPLES=harness-generic.thm logic.thm cert-sig.thm clerks-experts.thm kernel.thm \
+	 harness-reachable.thm reachable-fpc.thm reachable-examples.thm adj.thm \
+	 harness-unreachable.thm unreachable-fpc.thm unreachable-examples.thm
 
 all: $(TARGETS)
 
-index.html: index.php.html
+index.html: index.php.html $(EXAMPLES:=.html)
 	@php $< > $@
 
 pcpm-examples.tbz: $(EXAMPLES)
@@ -15,4 +15,17 @@ pcpm-examples.zip: $(EXAMPLES)
 	@zip -q $@ $^
 
 clean:
-	@rm -vf $(TARGETS)
+	@rm -vf $(TARGETS) $(EXAMPLES:=.html)
+
+%.thm.html: %.thm
+	@vim -n \
+	  +'set nonumber' \
+	  +'let html_use_css=1' \
+	  +'TOhtml' \
+	  +'/<pre\>/,/<\/pre>/d a' \
+	  +'%d' \
+	  +'1pu a' \
+	  +'1,2d' \
+	  +'$$d' \
+	  +"wq! $@" \
+	  +'q!' $<
