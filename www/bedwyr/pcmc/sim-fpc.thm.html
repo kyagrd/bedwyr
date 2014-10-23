@@ -1,0 +1,93 @@
+<span class="Comment">% Implementation of for clerks and experts for simulation in a LTS</span>
+<span class="Comment">%</span>
+<span class="Comment">%  C.f. &quot;A framework for proof certificates in model checking&quot;,</span>
+<span class="Comment">%  §5, &quot;Clerks and experts&quot; and</span>
+<span class="Comment">%  §8, &quot;A proof certificate for simulation&quot;</span>
+
+<span class="Comment">% The following are unused, therefore declared but undefined.</span>
+<span class="Comment">% synchronous right rules</span>
+<span class="Statement">Type</span> equalE                          cert <span class="Special">-&gt;</span> <span class="Type">prop</span><span class="Special">.</span>
+<span class="Statement">Type</span> oneE                            cert <span class="Special">-&gt;</span> <span class="Type">prop</span><span class="Special">.</span>
+<span class="Statement">Type</span> tensorE         cert <span class="Special">-&gt;</span> cert <span class="Special">-&gt;</span> cert <span class="Special">-&gt;</span> <span class="Type">prop</span><span class="Special">.</span>
+<span class="Comment">%Type oplusE        cert -&gt; cert -&gt; choice -&gt; prop.</span>
+<span class="Comment">%Type someE              cert -&gt; cert -&gt; i -&gt; prop.</span>
+<span class="Statement">Type</span> mu_unfoldE              cert <span class="Special">-&gt;</span> cert <span class="Special">-&gt;</span> <span class="Type">prop</span><span class="Special">.</span>
+<span class="Statement">Type</span> initR                           cert <span class="Special">-&gt;</span> <span class="Type">prop</span><span class="Special">.</span>
+<span class="Statement">Type</span> releaseR                cert <span class="Special">-&gt;</span> cert <span class="Special">-&gt;</span> <span class="Type">prop</span><span class="Special">.</span>
+<span class="Comment">% synchronous left rules</span>
+<span class="Statement">Type</span> unequalE                        cert <span class="Special">-&gt;</span> <span class="Type">prop</span><span class="Special">.</span>
+<span class="Statement">Type</span> botE                            cert <span class="Special">-&gt;</span> <span class="Type">prop</span><span class="Special">.</span>
+<span class="Statement">Type</span> impE            cert <span class="Special">-&gt;</span> cert <span class="Special">-&gt;</span> cert <span class="Special">-&gt;</span> <span class="Type">prop</span><span class="Special">.</span>
+<span class="Statement">Type</span> aandE         cert <span class="Special">-&gt;</span> cert <span class="Special">-&gt;</span> choice <span class="Special">-&gt;</span> <span class="Type">prop</span><span class="Special">.</span>
+<span class="Statement">Type</span> allE               cert <span class="Special">-&gt;</span> cert <span class="Special">-&gt;</span> i <span class="Special">-&gt;</span> <span class="Type">prop</span><span class="Special">.</span>
+<span class="Statement">Type</span> nu_unfoldE              cert <span class="Special">-&gt;</span> cert <span class="Special">-&gt;</span> <span class="Type">prop</span><span class="Special">.</span>
+<span class="Statement">Type</span> initL                           cert <span class="Special">-&gt;</span> <span class="Type">prop</span><span class="Special">.</span>
+<span class="Statement">Type</span> releaseL                cert <span class="Special">-&gt;</span> cert <span class="Special">-&gt;</span> <span class="Type">prop</span><span class="Special">.</span>
+<span class="Comment">% asynchronous right rules</span>
+<span class="Statement">Type</span> unequalC                cert <span class="Special">-&gt;</span> cert <span class="Special">-&gt;</span> <span class="Type">prop</span><span class="Special">.</span>
+<span class="Statement">Type</span> botC                    cert <span class="Special">-&gt;</span> cert <span class="Special">-&gt;</span> <span class="Type">prop</span><span class="Special">.</span>
+<span class="Comment">%Type impC                    cert -&gt; cert -&gt; prop.</span>
+<span class="Statement">Type</span> topC                    cert <span class="Special">-&gt;</span> cert <span class="Special">-&gt;</span> <span class="Type">prop</span><span class="Special">.</span>
+<span class="Statement">Type</span> aandC           cert <span class="Special">-&gt;</span> cert <span class="Special">-&gt;</span> cert <span class="Special">-&gt;</span> <span class="Type">prop</span><span class="Special">.</span>
+<span class="Comment">%Type allC             cert -&gt; (i -&gt; cert) -&gt; prop.</span>
+<span class="Comment">%Type nu_unfoldC              cert -&gt; cert -&gt; prop.</span>
+<span class="Statement">Type</span> nu0_invarC  cert <span class="Special">-&gt;</span> cert <span class="Special">-&gt;</span>            cert  <span class="Special">-&gt;</span>            bool  <span class="Special">-&gt;</span> <span class="Type">prop</span><span class="Special">.</span>
+<span class="Statement">Type</span> nu1_invarC  cert <span class="Special">-&gt;</span> cert <span class="Special">-&gt;</span> <span class="Statement">(</span>i <span class="Special">-&gt;</span>      cert<span class="Statement">)</span> <span class="Special">-&gt;</span> <span class="Statement">(</span>i <span class="Special">-&gt;</span>      bool<span class="Statement">)</span> <span class="Special">-&gt;</span> <span class="Type">prop</span><span class="Special">.</span>
+<span class="Statement">Type</span> nu2_invarC  cert <span class="Special">-&gt;</span> cert <span class="Special">-&gt;</span> <span class="Statement">(</span>i <span class="Special">-&gt;</span> i <span class="Special">-&gt;</span> cert<span class="Statement">)</span> <span class="Special">-&gt;</span> <span class="Statement">(</span>i <span class="Special">-&gt;</span> i <span class="Special">-&gt;</span> bool<span class="Statement">)</span> <span class="Special">-&gt;</span> <span class="Type">prop</span><span class="Special">.</span>
+<span class="Statement">Type</span> freezeR                 cert <span class="Special">-&gt;</span> cert <span class="Special">-&gt;</span> <span class="Type">prop</span><span class="Special">.</span>
+<span class="Comment">%Type switchR                 cert -&gt; cert -&gt; prop.</span>
+<span class="Comment">% asynchronous left rules</span>
+<span class="Comment">%Type equalC                  cert -&gt; cert -&gt; prop.</span>
+<span class="Statement">Type</span> oneC                    cert <span class="Special">-&gt;</span> cert <span class="Special">-&gt;</span> <span class="Type">prop</span><span class="Special">.</span>
+<span class="Statement">Type</span> tensorC                 cert <span class="Special">-&gt;</span> cert <span class="Special">-&gt;</span> <span class="Type">prop</span><span class="Special">.</span>
+<span class="Statement">Type</span> zeroC                   cert <span class="Special">-&gt;</span> cert <span class="Special">-&gt;</span> <span class="Type">prop</span><span class="Special">.</span>
+<span class="Comment">%Type oplusC          cert -&gt; cert -&gt; cert -&gt; prop.</span>
+<span class="Statement">Type</span> someC            cert <span class="Special">-&gt;</span> <span class="Statement">(</span>i <span class="Special">-&gt;</span> cert<span class="Statement">)</span> <span class="Special">-&gt;</span> <span class="Type">prop</span><span class="Special">.</span>
+<span class="Comment">%Type mu_unfoldC              cert -&gt; cert -&gt; prop.</span>
+<span class="Statement">Type</span> mu0_invarC  cert <span class="Special">-&gt;</span> cert <span class="Special">-&gt;</span>            cert  <span class="Special">-&gt;</span>            bool  <span class="Special">-&gt;</span> <span class="Type">prop</span><span class="Special">.</span>
+<span class="Statement">Type</span> mu1_invarC  cert <span class="Special">-&gt;</span> cert <span class="Special">-&gt;</span> <span class="Statement">(</span>i <span class="Special">-&gt;</span>      cert<span class="Statement">)</span> <span class="Special">-&gt;</span> <span class="Statement">(</span>i <span class="Special">-&gt;</span>      bool<span class="Statement">)</span> <span class="Special">-&gt;</span> <span class="Type">prop</span><span class="Special">.</span>
+<span class="Statement">Type</span> mu2_invarC  cert <span class="Special">-&gt;</span> cert <span class="Special">-&gt;</span> <span class="Statement">(</span>i <span class="Special">-&gt;</span> i <span class="Special">-&gt;</span> cert<span class="Statement">)</span> <span class="Special">-&gt;</span> <span class="Statement">(</span>i <span class="Special">-&gt;</span> i <span class="Special">-&gt;</span> bool<span class="Statement">)</span> <span class="Special">-&gt;</span> <span class="Type">prop</span><span class="Special">.</span>
+<span class="Statement">Type</span> freezeL                 cert <span class="Special">-&gt;</span> cert <span class="Special">-&gt;</span> <span class="Type">prop</span><span class="Special">.</span>
+<span class="Statement">Type</span> switchL                 cert <span class="Special">-&gt;</span> cert <span class="Special">-&gt;</span> <span class="Type">prop</span><span class="Special">.</span>
+
+
+<span class="Comment">% Structure of proof certificates</span>
+<span class="Statement">Type</span> decsim     cert<span class="Special">.</span>
+<span class="Comment">% Use the provided information to make (synchronous) choices.</span>
+<span class="Comment">%Type p          list i -&gt; cert.</span>
+<span class="Comment">% Just do blind unfolding and search.</span>
+<span class="Comment">%Type go         cert.</span>
+
+
+<span class="Comment">% The following are used, therefore defined.</span>
+<span class="Comment">% synchronous right rules</span>
+<span class="Statement">Define</span> oplusE <span class="Special">:</span> cert <span class="Special">-&gt;</span> cert <span class="Special">-&gt;</span> choice <span class="Special">-&gt;</span> <span class="Type">prop</span> <span class="Statement">by</span>
+  oplusE <span class="Identifier">Cert</span> <span class="Identifier">Cert</span> <span class="Identifier">Cert</span><span class="Special">.</span>
+<span class="Statement">Define</span> someE <span class="Special">:</span> cert <span class="Special">-&gt;</span> cert <span class="Special">-&gt;</span> i <span class="Special">-&gt;</span> <span class="Type">prop</span> <span class="Statement">by</span>
+  someE <span class="Identifier">Cert</span> <span class="Identifier">Cert</span> <span class="Identifier">T</span><span class="Special">.</span>
+<span class="Comment">% synchronous left rules</span>
+<span class="Comment">% asynchronous right rules</span>
+<span class="Statement">Define</span> impC <span class="Special">:</span> cert <span class="Special">-&gt;</span> cert <span class="Special">-&gt;</span> <span class="Type">prop</span> <span class="Statement">by</span>
+  impC decsim decsim<span class="Special">.</span>
+<span class="Statement">Define</span> allC <span class="Special">:</span> cert <span class="Special">-&gt;</span> <span class="Statement">(</span>i <span class="Special">-&gt;</span> cert<span class="Statement">)</span> <span class="Special">-&gt;</span> <span class="Type">prop</span> <span class="Statement">by</span>
+  allC decsim <span class="Statement">(</span>x<span class="Statement">\</span> decsim<span class="Statement">)</span><span class="Special">.</span>
+<span class="Statement">Define</span> nu_unfoldC <span class="Special">:</span> cert <span class="Special">-&gt;</span> cert <span class="Special">-&gt;</span> <span class="Type">prop</span> <span class="Statement">by</span>
+  nu_unfoldC decsim decsim<span class="Special">.</span>
+<span class="Statement">Define</span> switchR <span class="Special">:</span> cert <span class="Special">-&gt;</span> cert <span class="Special">-&gt;</span> <span class="Type">prop</span> <span class="Statement">by</span>
+  switchR decsim decsim<span class="Special">.</span>
+<span class="Comment">% asynchronous left rules</span>
+<span class="Statement">Define</span> equalC <span class="Special">:</span> cert <span class="Special">-&gt;</span> cert <span class="Special">-&gt;</span> <span class="Type">prop</span> <span class="Statement">by</span>
+  equalC decsim decsim<span class="Special">.</span>
+<span class="Statement">Define</span> oplusC <span class="Special">:</span> cert <span class="Special">-&gt;</span> cert <span class="Special">-&gt;</span> cert <span class="Special">-&gt;</span> <span class="Type">prop</span> <span class="Statement">by</span>
+  oplusC decsim decsim decsim<span class="Special">.</span>
+<span class="Statement">Define</span> mu_unfoldC <span class="Special">:</span> cert <span class="Special">-&gt;</span> cert <span class="Special">-&gt;</span> <span class="Type">prop</span> <span class="Statement">by</span>
+  mu_unfoldC decsim decsim<span class="Special">.</span>
+
+<span class="Comment">% si ça marche tout de suite (pas de successeurs pour le premier):</span>
+<span class="Comment">%   asyncL</span>
+<span class="Comment">%     nu_unfoldC</span>
+<span class="Comment">%     allC</span>
+<span class="Comment">%     impC</span>
+<span class="Comment">%   asyncR</span>
+<span class="Comment">%     mu_unfoldC</span>
+<span class="Comment">%     oplusC</span>

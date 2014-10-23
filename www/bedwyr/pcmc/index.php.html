@@ -1,0 +1,114 @@
+<?php
+function inc($file){
+?>
+    <figure>
+      <figcaption>
+      <?=$file?>
+      [<a class="view"><span>view</span><span style="display:none;">hide</span></a>,
+      <a class="view" href="<?=$file?>">get</a>]
+      </figcaption>
+      <pre style="display: none;" class='vimCodeElement'>
+<?php include($file.'.html')?>
+      </pre>
+    </figure>
+<?php
+}
+?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+  <head>
+    <title>Bedwyr</title>
+    <link href="../../slimmer.css" rel="stylesheet" type="text/css"/>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+    <style>
+a.view { color: grey; text-decoration: none }
+.vimCodeElement { overflow-x: auto; white-space: pre; font-family: monospace; color: #ffffff; background-color: #000000; padding: 1em; }
+.vimCodeElement * { font-size: 1em; }
+.vimCodeElement .Comment { color: #626262; }
+.vimCodeElement .Special { color: #ffd787; }
+.vimCodeElement .PreProc { color: #d7afaf; }
+.vimCodeElement .String { color: #5fffaf; background-color: #000000; padding-bottom: 1px; }
+.Identifier { color: #5fafd7; font-weight: bold; }
+.Statement { color: #5fd75f; font-weight: bold; }
+.Type { color: #d787ff; font-weight: bold; }
+    </style>
+    <script src="http://code.jquery.com/jquery-2.1.1.min.js"></script>
+    <script>
+$(function(){
+  $('.vimCodeElement').parent().find('figcaption>a:first-child').click(function(){
+    $(this).children().toggle();
+    $(this).parent().parent().find('pre.vimCodeElement').toggle(500);
+  });
+});
+    </script>
+  </head>
+
+  <body>
+    <h1>Bedwyr:<br/>
+      Proof certificates for model checking
+    </h1>
+
+    <p>This page provides examples illustrating the framework presented
+    in the paper
+    <a href="http://www.lix.polytechnique.fr/~dale/papers/pcmc-draft.pdf">A
+      framework for proof certificates in model checking</a>.
+    Each example demonstrates the use of one FPC
+    (<em>foundational proof certificate</em>).</p>
+
+    <p>The definition files (usually <code>*.def</code> or
+    <code>*.thm</code>) can be run with the
+    <a href="../#download">Bedwyr system</a>, for example with the
+    command <code>bedwyr -t -I harness-XXX.thm</code>.
+
+
+    <h2>Harness</h2>
+
+    A harness loads
+    <ul>
+      <li>the core of the framework (<code>logic.thm</code>,
+        <code>cert-sig.thm</code> and, especially,
+        <code>kernel.thm</code>)</li>
+      <li>the modular part of the framework (<code>*-fpc.thm</code>)</li>
+      <li>definitions tu run as examples (<code>*-examples.thm</code>)</li>
+    </ul>
+    The order is important: as there are no separate signature files,
+    the FPC must be loaded between the logic and the kernel.
+    {{harness-generic.thm}}
+
+    For simplicity reasons, the logic only uses abstraction on one type,
+    <code>i</code>, and Bedwyr's polymorphism is unused; these may change
+    in future versions of the framework.
+<?php inc('logic.thm')?>
+<?php inc('cert-sig.thm')?>
+
+    The file <code>clerks-experts.thm</code> contains the signature of
+    FPCs: constants are used instead of (defined) predicates for clerks
+    and experts.  It is only a starting point for new FPCs.
+<?php inc('clerks-experts.thm')?>
+
+    The kernel is a direct implementation of the inference rules.  The
+    simple settings chosen ("switchable formulas") allows to avoid using
+    an explicit implication rule, except in the case of unification.
+<?php inc('kernel.thm')?>
+
+
+    <h2>Examples</h2>
+
+    <h3>Reachability</h3>
+
+<?php inc('reachable-fpc.thm')?>
+<?php inc('harness-reachable.thm')?>
+
+    <h3>Non-reachability</h3>
+
+<?php inc('unreachable-fpc.thm')?>
+<?php inc('harness-unreachable.thm')?>
+
+    <!--h3>Simulation</h3>
+
+    <h3>Non-bisimilarity</h3-->
+
+    <p>Last modifed: October 2014.</p>
+  </body>
+</html>

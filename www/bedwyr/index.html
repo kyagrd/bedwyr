@@ -8,13 +8,14 @@
   </head>
 
   <body>
-    <h1> Bedwyr:<br/>
+    <h1>Bedwyr:<br/>
       A proof search  approach to model checking
     </h1>
 
+
     <h2>Overview</h2>
 
-    <p class="body">
+    <p>
     Bedwyr is a generalization of logic programming that allows model
     checking directly on syntactic expression possibly containing
     bindings.
@@ -97,6 +98,7 @@
     Foundation.
     </p>
 
+
     <h2 id="download">Download</h2>
 
     <p>The latest stablish release is version 1.4-alpha17 (September 2014).</p>
@@ -109,11 +111,11 @@
       href="https://gforge.inria.fr/scm/viewvc.php/trunk/bedwyr/?root=slimmer">
       browse the repository</a>, especially the <a
       href="https://gforge.inria.fr/scm/viewvc.php/trunk/bedwyr/examples/?root=slimmer">
-      examples</a>.</p>
+      example files</a>.</p>
     <p>The sources are currently known to not work on OSX or BSD.</p>
 
     <h3>Binaries &amp; Tarballs</h3>
-    <p>Some tarballs are available for all
+    <p>Some tarballs are available for some
     <a href="https://gforge.inria.fr/frs/?group_id=367">past releases</a>.
     They contain the files needed to build the programs and the documentation,
     but lack the files needed by maintainers.
@@ -178,6 +180,13 @@
     <p>[<a href="doc/libref/">html</a>]</p-->
 
 
+    <h2 id="examples">Examples</h2>
+
+    <ul>
+      <li><a href="pcmc/">Proof certificates for model checking</a></li>
+    </ul>
+
+
     <h2 id="links">Links</h2>
 
     <h3>Publications: the Bedwyr system and underlying theory</h3>
@@ -214,10 +223,12 @@
     <h3>Publications: Applications of Bedwyr</h3>
 
     <ol>
-      <li> <em>Model checking for pi-calculus using proof search</em> by
-      Alwen Tiu. In Proceedings of CONCUR 2005, LNCS Vol. 3653, pages 36 -
-      50, Springer-Verlag, 2005. (<a
-        href="http://users.cecs.anu.edu.au/~tiu/mcpi.pdf">pdf</a>).  </li>
+      <li>
+        <em>A framework for proof certificates in model checking</em>,
+        by Quentin Heath and Dale Miller.  (<a
+        href="http://www.lix.polytechnique.fr/~dale/papers/pcmc-draft.pdf">draft</a>
+        dated 17 October 2014)
+      </li>
 
       <li>
       <em>Proof Search Specifications of Bisimulation and Modal Logics for
@@ -228,11 +239,16 @@
         href="http://www.lix.polytechnique.fr/Labo/Dale.Miller/papers/tiu09tocl.pdf">pdf</a>,
       <a href="http://arxiv.org/abs/0805.2785">arXiv</a>)
       </li>
+
+      <li> <em>Model checking for pi-calculus using proof search</em> by
+      Alwen Tiu. In Proceedings of CONCUR 2005, LNCS Vol. 3653, pages 36 -
+      50, Springer-Verlag, 2005. (<a
+        href="http://users.cecs.anu.edu.au/~tiu/mcpi.pdf">pdf</a>).  </li>
     </ol>
 
     <hr/>
 
-    <p>Last modifed: June 2013.</p>
+    <p>Last modifed: October 2014.</p>
 
     <script src="http://www.google-analytics.com/urchin.js"
       type="text/javascript">

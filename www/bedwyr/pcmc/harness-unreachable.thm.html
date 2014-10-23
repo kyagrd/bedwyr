@@ -1,0 +1,12 @@
+<span class="Comment">% Harness for loading and testing an FPC for non-reachability in a graph</span>
+
+<span class="PreProc">#include</span> <span class="String">&quot;logic.thm&quot;</span><span class="Special">.</span>           <span class="Comment">% Syntax of a simple first-order logic</span>
+<span class="PreProc">#include</span> <span class="String">&quot;cert-sig.thm&quot;</span><span class="Special">.</span>        <span class="Comment">% Declarations for certificates</span>
+<span class="PreProc">#include</span> <span class="String">&quot;unreachable-fpc.thm&quot;</span><span class="Special">.</span> <span class="Comment">% Actual FPC</span>
+<span class="PreProc">#include</span> <span class="String">&quot;kernel.thm&quot;</span><span class="Special">.</span>          <span class="Comment">% Main kernel definition</span>
+<span class="PreProc">#include</span> <span class="String">&quot;unreachable-examples.thm&quot;</span><span class="Special">.</span> <span class="Comment">% Examples and queries for testing</span>
+
+<span class="PreProc">#assert</span>               unreachable negonly       d a<span class="Special">.</span>
+<span class="PreProc">#assert</span>     inv1 <span class="Identifier">S</span> <span class="Statement">/\</span> unreachable <span class="Statement">(</span>invariant <span class="Identifier">S</span><span class="Statement">)</span> d a<span class="Special">.</span>
+<span class="Comment">%#assert               unreachable negonly       a d. % loops infinitely</span>
+<span class="PreProc">#assert</span>     inv2 <span class="Identifier">S</span> <span class="Statement">/\</span> unreachable <span class="Statement">(</span>invariant <span class="Identifier">S</span><span class="Statement">)</span> a d<span class="Special">.</span>

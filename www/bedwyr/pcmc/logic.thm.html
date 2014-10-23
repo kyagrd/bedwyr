@@ -1,0 +1,57 @@
+<span class="Comment">%  Logic for checking.  A first-order linear logic.</span>
+<span class="Comment">%</span>
+<span class="Comment">%  C.f. &quot;A framework for proof certificates in model checking&quot;,</span>
+<span class="Comment">%  §4, &quot;A proof system underlying model checking&quot;</span>
+<span class="Comment">%</span>
+<span class="Comment">%    No exponentials are explicit but they are in the background</span>
+<span class="Comment">%    for the maintance of some zones.</span>
+
+<span class="Statement">Kind</span>   bool<span class="Special">,</span> i    <span class="Type">type</span><span class="Special">.</span>
+
+<span class="Statement">Type</span> tensor<span class="Special">,</span> aand<span class="Special">,</span> oplus<span class="Special">,</span> imp   bool <span class="Special">-&gt;</span> bool <span class="Special">-&gt;</span> bool<span class="Special">.</span>
+<span class="Statement">Type</span> top<span class="Special">,</span> bot<span class="Special">,</span> one<span class="Special">,</span> zero        bool<span class="Special">.</span>
+<span class="Statement">Type</span> all<span class="Special">,</span> some                  <span class="Statement">(</span>i <span class="Special">-&gt;</span> bool<span class="Statement">)</span> <span class="Special">-&gt;</span> bool<span class="Special">.</span>
+<span class="Statement">Type</span> eq<span class="Special">,</span> neq                    i <span class="Special">-&gt;</span> i <span class="Special">-&gt;</span> bool<span class="Special">.</span>
+<span class="Statement">Type</span> mu0<span class="Special">,</span> nu0                   <span class="Statement">(</span>bool <span class="Special">-&gt;</span> bool<span class="Statement">)</span> <span class="Special">-&gt;</span> bool<span class="Special">.</span>
+<span class="Statement">Type</span> mu1<span class="Special">,</span> nu1                   <span class="Statement">((</span>i <span class="Special">-&gt;</span> bool<span class="Statement">)</span> <span class="Special">-&gt;</span> i <span class="Special">-&gt;</span> bool<span class="Statement">)</span> <span class="Special">-&gt;</span> i <span class="Special">-&gt;</span> bool<span class="Special">.</span>
+<span class="Statement">Type</span> mu2<span class="Special">,</span> nu2                   <span class="Statement">((</span>i <span class="Special">-&gt;</span> i <span class="Special">-&gt;</span> bool<span class="Statement">)</span> <span class="Special">-&gt;</span> i <span class="Special">-&gt;</span> i <span class="Special">-&gt;</span> bool<span class="Statement">)</span> <span class="Special">-&gt;</span> i <span class="Special">-&gt;</span> i <span class="Special">-&gt;</span> bool<span class="Special">.</span>
+
+<span class="Statement">Define</span> negative <span class="Special">:</span> bool <span class="Special">-&gt;</span> <span class="Type">prop</span> <span class="Statement">by</span>
+  negative top <span class="Special">;</span> negative <span class="Statement">(</span>aand <span class="Identifier">A</span> <span class="Identifier">B</span><span class="Statement">)</span> <span class="Special">;</span>
+  negative bot <span class="Special">;</span> negative <span class="Statement">(</span>imp <span class="Identifier">A</span> <span class="Identifier">B</span><span class="Statement">)</span> <span class="Special">;</span>
+  negative <span class="Statement">(</span>all <span class="Identifier">B</span><span class="Statement">)</span> <span class="Special">;</span> negative <span class="Statement">(</span>neq <span class="Identifier">T</span> <span class="Identifier">S</span><span class="Statement">)</span> <span class="Special">;</span>
+  negative <span class="Statement">(</span>nu0 <span class="Identifier">B</span><span class="Statement">)</span> <span class="Special">;</span> negative <span class="Statement">(</span>nu1 <span class="Identifier">B</span> <span class="Identifier">T</span><span class="Statement">)</span> <span class="Special">;</span> negative <span class="Statement">(</span>nu2 <span class="Identifier">B</span> <span class="Identifier">T</span> <span class="Identifier">S</span><span class="Statement">)</span><span class="Special">.</span>
+
+<span class="Statement">Define</span> positive <span class="Special">:</span> bool <span class="Special">-&gt;</span> <span class="Type">prop</span> <span class="Statement">by</span>
+  positive one <span class="Special">;</span> positive <span class="Statement">(</span>tensor <span class="Identifier">A</span> <span class="Identifier">B</span><span class="Statement">)</span> <span class="Special">;</span>
+  positive zero <span class="Special">;</span> positive <span class="Statement">(</span>oplus <span class="Identifier">A</span> <span class="Identifier">B</span><span class="Statement">)</span> <span class="Special">;</span>
+  positive <span class="Statement">(</span>some <span class="Identifier">B</span><span class="Statement">)</span> <span class="Special">;</span> positive <span class="Statement">(</span>eq <span class="Identifier">T</span> <span class="Identifier">S</span><span class="Statement">)</span> <span class="Special">;</span>
+  positive <span class="Statement">(</span>mu0 <span class="Identifier">B</span><span class="Statement">)</span> <span class="Special">;</span> positive <span class="Statement">(</span>mu1 <span class="Identifier">B</span> <span class="Identifier">T</span><span class="Statement">)</span> <span class="Special">;</span> positive <span class="Statement">(</span>mu2 <span class="Identifier">B</span> <span class="Identifier">T</span> <span class="Identifier">S</span><span class="Statement">)</span><span class="Special">.</span>
+
+<span class="Comment">% The following code can be used to encode and treat mu and nu &quot;atoms&quot;</span>
+
+<span class="Statement">Define</span> mu_atom <span class="Special">:</span> bool <span class="Special">-&gt;</span> <span class="Type">prop</span> <span class="Statement">by</span>
+  mu_atom <span class="Statement">(</span>mu0 <span class="Identifier">B</span><span class="Statement">)</span> <span class="Special">;</span>
+  mu_atom <span class="Statement">(</span>mu1 <span class="Identifier">B</span> <span class="Identifier">T</span><span class="Statement">)</span> <span class="Special">;</span>
+  mu_atom <span class="Statement">(</span>mu2 <span class="Identifier">B</span> <span class="Identifier">T</span> <span class="Identifier">S</span><span class="Statement">)</span><span class="Special">.</span>
+
+<span class="Statement">Define</span> mu_unfold <span class="Special">:</span> bool <span class="Special">-&gt;</span> bool <span class="Special">-&gt;</span> <span class="Type">prop</span> <span class="Statement">by</span>
+  mu_unfold <span class="Statement">(</span>mu0 <span class="Identifier">B</span><span class="Statement">)</span>     <span class="Statement">(</span><span class="Identifier">B</span> <span class="Statement">(</span>mu0 <span class="Identifier">B</span><span class="Statement">))</span> <span class="Special">;</span>
+  mu_unfold <span class="Statement">(</span>mu1 <span class="Identifier">B</span> <span class="Identifier">T</span><span class="Statement">)</span>   <span class="Statement">(</span><span class="Identifier">B</span> <span class="Statement">(</span>mu1 <span class="Identifier">B</span><span class="Statement">)</span> <span class="Identifier">T</span><span class="Statement">)</span> <span class="Special">;</span>
+  mu_unfold <span class="Statement">(</span>mu2 <span class="Identifier">B</span> <span class="Identifier">T</span> <span class="Identifier">S</span><span class="Statement">)</span> <span class="Statement">(</span><span class="Identifier">B</span> <span class="Statement">(</span>mu2 <span class="Identifier">B</span><span class="Statement">)</span> <span class="Identifier">T</span> <span class="Identifier">S</span><span class="Statement">)</span><span class="Special">.</span>
+
+<span class="Statement">Define</span> nu_atom <span class="Special">:</span> bool <span class="Special">-&gt;</span> <span class="Type">prop</span> <span class="Statement">by</span>
+  nu_atom <span class="Statement">(</span>nu0 <span class="Identifier">B</span><span class="Statement">)</span> <span class="Special">;</span>
+  nu_atom <span class="Statement">(</span>nu1 <span class="Identifier">B</span> <span class="Identifier">T</span><span class="Statement">)</span> <span class="Special">;</span>
+  nu_atom <span class="Statement">(</span>nu2 <span class="Identifier">B</span> <span class="Identifier">T</span> <span class="Identifier">S</span><span class="Statement">)</span><span class="Special">.</span>
+
+<span class="Statement">Define</span> nu_unfold <span class="Special">:</span> bool <span class="Special">-&gt;</span> bool <span class="Special">-&gt;</span> <span class="Type">prop</span> <span class="Statement">by</span>
+  nu_unfold <span class="Statement">(</span>nu0 <span class="Identifier">B</span><span class="Statement">)</span>     <span class="Statement">(</span><span class="Identifier">B</span> <span class="Statement">(</span>nu0 <span class="Identifier">B</span><span class="Statement">))</span> <span class="Special">;</span>
+  nu_unfold <span class="Statement">(</span>nu1 <span class="Identifier">B</span> <span class="Identifier">T</span><span class="Statement">)</span>   <span class="Statement">(</span><span class="Identifier">B</span> <span class="Statement">(</span>nu1 <span class="Identifier">B</span><span class="Statement">)</span> <span class="Identifier">T</span><span class="Statement">)</span> <span class="Special">;</span>
+  nu_unfold <span class="Statement">(</span>nu2 <span class="Identifier">B</span> <span class="Identifier">T</span> <span class="Identifier">S</span><span class="Statement">)</span> <span class="Statement">(</span><span class="Identifier">B</span> <span class="Statement">(</span>nu2 <span class="Identifier">B</span><span class="Statement">)</span> <span class="Identifier">T</span> <span class="Identifier">S</span><span class="Statement">)</span><span class="Special">.</span>
+
+<span class="Comment">% Introduce pairing.  The logical expression</span>
+<span class="Comment">%   (tensor (eq A B) (eq C D)) can be replaced with</span>
+<span class="Comment">%   (eq (pr A C) (pr B D)).</span>
+
+<span class="Statement">Type</span> pr       i <span class="Special">-&gt;</span> i <span class="Special">-&gt;</span> i<span class="Special">.</span>
