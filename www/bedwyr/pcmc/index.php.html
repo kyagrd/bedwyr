@@ -77,7 +77,7 @@ $(function(){
     </ul>
     As there are no separate signature files, the order is important:
     the FPC must be loaded between the logic and the kernel.
-<?php inc('harness-generic.thm')?>
+<?php inc('generic-harness.thm')?>
 
     For simplicity reasons, the logic only uses abstraction on one type,
     <code>i</code>, and Bedwyr's polymorphism is unused; these details
@@ -85,11 +85,11 @@ $(function(){
 <?php inc('logic.thm')?>
 <?php inc('cert-sig.thm')?>
 
-    The file <code>clerks-experts.thm</code> contains the signature of
+    The file <code>generic-fpc.thm</code> contains the signature of
     FPCs: it contains constants instead of (defined) predicates for
     clerks and experts.  It is only a starting point for writting new
     FPCs.
-<?php inc('clerks-experts.thm')?>
+<?php inc('generic-fpc.thm')?>
 
     The kernel is a direct implementation of the inference rules.
     Thanks to the simple settings chosen ("switchable formulas"), the
@@ -104,19 +104,28 @@ $(function(){
     <h3>Reachability</h3>
 
 <?php inc('reachable-fpc.thm')?>
-<?php inc('harness-reachable.thm')?>
+<?php inc('adj.thm')?>
+<?php inc('reachable-examples.thm')?>
+<?php inc('reachable-harness.thm')?>
 
     <h3>Non-reachability</h3>
 
 <?php inc('unreachable-fpc.thm')?>
-<?php inc('harness-unreachable.thm')?>
+<?php inc('unreachable-examples.thm')?>
+<?php inc('unreachable-harness.thm')?>
 
     <h3>Simulation</h3>
 
 <?php inc('sim-fpc.thm')?>
-<?php inc('harness-sim.thm')?>
+<?php inc('lts.thm')?>
+<?php inc('sim-examples.thm')?>
+<?php inc('sim-harness.thm')?>
 
-    <!--h3>Non-bisimilarity</h3-->
+    <h3>Non-bisimilarity</h3>
+
+<?php inc('nonsim-fpc.thm')?>
+<?php inc('nonsim-examples.thm')?>
+<?php inc('nonsim-harness.thm')?>
 
     <p>Last modifed: October 2014.</p>
   </body>
