@@ -1,0 +1,300 @@
+<!-- Creator     : groff version 1.22.2 -->
+<!-- CreationDate: Fri Nov 14 14:41:37 2014 -->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+"http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta name="generator" content="groff -Thtml, see www.gnu.org">
+<meta http-equiv="Content-Type" content="text/html; charset=US-ASCII">
+<meta name="Content-Style" content="text/css">
+<style type="text/css">
+       p       { margin-top: 0; margin-bottom: 0; vertical-align: top }
+       pre     { margin-top: 0; margin-bottom: 0; vertical-align: top }
+       table   { margin-top: 0; margin-bottom: 0; vertical-align: top }
+       h1      { text-align: center }
+</style>
+<title></title>
+</head>
+<body>
+
+<hr>
+
+
+<p>BEDWYR(1) User&rsquo;s Reference Manual BEDWYR(1)</p>
+
+<p style="margin-top: 1em"><b>NAME</b></p>
+
+<p style="margin-left:6%;"><b>bedwyr</b>,
+<b>bedwyr.byte</b>, <b>bedwyr.native</b> &mdash; the
+not-so-sound logician</p>
+
+<p style="margin-top: 1em"><b>SYNOPSIS</b></p>
+
+<p style="margin-left:6%;"><b>bedwyr</b> [<b>&minus;I</b>]
+[<b>&minus;t</b>] [<b>&minus;&minus;strict</b>]
+[<b>&minus;&minus;filter</b>]
+[<b>&minus;d&nbsp;</b><i>command</i>]
+[<b>&minus;e&nbsp;</b><i>query</i>]
+[<b>&minus;&minus;freezing&nbsp;</b><i>fp</i>]
+[<b>&minus;&minus;saturation&nbsp;</b><i>sp</i>]
+[<b>&minus;&minus;version</b>] [<b>&minus;D</b>]
+[<b>&minus;help&nbsp;</b>|&nbsp;<b>&minus;&minus;help</b>]
+[<i>file&nbsp;...</i>]</p>
+
+<p style="margin-top: 1em"><b>DESCRIPTION</b></p>
+
+<p style="margin-left:6%;">Bedwyr is a tabled logic
+programming system for the Level-0/1 fragment of the Linc
+logic.</p>
+
+<p style="margin-left:6%; margin-top: 1em">It is based on
+Tiu&rsquo;s Level-0/1, and Nadathur &amp; Linell&rsquo;s
+LLambda library. For background on the system, see</p>
+
+<p>Alwen Tiu , <br>
+Gopalan Nadathur , and <br>
+Dale Miller , <i><br>
+Mixing Finite Success and Finite Failure in an Automated
+Prover</i> , <br>
+
+http://www.lix.polytechnique.fr/Labo/Dale.Miller/papers/eshol05.pdf
+.</p>
+
+<p style="margin-left:6%; margin-top: 1em">Webpage:
+<i>http://slimmer.gforge.inria.fr/bedwyr/</i>.</p>
+
+<p style="margin-left:6%; margin-top: 1em">When invoked as
+<b>bedwyr</b> the fastest available binary is used (i.e.
+<b>bedwyr.native</b> if present; otherwise,
+<b>bedwyr.byte</b>).</p>
+
+<p style="margin-top: 1em"><b>OPTIONS <br>
+&minus;I</b></p>
+
+<p style="margin-left:22%; margin-top: 1em">Do not enter
+interactive mode.</p>
+
+<p style="margin-top: 1em"><b>&minus;t</b></p>
+
+<p style="margin-left:22%; margin-top: 1em">Run tests in
+definition files. Those are the queries given by
+<b>#assert</b> <i>form</i><b>.</b> (see
+<i>META-COMMANDS</i>). <i>Use once for top-level definition
+files only,</i> twice for included definition files too.</p>
+
+<p style="margin-top: 1em"><b>&minus;&minus;strict</b></p>
+
+<p style="margin-left:22%; margin-top: 1em">Quit at the
+first non-interactive error. If not set, <b>bedwyr</b>
+won&rsquo;t exit on non-interactive errors (except for
+critical errors of status <i>5</i>, see <i>EXIT STATUS</i>)
+but will exit at the end of the non-interactive stage with
+the exit status of the first non-interactive error (this is
+useful to typecheck a whole file at once).</p>
+
+<p style="margin-top: 1em"><b>&minus;&minus;filter</b></p>
+
+<p style="margin-left:22%; margin-top: 1em">Use tabling
+with variables. If not set, only strict matches are
+used.</p>
+
+<p style="margin-top: 1em"><b>&minus;d</b>
+<i>command</i></p>
+
+<p style="margin-left:22%; margin-top: 1em">Run
+<i>command</i> (declaration of definition, see <i>INPUT
+FILES</i>). Multiple commands can be given. They are run
+after all the input files are read, and before executing
+queries.</p>
+
+<p style="margin-top: 1em"><b>&minus;e</b> <i>query</i></p>
+
+<p style="margin-left:22%; margin-top: 1em">Execute
+<i>query</i> (see <i>TOPLEVEL QUERIES</i>). Multiple queries
+can be given. They are executed after all the commands are
+run, and before entering the interactive loop.</p>
+
+<p style="margin-top: 1em"><b>&minus;&minus;freezing</b>
+<i>fp</i></p>
+
+<p style="margin-left:22%;">Enable backward chaining and
+set its limit (the so-called <i>freezing-point</i>) to
+<i>fp</i>. Setting it to 0 (the default value) disables
+backward chaining, setting it to &minus;1 allows for
+infinite chaining (usually not a smart idea). The value 1
+should be a good compromise.</p>
+
+<p style="margin-top: 1em"><b>&minus;&minus;saturation</b>
+<i>sp</i></p>
+
+<p style="margin-left:22%;">Enable forward chaining and set
+its limit (the so-called <i>saturation-point</i>) to
+<i>sp</i>. Setting it to 0 (the default value) disables
+forward chaining, setting it to &minus;1 allows infinite
+chaining and therefore actual saturation of the table wrt
+the theorem.</p>
+
+
+<p style="margin-top: 1em"><b>&minus;&minus;version</b></p>
+
+<p style="margin-left:22%; margin-top: 1em">Display version
+information and a list of compiled features.</p>
+
+<p style="margin-top: 1em"><b>&minus;D</b></p>
+
+<p style="margin-left:22%; margin-top: 1em">Print debugging
+information on stderr. Can be enabled/disabled at run-time
+with <b>#debug</b>.</p>
+
+<p style="margin-top: 1em"><b>&minus;help</b>,
+<b>&minus;&minus;help</b></p>
+
+<p style="margin-left:22%;">Display the list of
+command-line options.</p>
+
+<p style="margin-top: 1em"><b>EXIT STATUS</b></p>
+
+<p style="margin-left:6%;">The <b>bedwyr</b> utility
+exits&nbsp;0 on success, and&nbsp;&gt;0 if an error
+occurs.</p>
+
+<p style="margin-top: 1em"><i>1</i></p>
+
+<p style="margin-left:22%; margin-top: 1em">Input error
+(base syntax error, type error)</p>
+
+<p style="margin-top: 1em"><i>2</i></p>
+
+<p style="margin-left:22%; margin-top: 1em">Definition
+error (wrong declaration, wrong definition or object
+misuse)</p>
+
+<p style="margin-top: 1em"><i>3</i></p>
+
+<p style="margin-left:22%; margin-top: 1em">Core error
+(LLambda violation)</p>
+
+<p style="margin-top: 1em"><i>4</i></p>
+
+<p style="margin-left:22%; margin-top: 1em">Solver error
+(failed assertion, Level 0/1 violation)</p>
+
+<p style="margin-top: 1em"><i>5</i></p>
+
+<p style="margin-left:22%; margin-top: 1em">Generic error
+(undefined error)</p>
+
+<p style="margin-top: 1em"><b>INPUT FILES</b></p>
+
+<p style="margin-left:6%;">A definition file can contain
+any meta-command (see <i>META-COMMANDS</i>), in addition to
+any of the following commands.</p>
+
+<p style="margin-left:6%; margin-top: 1em"><b>Type
+declaration</b></p>
+
+<p><b>Kind</b> <i>list</i> <b>type &minus;&gt;
+type.</b></p>
+
+<p style="margin-left:22%;"><i>nat</i>, <i>string</i> and
+<i>prop</i> are built in, and <i>list</i> is
+predeclared.</p>
+
+<p style="margin-left:6%; margin-top: 1em"><b>Constant
+declaration</b></p>
+
+<p><b>Type</b> <i>::</i> <b>A &minus;&gt; list A
+&minus;&gt; list A.</b></p>
+
+<p style="margin-top: 1em"><b>Type</b> <i>nil</i> <b>list
+A.</b></p>
+
+<p style="margin-left:22%;"><i>true</i> and <i>false</i>
+are built-ins of type <b>prop</b>, <i>0</i>, <i>1</i>,
+<i>...</i> and any quoted string are runtime-defined
+constants of type <b>nat</b> and <b>string</b>, and
+<i>::</i> and <i>nil</i> are predeclared.</p>
+
+<p style="margin-left:6%; margin-top: 1em"><b>Predicate
+declaration and definition</b></p>
+
+<p><b>Define</b> <i>member</i> <b>: A &minus;&gt; list A
+&minus;&gt; prop by</b> <i>member X (X :: _)</i> <b>;</b>
+<i>member X (_ :: L) := member X L</i><b>.</b></p>
+
+<p style="margin-left:22%;"><b>print</b>, <b>println</b>,
+<b>printstr</b>, <b>fprint</b>, <b>fprintln</b>,
+<b>fprintstr</b>, <b>fopen_out</b> and <b>fclose_out</b> are
+built in, <b>member</b> is predefined.</p>
+
+
+<p style="margin-left:6%; margin-top: 1em"><b>Theorems</b></p>
+
+<p><b>Theorem</b> <i>thm</i> <b>:</b> <i>forall Y, body X Y
+&minus;&gt; head X</i><b>.</b></p>
+
+<p style="margin-left:22%;">A theorem is a valid Abella
+theorem with some restrictions on its body (neither
+implication nor universal quantification).</p>
+
+<p style="margin-top: 1em"><b>TOPLEVEL QUERIES <br>
+?=</b> <i>query</i><b>.</b></p>
+
+<p style="margin-left:22%; margin-top: 1em">The query
+entered at the prompt can either be a meta-command, which is
+executed, or a formula, which is solved ( <b>bedwyr</b>
+searches for all substitutions of free variables satisfying
+<i>query</i> and offers to display them one by one).</p>
+
+<p style="margin-top: 1em"><b>bedwyr &minus;e</b> &quot;
+<i><br>
+query</i><b>.</b>&quot;</p>
+
+<p style="margin-left:22%;">Queries given via this option
+are dealt with in the exact same way.</p>
+
+<p style="margin-top: 1em"><b>META-COMMANDS</b></p>
+
+<p style="margin-left:6%;">Meta-commands can be given both
+in a file and to the toplevel.</p>
+
+<p style="margin-top: 1em"><b>#help.</b></p>
+
+<p style="margin-left:22%; margin-top: 1em">This command
+should give a starting point.</p>
+
+<p style="margin-top: 1em"><b>#exit.</b></p>
+
+<p style="margin-left:22%; margin-top: 1em">And this one,
+an ending point.</p>
+
+<p style="margin-top: 1em"><b>OUTPUT</b></p>
+
+<p style="margin-left:6%;">Non-interactive output is offerd
+by <b>#save_table</b> <i>pred</i> &quot;</p>
+
+<p><i>table.def</i> &quot;<b>.</b> or <b>#export</b> &quot;
+<i><br>
+tables.xml</i> &quot;<b>.</b>.</p>
+
+<p style="margin-top: 1em"><b>FILES</b> <br>
+/usr/local/share/bedwyr/examples/</p>
+
+<p style="margin-left:22%;">Sample input files. Most of
+them have assertions that can be checked with the
+command-line option <b>&minus;t</b>.</p>
+
+
+<p style="margin-top: 1em">/usr/local/share/bedwyr/contrib/</p>
+
+<p style="margin-left:22%;">Text-mode goodies.</p>
+
+<p style="margin-top: 1em"><b>SEE ALSO</b></p>
+
+<p style="margin-left:6%;">abella(1), tac(1), teyjus(1)</p>
+
+<p style="margin-left:6%; margin-top: 1em">Bedwyr
+v1.4-alpha18 October&nbsp;7, 2014 Bedwyr v1.4-alpha18</p>
+<hr>
+</body>
+</html>
