@@ -1,6 +1,6 @@
 RCP = rsync -vrLtOCz --delete --stats \
       --exclude /Makefile --exclude /releases/ --exclude /doc/ --exclude /log/ \
-      --exclude ".*.swp"
+      --exclude-from=./.rsync-filter --exclude ".*.swp"
 
 upload:
 	$(MAKE) -C bedwyr/pcmc

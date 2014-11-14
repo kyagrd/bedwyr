@@ -7,7 +7,7 @@ EXAMPLES=generic-harness.thm logic.thm cert-sig.thm generic-fpc.thm kernel.thm \
 
 all: $(TARGETS)
 
-index.html: index.php.html $(EXAMPLES:=.html)
+%.html: %.html.php $(EXAMPLES:=.html)
 	@php $< > $@
 
 pcpm-examples.tbz: $(EXAMPLES)
