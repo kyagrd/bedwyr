@@ -22,7 +22,11 @@ function inc($file, $hidden=true){
     <link href="../../slimmer.css" rel="stylesheet" type="text/css"/>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
     <style>
+td>figure { margin: 1em; font-size: small; }
 a.view { color: grey; text-decoration: none }
+tr>th {text-align: left; }
+tr>td>figure>figcaption {text-align: right; }
+
 .vimCodeElement { overflow-x: auto; white-space: pre; font-family: monospace; color: #ffffff; background-color: #000000; padding: 1em; }
 .vimCodeElement * { font-size: 1em; }
 .vimCodeElement .Comment { color: #626262; }
@@ -38,6 +42,13 @@ a.view { color: grey; text-decoration: none }
 $(function(){
   $('.vimCodeElement').parent().find('figcaption>a:first-child').click(function(){
     $(this).children().toggle();
+    $(this).parent().parent().children('pre.vimCodeElement').toggle(500);
+  });
+  $('th>h3>a.view:first-child').click(function(){
+    $(this).parent().parent().parent().next().find('pre.vimCodeElement:visible').each(function(){
+      $(this).prev().children().children().toggle();
+      $(this).toggle(500);
+    });
     $(this).parent().parent().find('pre.vimCodeElement').toggle(500);
   });
 });
@@ -62,7 +73,7 @@ $(function(){
     <p>The definition files (usually <code>*.def</code> or
     <code>*.thm</code>) can be run with the
     <a href="../#download">Bedwyr system</a>, for example with the
-    command <code>bedwyr -t -I harness-XXX.thm</code>.
+    command <code>bedwyr -t -I &lt;NAME&gt;-harness.thm</code>.
 
     <p>The files presented on this page are available as an archive
     (<a href="pcpm-examples.tbz">tbz</a>, <a href="pcpm-examples.zip">zip</a>).</p>
@@ -104,31 +115,91 @@ $(function(){
 
     <h2>Examples</h2>
 
-    <h3>Reachability</h3>
+    <table style="width: 100%; display: block;">
 
+      <tr>
+        <th colspan="3">
+          <h3>
+            Reachability
+            [<a class="view"><span>hide all</span></a>]
+          </h3>
+        </th>
+      </tr>
+      <tr style="vertical-align: top;">
+        <td>
 <?php inc('reachable-fpc.thm')?>
 <?php inc('adj.thm')?>
+        </td>
+        <td>
 <?php inc('reachable-examples.thm')?>
+        </td>
+        <td>
 <?php inc('reachable-harness.thm')?>
+        </td>
+      </tr>
 
-    <h3>Non-reachability</h3>
-
+      <tr>
+        <th colspan="3">
+          <h3>
+            Non-reachability
+            [<a class="view"><span>hide all</span></a>]
+          </h3>
+        </th>
+      </tr>
+      <tr style="vertical-align: top;">
+        <td>
 <?php inc('unreachable-fpc.thm')?>
+        </td>
+        <td>
 <?php inc('unreachable-examples.thm')?>
+        </td>
+        <td>
 <?php inc('unreachable-harness.thm')?>
+        </td>
+      </tr>
 
-    <h3>Simulation</h3>
-
+      <tr>
+        <th colspan="3">
+          <h3>
+            Simulation
+            [<a class="view"><span>hide all</span></a>]
+          </h3>
+        </th>
+      </tr>
+      <tr style="vertical-align: top;">
+        <td>
 <?php inc('sim-fpc.thm')?>
 <?php inc('lts.thm')?>
+        </td>
+        <td>
 <?php inc('sim-examples.thm')?>
+        </td>
+        <td>
 <?php inc('sim-harness.thm')?>
+        </td>
+      </tr>
 
-    <h3>Non-bisimilarity</h3>
-
+      <tr>
+        <th colspan="3">
+          <h3>
+            Non-(bi)simulation
+            [<a class="view"><span>hide all</span></a>]
+          </h3>
+        </th>
+      </tr>
+      <tr style="vertical-align: top;">
+        <td>
 <?php inc('nonsim-fpc.thm')?>
+        </td>
+        <td>
 <?php inc('nonsim-examples.thm')?>
+        </td>
+        <td>
 <?php inc('nonsim-harness.thm')?>
+        </td>
+      </tr>
+
+    </table>
 
     <p>Last modifed: October 2014.</p>
   </body>
