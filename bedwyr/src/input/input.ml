@@ -1,6 +1,6 @@
 (****************************************************************************)
 (* Parsing and type-checking for the Bedwyr prover                          *)
-(* Copyright (C) 2012-2013 Quentin Heath, Alwen Tiu                         *)
+(* Copyright (C) 2012-2014 Quentin Heath, Alwen Tiu                         *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -221,9 +221,10 @@ let type_check_and_translate
                 let u = Typing.unify_constraint u exty ty in
                 t,u
             | None -> (* declared object *)
-                let stratum = (if negative then stratum else None) in
+                let forbidden_stratum = (if negative then stratum else None) in
                 let t,ty =
-                  typed_declared_obj ~instantiate_head:(not head) ?stratum (p,s)
+                  typed_declared_obj
+                    ~instantiate_type:(not head) ?forbidden_stratum (p,s)
                 in
                 let u = Typing.unify_constraint u exty ty in
                 t,u

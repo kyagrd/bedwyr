@@ -1,6 +1,6 @@
 (****************************************************************************)
 (* Parsing and type-checking for the Bedwyr prover                          *)
-(* Copyright (C) 2012-2013 Quentin Heath, Alwen Tiu                         *)
+(* Copyright (C) 2012-2014 Quentin Heath, Alwen Tiu                         *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -248,7 +248,7 @@ val type_check_and_translate :
   preterm ->
   Typing.ty ->
   ((pos * string -> Term.term * Typing.ty) *
-   (instantiate_head:bool -> ?stratum:int -> pos * string -> Term.term * Typing.ty) *
+   (instantiate_type:bool -> ?forbidden_stratum:int -> pos * string -> Term.term * Typing.ty) *
    (pos * string -> Term.term * Typing.ty) *
    (pos * string -> Typing.ki)) ->
   Term.term
