@@ -227,10 +227,10 @@ exception Term_typing_error of pos * Typing.ty * Typing.ty *
   * @param free_args names of the free variables used as argument of a
   * top-level (wrt a definition) application, ie which will be
   * abstracted on, and whose type can allowed to contain [TProp]
-  * @param iter_free_types function that maps a provided action on a set
-  * of types once the type unification is done
+  * @param fold_free_types function that folds a provided action on a
+  * set of types once the type unification is done
   * @param fresh_tyinst polymorphic type instantier
-  * @return a type-checked Term.term and its type
+  * @return a list of singleton variables and a type-checked Term.term
   * @raise Invalid_pred_declaration if the target type of a predicate is
   * not [prop]
   * @raise Type_order_error if the type of a quantified or free variable
@@ -243,12 +243,17 @@ val type_check_and_translate :
   ?stratum:int ->
   head:bool ->
   free_args:string list ->
-  iter_free_types:((Term.var -> Typing.ty -> unit) -> unit) ->
+  fold_free_types:((Term.var -> Typing.ty * pos option ->
+                    (pos * string) list ->
+                    (pos * string) list) ->
+                   (pos * string) list ->
+                   (pos * string) list) ->
   fresh_tyinst:(Typing.ty -> Typing.ty) ->
   preterm ->
   Typing.ty ->
   ((pos * string -> Term.term * Typing.ty) *
-   (instantiate_type:bool -> ?forbidden_stratum:int -> pos * string -> Term.term * Typing.ty) *
+   (instantiate_type:bool -> ?forbidden_stratum:int -> pos * string ->
+    Term.term * Typing.ty) *
    (pos * string -> Term.term * Typing.ty) *
    (pos * string -> Typing.ki)) ->
-  Term.term
+  (pos * string) list * Term.term

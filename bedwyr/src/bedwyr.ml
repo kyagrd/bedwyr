@@ -197,6 +197,12 @@ let rec process ~test ?(interactive=false) parse lexbuf =
       ~interactive_fun:(fun () -> exit 5)
       ~non_interactive_fun:(fun () -> exit 5)
   in
+  let wprintf ?(p=position_lex lexbuf) f =
+    Format.fprintf
+      (if interactive then Format.std_formatter else Format.err_formatter)
+      ("@[<hov>Warning: %s@;<1 1>@[" ^^ f ^^ "@]@]@.")
+      (position_range p)
+  in
   let eprintf k ?(p=position_lex lexbuf) f =
     Format.kfprintf k
       (if interactive then Format.std_formatter else Format.err_formatter)
@@ -217,7 +223,12 @@ let rec process ~test ?(interactive=false) parse lexbuf =
           List.iter (fun s -> System.declare_const s t) l
       | Input.Def (decls,defs) ->
           let stratum = System.declare_preds decls in
-          System.add_clauses stratum defs
+          List.iter
+            (fun (p,n) ->
+               wprintf ~p
+                 "%s is a singleton variable."
+                 n)
+            (System.add_clauses stratum defs)
       | Input.Theorem thm ->
           System.add_theorem thm ;
           Parser.skip_proof Lexer.proof lexbuf

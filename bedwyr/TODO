@@ -4,3 +4,6 @@
 
 * Unification optimization for "fresh" variables: avoid occurs-check. Hopefully
   this could help a lot on the efficiency of type checking.
+
+* make "_blah" a logic variable, (like "Blah"), but remove the
+  "singleton variable" warning for it (like for "_")

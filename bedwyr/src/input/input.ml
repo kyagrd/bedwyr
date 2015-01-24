@@ -182,7 +182,7 @@ let type_check_and_translate
       ?stratum
       ~head
       ~free_args
-      ~iter_free_types
+      ~fold_free_types
       ~fresh_tyinst
       pre_term
       expected_type
@@ -324,8 +324,8 @@ let type_check_and_translate
   let p = get_pos pre_term in
   (* type-check free variables as quantified variables were, except if
    * they are bound to be abstracted *)
-  iter_free_types
-    (fun v ty ->
+  let singletons = fold_free_types
+    (fun v (ty,single_pos) singletons ->
        let n = Term.get_var_name v in
        let obj =
          if List.mem n free_args
@@ -333,5 +333,9 @@ let type_check_and_translate
          else (Typing.QuantVar (Some n))
        in
        let _ = Typing.kind_check ~obj ~p ty ~atomic_kind in
-       ()) ;
-  term
+       match single_pos with
+         | Some pos when n<>"_" -> (pos,n)::singletons
+         | _ -> singletons)
+    []
+  in
+  singletons,term
