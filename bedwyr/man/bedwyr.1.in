@@ -1,6 +1,6 @@
 .\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 .\"  Bedwyr prover                                                           "
-.\"  Copyright (C) 2012 Quentin Heath                                        "
+.\"  Copyright (C) 2012-2014 Quentin Heath                                   "
 .\"                                                                          "
 .\"  This program is free software; you can redistribute it and/or modify    "
 .\"  it under the terms of the GNU General Public License as published by    "
@@ -19,7 +19,7 @@
 .\"
 .\" @configure_input@
 .\"
-.Dd August 20, 2013
+.Dd October 7, 2014
 .Os @PACKAGE_NAME@ v@PACKAGE_VERSION@
 .Dt BEDWYR 1 URM
 .\"
@@ -86,7 +86,8 @@ Do not enter interactive mode.
 Run tests in definition files.  Those are the queries given by
 .Ic #assert Ar form Ns Ic \&.
 (see
-.Sx META-COMMANDS ) .
+.Sx META-COMMANDS ) .  Use once for top-level definition files only,
+twice for included definition files too.
 .It Fl \-strict
 Quit at the first non-interactive error. If not set,
 .Nm
@@ -184,7 +185,8 @@ is predeclared.
 .Ar true
 and
 .Ar false
-are built in,
+are built-ins of type
+.Ic prop ,
 .Ar 0 , 1 , ...
 and any quoted string are runtime-defined constants of type
 .Ic nat
