@@ -1,6 +1,6 @@
 (****************************************************************************)
 (* Bedwyr prover                                                            *)
-(* Copyright (C) 2005-2013 Baelde, Tiu, Ziegler, Gacek, Heath               *)
+(* Copyright (C) 2005-2014 Baelde, Tiu, Ziegler, Gacek, Heath               *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -36,8 +36,6 @@ let welcome_msg =
   Printf.sprintf
     "%s %s%s welcomes you.\n\
     \n\
-    Software under GPLv2, Copyright (C) 2005-2013 Slimmer project.\n\
-    \n\
     For a little help, type \"#help.\"\n"
     Config.package_name
     Config.package_version
@@ -46,8 +44,9 @@ let welcome_msg =
 
 let print_version () : unit =
   Printf.printf
-    "%s prover %s, Copyright (C) 2005-2013 Slimmer project.\n\
-    This software is under the GNU General Public License version 2.\n\
+    "%s prover %s, Copyright (C) 2005-2014 Slimmer project.\n\
+    This is free software, distributed under the GNU General Public License\n\
+    version 2.  There is NO WARRANTY, not even SOUNDNESS nor COMPLETENESS.\n\
     %s (built with OCaml %s on the %s).\n\
     Features (+/-):%s\n"
     Config.package_name
@@ -86,7 +85,7 @@ let help_msg =
   see the user guide.\n\n"
 
 let interactive = ref true
-let test        = ref false
+let test        = ref None
 let session     = ref []
 let definitions = ref []
 let queries     = ref []
@@ -95,13 +94,21 @@ let exit_status = ref None
 let strict_mode = ref false
 let clean_tables = ref true
 
+let incr_test () =
+  test := match !test with
+    | Some _ -> Some true
+    | None -> Some false
+let decr_test = function
+  | Some true -> Some true
+  | _ -> None
+
 let _ =
   Arg.parse
     (Arg.align
        [ "-I", Arg.Clear interactive,
            " Do not enter interactive mode" ;
-         "-t", Arg.Set test,
-           " Run tests in definition files" ;
+         "-t", Arg.Unit incr_test,
+           " Run tests in top-level files (use twice for included files too)" ;
          "--strict", Arg.Set strict_mode,
            " Quit at the first non-interactive error" ;
          "--filter", Arg.Set System.use_filter,
@@ -159,7 +166,7 @@ let bool_of_flag = function
   | Some "off" | Some "false" -> false
   | _ -> raise Invalid_command
 
-let rec process ?(test=false) ?(interactive=false) parse lexbuf =
+let rec process ~test ?(interactive=false) parse lexbuf =
   let flush_input () =
     Lexing.flush_input lexbuf ;
     lexbuf.Lexing.lex_curr_p <- {
@@ -437,11 +444,11 @@ and load_session () =
   System.reset_decls () ;
   Input.Typing.clear () ;
   let lexbuf = (Lexing.from_string stdlib) in
-  input_defs ~test:false lexbuf "Bedwyr::stdlib" ;
+  input_defs ~test:None lexbuf "Bedwyr::stdlib" ;
   inclfiles := [] ;
   List.iter (include_file ~test:!test) !session
 
-and include_file ?(test=false) fname =
+and include_file ~test fname =
   let cwd = Sys.getcwd () in
   let fname =
     if (Filename.is_relative fname) then
@@ -476,7 +483,7 @@ and command ~test c reset =
     | Input.Help -> Format.printf "%s" help_msg
 
     (* Session management *)
-    | Input.Include l -> List.iter include_file l
+    | Input.Include l -> List.iter (include_file ~test:(decr_test test)) l
     | Input.Reload -> load_session ()
     | Input.Session l -> session := l ; load_session ()
 
@@ -512,7 +519,7 @@ and command ~test c reset =
     (* Testing commands *)
     | Input.Assert pre_query ->
         let query = System.translate_query pre_query in
-        if test then
+        begin match test with None -> () | _ ->
           if !exit_status = None then begin
             Format.eprintf "@[<hv 2>Checking that@ %a@,...@]@."
               Pprint.pp_term query ;
@@ -520,18 +527,20 @@ and command ~test c reset =
               ~success:(fun _ _ -> ())
               ~failure:(fun () -> raise Assertion_failed)
           end
+        end
     | Input.Assert_not pre_query ->
         let query = System.translate_query pre_query in
-        if test then
+        begin match test with None -> () | _ ->
           if !exit_status = None then begin
             Format.eprintf "@[<hv 2>Checking that@ %a@ is false...@]@."
               Pprint.pp_term query ;
             Prover.prove ~level:Prover.One ~local:0 ~timestamp:0 query
               ~success:(fun _ _ -> raise Assertion_failed) ~failure:ignore
           end
+        end
     | Input.Assert_raise pre_query ->
         let query = System.translate_query pre_query in
-        if test then
+        begin match test with None -> () | _ ->
           if !exit_status = None then begin
             Format.eprintf "@[<hv 2>Checking that@ %a@ causes an error...@]@."
               Pprint.pp_term query ;
@@ -541,6 +550,7 @@ and command ~test c reset =
             with _ -> false
             then raise Assertion_failed
           end
+        end
   in
   let reset = match c with
     | Input.Include _ | Input.Reload | Input.Session _ -> ignore

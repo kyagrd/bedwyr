@@ -1,6 +1,6 @@
 (****************************************************************************)
 (* Bedwyr prover                                                            *)
-(* Copyright (C) 2005-2013 Baelde, Tiu, Ziegler, Gacek, Heath               *)
+(* Copyright (C) 2005-2014 Baelde, Tiu, Ziegler, Gacek, Heath               *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -20,9 +20,9 @@
 (** Bedwyr's main loop. *)
 
 (** Read a *.def file. *)
-val include_file : ?test:bool -> string -> unit
+val include_file : test:bool option -> string -> unit
 
 (** Read the REPL or a script.
   * @param interactive intended for the REPL,
   * gives additional error messages *)
-val input_queries : test:bool -> ?interactive:bool -> Lexing.lexbuf -> unit
+val input_queries : test:bool option -> ?interactive:bool -> Lexing.lexbuf -> unit
