@@ -1,6 +1,6 @@
 ##############################################################################
 #  Bedwyr prover                                                             #
-#  Copyright (C) 2012-2013 Quentin Heath                                     #
+#  Copyright (C) 2012-2015 Quentin Heath                                     #
 #                                                                            #
 #  This program is free software; you can redistribute it and/or modify      #
 #  it under the terms of the GNU General Public License as published by      #
@@ -27,11 +27,6 @@
 PACKAGE_TARNAME	= @PACKAGE_TARNAME@
 PACKAGE_VERSION	= @PACKAGE_VERSION@
 DIST_NAME	= $(PACKAGE_TARNAME)-$(PACKAGE_VERSION)
-ifeq ($(TARGET),)
-  TARGET_NAME	= $(PACKAGE_TARNAME)
-else
-  TARGET_NAME	= $(TARGET)
-endif
 
 SHELL		= @BASH@
 LATEX		= @LATEX@
@@ -44,11 +39,11 @@ IMAGEN		= @IMAGEN@ -png
 HACHA		= @HACHA@ -tocbis
 TAR		= @TAR@
 FIND		= @FIND@
-GZIP		= @GZIP@ -4 -f
+GZIP		= @GZIP@ -4 -f -n
 
 prefix		= @prefix@
 datarootdir	= @datarootdir@
-docdir		= $(patsubst %$(PACKAGE_TARNAME),%$(TARGET_NAME),@docdir@)
+docdir		= @docdir@
 htmldir		= @htmldir@
 pdfdir		= @pdfdir@
 psdir		= @psdir@

@@ -4,7 +4,7 @@ Upstream-Contact: @UPSTREAM_FULLNAME@ <@UPSTREAM_EMAIL@>
 Source: @PACKAGE_URL@
 
 Files: *
-Copyright: 2005-2012, Slimmer project
+Copyright: 2005-2015, Slimmer project
 License: GPL-2+
 
 License: GPL-2+

@@ -1,0 +1,28 @@
+#!/bin/sh
+#
+# finds the best way to invoke the tool
+
+if command -v bedwyr.native >/dev/null 2>&1 ; then
+  BEDWYR=bedwyr.native
+else
+  if command -v bedwyr.byte >/dev/null 2>&1 ; then
+    BEDWYR=bedwyr.byte
+  else
+    echo >&2 "bedwyr doesn't seem to be installed"
+    exit 1
+  fi
+fi
+
+WORDS="+pkgdatadir+/contrib/rlwrap/bedwyr_words"
+if [ -f "$WORDS" ] ; then
+  AUTOCOMPLETION="-b(){}[],%\"; -f$WORDS"
+else
+  AUTOCOMPLETION="-b(){}[],%\";"
+fi
+
+if command -v rlwrap >/dev/null 2>&1 ; then
+  WRAPPER="rlwrap -c -Cbedwyr -D2 -g'^(n|y)$' -m -pgreen -q'\"' $AUTOCOMPLETION"
+else
+  WRAPPER=""
+fi
+$WRAPPER $BEDWYR "$@"

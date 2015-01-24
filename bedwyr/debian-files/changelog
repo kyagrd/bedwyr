@@ -1,3 +1,9 @@
+bedwyr (1.4~alpha17-1) unstable; urgency=medium
+
+  * new upstream release
+
+ -- Quentin Heath <quentin.heath@inria.fr>  Sun, 21 Sep 2014 05:33:20 +0200
+
 bedwyr (1.4~alpha14-1) unstable; urgency=low
 
   * new upstream release

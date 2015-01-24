@@ -1,7 +1,7 @@
 bedwyr: hardening-no-relro usr/bin/bedwyr.native
-bedwyr: hardening-no-fortify-functions usr/bin/bedwyr.native
 # the description is uniform across the whole package
 bedwyr: description-synopsis-starts-with-article
 # relative links from within /usr to within /usr/.../vimfiles
 # (itself a symlink) are de facto broken
+# TODO use a dh_* designed for symlinks
 bedwyr: symlink-should-be-relative

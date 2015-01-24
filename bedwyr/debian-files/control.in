@@ -7,7 +7,7 @@ Build-Depends: ocaml-base-nox (>= 3.11.0), ocaml-findlib, libxmlm-ocaml-dev,
  bash (>= 4)
 Build-Depends-Indep: ghostscript, hevea (>= 1.10),
  texlive-latex-base (>= 2009-11), texlive-latex-extra (>= 2009-10)
-Standards-Version: 3.9.4
+Standards-Version: 3.9.6
 Homepage: @PACKAGE_URL@
 Vcs-Svn: svn://scm.gforge.inria.fr/svn/slimmer
 Vcs-Browser: https://gforge.inria.fr/scm/viewvc.php/?root=slimmer
@@ -25,10 +25,10 @@ Description: @PACKAGE_TAGLINE@
  This system, written in OCaml, is a direct implementation of
  two recent advances in the theory of proof search:
  a symmetric treatment of finite success and finite failure
- (which allows capturing both aspects of may and must behavior
- in operational semantics and mixing model checking and logic
- programming), and direct support for lambda-tree syntax,
- as in lambdaProlog, via term-level lambda-binders,
+ (which allows capturing both aspects of _may_ and _must_
+ behaviour in operational semantics, and mixing model checking
+ and logic programming), and direct support for lambda-tree
+ syntax, as in lambdaProlog, via term-level lambda-binders,
  higher-order pattern unification, and the nabla-quantifier.
 
 Package: @PACKAGE_TARNAME@-doc
@@ -57,4 +57,4 @@ Description: the not-so-useful libraries
  possibly containing bindings.
  .
  This package contains some development files built from the sources of Bedwyr
- (especially the ndcore library).
+ (especially ndcore, the term and unification library).

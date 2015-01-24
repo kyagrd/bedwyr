@@ -1,6 +1,6 @@
 ##############################################################################
 #  Bedwyr prover                                                             #
-#  Copyright (C) 2012-2013 Quentin Heath                                     #
+#  Copyright (C) 2012-2015 Quentin Heath                                     #
 #                                                                            #
 #  This program is free software; you can redistribute it and/or modify      #
 #  it under the terms of the GNU General Public License as published by      #
@@ -104,12 +104,12 @@ DESKTOP_DIR	= $(DATAROOTDIR)/applications
 SHELL		= @BASH@
 TAR		= @TAR@ -p
 FIND		= @FIND@
-GZIP		= @GZIP@ -4 -f
+GZIP		= @GZIP@ -4 -f -n
 BZIP2		= @BZIP2@ -9 -f
 OCAMLC		= @OCAMLC@
 OCAMLDEBUG	= @OCAMLDEBUG@
 OCAMLBUILD	= @OCAMLBUILD@ -use-ocamlfind -classic-display -yaccflag -v \
-		  -Xs debian,$(DEB_DIST_NAME),nsis-files,nsis-build
+		  -Xs debian,$(DEB_DIST_NAME),nsis-files,nsis-build -no-links
 OCAMLBUILDWIN32	= OCAMLFIND_CONF=@MINGW32_OCAMLFIND_CONF@ $(OCAMLBUILD)
 MINGW32_WINDRES	= @MINGW32_WINDRES@ -c0xfde9 -l0x0890
 OCAMLDOC	= @OCAMLDOC@
@@ -140,11 +140,15 @@ SLIMMER_FILES	= ChangeLog TODO
 BEDWYR_FILES	= README
 BEDWYR_LIBS	= ndcore batyping input prover
 MAN_FILES	= $(wildcard man/*.in)
+XML_CONTRIB	= bedwyr.dtd bedwyr-skeleton.xsl skeleton.css
 VIM_CONTRIB	= ftdetect/bedwyr.vim ftplugin/bedwyr.vim \
 		  indent/bedwyr.vim syntax/bedwyr.vim
 EMACS_CONTRIB	= bedwyr.el
-CONTRIB_FILES	= $(addprefix contrib/emacs/,$(EMACS_CONTRIB)) \
+CONTRIB_FILES	= contrib/rlwrap/bedwyr_words \
+		  $(addprefix contrib/xml/,$(XML_CONTRIB)) \
+		  $(addprefix contrib/emacs/,$(EMACS_CONTRIB)) \
 		  $(addprefix contrib/vim/,$(VIM_CONTRIB))
+BEDWYR_WRAPPER	= contrib/bedwyr.in
 HICOLOR_ICONS	= hicolor/16x16/apps/bedwyr.png hicolor/32x32/apps/bedwyr.png \
 		  hicolor/48x48/apps/bedwyr.png hicolor/256x256/apps/bedwyr.png
 PIXMAP_ICONS	= bedwyr_32x32.xpm
@@ -157,17 +161,21 @@ DEBIAN_FILES	= control \
 		  changelog \
 		  rules \
 		  bedwyr.install \
-		  bedwyr.lintian-overrides \
+		  bedwyr.docs \
+		  bedwyr.manpages \
 		  bedwyr.menu \
+		  bedwyr.lintian-overrides \
 		  bedwyr-doc.install \
 		  bedwyr-doc.doc-base.quickstart \
 		  bedwyr-doc.doc-base.libref \
 		  bedwyr-doc.doc-base.refman \
 		  bedwyr-doc.lintian-overrides \
 		  bedwyr-dev.install \
+		  bedwyr-dev.manpages \
 		  bedwyr-dev.lintian-overrides \
 		  watch \
 		  compat \
+		  source/lintian-overrides \
 		  source/format
 NSIS_FILES	= bedwyr.nsi EnvVarUpdate.nsh FileAssociation.nsh \
 		  bedwyr.rc $(NSIS_ICONS)
