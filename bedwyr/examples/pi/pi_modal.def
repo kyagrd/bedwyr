@@ -48,68 +48,69 @@ Type boxOut, diaOut,
 
 % A "lazy" but incomplete encoding.
 
-Define inductive sat : p -> form -> prop by
-  sat P top;
-  sat P (land A B) := sat P A /\ sat P B;
-  sat P (lor A B) := sat P A \/ sat P B;
-  sat P (boxMatch X Y A) := (X = Y) -> sat P A;
-  sat P (diaMatch X Y A) := (X = Y) /\ sat P A;
-  sat P (boxAct X A) :=
-     forall P1, one P X P1 -> sat P1 A;
-  sat P (diaAct X A) :=
-     exists P1, one P X P1 /\ sat P1 A;
-  sat P (boxOut X A) :=
-     forall Q, onep P (up X) Q -> nabla y, sat (Q y) (A y);
-  sat P (diaOut X A) :=
-     exists Q, onep P (up X) Q /\ nabla y, sat (Q y) (A y);
-  sat P (boxIn X A) :=
-     forall Q, onep P (dn X) Q -> forall y, sat (Q y) (A y);
-  sat P (diaIn X A) :=
-     exists Q, onep P (dn X) Q /\ exists y, sat (Q y) (A y);
-  sat P (boxInL X A) :=
-     forall Q, onep P (dn X) Q -> exists y, sat (Q y) (A y);
-  sat P (diaInL X A) :=
-     exists Q, onep P (dn X) Q /\ forall y, sat (Q y) (A y);
-  sat P (boxInE X A) :=
-     exists y, forall Q, onep P (dn X) Q -> sat (Q y) (A y);
-  sat P (diaInE X A) :=
-     forall y, exists Q, onep P (dn X) Q /\ sat (Q y) (A y).
+Define inductive sat : p -> form -> prop
+by sat _ top
+;  sat P (land A B) := sat P A /\ sat P B
+;  sat P (lor A B) := sat P A \/ sat P B
+;  sat P (boxMatch X Y A) := (X = Y) -> sat P A
+;  sat P (diaMatch X Y A) := (X = Y) /\ sat P A
+;  sat P (boxAct X A) :=
+     forall P1, one P X P1 -> sat P1 A
+;  sat P (diaAct X A) :=
+     exists P1, one P X P1 /\ sat P1 A
+;  sat P (boxOut X A) :=
+     forall Q, onep P (up X) Q -> nabla y, sat (Q y) (A y)
+;  sat P (diaOut X A) :=
+     exists Q, onep P (up X) Q /\ nabla y, sat (Q y) (A y)
+;  sat P (boxIn X A) :=
+     forall Q, onep P (dn X) Q -> forall y, sat (Q y) (A y)
+;  sat P (diaIn X A) :=
+     exists Q, onep P (dn X) Q /\ exists y, sat (Q y) (A y)
+;  sat P (boxInL X A) :=
+     forall Q, onep P (dn X) Q -> exists y, sat (Q y) (A y)
+;  sat P (diaInL X A) :=
+     exists Q, onep P (dn X) Q /\ forall y, sat (Q y) (A y)
+;  sat P (boxInE X A) :=
+     exists y, forall Q, onep P (dn X) Q -> sat (Q y) (A y)
+;  sat P (diaInE X A) :=
+     forall y, exists Q, onep P (dn X) Q /\ sat (Q y) (A y)
+.
 
 
 % A complete encoding: using explicit list of names.
 
-Define inductive lsat : list name -> p -> form -> prop by
-  lsat L P top;
-  lsat L P (land A B) := lsat L P A /\ lsat L P B;
-  lsat L P (lor  A B) := lsat L P A \/ lsat L P B;
-  lsat L P (boxMatch X Y A) := (X = Y) -> lsat L P A;
-  lsat L P (diaMatch X Y A) := (X = Y) /\ lsat L P A;
-  lsat L P (boxAct X A) := forall P1, one P X P1 -> lsat L P1 A;
-  lsat L P (diaAct X A) := exists P1, one P X P1 /\ lsat L P1 A;
-  lsat L P (boxOut X A) :=
-    forall Q, onep P (up X) Q -> nabla y, lsat (y :: L) (Q y) (A y);
-  lsat L P (diaOut X A) :=
-    exists Q, onep P (up X) Q /\ nabla y, lsat (y :: L) (Q y) (A y);
-  lsat L P (boxIn X A) :=
-    forall Q, onep P (dn X) Q ->
-      nabla w, forall y, (member y (w :: L) -> lsat (w :: L) (Q y) (A y));
-  lsat L P (diaIn X A) :=
-    exists Q, onep P (dn X) Q /\
-      nabla w, exists y, (member y (w :: L) /\ lsat (w :: L) (Q y) (A y));
-  lsat L P (boxInL X A) :=
-    forall Q, onep P (dn X) Q ->
-      nabla w, exists y, (member y (w :: L) /\ lsat (w :: L) (Q y) (A y));
-  lsat L P (diaInL X A) :=
-    exists Q, onep P (dn X) Q /\
-      nabla w, forall y, (member y (w :: L) -> lsat (w :: L) (Q y) (A y));
-  lsat L P (boxInE X A) :=
-    nabla w, exists y,
-      (member y (w :: L) /\
-         forall Q, onep P (dn X) Q -> lsat (w :: L) (Q y) (A y));
-  lsat L P (diaInE X A) :=
-    nabla w, forall y, member y (w :: L) ->
-      exists Q, onep P (dn X) Q /\ lsat (w :: L) (Q y) (A y).
-
+Define inductive lsat : list name -> p -> form -> prop
+by lsat _ _ top
+;  lsat L P (land A B) := lsat L P A /\ lsat L P B
+;  lsat L P (lor  A B) := lsat L P A \/ lsat L P B
+;  lsat L P (boxMatch X Y A) := (X = Y) -> lsat L P A
+;  lsat L P (diaMatch X Y A) := (X = Y) /\ lsat L P A
+;  lsat L P (boxAct X A) := forall P1, one P X P1 -> lsat L P1 A
+;  lsat L P (diaAct X A) := exists P1, one P X P1 /\ lsat L P1 A
+;  lsat L P (boxOut X A) :=
+     forall Q, onep P (up X) Q -> nabla y, lsat (y :: L) (Q y) (A y)
+;  lsat L P (diaOut X A) :=
+     exists Q, onep P (up X) Q /\ nabla y, lsat (y :: L) (Q y) (A y)
+;  lsat L P (boxIn X A) :=
+     forall Q, onep P (dn X) Q ->
+       nabla w, forall y, (member y (w :: L) -> lsat (w :: L) (Q y) (A y))
+;  lsat L P (diaIn X A) :=
+     exists Q, onep P (dn X) Q /\
+       nabla w, exists y, (member y (w :: L) /\ lsat (w :: L) (Q y) (A y))
+;  lsat L P (boxInL X A) :=
+     forall Q, onep P (dn X) Q ->
+       nabla w, exists y, (member y (w :: L) /\ lsat (w :: L) (Q y) (A y))
+;  lsat L P (diaInL X A) :=
+     exists Q, onep P (dn X) Q /\
+       nabla w, forall y, (member y (w :: L) -> lsat (w :: L) (Q y) (A y))
+;  lsat L P (boxInE X A) :=
+     nabla w, exists y,
+     (member y (w :: L) /\
+      forall Q, onep P (dn X) Q -> lsat (w :: L) (Q y) (A y))
+;  lsat L P (diaInE X A) :=
+     nabla w, forall y, member y (w :: L) ->
+       exists Q, onep P (dn X) Q /\ lsat (w :: L) (Q y) (A y)
+.
 
 % Some examples ===============================================================
 

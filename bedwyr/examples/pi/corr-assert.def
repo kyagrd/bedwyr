@@ -92,37 +92,38 @@ by
 
 % traces
 
-Define trace : p -> p -> prop by
-  trace P stop;
-  trace P (begin L T) :=
-    one P (bgn L) Q /\ trace Q T;
-  trace P ($end L T) :=
-    one P (nd L) Q /\ trace Q T;
-  trace P T :=
-    one P tau Q /\ trace Q T;
-  trace P T :=
-    one P (up X Y) Q /\ trace Q T;
-  trace P T :=
-    onep P (dn X) Q /\ exists y, trace (Q y) T;
-  trace P (nu x\ T x) :=
-    onep P (up X) Q /\ nabla x, trace (Q x) (T x);
-  trace P (nu x\ begin x (T x)) :=
-    onep P bgn Q /\
-    nabla x, trace (Q x) (T x);
-  trace P (nu x\ $end x (T x)) :=
-    onep P nd Q /\
-    nabla x, trace (Q x) (T x).
+Define trace : p -> p -> prop
+by trace _ stop
+;  trace P (begin L T) :=
+     one P (bgn L) Q /\ trace Q T
+;  trace P ($end L T) :=
+     one P (nd L) Q /\ trace Q T
+;  trace P T :=
+     one P tau Q /\ trace Q T
+;  trace P T :=
+     one P (up _ _) Q /\ trace Q T
+;  trace P T :=
+     onep P (dn _) Q /\ exists y, trace (Q y) T
+;  trace P (nu x\ T x) :=
+     onep P (up _) Q /\ nabla x, trace (Q x) (T x)
+;  trace P (nu x\ begin x (T x)) :=
+     onep P bgn Q /\
+     nabla x, trace (Q x) (T x)
+;  trace P (nu x\ $end x (T x)) :=
+     onep P nd Q /\
+     nabla x, trace (Q x) (T x)
+.
 
 #include "../list.def".
 
 % Check whether a trace is a correspondence. The list L is the accumulated
 % "begin" assertions. Use tabling to speed up proof search.
-Define inductive iscorr : list obj -> p -> prop by
-  iscorr L stop;
-  iscorr L (begin M T) := iscorr (M :: L) T;
-  iscorr L ($end M T) := remove L M L1 /\ iscorr L1 T;
-  iscorr L (nu x\(T x)) := nabla x, iscorr L (T x).
-
+Define inductive iscorr : list obj -> p -> prop
+by iscorr _ stop
+;  iscorr L (begin M T) := iscorr (M :: L) T
+;  iscorr L ($end M T) := remove L M L1 /\ iscorr L1 T
+;  iscorr L (nu x\(T x)) := nabla x, iscorr L (T x)
+.
 
 Define safe : p -> prop by
   safe P :=

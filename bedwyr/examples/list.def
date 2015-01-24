@@ -7,9 +7,9 @@
 
 Define list : list _ -> prop by
   list nil;
-  list (X :: nil);
-  list (X :: Y :: nil);
-  list (X :: Y :: Z :: nil).
+  list (_ :: nil);
+  list (_ :: _ :: nil);
+  list (_ :: _ :: _ :: nil).
 
 Define append : list A -> list A -> list A -> prop by
   append nil K K;

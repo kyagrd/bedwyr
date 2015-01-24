@@ -8,10 +8,11 @@ Type done       trace.
 Type tr         a -> trace -> trace.
 Type trp        (name -> a) -> (name -> trace) -> trace.
 
-Define trace : p -> trace -> prop by
-  trace P done;
-  trace P (tr  Act Trace) := one  P Act P' /\ trace P' Trace;
-  trace P (trp Act Trace) := onep P Act P' /\ nabla x, trace (P' x) (Trace x).
+Define trace : p -> trace -> prop
+by trace _ done
+;  trace P (tr  Act Trace) := one  P Act P' /\ trace P' Trace
+;  trace P (trp Act Trace) := onep P Act P' /\ nabla x, trace (P' x) (Trace x)
+.
 
 Define trace_eq : p -> p -> prop by
   trace_eq P Q := (forall T, trace P T -> trace Q T) /\

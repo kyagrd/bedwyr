@@ -81,31 +81,30 @@ Type    church            name -> name -> ch_nat -> p.
 Type    zzz               ch_nat.
 Type    sss               ch_nat -> ch_nat.
 
-Define
-   pidef : p -> p -> prop
-by
-   pidef quiet       (nu x\ out x x z);
+Define pidef : p -> p -> prop
+by pidef quiet       (nu x\ out x x z)
 % The follow define processes related to arithmetic
-   pidef (zero C)    (in C s\ in C n\ out n null z);
-   pidef (suc P C)   (in C s\ in C n\ out s P z);
-   pidef (add P Q R) (nu s\ nu n\ out P s (out P n
+;  pidef (zero C)    (in C s\ in C n\ out n null z)
+;  pidef (suc P C)   (in C s\ in C n\ out s P z)
+;  pidef (add P Q R) (nu s\ nu n\ out P s (out P n
                      (in R ss\ in R nn\
                       (plus (in s k\ nu kk\ (par (out ss kk z) (add k Q kk)))
-                            (in n null\ out Q ss (out Q nn z))))));
-   pidef (num (s N) C) (in C s\ in C zz\ nu n\ par (out s n z) (num N n));
-   pidef (num zz    C) (zero C);
+                            (in n null\ out Q ss (out Q nn z))))))
+;  pidef (num (s N) C) (in C s\ in C zz\ nu n\ par (out s n z) (num N n))
+;  pidef (num zz    C) (zero C)
 % The follow define processes related to encoding the lambda-calculus
-   pidef (zzero S Z)    (nu i\ out Z i z);
-   pidef (un   S Z)     (nu i\ out S i (nu i\ out Z i z));
-   pidef (deux S Z)     (nu i\ out S i (nu i\ out S i (nu i\ out Z i z)));
-   pidef (succ S Z Y W) (nu i\ out Y i (copy S Z Y W));
-   pidef (copy S Z Y W) (plus (in S i\ succ S Z Y W)
-                              (in Z i\ nu i\ out W i z));
-   pidef (ssum S1 Z1 S2 Z2 Y W)
+;  pidef (zzero _ Z)    (nu i\ out Z i z)
+;  pidef (un   S Z)     (nu i\ out S i (nu i\ out Z i z))
+;  pidef (deux S Z)     (nu i\ out S i (nu i\ out S i (nu i\ out Z i z)))
+;  pidef (succ S Z Y W) (nu i\ out Y i (copy S Z Y W))
+;  pidef (copy S Z Y W) (plus (in S i\ succ S Z Y W)
+                              (in Z i\ nu i\ out W i z))
+;  pidef (ssum S1 Z1 S2 Z2 Y W)
          (plus (in S1 i\ nu i\ out Y i (ssum S1 Z1 S2 Z2 Y W))
-               (in Z1 i\ copy S2 Z2 Y W));
-   pidef (church S Z zzz)     (nu i\ out Z i z);
-   pidef (church S Z (sss N)) (nu i\ out S i (church S Z N)).
+               (in Z1 i\ copy S2 Z2 Y W))
+;  pidef (church _ Z zzz)     (nu i\ out Z i z)
+;  pidef (church S Z (sss N)) (nu i\ out S i (church S Z N))
+.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%     One step transition rules for the pi-calculus      %%%%
@@ -114,11 +113,9 @@ by
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % bound input
-Define
-  one  :  p ->          a  ->          p  -> prop,
-  onep :  p -> (name -> a) -> (name -> p) -> prop
-by
-  onep (in X M) (dn X) M;
+Define one  :  p ->          a  ->          p  -> prop,
+       onep :  p -> (name -> a) -> (name -> p) -> prop
+by onep (in X M) (dn X) M;
 
   % free output
   one  (out X Y P) (up X Y) P;
@@ -131,10 +128,10 @@ by
   onep (match X X P) A M := onep P A M;
 
   % sum
-  one  (plus P Q) A R := one  P A R;
-  one  (plus P Q) A R := one  Q A R;
-  onep (plus P Q) A M := onep P A M;
-  onep (plus P Q) A M := onep Q A M;
+  one  (plus P _) A R := one  P A R;
+  one  (plus _ Q) A R := one  Q A R;
+  onep (plus P _) A M := onep P A M;
+  onep (plus _ Q) A M := onep Q A M;
 
   % par
   one  (par P Q) A (par P1 Q) := one P A P1;
@@ -224,9 +221,10 @@ Define taus : p -> p -> prop by
   taus P QQ := one P tau Q /\ taus Q QQ;
   taus P P.
 
-Define weak_one : p -> a -> p -> prop by
-  weak_one Q (up X Y) P := taus Q QQ /\ one QQ A PP /\ taus PP P;
-  weak_one Q tau QQ     := taus Q QQ.
+Define weak_one : p -> a -> p -> prop
+by weak_one Q (up _ _) P := taus Q QQ /\ one QQ _ PP /\ taus PP P
+;  weak_one Q tau QQ     := taus Q QQ
+.
 
 Define weak_onep : p -> (name -> a) -> (name -> p) -> prop by
   weak_onep Q (up X) P :=
