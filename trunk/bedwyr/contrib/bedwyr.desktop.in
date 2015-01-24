@@ -1,6 +1,7 @@
 [Desktop Entry]
 Name=@PACKAGE_NAME@
 GenericName=Theorem prover
+Keywords=model;checker;lprolog;logic;symbolic;induction;
 Terminal=true
 Type=Application
 Categories=Development;Science;ComputerScience;ConsoleOnly;

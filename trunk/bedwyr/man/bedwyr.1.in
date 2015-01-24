@@ -1,6 +1,6 @@
 .\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 .\"  Bedwyr prover                                                           "
-.\"  Copyright (C) 2012-2014 Quentin Heath                                   "
+.\"  Copyright (C) 2012-2015 Quentin Heath                                   "
 .\"                                                                          "
 .\"  This program is free software; you can redistribute it and/or modify    "
 .\"  it under the terms of the GNU General Public License as published by    "
@@ -19,7 +19,7 @@
 .\"
 .\" @configure_input@
 .\"
-.Dd October 7, 2014
+.Dd January 23, 2015
 .Os @PACKAGE_NAME@ v@PACKAGE_VERSION@
 .Dt BEDWYR 1 URM
 .\"
@@ -69,12 +69,9 @@ LLambda library. For background on the system, see
 Webpage:
 .Pa http://slimmer.gforge.inria.fr/bedwyr/ .
 .Pp
-When invoked as
+The wrapper
 .Nm
-the fastest available binary is used (i.e.
-.Nm Ns Nm .native
-if present; otherwise,
-.Nm Ns Nm .byte ) .
+is the preferred invocation.
 .\"
 .\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 .\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
@@ -86,8 +83,9 @@ Do not enter interactive mode.
 Run tests in definition files.  Those are the queries given by
 .Ic #assert Ar form Ns Ic \&.
 (see
-.Sx META-COMMANDS ) .  Use once for top-level definition files only,
-twice for included definition files too.
+.Sx META-COMMANDS ) .
+Use once for top-level definition files only, twice for included
+definition files too.
 .It Fl \-strict
 Quit at the first non-interactive error. If not set,
 .Nm
@@ -225,16 +223,19 @@ A theorem is a valid Abella theorem with some restrictions on its body
 .\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 .\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 .Sh TOPLEVEL QUERIES
-.Bl -tag -width Ic
-.It Ic ?= Ar query Ns Ic \&.
-The query entered at the prompt can either be a meta-command, which is
-executed, or a formula, which is solved (
-.Nm
+The toplevel input can contain any meta-command (see
+.Sx META-COMMANDS ) ,
+as well as any formula.
+In the latter case, each formula is a query which is solved
+.Ns ( Nm
 searches for all substitutions of free variables satisfying
 .Ar query
 and offers to display them one by one).
+.Bl -tag -width Ic
+.It Ic ?= Ar query Ns Ic \&.
+Interactive toplevel.
 .It Nm Fl e Qo Ar query Ns Ic \&. Qc
-Queries given via this option are dealt with in the exact same way.
+Non-interactive toplevel.
 .El
 .\"
 .\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""

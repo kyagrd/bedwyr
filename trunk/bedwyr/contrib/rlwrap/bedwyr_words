@@ -1,0 +1,15 @@
+#exit #help #include #reset #reload #session #debug #time #equivariant
+#freezing #saturation #env #typeof #show_def #show_table #clear_tables
+#clear_table #save_table #export #assert #assert_not #assert_raise
+
+Kind Type Define Theorem Qed
+
+inductive coinductive by
+
+type prop string nat forall exists nabla true false
+
+-> =
+
+: := ; , .  ()
+
+/\ \/ \

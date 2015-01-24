@@ -1,6 +1,6 @@
 ##############################################################################
 #  Bedwyr prover                                                             #
-#  Copyright (C) 2012-2014 Quentin Heath                                     #
+#  Copyright (C) 2012-2015 Quentin Heath                                     #
 #                                                                            #
 #  This program is free software; you can redistribute it and/or modify      #
 #  it under the terms of the GNU General Public License as published by      #
@@ -21,7 +21,7 @@ m4_define([M4_VERSION_MAJOR],1)
 m4_define([M4_VERSION_MINOR],4)
 m4_define([M4_VERSION_PATCH],0)
 m4_define([M4_VERSION_BUILD],0)
-m4_define([M4_VERSION_DEV],alpha18)
+m4_define([M4_VERSION_DEV],alpha19)
 m4_define([M4_VERSION1],[M4_VERSION_MAJOR.M4_VERSION_MINOR])
 m4_define([M4_VERSION2],m4_if(M4_VERSION_PATCH,0,
           [M4_VERSION1],[M4_VERSION1.M4_VERSION_PATCH]))
@@ -109,7 +109,6 @@ if test "X$enable_win32" = Xyes ; then
 	BIN_SUFFIXES="$BIN_SUFFIXES $WIN32_BIN_SUFFIX"
 	BEST_SUFFIX="$WIN32_BIN_SUFFIX"
 	OCAML_VERSION=$(OCAMLFIND_CONF="$MINGW32_OCAMLFIND_CONF" "$OCAMLFIND" ocamlopt -version)
-	OCAML_WHERE=$(OCAMLFIND_CONF="$MINGW32_OCAMLFIND_CONF" "$OCAMLFIND" ocamlopt -where)
 
 	AC_PATH_PROGS(MINGW32_WINDRES,
 	              i686-w64-mingw32-windres.opt i686-w64-mingw32-windres \
@@ -132,7 +131,6 @@ if test "X$enable_bytecode" != Xno ; then
 	BIN_SUFFIXES="$BIN_SUFFIXES $BYTE_BIN_SUFFIX"
 	BEST_SUFFIX="$BYTE_BIN_SUFFIX"
 	OCAML_VERSION=$("$OCAMLC" -version)
-	OCAML_WHERE=$("$OCAMLC" -where)
 fi
 
 AC_MSG_CHECKING(if native code should be generated)
@@ -148,7 +146,6 @@ if test "X$enable_nativecode" = Xyes ; then
 	BIN_SUFFIXES="$BIN_SUFFIXES $NATIVE_BIN_SUFFIX"
 	BEST_SUFFIX="$NATIVE_BIN_SUFFIX"
 	OCAML_VERSION=$("$OCAMLOPT" -version)
-	OCAML_WHERE=$("$OCAMLOPT" -where)
 fi
 
 AS_VERSION_COMPARE([$OCAML_VERSION],[3.11],
@@ -377,6 +374,7 @@ AC_CONFIG_FILES([src/META.part],[chmod a-w src/META.part])
 AC_CONFIG_FILES([doc/Makefile],[chmod a-w doc/Makefile])
 AC_CONFIG_FILES([man/bedwyr.1],[chmod a-w man/bedwyr.1])
 AC_CONFIG_FILES([contrib/bedwyr.desktop],[chmod a-w contrib/bedwyr.desktop])
+AC_CONFIG_FILES([contrib/bedwyr],[chmod a-w+x contrib/bedwyr])
 AC_CONFIG_FILES([debian-files/control],[])
 AC_CONFIG_FILES([debian-files/copyright],[chmod a-w debian-files/copyright])
 AC_CONFIG_FILES([debian-files/bedwyr.menu],
@@ -411,7 +409,6 @@ AC_SUBST(LIB_SUFFIXES)
 AC_SUBST(BIN_SUFFIXES)
 AC_SUBST(BEST_SUFFIX)
 AC_SUBST(OCAML_VERSION)
-AC_SUBST(OCAML_WHERE)
 AC_SUBST(MINGW32_OCAMLFIND_CONF)
 
 AC_SUBST(TABLE_XML_EXPORT_MODULE_DOT)

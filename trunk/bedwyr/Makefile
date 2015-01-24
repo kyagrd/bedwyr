@@ -1,6 +1,6 @@
 ##############################################################################
 #  Bedwyr prover                                                             #
-#  Copyright (C) 2012-2013 Quentin Heath                                     #
+#  Copyright (C) 2012-2015 Quentin Heath                                     #
 #                                                                            #
 #  This program is free software; you can redistribute it and/or modify      #
 #  it under the terms of the GNU General Public License as published by      #
@@ -46,7 +46,7 @@ bedwyr_prefix	= $(BUILD)/src/bedwyr
 
 # Archived files
 
-ARCH_FILES	= $(OCAML_FILES) \
+ARCH_FILES	= $(OCAML_FILES) $(BEDWYR_WRAPPER) \
 		  $(SLIMMER_FILES) $(BEDWYR_FILES) COPYING $(MAN_FILES) \
 		  $(CONTRIB_FILES) $(DESKTOP_FILES) $(ICONS_FILES) $(EXAMPLES_FILES) \
 		  configure.ac Makefile Makefile.include.in \
@@ -56,8 +56,8 @@ BEDWYR_ARCH	= $(addprefix $(DIST_NAME).,$(ARCH_SUFFIXES))
 
 # Released files
 
-BEDWYR_BINS	= $(addprefix $(bedwyr_prefix).,$(BIN_SUFFIXES))
-MANPAGES	= $(MAN_FILES:.in=)
+BEDWYR_BINS	= $(addprefix $(bedwyr_prefix).,$(BIN_SUFFIXES)) $(BEDWYR_WRAPPER:.in=)
+MANPAGES	= $(MAN_FILES:.in=) $(foreach m,$(BIN_SUFFIXES),$(MAN_FILES:.1.in=.$m.1))
 SLIMMER_META	= src/META
 SLIMMER_LIBS	= $(foreach m,$(BEDWYR_LIBS),\
 		  $(addprefix $(BUILD)/src/$m/$m.,$(LIB_SUFFIXES)))
@@ -66,9 +66,9 @@ SLIMMER_MLIS	= $(foreach m,$(BEDWYR_LIBS),\
 ifneq ($(BEST_SUFFIX),)
   SLIMMER_CMIS	= $(addprefix $(BUILD)/,$(SLIMMER_MLIS:.mli=.cmi))
 endif
-BUILT_FILES	= $(BEDWYR_BINS) $(MANPAGES) \
+BUILT_FILES	= $(BEDWYR_BINS) $(MANPAGES) $(MANPAGES:=.html) \
 		  $(SLIMMER_META) $(SLIMMER_LIBS) $(SLIMMER_CMIS) \
-		  $(DESKTOP_FILES:.in=)
+		  $(CONTRIB_FILES:.in=) $(DESKTOP_FILES:.in=)
 
 NDCORE_MLS	= $(foreach m,$(BEDWYR_LIBS),\
 		  $(filter-out src/$m/test.ml,$(wildcard src/$m/*.ml)))
@@ -101,7 +101,7 @@ $(BUILD)/%.cmi: $(OCAML_FILES:.in=)
 $(BUILD)/%.cma: $(OCAML_FILES:.in=)
 	@$(OCAMLBUILD) $*.cma
 
-$(BUILD)/%.cmxa %.a: $(OCAML_FILES:.in=)
+$(BUILD)/%.cmxa $(BUILD)/%.a: $(OCAML_FILES:.in=)
 	@$(OCAMLBUILD) $*.cmxa
 
 $(BUILD)/%.docdir/index.html: $(OCAML_FILES:.in=) %.odocl
@@ -234,6 +234,15 @@ src.odocl: $(foreach m,$(BEDWYR_LIBS),src/$m/$m.mllib)
 	  sed -e "s|^|$$(dirname $$i)/|" -e '/Lexer\|Parser/d' $$i ; \
 	  done >> $@
 
+man/%.byte.1: man/%.1
+	@echo ".so man1/$*.1" > $@
+
+man/%.native.1: man/%.1
+	@echo ".so man1/$*.1" > $@
+
+man/%.html: man/%
+	@groff -Thtml -mandoc $< > $@
+
 #
 # INSTALL
 #
@@ -267,7 +276,6 @@ install_bedwyr: install_bedwyr_bin install_bedwyr_files \
 install_bedwyr_bin: $(BEDWYR_BINS)
 	@$(INSTALL_DIR) $(BINDIR)
 	@for i in $^ ; do $(INSTALL_BIN) $$i $(BINDIR) ; done
-	@ln -svf bedwyr.$(BEST_SUFFIX) $(BINDIR)/bedwyr
 
 install_bedwyr_files: $(BEDWYR_FILES:=.gz)
 	@$(INSTALL_DIR) $(DOCDIR)
@@ -276,11 +284,9 @@ install_bedwyr_files: $(BEDWYR_FILES:=.gz)
 install_bedwyr_man: $(MANPAGES)
 	@$(INSTALL_DIR) $(MANDIR)/man1
 	@for i in $^ ; do $(INSTALL_DATA) $$i $(MANDIR)/man1 ; done
-	@for i in $(BIN_SUFFIXES) ; do \
-	  ln -svf bedwyr.1 $(MANDIR)/man1/bedwyr.$$i.1 ; done
 
-install_bedwyr_contrib:
-	@for i in $(CONTRIB_FILES) ; do \
+install_bedwyr_contrib: $(CONTRIB_FILES:.in=)
+	@for i in $^ ; do \
 	  $(INSTALL_DATA) -D $$i $(PKGDATADIR)/$$i ; done
 ifneq ($(VIMFILES),$(DESTDIR))
 	@for i in $(VIM_CONTRIB) ; do \
@@ -457,8 +463,8 @@ clean: doc/Makefile mostlyclean
 	@$(MAKE) -C $$(dirname $<) clean
 	@$(MAKE) -C examples/ccs_vp/timing clean
 	@rm -vf $(SLIMMER_META)
-	@rm -vf *.bz2 *.gz *.tar *.tbz *.tgz *.odocl $(MANPAGES)
-	@rm -vf *.build *.changes *.dsc *.deb *-installer.exe
+	@rm -vf *.bz2 *.gz *.tar *.tbz *.tgz *.odocl $(MANPAGES) $(MANPAGES:=.html)
+	@rm -vf *.debian.tar.xz *.build *.changes *.dsc *.deb *-installer.exe
 	@rm -rvf $(DEB_DIST_NAME) nsis-build
 
 distclean: doc/Makefile clean
