@@ -20,9 +20,10 @@ Type    abs     (term -> term) -> term.
 
 % Typing environment ==========================================================
 
-Define ty : env -> name -> ty -> prop by
-  ty (bind A T E) A T;
-  ty (bind A B E) X T := ty E X T.
+Define ty : env -> name -> ty -> prop
+by ty (bind A T _) A T
+;  ty (bind _ _ E) X T := ty E X T
+.
 
 % Adding a (A = X -> false) guard to the second clause would avoid
 % unnecessary searches, but would make the definition invalid in Level 0.

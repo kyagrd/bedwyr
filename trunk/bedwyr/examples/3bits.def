@@ -4,30 +4,45 @@ Type    ff,tt   bool.
 
 % Boolean operators
 
-Define bool : bool -> prop by
-  bool X := X = ff \/ X = tt.
-Define xor : bool -> bool -> bool -> prop by
-  xor X Y Z := (X = Y /\ Z = ff) \/ (X = ff /\ Y = Z) \/ (X = Z /\ Y = ff).
-Define or : bool -> bool -> bool -> prop by
-  or  X Y Z := (Z = tt /\ (X = tt \/ Y = tt)) \/ (Z = ff /\ X = ff /\ Y = ff).
-Define and : bool -> bool -> bool -> prop by
-  and X Y Z := (X = tt /\ Y = tt /\ Z = tt) \/ (Z = ff /\ (X = ff \/ Y = ff)).
+Define bool : bool -> prop
+by bool ff
+;  bool tt
+.
+Define xor : bool -> bool -> bool -> prop
+by xor X X ff
+;  xor ff X X
+;  xor X ff X
+.
+Define or : bool -> bool -> bool -> prop
+by or ff ff ff
+;  or tt _  tt
+;  or _  tt tt
+.
+Define and : bool -> bool -> bool -> prop
+by and tt tt tt
+;  and ff _  ff
+;  and _  ff ff
+.
 
 % Addition on 3bit integers
 
-Define simple_add : bool -> bool -> bool -> bool -> prop by
-  simple_add A B R C := xor A B R /\ and A B C.
+Define simple_add : bool -> bool -> bool -> bool -> prop
+by simple_add A B R C := xor A B R /\ and A B C.
 
-Define full_add : bool -> bool -> bool -> bool -> bool -> prop by
-  full_add A B Cin R Cout :=
-  xor A B X /\ xor X Cin R /\
-  and X Cin C1 /\ and A B C2 /\ or C1 C2 Cout.
+Define full_add : bool -> bool -> bool -> bool -> bool -> prop
+by full_add A B Cin R Cout :=
+  simple_add A B X C1 /\
+  simple_add X Cin R C2 /\
+  or C1 C2 Cout
+.
 
-Define $3add : bool -> bool -> bool -> bool -> bool -> bool -> bool -> bool -> bool -> prop by
-  $3add X2 X1 X0 Y2 Y1 Y0 Z2 Z1 Z0 :=
+Define add3 : bool -> bool -> bool ->
+              bool -> bool -> bool ->
+              bool -> bool -> bool -> prop
+by add3 X2 X1 X0 Y2 Y1 Y0 Z2 Z1 Z0 :=
   simple_add X0 Y0 Z0 C1 /\
   full_add X1 Y1 C1 Z1 C2 /\
-  full_add X2 Y2 C2 Z2 C3.
+  full_add X2 Y2 C2 Z2 _.
 
 % Addition modulo 8. No other way to do this for now..
 % {{{
@@ -101,18 +116,18 @@ Define add : nat -> nat -> nat -> prop by
 
 % Conversion from 3bit to integer
 
-Define convert : bool -> bool -> bool -> nat -> prop by
-  convert Z Y X N :=
-    ((X = tt /\ A = 1) \/ (X = ff /\ A = 0)) /\
-    ((Y = tt /\ B = 2) \/ (Y = ff /\ B = 0)) /\
-    ((Z = tt /\ C = 4) \/ (Z = ff /\ C = 0)) /\
-    add A B R /\ add R C N.
+Define convert : bool -> bool -> bool -> nat -> prop
+by convert Z Y X N :=
+  ((X = tt /\ A = 1) \/ (X = ff /\ A = 0)) /\
+  ((Y = tt /\ B = 2) \/ (Y = ff /\ B = 0)) /\
+  ((Z = tt /\ C = 4) \/ (Z = ff /\ C = 0)) /\
+  add A B R /\ add R C N.
 
-% Check that $3add is the same as add, up to convert
+% Check that add3 is the same as add, up to convert
 
 Define valid : bool -> bool -> bool -> bool -> bool -> bool -> prop by
   valid X Y Z A B C :=
-    $3add X Y Z A B C P Q R /\
+    add3 X Y Z A B C P Q R /\
     convert X Y Z XYZ /\
     convert A B C ABC /\
     convert P Q R PQR /\

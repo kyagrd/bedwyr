@@ -1,6 +1,6 @@
 (****************************************************************************)
 (* Bedwyr prover                                                            *)
-(* Copyright (C) 2005-2014 Baelde, Tiu, Ziegler, Heath                      *)
+(* Copyright (C) 2005-2015 Baelde, Tiu, Ziegler, Heath                      *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -445,7 +445,7 @@ let add_def_clause stratum (p,pre_head,pre_body) =
   in
   let def = Norm.hnorm def in
   x.definition <- def ;
-  singletons
+  (List.rev singletons)
 
 (* returns the list of singleton variables of the clause *)
 let add_clauses stratum clauses =

@@ -43,15 +43,16 @@ Define symmetries : list cell -> list cell -> prop by
 
 % winner Player Board
 % True if Player has won on the Board
-Define winner : cell -> list cell -> prop by
-  winner W (W :: W :: W :: A :: B :: C :: D :: E :: F :: nil);
-  winner W (A :: B :: C :: W :: W :: W :: D :: E :: F :: nil);
-  winner W (A :: B :: C :: D :: E :: F :: W :: W :: W :: nil);
-  winner W (W :: A :: B :: W :: C :: D :: W :: E :: F :: nil);
-  winner W (A :: W :: B :: C :: W :: D :: E :: W :: F :: nil);
-  winner W (A :: B :: W :: C :: D :: W :: E :: F :: W :: nil);
-  winner W (W :: A :: B :: C :: W :: D :: E :: F :: W :: nil);
-  winner W (A :: B :: W :: C :: W :: D :: W :: E :: F :: nil).
+Define winner : cell -> list cell -> prop
+by winner W (W :: W :: W :: _ :: _ :: _ :: _ :: _ :: _ :: nil)
+;  winner W (_ :: _ :: _ :: W :: W :: W :: _ :: _ :: _ :: nil)
+;  winner W (_ :: _ :: _ :: _ :: _ :: _ :: W :: W :: W :: nil)
+;  winner W (W :: _ :: _ :: W :: _ :: _ :: W :: _ :: _ :: nil)
+;  winner W (_ :: W :: _ :: _ :: W :: _ :: _ :: W :: _ :: nil)
+;  winner W (_ :: _ :: W :: _ :: _ :: W :: _ :: _ :: W :: nil)
+;  winner W (W :: _ :: _ :: _ :: W :: _ :: _ :: _ :: W :: nil)
+;  winner W (_ :: _ :: W :: _ :: W :: _ :: W :: _ :: _ :: nil)
+.
 
 Theorem winner_symmetries :
   symmetries List List' /\ winner W List -> winner W List'.% TODO proof
@@ -120,16 +121,18 @@ Qed.
 % Given a board, the computer attempts to make a move in a winning
 % strategy. If this is not possible, it attempts to make a move in a
 % non-losing strategy. If this is not possible, it just makes some move.
-Define play_to_win : list cell -> list cell -> prop by
-  play_to_win L K := winner o K \/ somemove K /\ forall M, move K x M -> owins M.
+Define play_to_win : list cell -> prop
+by play_to_win K :=
+  winner o K \/ somemove K /\ forall M, move K x M -> owins M.
 
-Define play_to_tie : list cell -> list cell -> prop by
-  play_to_tie L K := tie K \/ forall M, move K x M -> notxwins M.
+Define play_to_tie : list cell -> prop
+by play_to_tie K :=
+  tie K \/ forall M, move K x M -> notxwins M.
 
 Define play : board -> prop by
   play L' := convert L L' /\ nowinner L /\ exists K,
-      ((move L o K /\ play_to_win L K /\ printstr "Playing to win...\n") \/
-       (move L o K /\ play_to_tie L K /\ printstr "Playing to tie...\n") \/
+      ((move L o K /\ play_to_win K /\ printstr "Playing to win...\n") \/
+       (move L o K /\ play_to_tie K /\ printstr "Playing to tie...\n") \/
        (move L o K /\ printstr "Playing to lose...\n")) /\
       convert K K' /\ println K'.
 

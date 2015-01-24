@@ -1,6 +1,6 @@
 (****************************************************************************)
 (* Bedwyr prover                                                            *)
-(* Copyright (C) 2005-2014 Baelde, Tiu, Ziegler, Gacek, Heath               *)
+(* Copyright (C) 2005-2015 Baelde, Tiu, Ziegler, Gacek, Heath               *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -44,7 +44,7 @@ let welcome_msg =
 
 let print_version () : unit =
   Printf.printf
-    "%s prover %s, Copyright (C) 2005-2014 Slimmer project.\n\
+    "%s prover %s, Copyright (C) 2005-2015 Slimmer project.\n\
     This is free software, distributed under the GNU General Public License\n\
     version 2.  There is NO WARRANTY, not even SOUNDNESS nor COMPLETENESS.\n\
     %s (built with OCaml %s on the %s).\n\
@@ -228,7 +228,7 @@ let rec process ~test ?(interactive=false) parse lexbuf =
                wprintf ~p
                  "%s is a singleton variable."
                  n)
-            (System.add_clauses stratum defs)
+            (List.rev (System.add_clauses stratum defs))
       | Input.Theorem thm ->
           System.add_theorem thm ;
           Parser.skip_proof Lexer.proof lexbuf

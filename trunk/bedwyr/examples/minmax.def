@@ -8,9 +8,10 @@ Define a : nat -> prop by
   a (s (s (s (s (s z)))));
   a (s (s z)).
 
-Define leq : nat -> nat -> prop by
-  leq z N;
-  leq (s N) (s M) := leq N M.
+Define leq : nat -> nat -> prop
+by leq z _
+;  leq (s N) (s M) := leq N M
+.
 
 % Now decide the maximum of a given predicate.  In the first-order
 % setting we could write just:
@@ -27,8 +28,10 @@ Define max : (nat -> prop) -> nat -> prop by
 % Bedwyr, because max isn't suitable for the left prover as it already
 % contains an implication.
 
-Define minmax : (nat -> nat -> prop) -> nat -> prop by
-  minmax B N := max (B I) N /\ forall j m, max (B j) m -> (j = I \/ leq N M).
+Define minmax : (nat -> nat -> prop) -> nat -> prop
+by minmax B N :=
+  max (B I) N /\ forall J M, max (B J) M -> (J = I \/ leq N M)
+.
 
 Define b : nat -> nat -> prop by
   b z (s (s (s z)));

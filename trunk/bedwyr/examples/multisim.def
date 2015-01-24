@@ -55,22 +55,23 @@ Define accepts : state -> prop by
 %
 % The lists should be sorted, the relation should be functional AND TOTAL.
 
-Define steps : state -> label -> list state -> prop by
-  steps even z (accept :: nil);
-  steps even s (odd :: nil);
-  steps odd  s (even :: nil);
-  steps odd  z nil;
-  steps $nat z (accept :: nil);
-  steps $nat s ($nat :: nil);
-  steps accept X nil;
-  steps half   z (accept :: nil);
-  steps half   s (half_s :: is_z :: nil);
-  steps is_z   z (accept :: nil);
-  steps is_z   s nil;
-  steps half_s z nil;
-  steps half_s s (half :: nil);
-  steps loop   s (loop :: nil);
-  steps loop   z (loop :: nil).
+Define steps : state -> label -> list state -> prop
+by steps accept _ nil
+;  steps even   z (accept :: nil)
+;  steps odd    z nil
+;  steps $nat   z (accept :: nil)
+;  steps half   z (accept :: nil)
+;  steps is_z   z (accept :: nil)
+;  steps half_s z nil
+;  steps loop   z (loop :: nil)
+;  steps even   s (odd :: nil)
+;  steps odd    s (even :: nil)
+;  steps $nat   s ($nat :: nil)
+;  steps half   s (half_s :: is_z :: nil)
+;  steps is_z   s nil
+;  steps half_s s (half :: nil)
+;  steps loop   s (loop :: nil)
+.
 
 % Non-deterministic version of steps.
 
@@ -79,15 +80,17 @@ Define step : state -> label -> state -> prop by
 
 % Extension of acceptance and transitions to sets of states.
 
-Define multi_steps : list state -> label -> list state -> prop by
-  multi_steps nil A nil;
-  multi_steps (Q :: S) A L'' :=
-    steps Q A L /\ multi_steps S A L' /\ union L L' L''.
+Define multi_steps : list state -> label -> list state -> prop
+by multi_steps nil _ nil
+;  multi_steps (Q :: S) A L'' :=
+  steps Q A L /\ multi_steps S A L' /\ union L L' L''
+.
 
-Define subset : list state -> list state -> prop by
-  subset nil nil;
-  subset L (A :: L') := subset L L';
-  subset (A :: L) (A :: L') := subset L L'.
+Define subset : list A -> list A -> prop
+by subset nil nil
+;  subset L (_ :: L') := subset L L'
+;  subset (A :: L) (A :: L') := subset L L'
+.
 
 Define multi_step : list state -> label -> list state -> prop by
   multi_step X A Y := multi_steps X A X' /\ subset Y X'.
