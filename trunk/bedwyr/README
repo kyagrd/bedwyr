@@ -62,7 +62,7 @@ the core libraries as well as the complete program.
 
 For proper compilation and installation, a Linux environment and the
 following packages are required:
-- OCaml (3.11 or later)
+- OCaml (3.11 or later) and findlib (often packaged as ocaml-findlib)
 - autotools (at least autoconf-2.60) and GNU make
 - bash, tar, gzip, bzip2 and some other standard tools
 
@@ -89,8 +89,7 @@ See doc/quickstart.(ps.gz|pdf|html) for more information on how to use
 bedwyr, doc/refman/index.html for a complete system description, and
 _build/src_docdir/index.html for the source code documentation.
 Building those files requires the "--enable-doc" configure option (which
-add some programs -- latex, hevea and Co. -- to the list of
-dependencies) and is done by the
+adds some dependencies on LaTeX, HeVeA, etc), and is done by the
   $ make doc
 command.
 

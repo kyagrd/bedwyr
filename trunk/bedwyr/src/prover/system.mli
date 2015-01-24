@@ -1,6 +1,6 @@
 (****************************************************************************)
 (* Bedwyr prover                                                            *)
-(* Copyright (C) 2005-2013 Baelde, Tiu, Ziegler, Heath                      *)
+(* Copyright (C) 2005-2014 Baelde, Tiu, Ziegler, Heath                      *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -250,9 +250,12 @@ exception Inconsistent_definition of string * Input.pos * string
 
 (** For each [(p,h,b)] of [c],
   * [add_clauses s c] adds the clause [h := b] to a definition,
-  * as long as the var of the corresponding predicate has stratum [s]. *)
+  * as long as the var of the corresponding predicate has stratum [s].
+  *
+  * @return the list of singleton variables of the clause *)
 val add_clauses :
-  int -> (Input.pos * Input.preterm * Input.preterm) list -> unit
+  int -> (Input.pos * Input.preterm * Input.preterm) list ->
+  (Input.pos * string) list
 
 (** {6 Theorem definitions} *)
 

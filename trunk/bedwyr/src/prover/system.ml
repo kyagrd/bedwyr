@@ -238,17 +238,20 @@ let translate_term
       pre_term
       free_types =
   let fresh_tyinst = Ty.get_fresh_tyinst () in
-  let iter_free_types f =
-    Hashtbl.iter f free_types
+  let fold_free_types f =
+    Hashtbl.fold f free_types
   in
   (* return (and create if needed) a typed variable
    * corresponding to the name of a free variable *)
-  let typed_free_var (_,name) =
+  let typed_free_var (p,name) =
     let was_free = Term.is_free name in
     let t = Term.atom ~tag:Term.Logic name in
     let v = Term.get_var t in
-    try t,(Hashtbl.find free_types v)
-    with Not_found ->
+    try begin
+      let ty,_ = Hashtbl.find free_types v in
+      Hashtbl.replace free_types v (ty,None) ;
+      t,ty
+    end with Not_found ->
       let t,v =
         if was_free then t,v else begin
           Term.free name ;
@@ -261,7 +264,7 @@ let translate_term
         end
       in
       let ty = Ty.fresh_tyvar () in
-      Hashtbl.add free_types v ty ;
+      Hashtbl.add free_types v (ty,Some p) ;
       t,ty
   in
   (* return a typed variable corresponding to the name
@@ -304,17 +307,17 @@ let translate_term
     ?stratum
     ~head
     ~free_args
-    ~iter_free_types
+    ~fold_free_types
     ~fresh_tyinst
     pre_term
     expected_type
     (typed_free_var,typed_declared_obj,typed_intern_pred,atomic_kind)
 
 let translate_query pre_term =
-  let free_types : (Term.var,Ty.ty) Hashtbl.t =
+  let free_types : (Term.var,(Ty.ty*Ty.pos option)) Hashtbl.t =
     Hashtbl.create 10
   in
-  let term = translate_term pre_term free_types in term
+  let _,term = translate_term pre_term free_types in term
 
 (* Replace the params by fresh variables and
  * put the constraints on the parameters in the body:
@@ -402,17 +405,18 @@ let mk_def_clause p head body =
   in
   mk_clause pred params body
 
+(* returns the list of singleton variables of the clause *)
 let add_def_clause stratum (p,pre_head,pre_body) =
-  let free_types : (Term.var,Ty.ty) Hashtbl.t =
+  let free_types : (Term.var,(Ty.ty*Ty.pos option)) Hashtbl.t =
     Hashtbl.create 10
   in
   let free_args = Input.free_args pre_head in
   (* XXX what about stratum in theorems? *)
-  let head =
+  let _,head =
     translate_term ~stratum ~free_args ~head:true
       pre_head free_types
   in
-  let body =
+  let singletons,body =
     translate_term ~stratum ~free_args
       pre_body free_types
   in
@@ -440,10 +444,15 @@ let add_def_clause stratum (p,pre_head,pre_body) =
       | _ -> assert false
   in
   let def = Norm.hnorm def in
-  x.definition <- def
+  x.definition <- def ;
+  singletons
 
+(* returns the list of singleton variables of the clause *)
 let add_clauses stratum clauses =
-  List.iter (add_def_clause stratum) clauses
+  List.fold_left
+    (fun singletons clause ->
+       List.rev_append (add_def_clause stratum clause) singletons)
+    [] clauses
 
 
 (* Theorem definitions *)
@@ -527,10 +536,10 @@ let add_theorem_clause p (pred,arity,body) =
         x.theorem <- th
 
 let add_theorem (p,n,pre_theorem) =
-  let free_types : (Term.var,Ty.ty) Hashtbl.t =
+  let free_types : (Term.var,(Ty.ty*Ty.pos option)) Hashtbl.t =
     Hashtbl.create 10
   in
-  let theorem = translate_term pre_theorem free_types in
+  let _,theorem = translate_term pre_theorem free_types in
   let clauses = mk_theorem_clauses (p,n) theorem in
   List.iter (add_theorem_clause p) clauses
 
@@ -635,11 +644,11 @@ let print_env () =
   print_predicates ()
 
 let get_types pre_term =
-  let free_types : (Term.var,Ty.ty) Hashtbl.t =
+  let free_types : (Term.var,(Ty.ty*Ty.pos option)) Hashtbl.t =
     Hashtbl.create 10
   in
   let ty = Ty.fresh_tyvar () in
-  let t = translate_term ~expected_type:ty pre_term free_types in
+  let _,t = translate_term ~expected_type:ty pre_term free_types in
   t,ty,free_types
 
 let print_type_of pre_term =
@@ -649,8 +658,8 @@ let print_type_of pre_term =
     Pprint.pp_term t
     pp_type ty ;
   Hashtbl.iter
-    (fun v ty -> Format.printf "@,@[%s :@;<1 2>%a@]"
-                   (Term.get_var_name v) pp_type ty)
+    (fun v (ty,_) -> Format.printf "@,@[%s :@;<1 2>%a@]"
+                       (Term.get_var_name v) pp_type ty)
     free_types ;
   Format.printf "@]@."
 

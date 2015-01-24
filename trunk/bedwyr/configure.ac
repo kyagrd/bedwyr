@@ -1,6 +1,6 @@
 ##############################################################################
 #  Bedwyr prover                                                             #
-#  Copyright (C) 2012-2013 Quentin Heath                                     #
+#  Copyright (C) 2012-2014 Quentin Heath                                     #
 #                                                                            #
 #  This program is free software; you can redistribute it and/or modify      #
 #  it under the terms of the GNU General Public License as published by      #
@@ -21,7 +21,7 @@ m4_define([M4_VERSION_MAJOR],1)
 m4_define([M4_VERSION_MINOR],4)
 m4_define([M4_VERSION_PATCH],0)
 m4_define([M4_VERSION_BUILD],0)
-m4_define([M4_VERSION_DEV],alpha17)
+m4_define([M4_VERSION_DEV],alpha18)
 m4_define([M4_VERSION1],[M4_VERSION_MAJOR.M4_VERSION_MINOR])
 m4_define([M4_VERSION2],m4_if(M4_VERSION_PATCH,0,
           [M4_VERSION1],[M4_VERSION1.M4_VERSION_PATCH]))
