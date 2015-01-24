@@ -1,6 +1,6 @@
 (****************************************************************************)
 (* Bedwyr prover                                                            *)
-(* Copyright (C) 2005-2013 Baelde, Tiu, Ziegler, Heath                      *)
+(* Copyright (C) 2005-2014 Baelde, Tiu, Ziegler, Heath                      *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -266,14 +266,14 @@ let translate_term
   in
   (* return a typed variable corresponding to the name
    * of a constant (predefined or not) or a predicate *)
-  let typed_declared_obj ~instantiate_head ?stratum (p,name) =
+  let typed_declared_obj ~instantiate_type ?forbidden_stratum (p,name) =
     let t = Term.atom ~tag:Term.Constant name in
     let v = Term.get_var t in
     let ty =
       try match Hashtbl.find decls v with
         | Constant ty -> ty
         | Predicate {stratum=stratum';ty=ty} ->
-            if stratum=(Some stratum') then
+            if forbidden_stratum=(Some stratum') then
               raise (Stratification_error (name,p))
             else ty
       with Not_found ->
@@ -284,7 +284,7 @@ let translate_term
             raise (Missing_declaration (name,Some p))
           end
         end
-    in t,(if instantiate_head then Ty.get_fresh_tyinst () ty else ty)
+    in t,(if instantiate_type then Ty.get_fresh_tyinst () ty else ty)
   in
   (* return a typed variable corresponding to the name
    * of an internal constant *)
@@ -321,37 +321,37 @@ let translate_query pre_term =
  *     pred [params] := body
  *     d X X (f X Y) := g X Y Z
  * --> d X U V       := (U = X) /\ ((V = (f X Y)) /\ (g X Y Z))
- * --> d X U V       := forall Z Y, (U = X) /\ ((V = (f X Y)) /\ (g X Y Z))
+ * --> d X U V       := exists Z Y, (U = X) /\ ((V = (f X Y)) /\ (g X Y Z))
  * --> d == \\\ Exists\\ #4=#5 /\ (#3=(f #5 #1) /\ (g #5 #1 #2))
  *)
 let mk_clause pred params body =
   (* pred       d
    * params     [X;X;(f X Y)]
-   * Create the prolog (new equalities added to the body) and the new set
-   * of variables used as parameters.
+   * Create the prologue (new equalities added to the body) and the new
+   * set of variables used as parameters.
    * A parameter can be left untouched if it's a variable which didn't
    * occur yet. *)
-  let new_params,prolog =
+  let new_params,prologue =
     List.fold_left
-      (fun (new_params,prolog) p ->
+      (fun (new_params,prologue) p ->
          match Term.observe p with
            | Term.Var {Term.tag=Term.Logic}
                when List.for_all (fun v -> v!=p) new_params ->
-               p::new_params,prolog
+               p::new_params,prologue
            | _  ->
                let v = Term.fresh ~ts:0 ~lts:0 Term.Logic in
-               (v::new_params,(Term.op_eq v p)::prolog))
+               (v::new_params,(Term.op_eq v p)::prologue))
       ([],[])
       params
   in
   (* new_params [V;U;X]
-   * prolog     [V=(f X Y);U=X]
-   * Add prolog to the body *)
-  let body = if prolog = [] then body else
+   * prologue   [V=(f X Y);U=X]
+   * Add prologue to the body *)
+  let body = if prologue = [] then body else
     List.fold_left
       (fun acc term -> Term.op_and term acc)
       body
-      prolog
+      prologue
   in
   (* body       U=X /\ (V=(f X Y) /\ (g X Y Z))
    * Quantify existentially over the initial free variables. *)
