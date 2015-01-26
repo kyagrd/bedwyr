@@ -1,6 +1,6 @@
 (****************************************************************************)
 (* Prenex polymorphic typing                                                *)
-(* Copyright (C) 2012-2013 Andrew Gacek, Quentin Heath                      *)
+(* Copyright (C) 2012-2014 Andrew Gacek, Quentin Heath                      *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)

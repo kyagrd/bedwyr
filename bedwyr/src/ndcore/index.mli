@@ -1,6 +1,6 @@
 (****************************************************************************)
 (* An implementation of substitution tree for term indexing                 *)
-(* Copyright (C) 2006-2013 David Baelde, Alwen Tiu, Quentin Heath           *)
+(* Copyright (C) 2006-2014 David Baelde, Alwen Tiu, Quentin Heath           *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
