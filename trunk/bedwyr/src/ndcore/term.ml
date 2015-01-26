@@ -1,6 +1,6 @@
 (****************************************************************************)
 (* An implementation of Higher-Order Pattern Unification                    *)
-(* Copyright (C) 2006-2012 Nadathur, Linnell, Baelde, Ziegler, Gacek, Tiu,  *)
+(* Copyright (C) 2006-2014 Nadathur, Linnell, Baelde, Ziegler, Gacek, Tiu,  *)
 (*                         Heath                                            *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)

@@ -1,6 +1,7 @@
 % Encoding of CCS.
 % This is to test tabling-modulo implementation.
 % Alwen Tiu, version 18 Dec 2012.
+% Quentin Heath, 18 Apr 2013
 
 Kind    name        type.   % some names
 Type    a,b,c,x,y   name.

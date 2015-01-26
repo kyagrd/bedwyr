@@ -1,6 +1,6 @@
 (****************************************************************************)
 (* Bedwyr prover                                                            *)
-(* Copyright (C) 2006-2013 Gacek, Baelde, Tiu, Heath                        *)
+(* Copyright (C) 2006-2014 Gacek, Baelde, Tiu, Heath                        *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)

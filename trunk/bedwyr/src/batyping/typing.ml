@@ -1,6 +1,6 @@
 (****************************************************************************)
 (* Prenex polymorphic typing                                                *)
-(* Copyright (C) 2012-2013 Quentin Heath, Alwen Tiu                         *)
+(* Copyright (C) 2012-2014 Quentin Heath, Alwen Tiu                         *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
