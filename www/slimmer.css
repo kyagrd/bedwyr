@@ -69,3 +69,9 @@ div.odd  {padding: 2px; background-color: #efefef;}
 div.even {padding: 2px; background-color: #FFFFFF;}
 
 code {background-color: #fdd;}
+
+.new {
+  font-weight: bold;
+  text-transform: uppercase;
+  color: red;
+}

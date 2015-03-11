@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.22.2 -->
-<!-- CreationDate: Fri Nov 14 14:41:37 2014 -->
+<!-- CreationDate: Wed Mar 11 12:02:15 2015 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -38,7 +38,7 @@ not-so-sound logician</p>
 [<b>&minus;&minus;freezing&nbsp;</b><i>fp</i>]
 [<b>&minus;&minus;saturation&nbsp;</b><i>sp</i>]
 [<b>&minus;&minus;version</b>] [<b>&minus;D</b>]
-[<b>&minus;help&nbsp;</b>|&nbsp;<b>&minus;&minus;help</b>]
+[<b>&minus;help</b>|<b>&minus;&minus;help</b>]
 [<i>file&nbsp;...</i>]</p>
 
 <p style="margin-top: 1em"><b>DESCRIPTION</b></p>
@@ -63,10 +63,8 @@ http://www.lix.polytechnique.fr/Labo/Dale.Miller/papers/eshol05.pdf
 <p style="margin-left:6%; margin-top: 1em">Webpage:
 <i>http://slimmer.gforge.inria.fr/bedwyr/</i>.</p>
 
-<p style="margin-left:6%; margin-top: 1em">When invoked as
-<b>bedwyr</b> the fastest available binary is used (i.e.
-<b>bedwyr.native</b> if present; otherwise,
-<b>bedwyr.byte</b>).</p>
+<p style="margin-left:6%; margin-top: 1em">The wrapper
+<b>bedwyr</b> is the preferred invocation.</p>
 
 <p style="margin-top: 1em"><b>OPTIONS <br>
 &minus;I</b></p>
@@ -79,8 +77,8 @@ interactive mode.</p>
 <p style="margin-left:22%; margin-top: 1em">Run tests in
 definition files. Those are the queries given by
 <b>#assert</b> <i>form</i><b>.</b> (see
-<i>META-COMMANDS</i>). <i>Use once for top-level definition
-files only,</i> twice for included definition files too.</p>
+<i>META-COMMANDS</i>). Use once for top-level definition
+files only, twice for included definition files too.</p>
 
 <p style="margin-top: 1em"><b>&minus;&minus;strict</b></p>
 
@@ -237,21 +235,26 @@ built in, <b>member</b> is predefined.</p>
 theorem with some restrictions on its body (neither
 implication nor universal quantification).</p>
 
-<p style="margin-top: 1em"><b>TOPLEVEL QUERIES <br>
-?=</b> <i>query</i><b>.</b></p>
+<p style="margin-top: 1em"><b>TOPLEVEL QUERIES</b></p>
 
-<p style="margin-left:22%; margin-top: 1em">The query
-entered at the prompt can either be a meta-command, which is
-executed, or a formula, which is solved ( <b>bedwyr</b>
-searches for all substitutions of free variables satisfying
-<i>query</i> and offers to display them one by one).</p>
+<p style="margin-left:6%;">The toplevel input can contain
+any meta-command (see <i>META-COMMANDS</i>), as well as any
+formula. In the latter case, each formula is a query which
+is solved (<b>bedwyr</b> searches for all substitutions of
+free variables satisfying <i>query</i> and offers to display
+them one by one).</p>
+
+<p style="margin-top: 1em"><b>?=</b>
+<i>query</i><b>.</b></p>
+
+<p style="margin-left:22%; margin-top: 1em">Interactive
+toplevel.</p>
 
 <p style="margin-top: 1em"><b>bedwyr &minus;e</b> &quot;
 <i><br>
 query</i><b>.</b>&quot;</p>
 
-<p style="margin-left:22%;">Queries given via this option
-are dealt with in the exact same way.</p>
+<p style="margin-left:22%;">Non-interactive toplevel.</p>
 
 <p style="margin-top: 1em"><b>META-COMMANDS</b></p>
 
@@ -294,7 +297,7 @@ command-line option <b>&minus;t</b>.</p>
 <p style="margin-left:6%;">abella(1), tac(1), teyjus(1)</p>
 
 <p style="margin-left:6%; margin-top: 1em">Bedwyr
-v1.4-alpha18 October&nbsp;7, 2014 Bedwyr v1.4-alpha18</p>
+v1.4-beta1 January&nbsp;23, 2015 Bedwyr v1.4-beta1</p>
 <hr>
 </body>
 </html>

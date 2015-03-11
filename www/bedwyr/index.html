@@ -52,9 +52,9 @@
     </p>
 
     <p>
-    <font color="red">New:</font> December 2014.
-    Some <a href="http://slimmer.gforge.inria.fr/bedwyr/pcmc/">recent
-    work</a> on describing proof certificates for model checking.
+    <span class="new">New</span> December 2014:
+    some <a href="pcmc/">recent work</a> on describing proof
+    certificates for model checking.
     </p>
 
     <h2 id="developers">Current developers</h2>
@@ -106,7 +106,7 @@
 
     <h2 id="download">Download</h2>
 
-    <p>The latest stablish release is version 1.4-alpha17 (September 2014).</p>
+    <p>The latest stablish release is version 1.4-beta1 (January 2015).</p>
 
     <h3>SCM (open source repository)</h3>
     <p>The <a href="https://gforge.inria.fr/scm/?group_id=367">SVN repository</a>
@@ -129,36 +129,35 @@
     <h3>Packages</h3>
     <p>Some packages, containing both versions of the program (native and
     bytecode), the complete documentation, all examples and some language files
-    for Emacs and Vim, are available for GNU/Linux (Debian stable and Gentoo)
+    for Emacs and Vim, are available for GNU/Linux (Debian testing and Gentoo)
     and Windows 8. The Linux packages also include the standalone core library
     <em>ndcore</em> for development purposes.</p>
     <ul>
       <li>The <a
         href="http://slimmer.gforge.inria.fr/releases/debian/pool/main/b/bedwyr/">Debian
         packages</a> exist for i386 and amd64 and are designed for
-      the current stable (<em>Wheezy</em>), but might just work for other
+      the current testing (<em>Jessie</em>), but might just work for other
       versions or even derivatives such as Ubuntu:
       <ul>
-        <li>create (as root) the file
-        <code>/etc/apt/sources.list.d/slimmer.list</code> containing
-        <code>deb http://slimmer.gforge.inria.fr/releases/debian/ wheezy
-          main</code>
+        <li>create the file
+          <code>/etc/apt/sources.list.d/slimmer.list</code>
+          containing the line
+          <code>deb http://slimmer.gforge.inria.fr/releases/debian/ jessie main</code>
         </li>
         <li>download this public <a href="/heath.asc">PGP key</a>
-        and add it to your APT keyring by running (as root)
-        <code>apt-key add heath.asc</code></li>
+          and add it to your APT keyring by running
+          <code>apt-key add heath.asc</code></li>
         <li>run <code>apt-get update</code>, then
-        <code>apt-get install bedwyr bedwyr-doc</code></li>
-        <li>browse <code>/usr/share/bedwyr/examples</code></li>
+          <code>apt-get install bedwyr bedwyr-doc</code></li>
+        <li>find files in <code>/usr/share/bedwyr/examples</code> to run <code>bedwyr</code> on</li>
       </ul></li>
       <li>The Gentoo package, for ~x86 and ~amd64, is in the overlay
       <em>dawan</em>:
       <ul>
         <li>emerge <em>layman</em> and run <code>layman -a dawan</code></li>
-        <li>make sure that <code>/var/lib/layman/make.conf</code>
-        is sourced by <code>/etc/portage/make.conf</code></li>
-        <li>emerge <em>sci-mathematics/bedwyr</em>
-        (<em>dev-lang/ocaml</em> is part of the dependencies)</li>
+        <li>make sure that <code>/var/lib/layman/make.conf</code> is
+          sourced by <code>/etc/portage/make.conf</code></li>
+        <li>emerge <em>sci-mathematics/bedwyr</em></li>
       </ul></li>
       <li>The <a
         href="https://gforge.inria.fr/frs/download.php/file/34079/bedwyr-1.4-alpha17-installer.exe">Windows
