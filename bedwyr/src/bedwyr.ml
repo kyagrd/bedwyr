@@ -85,7 +85,7 @@ let help_msg =
   see the user guide.\n\n"
 
 let interactive = ref true
-let test        = ref None
+let test_limit  = ref (Some 0)
 let session     = ref []
 let definitions = ref []
 let queries     = ref []
@@ -94,20 +94,21 @@ let exit_status = ref None
 let strict_mode = ref false
 let clean_tables = ref true
 
-let incr_test () =
-  test := match !test with
-    | Some _ -> Some true
-    | None -> Some false
-let decr_test = function
-  | Some true -> Some true
-  | _ -> None
+let incr_test_limit () =
+  test_limit := match !test_limit with
+    | Some n -> Some (n+1)
+    | None -> None
+let decr_test_limit = function
+  | Some n when n > 0 -> Some (n-1)
+  | Some _ -> Some 0
+  | None -> None
 
 let _ =
   Arg.parse
     (Arg.align
        [ "-I", Arg.Clear interactive,
            " Do not enter interactive mode" ;
-         "-t", Arg.Unit incr_test,
+         "-t", Arg.Unit incr_test_limit,
            " Run tests in top-level files (use twice for included files too)" ;
          "--strict", Arg.Set strict_mode,
            " Quit at the first non-interactive error" ;
@@ -166,7 +167,7 @@ let bool_of_flag = function
   | Some "off" | Some "false" -> false
   | _ -> raise Invalid_command
 
-let rec process ~test ?(interactive=false) parse lexbuf =
+let rec process_input ~run_input ~test_limit ?(interactive=false) parse lexbuf =
   let flush_input () =
     Lexing.flush_input lexbuf ;
     lexbuf.Lexing.lex_curr_p <- {
@@ -178,12 +179,18 @@ let rec process ~test ?(interactive=false) parse lexbuf =
         ?(interactive_fun=flush_input)
         ?(non_interactive_fun=ignore)
         error_code =
-    if interactive then interactive_fun ()
-    else if !strict_mode then exit error_code
-    else begin
-      if !exit_status = None then exit_status := Some error_code ;
-      non_interactive_fun ()
-    end
+    begin
+      if interactive then interactive_fun ()
+      else if !strict_mode then exit error_code
+      else begin
+        begin
+          if !exit_status = None
+          then exit_status := Some error_code
+        end ;
+        non_interactive_fun ()
+      end
+    end ;
+    None
   in
   let skip_input () = Parser.skip_invalid Lexer.invalid lexbuf in
   let lexer_error _ = basic_error 1 ~non_interactive_fun:skip_input in
@@ -210,222 +217,198 @@ let rec process ~test ?(interactive=false) parse lexbuf =
       (position_range p)
   in
   try while true do
-    let reset =
-      let s = Term.save_state () in
-      let ns = Term.save_namespace () in
-      fun () -> Term.restore_state s ; Term.restore_namespace ns
-    in
     if interactive then Format.printf "?= %!" ;
-    begin try match (parse Lexer.token lexbuf) with
-      | Input.KKind (l, k) ->
-          List.iter (fun s -> System.declare_type s k) l
-      | Input.TType (l, t) ->
-          List.iter (fun s -> System.declare_const s t) l
-      | Input.Def (decls,defs) ->
-          let stratum = System.declare_preds decls in
-          List.iter
-            (fun (p,n) ->
-               wprintf ~p
-                 "%s is a singleton variable."
-                 n)
-            (List.rev (System.add_clauses stratum defs))
-      | Input.Theorem thm ->
-          System.add_theorem thm ;
-          Parser.skip_proof Lexer.proof lexbuf
-      | Input.Qed p -> raise (Input.Qed_error p)
-      | Input.Query t ->
-          do_cleanup
-            (fun pre_query ->
-               let query = System.translate_query pre_query in
-               if !exit_status = None then Prover.toplevel_prove query)
-            t
-            reset
-      | Input.Cert t ->
-          let cert = System.translate_cert t in
-          (*
-          Prover.toplevel_prove cert
-           *)
-          ignore cert
-      | Input.Command c -> command ~test c reset
+    begin match match
+      try Some (parse Lexer.token lexbuf) with
+        (* I/O - Lexer *)
+        | End_of_file -> raise End_of_file
+        | Input.Illegal_string c ->
+            eprintf lexer_error
+              "Illegal string starting with %C in input."
+              c
+        | Input.Illegal_string_comment ->
+            eprintf lexer_error
+              "Unmatched comment delimiter in string."
+        | Input.Illegal_token (n1,n2) ->
+            eprintf lexer_error
+              "%S is illegal in a token, did you mean %S?"
+              (Lexing.lexeme lexbuf)
+              (String.concat " " [n1;n2])
+        | Input.Unknown_command n ->
+            eprintf lexer_error
+              "Unknown command %S, use \"#help.\" for a short list."
+              n
+
+        (* I/O - Parser *)
+        | Parsing.Parse_error ->
+            eprintf lexer_error
+              "Unexpected input."
+        | Input.Parse_error (p,s1,s2) ->
+            eprintf parser_error ~p
+              "%s while parsing@ %s."
+              s1 s2
+        | Input.Qed_error p ->
+            eprintf parser_error ~p
+              "\"Qed\" command used while not in proof mode."
     with
-      (* I/O - Lexer *)
-      | End_of_file -> raise End_of_file
-      | Input.Illegal_string c ->
-          eprintf lexer_error
-            "Illegal string starting with %C in input."
-            c
-      | Input.Illegal_string_comment ->
-          eprintf lexer_error
-            "Unmatched comment delimiter in string."
-      | Input.Illegal_token (n1,n2) ->
-          eprintf lexer_error
-            "%S is illegal in a token, did you mean %S?"
-            (Lexing.lexeme lexbuf)
-            (String.concat " " [n1;n2])
-      | Input.Unknown_command n ->
-          eprintf lexer_error
-            "Unknown command %S, use \"#help.\" for a short list."
-            n
-
-      (* I/O - Parser *)
-      | Parsing.Parse_error ->
-          eprintf lexer_error
-            "Unexpected input."
-      | Input.Parse_error (p,s1,s2) ->
-          eprintf parser_error ~p
-            "%s while parsing@ %s."
-            s1 s2
-      | Input.Qed_error p ->
-          eprintf parser_error ~p
-            "\"Qed\" command used while not in proof mode."
-
-      (* Declarations *)
-      | System.Invalid_type_declaration (n,p,ki,s) ->
-          eprintf def_error ~p
-            "Cannot declare type %s of kind %a:@ %s."
-            n
-            Input.Typing.pp_kind ki
-            s
-      | System.Missing_type (n,_) ->
-          eprintf def_error
-            "Undeclared type %s."
-            n
-      | System.Invalid_const_declaration (n,p,ty,s) ->
-          eprintf def_error ~p
-            "Cannot declare constant %s of type %a:@ %s."
-            n
-            (Input.Typing.get_pp_type ()) ty
-            s
-      | System.Invalid_flavour (n,p,gf,f) ->
-          let string_of_flavour = function
-            | Input.Normal -> "Normal"
-            | Input.Inductive -> "Inductive"
-            | Input.CoInductive -> "CoInductive"
-          in
-          eprintf def_error ~p
-            "Cannot declare predicate %s of flavour %s:@ \
-              this definition block is %s."
-            n
-            (string_of_flavour f)
-            (string_of_flavour gf)
-      | System.Invalid_pred_declaration (n,p,ty,s) ->
-          eprintf def_error ~p
-            "Cannot declare predicate %s of type %a:@ %s."
-            n
-            (Input.Typing.get_pp_type ()) ty
-            s
-      | Input.Typing.Invalid_pred_declaration (n,p,ty) ->
-          eprintf def_error ~p
-            "Cannot declare predicate %s of type %a:@ \
-              target type must be %s."
-            n
-            (Input.Typing.get_pp_type ()) ty
-            (Input.Typing.get_type_to_string () Input.Typing.tprop)
-
-      (* Definitions and theorems *)
-      | System.Missing_declaration (n,p) ->
-          eprintf def_error ?p
-            "Undeclared object %s."
-            n
-      | System.Stratification_error (n,p) ->
-          eprintf def_error ~p
-            "Inconsistent stratification:@ %s is forbidden here."
-            n
-      | System.Inconsistent_definition (n,p,s) ->
-          eprintf def_error ~p
-            "Inconsistent extension of definition for %s:@ %s."
-            n
-            s
-      | System.Inconsistent_theorem (n,p,s) ->
-          eprintf def_error ~p
-            "Inconsistent theorem specification for %s:@ %s."
-            n
-            s
-
-      (* Kind/type checking *)
-      | Input.Typing.Type_kinding_error (n,p,ki1,ki2) ->
-          eprintf def_error ~p
-            "Kinding error: the type constructor %s has kind %a \
-              but is used as %a."
-            n
-            Input.Typing.pp_kind ki2
-            Input.Typing.pp_kind ki1
-      | Input.Typing.Undefinite_type (n,p,ty,tp) ->
-          let type_to_string = Input.Typing.get_type_to_string () in
-          eprintf def_error ~p
-            "Polymorphism error for %s: parameter%s %s@ of type %s@ \
-              %s not transparant."
-            n
-            (if List.length tp > 1 then "s" else "")
-            (String.concat ", "
-               (List.map
-                  (fun i -> Format.sprintf "%s"
-                              (type_to_string (Input.Typing.tparam i))) tp))
-            (type_to_string ty)
-            (if List.length tp > 1 then "are" else "is")
-      | Input.Typing.Type_order_error (n,p,ty) ->
-          begin match n with
-            | Some n ->
+      | Some input ->
+          begin try Some (run_input ~test_limit input) with
+            (* Declarations *)
+            | System.Invalid_type_declaration (n,p,ki,s) ->
                 eprintf def_error ~p
-                  "Typing error: cannot give free variable %s the type %a." n
-                  (Input.Typing.get_pp_type ()) ty
-            | None ->
+                  "Cannot declare type %s of kind %a:@ %s."
+                  n
+                  Input.Typing.pp_kind ki
+                  s
+            | System.Missing_type (n,_) ->
+                eprintf def_error
+                  "Undeclared type %s."
+                  n
+            | System.Invalid_const_declaration (n,p,ty,s) ->
                 eprintf def_error ~p
-                  "Typing error: cannot quantify over type %a."
+                  "Cannot declare constant %s of type %a:@ %s."
+                  n
                   (Input.Typing.get_pp_type ()) ty
+                  s
+            | System.Invalid_flavour (n,p,gf,f) ->
+                let string_of_flavour = function
+                  | Input.Normal -> "Normal"
+                  | Input.Inductive -> "Inductive"
+                  | Input.CoInductive -> "CoInductive"
+                in
+                eprintf def_error ~p
+                  "Cannot declare predicate %s of flavour %s:@ \
+                    this definition block is %s."
+                  n
+                  (string_of_flavour f)
+                  (string_of_flavour gf)
+            | System.Invalid_pred_declaration (n,p,ty,s) ->
+                eprintf def_error ~p
+                  "Cannot declare predicate %s of type %a:@ %s."
+                  n
+                  (Input.Typing.get_pp_type ()) ty
+                  s
+            | Input.Typing.Invalid_pred_declaration (n,p,ty) ->
+                eprintf def_error ~p
+                  "Cannot declare predicate %s of type %a:@ \
+                    target type must be %s."
+                  n
+                  (Input.Typing.get_pp_type ()) ty
+                  (Input.Typing.get_type_to_string () Input.Typing.tprop)
+
+            (* Definitions and theorems *)
+            | System.Missing_declaration (n,p) ->
+                eprintf def_error ?p
+                  "Undeclared object %s."
+                  n
+            | System.Stratification_error (n,p) ->
+                eprintf def_error ~p
+                  "Inconsistent stratification:@ %s is forbidden here."
+                  n
+            | System.Inconsistent_definition (n,p,s) ->
+                eprintf def_error ~p
+                  "Inconsistent extension of definition for %s:@ %s."
+                  n
+                  s
+            | System.Inconsistent_theorem (n,p,s) ->
+                eprintf def_error ~p
+                  "Inconsistent theorem specification for %s:@ %s."
+                  n
+                  s
+
+            (* Kind/type checking *)
+            | Input.Typing.Type_kinding_error (n,p,ki1,ki2) ->
+                eprintf def_error ~p
+                  "Kinding error: the type constructor %s has kind %a \
+                    but is used as %a."
+                  n
+                  Input.Typing.pp_kind ki2
+                  Input.Typing.pp_kind ki1
+            | Input.Typing.Undefinite_type (n,p,ty,tp) ->
+                let type_to_string = Input.Typing.get_type_to_string () in
+                eprintf def_error ~p
+                  "Polymorphism error for %s: parameter%s %s@ of type %s@ \
+                    %s not transparant."
+                  n
+                  (if List.length tp > 1 then "s" else "")
+                  (String.concat ", "
+                     (List.map
+                        (fun i -> Format.sprintf "%s"
+                                    (type_to_string (Input.Typing.tparam i))) tp))
+                  (type_to_string ty)
+                  (if List.length tp > 1 then "are" else "is")
+            | Input.Typing.Type_order_error (n,p,ty) ->
+                begin match n with
+                  | Some n ->
+                      eprintf def_error ~p
+                        "Typing error: cannot give free variable %s the type %a." n
+                        (Input.Typing.get_pp_type ()) ty
+                  | None ->
+                      eprintf def_error ~p
+                        "Typing error: cannot quantify over type %a."
+                        (Input.Typing.get_pp_type ()) ty
+                end
+            | Input.Term_typing_error (p,ty1,ty2,unifier) ->
+                eprintf def_error ~p
+                  "Typing error: this term has type %a but is used as %a."
+                  (Input.Typing.get_pp_type ~unifier ()) ty2
+                  (Input.Typing.get_pp_type ~unifier ()) ty1
+
+            (* Using predicates and tables *)
+            | System.Missing_definition (n,p) ->
+                eprintf def_error ?p
+                  "Undefined predicate (%s was declared as a constant)."
+                  n
+            | System.Missing_table (n,p) ->
+                eprintf def_error ?p
+                  "No table (%s is neither inductive nor coinductive)."
+                  n
+            | Uncleared_tables ->
+                eprintf def_error
+                  "Unable to export tables (some have been cleared, \
+                    state might be inconsistent).@ Run #clear_tables to fix."
+
+            (* Core *)
+            | Unify.NotLLambda t ->
+                eprintf ndcore_error
+                  "Not LLambda unification encountered:@ %a."
+                  Pprint.pp_term t
+
+            (* Solving *)
+            | Prover.Level_inconsistency ->
+                eprintf solver_error
+                  "This formula cannot be handled by the left prover!"
+            | Prover.Left_logic t ->
+                eprintf ndcore_error
+                  "Logic variable encountered on the left:@ %a."
+                  Pprint.pp_term t
+
+            (* Misc Bedwyr errors *)
+            | Assertion_failed ->
+                eprintf solver_error
+                  "Assertion failed."
+            | System.Interrupt ->
+                eprintf bedwyr_error
+                  "User interruption."
+            | System.Abort_search ->
+                eprintf bedwyr_error
+                  "Proof search aborted!"
+            | IO.File_error (s1,n,s2) ->
+                eprintf bedwyr_error
+                  "Couldn't %s@ %S:@ %s."
+                  s1 n s2
+            | Invalid_command ->
+                eprintf bedwyr_error
+                  "Invalid command, or wrong arguments."
           end
-      | Input.Term_typing_error (p,ty1,ty2,unifier) ->
-          eprintf def_error ~p
-            "Typing error: this term has type %a but is used as %a."
-            (Input.Typing.get_pp_type ~unifier ()) ty2
-            (Input.Typing.get_pp_type ~unifier ()) ty1
-
-      (* Using predicates and tables *)
-      | System.Missing_definition (n,p) ->
-          eprintf def_error ?p
-            "Undefined predicate (%s was declared as a constant)."
-            n
-      | System.Missing_table (n,p) ->
-          eprintf def_error ?p
-            "No table (%s is neither inductive nor coinductive)."
-            n
-      | Uncleared_tables ->
-          eprintf def_error
-            "Unable to export tables (some have been cleared, \
-              state might be inconsistent).@ Run #clear_tables to fix."
-
-      (* Core *)
-      | Unify.NotLLambda t ->
-          eprintf ndcore_error
-            "Not LLambda unification encountered:@ %a."
-            Pprint.pp_term t
-
-      (* Solving *)
-      | Prover.Level_inconsistency ->
-          eprintf solver_error
-            "This formula cannot be handled by the left prover!"
-      | Prover.Left_logic t ->
-          eprintf ndcore_error
-            "Logic variable encountered on the left:@ %a."
-            Pprint.pp_term t
-
-      (* Misc Bedwyr errors *)
-      | Assertion_failed ->
-          eprintf solver_error
-            "Assertion failed."
-      | System.Interrupt ->
-          eprintf bedwyr_error
-            "User interruption."
-      | System.Abort_search ->
-          eprintf bedwyr_error
-            "Proof search aborted!"
-      | IO.File_error (s1,n,s2) ->
-          eprintf bedwyr_error
-            "Couldn't %s@ %S:@ %s."
-            s1 n s2
-      | Invalid_command ->
-          eprintf bedwyr_error
-            "Invalid command, or wrong arguments."
+      | None -> None
+    with
+      | Some (singletons,proof) ->
+          List.iter
+            (fun (p,n) -> wprintf ~p "%s is a singleton variable." n)
+            singletons ;
+          if proof then Parser.skip_proof Lexer.proof lexbuf
+      | None -> ()
     end ;
     if interactive then flush stdout ;
     begin match !exit_status with
@@ -437,35 +420,81 @@ let rec process ~test ?(interactive=false) parse lexbuf =
         if interactive then Format.printf "@."
     (* Unhandled errors *)
     | Failure s ->
-        eprintf critical_error
-          "Error:@ %s"
-          s
+        let _ =
+          eprintf critical_error
+            "Error:@ %s"
+            s
+        in
+        ()
     | e ->
-        eprintf critical_error
-          "Unexpected error:@ %s"
-          (Printexc.to_string e)
+        let _ =
+          eprintf critical_error
+            "Unexpected error:@ %s"
+            (Printexc.to_string e)
+        in
+        ()
 
-and input_from_file ~test file =
+and run_query_or_def ~test_limit =
+  let reset =
+    let s = Term.save_state () in
+    let ns = Term.save_namespace () in
+    fun () -> Term.restore_state s ; Term.restore_namespace ns
+  in function
+    | Input.KKind (l, k) ->
+        List.iter (fun s -> System.declare_type s k) l ;
+        [],false
+    | Input.TType (l, t) ->
+        List.iter (fun s -> System.declare_const s t) l ;
+        [],false
+    | Input.Def (decls,defs) ->
+        let stratum = System.declare_preds decls in
+        (List.rev (System.add_clauses stratum defs)),false
+    | Input.Theorem thm ->
+        System.add_theorem thm ;
+        [],true
+    | Input.Qed p -> raise (Input.Qed_error p)
+    | Input.Query t ->
+        do_cleanup
+          (fun pre_query ->
+             let query = System.translate_query pre_query in
+             if !exit_status = None then Prover.toplevel_prove query)
+          t
+          reset ;
+        [],false
+    | Input.Cert t ->
+        let cert = System.translate_cert t in
+        (*
+         Prover.toplevel_prove cert
+         *)
+        ignore cert ;
+        [],false
+    | Input.Command c ->
+        command ~test_limit c reset ;
+        [],false
+
+and input_from_file ~test_limit file =
   let channel = IO.open_in file in
   let lexbuf = Lexing.from_channel channel in
-  input_defs ~test lexbuf file ;
+  input_defs ~test_limit lexbuf file ;
   IO.close_in file channel
-and input_defs ~test lexbuf file =
+and input_defs ?(test_limit=(!test_limit)) lexbuf file =
   lexbuf.Lexing.lex_curr_p <- {
     lexbuf.Lexing.lex_curr_p with Lexing.pos_fname = file } ;
-  process ~test Parser.input_def lexbuf
-and input_queries ~test ?(interactive=false) lexbuf =
-  process ~test ~interactive Parser.input_query lexbuf
+  let run_input = run_query_or_def in
+  process_input ~run_input ~test_limit Parser.input_def lexbuf
+and input_queries ?(test_limit=(!test_limit)) ?(interactive=false) lexbuf =
+  let run_input = run_query_or_def in
+  process_input ~run_input ~test_limit ~interactive Parser.input_query lexbuf
 
 and load_session () =
   System.reset_decls () ;
   Input.Typing.clear () ;
   let lexbuf = (Lexing.from_string stdlib) in
-  input_defs ~test:None lexbuf "Bedwyr::stdlib" ;
+  input_defs ~test_limit:(Some 0) lexbuf "Bedwyr::stdlib" ;
   inclfiles := [] ;
-  List.iter (include_file ~test:!test) !session
+  List.iter (fun fname -> include_file fname) !session
 
-and include_file ~test fname =
+and include_file ?(test_limit=(!test_limit)) fname =
   let cwd = Sys.getcwd () in
   let fname =
     if (Filename.is_relative fname &&
@@ -479,7 +508,7 @@ and include_file ~test fname =
     Format.eprintf "Now including %S.@." fname ;
     inclfiles := fname :: !inclfiles ;
     IO.chdir (Filename.dirname fname) ;
-    input_from_file ~test (Filename.basename fname);
+    input_from_file ~test_limit (Filename.basename fname);
     IO.chdir cwd
   end
 
@@ -489,7 +518,7 @@ and include_file ~test fname =
  * "", "true", "on", "false" or "off")
  * @raise Assertion_failed if [#assert formula.], [#assert_not formula.]
  * or [#assert_raise formula.] fails *)
-and command ~test c reset =
+and command ~test_limit c reset =
   let aux = function
     | Input.Exit ->
         IO.close_user_files () ;
@@ -500,7 +529,7 @@ and command ~test c reset =
     | Input.Help -> Format.printf "%s" help_msg
 
     (* Session management *)
-    | Input.Include l -> List.iter (include_file ~test:(decr_test test)) l
+    | Input.Include l -> List.iter (include_file ~test_limit:(decr_test_limit test_limit)) l
     | Input.Reload -> load_session ()
     | Input.Session l -> session := l ; load_session ()
 
@@ -536,7 +565,7 @@ and command ~test c reset =
     (* Testing commands *)
     | Input.Assert pre_query ->
         let query = System.translate_query pre_query in
-        begin match test with None -> () | _ ->
+        begin match test_limit with Some n when n <= 0 -> () | _ ->
           if !exit_status = None then begin
             Format.eprintf "@[<hv 2>Checking that@ %a@,...@]@."
               Pprint.pp_term query ;
@@ -547,7 +576,7 @@ and command ~test c reset =
         end
     | Input.Assert_not pre_query ->
         let query = System.translate_query pre_query in
-        begin match test with None -> () | _ ->
+        begin match test_limit with Some n when n <= 0 -> () | _ ->
           if !exit_status = None then begin
             Format.eprintf "@[<hv 2>Checking that@ %a@ is false...@]@."
               Pprint.pp_term query ;
@@ -557,7 +586,7 @@ and command ~test c reset =
         end
     | Input.Assert_raise pre_query ->
         let query = System.translate_query pre_query in
-        begin match test with None -> () | _ ->
+        begin match test_limit with Some n when n <= 0 -> () | _ ->
           if !exit_status = None then begin
             Format.eprintf "@[<hv 2>Checking that@ %a@ causes an error...@]@."
               Pprint.pp_term query ;
@@ -584,14 +613,14 @@ let _ =
     exit 5
   end ;
   List.iter
-    (fun s -> input_defs ~test:!test (Lexing.from_string s) "") !definitions ;
+    (fun s -> input_defs (Lexing.from_string s) "") !definitions ;
   List.iter
-    (fun s -> input_queries ~test:!test (Lexing.from_string s)) !queries ;
+    (fun s -> input_queries (Lexing.from_string s)) !queries ;
   match !exit_status with
     | None ->
         if !interactive then begin
           Format.printf "%s@." welcome_msg ;
-          input_queries ~test:!test ~interactive:true
+          input_queries ~interactive:true
             (Lexing.from_channel stdin)
         end
     | Some error_code -> exit error_code

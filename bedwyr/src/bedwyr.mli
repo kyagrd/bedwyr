@@ -20,9 +20,9 @@
 (** Bedwyr's main loop. *)
 
 (** Read a *.def file. *)
-val include_file : test:bool option -> string -> unit
+val include_file : ?test_limit:int option -> string -> unit
 
 (** Read the REPL or a script.
   * @param interactive intended for the REPL,
   * gives additional error messages *)
-val input_queries : test:bool option -> ?interactive:bool -> Lexing.lexbuf -> unit
+val input_queries : ?test_limit:int option -> ?interactive:bool -> Lexing.lexbuf -> unit
