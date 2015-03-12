@@ -170,6 +170,7 @@ type input =
   | Def     of (flavour * pos * string * Typing.ty) list *
                (pos * preterm * preterm) list
   | Query   of preterm
+  | Cert    of preterm
   | Command of command
   | Theorem of (pos * string * preterm)
   | Qed     of (pos)

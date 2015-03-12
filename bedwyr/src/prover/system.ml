@@ -68,6 +68,7 @@ struct
             ]
 
 
+  let read              = Term.atom ~tag:Term.Constant "read"
   let print             = Term.atom ~tag:Term.Constant "print"
   let println           = Term.atom ~tag:Term.Constant "println"
   let printstr          = Term.atom ~tag:Term.Constant "printstr"
@@ -77,6 +78,7 @@ struct
   let fopen_out         = Term.atom ~tag:Term.Constant "fopen_out"
   let fclose_out        = Term.atom ~tag:Term.Constant "fclose_out"
 
+  let var_read         = Term.get_var read
   let var_print         = Term.get_var print
   let var_println       = Term.get_var println
   let var_printstr      = Term.get_var printstr
@@ -89,6 +91,8 @@ struct
   let predefined_t = Hashtbl.create 8
   let _ = List.iter (fun (k,v) -> Hashtbl.add predefined_t k v)
             [ (* I/O extensions *)
+              var_read,
+                Ty.ty_arrow [Ty.tparam 0] Ty.tprop;
               var_print,
                 Ty.ty_arrow [Ty.tparam 0] Ty.tprop;
               var_println,
@@ -230,6 +234,9 @@ exception Missing_declaration of string * Input.pos option
 exception Stratification_error of string * Input.pos
 
 
+let create_free_types : int -> (Term.var,(Ty.ty*Ty.pos option)) Hashtbl.t =
+  fun n -> Hashtbl.create n
+
 let translate_term
       ?stratum
       ?(head=false)
@@ -314,9 +321,7 @@ let translate_term
     (typed_free_var,typed_declared_obj,typed_intern_pred,atomic_kind)
 
 let translate_query pre_term =
-  let free_types : (Term.var,(Ty.ty*Ty.pos option)) Hashtbl.t =
-    Hashtbl.create 10
-  in
+  let free_types = create_free_types 10 in
   let _,term = translate_term pre_term free_types in term
 
 (* Replace the params by fresh variables and
@@ -407,9 +412,7 @@ let mk_def_clause p head body =
 
 (* returns the list of singleton variables of the clause *)
 let add_def_clause stratum (p,pre_head,pre_body) =
-  let free_types : (Term.var,(Ty.ty*Ty.pos option)) Hashtbl.t =
-    Hashtbl.create 10
-  in
+  let free_types = create_free_types 10 in
   let free_args = Input.free_args pre_head in
   (* XXX what about stratum in theorems? *)
   let _,head =
@@ -536,9 +539,7 @@ let add_theorem_clause p (pred,arity,body) =
         x.theorem <- th
 
 let add_theorem (p,n,pre_theorem) =
-  let free_types : (Term.var,(Ty.ty*Ty.pos option)) Hashtbl.t =
-    Hashtbl.create 10
-  in
+  let free_types = create_free_types 10 in
   let _,theorem = translate_term pre_theorem free_types in
   let clauses = mk_theorem_clauses (p,n) theorem in
   List.iter (add_theorem_clause p) clauses
@@ -596,6 +597,13 @@ let clear_table (p,head_tm) =
 
 (* I/O *)
 
+let translate_cert pre_term =
+  let free_types = create_free_types 10 in
+  (* TODO use the cert type here *)
+  let ty = Ty.fresh_tyvar () in
+  let _,term = translate_term ~expected_type:ty pre_term free_types in
+  term
+
 let print_env () =
   let print_types () =
     Format.printf "@[<v 3>*** Types ***" ;
@@ -644,9 +652,7 @@ let print_env () =
   print_predicates ()
 
 let get_types pre_term =
-  let free_types : (Term.var,(Ty.ty*Ty.pos option)) Hashtbl.t =
-    Hashtbl.create 10
-  in
+  let free_types = create_free_types 10 in
   let ty = Ty.fresh_tyvar () in
   let _,t = translate_term ~expected_type:ty pre_term free_types in
   t,ty,free_types

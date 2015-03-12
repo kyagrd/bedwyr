@@ -240,6 +240,12 @@ let rec process ~test ?(interactive=false) parse lexbuf =
                if !exit_status = None then Prover.toplevel_prove query)
             t
             reset
+      | Input.Cert t ->
+          let cert = System.translate_cert t in
+          (*
+          Prover.toplevel_prove cert
+           *)
+          ignore cert
       | Input.Command c -> command ~test c reset
     with
       (* I/O - Lexer *)

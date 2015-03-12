@@ -815,6 +815,24 @@ let rec prove sons
           | Var v when v == Logic.var_distinct ->
               prove_distinct goals
 
+          (* Input *)
+          | Var v when v == Logic.var_read ->
+              begin match goals with
+                  (*
+                | [var] ->
+                    let read_fun s =
+                      System.translate_cert s
+
+                      process ~test:false Parser.input_cert (Lexing.from_string s)
+
+                    in
+                    let t = IO.read read_fun in
+                    prove sons temperatures ~success ~failure ~level
+                      ~timestamp ~local (Term.eq var t)
+                   *)
+                | _ -> assert false
+              end
+
           (* Output *)
           | Var v when v == Logic.var_print ->
               let print_fun t = printf "%a%!" Pprint.pp_term t ; true in

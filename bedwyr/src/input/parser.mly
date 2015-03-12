@@ -116,6 +116,12 @@ input_query:
   | error DOT                           { generic_error 1 "the toplevel" }
   | error EOF                           { eof_error "the toplevel" }
 
+input_cert:
+  | formula DOT                         { Input.Cert $1 }
+  /*| meta_command                        { $1 }*/
+  | error DOT                           { generic_error 1 "the toplevel" }
+  | error EOF                           { eof_error "the toplevel" }
+
 top_command:
   | KKIND type_clist ki DOT             { Input.KKind ($2,$3) }
   | TTYPE const_clist ty DOT            { Input.TType ($2,$3) }
