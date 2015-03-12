@@ -468,10 +468,10 @@ and load_session () =
 and include_file ~test fname =
   let cwd = Sys.getcwd () in
   let fname =
-    if (Filename.is_relative fname) then
-      Filename.concat cwd fname
-    else
-      fname
+    if (Filename.is_relative fname &&
+        not (String.length fname > 2 && fname.[0]='~' && fname.[1]='/'))
+    then Filename.concat cwd fname
+    else fname
   in
   if (List.mem fname !inclfiles) then
     Format.eprintf "File %S already included, skipping.@." fname
