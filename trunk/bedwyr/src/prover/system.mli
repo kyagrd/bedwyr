@@ -126,6 +126,10 @@ No. v} *)
 
   (** {6 I/O extensions} *)
 
+  (** {[read : A -> prop]} Parses the standard input and succeeds if the
+    * result is a well-formed and well-typed term (see {!IO.read}). *)
+  val var_read : Term.var
+
   (** {[print : A -> prop]} Print a term and succeeds (see {!IO.print}). *)
   val var_print : Term.var
 
@@ -284,6 +288,10 @@ val clear_tables : unit -> unit
 val clear_table : Input.pos * Term.term -> unit
 
 (** {6 I/O} *)
+
+(** Translate a pre-term into a term.
+  * Similar to {!translate_query}, but with no assumption on the type. *)
+val translate_cert : Input.preterm -> Term.term
 
 (** Display all type and objects declarations. *)
 val print_env : unit -> unit

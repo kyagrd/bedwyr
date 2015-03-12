@@ -54,6 +54,11 @@ let get_user_file name =
   try Some (Hashtbl.find user_files name)
   with Not_found -> None
 
+(* Term input (stdin) *)
+
+let read read_fun =
+  read_fun "42"
+
 (* Term output (stdout and file) *)
 
 let print print_fun goals = match goals with

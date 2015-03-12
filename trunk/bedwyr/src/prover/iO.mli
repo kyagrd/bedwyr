@@ -34,6 +34,12 @@ val close_out : string -> out_channel -> unit
 
 val chdir : string -> unit
 
+(** {6 Term input (stdin)} *)
+
+(** Read from the standard input. *)
+val read : (string -> Term.term) -> Term.term
+
+
 (** {6 Term output (stdout and file)} *)
 
 (** Write on the standard output. The list should contain exactly one term. *)

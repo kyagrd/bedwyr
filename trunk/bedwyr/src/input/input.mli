@@ -189,6 +189,8 @@ type input =
   (** predicate declaration and definition *)
   | Query of preterm
   (** query (interactive mode) *)
+  | Cert of preterm
+  (** certificate (interactive mode) *)
   | Command of command
   (** meta-command (any mode) *)
   | Theorem of (pos * string * preterm)
