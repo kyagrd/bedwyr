@@ -29,14 +29,15 @@ val dummy_pos : pos
   * It might contain a valid prefix, though,
   * and in particular the provided byte could be a valid character,
   * but it often is the first byte of a multibyte unicode character. *)
-exception Illegal_string of char
+exception Illegal_byte_sequence of char
 
-(** A "/*" or a "*/" was found in a quoted string.
-  * In order to allow commenting a block of valid code without breaking the whole file,
-  * those must be escaped (for instance "/\*" and "*\/").
-  * Note that escaping the first character instead of the second doesn't
-  * prevent this exception. *)
-exception Illegal_string_comment
+(** An unmatched "/*" or a "*/" was found in a quoted string.
+  * In order to allow for commenting a block of valid code without
+  * breaking the whole file, comment delimiters must be properly escaped
+  * (for instance "/\*" and "*\/") or balanced.
+  * Note that escaping the first character instead of the second
+  * ("\/*" or "\*/") doesn't prevent this exception. *)
+exception Illegal_string_comment of pos
 
 (** Some characters that are only allowed in prefix names
   * were used next to some that are only allowed in infix names.
@@ -47,6 +48,15 @@ exception Illegal_token of string * string
 
 (** The hash character was misused, or a meta-command was misspelled. *)
 exception Unknown_command of string
+
+(** Wrapper around some Failures raised in Lexer. *)
+exception EOF_error of string
+
+(** Wrapper around End_of_file in definition mode. *)
+exception Empty_command
+
+(** Wrapper around End_of_file in the toplevel. *)
+exception Empty_term
 
 (** Wrapper around some [Parsing.Parse_error]. *)
 exception Parse_error of pos * string * string
@@ -120,7 +130,7 @@ val change_pos :
 (** Find which arguments of an application are free variables. *)
 val free_args : preterm -> string list
 
-(** {6 Input AST ({e .def} file or toplevel)} *)
+(** {6 Input AST} *)
 
 (** "Qed" command used outside of proof mode.
   * It should be the first command to appear after a "Theorem". *)
@@ -128,75 +138,92 @@ exception Qed_error of pos
 
 (** Flavouring keyword, prefixing a predicate declaration. *)
 type flavour =
-    Normal (** no keyword *)
+  | Normal (** no keyword *)
   | Inductive (** {b inductive} *)
   | CoInductive (** {b coinductive} *)
 
-(** "Hash-command" (meta-commands, mostly designed for the toplevel
-  * but also available in input files). *)
-type command =
-    Exit
-  (** [#exit.] close all files and exit *)
-  | Help
-  (** [#help.] display a short help message *)
-  | Include of string list
-  (** [#include "f1.def" "f2.def".] load a list of files *)
-  | Reload
-  (** [#reload.] reload the current session *)
-  | Session of string list
-  (** [#session "f1.def" "f2.def".] load these files as the current session *)
-  | Debug of string option
-  (** [#debug on.] turn debugging on/off (default off) *)
-  | Time of string option
-  (** [#time on.] turn timing on/off (default off) *)
-  | Equivariant of string option
-  (** [#equivariant on.] turn equivariant tabling on/off (default on) *)
-  | Freezing of int
-  (** [#freezing 42.] set the freezing-point to a non-negative value or -1 (default 0) *)
-  | Saturation of int
-  (** [#saturation 42.] set the saturation pressure to a non-negative value or -1 (default 0) *)
-  | Env
-  (** [#env.] call {!System.print_env} *)
-  | Type_of of preterm
-  (** [#type_of t.] call {!System.print_type_of} *)
-  | Show_def of pos * string
-  (** [#show_def p.] call {!System.show_def} *)
-  | Show_table of pos * string
-  (** [#show_table p.] call {!System.show_table} *)
-  | Clear_tables
-  (** [#clear_tables.] call {!System.clear_tables} *)
-  | Clear_table of pos * string
-  (** [#clear_table p.] call {!System.clear_table} *)
-  | Save_table of pos * string * string
-  (** [#save_table p "p-table.def".] call {!System.save_table} *)
-  | Export of string
-  (** [#export "skeleton.xml".] call {!System.export} *)
-  | Assert of preterm
-  (** [#assert t.] check whether a query succeeds *)
-  | Assert_not of preterm
-  (** [#assert_not t.] check whether a query fails *)
-  | Assert_raise of preterm
-  (** [#assert_raise t.] check whether a query crashes *)
+(** Command AST. *)
+module Command : sig
+  type t =
+    | Kind    of (pos * string) list * Typing.ki
+    (** type declaration *)
+    | Type    of (pos * string) list * Typing.ty
+    (** constant declaration *)
+    | Def     of (flavour * pos * string * Typing.ty) list *
+                 (pos * preterm * preterm) list
+    (** predicate declaration and definition *)
+    | Theorem of (pos * string * preterm)
+    (** theorem (imported from Abella) *)
+    | Qed     of pos
+    (** end of proof (imported from Abella, ignored by Bedwyr) *)
+end
+
+(** Meta-command AST (mostly designed for the toplevel but also
+  * available in input files). *)
+module MetaCommand : sig
+  type t =
+    | Exit
+    (** [#exit.] close all files and exit *)
+    | Help
+    (** [#help.] display a short help message *)
+    | Include of string list
+    (** [#include "f1.def" "f2.def".] load a list of files *)
+    | Reload
+    (** [#reload.] reload the current session *)
+    | Session of string list
+    (** [#session "f1.def" "f2.def".] load these files as the current session *)
+    | Debug of string option
+    (** [#debug on.] turn debugging on/off (default off) *)
+    | Time of string option
+    (** [#time on.] turn timing on/off (default off) *)
+    | Equivariant of string option
+    (** [#equivariant on.] turn equivariant tabling on/off (default on) *)
+    | Freezing of int
+    (** [#freezing 42.] set the freezing-point to a non-negative value or -1 (default 0) *)
+    | Saturation of int
+    (** [#saturation 42.] set the saturation pressure to a non-negative value or -1 (default 0) *)
+    | Env
+    (** [#env.] call {!System.print_env} *)
+    | Type_of of preterm
+    (** [#type_of t.] call {!System.print_type_of} *)
+    | Show_def of pos * string
+    (** [#show_def p.] call {!System.show_def} *)
+    | Show_table of pos * string
+    (** [#show_table p.] call {!System.show_table} *)
+    | Clear_tables
+    (** [#clear_tables.] call {!System.clear_tables} *)
+    | Clear_table of pos * string
+    (** [#clear_table p.] call {!System.clear_table} *)
+    | Save_table of pos * string * string
+    (** [#save_table p "p-table.def".] call {!System.save_table} *)
+    | Export of string
+    (** [#export "skeleton.xml".] call {!System.export} *)
+    | Assert of preterm
+    (** [#assert t.] check whether a query succeeds *)
+    | Assert_not of preterm
+    (** [#assert_not t.] check whether a query fails *)
+    | Assert_raise of preterm
+    (** [#assert_raise t.] check whether a query crashes *)
+end
+
+type definition_mode =
+  [
+  | `Command            of Command.t
+  | `MetaCommand        of MetaCommand.t
+  ]
+
+type toplevel =
+  [
+  | `Term               of pos * preterm
+  | `MetaCommand        of MetaCommand.t
+  ]
+
+type term_mode =
+  [
+  | `Term               of pos * preterm
+  ]
 
 (** Global AST for any input (file or toplevel). *)
-type input =
-    KKind of (pos * string) list * Typing.ki
-  (** type declaration *)
-  | TType of (pos * string) list * Typing.ty
-  (** constant declaration *)
-  | Def of (flavour * pos * string * Typing.ty) list *
-      (pos * preterm * preterm) list
-  (** predicate declaration and definition *)
-  | Query of preterm
-  (** query (interactive mode) *)
-  | Cert of preterm
-  (** certificate (interactive mode) *)
-  | Command of command
-  (** meta-command (any mode) *)
-  | Theorem of (pos * string * preterm)
-  (** theorem (imported from Abella) *)
-  | Qed of (pos)
-  (** end of proof (imported from Abella, ignored by Bedwyr) *)
 
 (** {6 Pre-terms' type checking} *)
 
