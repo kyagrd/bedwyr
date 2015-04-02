@@ -62,6 +62,13 @@ INSTALL_DATA	= @INSTALL_DATA@ $(INSTALL_OPTS) -p
 #
 ##############################################################################
 
+ifeq ($(notdir $(LATEX)),latex)
+  TGT		= dvi
+else
+  TGT		= pdf
+endif
+RERUN_MSG	= Rerun to get cross-references right
+
 QUICKSTART	= quickstart
 REFMAN		= refman
 
@@ -117,11 +124,11 @@ all: $(TARGETS)
 
 %.dvi: %.tex
 
-.bbl.dvi:
-	@echo -e "$(SET_RED)===== BBL -> DVI Pass ==== $* =====$(RESET_COLOR)"
+.bbl.$(TGT):
+	@echo -e "$(SET_RED)===== BBL -> $(TGT) Pass ==== $* =====$(RESET_COLOR)"
 	@$(LATEX) $*
-	@while ( grep -q "Rerun to get cross-references right" $*.log ) ; do \
-	  echo -e "$(SET_RED)===== DVI -> DVI (cross-references) Pass ==== $* =====$(RESET_COLOR)" ; \
+	@while ( grep -q "$(RERUN_MSG)" $*.log ) ; do \
+	  echo -e "$(SET_RED)===== $(TGT) -> $(TGT) (cross-references) Pass ==== $* =====$(RESET_COLOR)" ; \
 	  $(LATEX) $* ; \
 	  done
 
