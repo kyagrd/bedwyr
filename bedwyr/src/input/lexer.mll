@@ -21,6 +21,11 @@
   open Parser
   open Lexing
 
+  let flush_input lexbuf =
+    flush_input lexbuf ;
+    lexbuf.lex_curr_p <-
+      { lexbuf.lex_curr_p with pos_bol = 0 ; pos_lnum = 1 }
+
   (* == Quoted strings ============================================== *)
 
   (* keep track of the content of a quoted string
@@ -281,7 +286,7 @@ rule token = parse
 
   | '"'                         { Buffer.clear strbuf ;
                                   strstart := lexbuf.lex_start_p ;
-                                  qstring lexbuf }
+                                  qstring [] None lexbuf }
 
   (* Punctuation *)
   | ":"                         { COLON }
@@ -337,10 +342,11 @@ rule token = parse
   (* misc *)
   | eof                         { EOF }
 
-  | _ as c                      { raise (Input.Illegal_string c) }
+  | _ as c                      { raise (Input.Illegal_byte_sequence c) }
 
 and proof = parse
-  | '\n'                        { new_line lexbuf; proof lexbuf }
+  | '\n'                        { new_line lexbuf ;
+                                  proof lexbuf }
   | "Qed"                       { QED }
   | '.'                         { DOT }
   | eof                         { EOF }
@@ -348,18 +354,6 @@ and proof = parse
   | lower_name
   | intern_name
   | _                           { proof lexbuf }
-
-and invalid = parse
-  | '.'                         { DOT }
-  | "/*"                        { comment 0 (Continuation invalid) lexbuf }
-  | '%' [^'\n']* '\n'           { new_line lexbuf; invalid lexbuf }
-  | '%' [^'\n']*                { invalid lexbuf }
-  | '\n'                        { new_line lexbuf; invalid lexbuf }
-  | '"'                         { Buffer.clear strbuf ;
-                                  strstart := lexbuf.lex_start_p ;
-                                  qstring lexbuf }
-  | eof                         { EOF }
-  | _                           { invalid lexbuf }
 
 and comment level cont = parse
   | in_comment                  { comment level cont lexbuf }
@@ -372,22 +366,37 @@ and comment level cont = parse
                                     comment (level - 1) cont lexbuf }
   | '\n'                        { new_line lexbuf ;
                                   comment level cont lexbuf }
-  | eof                         { failwith "comment not closed at end of input" }
+  | eof                         { raise (Input.EOF_error "comment not closed") }
 
-and qstring = parse
+and qstring starts finish = parse
   | "\\\n"                      { new_line lexbuf ;
-                                  qstring lexbuf }
-  | "\\/*" | "\\*/"             { raise Input.Illegal_string_comment }
+                                  qstring starts finish lexbuf }
+  | "\\/*" as s | "/*" as s     { addString s ;
+                                  let pos = (lexbuf.lex_start_p,lexbuf.lex_curr_p) in
+                                  let starts = pos :: starts in
+                                  qstring starts finish lexbuf }
+  | "\\*/" as s | "*/" as s     { addString s ;
+                                  match starts,finish with
+                                    | (_ :: starts),_ ->
+                                        qstring starts finish lexbuf
+                                    | [],None ->
+                                        let pos = (lexbuf.lex_start_p,lexbuf.lex_curr_p) in
+                                        qstring starts (Some pos) lexbuf
+                                    | _ ->
+                                        qstring starts finish lexbuf }
   | '\\' (_ as c)               { addEscapedChar c ;
-                                  qstring lexbuf }
+                                  qstring starts finish lexbuf }
   | in_qstring as s             { addString s ;
-                                  qstring lexbuf }
-  | '"'                         { let pos = (!strstart,lexbuf.lex_curr_p) in
-                                  QSTRING (pos,Buffer.contents strbuf) }
+                                  qstring starts finish lexbuf }
+  | '"'                         { match starts,finish with
+                                    | (pos :: _),_ | _,Some pos ->
+                                        raise (Input.Illegal_string_comment pos)
+                                    | _ ->
+                                        let pos = (!strstart,lexbuf.lex_curr_p) in
+                                        QSTRING (pos,Buffer.contents strbuf) }
   | '\n'                        { addChar '\n' ;
                                   new_line lexbuf ;
-                                  qstring lexbuf }
-  | "/*" | "*/"                 { raise Input.Illegal_string_comment }
+                                  qstring starts finish lexbuf }
   | (('/' | '*') as c)          { addChar c ;
-                                  qstring lexbuf }
-  | eof                         { failwith "string not closed at end of input" }
+                                  qstring starts finish lexbuf }
+  | eof                         { raise (Input.EOF_error "string not closed") }

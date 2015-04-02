@@ -440,20 +440,20 @@ and run_query_or_def ~test_limit =
     let ns = Term.save_namespace () in
     fun () -> Term.restore_state s ; Term.restore_namespace ns
   in function
-    | Input.KKind (l, k) ->
+    | `InKind (l, k) ->
         List.iter (fun s -> System.declare_type s k) l ;
         [],false
-    | Input.TType (l, t) ->
+    | `InType (l, t) ->
         List.iter (fun s -> System.declare_const s t) l ;
         [],false
-    | Input.Def (decls,defs) ->
+    | `InDef (decls,defs) ->
         let stratum = System.declare_preds decls in
         (List.rev (System.add_clauses stratum defs)),false
-    | Input.Theorem thm ->
+    | `InTheorem thm ->
         System.add_theorem thm ;
         [],true
-    | Input.Qed p -> raise (Input.Qed_error p)
-    | Input.Query t ->
+    | `InQed p -> raise (Input.Qed_error p)
+    | `InQuery (p,t) ->
         do_cleanup
           (fun pre_query ->
              let query = System.translate_query pre_query in
@@ -461,14 +461,14 @@ and run_query_or_def ~test_limit =
           t
           reset ;
         [],false
-    | Input.Cert t ->
+    | `InCert t ->
         let cert = System.translate_cert t in
         (*
          Prover.toplevel_prove cert
          *)
         ignore cert ;
         [],false
-    | Input.Command c ->
+    | `InCommand c ->
         command ~test_limit c reset ;
         [],false
 
@@ -520,50 +520,50 @@ and include_file ?(test_limit=(!test_limit)) fname =
  * or [#assert_raise formula.] fails *)
 and command ~test_limit c reset =
   let aux = function
-    | Input.Exit ->
+    | `ComExit ->
         IO.close_user_files () ;
         begin match !exit_status with
           | None -> exit 0
           | Some error_code -> exit error_code
         end
-    | Input.Help -> Format.printf "%s" help_msg
+    | `ComHelp -> Format.printf "%s" help_msg
 
     (* Session management *)
-    | Input.Include l -> List.iter (include_file ~test_limit:(decr_test_limit test_limit)) l
-    | Input.Reload -> load_session ()
-    | Input.Session l -> session := l ; load_session ()
+    | `ComInclude l -> List.iter (include_file ~test_limit:(decr_test_limit test_limit)) l
+    | `ComReload -> load_session ()
+    | `ComSession l -> session := l ; load_session ()
 
     (* Turn debugging on/off. *)
-    | Input.Debug value -> System.debug := (bool_of_flag value)
+    | `ComDebug value -> System.debug := (bool_of_flag value)
 
     (* Turn timing on/off. *)
-    | Input.Time value -> System.time := (bool_of_flag value)
+    | `ComTime value -> System.time := (bool_of_flag value)
 
     (* Tabling-related commands *)
-    | Input.Equivariant value -> Table.O.set_eqvt (bool_of_flag value)
-    | Input.Freezing temp -> Prover.freezing_point := temp
-    | Input.Saturation pressure -> Prover.saturation_pressure := pressure
-    | Input.Env -> System.print_env ()
-    | Input.Type_of pre_term -> System.print_type_of pre_term
-    | Input.Show_def (p,name) ->
+    | `ComEquivariant value -> Table.O.set_eqvt (bool_of_flag value)
+    | `ComFreezing temp -> Prover.freezing_point := temp
+    | `ComSaturation pressure -> Prover.saturation_pressure := pressure
+    | `ComEnv -> System.print_env ()
+    | `ComType_of pre_term -> System.print_type_of pre_term
+    | `ComShow_def (p,name) ->
         System.show_def (p,Term.atom ~tag:Term.Constant name)
-    | Input.Show_table (p,name) ->
+    | `ComShow_table (p,name) ->
         System.show_table (p,Term.atom ~tag:Term.Constant name)
-    | Input.Clear_tables ->
+    | `ComClear_tables ->
         clean_tables := true ;
         System.clear_tables ()
-    | Input.Clear_table (p,name) ->
+    | `ComClear_table (p,name) ->
         clean_tables := false ;
         System.clear_table (p,Term.atom ~tag:Term.Constant name)
     (* save the content of a table to a file. An exception is thrown if
      * file already exists. *)
-    | Input.Save_table (p,name,file) ->
+    | `ComSave_table (p,name,file) ->
         System.save_table (p,Term.atom ~tag:Term.Constant name) name file
-    | Input.Export name ->
+    | `ComExport name ->
         if !clean_tables then System.export name else raise Uncleared_tables
 
     (* Testing commands *)
-    | Input.Assert pre_query ->
+    | `ComAssert pre_query ->
         let query = System.translate_query pre_query in
         begin match test_limit with Some n when n <= 0 -> () | _ ->
           if !exit_status = None then begin
@@ -574,7 +574,7 @@ and command ~test_limit c reset =
               ~failure:(fun () -> raise Assertion_failed)
           end
         end
-    | Input.Assert_not pre_query ->
+    | `ComAssert_not pre_query ->
         let query = System.translate_query pre_query in
         begin match test_limit with Some n when n <= 0 -> () | _ ->
           if !exit_status = None then begin
@@ -584,7 +584,7 @@ and command ~test_limit c reset =
               ~success:(fun _ _ -> raise Assertion_failed) ~failure:ignore
           end
         end
-    | Input.Assert_raise pre_query ->
+    | `ComAssert_raise pre_query ->
         let query = System.translate_query pre_query in
         begin match test_limit with Some n when n <= 0 -> () | _ ->
           if !exit_status = None then begin
@@ -599,7 +599,7 @@ and command ~test_limit c reset =
         end
   in
   let reset = match c with
-    | Input.Include _ | Input.Reload | Input.Session _ -> ignore
+    | `ComInclude _ | `ComReload | `ComSession _ -> ignore
     | _ -> reset
   in
   do_cleanup aux c reset

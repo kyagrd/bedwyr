@@ -25,11 +25,13 @@ and pos' = pos
 let dummy_pos = Lexing.dummy_pos,Lexing.dummy_pos
 let dummy_pos' = dummy_pos
 
-exception Illegal_string of char
-exception Illegal_string_comment
+exception Illegal_byte_sequence of char
+exception Illegal_string_comment of pos
 exception Illegal_token of string * string
 exception Unknown_command of string
-
+exception EOF_error of string
+exception Empty_command
+exception Empty_term
 exception Parse_error of pos * string * string
 
 module I = struct
@@ -135,45 +137,63 @@ let free_args pre_term =
   in_app pre_term
 
 
-(* Input AST (.def file or toplevel) *)
+(* Input AST *)
 
 exception Qed_error of pos
 
 type flavour = Normal | Inductive | CoInductive
 
-type command =
-  | Exit
-  | Help
-  | Include             of string list
-  | Reload
-  | Session             of string list
-  | Debug               of string option
-  | Time                of string option
-  | Equivariant         of string option
-  | Freezing            of int
-  | Saturation          of int
-  | Env
-  | Type_of             of preterm
-  | Show_def            of pos * string
-  | Show_table          of pos * string
-  | Clear_tables
-  | Clear_table         of pos * string
-  | Save_table          of pos * string * string
-  | Export              of string
-  | Assert              of preterm
-  | Assert_not          of preterm
-  | Assert_raise        of preterm
+module Command = struct
+  type t =
+    | Kind    of (pos * string) list * Typing.ki
+    | Type    of (pos * string) list * Typing.ty
+    | Def     of (flavour * pos * string * Typing.ty) list *
+                 (pos * preterm * preterm) list
+    | Theorem of (pos * string * preterm)
+    | Qed     of pos
+end
 
-type input =
-  | KKind   of (pos * string) list * Typing.ki
-  | TType   of (pos * string) list * Typing.ty
-  | Def     of (flavour * pos * string * Typing.ty) list *
-               (pos * preterm * preterm) list
-  | Query   of preterm
-  | Cert    of preterm
-  | Command of command
-  | Theorem of (pos * string * preterm)
-  | Qed     of (pos)
+module MetaCommand = struct
+  type t =
+    | Exit
+    | Help
+    | Include       of string list
+    | Reload
+    | Session       of string list
+    | Debug         of string option
+    | Time          of string option
+    | Equivariant   of string option
+    | Freezing      of int
+    | Saturation    of int
+    | Env
+    | Type_of       of preterm
+    | Show_def      of pos * string
+    | Show_table    of pos * string
+    | Clear_tables
+    | Clear_table   of pos * string
+    | Save_table    of pos * string * string
+    | Export        of string
+    | Assert        of preterm
+    | Assert_not    of preterm
+    | Assert_raise  of preterm
+end
+
+type definition_mode =
+  [
+  | `Command            of Command.t
+  | `MetaCommand        of MetaCommand.t
+  ]
+
+type toplevel =
+  [
+  | `Term               of pos * preterm
+  | `MetaCommand        of MetaCommand.t
+  ]
+
+type term_mode =
+  [
+  | `Term               of pos * preterm
+  ]
 
 (* Pre-terms' type checking *)
 

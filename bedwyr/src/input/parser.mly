@@ -68,7 +68,6 @@
 %token EOF
 
 /* Lower */
-
 %nonassoc LPAREN
 %nonassoc RPAREN
 
@@ -81,54 +80,54 @@
 %nonassoc EQ
 
 %right INFIX_ID
-
 /* Higher */
 
-%start skip_invalid skip_proof input_def input_query
-%type <unit> skip_invalid
+%start skip skip_proof definition_mode toplevel term_mode
+%type <unit> skip
 %type <unit> skip_proof
-%type <Input.input> input_def
-%type <Input.input> input_query
+%type <Input.definition_mode> definition_mode
+%type <Input.toplevel> toplevel
+%type <Input.term_mode> term_mode
 
 %%
 
-/* commands */
+/* entry points */
 
-skip_invalid:
+skip:
   | DOT                                 { () }
   | EOF                                 { () }
-  | QSTRING skip_invalid                { () }
 
 skip_proof:
   | DOT skip_proof                      { $2 }
   | QED DOT                             { () }
   | EOF                                 { eof_error "an Abella proof" }
 
-input_def:
-  | top_command                         { $1 }
-  | meta_command                        { $1 }
+definition_mode:
+  | command                             { `Command $1 }
+  | meta_command                        { `MetaCommand $1 }
+  | EOF                                 { raise Input.Empty_command }
   | error DOT                           { generic_error 1 "a definition file" }
   | error EOF                           { eof_error "a definition file" }
 
-input_query:
-  | formula DOT                         { Input.Query $1 }
-  | meta_command                        { $1 }
+toplevel:
+  | formula DOT                         { `Term (pos 1,$1) }
+  | meta_command                        { `MetaCommand $1 }
+  | EOF                                 { raise Input.Empty_term }
   | error DOT                           { generic_error 1 "the toplevel" }
   | error EOF                           { eof_error "the toplevel" }
 
-input_cert:
-  | formula DOT                         { Input.Cert $1 }
-  /*| meta_command                        { $1 }*/
-  | error DOT                           { generic_error 1 "the toplevel" }
-  | error EOF                           { eof_error "the toplevel" }
+term_mode:
+  | formula DOT                         { `Term (pos 1,$1) }
+  | error DOT                           { generic_error 1 "the term input" }
+  | error EOF                           { eof_error "the term input" }
 
-top_command:
-  | KKIND type_clist ki DOT             { Input.KKind ($2,$3) }
-  | TTYPE const_clist ty DOT            { Input.TType ($2,$3) }
-  | DEFINE decls BY defs DOT            { Input.Def ($2,$4) }
-  | DEFINE decls DOT                    { Input.Def ($2,[]) }
-  | THEOREM theorem DOT                 { Input.Theorem $2 }
-  | QED DOT                             { Input.Qed (pos 0) }
+command:
+  | KKIND type_clist ki DOT             { Input.Command.Kind ($2,$3) }
+  | TTYPE const_clist ty DOT            { Input.Command.Type ($2,$3) }
+  | DEFINE decls BY defs DOT            { Input.Command.Def ($2,$4) }
+  | DEFINE decls DOT                    { Input.Command.Def ($2,[]) }
+  | THEOREM theorem DOT                 { Input.Command.Theorem $2 }
+  | QED DOT                             { Input.Command.Qed (pos 0) }
   | CLOSE                               { failwith "Abella command only." }
   | QUERY                               { failwith "Abella command only." }
   | IMPORT                              { failwith "Abella command only." }
@@ -136,31 +135,30 @@ top_command:
   | SSPLIT                              { failwith "Abella command only." }
 
 meta_command:
-  | EXIT DOT                            { Input.Command (Input.Exit) }
-  | HELP DOT                            { Input.Command (Input.Help) }
-  | INCLUDE string_args DOT             { Input.Command (Input.Include $2) }
-  | RESET DOT                           { Input.Command (Input.Session []) }
-  | RELOAD DOT                          { Input.Command (Input.Reload) }
-  | SESSION string_args DOT             { Input.Command (Input.Session $2) }
-  | DEBUG opt_bool DOT                  { Input.Command (Input.Debug $2) }
-  | TIME opt_bool DOT                   { Input.Command (Input.Time $2) }
-  | EQUIVARIANT opt_bool DOT            { Input.Command (Input.Equivariant $2) }
-  | FREEZING opt_nat DOT                { Input.Command (Input.Freezing $2) }
-  | SATURATION opt_nat DOT              { Input.Command (Input.Saturation $2) }
-  | ENV DOT                             { Input.Command (Input.Env) }
-  | TYPEOF formula DOT                  { Input.Command (Input.Type_of $2) }
-  | SHOW_DEF lower_id DOT               { Input.Command (Input.Show_def (pos 2,$2)) }
-  | SHOW_TABLE lower_id DOT             { Input.Command (Input.Show_table (pos 2,$2)) }
-  | CLEAR_TABLES DOT                    { Input.Command (Input.Clear_tables) }
-  | CLEAR_TABLE lower_id DOT            { Input.Command (Input.Clear_table (pos 2,$2)) }
+  | EXIT DOT                            { Input.MetaCommand.Exit }
+  | HELP DOT                            { Input.MetaCommand.Help }
+  | INCLUDE string_args DOT             { Input.MetaCommand.Include $2 }
+  | RESET DOT                           { Input.MetaCommand.Session [] }
+  | RELOAD DOT                          { Input.MetaCommand.Reload }
+  | SESSION string_args DOT             { Input.MetaCommand.Session $2 }
+  | DEBUG opt_bool DOT                  { Input.MetaCommand.Debug $2 }
+  | TIME opt_bool DOT                   { Input.MetaCommand.Time $2 }
+  | EQUIVARIANT opt_bool DOT            { Input.MetaCommand.Equivariant $2 }
+  | FREEZING opt_nat DOT                { Input.MetaCommand.Freezing $2 }
+  | SATURATION opt_nat DOT              { Input.MetaCommand.Saturation $2 }
+  | ENV DOT                             { Input.MetaCommand.Env }
+  | TYPEOF formula DOT                  { Input.MetaCommand.Type_of $2 }
+  | SHOW_DEF lower_id DOT               { Input.MetaCommand.Show_def (pos 2,$2) }
+  | SHOW_TABLE lower_id DOT             { Input.MetaCommand.Show_table (pos 2,$2) }
+  | CLEAR_TABLES DOT                    { Input.MetaCommand.Clear_tables }
+  | CLEAR_TABLE lower_id DOT            { Input.MetaCommand.Clear_table (pos 2,$2) }
   | SAVE_TABLE lower_id QSTRING DOT     { let _,s = $3 in
-                                          Input.Command (Input.Save_table (pos 2,$2,s)) }
+                                          Input.MetaCommand.Save_table (pos 2,$2,s) }
   | EXPORT QSTRING DOT                  { let _,s = $2 in
-                                          Input.Command (Input.Export s) }
-  | ASSERT formula DOT                  { Input.Command (Input.Assert $2) }
-  | ASSERT_NOT formula DOT              { Input.Command (Input.Assert_not $2) }
-  | ASSERT_RAISE formula DOT            { Input.Command (Input.Assert_raise $2) }
-  | EOF                                 { raise End_of_file }
+                                          Input.MetaCommand.Export s }
+  | ASSERT formula DOT                  { Input.MetaCommand.Assert $2 }
+  | ASSERT_NOT formula DOT              { Input.MetaCommand.Assert_not $2 }
+  | ASSERT_RAISE formula DOT            { Input.MetaCommand.Assert_raise $2 }
   | SET                                 { failwith "Abella command only" }
   | SHOW                                { failwith "Abella command only" }
   | QUIT                                { failwith "Abella command only" }
