@@ -62,17 +62,22 @@ let usage_msg =
     "Usage: bedwyr [filename | option]*\n"
 
 let batch       = ref false
+let test_limit  = ref (Some 0)
 let session     = ref []
 let definitions = ref []
 let queries     = ref []
 let inclfiles   = ref []
 
 let incr_test_limit () =
-  Interface.test_limit := match !Interface.test_limit with
+  test_limit := match !test_limit with
     | Some n -> Some (n+1)
     | None -> None
 let remove_test_limit () =
-  Interface.test_limit := None
+  test_limit := None
+let decr_test_limit = function
+  | Some n when n > 0 -> Some (n-1)
+  | Some _ -> Some 0
+  | None -> None
 
 let _ =
   Arg.parse
@@ -144,22 +149,24 @@ let run_on_file ~strict f fpath =
   if strict then Interface.exit_if_status ()
 
 let _ =
+  let test_limit = !test_limit in
   let reload ~strict ?(session=(!session)) () =
     System.reset_decls () ;
     Input.Typing.clear () ;
-    run_on_string ~strict Interface.defl ~fname:"Bedwyr::stdlib" stdlib ;
+    run_on_string ~strict (Interface.defl ~test_limit) ~fname:"Bedwyr::stdlib" stdlib ;
     inclfiles := [] ;
-    List.iter (run_on_file ~strict Interface.defl) session ;
-    List.iter (run_on_string ~strict Interface.defs) !definitions
+    List.iter (run_on_file ~strict (Interface.defl ~test_limit)) session ;
+    List.iter (run_on_string ~strict (Interface.defs ~test_limit)) !definitions
   in
   System.read_term := Interface.read_term ;
   Interface.reload := reload ~strict:false ;
-  Interface.include_file := run_on_file ~strict:false Interface.defl ;
+  Interface.include_file := (fun ~test_limit ->
+    run_on_file ~strict:false (Interface.defl ~test_limit:(decr_test_limit test_limit))) ;
   reload ~strict:true () ;
-  List.iter (run_on_string ~strict:true Interface.reps) !queries ;
+  List.iter (run_on_string ~strict:true (Interface.reps ~test_limit)) !queries ;
   if !batch
   then Interface.exit_with_status ()
   else begin
     Format.printf "%s@." welcome_msg ;
-    Interface.repl (Lexing.from_channel stdin)
+    Interface.repl ~test_limit (Lexing.from_channel stdin)
   end

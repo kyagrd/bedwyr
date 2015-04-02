@@ -41,9 +41,9 @@ let help_msg =
   see the user guide.\n\n"
 
 let exit_status = ref None
-let test_limit  = ref (Some 0)
 let reload : ((?session:(string list) -> unit -> unit) ref) = ref (fun ?session () -> ())
-let include_file : ((string -> unit) ref) = ref (fun _ -> ())
+let include_file : ((test_limit:(int option) -> string -> unit) ref) =
+  ref (fun ~test_limit:_ _ -> ())
 
 let exit_with_status () =
   exit (match !exit_status with
@@ -396,9 +396,9 @@ end = struct
 end
 
 module Eval : sig
-  val definition :
+  val definition : test_limit:(int option) ->
     print:('a -> unit) -> Input.definition_mode -> Lexing.lexbuf -> unit option
-  val toplevel :
+  val toplevel : test_limit:(int option) ->
     print:('a -> unit) -> Input.toplevel -> Lexing.lexbuf -> unit option
   val term : print:('a -> unit) -> Input.term_mode -> Lexing.lexbuf -> Term.term option
 end = struct
@@ -486,7 +486,7 @@ end = struct
    * "", "true", "on", "false" or "off")
    * @raise Assertion_failed if [#assert formula.], [#assert_not formula.]
    * or [#assert_raise formula.] fails *)
-  let meta_command ?(test_limit=(!test_limit)) mc =
+  let meta_command ~test_limit mc =
     let reset = Input.MetaCommand.(
       match mc with
         | Include _ | Reload | Session _ -> ignore
@@ -500,7 +500,7 @@ end = struct
         | Input.MetaCommand.Help -> Format.printf "%s" help_msg
 
         (* Session management *)
-        | Input.MetaCommand.Include l -> List.iter !include_file l
+        | Input.MetaCommand.Include l -> List.iter (!include_file ~test_limit) l
         | Input.MetaCommand.Reload -> !reload ()
         | Input.MetaCommand.Session l -> !reload ~session:l ()
 
@@ -584,17 +584,17 @@ end = struct
     with e -> raise e
 
 
-  let definition ~print input lexbuf = match input with
+  let definition ~test_limit ~print input lexbuf = match input with
     | `Command c ->
         command c
     | `MetaCommand mc ->
-        meta_command mc
+        meta_command ~test_limit mc
 
-  let toplevel ~print input lexbuf = match input with
+  let toplevel ~test_limit ~print input lexbuf = match input with
     | `Term (p,pre_query) ->
         query ~p ~print pre_query
     | `MetaCommand mc ->
-        meta_command mc
+        meta_command ~test_limit mc
 
   let term ~print input lexbuf = match input with
     | `Term (p,pre_term) ->
@@ -602,8 +602,8 @@ end = struct
 end
 
 module Mode : sig
-  val definition : Lexing.lexbuf -> (unit -> unit) -> unit
-  val toplevel : Lexing.lexbuf -> (unit -> unit) -> unit
+  val definition : test_limit:(int option) -> Lexing.lexbuf -> (unit -> unit) -> unit
+  val toplevel : test_limit:(int option) -> Lexing.lexbuf -> (unit -> unit) -> unit
   val term : Lexing.lexbuf -> Term.term option
 end = struct
   let step ~read ~eval ~print lexbuf =
@@ -614,9 +614,9 @@ end = struct
           try Some ((eval ~print input) lexbuf)
           with e -> Catch.check lexbuf e
 
-  let definition lexbuf cb =
+  let definition ~test_limit lexbuf cb =
     match
-      try step ~read:Read.definition ~eval:Eval.definition ~print:ignore lexbuf
+      try step ~read:Read.definition ~eval:(Eval.definition ~test_limit) ~print:ignore lexbuf
       with e -> try Catch.command lexbuf e
       with e -> try Catch.solve lexbuf e
       with e -> try Catch.meta_command lexbuf e
@@ -626,9 +626,9 @@ end = struct
       | None -> cb ()
       | _ -> ()
 
-  let toplevel lexbuf cb =
+  let toplevel ~test_limit lexbuf cb =
     match
-      try step ~read:Read.toplevel ~eval:Eval.toplevel ~print:ignore lexbuf
+      try step ~read:Read.toplevel ~eval:(Eval.toplevel ~test_limit) ~print:ignore lexbuf
       with e -> try Catch.solve lexbuf e
       with e -> try Catch.meta_command lexbuf e
       with e -> try Catch.io ~lexbuf e
@@ -664,7 +664,7 @@ let read_term () =
   try Some (aux ()) with End_of_file -> None
 
 (* definition-mode step *)
-let defs lexbuf =
+let defs ~test_limit lexbuf =
   let cb () =
     let k _ =
       set_exit_status 1 ;
@@ -672,16 +672,16 @@ let defs lexbuf =
     in
     ignore (eprintf ~p:(position_lex lexbuf) ~k "Empty command.")
   in
-  Mode.definition lexbuf cb
+  Mode.definition ~test_limit lexbuf cb
 
 (* definition-mode loop *)
-let defl lexbuf =
+let defl ~test_limit lexbuf =
   try while true do
-    Mode.definition lexbuf (fun () -> raise End_of_file)
+    Mode.definition ~test_limit lexbuf (fun () -> raise End_of_file)
   done with End_of_file -> ()
 
 (* read-eval-print step *)
-let reps lexbuf =
+let reps ~test_limit lexbuf =
   let cb () =
     let k _ =
       set_exit_status 1 ;
@@ -689,14 +689,14 @@ let reps lexbuf =
     in
     ignore (eprintf ~p:(position_lex lexbuf) ~k "Empty query.")
   in
-  Mode.toplevel lexbuf cb
+  Mode.toplevel ~test_limit lexbuf cb
 
 (* read-eval-print loop *)
-let repl lexbuf =
+let repl ~test_limit lexbuf =
   try while true do
     Format.printf "?= %!" ;
     Lexer.flush_input lexbuf ;
-    Mode.toplevel lexbuf (fun () -> raise End_of_file)
+    Mode.toplevel ~test_limit lexbuf (fun () -> raise End_of_file)
   done with End_of_file -> Format.printf "@."
 
 (* TODO no meta-commands in defs? *)
