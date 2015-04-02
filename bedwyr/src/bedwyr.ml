@@ -104,16 +104,16 @@ let _ =
   definitions := List.rev (!definitions) ;
   queries := List.rev (!queries)
 
-let run_on_string f ?(fname="") str =
+let run_on_string ~strict f ?(fname="") str =
   let lexbuf = Lexing.from_string str in
   let lexbuf = Lexing.({
     lexbuf with lex_curr_p =
       { lexbuf.lex_curr_p with pos_fname = fname }
   }) in
   f lexbuf ;
-  Interface.exit_if_status ()
+  if strict then Interface.exit_if_status ()
 
-let run_on_file f fpath =
+let run_on_file ~strict f fpath =
   let cwd = Sys.getcwd () in
   let fpath =
     if (Filename.is_relative fpath &&
@@ -141,21 +141,21 @@ let run_on_file f fpath =
       IO.chdir cwd
     with e -> ignore (Interface.Catch.io e)
   end ;
-  Interface.exit_if_status ()
+  if strict then Interface.exit_if_status ()
 
 let _ =
-  let reload ?(session=(!session)) () =
+  let reload ~strict ?(session=(!session)) () =
     System.reset_decls () ;
     Input.Typing.clear () ;
-    run_on_string Interface.defl ~fname:"Bedwyr::stdlib" stdlib ;
+    run_on_string ~strict Interface.defl ~fname:"Bedwyr::stdlib" stdlib ;
     inclfiles := [] ;
-    List.iter (run_on_file Interface.defl) session ;
-    List.iter (run_on_string Interface.defs) !definitions
+    List.iter (run_on_file ~strict Interface.defl) session ;
+    List.iter (run_on_string ~strict Interface.defs) !definitions
   in
-  Interface.reload := reload ;
-  Interface.include_file := run_on_file Interface.defl ;
-  reload () ;
-  List.iter (run_on_string Interface.reps) !queries ;
+  Interface.reload := reload ~strict:false ;
+  Interface.include_file := run_on_file ~strict:false Interface.defl ;
+  reload ~strict:true () ;
+  List.iter (run_on_string ~strict:true Interface.reps) !queries ;
   if !batch
   then Interface.exit_with_status ()
   else begin
