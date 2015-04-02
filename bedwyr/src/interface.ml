@@ -479,7 +479,11 @@ end = struct
    * @raise Assertion_failed if [#assert formula.], [#assert_not formula.]
    * or [#assert_raise formula.] fails *)
   let meta_command ?(test_limit=(!test_limit)) mc =
-    let reset = set_reset () in
+    let reset = Input.MetaCommand.(
+      match mc with
+        | Include _ | Reload | Session _ -> ignore
+        | _ -> set_reset ())
+    in
     try
       begin match mc with
         | Input.MetaCommand.Exit ->
