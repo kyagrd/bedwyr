@@ -34,17 +34,33 @@ let open_in name =
   try open_in name
   with Sys_error e -> error name e "read from"
 
-let close_in name f =
-  try close_in f
+let close_in name c =
+  try close_in c
   with Sys_error e -> error name e "close"
+
+let run_in f name =
+  let c = open_in name in
+  begin try f c with e ->
+    close_in name c ;
+    raise e
+  end ;
+  close_in name c
 
 let open_out name =
   try open_out_gen [Open_wronly;Open_creat;Open_excl] 0o600 name
   with Sys_error e -> error name e "create"
 
-let close_out name f =
-  try close_out f
+let close_out name c =
+  try close_out c
   with Sys_error e -> error name e "close"
+
+let run_out f name =
+  let c = open_out name in
+  begin try f c with e ->
+    close_out name c ;
+    raise e
+  end ;
+  close_out name c
 
 let chdir name =
   try Sys.chdir name
