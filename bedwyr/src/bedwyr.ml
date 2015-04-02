@@ -152,6 +152,7 @@ let _ =
     List.iter (run_on_file ~strict Interface.defl) session ;
     List.iter (run_on_string ~strict Interface.defs) !definitions
   in
+  System.read_term := Interface.read_term ;
   Interface.reload := reload ~strict:false ;
   Interface.include_file := run_on_file ~strict:false Interface.defl ;
   reload ~strict:true () ;

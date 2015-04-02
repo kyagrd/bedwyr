@@ -112,6 +112,7 @@ struct
             ]
 end
 
+let read_term = ref (fun () -> None)
 let debug = ref false
 let time  = ref false
 let root_atoms = ref []
@@ -591,13 +592,6 @@ let clear_table (p,head_tm) =
 
 (* I/O *)
 
-let translate_cert pre_term =
-  let free_types = create_free_types 10 in
-  (* TODO use the cert type here *)
-  let ty = Ty.fresh_tyvar () in
-  let _,term = translate_term ~expected_type:ty pre_term free_types in
-  term
-
 let print_env () =
   let print_types () =
     Format.printf "@[<v 3>*** Types ***" ;
@@ -688,7 +682,14 @@ let export file =
          | _ -> l)
       decls []
   in
-  T.export file all_tables !root_atoms ;
+  T.export file all_tables !root_atoms
+
+let translate_term pre_term =
+  let free_types = create_free_types 10 in
+  (* TODO use the cert type here? *)
+  let ty = Ty.fresh_tyvar () in
+  let _,term = translate_term ~expected_type:ty pre_term free_types in
+  term
 
 
 (* Misc *)

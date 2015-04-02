@@ -118,6 +118,7 @@ toplevel:
 
 term_mode:
   | formula DOT                         { `Term (pos 1,$1) }
+  | EOF                                 { raise Input.Empty_term }
   | error DOT                           { generic_error 1 "the term input" }
   | error EOF                           { eof_error "the term input" }
 

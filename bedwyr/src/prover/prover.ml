@@ -818,12 +818,15 @@ let rec prove sons
           (* Input *)
           | Var v when v == Logic.var_read ->
               begin match goals with
-                  (*
-                | [var] ->
-                    let t = IO.read parse_term in
-                    prove sons temperatures ~success ~failure ~level
-                      ~timestamp ~local (Term.eq var t)
-                   *)
+                | [pattern] ->
+                    begin match !(System.read_term) () with
+                      | None -> failure ()
+                      | Some term ->
+                          prove sons
+                            temperatures (depth+1)
+                            ~level ~local ~timestamp ~failure ~success
+                            (Term.op_eq pattern term)
+                    end
                 | _ -> assert false
               end
 

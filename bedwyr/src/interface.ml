@@ -376,6 +376,7 @@ end
 module Read : sig
   val definition : Lexing.lexbuf -> Input.definition_mode option option
   val toplevel : Lexing.lexbuf -> Input.toplevel option option
+  val term : Lexing.lexbuf -> Input.term_mode option option
 end = struct
   let parse ~parser ~lexer lexbuf =
     try Some (parser lexer lexbuf)
@@ -388,11 +389,18 @@ end = struct
   let toplevel lexbuf =
     try Some (parse ~parser:Parser.toplevel ~lexer:Lexer.token lexbuf)
     with Input.Empty_term -> None
+
+  let term lexbuf =
+    try Some (parse ~parser:Parser.term_mode ~lexer:Lexer.token lexbuf)
+    with Input.Empty_term -> None
 end
 
 module Eval : sig
-  val definition : print:('a -> unit) -> Input.definition_mode -> Lexing.lexbuf -> unit option
-  val toplevel : print:('a -> unit) -> Input.toplevel -> Lexing.lexbuf -> unit option
+  val definition :
+    print:('a -> unit) -> Input.definition_mode -> Lexing.lexbuf -> unit option
+  val toplevel :
+    print:('a -> unit) -> Input.toplevel -> Lexing.lexbuf -> unit option
+  val term : print:('a -> unit) -> Input.term_mode -> Lexing.lexbuf -> Term.term option
 end = struct
   let set_reset () =
     let s = Term.save_state () in
@@ -428,11 +436,11 @@ end = struct
       let found = ref false in
       let reset_time,time =
         let t0 = ref (Unix.gettimeofday ()) in
-          (fun () -> t0 := Unix.gettimeofday ()),
-          (fun () ->
-             if !System.time
-             then Format.printf "+ %.0fms@."
-                    (1000. *. (Unix.gettimeofday () -. !t0)))
+        (fun () -> t0 := Unix.gettimeofday ()),
+        (fun () ->
+           if !System.time
+           then Format.printf "+ %.0fms@."
+                  (1000. *. (Unix.gettimeofday () -. !t0)))
       in
       let show _ k =
         time () ;
@@ -464,7 +472,7 @@ end = struct
       let result =
         Prover.prove ~local:0 ~timestamp:0 query
           ~success:show
-          ~failure:continue ;
+          ~failure:continue
       in
       reset () ;
       Some result
@@ -571,6 +579,11 @@ end = struct
       reset () ;
       raise e
 
+  let term ~p ~print pre_term =
+    try Some (System.translate_term pre_term)
+    with e -> raise e
+
+
   let definition ~print input lexbuf = match input with
     | `Command c ->
         command c
@@ -582,13 +595,17 @@ end = struct
         query ~p ~print pre_query
     | `MetaCommand mc ->
         meta_command mc
+
+  let term ~print input lexbuf = match input with
+    | `Term (p,pre_term) ->
+        term ~p ~print pre_term
 end
 
 module Mode : sig
   val definition : Lexing.lexbuf -> (unit -> unit) -> unit
   val toplevel : Lexing.lexbuf -> (unit -> unit) -> unit
+  val term : Lexing.lexbuf -> Term.term option
 end = struct
-
   let step ~read ~eval ~print lexbuf =
     match read lexbuf with
       | None -> None
@@ -619,8 +636,32 @@ end = struct
     with
       | None -> cb ()
       | _ -> ()
+
+  let term lexbuf =
+    match step ~read:Read.term ~eval:Eval.term ~print:ignore lexbuf with
+      | Some (Some term) -> Some term
+      | Some None -> None
+      | None -> raise End_of_file
 end
 
+let read_term () =
+  let rec aux () =
+    let l =
+      Format.printf " ?> %!" ;
+      try input_line stdin
+      with End_of_file -> ""
+      (* XXX this End_of_file is changed here into a "",
+       * then by the parser into an Input.Empty_term,
+       * then by Read into a None,
+       * then by Mode into a End_of_file...
+       * maybe this is a little heavy and useless *)
+    in
+    let lexbuf = Lexing.from_string l in
+    match Mode.term lexbuf with
+      | None -> aux ()
+      | Some term -> term
+  in
+  try Some (aux ()) with End_of_file -> None
 
 (* definition-mode step *)
 let defs lexbuf =
@@ -657,3 +698,5 @@ let repl lexbuf =
     Lexer.flush_input lexbuf ;
     Mode.toplevel lexbuf (fun () -> raise End_of_file)
   done with End_of_file -> Format.printf "@."
+
+(* TODO no meta-commands in defs? *)
