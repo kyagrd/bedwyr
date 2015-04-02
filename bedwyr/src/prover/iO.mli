@@ -24,13 +24,9 @@ exception File_error of string * string * string
 
 (** {6 Sanity wrappers} *)
 
-val open_in : string -> in_channel
+val run_in : (in_channel -> unit) -> string -> unit
 
-val close_in : string -> in_channel -> unit
-
-val open_out : string -> out_channel
-
-val close_out : string -> out_channel -> unit
+val run_out : (out_channel -> unit) -> string -> unit
 
 val chdir : string -> unit
 

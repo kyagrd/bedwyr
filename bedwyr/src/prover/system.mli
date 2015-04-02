@@ -188,6 +188,11 @@ val root_atoms : Table.O.son list ref
 (** Enables the use of {!Table.O.filter}. *)
 val use_filter : bool ref
 
+(** Guaranties that no table was cleared by {!System.clear_table}
+  * without the others being also cleared, so that {!System.export} can
+  * be used safely. *)
+val clean_tables : bool ref
+
 (** {6 Type declarations} *)
 
 exception Invalid_type_declaration of
@@ -237,7 +242,7 @@ val declare_preds :
 
 (** {6 Clauses and queries construction} *)
 
-exception Missing_declaration of string * Input.pos option
+exception Missing_declaration of string * Input.pos
 exception Stratification_error of string * Input.pos
 
 (** Translate a pre-term, with typing and position information,
@@ -334,3 +339,7 @@ val reset_decls : unit -> unit
 (** @return [true] if a user interruption was detected since the last call to
   * {!check_interrupt}, [false] otherwise. *)
 val check_interrupt : unit -> bool
+
+(** Ensure that the second argument is called, while propagating the
+  * exceptions raised by the first argument. *)
+val sanitize : (unit -> unit) -> (unit -> unit) -> unit

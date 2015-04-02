@@ -116,6 +116,7 @@ let debug = ref false
 let time  = ref false
 let root_atoms = ref []
 let use_filter = ref false
+let clean_tables = ref true
 
 
 (* Types declarations *)
@@ -221,16 +222,15 @@ let declare_preds =
     ignore (List.fold_left (create_def !stratum) Input.Normal decls) ;
     !stratum
 
-let get_pred head_var fail_const fail_missing =
-  try match Hashtbl.find decls head_var with
-    | Constant _ -> fail_const ()
+let get_pred head_var failure =
+  match Hashtbl.find decls head_var with
+    | Constant _ -> failure ()
     | Predicate x -> x
-  with Not_found -> fail_missing ()
 
 
 (* Clauses and queries construction *)
 
-exception Missing_declaration of string * Input.pos option
+exception Missing_declaration of string * Input.pos
 exception Stratification_error of string * Input.pos
 
 
@@ -291,7 +291,7 @@ let translate_term
         with Not_found ->
           begin
             Term.free name ;
-            raise (Missing_declaration (name,Some p))
+            raise (Missing_declaration (name,p))
           end
         end
     in t,(if instantiate_type then Ty.get_fresh_tyinst () ty else ty)
@@ -306,7 +306,7 @@ let translate_term
       with Not_found ->
         begin
           Term.free name ;
-          raise (Missing_declaration (name,Some p))
+          raise (Missing_declaration (name,p))
         end
     in t,Ty.get_fresh_tyinst () ty
   in
@@ -432,8 +432,6 @@ let add_def_clause stratum (p,pre_head,pre_body) =
     get_pred head_var
       (fun () -> raise (Inconsistent_definition
                           (name,p,"object declared as a constant")))
-      (fun () -> raise (Inconsistent_definition
-                          (name,p,"predicate not declared")))
   in
   if stratum<>stratum' then
     raise (Inconsistent_definition
@@ -518,8 +516,6 @@ let add_theorem_clause p (pred,arity,body) =
     get_pred head_var
       (fun () -> raise (Inconsistent_theorem
                           (name,p,"target object declared as a constant")))
-      (fun () -> raise (Inconsistent_theorem
-                          (name,p,"target predicate not declared")))
   in
   match flavour with
     | Normal -> () (* XXX to crash or not to crash? *)
@@ -551,13 +547,12 @@ exception Missing_definition of string * Input.pos option
 exception Missing_table of string * Input.pos option
 
 
-let get_name_pred ?pos head_tm failure =
+let get_name_pred ?pos head_tm =
   let head_var = Term.get_var head_tm in
   let name = Term.get_name head_tm in
   let {flavour=flavour;definition=definition;ty=ty} =
     get_pred head_var
-      (fun () -> failure () ; raise (Missing_definition (name,pos)))
-      (fun () -> failure () ; raise (Missing_declaration (name,pos)))
+      (fun () -> raise (Missing_definition (name,pos)))
   in
   name,flavour,definition,ty
 
@@ -566,18 +561,17 @@ let remove_def head_tm =
   Hashtbl.remove decls head_var
 
 let get_flav_def head_tm =
-  let _,flavour,definition,_ = get_name_pred head_tm ignore in
+  let _,flavour,definition,_ = get_name_pred head_tm in
   flavour,definition
 
-let get_def pos head_tm success failure =
-  let _,_,definition,ty = get_name_pred ~pos head_tm failure in
+let get_def pos head_tm success =
+  let _,_,definition,ty = get_name_pred ~pos head_tm in
   success definition ty
 
-let get_table pos head_tm success failure =
-  let name,flavour,_,ty = get_name_pred ~pos head_tm failure in
+let get_table pos head_tm success =
+  let name,flavour,_,ty = get_name_pred ~pos head_tm in
   match flavour with
     | Normal ->
-        failure () ;
         raise (Missing_table (name,Some pos))
     | Inductive {table=table} | CoInductive {table=table} ->
         success table ty
@@ -592,7 +586,7 @@ let clear_tables () =
     decls
 
 let clear_table (p,head_tm) =
-  get_table p head_tm (fun table _ -> T.reset table) ignore
+  get_table p head_tm (fun table _ -> T.reset table)
 
 
 (* I/O *)
@@ -671,18 +665,18 @@ let print_type_of pre_term =
 
 let show_def (p,head_tm) =
   get_def p head_tm
-    (fun body _ -> Format.printf "%a@." Pprint.pp_term body) ignore
+    (fun body _ -> Format.printf "%a@." Pprint.pp_term body)
 
 let show_table (p,head_tm) =
-  get_table p head_tm (fun table _ -> T.print head_tm table) ignore
+  get_table p head_tm (fun table _ -> T.print head_tm table)
 
 let save_table (p,head_tm) name file =
-  let fout = IO.open_out file in
-  get_table p head_tm
-    (fun table ty ->
-       T.fprint fout head_tm table ty ;
-       IO.close_out name fout)
-    (fun () -> IO.close_out name fout)
+  let aux channel =
+    get_table p head_tm
+      (fun table ty ->
+         T.fprint channel head_tm table ty)
+  in
+  IO.run_out aux file
 
 let export file =
   let all_tables =
@@ -713,3 +707,7 @@ let _ =
   Sys.set_signal Sys.sigint (Sys.Signal_handle (fun _ -> interrupt := true))
 let check_interrupt () =
   if !interrupt then ( interrupt := false ; true ) else false
+
+let sanitize f clean =
+  try f () ; clean ()
+  with e -> clean () ; raise e

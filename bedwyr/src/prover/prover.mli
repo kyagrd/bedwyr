@@ -53,8 +53,4 @@ val saturation_pressure : int ref
 val prove :
   success:(int -> (unit -> 'a) -> 'a) ->
   failure:(unit -> 'a) ->
-  level:level -> timestamp:int -> local:int -> Term.term -> 'a
-
-(** Run the toplevel, call [prove] on the queries,
-  * and offer to print the solutions one by one. *)
-val toplevel_prove : Term.term -> unit
+  timestamp:int -> local:int -> Term.term -> 'a

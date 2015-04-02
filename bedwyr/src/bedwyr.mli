@@ -17,6 +17,7 @@
 (* 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.              *)
 (****************************************************************************)
 
+(*
 (** Bedwyr's main loop. *)
 
 (** Read a *.def file. *)
@@ -26,3 +27,4 @@ val include_file : ?test_limit:int option -> string -> unit
   * @param interactive intended for the REPL,
   * gives additional error messages *)
 val input_queries : ?test_limit:int option -> ?interactive:bool -> Lexing.lexbuf -> unit
+ *)

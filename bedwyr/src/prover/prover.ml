@@ -820,13 +820,7 @@ let rec prove sons
               begin match goals with
                   (*
                 | [var] ->
-                    let read_fun s =
-                      System.translate_cert s
-
-                      process ~test:false Parser.input_cert (Lexing.from_string s)
-
-                    in
-                    let t = IO.read read_fun in
+                    let t = IO.read parse_term in
                     prove sons temperatures ~success ~failure ~level
                       ~timestamp ~local (Term.eq var t)
                    *)
@@ -909,7 +903,7 @@ let rec prove sons
     | _ -> invalid_goal ()
 
 (* Wrap prove with sanity checks. *)
-let prove ~success ~failure ~level ~timestamp ~local g =
+let prove ~success ~failure ~timestamp ~local g =
   let s0 = save_state () in
   let success ts k =
     assert (Stack.is_empty dependency_stack) ;
@@ -923,45 +917,8 @@ let prove ~success ~failure ~level ~timestamp ~local g =
   try
     prove System.root_atoms
       [] 0
-      ~success ~failure ~level ~timestamp ~local g
+      ~success ~failure  ~level:One ~timestamp ~local g
   with e ->
     clear_dependency_stack () ;
     restore_state s0 ;
     raise e
-
-let toplevel_prove g =
-  let s0 = save_state () in
-  let vars = List.map (fun t -> Pprint.term_to_string t, t)
-               (List.rev (logic_vars [g])) in
-  let found = ref false in
-  let reset,time =
-    let t0 = ref (Unix.gettimeofday ()) in
-      (fun () -> t0 := Unix.gettimeofday ()),
-      (fun () ->
-         if !time then
-           printf "+ %.0fms@." (1000. *. (Unix.gettimeofday () -. !t0)))
-  in
-  let show _ k =
-    time () ;
-    found := true ;
-    if vars = [] then printf "Yes.@." else
-      printf "Solution found:@." ;
-    List.iter
-      (fun (o,t) -> printf " %s = %a@." o Pprint.pp_term t)
-      vars ;
-    printf "More [y] ? %!" ;
-    let l = input_line stdin in
-    if l = "" || l.[0] = 'y' || l.[0] = 'Y' then begin
-      reset () ;
-      k ()
-    end else begin
-      restore_state s0 ;
-      printf "Search stopped.@."
-    end
-  in
-  prove ~level:One ~local:0 ~timestamp:0 g
-    ~success:show
-    ~failure:(fun () ->
-                time () ;
-                if !found then printf "No more solutions.@."
-                else printf "No.@.")
