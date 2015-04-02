@@ -1,12 +1,13 @@
-\documentclass[a4paper]{article} % defaults to letter
+\documentclass[a4paper,twocolumn]{article}
 \input{include/tex/preamble.tex}
+\usepackage{amssymb}
 
 \hypersetup{pdftitle={Bedwyr 1.4 QuickStart}}
 \lstset{style=bedwyr}
 
-\title{{\Huge A Quick-Start Guide to Bedwyr v1.4}}
+\title{{\Huge A Quick-Start Guide to\\Bedwyr v1.4}}
 \author{Quentin Heath\\
-        INRIA Saclay and LIX/\'Ecole polytechnique}
+        Inria Saclay--\^Ile-de-France \& LIX, \'Ecole polytechnique}
 
 \begin{document}
 \maketitle
@@ -23,7 +24,7 @@ co-induction}), contains object-level $\lambda$-abstractions, three quantifiers
 definitions.  While LINC is a extension of higher-order intuitionistic logic,
 formulae are restricted to a fragment where connectives on the left of an
 implication must have invertible rules (i.e. no universal quantifier nor
-implication -- this enables the closed-world assumption), while equalities are
+implication -- this is what enables the closed-world assumption), while equalities are
 restricted to the \Ll{} fragment (allowing for the use of higher-order pattern
 unification).
 
@@ -43,38 +44,59 @@ includes this quick-start guide, a reference manual and the source-code
 documentation.
 
 % ============================================================================
-\section{Input format}
+\section{Input}
 
-Bedwyr accepts three kinds of input: commands, queries and meta-commands.
+\begin{figure}[t]
+  \centering
+  \begin{tabular}{rl|ccc}
+                            &                              & .def       & REPL       & CLI \\
+    \hline
+         \ref{sec:commands} & \lstinline+Define p : prop.+ & \checkmark &            & \texttt{-d} \\
+          \ref{sec:queries} & \lstinline+X = 42.+          &            & \checkmark & \texttt{-e} \\
+    \ref{sec:meta-commands} & \lstinline+#print_env.+      & \checkmark & \checkmark & \texttt{-d/-e} \\
+  \end{tabular}
+\end{figure}
 
-Commands are grouped in definition files (plain text files,
-usually named \path{*.def}).  They declare new types and constants,
-declare and define new predicates, and define theorems
-(note that theorems are not proved, but are used as lemmas).
+\subsection{Commands (definition mode)}
+\label{sec:commands}
 
-Queries are entered at the toplevel (either in batch-mode or interactively).
-They are plain formulae that Bedwyr attempts to solve.
-If it succeeds in its search, it either displays the list of solutions
-(substitutions of the free variables) or a negative answer; otherwise,
-if the formula is not handled by the prover (non-invertible connective on the
-left) or by the unifier (not \Ll{}), it aborts with an appropriate error
-message.
+Commands are used to declare new types and constants, declare and
+define predicates, and define theorems (which are not proved, but are
+used as lemmas).
 
-Meta-commands can be entered either in files or at the toplevel.
+They are grouped in definition files (plain text files, usually named
+\path{*.def}), or passed onto the CLI (command-line interface) via the
+\texttt{-d} option.
+
+\subsection{Queries (toplevel)}
+\label{sec:queries}
+
+Queries are plain formulae that Bedwyr attempts to solve.  If
+possible, it outputs the list of solutions (substitutions of the free
+variables).  Otherwise, if the formula is not handled by the prover
+(non-invertible connective on the left) or by the unifier (not \Ll{}),
+resolution aborts.
+
+They are entered interactively in an REPL (read-eval-print loop), or
+passed onto the CLI via the \texttt{-e} option.
+
+\subsection{Meta-commands}
+\label{sec:meta-commands}
+
+Meta-commands can be used wherever commands or queries are allowed.
 Most of them aim at improving the user experience by executing strictly
 non-logical tasks, mainly input (\lstinline+#include "inc.def".+), output
-(\lstinline+#debug on.+, \lstinline+#typeof X Y :: nil.+) and testing
-(\lstinline+#assert true.+, \lstinline+#assert_not false.+).
-A few of them change the order of computations, and thus performances, but not
-provability (\lstinline+#freezing 4.+, \lstinline+#saturation 2.+).
+(\lstinline+#typeof X Y :: nil.+) or testing (\lstinline+#assert true.+).
+A few of them change proof structure, but not provability
+(\lstinline+#freezing 4.+, \lstinline+#saturation 2.+).
 
 % ============================================================================
-\section{Sample files}
+\section{Sample definition file}
 
 \autoref{def:maxa} shows a complete sample definition file,
 with the declarations for a type and two constants, along with a few predicates.
 
-\begin{figure}
+\begin{figure}[t]
   \lstinputlisting[%
     caption={\protect\path{maxa.def}},%
     label=def:maxa%
@@ -99,7 +121,7 @@ only the first aspect is used here (meaning we might as well have used the
 \autoref{repl:maxa} shows an example of use of the interactive toplevel
 following the invocation of \verb+bedwyr maxa.def+.
 
-\begin{figure}\begin{lstlisting}[%
+\begin{figure}[t]\begin{lstlisting}[%
   style=bedwyr-repl,caption={Interactive session},label=repl:maxa]
 ?= #env.
 *** Types ***
@@ -115,15 +137,12 @@ following the invocation of \verb+bedwyr maxa.def+.
  I leq : ch -> ch -> prop
    maxa : ch -> prop
    member : A -> (list A) -> prop
-?= leq X (s (s z)).
+?= leq X (s z).
 Solution found:
  X = z
 More [y] ? y
 Solution found:
  X = s z
-More [y] ? y
-Solution found:
- X = s (s z)
 More [y] ? y
 No more solutions.
 ?= maxa X.

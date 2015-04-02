@@ -10,10 +10,11 @@ Define a : ch -> prop by
   a (s (s z)).
 
 % The less-than-or-equal relation
-Define inductive leq : ch -> ch -> prop by
-  leq z N ;
-  leq (s N) (s M) := leq N M.
+Define inductive leq : ch -> ch -> prop
+by leq z _
+;  leq (s N) (s M) := leq N M.
 
 % Compute the maximum of a
-Define maxa : ch -> prop by
-  maxa N := a N /\ forall x, a x -> leq x N.
+Define maxa : ch -> prop
+by maxa N :=
+     a N /\ forall x, a x -> leq x N.
