@@ -176,6 +176,10 @@ No more solutions. v}
     * The file "test.txt" will contain the string "Test printing". *)
 end
 
+(** Function used to provide a term during the processing of a request.
+  * Expected to ask the term interactivelly to the user. *)
+val read_term : (unit -> Term.term option) ref
+
 (** Simple debug flag, can be set dynamically from the logic program. *)
 val debug : bool ref
 
@@ -294,10 +298,6 @@ val clear_table : Input.pos * Term.term -> unit
 
 (** {6 I/O} *)
 
-(** Translate a pre-term into a term.
-  * Similar to {!translate_query}, but with no assumption on the type. *)
-val translate_cert : Input.preterm -> Term.term
-
 (** Display all type and objects declarations. *)
 val print_env : unit -> unit
 
@@ -324,6 +324,10 @@ val save_table : Input.pos * Term.term -> string -> string -> unit
   * Doesn't work between a call to [#clear_table] and the following call
   * to [#clear_tables]. *)
 val export : string -> unit
+
+(** Translate a pre-term into a term.
+  * Similar to {!translate_query}, but with no assumption on the type. *)
+val translate_term : Input.preterm -> Term.term
 
 (** {6 Misc} *)
 

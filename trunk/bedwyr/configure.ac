@@ -21,7 +21,7 @@ m4_define([M4_VERSION_MAJOR],1)
 m4_define([M4_VERSION_MINOR],4)
 m4_define([M4_VERSION_PATCH],0)
 m4_define([M4_VERSION_BUILD],0)
-m4_define([M4_VERSION_DEV],beta1)
+m4_define([M4_VERSION_DEV],beta2)
 m4_define([M4_VERSION1],[M4_VERSION_MAJOR.M4_VERSION_MINOR])
 m4_define([M4_VERSION2],m4_if(M4_VERSION_PATCH,0,
           [M4_VERSION1],[M4_VERSION1.M4_VERSION_PATCH]))
@@ -232,9 +232,9 @@ if test "X$enable_doc" = Xyes ; then
 	#	AC_MSG_ERROR(Cannot find fig2dev. Install transfig.)
 	#fi
 
-	AC_PATH_PROG(LATEX,latex,no)
+	AC_PATH_PROG(LATEX,pdflatex latex,no)
 	AS_IF([test "X$LATEX" = Xno],
-	      [AC_MSG_ERROR(Cannot find latex.)])
+	      [AC_MSG_ERROR(Cannot find a latex alternative.)])
 
 	AC_PATH_PROG(KPSEWHICH,kpsewhich,no)
 	if test "X$KPSEWHICH" = Xno ; then
