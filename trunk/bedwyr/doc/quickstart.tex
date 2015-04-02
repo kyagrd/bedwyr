@@ -15,80 +15,94 @@
 % ============================================================================
 \section{Overview}
 
-Bedwyr is a generalization of logic programming that allows model checking
-directly on syntactic expression possibly containing bindings.  It identifies
-finite successes and finite failures under the closed world assumption.  The
-logic manipulated, a subset of LINC (for \emph{lambda, induction, nabla,
-co-induction}), contains object-level $\lambda$-abstractions, three quantifiers
-(including the $\nabla$ quantifier), and inductive and co-inductive
-definitions.  While LINC is a extension of higher-order intuitionistic logic,
-formulae are restricted to a fragment where connectives on the left of an
-implication must have invertible rules (i.e. no universal quantifier nor
-implication -- this is what enables the closed-world assumption), while equalities are
-restricted to the \Ll{} fragment (allowing for the use of higher-order pattern
-unification).
+Bedwyr is a generalization of logic programming that allows model
+checking directly on syntactic expression.
 
-The system, written in OCaml, is part of an open source project.
-The \href{http://slimmer.gforge.inria.fr/bedwyr/#download}{web page}
+The logic manipulated, a subset of LINC (for \emph{lambda, induction,
+nabla, co-induction}), contains object-level $\lambda$-abstractions,
+$\nabla$ (nominal) quantification, and (co-)inductive definitions.
+While LINC is a extension of higher-order intuitionistic logic, Bedwyr
+formulae are restricted to a fragment where connectives on the left of
+an implication must have invertible rules (i.e. no universal
+quantifier nor implication -- this enables the closed-world assumption
+when identifying finite success and finite failure), while equalities
+are restricted to the \Ll{} fragment (allowing for the use of
+higher-order pattern unification).
+
+The OCaml implementation is part of an open source project.  The
+\href{http://slimmer.gforge.inria.fr/bedwyr/#download}{web page}
 offers multiple ways to get it:
-\begin{itemize}
-  \item read-only SVN repository
-  \item sources tarball
-  \item precompiled binaries (win32, GNU/Linux, OCaml bytecode)
-  \item GNU/Linux (Gentoo and Debian) unofficial packages
+\begin{itemize}[nolistsep]
+  \item SVN repository
+  \item tarballs
+  \item precompiled binaries
+  \item GNU/Linux packages
   \item Windows installer
 \end{itemize}
 
-The \href{http://slimmer.gforge.inria.fr/bedwyr/#documentation}{documentation}
-includes this quick-start guide, a reference manual and the source-code
-documentation.
+The
+\href{http://slimmer.gforge.inria.fr/bedwyr/#documentation}{documentation}
+includes this quick-start guide, a reference manual and the
+source-code documentation.
 
 % ============================================================================
 \section{Input}
 
+Input sources can be plain text definition files (\path{*.def}), the
+REPL (read-eval-print loop), the \lstinline+read+ predicate, and
+arguments to the \texttt{-d}, \texttt{-e} and \texttt{-c} CLI
+(command-line interface) options.  Three modes are available:
+\begin{description}[nolistsep]
+  \item[definition mode] is used in \path{*.def} files and with
+    \texttt{-d}
+  \item[toplevel mode] is used in the REPL and with \texttt{-e}
+  \item[term mode] is used at run-time via \lstinline+read+ and with
+    \texttt{-c}
+\end{description}
+
 \begin{figure}[t]
   \centering
-  \begin{tabular}{rl|ccc}
-                            &                              & .def       & REPL       & CLI \\
+  \begin{tabular}{l|cccc}
+                                                         & *.def      & REPL       & \lstinline+read+ & CLI \\
     \hline
-         \ref{sec:commands} & \lstinline+Define p : prop.+ & \checkmark &            & \texttt{-d} \\
-          \ref{sec:queries} & \lstinline+X = 42.+          &            & \checkmark & \texttt{-e} \\
-    \ref{sec:meta-commands} & \lstinline+#print_env.+      & \checkmark & \checkmark & \texttt{-d/-e} \\
+         \ref{sec:commands} \lstinline+Define p : prop.+ & \checkmark &            &                  & \texttt{-d} \\
+          \ref{sec:queries} \lstinline+X = 42.+          &            & \checkmark &                  & \texttt{-e} \\
+    \ref{sec:meta-commands} \lstinline+#env.+            & \checkmark & \checkmark &                  & \texttt{-d/-e} \\
+            \ref{sec:terms} \lstinline+1 :: 2 :: nil.+   &            &            & \checkmark       & \texttt{-c}
   \end{tabular}
 \end{figure}
 
-\subsection{Commands (definition mode)}
+\subsection{Commands}
 \label{sec:commands}
 
-Commands are used to declare new types and constants, declare and
-define predicates, and define theorems (which are not proved, but are
-used as lemmas).
+Commands are used in definition mode to declare new types and
+constants, declare and define predicates, and define theorems (which
+are not proved, but are used as lemmas).
 
-They are grouped in definition files (plain text files, usually named
-\path{*.def}), or passed onto the CLI (command-line interface) via the
-\texttt{-d} option.
-
-\subsection{Queries (toplevel)}
+\subsection{Queries}
 \label{sec:queries}
 
-Queries are plain formulae that Bedwyr attempts to solve.  If
-possible, it outputs the list of solutions (substitutions of the free
-variables).  Otherwise, if the formula is not handled by the prover
-(non-invertible connective on the left) or by the unifier (not \Ll{}),
-resolution aborts.
-
-They are entered interactively in an REPL (read-eval-print loop), or
-passed onto the CLI via the \texttt{-e} option.
+Queries are plain formulae (terms of type \lstinline+prop+), entered
+at the toplevel, that Bedwyr attempts to solve.  If possible, it
+outputs the list of solutions (substitutions of the free variables).
+Otherwise, if the formula is not handled by the prover (non-invertible
+connective on the left) or by the unifier (not \Ll{}), resolution
+aborts.
 
 \subsection{Meta-commands}
 \label{sec:meta-commands}
 
-Meta-commands can be used wherever commands or queries are allowed.
-Most of them aim at improving the user experience by executing strictly
-non-logical tasks, mainly input (\lstinline+#include "inc.def".+), output
-(\lstinline+#typeof X Y :: nil.+) or testing (\lstinline+#assert true.+).
-A few of them change proof structure, but not provability
-(\lstinline+#freezing 4.+, \lstinline+#saturation 2.+).
+Meta-commands are used both in definition mode and at the toplevel,
+mostly to improve the user experience by executing strictly
+non-logical tasks, such as input (\lstinline+#include "inc.def".+),
+output (\lstinline+#typeof X Y :: nil.+) or testing
+(\lstinline+#assert true.+).  A few of them change proof structure,
+but not provability (\lstinline+#freezing 4.+, \lstinline+#saturation 2.+).
+
+\subsection{Terms}
+\label{sec:terms}
+
+Term-mode is a way to improve interactivity.
 
 % ============================================================================
 \section{Sample definition file}
@@ -137,11 +151,14 @@ following the invocation of \verb+bedwyr maxa.def+.
  I leq : ch -> ch -> prop
    maxa : ch -> prop
    member : A -> (list A) -> prop
-?= leq X (s z).
+?= read Y /\ leq X Y.
+Input term: (s z).
 Solution found:
+ Y = s z
  X = z
 More [y] ? y
 Solution found:
+ Y = s z
  X = s z
 More [y] ? y
 No more solutions.
@@ -154,12 +171,12 @@ No more solutions.
 \end{lstlisting}\end{figure}
 
 The \lstinline+#env.+ meta-command shows all declared objects
-(including the standard pre-declared list-related objects),
-and displays \lstinline+leq+ as inductive.
-The call to the query \lstinline+leq X (s (s z)).+ offers to display all
+(including the standard pre-declared list-related objects), and
+informs \lstinline+leq+ is inductive.  The call to the queries
+\lstinline+leq X (s z).+ and \lstinline+maxa X.+ offer to display all
 solutions, one by one.
-The call to the query \lstinline+maxa X.+ does the same,
-but a subsequent call to \lstinline+#show_table leq.+ would then show the table
-filled with \lstinline+leq+-headed atoms, either marked as proved or disproved.
+A subsequent call to \lstinline+#show_table leq.+ would show the table
+filled by the second query with \lstinline+leq+-headed atoms, either
+marked as proved or disproved.
 
 \end{document}
