@@ -22,6 +22,14 @@
 (** Wrapper around some [Sys_error]. *)
 exception File_error of string * string * string
 
+
+(** List of open files used for user I/O. *)
+
+(** Close all open files.
+  * Raises no exception on system errors. *)
+val close_io_files : unit -> unit
+
+
 (** {6 Sanity wrappers} *)
 
 val run_in : (in_channel -> unit) -> string -> unit
@@ -33,36 +41,52 @@ val chdir : string -> unit
 (** {6 Term input (stdin)} *)
 
 (** Read from the standard input. *)
-val read : (string -> Term.term) -> Term.term
+val read : (unit -> Term.term option) -> Term.term list -> Term.term option
+
+(** Open a file for reading. The list should contain exactly one term,
+  * the name of the file (an actual [Term.QString]).
+  * Fails if the name is an unbound variable or a constant,
+  * or if the file was already open.
+  * @raise File_error if the file exists or cannot be created *)
+val fopen_in : Term.term list -> bool
+
+(** Read from a file. The list should contain exactly two terms,
+  * the first one being the name of the file (an actual [Term.QString]).
+  * Fails if the name is an unbound variable or a constant,
+  * or if the file wasn't opened for reading. *)
+val fread :
+  (Lexing.lexbuf -> unit -> Term.term option) -> Term.term list -> Term.term option
+
+(** Close an open file. The list should contain exactly one term,
+  * the name of the file (an actual [Term.QString]).
+  * Fails if the name is an unbound variable or a constant,
+  * or if the file was not open for reading.
+  * @raise File_error if the file cannot be closed *)
+val fclose_in : Term.term list -> bool
 
 
 (** {6 Term output (stdout and file)} *)
 
 (** Write on the standard output. The list should contain exactly one term. *)
-val print :
-  (Term.term -> bool) -> Term.term list -> bool
+val print : (Term.term -> bool) -> Term.term list -> bool
 
 (** Open a file for writing. The list should contain exactly one term,
   * the name of the file (an actual [Term.QString]).
   * Fails if the name is an unbound variable or a constant,
   * or if the file was already open.
   * @raise File_error if the file exists or cannot be created *)
-val open_user_file : Term.term list -> bool
+val fopen_out : Term.term list -> bool
 
 (** Write in a file. The list should contain exactly two terms,
   * the first one being the name of the file (an actual [Term.QString]).
   * Fails if the name is an unbound variable or a constant,
-  * or if the file wasn't opened with [open_user_file]. *)
+  * or if the file wasn't opened for writing. *)
 val fprint :
   (Format.formatter -> Term.term -> bool) -> Term.term list -> bool
 
 (** Close an open file. The list should contain exactly one term,
   * the name of the file (an actual [Term.QString]).
   * Fails if the name is an unbound variable or a constant,
-  * or if the file was not open.
+  * or if the file was not open for writing.
   * @raise File_error if the file cannot be closed *)
-val close_user_file : Term.term list -> bool
-
-(** Close all open files.
-  * Raises no exception on system errors. *)
-val close_user_files : unit -> unit
+val fclose_out : Term.term list -> bool

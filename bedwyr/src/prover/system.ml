@@ -69,6 +69,9 @@ struct
 
 
   let read              = Term.atom ~tag:Term.Constant "read"
+  let fread             = Term.atom ~tag:Term.Constant "fread"
+  let fopen_in          = Term.atom ~tag:Term.Constant "fopen_in"
+  let fclose_in         = Term.atom ~tag:Term.Constant "fclose_in"
   let print             = Term.atom ~tag:Term.Constant "print"
   let println           = Term.atom ~tag:Term.Constant "println"
   let printstr          = Term.atom ~tag:Term.Constant "printstr"
@@ -78,7 +81,10 @@ struct
   let fopen_out         = Term.atom ~tag:Term.Constant "fopen_out"
   let fclose_out        = Term.atom ~tag:Term.Constant "fclose_out"
 
-  let var_read         = Term.get_var read
+  let var_read          = Term.get_var read
+  let var_fread         = Term.get_var fread
+  let var_fopen_in      = Term.get_var fopen_in
+  let var_fclose_in     = Term.get_var fclose_in
   let var_print         = Term.get_var print
   let var_println       = Term.get_var println
   let var_printstr      = Term.get_var printstr
@@ -92,27 +98,34 @@ struct
   let _ = List.iter (fun (k,v) -> Hashtbl.add predefined_t k v)
             [ (* I/O extensions *)
               var_read,
-                Ty.ty_arrow [Ty.tparam 0] Ty.tprop;
+                Ty.ty_arrow [Ty.tparam 0] Ty.tprop ;
+              var_fread,
+                Ty.ty_arrow [Ty.tstring;Ty.tparam 0] Ty.tprop ;
+              var_fopen_in,
+                Ty.ty_arrow [Ty.tstring] Ty.tprop ;
+              var_fclose_in,
+                Ty.ty_arrow [Ty.tstring] Ty.tprop ;
               var_print,
-                Ty.ty_arrow [Ty.tparam 0] Ty.tprop;
+                Ty.ty_arrow [Ty.tparam 0] Ty.tprop ;
               var_println,
-                Ty.ty_arrow [Ty.tparam 0] Ty.tprop;
+                Ty.ty_arrow [Ty.tparam 0] Ty.tprop ;
               var_printstr,
-                Ty.ty_arrow [Ty.tstring] Ty.tprop;
+                Ty.ty_arrow [Ty.tstring] Ty.tprop ;
               var_fprint,
-                Ty.ty_arrow [Ty.tstring;Ty.tparam 0] Ty.tprop;
+                Ty.ty_arrow [Ty.tstring;Ty.tparam 0] Ty.tprop ;
               var_fprintln,
-                Ty.ty_arrow [Ty.tstring;Ty.tparam 0] Ty.tprop;
+                Ty.ty_arrow [Ty.tstring;Ty.tparam 0] Ty.tprop ;
               var_fprintstr,
-                Ty.ty_arrow [Ty.tstring;Ty.tstring] Ty.tprop;
+                Ty.ty_arrow [Ty.tstring;Ty.tstring] Ty.tprop ;
               var_fopen_out,
-                Ty.ty_arrow [Ty.tstring] Ty.tprop;
+                Ty.ty_arrow [Ty.tstring] Ty.tprop ;
               var_fclose_out,
                 Ty.ty_arrow [Ty.tstring] Ty.tprop
             ]
 end
 
 let read_term = ref (fun () -> None)
+let fread_term = ref (fun _ () -> None)
 let debug = ref false
 let time  = ref false
 let root_atoms = ref []

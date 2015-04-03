@@ -20,10 +20,6 @@
 exception File_error of string * string * string
 
 
-(* List of open files used for user output. *)
-let user_files : (string,out_channel) Hashtbl.t =
-  Hashtbl.create 50
-
 (* Sanity wrappers *)
 
 let error name e s =
@@ -66,14 +62,110 @@ let chdir name =
   try Sys.chdir name
   with Sys_error e -> error name e "chdir in"
 
-let get_user_file name =
-  try Some (Hashtbl.find user_files name)
-  with Not_found -> None
+(* List of open files used for user I/O. *)
 
-(* Term input (stdin) *)
+module I = struct
+  let files : (string,(in_channel * Lexing.lexbuf)) Hashtbl.t = Hashtbl.create 50
 
-let read read_fun =
-  read_fun "42"
+  let get name =
+    try Some (Hashtbl.find files name)
+    with Not_found -> None
+
+  let add name =
+    let c = open_in name in
+    let l = Lexing.from_channel c in
+    Hashtbl.add files name (c,l)
+
+  let remove name c =
+    close_in name c ;
+    Hashtbl.remove files name
+
+  let clear () =
+    Hashtbl.iter
+      (fun _ (c,_) -> try Pervasives.close_in c with Sys_error _ -> ())
+      files ;
+    Hashtbl.clear files ;
+end
+
+module O = struct
+  let files : (string,(out_channel * Format.formatter)) Hashtbl.t = Hashtbl.create 50
+
+  let get name =
+    try Some (Hashtbl.find files name)
+    with Not_found -> None
+
+  let add name =
+    let c = open_out name in
+    let f = Format.formatter_of_out_channel c in
+    Hashtbl.add files name (c,f)
+
+  let remove name c =
+    close_out name c ;
+    Hashtbl.remove files name
+
+  let clear () =
+    Hashtbl.iter
+      (fun _ (c,_) -> try Pervasives.close_out c with Sys_error _ -> ())
+      files ;
+    Hashtbl.clear files ;
+end
+
+let close_io_files () =
+  I.clear () ;
+  O.clear ()
+
+(* Term input (stdin and file) *)
+
+let read read_fun goals =
+  match goals with
+    | [pattern] ->
+        begin match read_fun () with
+          | Some term -> Some (Term.op_eq pattern term)
+          | None -> None
+        end
+    | _ -> assert false
+
+let fopen_in goals =
+  match goals with
+    | [f] ->
+        begin match Term.observe f with
+          | Term.QString name ->
+              begin match I.get name with
+                | Some _ -> false
+                | None -> I.add name ; true
+              end
+          | _ -> false
+        end
+    | _ -> assert false
+
+let fread read_fun goals = match goals with
+  | [f;pattern] ->
+      begin match Term.observe f with
+        | Term.QString name ->
+            begin match I.get name with
+              | Some (_,l) ->
+                  begin match read_fun l () with
+                    | Some term -> Some (Term.op_eq pattern term)
+                    | None -> None
+                  end
+              | None -> None
+            end
+        | _ -> None
+      end
+  | _ -> assert false
+
+let fclose_in goals =
+  match goals with
+    | [f] ->
+        begin match Term.observe f with
+          | Term.QString name ->
+              begin match I.get name with
+                | Some (c,_) -> I.remove name c ; true
+                | None -> false
+              end
+          | _ -> false
+        end
+    | _ -> assert false
 
 (* Term output (stdout and file) *)
 
@@ -81,15 +173,14 @@ let print print_fun goals = match goals with
   | [f] -> print_fun f
   | _ -> assert false
 
-let open_user_file goals =
+let fopen_out goals =
   match goals with
     | [f] ->
         begin match Term.observe f with
           | Term.QString name ->
-              if Hashtbl.mem user_files name then false else begin
-                let fout = open_out name in
-                Hashtbl.add user_files name fout ;
-                true
+              begin match O.get name with
+                | Some _ -> false
+                | None -> O.add name ; true
               end
           | _ -> false
         end
@@ -99,33 +190,23 @@ let fprint print_fun goals = match goals with
   | [f;g] ->
       begin match Term.observe f with
         | Term.QString name ->
-            begin match get_user_file name with
-              | Some f ->
-                  let fmt = Format.formatter_of_out_channel f in
-                  print_fun fmt g
+            begin match O.get name with
+              | Some (_,f) -> print_fun f g
               | None -> false
             end
         | _ -> false
       end
   | _ -> assert false
 
-let close_user_file goals =
+let fclose_out goals =
   match goals with
     | [f] ->
         begin match Term.observe f with
           | Term.QString name ->
-              let opened = match get_user_file name with
-                  | Some f -> close_out name f ; true
-                  | None -> false
-              in
-              Hashtbl.remove user_files name ;
-              opened
+              begin match O.get name with
+                | Some (c,_) -> O.remove name c ; true
+                | None -> false
+              end
           | _ -> false
         end
     | _ -> assert false
-
-let close_user_files () =
-  Hashtbl.iter
-    (fun n c -> try Pervasives.close_out c with Sys_error _ -> ())
-    user_files ;
-  Hashtbl.clear user_files
