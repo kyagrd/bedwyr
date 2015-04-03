@@ -116,7 +116,7 @@ let run_on_string ~strict f ?(fname="") str =
       { lexbuf.lex_curr_p with pos_fname = fname }
   }) in
   f lexbuf ;
-  if strict then Interface.exit_if_status ()
+  if strict then Interface.Status.exit_if ()
 
 let run_on_file ~strict f fpath =
   let cwd = Sys.getcwd () in
@@ -146,7 +146,7 @@ let run_on_file ~strict f fpath =
       IO.chdir cwd
     with e -> ignore (Interface.Catch.io e)
   end ;
-  if strict then Interface.exit_if_status ()
+  if strict then Interface.Status.exit_if ()
 
 let _ =
   let test_limit = !test_limit in
@@ -158,14 +158,13 @@ let _ =
     List.iter (run_on_file ~strict (Interface.defl ~test_limit)) session ;
     List.iter (run_on_string ~strict (Interface.defs ~test_limit)) !definitions
   in
-  System.read_term := Interface.read_term ;
   Interface.reload := reload ~strict:false ;
   Interface.include_file := (fun ~test_limit ->
     run_on_file ~strict:false (Interface.defl ~test_limit:(decr_test_limit test_limit))) ;
   reload ~strict:true () ;
   List.iter (run_on_string ~strict:true (Interface.reps ~test_limit)) !queries ;
   if !batch
-  then Interface.exit_with_status ()
+  then Interface.Status.exit_with ()
   else begin
     Format.printf "%s@." welcome_msg ;
     Interface.repl ~test_limit (Lexing.from_channel stdin)

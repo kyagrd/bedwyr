@@ -127,8 +127,23 @@ No. v} *)
   (** {6 I/O extensions} *)
 
   (** {[read : A -> prop]} Parses the standard input and succeeds if the
-    * result is a well-formed and well-typed term (see {!IO.read}). *)
+    * result is a well-formed and well-typed term
+    * (see {!System.read}). *)
   val var_read : Term.var
+
+  (** {[fread : string -> A -> prop]} Parses the file specified in the
+    * first argument and succeeds if the result is a well-formed and
+    * well-typed term (see {!System.fread}).
+    * Fails if the file was not opened yet. *)
+  val var_fread : Term.var
+
+  (** {[fopen_in : string -> prop]} Open a file for reading
+    * (see {!IO.fopen_in}). *)
+  val var_fopen_in : Term.var
+
+  (** {[fclose_in : string -> prop]} Close an open file
+    * (see {!IO.fclose_in}). *)
+  val var_fclose_in : Term.var
 
   (** {[print : A -> prop]} Print a term and succeeds (see {!IO.print}). *)
   val var_print : Term.var
@@ -153,11 +168,11 @@ No. v} *)
   val var_fprintstr : Term.var
 
   (** {[fopen_out : string -> prop]} Open a file for writing
-    * (see {!IO.open_user_file}). *)
+    * (see {!IO.fopen_out}). *)
   val var_fopen_out : Term.var
 
   (** {[fclose_out : string -> prop]} Close an open file
-    * (see {!IO.close_user_file}). *)
+    * (see {!IO.fclose_out}). *)
   val var_fclose_out : Term.var
 
   (** Example:
@@ -176,9 +191,13 @@ No more solutions. v}
     * The file "test.txt" will contain the string "Test printing". *)
 end
 
-(** Function used to provide a term during the processing of a request.
+(** Provide a term during the processing of a request.
   * Expected to ask the term interactivelly to the user. *)
 val read_term : (unit -> Term.term option) ref
+
+(** Provide a term during the processing of a request.
+  * Expected to ask the term interactivelly to the user. *)
+val fread_term : (Lexing.lexbuf -> unit -> Term.term option) ref
 
 (** Simple debug flag, can be set dynamically from the logic program. *)
 val debug : bool ref

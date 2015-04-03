@@ -40,22 +40,31 @@ let help_msg =
   For more information (including commands relevant in definition mode),\n\
   see the user guide.\n\n"
 
-let exit_status = ref None
+module Status = struct
+  let value = ref None
+
+  let exit_with () =
+    exit (match !value with
+            | None -> 0
+            | Some error_code -> error_code)
+  and exit_if () =
+    match !value with
+      | None -> ()
+      | Some error_code -> exit error_code
+  and set error_code =
+    if !value = None
+    then value := Some error_code
+
+  let input () = set 1
+  let def () = set 2
+  let ndcore () = set 3
+  let solver () = set 4
+  let bedwyr () = set 5
+end
+
 let reload : ((?session:(string list) -> unit -> unit) ref) = ref (fun ?session () -> ())
 let include_file : ((test_limit:(int option) -> string -> unit) ref) =
   ref (fun ~test_limit:_ _ -> ())
-
-let exit_with_status () =
-  exit (match !exit_status with
-          | None -> 0
-          | Some error_code -> error_code)
-and exit_if_status () =
-  match !exit_status with
-    | None -> ()
-    | Some error_code -> exit error_code
-and set_exit_status error_code =
-  if !exit_status = None
-  then exit_status := Some error_code
 
 let bool_of_flag = function
   | None | Some "on" | Some "true" -> true
@@ -108,7 +117,7 @@ let eprintf ?p ?(k=fun _ -> None) f =
 module Catch = struct
   let parse lexbuf =
     let k _ =
-      set_exit_status 1 ;
+      Status.input () ;
       Lexer.flush_input lexbuf ;
       None
     in
@@ -148,7 +157,7 @@ module Catch = struct
 
   let check lexbuf =
     let k _ =
-      set_exit_status 1 ;
+      Status.input () ;
       Some None
     in
     function
@@ -190,7 +199,7 @@ module Catch = struct
 
   let command lexbuf =
     let k _ =
-      set_exit_status 2 ;
+      Status.def () ;
       Some None
     in
     function
@@ -274,7 +283,7 @@ module Catch = struct
 
   let solve lexbuf =
     let k _ =
-      set_exit_status 3 ;
+      Status.ndcore () ;
       Some None
     in
     function
@@ -314,7 +323,7 @@ module Catch = struct
 
   let meta_command lexbuf =
     let k _ =
-      set_exit_status 4 ;
+      Status.solver () ;
       Some None
     in
     function
@@ -345,7 +354,7 @@ module Catch = struct
 
   let io ?lexbuf =
     let k _ =
-      set_exit_status 5 ;
+      Status.bedwyr () ;
       Some None
     in
     function
@@ -359,7 +368,7 @@ module Catch = struct
   (* Unhandled errors *)
   let all lexbuf =
     let k _ =
-      set_exit_status 5 ;
+      Status.bedwyr () ;
       Some None
     in
     function
@@ -495,8 +504,8 @@ end = struct
     try
       begin match mc with
         | Input.MetaCommand.Exit ->
-            IO.close_user_files () ;
-            exit_with_status ()
+            IO.close_io_files () ;
+            Status.exit_with ()
         | Input.MetaCommand.Help -> Format.printf "%s" help_msg
 
         (* Session management *)
@@ -541,7 +550,7 @@ end = struct
         | Input.MetaCommand.Assert pre_query ->
             let query = System.translate_query pre_query in
             begin match test_limit with Some n when n <= 0 -> () | _ ->
-              if !exit_status = None then begin
+              if !Status.value = None then begin
                 Format.eprintf "@[<hv 2>Checking that@ %a@,...@]@."
                   Pprint.pp_term query ;
                 Prover.prove ~local:0 ~timestamp:0 query
@@ -552,7 +561,7 @@ end = struct
         | Input.MetaCommand.Assert_not pre_query ->
             let query = System.translate_query pre_query in
             begin match test_limit with Some n when n <= 0 -> () | _ ->
-              if !exit_status = None then begin
+              if !Status.value = None then begin
                 Format.eprintf "@[<hv 2>Checking that@ %a@ is false...@]@."
                   Pprint.pp_term query ;
                 Prover.prove ~local:0 ~timestamp:0 query
@@ -562,7 +571,7 @@ end = struct
         | Input.MetaCommand.Assert_raise pre_query ->
             let query = System.translate_query pre_query in
             begin match test_limit with Some n when n <= 0 -> () | _ ->
-              if !exit_status = None then begin
+              if !Status.value = None then begin
                 Format.eprintf "@[<hv 2>Checking that@ %a@ causes an error...@]@."
                   Pprint.pp_term query ;
                 if try
@@ -604,7 +613,7 @@ end
 module Mode : sig
   val definition : test_limit:(int option) -> Lexing.lexbuf -> (unit -> unit) -> unit
   val toplevel : test_limit:(int option) -> Lexing.lexbuf -> (unit -> unit) -> unit
-  val term : Lexing.lexbuf -> Term.term option
+  val term : Lexing.lexbuf -> (unit -> Term.term option) -> Term.term option
 end = struct
   let step ~read ~eval ~print lexbuf =
     match read lexbuf with
@@ -637,37 +646,36 @@ end = struct
       | None -> cb ()
       | _ -> ()
 
-  let term lexbuf =
+  let term lexbuf cb =
     match step ~read:Read.term ~eval:Eval.term ~print:ignore lexbuf with
-      | Some (Some term) -> Some term
+      | None -> cb ()
       | Some None -> None
-      | None -> raise End_of_file
+      | Some (Some term) -> Some term
 end
 
 let read_term () =
   let rec aux () =
-    let l =
-      Format.printf " ?> %!" ;
-      try input_line stdin
-      with End_of_file -> ""
-      (* XXX this End_of_file is changed here into a "",
-       * then by the parser into an Input.Empty_term,
-       * then by Read into a None,
-       * then by Mode into a End_of_file...
-       * maybe this is a little heavy and useless *)
-    in
-    let lexbuf = Lexing.from_string l in
-    match Mode.term lexbuf with
+    Format.printf " ?> %!" ;
+    let lexbuf = Lexing.from_channel stdin in
+    match Mode.term lexbuf (fun () -> raise End_of_file) with
       | None -> aux ()
       | Some term -> term
   in
   try Some (aux ()) with End_of_file -> None
 
+let () = (System.read_term := read_term)
+
+let fread_term lexbuf () =
+  try Mode.term lexbuf (fun () -> raise End_of_file)
+  with End_of_file -> None
+
+let () = (System.fread_term := fread_term)
+
 (* definition-mode step *)
 let defs ~test_limit lexbuf =
   let cb () =
     let k _ =
-      set_exit_status 1 ;
+      Status.input () ;
       None
     in
     ignore (eprintf ~p:(position_lex lexbuf) ~k "Empty command.")
@@ -684,7 +692,7 @@ let defl ~test_limit lexbuf =
 let reps ~test_limit lexbuf =
   let cb () =
     let k _ =
-      set_exit_status 1 ;
+      Status.input () ;
       None
     in
     ignore (eprintf ~p:(position_lex lexbuf) ~k "Empty query.")

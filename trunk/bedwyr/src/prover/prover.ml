@@ -817,18 +817,37 @@ let rec prove sons
 
           (* Input *)
           | Var v when v == Logic.var_read ->
-              begin match goals with
-                | [pattern] ->
-                    begin match !(System.read_term) () with
-                      | None -> failure ()
-                      | Some term ->
-                          prove sons
-                            temperatures (depth+1)
-                            ~level ~local ~timestamp ~failure ~success
-                            (Term.op_eq pattern term)
-                    end
-                | _ -> assert false
+              let read_fun () = !System.read_term () in
+              begin match IO.read read_fun goals with
+                | None -> failure ()
+                | Some goal ->
+                    prove sons
+                      temperatures (depth+1)
+                      ~level ~local ~timestamp ~failure ~success
+                      goal
               end
+
+          | Var v when v == Logic.var_fread ->
+              let read_fun lexbuf () = !System.fread_term lexbuf () in
+              begin match IO.fread read_fun goals with
+                | None -> failure ()
+                | Some goal ->
+                    prove sons
+                      temperatures (depth+1)
+                      ~level ~local ~timestamp ~failure ~success
+                      goal
+              end
+
+          (* Opening file for input *)
+          | Var v when v == Logic.var_fopen_in ->
+              assert_level_one level ;
+              if (IO.fopen_in goals) then success timestamp failure
+              else failure ()
+
+          | Var v when v == Logic.var_fclose_in ->
+              assert_level_one level ;
+              if (IO.fclose_in goals) then success timestamp failure
+              else failure ()
 
           (* Output *)
           | Var v when v == Logic.var_print ->
@@ -880,12 +899,12 @@ let rec prove sons
           (* Opening file for output *)
           | Var v when v == Logic.var_fopen_out ->
               assert_level_one level ;
-              if (IO.open_user_file goals) then success timestamp failure
+              if (IO.fopen_out goals) then success timestamp failure
               else failure ()
 
           | Var v when v == Logic.var_fclose_out ->
               assert_level_one level ;
-              if (IO.close_user_file goals) then success timestamp failure
+              if (IO.fclose_out goals) then success timestamp failure
               else failure ()
 
           (* Check for definitions *)
