@@ -1,19 +1,19 @@
-#!/bin/sh
+#!/bin/bash
 #
 # finds the best way to invoke the tool
 
-if command -v bedwyr.native >/dev/null 2>&1 ; then
-  BEDWYR=bedwyr.native
+if command -v @PACKAGE_TARNAME@.native >/dev/null 2>&1 ; then
+  PROGRAM=@PACKAGE_TARNAME@.native
 else
-  if command -v bedwyr.byte >/dev/null 2>&1 ; then
-    BEDWYR=bedwyr.byte
+  if command -v @PACKAGE_TARNAME@.byte >/dev/null 2>&1 ; then
+    PROGRAM=@PACKAGE_TARNAME@.byte
   else
-    echo >&2 "bedwyr doesn't seem to be installed"
+    echo >&2 "@PACKAGE_TARNAME@ doesn't seem to be installed"
     exit 1
   fi
 fi
 
-WORDS="+pkgdatadir+/contrib/rlwrap/bedwyr_words"
+WORDS="+pkgdatadir+/contrib/rlwrap/@PACKAGE_TARNAME@_words"
 if [ -f "$WORDS" ] ; then
   AUTOCOMPLETION="-b(){}[],%\"; -f$WORDS"
 else
@@ -21,8 +21,8 @@ else
 fi
 
 if command -v rlwrap >/dev/null 2>&1 ; then
-  WRAPPER="rlwrap -c -Cbedwyr -D2 -g'^(n|y)$' -m -pgreen -q'\"' $AUTOCOMPLETION"
+  WRAPPER="rlwrap -c -C@PACKAGE_TARNAME@ -D2 -g'^(n|y)$' -m -pgreen -q'\"' $AUTOCOMPLETION"
 else
   WRAPPER=""
 fi
-$WRAPPER $BEDWYR "$@"
+exec -a @PACKAGE_TARNAME@ $WRAPPER $PROGRAM "$@"

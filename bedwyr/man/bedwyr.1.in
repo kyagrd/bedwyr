@@ -19,7 +19,7 @@
 .\"
 .\" @configure_input@
 .\"
-.Dd April 1, 2015
+.Dd April 3, 2015
 .Os @PACKAGE_NAME@ v@PACKAGE_VERSION@
 .Dt BEDWYR 1 URM
 .\"
@@ -228,9 +228,15 @@ searches for all substitutions of free variables satisfying
 and offers to display them one by one).
 .Bl -tag -width Ic
 .It Ic ?= Ar query Ns Ic \&.
-Interactive toplevel.
+Interactive toplevel.  Queries can span on several lines, but all input
+between the
+.Ic \&.
+and the end of the line is ignored.
 .It Nm Fl e Qo Ar query Ns Ic \&. Qc
-Non-interactive toplevel.
+Non-interactive toplevel.  The string must not be empty, and all input
+between the
+.Ic \&.
+and the end of the line is ignored.
 .El
 .\"
 .\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""

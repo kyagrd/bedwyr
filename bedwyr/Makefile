@@ -66,7 +66,7 @@ SLIMMER_MLIS	= $(foreach m,$(BEDWYR_LIBS),\
 ifneq ($(BEST_SUFFIX),)
   SLIMMER_CMIS	= $(addprefix $(BUILD)/,$(SLIMMER_MLIS:.mli=.cmi))
 endif
-BUILT_FILES	= $(BEDWYR_BINS) $(MANPAGES) $(MANPAGES:=.html) \
+BUILT_FILES	= $(BEDWYR_BINS) $(MANPAGES) \
 		  $(SLIMMER_META) $(SLIMMER_LIBS) $(SLIMMER_CMIS) \
 		  $(CONTRIB_FILES:.in=) $(DESKTOP_FILES:.in=)
 

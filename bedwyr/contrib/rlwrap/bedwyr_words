@@ -13,3 +13,7 @@ type prop string nat forall exists nabla true false
 : := ; , .  ()
 
 /\ \/ \
+
+list nil :: member
+
+read fread fopen_in fclose_in print println printstr fprint fprintln fprintstr fopen_out fclose_out
