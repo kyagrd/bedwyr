@@ -36,7 +36,6 @@
 TEST_EXAMPLES	= list.def internal/scoping.def internal/checks.def \
 		  3bits.def lambda.def progs.def \
 		  graph-alt.def minmax.def multisim.def \
-		  tictactoe.def \
 		  pi/pi_trace.def pi/corr-assert.def pi/pi_modal.def \
 		  pi/pi_asserts.def
 
@@ -105,7 +104,7 @@ $(BUILD)/%.cmxa $(BUILD)/%.a: $(OCAML_FILES:.in=)
 	@$(OCAMLBUILD) $*.cmxa
 
 $(BUILD)/%.docdir/index.html: $(OCAML_FILES:.in=) %.odocl
-	$(OCAMLBUILD) $*.docdir/index.html
+	@$(OCAMLBUILD) $*.docdir/index.html
 
 $(BUILD)/%.odoc: $(OCAML_FILES:.in=)
 	@$(OCAMLBUILD) $*.odoc
@@ -129,10 +128,11 @@ $(SLIMMER_META): $(SLIMMER_META).part $(BEDWYR_LIBS:%=src/%/META.part)
 
 %:: config.status %.in Makefile
 	@./$< $@
-	@sed -i \
+	@sed -i.bkp \
 	  -e 's|+pkgdatadir+|$(pkgdatadir)|' \
 	  -e 's|+bindir+|$(bindir)|' \
 	  $@
+	@rm -f $@.bkp
 
 config.status: configure Makefile
 	@[ -x $@ ] && ./$@ --recheck || ./$< --no-create $(CONFIGURE_OPTS)
@@ -422,7 +422,8 @@ else
   nsis_pkg: build doc
 	@mv $(SRC_DOCDIR)/index.html $(SRC_DOCDIR)/index.htm
 	@find $(SRC_DOCDIR)/ -type f \
-	  -exec sed -i -e 's|\<index.html\>|index.htm|' {} \;
+	  -exec sed -i.bkp -e 's|\<index.html\>|index.htm|' {} \; \
+	  -exec rm -f {}.bkp \;
 	@$(MAKENSIS) nsis-files/bedwyr.nsi
 endif
 

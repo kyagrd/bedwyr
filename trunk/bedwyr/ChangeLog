@@ -8,6 +8,7 @@ Fixed:
   - incorrect tabled results within co-inductive loops
   - "-1" not recognised by #freezing and #saturation
   - build-system incompatible with OCaml 4
+  - build-system incompatible with BSD sed
 Changed:
   - port of the build system (bin and odoc) to ocamlbuild
   - zipper-based indexing with get-and-set functionality
