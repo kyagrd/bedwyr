@@ -85,7 +85,6 @@ BIB_DEPS	= $(wildcard *.bib)
 TEX_FILES	= $(QUICKSTART).tex $(REFMAN).tex
 DVI_FILES	= $(TEX_FILES:.tex=.dvi)
 PS_FILES	= $(DVI_FILES:.dvi=.ps)
-PSGZ_FILES	= $(PS_FILES:=.gz)
 PDF_FILES	= $(PS_FILES:.ps=.pdf)
 PDFGZ_FILES	= $(PDF_FILES:=.gz)
 HTML_FILES	= $(QUICKSTART).html $(REFMAN)/index.html
@@ -94,7 +93,7 @@ ARCH_FILES	= $(TEX_INCLUDES) $(STY_INCLUDES) $(HVA_INCLUDES) \
 		  $(LPROLOG_FILES) $(BEDWYR_FILES) \
 		  $(BIB_DEPS) $(TEX_FILES) Makefile.in
 
-TARGETS		= $(PSGZ_FILES) $(PDF_FILES) $(PDFGZ_FILES) $(HTML_FILES)
+TARGETS		= $(PDF_FILES) $(PDFGZ_FILES) $(HTML_FILES)
 
 RESET_COLOR	= \e[0m
 SET_BLACK	= \e[0;30m
@@ -168,11 +167,7 @@ all: $(TARGETS)
 
 .PHONY: install
 
-install: install_psgz install_pdfgz install_html
-
-install_psgz: $(PSGZ_FILES)
-	@$(INSTALL_DIR) $(PSDIR)
-	@for i in $^ ; do $(INSTALL_DATA) $$i $(PSDIR) ; done
+install: install_pdfgz install_html
 
 install_pdfgz: $(PDFGZ_FILES)
 	@$(INSTALL_DIR) $(PDFDIR)

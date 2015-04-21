@@ -12,6 +12,3 @@ Files: /usr/share/doc/bedwyr/refman/*.html
 
 Format: PDF
 Files: /usr/share/doc/bedwyr/refman.pdf.gz
-
-Format: PostScript
-Files: /usr/share/doc/bedwyr/refman.ps.gz

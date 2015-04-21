@@ -3,7 +3,7 @@ Section: math
 Priority: optional
 Maintainer: Quentin Heath <quentin.heath@inria.fr>
 Build-Depends: ocaml-base-nox (>= 3.11.0), ocaml-findlib, libxmlm-ocaml-dev,
- autoconf (>= 2.60), debhelper (>= 7.0.50~), fakeroot, lintian, devscripts,
+ autoconf (>= 2.60), debhelper (>= 8), fakeroot, lintian, devscripts,
  bash (>= 4)
 Build-Depends-Indep: ghostscript, hevea (>= 1.10),
  texlive-latex-base (>= 2009-11), texlive-latex-extra (>= 2009-10)
@@ -42,7 +42,7 @@ Description: the not-so-complete documentation
  possibly containing bindings.
  .
  This package contains documentation for Bedwyr (both a quickstart guide
- and a reference manual) in html, ps and pdf format, as well as the
+ and a reference manual) in html and pdf format, as well as the
  source code documentation in html and ocamldoc-dump format.
 
 Package: @PACKAGE_TARNAME@-dev

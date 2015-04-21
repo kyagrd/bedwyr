@@ -11,6 +11,3 @@ Files: /usr/share/doc/bedwyr/quickstart.html
 
 Format: PDF
 Files: /usr/share/doc/bedwyr/quickstart.pdf.gz
-
-Format: PostScript
-Files: /usr/share/doc/bedwyr/quickstart.ps.gz
