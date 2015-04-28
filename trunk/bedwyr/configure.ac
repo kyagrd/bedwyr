@@ -303,17 +303,6 @@ AS_IF([test "X$with_vimfiles" = Xyes],
 
 AC_PROG_INSTALL
 
-AC_MSG_CHECKING(if a Opam package should be built)
-AC_ARG_ENABLE([opam],
-	AC_HELP_STRING([--enable-opam],[build opam packages (no)]),
-	[AC_MSG_RESULT($enable_opam)],
-	[AC_MSG_RESULT(no)])
-if test "X$enable_opam" = Xyes ; then
-	AC_PATH_PROG(OPAM,opam,no)
-	AS_IF([test "X$OPAM" = Xno],
-	      [AC_MSG_ERROR(Cannot find opam.)])
-fi
-
 AC_MSG_CHECKING(if a Debian package should be built)
 AC_ARG_ENABLE([deb],
 	AC_HELP_STRING([--enable-deb],[build deb and debsrc packages (no)]),

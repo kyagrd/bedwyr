@@ -377,7 +377,7 @@ $(DIST_NAME).tar: archive.tar doc/archive.tar
 	@$(GZIP) -c $< > $@
 
 opam: opam-repo/packages/$(PACKAGE_TARNAME)/$(OPAM_NAME)
-	@$(OPAM) update bedwyr
+	@opam update bedwyr
 
 $(OPAM_PACKAGES)/$(PACKAGE_TARNAME)/$(OPAM_NAME): $(addprefix opam-files/,$(OPAM_FILES))
 	@sed -i.bkp \
