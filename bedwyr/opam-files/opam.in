@@ -1,0 +1,48 @@
+opam-version: "1.2"
+name: "@PACKAGE_TARNAME@"
+maintainer: "Quentin Heath <quentin.heath@inria.fr>"
+authors: [
+  "David Baelde"
+  "Andrew Gacek"
+  "Dale Miller"
+  "Quentin Heath"
+  "Gopalan Nadathur"
+  "Alwen Tiu"
+  "Quentin Heath"
+]
+license: "GPL-2"
+homepage: "@PACKAGE_URL@"
+bug-reports: "@PACKAGE_BUGREPORT@"
+#dev-repo: "svn+ssh://scm.gforge.inria.fr/svnroot/slimmer/trunk"
+build: [
+  ["autoconf"]
+  ["./configure"
+     "--prefix=%{prefix}%"
+     "--no-create"
+     "--enable-nativecode"
+     "--with-xmlm"]
+  [make
+    "_build/src/bedwyr.native"
+    "contrib/bedwyr"
+    "man/bedwyr.native.1"
+    "man/bedwyr.1"
+    "slimmer_lib_opam"
+    "contrib/rlwrap/bedwyr_words"
+  ]
+]
+install: [
+  ["ocamlfind" "install" "slimmer"
+    "slimmer_lib_opam"
+  ]
+]
+remove: [
+  ["ocamlfind" "remove" "slimmer"]
+]
+depends: [
+  "ocamlfind" {build}
+  "xmlm" {build}
+]
+depexts: [
+  [ ["debian"] ["autoconf"] ]
+  [ ["debian"] ["bash"] ]
+]

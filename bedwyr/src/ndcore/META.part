@@ -1,6 +1,5 @@
 version = "[internal]"
 description = "Higher-Order Pattern Unification and Term Indexing"
 #requires = ""
-#directory = "^"
 archive(byte) = "ndcore.cma"
 archive(native) = "ndcore.cmxa"

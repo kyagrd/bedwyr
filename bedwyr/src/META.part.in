@@ -4,4 +4,4 @@
 version = "@PACKAGE_VERSION@"
 description = "Sophisticated Logic Implementations for Modeling and Mechanical Reasoning"
 requires = "slimmer.ndcore"
-directory = "+slimmer"
+#directory = "+slimmer"
