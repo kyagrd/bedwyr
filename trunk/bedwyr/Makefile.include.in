@@ -32,6 +32,7 @@ DIST_NAME	= $(PACKAGE_TARNAME)-$(PACKAGE_VERSION)
 DEBIAN_VERSION	= $(subst -,~,$(subst -p,+p,$(PACKAGE_VERSION)))
 DEB_DIST_NAME	= $(PACKAGE_TARNAME)-$(DEBIAN_VERSION)
 DEB_NAME	= $(PACKAGE_TARNAME)_$(DEBIAN_VERSION)
+OPAM_NAME	= $(PACKAGE_TARNAME).$(DEBIAN_VERSION)
 ARCH_SUFFIXES	= @ARCH_SUFFIXES@
 LIB_SUFFIXES	= @LIB_SUFFIXES@
 BIN_SUFFIXES	= @BIN_SUFFIXES@
@@ -121,6 +122,8 @@ INSTALL_DIR	= @INSTALL_PROGRAM@ $(INSTALL_OPTS) -d
 INSTALL_BIN	= @INSTALL_PROGRAM@ $(INSTALL_OPTS) -p
 INSTALL_DATA	= @INSTALL_DATA@ $(INSTALL_OPTS) -p
 
+OPAM		= @OPAM@
+
 DCH		= @DCH@ -d -D unstable
 DEBUILD		= @DEBUILD@
 MAKENSIS	= @MAKENSIS@ -V2 -NOCD \
@@ -140,11 +143,12 @@ SLIMMER_FILES	= ChangeLog TODO
 BEDWYR_FILES	= README
 BEDWYR_LIBS	= ndcore batyping input prover
 MAN_FILES	= $(wildcard man/*.in)
+RLWRAP_CONTRIB	= bedwyr_words
 XML_CONTRIB	= bedwyr.dtd bedwyr-skeleton.xsl skeleton.css
 VIM_CONTRIB	= ftdetect/bedwyr.vim ftplugin/bedwyr.vim \
 		  indent/bedwyr.vim syntax/bedwyr.vim
 EMACS_CONTRIB	= bedwyr.el
-CONTRIB_FILES	= contrib/rlwrap/bedwyr_words \
+CONTRIB_FILES	= $(addprefix contrib/rlwrap/,$(RLWRAP_CONTRIB)) \
 		  $(addprefix contrib/xml/,$(XML_CONTRIB)) \
 		  $(addprefix contrib/emacs/,$(EMACS_CONTRIB)) \
 		  $(addprefix contrib/vim/,$(VIM_CONTRIB))

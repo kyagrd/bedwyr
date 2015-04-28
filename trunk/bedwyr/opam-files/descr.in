@@ -1,0 +1,15 @@
+@PACKAGE_TAGLINE@
+
+Bedwyr is a generalization of logic programming
+that allows model checking directly on syntactic expression
+possibly containing bindings.
+
+This system, written in OCaml, is a direct implementation of
+two recent advances in the theory of proof search:
+a symmetric treatment of finite success and finite failure
+(which allows capturing both aspects of _may_ and _must_
+behaviour in operational semantics, and mixing model checking
+and logic programming), and direct support for lambda-tree
+syntax, as in lambdaProlog, via term-level lambda-binders,
+higher-order pattern unification, and the nabla-quantifier.
+

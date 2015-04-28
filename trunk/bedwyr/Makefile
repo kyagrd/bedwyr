@@ -42,6 +42,7 @@ TEST_EXAMPLES	= list.def internal/scoping.def internal/checks.def \
 l_cclib		= -lflags -cclib,
 BUILD		= _build
 bedwyr_prefix	= $(BUILD)/src/bedwyr
+OPAM_PACKAGES	= opam-repo/packages
 
 # Archived files
 
@@ -63,16 +64,18 @@ SLIMMER_LIBS	= $(foreach m,$(BEDWYR_LIBS),\
 SLIMMER_MLIS	= $(foreach m,$(BEDWYR_LIBS),\
 		  $(wildcard src/$m/*.mli))
 ifneq ($(BEST_SUFFIX),)
-  SLIMMER_CMIS	= $(addprefix $(BUILD)/,$(SLIMMER_MLIS:.mli=.cmi))
+  SLIMMER_CMIS	= $(addprefix $(BUILD)/,$(SLIMMER_MLIS:.mli=.cmi) $(addprefix src/input/,lexer.cmi parser.cmi) src/prover/interface.cmi)
+SLIMMER_FINDLIB	= $(SLIMMER_META) $(SLIMMER_LIBS) $(SLIMMER_CMIS)
 endif
-BUILT_FILES	= $(BEDWYR_BINS) $(MANPAGES) \
-		  $(SLIMMER_META) $(SLIMMER_LIBS) $(SLIMMER_CMIS) \
+BUILT_FILES	= $(BEDWYR_BINS) $(MANPAGES) $(SLIMMER_FINDLIB) \
 		  $(CONTRIB_FILES:.in=) $(DESKTOP_FILES:.in=)
 
 NDCORE_MLS	= $(foreach m,$(BEDWYR_LIBS),\
 		  $(filter-out src/$m/test.ml,$(wildcard src/$m/*.ml)))
 SLIMMER_ODOCS	= $(addprefix $(BUILD)/,$(NDCORE_MLS:.ml=.odoc))
 SRC_DOCDIR	= $(BUILD)/src.docdir
+
+OPAM_FILES	= opam descr findlib url files/bedwyr.install
 
 # Other files
 
@@ -87,6 +90,8 @@ COFF_FILES	= $(NSIS_RC_FILES:.rc=.o)
 .PHONY: build
 
 build: $(BUILT_FILES) bedwyr
+
+#slimmer_lib_opam: $(SLIMMER_FINDLIB)
 
 $(BUILD)/%.byte: $(OCAML_FILES:.in=)
 	@$(OCAMLBUILD) $*.byte
@@ -314,8 +319,7 @@ install_bedwyr_examples:
 
 install_slimmer: install_slimmer_lib install_slimmer_files
 
-install_slimmer_lib: $(SLIMMER_META) $(SLIMMER_LIBS) \
-  $(SLIMMER_MLIS) $(SLIMMER_CMIS)
+install_slimmer_lib: $(SLIMMER_FINDLIB) $(SLIMMER_MLIS)
 	@$(INSTALL_DIR) $(OCAMLLIBDIR)
 	@$(FINDLIB_INSTALL) $^
 
@@ -345,10 +349,11 @@ install_src_libref: $(SRC_DOCDIR)/index.html
 ##############################################################################
 
 .PHONY: dist archive deb deb_orig deb_debian deb_pkg nsis \
-  nsis_orig_files nsis_files nsis_pkg
+  nsis_orig_files nsis_files nsis_pkg \
+  $(OPAM_PACKAGES)-repo/packages/$(PACKAGE_TARNAME)/$(OPAM_NAME)
 .SUFFIXES: .tar .tbz .tgz
 
-dist: archive deb nsis
+dist: archive opam deb nsis
 
 archive: $(BEDWYR_ARCH)
 
@@ -370,6 +375,51 @@ $(DIST_NAME).tar: archive.tar doc/archive.tar
 	@$(GZIP) -c $< > $@
 .tar.tgz:
 	@$(GZIP) -c $< > $@
+
+opam: opam-repo/packages/$(PACKAGE_TARNAME)/$(OPAM_NAME)
+	@$(OPAM) update bedwyr
+
+$(OPAM_PACKAGES)/$(PACKAGE_TARNAME)/$(OPAM_NAME): $(addprefix opam-files/,$(OPAM_FILES))
+	@sed -i.bkp \
+	  -e 's|^\(\s*\)"slimmer_lib_opam"$$|\1$(SLIMMER_FINDLIB:%=\"%\")|' \
+	  opam-files/opam
+	@rm -f opam-files/opam.bkp
+	@rm -rf $@
+	@$(TAR) -cpf - $^ --xform 's|^opam-files/|$@/|S' | $(TAR) -xpf -
+
+opam-files/findlib:
+	@echo "slimmer" > $@
+	@for i in $(BEDWYR_LIBS) ; do echo "slimmer.$$i" ; done >> $@
+
+opam-files/url:
+	@echo "archive: \"http://slimmer.gforge.inria.fr/releases/debian/pool/main/b/bedwyr/$(DEB_NAME).orig.tar.gz\"" > $@
+	@echo -n "checksum: \"" >> $@
+	@curl -L "http://slimmer.gforge.inria.fr/releases/debian/pool/main/b/bedwyr/$(DEB_NAME).orig.tar.gz" \
+	  | md5sum | tr -d ' \n-' >> $@
+	@echo "\"" >> $@
+
+opam-files/files/bedwyr.install:
+	@mkdir -p opam-files/files
+	@echo "bin: [" > $@
+	@for i in "_build/src/bedwyr.native" "contrib/bedwyr" ; do \
+	  echo "  \"$$i\"" ; \
+	  done >> $@
+	@echo "]" >> $@
+	@echo "man: [" >> $@
+	@for i in ".native" "" ; do \
+	  echo "  \"man/bedwyr$$i.1\" {\"man1/bedwyr$$i.1\"}" ; \
+	  done >> $@
+	@echo "]" >> $@
+	@echo "lib: [" >> $@
+	@for i in $(SLIMMER_FINDLIB) ; do \
+	  echo "#  \"$$i\"" ; \
+	  done >> $@
+	@echo "]" >> $@
+	@echo "share: [" >> $@
+	@for i in $(RLWRAP_CONTRIB) ; do \
+	  echo "  \"contrib/rlwrap/$$i\" {\"contrib/rlwrap/$$i\"}" ; \
+	  done >> $@
+	@echo "]" >> $@
 
 deb: deb_orig deb_debian
 	@CONFIGURE_OPTS="$(CONFIGURE_OPTS) --enable-deb" \
@@ -447,6 +497,7 @@ help:
 	@echo
 	@echo ' dist           build archives and packages'
 	@echo ' archive        build archives ($(DIST_NAME).($(ARCH_SUFFIXES)))'
+	@echo ' opam           build opam package ($(DEB_NAME)???)'
 	@echo ' deb            build debian package ($(DEB_NAME)-1_*.deb)'
 	@echo ' nsis           build windows installer ($(DIST_NAME)-installer.exe)'
 	@echo
@@ -463,7 +514,8 @@ mostlyclean:
 clean: doc/Makefile mostlyclean
 	@$(MAKE) -C $$(dirname $<) clean
 	@$(MAKE) -C examples/ccs_vp/timing clean
-	@rm -vf $(SLIMMER_META)
+	@rm -vf $(addprefix opam-files/,$(OPAM_FILES))
+	@rm -vf $(SLIMMER_FINDLIB)
 	@rm -vf *.bz2 *.gz *.tar *.tbz *.tgz *.odocl $(MANPAGES) $(MANPAGES:=.html)
 	@rm -vf *.debian.tar.xz *.build *.changes *.dsc *.deb *-installer.exe
 	@rm -rvf $(DEB_DIST_NAME) nsis-build
