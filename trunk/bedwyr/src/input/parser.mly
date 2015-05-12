@@ -77,7 +77,7 @@
 %nonassoc EQ
 
 %nonassoc BSLASH
-
+%nonassoc TUPLE
 %right INFIX_ID
 /* Higher */
 
@@ -243,6 +243,12 @@ term:
                                               ~infix:true (pos 2) $2
                                           in
                                           Input.pre_app (pos 0) hd [$1; $3] }
+  | term COMMA term_tuple %prec TUPLE   { let t,l = $3 in
+                                          Input.pre_tuple (pos 0) $1 t l }
+
+term_tuple:
+  | term                                { $1,[] }
+  | term COMMA term_tuple               { let t,l = $3 in $1,t::l }
 
 term_list:
   | term_atom                           { $1,[] }

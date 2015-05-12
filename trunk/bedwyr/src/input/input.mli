@@ -113,13 +113,12 @@ val pre_binder :
 
 (** Abstraction. *)
 val pre_lambda : pos -> (pos * string * Typing.ty) list -> preterm -> preterm
-(** This pre-term may contain type parameters (not converted to type variables)
-  * if its type was polymorphic. *)
 
 (** Application. *)
 val pre_app : pos -> preterm -> preterm list -> preterm
-(** This pre-term may contain type parameters (not converted to type variables)
-  * if its type was polymorphic. *)
+
+(** Term tuple. *)
+val pre_tuple : pos -> preterm -> preterm -> preterm list -> preterm
 
 (** {6 Pre-terms manipulation} *)
 
