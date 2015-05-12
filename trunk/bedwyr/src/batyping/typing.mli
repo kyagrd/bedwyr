@@ -57,6 +57,9 @@ module type S = sig
   (** User-declared types and type operators. *)
   val tconst : string -> ty list -> ty
 
+  (** Runtime-declared product types. *)
+  val ttuple : ty -> ty -> ty list -> ty
+
   (** return type of predicates ([prop]). *)
   val tprop : ty
 
