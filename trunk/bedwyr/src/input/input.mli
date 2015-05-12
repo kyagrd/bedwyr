@@ -79,7 +79,7 @@ val pre_nat : pos -> int -> preterm
 val pre_freeid : pos -> string -> preterm
 
 (** Declared object (predicate or constant) or bound variable id. *)
-val pre_predconstid : pos -> string -> preterm
+val pre_predconstid : ?infix:bool -> pos -> string -> preterm
 
 (** Internal predicate id. *)
 val pre_internid : pos -> string -> preterm
@@ -122,10 +122,6 @@ val pre_app : pos -> preterm -> preterm list -> preterm
   * if its type was polymorphic. *)
 
 (** {6 Pre-terms manipulation} *)
-
-(** [change_pos (p1,_) t (_,p2)] replaces the position by [(p1,p2)] in [t]. *)
-val change_pos :
-  pos -> preterm -> pos -> preterm
 
 (** Find which arguments of an application are free variables. *)
 val free_args : preterm -> string list
