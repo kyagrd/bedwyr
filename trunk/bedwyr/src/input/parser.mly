@@ -30,7 +30,6 @@
 
   let eof_error s =
     raise (Input.Parse_error (pos 0,"Unexpected end of file",s))
-
 %}
 
 /* Punctuation */
@@ -68,17 +67,19 @@
 %token EOF
 
 /* Lower */
-%nonassoc LPAREN RPAREN
-
-%nonassoc COMMA
+%nonassoc BINDER
 %right RARROW
 %left OR
 %left AND
 %nonassoc EQ
 
+%nonassoc COMMA
+
 %nonassoc BSLASH
-%nonassoc TUPLE
+
 %right INFIX_ID
+
+%nonassoc LPAREN RPAREN
 /* Higher */
 
 %start skip skip_proof definition_mode toplevel term_mode
@@ -230,29 +231,38 @@ theorem:
 
 /* terms (with or without logical connectives) */
 
+term_tuple:
+  | term_tuple COMMA singleton          { let t1,t2,l = $1 in
+                                          $3,t1,t2::l }
+  | singleton COMMA singleton           { $3,$1,[] }
+
 term:
   | term EQ term                        { Input.pre_eq (pos 0) $1 $3 }
   | term AND term                       { Input.pre_and (pos 0) $1 $3 }
   | term OR term                        { Input.pre_or (pos 0) $1 $3 }
   | term RARROW term                    { Input.pre_arrow (pos 0) $1 $3 }
-  | binder pabound_list COMMA term      { Input.pre_binder (pos 0) $1 $2 $4 }
+  | term_tuple                          { let t1,t2,l = $1 in
+                                          Input.pre_tuple (pos 0) t1 t2 l }
+  | singleton                           { $1 }
+
+singleton:
+  | binder pabound_list COMMA term %prec BINDER
+                                        { Input.pre_binder (pos 0) $1 $2 $4 }
   | term_list %prec INFIX_ID            { let t,l = $1 in
                                           Input.pre_app (pos 1) t l }
-  | term INFIX_ID term                  { let hd =
-                                            Input.pre_predconstid
-                                              ~infix:true (pos 2) $2
-                                          in
-                                          Input.pre_app (pos 0) hd [$1; $3] }
-  | term COMMA term_tuple %prec TUPLE   { let t,l = $3 in
-                                          Input.pre_tuple (pos 0) $1 t l }
-
-term_tuple:
-  | term                                { $1,[] }
-  | term COMMA term_tuple               { let t,l = $3 in $1,t::l }
 
 term_list:
   | term_atom                           { $1,[] }
-  | term_atom term_list                 { let t,l = $2 in $1,t::l }
+  | term_list INFIX_ID term_list        { let hd =
+                                            Input.pre_predconstid
+                                              ~infix:true (pos 2) $2
+                                          in
+                                          let t1,l1 = $1 in
+                                          let t1 = Input.pre_app (pos 1) t1 l1 in
+                                          let t3,l3 = $3 in
+                                          let t3 = Input.pre_app (pos 3) t3 l3 in
+                                          t3,[t1;hd] }
+  | term_list term_atom                 { let t,l = $1 in $2,t::l }
 
 term_atom:
   | QSTRING                             { let p,s = $1 in

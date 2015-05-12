@@ -55,7 +55,7 @@ and rawterm =
   | Arrow               of preterm * preterm
   | Binder              of Term.binder * (pos * string * Typing.ty) list * preterm
   | Lam                 of (pos * string * Typing.ty) list * preterm
-  | App                 of preterm * preterm list
+  | App                 of preterm * preterm * preterm list
   | Tuple               of preterm * preterm * preterm list
 
 (* Pre-terms creation *)
@@ -83,10 +83,23 @@ let pre_lambda p vars t =
     | [],_ -> t
     | _,(_,Lam (vars',t)) -> p,Lam (vars@vars',t)
     | _,_ -> p,Lam (vars,t)
-let pre_app p hd args = if args = [] then hd else match hd with
-  | _,App (hd,args') -> p,App (hd,args'@args)
-  | _ -> p,App (hd,args)
-let pre_tuple p t1 t2 tl = p,Tuple (t1,t2,tl)
+let pre_app p t1 tl =
+  let rec aux (a,l) = function
+    | h::t -> aux (h,(a::l)) t
+    | [] ->
+        begin match a,l with
+          | hd,[] -> hd
+          | (_,App (hd,arg,args1)),args2 -> p,App (hd,arg,args1@args2)
+          | hd,arg::args -> p,App (hd,arg,args)
+        end
+  in
+  aux (t1,[]) tl
+let pre_tuple p t1 t2 tl =
+  let rec aux (a,b,l) = function
+    | h::t -> aux (h,a,(b::l)) t
+    | [] -> p,Tuple (a,b,l)
+  in
+  aux (t2,t1,[]) tl
 
 (* Pre-terms manipulation *)
 
@@ -97,8 +110,8 @@ let free_args pre_term =
     | _ -> accum
   in
   let rec in_app = function
-    | _,App (phd,pargs) ->
-        List.rev_append (in_app phd) (List.fold_left in_arg [] pargs)
+    | _,App (phd,parg,pargs) ->
+        List.rev_append (in_app phd) (List.fold_left in_arg [] (parg::pargs))
     | _ -> []
   in
   in_app pre_term
@@ -287,8 +300,8 @@ let type_check_and_translate
           let u = Typing.unify_constraint u exty (Typing.ty_arrow tys ty) in
           let t,u = aux ~negative pt ty bvars u in
           Term.lambda arity t,u
-      | App (phd,pargs) ->
-          let tys = Typing.fresh_tyvars (List.length pargs)
+      | App (phd,parg,pargs) ->
+          let tys = Typing.fresh_tyvars (1 + List.length pargs)
           and ty = Typing.fresh_tyvar () in
           let u = Typing.unify_constraint u exty ty in
           let hd,u = aux ~head ~negative phd (Typing.ty_arrow tys ty) bvars u in
@@ -296,7 +309,7 @@ let type_check_and_translate
                          (fun (u,args) pt ty ->
                             let t,u = aux ~negative pt ty bvars u in u,t::args)
                          (u,[])
-                         pargs
+                         (parg::pargs)
                          tys
           in
           Term.app hd (List.rev args),u
