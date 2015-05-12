@@ -170,20 +170,20 @@ else
 endif
 
 test_ndcore: $(BUILD)/src/ndcore/test.$(BEST_SUFFIX)
+	@echo -n 'Testing the core LLambda library'
 	@$< $(TEST_FLAGS)
-	@echo ' for the core LLambda library'
 
 test_batyping: $(BUILD)/src/batyping/test.$(BEST_SUFFIX)
+	@echo -n 'Testing the Bedwyr-Abella typing library'
 	@$< $(TEST_FLAGS)
-	@echo ' for the Bedwyr-Abella typing library'
 
 test_input: $(BUILD)/src/input/test.$(BEST_SUFFIX)
+	@echo -n 'Testing the *.def and REPL input library'
 	@$< $(TEST_FLAGS)
-	@echo ' for the *.def and REPL input library'
 
 test_prover: $(BUILD)/src/prover/test.$(BEST_SUFFIX)
+	@echo -n 'Testing the theorem prover library'
 	@$< $(TEST_FLAGS)
-	@echo ' for the theorem prover library'
 
 test_bedwyr: bedwyr
 	@time for i in $(TEST_EXAMPLES) ; do \
