@@ -664,10 +664,17 @@ let print_type_of pre_term =
   Format.printf "@[<v 3>@[%a :@;<1 2>%a@]"
     Pprint.pp_term t
     pp_type ty ;
-  Hashtbl.iter
-    (fun v (ty,_) -> Format.printf "@,@[%s :@;<1 2>%a@]"
-                       (Term.get_var_name v) pp_type ty)
-    free_types ;
+  let vars =
+    Hashtbl.fold
+      (fun v (ty,_) accum -> (Term.get_var_name v,ty)::accum)
+      free_types
+      []
+  in
+  List.iter
+    (fun (n,ty) ->
+       Format.printf "@,@[%s :@;<1 2>%a@]"
+         n pp_type ty)
+    (List.sort (fun (s1,_) (s2,_) -> compare s1 s2) vars) ;
   Format.printf "@]@."
 
 let show_def (p,head_tm) =
