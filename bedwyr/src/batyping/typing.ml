@@ -38,6 +38,7 @@ module type S = sig
 
   type ty
   val tconst : string -> ty list -> ty
+  val ttuple : ty -> ty -> ty list -> ty
   val tprop : ty
   val tstring : ty
   val tnat : ty
@@ -137,21 +138,22 @@ module Make (I : INPUT) = struct
 
   type ty = Ty of ty list * ty_base
   and ty_base =
-    | TConst      of string * (ty list) (* user-defined type constructors *)
+    | TConst    of string * (ty list) (* user-defined type constructors *)
+    | TTuple    of ty * ty * ty list  (* predefined tuples constructors *)
     | TProp
     | TString
     | TNat
-    | TParam      of int                (* type parameters (for polymorphism) *)
-    | TVar        of int                (* type variables (for inference) *)
+    | TParam    of int                (* type parameters (for polymorphism) *)
+    | TVar      of int                (* type variables (for inference) *)
 
   let tconst name args = Ty ([],TConst (name, args))
+  let ttuple arg1 arg2 args = Ty ([],TTuple (arg1,arg2,args))
   let tprop = Ty ([],TProp)
   let tstring = Ty ([],TString)
   let tnat = Ty ([],TNat)
   let tparam i = Ty ([],TParam i)
   let tvar i = Ty ([],TVar i)
-  let ty_arrow tys = function
-    | Ty (tys',ty)        -> Ty (tys@tys',ty)
+  let ty_arrow tys (Ty (tys',ty)) = Ty (tys@tys',ty)
 
   let fresh_typaram =
     let count = ref 0 in
@@ -183,6 +185,11 @@ module Make (I : INPUT) = struct
       | Ty ([],TConst (name,tys)) ->
           let tys = List.map (aux []) tys in
           Ty (List.rev accum,TConst (name,tys))
+      | Ty ([],TTuple (ty1,ty2,tys)) ->
+          let ty1 = aux [] ty1
+          and ty2 = aux [] ty2
+          and tys = List.map (aux []) tys in
+          Ty (List.rev accum,TTuple (ty1,ty2,tys))
       | Ty ([],TParam i) ->
           let ty =
             try List.assoc i !bindings
@@ -197,11 +204,11 @@ module Make (I : INPUT) = struct
     fun ty -> aux [] ty
 
   let build_abstraction_types arity =
-    let rec aux tys ty a =
-      if a>0 then aux ((fresh_tyvar ())::tys) ty (a-1)
-      else tys,ty
+    let rec aux tys a =
+      if a>0 then aux ((fresh_tyvar ())::tys) (a-1)
+      else tys
     in
-    aux [] (fresh_tyvar ()) arity
+    (aux [] arity),(fresh_tyvar ())
 
   let get_pp_type () =
     let string_of_param =
@@ -226,35 +233,49 @@ module Make (I : INPUT) = struct
           let s = "?" ^ string_of_int !count in
           incr count ; bindings := (i,s) :: !bindings ; s
     in
-    let rec aux par chan = function
+    let rec aux level chan = function
       | Ty (ty::tys,ty_base) ->
           let print =
-            if par then Format.fprintf chan "@[(%a -> %a)@]"
+            if level>0
+            then Format.fprintf chan "@[(%a -> %a)@]"
             else Format.fprintf chan "@[%a -> %a@]"
           in
-          print (aux true) ty (aux false) (Ty (tys,ty_base))
-      | Ty ([],TConst (name,tys)) ->
-          let print =
-            if par && List.length tys<>0
-            then Format.fprintf chan "@[(%s%a)@]"
-            else Format.fprintf chan "@[%s%a@]"
-          in
-          print name aux2 tys
-      | Ty ([],TProp) ->
-          Format.fprintf chan "prop"
-      | Ty ([],TString) ->
-          Format.fprintf chan "string"
-      | Ty ([],TNat) ->
-          Format.fprintf chan "nat"
-      | Ty ([],TParam i) ->
-          Format.fprintf chan "%s" (string_of_param i)
-      | Ty ([],TVar i) ->
-          Format.fprintf chan "%s" (string_of_var i)
+          print (aux 1) ty (aux 0) (Ty (tys,ty_base))
+      | Ty ([],ty_base) ->
+          begin match ty_base with
+            | TConst (name,tys) ->
+
+                let print =
+                  if level>2
+                  then Format.fprintf chan "@[(%s%a)@]"
+                  else Format.fprintf chan "@[%s%a@]"
+                in
+                print name aux2 tys
+            | TTuple (ty1,ty2,tys) ->
+                let print =
+                  if level>1
+                  then Format.fprintf chan "@[(%a%a)@]"
+                  else Format.fprintf chan "@[%a%a@]"
+                in
+                print (aux 2) ty1 aux3 (ty2::tys)
+            | TProp ->
+                Format.fprintf chan "prop"
+            | TString ->
+                Format.fprintf chan "string"
+            | TNat ->
+                Format.fprintf chan "nat"
+            | TParam i ->
+                Format.fprintf chan "%s" (string_of_param i)
+            | TVar i ->
+                Format.fprintf chan "%s" (string_of_var i)
+          end
     and aux2 chan =
-      List.iter (fun ty -> Format.fprintf chan " %a" (aux true) ty)
+      List.iter (fun ty -> Format.fprintf chan " %a" (aux 3) ty)
+    and aux3 chan =
+      List.iter (fun ty -> Format.fprintf chan " * %a" (aux 2) ty)
     in
     fun chan ty ->
-      Format.fprintf chan "@[%a@]" (aux false) ty
+      Format.fprintf chan "@[%a@]" (aux 0) ty
 
   (* Kind checking *)
 
@@ -291,6 +312,11 @@ module Make (I : INPUT) = struct
                           ktypes (List.length tys),ki))
             in
             (a,false,ho),(tp1,tp2)
+        | TTuple (ty1,ty2,tys) ->
+            let ho,tp2 =
+              List.fold_left aux4 (ho,TypeParams.empty) (ty1::ty2::tys)
+            in
+            (a,false,ho),(tp1,tp2)
         | TProp -> (a,true,ho),(tp1,TypeParams.empty)
         | TString | TNat -> (a,false,ho),(tp1,TypeParams.empty)
         | TParam i -> (a,false,ho),(tp1,TypeParams.singleton i)
@@ -305,6 +331,9 @@ module Make (I : INPUT) = struct
       (* increment the set of type parameters *)
       if ki<>ktype then assert false (* TODO raise something *)
       else let (_,ho),tp = aux2 ((0,ho),tp) ty in ho,tp
+    and aux4 (ho,tp) ty =
+      (* increment the set of type parameters *)
+      let (_,ho),tp = aux2 ((0,ho),tp) ty in ho,tp
     in
     let (a,pr,ho),(tp1,tp2) = aux ty in
     match obj with
@@ -346,6 +375,8 @@ module Make (I : INPUT) = struct
           Ty (tys,ty_base)
       | TConst (name,tys1) ->
           Ty (tys,TConst (name,List.map aux tys1))
+      | TTuple (ty1,ty2,tys1) ->
+          Ty (tys,TTuple (aux ty1,aux ty2,List.map aux tys1))
       | TVar i ->
           try ty_arrow tys (aux (Unifier.find i unifier))
           with Not_found -> Ty (tys,ty_base)
@@ -372,6 +403,7 @@ module Make (I : INPUT) = struct
     and aux_base = function
       | TProp | TString | TNat | TParam _ -> false
       | TConst (_,tys) -> List.exists aux tys
+      | TTuple (ty1,ty2,tys) -> aux ty1 || aux ty2 || List.exists aux tys
       | TVar j ->
           if i=j then true
           else try aux (Unifier.find j unifier)
@@ -392,13 +424,6 @@ module Make (I : INPUT) = struct
       | Ty (ty1::tys1,ty_base1),Ty (ty2::tys2,ty_base2) ->
           let u = aux u ty1 ty2 in
           aux u (Ty (tys1,ty_base1)) (Ty (tys2,ty_base2))
-      | Ty ([],TConst (name1,tys1)),Ty ([],TConst(name2,tys2)) ->
-          if name1 = name2 then
-            try List.fold_left2 aux u tys1 tys2
-            with Invalid_argument _ ->
-              raise (Type_unification_error (ty1',ty2',unifier))
-          else
-             raise (Type_unification_error (ty1',ty2',unifier))
       | Ty ([],TVar i),_ when Unifier.mem i u ->
           let ty1 = Unifier.find i u in
           aux u ty1 ty2
@@ -413,6 +438,24 @@ module Make (I : INPUT) = struct
           if occurs u j ty1
           then raise (Type_unification_error (ty1',ty2',unifier))
           else Unifier.add j ty1 u
+      | Ty ([],ty_base1),Ty ([],ty_base2) ->
+          begin match ty_base1,ty_base2 with
+            | TConst (name1,tys1),TConst(name2,tys2) ->
+                if name1 = name2 then
+                  try List.fold_left2 aux u tys1 tys2
+                  with Invalid_argument _ ->
+                    raise (Type_unification_error (ty1',ty2',unifier))
+                else
+                   raise (Type_unification_error (ty1',ty2',unifier))
+            | TTuple (ty11,ty21,tys1),TTuple (ty12,ty22,tys2) ->
+                begin try List.fold_left2 aux u
+                            (ty11::ty21::tys1) (ty12::ty22::tys2)
+                with Invalid_argument _ ->
+                  raise (Type_unification_error (ty1',ty2',unifier))
+                end
+            | _ ->
+                raise (Type_unification_error (ty1',ty2',unifier))
+          end
       | _ ->
           raise (Type_unification_error (ty1',ty2',unifier))
     in
