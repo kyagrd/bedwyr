@@ -68,16 +68,15 @@
 %token EOF
 
 /* Lower */
-%nonassoc LPAREN
-%nonassoc RPAREN
+%nonassoc LPAREN RPAREN
 
 %nonassoc COMMA
 %right RARROW
 %left OR
 %left AND
+%nonassoc EQ
 
 %nonassoc BSLASH
-%nonassoc EQ
 
 %right INFIX_ID
 /* Higher */
@@ -110,17 +109,19 @@ definition_mode:
   | error EOF                           { eof_error "a definition file" }
 
 toplevel:
-  | formula DOT                         { `Term (pos 1,$1) }
+  | term DOT                            { `Term (pos 1,$1) }
   | meta_command                        { `MetaCommand $1 }
   | EOF                                 { raise Input.Empty_term }
   | error DOT                           { generic_error 1 "the toplevel" }
   | error EOF                           { eof_error "the toplevel" }
 
 term_mode:
-  | formula DOT                         { `Term (pos 1,$1) }
+  | term DOT                            { `Term (pos 1,$1) }
   | EOF                                 { raise Input.Empty_term }
   | error DOT                           { generic_error 1 "the term input" }
   | error EOF                           { eof_error "the term input" }
+
+/* input type */
 
 command:
   | KKIND type_clist ki DOT             { Input.Command.Kind ($2,$3) }
@@ -148,7 +149,7 @@ meta_command:
   | FREEZING opt_nat DOT                { Input.MetaCommand.Freezing $2 }
   | SATURATION opt_nat DOT              { Input.MetaCommand.Saturation $2 }
   | ENV DOT                             { Input.MetaCommand.Env }
-  | TYPEOF formula DOT                  { Input.MetaCommand.Type_of $2 }
+  | TYPEOF term DOT                     { Input.MetaCommand.Type_of $2 }
   | SHOW_DEF lower_id DOT               { Input.MetaCommand.Show_def (pos 2,$2) }
   | SHOW_TABLE lower_id DOT             { Input.MetaCommand.Show_table (pos 2,$2) }
   | CLEAR_TABLES DOT                    { Input.MetaCommand.Clear_tables }
@@ -157,9 +158,9 @@ meta_command:
                                           Input.MetaCommand.Save_table (pos 2,$2,s) }
   | EXPORT QSTRING DOT                  { let _,s = $2 in
                                           Input.MetaCommand.Export s }
-  | ASSERT formula DOT                  { Input.MetaCommand.Assert $2 }
-  | ASSERT_NOT formula DOT              { Input.MetaCommand.Assert_not $2 }
-  | ASSERT_RAISE formula DOT            { Input.MetaCommand.Assert_raise $2 }
+  | ASSERT term DOT                     { Input.MetaCommand.Assert $2 }
+  | ASSERT_NOT term DOT                 { Input.MetaCommand.Assert_not $2 }
+  | ASSERT_RAISE term DOT               { Input.MetaCommand.Assert_raise $2 }
   | SET                                 { failwith "Abella command only" }
   | SHOW                                { failwith "Abella command only" }
   | QUIT                                { failwith "Abella command only" }
@@ -221,46 +222,46 @@ defs:
   | def SEMICOLON defs                  { $1::$3 }
 
 def:
-  | formula                             { pos 0,$1,Input.pre_true (pos 0) }
-  | formula DEFEQ formula               { pos 0,$1,$3 }
+  | term                                { pos 0,$1,Input.pre_true (pos 0) }
+  | term DEFEQ term                     { pos 0,$1,$3 }
 
 theorem:
-  | lower_id COLON formula              { pos 1,$1,$3 }
+  | lower_id COLON term                 { pos 1,$1,$3 }
+
+/* terms (with or without logical connectives) */
+
+term:
+  | term EQ term                        { Input.pre_eq (pos 0) $1 $3 }
+  | term AND term                       { Input.pre_and (pos 0) $1 $3 }
+  | term OR term                        { Input.pre_or (pos 0) $1 $3 }
+  | term RARROW term                    { Input.pre_arrow (pos 0) $1 $3 }
+  | binder pabound_list COMMA term      { Input.pre_binder (pos 0) $1 $2 $4 }
+  | term_list %prec INFIX_ID            { let t,l = $1 in
+                                          Input.pre_app (pos 1) t l }
+  | term INFIX_ID term                  { let hd =
+                                            Input.pre_predconstid
+                                              ~infix:true (pos 2) $2
+                                          in
+                                          Input.pre_app (pos 0) hd [$1; $3] }
 
 term_list:
   | term_atom                           { $1,[] }
-  | term_abs                            { $1,[] }
   | term_atom term_list                 { let t,l = $2 in $1,t::l }
 
 term_atom:
-  | TRUE                                { Input.pre_true (pos 0) }
-  | FALSE                               { Input.pre_false (pos 0) }
-  | LPAREN formula RPAREN               { Input.change_pos (pos 1) $2 (pos 3) }
-  | LPAREN term RPAREN                  { $2 }
-  | LPAREN INFIX_ID RPAREN              { Input.pre_predconstid (pos 0) ("("^$2^")") }
-  | token_id                            { $1 }
   | QSTRING                             { let p,s = $1 in
                                           Input.pre_qstring p s }
   | NUM                                 { Input.pre_nat (pos 1) $1 }
+  | token_id                            { $1 }
+  | TRUE                                { Input.pre_true (pos 0) }
+  | FALSE                               { Input.pre_false (pos 0) }
+  | term_abs                            { $1 }
+  | LPAREN term RPAREN                  { $2 }
+  | LPAREN INFIX_ID RPAREN              { Input.pre_predconstid
+                                            ~infix:true (pos 0) $2 }
 
 term_abs:
   | abound_id BSLASH term               { Input.pre_lambda (pos 0) [$1] $3 }
-
-term:
-  | term_list %prec INFIX_ID            { let t,l = $1 in
-                                          Input.pre_app (pos 1) t l }
-  | term INFIX_ID term                  { Input.pre_app
-                                            (pos 0)
-                                            (Input.pre_predconstid (pos 2) ("("^$2^")"))
-                                            [$1; $3] }
-
-formula:
-  | term EQ term                        { Input.pre_eq (pos 0) $1 $3 }
-  | formula AND formula                 { Input.pre_and (pos 0) $1 $3 }
-  | formula OR formula                  { Input.pre_or (pos 0) $1 $3 }
-  | formula RARROW formula              { Input.pre_arrow (pos 0) $1 $3 }
-  | binder pabound_list COMMA formula   { Input.pre_binder (pos 0) $1 $2 $4 }
-  | term %prec LPAREN                   { $1 }
 
 binder:
   | FORALL                              { Term.Forall }

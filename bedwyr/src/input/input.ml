@@ -94,7 +94,9 @@ let set_pos p = function
 let pre_qstring p s = QString (p,s)
 let pre_nat p i = Nat (p,i)
 let pre_freeid p s = FreeBoundID (p,s)
-let pre_predconstid p s = PredConstBoundID (p,s)
+let pre_predconstid ?(infix=false) p s =
+  let s = if infix then "("^s^")" else s in
+  PredConstBoundID (p,s)
 let pre_internid p s = InternID (p,s)
 let pre_true p = True p
 let pre_false p = False p
@@ -120,8 +122,6 @@ let pre_app p hd args = if args = [] then hd else match hd with
   | _ -> App (p,hd,args)
 
 (* Pre-terms manipulation *)
-
-let change_pos (p1,_) t (_,p2) = set_pos (p1,p2) t
 
 let free_args pre_term =
   let in_arg accum = function
