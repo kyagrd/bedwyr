@@ -612,5 +612,8 @@ let fresh_name name =
   let v = fresh ~name:name Constant ~lts:0 ~ts:0 in
   get_name v
 
+let tuple = fresh Constant ~ts:0 ~lts:0 ~name:"tuple"
+let vtuple = get_var tuple
+
 let get_var_ts v = v.ts
 let get_var_lts v = v.lts

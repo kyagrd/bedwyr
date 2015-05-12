@@ -105,6 +105,10 @@ let print_full ~generic ~bound chan term =
   let high_pr = 1 + get_max_priority () in
   let rec pp ~bound pr chan term =
     match observe term with
+        (* void is not a built-in type yet
+      | Var v when v == vtuple ->
+          fprintf chan "()"
+         *)
       | Var v ->
           let name = get_name term in
           if !debug then
@@ -170,6 +174,13 @@ let print_full ~generic ~bound chan term =
                     fprintf chan "@[<1>(%a@ %s@ %a)@]"
                 in
                 print (pp ~bound pr_left) a op (pp ~bound pr_right) b*)
+            | (Var v),hd::tl when v == vtuple ->
+                fprintf chan "@[(%a%a)@]"
+                  (pp ~bound high_pr) hd
+                  (fun chan ->
+                     List.iter
+                       (fprintf chan ",@ %a" (pp ~bound high_pr)))
+                  tl
             | _,hd::tl ->
                 let print =
                   if pr=0 then
@@ -178,7 +189,6 @@ let print_full ~generic ~bound chan term =
                     fprintf chan "@[<3>(%a %a%a)@]"
                 in
                 print
-
                   (pp ~bound high_pr) t
                   (pp ~bound high_pr) hd
                   (fun chan ->

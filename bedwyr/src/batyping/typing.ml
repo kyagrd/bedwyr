@@ -49,7 +49,7 @@ module type S = sig
   val get_typaram : string -> ty
   val fresh_tyvar : unit -> ty
   val get_fresh_tyinst : unit -> ty -> ty
-  val build_abstraction_types : int -> ty list * ty
+  val fresh_tyvars : int -> ty list
 
   exception Type_kinding_error of string * pos * ki * ki
   exception Undefinite_type of string * pos * ty * int list
@@ -203,12 +203,12 @@ module Make (I : INPUT) = struct
     in
     fun ty -> aux [] ty
 
-  let build_abstraction_types arity =
+  let fresh_tyvars =
     let rec aux tys a =
       if a>0 then aux ((fresh_tyvar ())::tys) (a-1)
       else tys
     in
-    (aux [] arity),(fresh_tyvar ())
+    aux []
 
   let get_pp_type () =
     let string_of_param =
@@ -244,7 +244,6 @@ module Make (I : INPUT) = struct
       | Ty ([],ty_base) ->
           begin match ty_base with
             | TConst (name,tys) ->
-
                 let print =
                   if level>2
                   then Format.fprintf chan "@[(%s%a)@]"

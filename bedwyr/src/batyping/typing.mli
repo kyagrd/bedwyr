@@ -89,7 +89,7 @@ module type S = sig
   (** The mapping from type parameters to type variables will be kept across
     * calls for a given [get_fresh_tyinst ()]. *)
 
-  val build_abstraction_types : int -> ty list * ty
+  val fresh_tyvars : int -> ty list
 
   (** {6 Kind checking} *)
 
