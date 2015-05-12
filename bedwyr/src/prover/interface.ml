@@ -180,10 +180,11 @@ module Catch = struct
             "Undeclared object %s."
             n
       | Input.Term_typing_error (p,ty1,ty2,unifier) ->
+          let pp_type = Input.Typing.get_pp_type ~unifier () in
           eprintf ~p ~k
             "Typing error: this term has type %a but is used as %a."
-            (Input.Typing.get_pp_type ~unifier ()) ty2
-            (Input.Typing.get_pp_type ~unifier ()) ty1
+            pp_type ty2
+            pp_type ty1
       | Input.Typing.Type_order_error (n,p,ty) ->
           begin match n with
             | Some n ->
