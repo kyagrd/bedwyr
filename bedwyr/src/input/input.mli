@@ -116,9 +116,12 @@ val pre_lambda : pos -> (pos * string * Typing.ty) list -> preterm -> preterm
 
 (** Application. *)
 val pre_app : pos -> preterm -> preterm list -> preterm
+(** The (zero or more) arguments and the head of the application are
+  * given in reverse order. *)
 
 (** Term tuple. *)
 val pre_tuple : pos -> preterm -> preterm -> preterm list -> preterm
+(** The (two or more) components are given in reverse order. *)
 
 (** {6 Pre-terms manipulation} *)
 
