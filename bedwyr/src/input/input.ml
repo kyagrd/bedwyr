@@ -56,6 +56,7 @@ and rawterm =
   | Binder              of Term.binder * (pos * string * Typing.ty) list * preterm
   | Lam                 of (pos * string * Typing.ty) list * preterm
   | App                 of preterm * preterm list
+  | Tuple               of preterm * preterm * preterm list
 
 (* Pre-terms creation *)
 
@@ -72,22 +73,20 @@ let pre_eq p t1 t2 = p,Eq (t1,t2)
 let pre_and p t1 t2 = p,And (t1,t2)
 let pre_or p t1 t2 = p,Or (t1,t2)
 let pre_arrow p t1 t2 = p,Arrow (t1,t2)
-
 let pre_binder p b vars t =
   match vars,t with
     | [],_ -> t
     | _,(_,Binder (b',vars',t)) when b=b' -> p,Binder (b,vars@vars',t)
     | _,_ -> p,Binder (b,vars,t)
-
 let pre_lambda p vars t =
   match vars,t with
     | [],_ -> t
     | _,(_,Lam (vars',t)) -> p,Lam (vars@vars',t)
     | _,_ -> p,Lam (vars,t)
-
 let pre_app p hd args = if args = [] then hd else match hd with
   | _,App (hd,args') -> p,App (hd,args'@args)
   | _ -> p,App (hd,args)
+let pre_tuple p t1 t2 tl = p,Tuple (t1,t2,tl)
 
 (* Pre-terms manipulation *)
 
@@ -301,6 +300,7 @@ let type_check_and_translate
                          tys
           in
           Term.app hd (List.rev args),u
+      | Tuple (pt1,pt2,ptl) -> assert false
     with Typing.Type_unification_error (ty1,ty2,unifier) ->
       raise (Term_typing_error (p,ty1,ty2,unifier))
   in
