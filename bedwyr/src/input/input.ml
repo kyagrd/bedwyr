@@ -40,97 +40,65 @@ module I = struct
 end
 module Typing = Typing.Make (I)
 
-type preterm = rawpreterm
-and rawpreterm =
-  | QString of pos * string
-  | Nat    of pos * int
-  | FreeBoundID of pos * string
-  | PredConstBoundID of pos * string
-  | InternID of pos * string
-  | True   of pos
-  | False  of pos
-  | Eq     of pos * preterm * preterm
-  | And    of pos * preterm * preterm
-  | Or     of pos * preterm * preterm
-  | Arrow  of pos * preterm * preterm
-  | Binder of pos * Term.binder * (pos * string * Typing.ty) list * preterm
-  | Lam    of pos * (pos * string * Typing.ty) list * preterm
-  | App    of pos * preterm * preterm list
-
-let get_pos = function
-  | QString (p,_)
-  | Nat (p,_)
-  | FreeBoundID (p,_)
-  | PredConstBoundID (p,_)
-  | InternID (p,_)
-  | True p
-  | False p
-  | Eq (p,_,_)
-  | And (p,_,_)
-  | Or (p,_,_)
-  | Arrow (p,_,_)
-  | Binder (p,_,_,_)
-  | Lam (p,_,_)
-  | App (p,_,_) -> p
-
-let set_pos p = function
-  | QString (_,s) -> QString (p,s)
-  | Nat (_,s) -> Nat (p,s)
-  | FreeBoundID (_,s) -> FreeBoundID (p,s)
-  | PredConstBoundID (_,s) -> PredConstBoundID (p,s)
-  | InternID (_,s) -> InternID (p,s)
-  | True _ -> True p
-  | False _ -> False p
-  | Eq (_,t1,t2) -> Eq (p,t1,t2)
-  | And (_,t1,t2) -> And (p,t1,t2)
-  | Or (_,t1,t2) -> Or (p,t1,t2)
-  | Arrow (_,t1,t2) -> Arrow (p,t1,t2)
-  | Binder (_,b,l,t) -> Binder (p,b,l,t)
-  | Lam (_,l,t) -> Lam (p,l,t)
-  | App (_,hd,tl) -> App (p,hd,tl)
+type preterm = pos * rawterm
+and rawterm =
+  | QString             of string
+  | Nat                 of int
+  | FreeBoundID         of string
+  | PredConstBoundID    of string
+  | InternID            of string
+  | True
+  | False
+  | Eq                  of preterm * preterm
+  | And                 of preterm * preterm
+  | Or                  of preterm * preterm
+  | Arrow               of preterm * preterm
+  | Binder              of Term.binder * (pos * string * Typing.ty) list * preterm
+  | Lam                 of (pos * string * Typing.ty) list * preterm
+  | App                 of preterm * preterm list
 
 (* Pre-terms creation *)
 
-let pre_qstring p s = QString (p,s)
-let pre_nat p i = Nat (p,i)
-let pre_freeid p s = FreeBoundID (p,s)
+let pre_qstring p s = p,QString s
+let pre_nat p i = p,Nat i
+let pre_freeid p s = p,FreeBoundID s
 let pre_predconstid ?(infix=false) p s =
   let s = if infix then "("^s^")" else s in
-  PredConstBoundID (p,s)
-let pre_internid p s = InternID (p,s)
-let pre_true p = True p
-let pre_false p = False p
-let pre_eq p t1 t2 = Eq (p,t1,t2)
-let pre_and p t1 t2 = And (p,t1,t2)
-let pre_or p t1 t2 = Or (p,t1,t2)
-let pre_arrow p t1 t2 = Arrow (p,t1,t2)
+  p,PredConstBoundID s
+let pre_internid p s = p,InternID s
+let pre_true p = p,True
+let pre_false p = p,False
+let pre_eq p t1 t2 = p,Eq (t1,t2)
+let pre_and p t1 t2 = p,And (t1,t2)
+let pre_or p t1 t2 = p,Or (t1,t2)
+let pre_arrow p t1 t2 = p,Arrow (t1,t2)
 
 let pre_binder p b vars t =
   match vars,t with
     | [],_ -> t
-    | _,Binder (_,b',vars',t) when b=b' -> Binder (p,b,vars@vars',t)
-    | _,_ -> Binder (p,b,vars,t)
+    | _,(_,Binder (b',vars',t)) when b=b' -> p,Binder (b,vars@vars',t)
+    | _,_ -> p,Binder (b,vars,t)
 
 let pre_lambda p vars t =
   match vars,t with
     | [],_ -> t
-    | _,Lam (_,vars',t) -> Lam (p,vars@vars',t)
-    | _,_ -> Lam (p,vars,t)
+    | _,(_,Lam (vars',t)) -> p,Lam (vars@vars',t)
+    | _,_ -> p,Lam (vars,t)
 
 let pre_app p hd args = if args = [] then hd else match hd with
-  | App (_,hd,args') -> App (p,hd,args'@args)
-  | _ -> App (p,hd,args)
+  | _,App (hd,args') -> p,App (hd,args'@args)
+  | _ -> p,App (hd,args)
 
 (* Pre-terms manipulation *)
 
 let free_args pre_term =
   let in_arg accum = function
-    | FreeBoundID (_,"_") -> accum
-    | FreeBoundID (_,s) -> s::accum
+    | _,FreeBoundID "_" -> accum
+    | _,FreeBoundID s -> s::accum
     | _ -> accum
   in
   let rec in_app = function
-    | App (_,phd,pargs) ->
+    | _,App (phd,pargs) ->
         List.rev_append (in_app phd) (List.fold_left in_arg [] pargs)
     | _ -> []
   in
@@ -217,16 +185,15 @@ let type_check_and_translate
     in
     aux 1 bvars
   in
-  let rec aux ?(head=false) ~negative pt exty bvars u =
-    let p = get_pos pt in
-    try match pt with
-      | QString (_,s) ->
+  let rec aux ?(head=false) ~negative (p,rt) exty bvars u =
+    try match rt with
+      | QString s ->
           let u = Typing.unify_constraint u exty Typing.tstring in
           Term.qstring s,u
-      | Nat (_,i) ->
+      | Nat i ->
           let u = Typing.unify_constraint u exty Typing.tnat in
           Term.nat i,u
-      | FreeBoundID (p,s) ->
+      | FreeBoundID s ->
           begin match find_db s bvars with
             | Some (t,ty) -> (* (upper-case) bound variable *)
                 let u = Typing.unify_constraint u exty ty in
@@ -236,7 +203,7 @@ let type_check_and_translate
                 let u = Typing.unify_constraint u exty ty in
                 t,u
           end
-      | PredConstBoundID (p,s) ->
+      | PredConstBoundID s ->
           begin match find_db s bvars with
             | Some (t,ty) -> (* (lower-case) bound variable *)
                 let u = Typing.unify_constraint u exty ty in
@@ -250,38 +217,38 @@ let type_check_and_translate
                 let u = Typing.unify_constraint u exty ty in
                 t,u
           end
-      | InternID (p,s) ->
+      | InternID s ->
           let t,ty = typed_intern_pred (p,s) in
           let u = Typing.unify_constraint u exty ty in
           t,u
-      | True _ ->
+      | True ->
           let u = Typing.unify_constraint u exty Typing.tprop in
           Term.op_true,u
-      | False _ ->
+      | False ->
           let u = Typing.unify_constraint u exty Typing.tprop in
           Term.op_false,u
-      | Eq (_,pt1,pt2) ->
+      | Eq (pt1,pt2) ->
           let ty = Typing.fresh_tyvar () in
           let u = Typing.unify_constraint u exty Typing.tprop in
           let t1,u = aux ~negative pt1 ty bvars u in
           let t2,u = aux ~negative pt2 ty bvars u in
           Term.op_eq t1 t2,u
-      | And (_,pt1,pt2) ->
+      | And (pt1,pt2) ->
           let u = Typing.unify_constraint u exty Typing.tprop in
           let t1,u = aux ~negative pt1 Typing.tprop bvars u in
           let t2,u = aux ~negative pt2 Typing.tprop bvars u in
           Term.op_and t1 t2,u
-      | Or (_,pt1,pt2) ->
+      | Or (pt1,pt2) ->
           let u = Typing.unify_constraint u exty Typing.tprop in
           let t1,u = aux ~negative pt1 Typing.tprop bvars u in
           let t2,u = aux ~negative pt2 Typing.tprop bvars u in
           Term.op_or t1 t2,u
-      | Arrow (_,pt1,pt2) ->
+      | Arrow (pt1,pt2) ->
           let u = Typing.unify_constraint u exty Typing.tprop in
           let t1,u = aux ~negative:(not negative) pt1 Typing.tprop bvars u in
           let t2,u = aux ~negative pt2 Typing.tprop bvars u in
           Term.op_arrow t1 t2,u
-      | Binder (_,b,vars,pt) ->
+      | Binder (b,vars,pt) ->
           let arity = List.length vars in
           let r_vars,bvars =
             List.fold_left
@@ -303,7 +270,7 @@ let type_check_and_translate
                ())
             r_vars ;
           Term.binder b arity t,u
-      | Lam (_,vars,pt) ->
+      | Lam (vars,pt) ->
           let arity = List.length vars in
           let bvars,r_tys =
             List.fold_left
@@ -321,7 +288,7 @@ let type_check_and_translate
           let u = Typing.unify_constraint u exty (Typing.ty_arrow tys ty) in
           let t,u = aux ~negative pt ty bvars u in
           Term.lambda arity t,u
-      | App (_,phd,pargs) ->
+      | App (phd,pargs) ->
           let arity = List.length pargs in
           let tys,ty = Typing.build_abstraction_types arity in
           let u = Typing.unify_constraint u exty ty in
@@ -342,7 +309,7 @@ let type_check_and_translate
       pre_term expected_type [] !Typing.global_unifier
   in
   Typing.global_unifier := unifier ;
-  let p = get_pos pre_term in
+  let p,_ = pre_term in
   (* type-check free variables as quantified variables were, except if
    * they are bound to be abstracted *)
   let singletons = fold_free_types
