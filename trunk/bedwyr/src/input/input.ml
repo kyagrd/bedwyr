@@ -288,8 +288,8 @@ let type_check_and_translate
           let t,u = aux ~negative pt ty bvars u in
           Term.lambda arity t,u
       | App (phd,pargs) ->
-          let arity = List.length pargs in
-          let tys,ty = Typing.build_abstraction_types arity in
+          let tys = Typing.fresh_tyvars (List.length pargs)
+          and ty = Typing.fresh_tyvar () in
           let u = Typing.unify_constraint u exty ty in
           let hd,u = aux ~head ~negative phd (Typing.ty_arrow tys ty) bvars u in
           let u,args = List.fold_left2
@@ -300,7 +300,20 @@ let type_check_and_translate
                          tys
           in
           Term.app hd (List.rev args),u
-      | Tuple (pt1,pt2,ptl) -> assert false
+      | Tuple (pt1,pt2,ptl) ->
+          let ty1 = Typing.fresh_tyvar ()
+          and ty2 = Typing.fresh_tyvar ()
+          and tys = Typing.fresh_tyvars (List.length ptl) in
+          let u = Typing.unify_constraint u exty (Typing.ttuple ty1 ty2 tys) in
+          let hd = Term.tuple in
+          let u,args = List.fold_left2
+                         (fun (u,args) pt ty ->
+                            let t,u = aux ~negative pt ty bvars u in u,t::args)
+                         (u,[])
+                         (pt1::pt2::ptl)
+                         (ty1::ty2::tys)
+          in
+          Term.app hd (List.rev args),u
     with Typing.Type_unification_error (ty1,ty2,unifier) ->
       raise (Term_typing_error (p,ty1,ty2,unifier))
   in

@@ -68,6 +68,10 @@ type rawterm =
   | Ptr     of ptr
     (** implementation artifact, never to be used directly *)
 
+(** Generic tuple constructor. *)
+val tuple : term
+val vtuple : var
+
 (** {6 Creating terms} *)
 
 (** Access to a term. *)
@@ -263,7 +267,7 @@ sig
     (** abstraction *)
   val ( ^^ ) : term -> term list -> term
     (** application *)
-  end
+end
 
 (** Generate a fresh (constant) variable.
   * @return its name *)
