@@ -342,4 +342,4 @@ let type_check_and_translate
          | _ -> singletons)
     []
   in
-  singletons,term
+  (List.sort (fun ((p1,_),_) ((p2,_),_) -> compare p2 p1) singletons),term
