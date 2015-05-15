@@ -146,8 +146,8 @@ module Make (I : INPUT) = struct
     | TParam    of int                (* type parameters (for polymorphism) *)
     | TVar      of int                (* type variables (for inference) *)
 
-  let tconst name args = Ty ([],TConst (name, args))
-  let ttuple arg1 arg2 args = Ty ([],TTuple (arg1,arg2,args))
+  let tconst name args = Ty ([],TConst (name,List.rev args))
+  let ttuple arg1 arg2 args = Ty ([],TTuple (arg1,arg2,List.rev args))
   let tprop = Ty ([],TProp)
   let tstring = Ty ([],TString)
   let tnat = Ty ([],TNat)

@@ -37,10 +37,10 @@
   let escape_table = Hashtbl.create 4
   let _ = List.iter (fun (k,t) -> Hashtbl.add escape_table k t)
             [ (* standard escaping sequences *)
-              'b',  '\b';
-              't',  '\t';
-              'n',  '\n';
-              'r',  '\r'
+              'b',  '\b' ;
+              't',  '\t' ;
+              'n',  '\n' ;
+              'r',  '\r' ;
             ]
 
   let addChar c = Buffer.add_char strbuf c
@@ -54,28 +54,28 @@
   let command_table = Hashtbl.create 22
   let _ = List.iter (fun (k,t) -> Hashtbl.add command_table k t)
             [ (* Bedwyr meta-commands *)
-              "exit",           EXIT;
-              "help",           HELP;
-              "include",        INCLUDE;
-              "reset",          RESET;
-              "reload",         RELOAD;
-              "session",        SESSION;
-              "debug",          DEBUG;
-              "time",           TIME;
-              "equivariant",    EQUIVARIANT;
-              "freezing",       FREEZING;
-              "saturation",     SATURATION;
-              "env",            ENV;
-              "typeof",         TYPEOF;
-              "show_def",       SHOW_DEF;
-              "show_table",     SHOW_TABLE;
-              "clear_tables",   CLEAR_TABLES;
-              "clear_table",    CLEAR_TABLE;
-              "save_table",     SAVE_TABLE;
-              "export",         EXPORT;
-              "assert",         ASSERT;
-              "assert_not",     ASSERT_NOT;
-              "assert_raise",   ASSERT_RAISE
+              "exit",           EXIT ;
+              "help",           HELP ;
+              "include",        INCLUDE ;
+              "reset",          RESET ;
+              "reload",         RELOAD ;
+              "session",        SESSION ;
+              "debug",          DEBUG ;
+              "time",           TIME ;
+              "equivariant",    EQUIVARIANT ;
+              "freezing",       FREEZING ;
+              "saturation",     SATURATION ;
+              "env",            ENV ;
+              "typeof",         TYPEOF ;
+              "show_def",       SHOW_DEF ;
+              "show_table",     SHOW_TABLE ;
+              "clear_tables",   CLEAR_TABLES ;
+              "clear_table",    CLEAR_TABLE ;
+              "save_table",     SAVE_TABLE ;
+              "export",         EXPORT ;
+              "assert",         ASSERT ;
+              "assert_not",     ASSERT_NOT ;
+              "assert_raise",   ASSERT_RAISE ;
             ]
   let get_command n =
     try Hashtbl.find command_table n
@@ -85,23 +85,23 @@
   let ub_keyword_t = Hashtbl.create 5
   let _ = List.iter (fun (k,t) -> Hashtbl.add ub_keyword_t k t)
             [ (* Bedwyr upper-case keywords *)
-              "Kind",           KKIND;
-              "Type",           TTYPE;
-              "Define",         DEFINE;
-              "Theorem",        THEOREM;
-              "Qed",            QED
+              "Kind",           KKIND ;
+              "Type",           TTYPE ;
+              "Define",         DEFINE ;
+              "Theorem",        THEOREM ;
+              "Qed",            QED ;
             ]
   let ua_keyword_t = Hashtbl.create 8
   let _ = List.iter (fun (k,t) -> Hashtbl.add ua_keyword_t k t)
             [ (* Abella upper-case keywords *)
-              "Close",          CLOSE;
-              "Query",          QUERY;
-              "Import",         IMPORT;
-              "Specification",  SPECIFICATION;
-              "Split",          SSPLIT;
-              "Set",            SET;
-              "Show",           SHOW;
-              "Quit",           QUIT
+              "Close",          CLOSE ;
+              "Query",          QUERY ;
+              "Import",         IMPORT ;
+              "Specification",  SPECIFICATION ;
+              "Split",          SSPLIT ;
+              "Set",            SET ;
+              "Show",           SHOW ;
+              "Quit",           QUIT ;
             ]
   let get_upper n =
     try Hashtbl.find ub_keyword_t n
@@ -115,83 +115,83 @@
   let lb_keyword_t = Hashtbl.create 3
   let _ = List.iter (fun (k,t) -> Hashtbl.add lb_keyword_t k t)
             [ (* Bedwyr lower-case keywords *)
-              "inductive",      INDUCTIVE;
-              "coinductive",    COINDUCTIVE;
-              "by",             BY
+              "inductive",      INDUCTIVE ;
+              "coinductive",    COINDUCTIVE ;
+              "by",             BY ;
             ]
   let lb_primitive_t = Hashtbl.create 9
   let _ = List.iter (fun (k,t) -> Hashtbl.add lb_primitive_t k t)
             [ (* Bedwyr lower-case primitive operators and constants *)
-              "type",           TYPE;
-              "prop",           PROP;
-              "string",         STRING;
-              "nat",            NAT;
-              "forall",         FORALL;
-              "exists",         EXISTS;
-              "nabla",          NABLA;
-              "true",           TRUE;
-              "false",          FALSE
+              "type",           TYPE ;
+              "prop",           PROP ;
+              "string",         STRING ;
+              "nat",            NAT ;
+              "forall",         FORALL ;
+              "exists",         EXISTS ;
+              "nabla",          NABLA ;
+              "true",           TRUE ;
+              "false",          FALSE ;
             ]
   let la_keyword_t = Hashtbl.create 5
   let _ = List.iter (fun (k,t) -> Hashtbl.add la_keyword_t k t)
             [ (* Abella lower-case keywords, except for tactics *)
-              "to",             TO;
-              "with",           WITH;
-              "on",             ON;
-              "as",             AS;
-              "keep",           KEEP
+              "to",             TO ;
+              "with",           WITH ;
+              "on",             ON ;
+              "as",             AS ;
+              "keep",           KEEP ;
             ]
   let la_tactic_t = Hashtbl.create 23
   let _ = List.iter (fun (k,t) -> Hashtbl.add la_tactic_t k t)
             [ (* Abella tactics, except for "exists" and "split*" *)
-              "induction",      IND_T;
-              "coinduction",    COIND_T;
-              "intros",         INTROS_T;
-              "case",           CASE_T;
-              "search",         SEARCH_T;
-              "apply",          APPLY_T;
-              "backchain",      BACKCHAIN_T;
-              "unfold",         UNFOLD_T;
-              "assert",         ASSERT_T;
-              "split",          SPLIT_T;
-              "left",           LEFT_T;
-              "right",          RIGHT_T;
-              "permute",        PERMUTE_T;
-              "inst",           INST_T;
-              "cut",            CUT_T;
-              "monotone",       MONOTONE_T;
-              "undo",           UNDO_T;
-              "skip",           SKIP_T;
-              "abort",          ABORT_T;
-              "clear",          CLEAR_T;
-              "abbrev",         ABBREV_T;
-              "unabbrev",       UNABBREV_T
+              "induction",      IND_T ;
+              "coinduction",    COIND_T ;
+              "intros",         INTROS_T ;
+              "case",           CASE_T ;
+              "search",         SEARCH_T ;
+              "apply",          APPLY_T ;
+              "backchain",      BACKCHAIN_T ;
+              "unfold",         UNFOLD_T ;
+              "assert",         ASSERT_T ;
+              "split",          SPLIT_T ;
+              "left",           LEFT_T ;
+              "right",          RIGHT_T ;
+              "permute",        PERMUTE_T ;
+              "inst",           INST_T ;
+              "cut",            CUT_T ;
+              "monotone",       MONOTONE_T ;
+              "undo",           UNDO_T ;
+              "skip",           SKIP_T ;
+              "abort",          ABORT_T ;
+              "clear",          CLEAR_T ;
+              "abbrev",         ABBREV_T ;
+              "unabbrev",       UNABBREV_T ;
             ]
   let lt_keyword_t = Hashtbl.create 22
   let _ = List.iter (fun (k,t) -> Hashtbl.add lt_keyword_t k t)
             [ (* Teyjus lower-case keywords *)
-              "sig",            TEYJUS_KEYWORD;
-              "module",         TEYJUS_KEYWORD;
-              "accum_sig",      TEYJUS_KEYWORD;
-              "accumulate",     TEYJUS_KEYWORD;
-              "end",            TEYJUS_KEYWORD;
-              "kind",           TEYJUS_KEYWORD;
-              "closed",         TEYJUS_KEYWORD;
-              "exportdef",      TEYJUS_KEYWORD;
-              "import",         TEYJUS_KEYWORD;
-              "infix",          TEYJUS_KEYWORD;
-              "infixl",         TEYJUS_KEYWORD;
-              "infixr",         TEYJUS_KEYWORD;
-              "local",          TEYJUS_KEYWORD;
-              "localkind",      TEYJUS_KEYWORD;
-              "postfix",        TEYJUS_KEYWORD;
-              "posfixl",        TEYJUS_KEYWORD;
-              "prefix",         TEYJUS_KEYWORD;
-              "prefixr",        TEYJUS_KEYWORD;
-              "typeabbrev",     TEYJUS_KEYWORD;
-              "use_sig",        TEYJUS_KEYWORD;
-              "useonly",        TEYJUS_KEYWORD;
-              "!",              TEYJUS_KEYWORD
+              "sig",            TEYJUS_KEYWORD ;
+              "module",         TEYJUS_KEYWORD ;
+              "accum_sig",      TEYJUS_KEYWORD ;
+              "accumulate",     TEYJUS_KEYWORD ;
+              "end",            TEYJUS_KEYWORD ;
+              "kind",           TEYJUS_KEYWORD ;
+              "closed",         TEYJUS_KEYWORD ;
+              "exportdef",      TEYJUS_KEYWORD ;
+              "import",         TEYJUS_KEYWORD ;
+              "infix",          TEYJUS_KEYWORD ;
+              "infixl",         TEYJUS_KEYWORD ;
+              "infixr",         TEYJUS_KEYWORD ;
+              "local",          TEYJUS_KEYWORD ;
+              "localkind",      TEYJUS_KEYWORD ;
+              "postfix",        TEYJUS_KEYWORD ;
+              "posfixl",        TEYJUS_KEYWORD ;
+              "prefix",         TEYJUS_KEYWORD ;
+              "prefixr",        TEYJUS_KEYWORD ;
+              "typeabbrev",     TEYJUS_KEYWORD ;
+              "use_sig",        TEYJUS_KEYWORD ;
+              "useonly",        TEYJUS_KEYWORD ;
+              "!",              TEYJUS_KEYWORD ;
             ]
   let get_lower n =
     try Hashtbl.find lb_keyword_t n
@@ -219,19 +219,20 @@
   let ib_primitive_t = Hashtbl.create 2
   let _ = List.iter (fun (k,t) -> Hashtbl.add ib_primitive_t k t)
             [ (* Bedwyr infix-case primitive operators and constants *)
-              "->",             RARROW;
-              "=",              EQ
+              "->",             RARROW ;
+              "*",              STAR ;
+              "=",              EQ ;
             ]
   let ia_primitive_t = Hashtbl.create 1
   let _ = List.iter (fun (k,t) -> Hashtbl.add ia_primitive_t k t)
             [ (* Abella infix-case primitive operators and constants *)
-              "|-",             TURN
+              "|-",             TURN ;
             ]
   let it_primitive_t = Hashtbl.create 2
   let _ = List.iter (fun (k,t) -> Hashtbl.add it_primitive_t k t)
             [ (* Teyjus infix-case primitive operators and constants *)
-              ":-",             TEYJUS_KEYWORD;
-              "=>",             TEYJUS_KEYWORD
+              ":-",             TEYJUS_KEYWORD ;
+              "=>",             TEYJUS_KEYWORD ;
             ]
   let get_infix n =
     try Hashtbl.find ib_primitive_t n

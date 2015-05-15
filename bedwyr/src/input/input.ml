@@ -83,23 +83,12 @@ let pre_lambda p vars t =
     | [],_ -> t
     | _,(_,Lam (vars',t)) -> p,Lam (vars@vars',t)
     | _,_ -> p,Lam (vars,t)
-let pre_app p t1 tl =
-  let rec aux (a,l) = function
-    | h::t -> aux (h,(a::l)) t
-    | [] ->
-        begin match a,l with
-          | hd,[] -> hd
-          | (_,App (hd,arg,args1)),args2 -> p,App (hd,arg,args1@args2)
-          | hd,arg::args -> p,App (hd,arg,args)
-        end
-  in
-  aux (t1,[]) tl
-let pre_tuple p t1 t2 tl =
-  let rec aux (a,b,l) = function
-    | h::t -> aux (h,a,(b::l)) t
-    | [] -> p,Tuple (a,b,l)
-  in
-  aux (t2,t1,[]) tl
+let pre_app p t ts =
+  match t,List.rev ts with
+    | hd,[] -> hd
+    | (_,App (hd,arg,args1)),args2 -> p,App (hd,arg,args1@args2)
+    | hd,arg::args -> p,App (hd,arg,args)
+let pre_tuple p t1 t2 ts = p,Tuple (t1,t2,List.rev ts)
 
 (* Pre-terms manipulation *)
 
@@ -317,7 +306,7 @@ let type_check_and_translate
           let ty1 = Typing.fresh_tyvar ()
           and ty2 = Typing.fresh_tyvar ()
           and tys = Typing.fresh_tyvars (List.length ptl) in
-          let u = Typing.unify_constraint u exty (Typing.ttuple ty1 ty2 tys) in
+          let u = Typing.unify_constraint u exty (Typing.ttuple ty1 ty2 (List.rev tys)) in
           let hd = Term.tuple in
           let u,args = List.fold_left2
                          (fun (u,args) pt ty ->
