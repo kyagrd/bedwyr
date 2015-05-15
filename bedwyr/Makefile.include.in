@@ -109,8 +109,10 @@ GZIP		= @GZIP@ -4 -f -n
 BZIP2		= @BZIP2@ -9 -f
 OCAMLC		= @OCAMLC@
 OCAMLDEBUG	= @OCAMLDEBUG@
-OCAMLBUILD	= @OCAMLBUILD@ -use-ocamlfind -classic-display -yaccflag -v \
-		  -Xs debian,$(DEB_DIST_NAME),nsis-files,nsis-build -no-links
+OCAMLBUILD	= @OCAMLBUILD@ -use-ocamlfind -classic-display \
+		  -yaccflag -v \
+		  -Xs debian,$(DEB_DIST_NAME),nsis-files,nsis-build -no-links# \
+		  -cflag -safe-string
 OCAMLBUILDWIN32	= OCAMLFIND_CONF=@MINGW32_OCAMLFIND_CONF@ $(OCAMLBUILD)
 MINGW32_WINDRES	= @MINGW32_WINDRES@ -c0xfde9 -l0x0890
 OCAMLDOC	= @OCAMLDOC@
