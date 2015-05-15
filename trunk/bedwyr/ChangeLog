@@ -14,6 +14,7 @@ Changed:
   - zipper-based indexing with get-and-set functionality
   - #typeof outputs consistent type variables
   - more supported tokens
+  - logical connectives seen as higher-order constants by the parser
 New:
   - better tabling
     - simple theorems are used to improve tabling
@@ -35,9 +36,11 @@ New:
     - assertions checked in all files
     - #! (shbang) marks a single-line comment (like %)
     - readline-aware wrapper
+    - "read" predicate
   - stratification checking
   - Quick-Start Guide
-
+  - opam packaging
+  - n-tuples (for n>1)
 
 1.3 (2012-02-29)
 ================

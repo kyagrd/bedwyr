@@ -225,7 +225,7 @@ endif
 bedwyr_doc: bedwyr_refman
 
 bedwyr_refman: doc/Makefile
-	@$(MAKE) -C $$(dirname $<)
+	@$(MAKE) -C $(<D)
 
 slimmer_doc: src_odocs src_libref
 
@@ -330,7 +330,7 @@ install_slimmer_files: $(SLIMMER_FILES:=.gz)
 install_bedwyr_doc: install_bedwyr_refman
 
 install_bedwyr_refman: doc/Makefile
-	@$(MAKE) -C $$(dirname $<) install
+	@$(MAKE) -C $(<D) install
 
 install_slimmer_doc: install_src_odocs install_src_libref
 
@@ -361,7 +361,7 @@ archive.tar: $(ARCH_FILES)
 	@$(TAR) -cpf $@ --xform 's|^|$(DIST_NAME)/|S' $^
 
 doc/archive.tar: doc/Makefile
-	@$(MAKE) -C $$(dirname $<) archive
+	@$(MAKE) -C $(<D) archive
 
 $(DIST_NAME).tar: archive.tar doc/archive.tar
 	@$(TAR) -cpf $@ -T /dev/null
@@ -512,7 +512,7 @@ mostlyclean:
 	@rm -vf nsis-files/*.o bedwyr
 
 clean: doc/Makefile mostlyclean
-	@$(MAKE) -C $$(dirname $<) clean
+	@$(MAKE) -C $(<D) clean
 	@$(MAKE) -C examples/ccs_vp/timing clean
 	@rm -vf $(addprefix opam-files/,$(OPAM_FILES))
 	@rm -vf $(SLIMMER_FINDLIB)
@@ -521,7 +521,7 @@ clean: doc/Makefile mostlyclean
 	@rm -rvf $(DEB_DIST_NAME) nsis-build
 
 distclean: doc/Makefile clean
-	@$(MAKE) -C $$(dirname $<) distclean
+	@$(MAKE) -C $(<D) distclean
 	@$(FIND) . -name '*~' -exec rm -vf \{\} \;
 	@rm -vf $(ac_config_files)
 	@rm -vf config.status config.log configure
