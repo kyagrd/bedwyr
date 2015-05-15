@@ -56,9 +56,12 @@ module type S = sig
 
   (** User-declared types and type operators. *)
   val tconst : string -> ty list -> ty
+  (** The (zero or more) arguments of the operator are given backwards. *)
 
   (** Runtime-declared product types. *)
   val ttuple : ty -> ty -> ty list -> ty
+  (** The (zero or more) last components (after the two first ones) are
+    * given in reverse order. *)
 
   (** return type of predicates ([prop]). *)
   val tprop : ty

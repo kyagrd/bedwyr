@@ -47,7 +47,7 @@
 %token UNDERSCORE
 /* Bedwyr primitives */
 %token TYPE PROP STRING NAT FORALL EXISTS NABLA TRUE FALSE
-%token RARROW EQ AND OR BSLASH
+%token RARROW STAR EQ AND OR BSLASH
 
 /* Abella keywords, including tactics, apart from "exists" */
 %token CLOSE QUERY IMPORT SPECIFICATION SSPLIT SET SHOW QUIT
@@ -73,7 +73,7 @@
 %left AND
 %nonassoc EQ
 
-%nonassoc COMMA
+%right COMMA STAR
 
 %nonassoc BSLASH
 
@@ -170,7 +170,7 @@ meta_command:
 
 type_clist:
   | lower_id                            { [pos 1,$1] }
-  | lower_id COMMA type_clist           { (pos 1,$1)::$3 }
+  | type_clist COMMA lower_id           { (pos 3,$3)::$1 }
 
 ki:
   | TYPE RARROW ki                      { Input.Typing.ki_arrow
@@ -180,17 +180,27 @@ ki:
 
 const_clist:
   | const_id                            { [pos 1,$1] }
-  | const_id COMMA const_clist          { (pos 1,$1)::$3 }
+  | const_clist COMMA const_id          { (pos 3,$3)::$1 }
+
+ty_tuple:
+  | ty_tuple STAR ty_singleton          { let ty1,ty2,tys = $1 in
+                                          ty1,ty2,$3::tys }
+  | ty_singleton STAR ty_singleton      { $1,$3,[] }
 
 ty:
-  | ty_list                             { let n,l = $1 in
-                                          Input.Typing.tconst n (List.rev l) }
-  | ty_atom2                            { $1 }
   | ty RARROW ty                        { Input.Typing.ty_arrow [$1] $3 }
+  | ty_tuple                            { let ty1,ty2,tys = $1 in
+                                          Input.Typing.ttuple ty1 ty2 tys }
+  | ty_singleton                        { $1 }
+
+ty_singleton:
+  | ty_list                             { let n,l = $1 in
+                                          Input.Typing.tconst n l }
+  | ty_atom2                            { $1 }
 
 ty_list:
   | lower_id                            { $1,[] }
-  | ty_list ty_atom                     { let n,l = $1 in n,($2::l) }
+  | ty_list ty_atom                     { let n,l = $1 in n,$2::l }
 
 ty_atom:
   | lower_id                            { Input.Typing.tconst $1 [] }
@@ -208,7 +218,7 @@ ty_atom2:
 
 decls:
   | decl                                { [$1] }
-  | decl COMMA decls                    { $1::$3 }
+  | decls COMMA decl                    { $3::$1 }
 
 decl:
   | flavour apred_id                    { let p,n,ty = $2 in ($1,p,n,ty) }
@@ -233,8 +243,8 @@ theorem:
 
 term_tuple:
   | term_tuple COMMA singleton          { let t1,t2,l = $1 in
-                                          $3,t1,t2::l }
-  | singleton COMMA singleton           { $3,$1,[] }
+                                          t1,t2,$3::l }
+  | singleton COMMA singleton           { $1,$3,[] }
 
 term:
   | term EQ term                        { Input.pre_eq (pos 0) $1 $3 }
@@ -261,8 +271,8 @@ term_list:
                                           let t1 = Input.pre_app (pos 1) t1 l1 in
                                           let t3,l3 = $3 in
                                           let t3 = Input.pre_app (pos 3) t3 l3 in
-                                          t3,[t1;hd] }
-  | term_list term_atom                 { let t,l = $1 in $2,t::l }
+                                          hd,[t3;t1] }
+  | term_list term_atom                 { let t,l = $1 in t,$2::l }
 
 term_atom:
   | QSTRING                             { let p,s = $1 in
