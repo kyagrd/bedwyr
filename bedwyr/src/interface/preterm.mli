@@ -34,6 +34,9 @@ module Pos : sig
   (** Current position (parsing). *)
   val of_token : int -> t
 
+  (** Offset pair. *)
+  val to_pair : t -> int * int
+
   (** Position information pretty-printing. *)
   val pp : Format.formatter -> t -> unit
 end
