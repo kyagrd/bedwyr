@@ -1,5 +1,0 @@
-version = "[internal]"
-description = "Bedwyr prover"
-requires = "str,xmlm,slimmer.ndcore,slimmer.input"
-archive(byte) = "prover.cma"
-archive(native) = "prover.cmxa"

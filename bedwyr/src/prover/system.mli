@@ -1,6 +1,6 @@
 (****************************************************************************)
-(* Bedwyr prover                                                            *)
-(* Copyright (C) 2005-2014 Baelde, Tiu, Ziegler, Heath                      *)
+(* Bedwyr -- base functions                                                 *)
+(* Copyright (C) 2005-2015 Baelde, Tiu, Ziegler, Heath                      *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -17,6 +17,7 @@
 (* 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.              *)
 (****************************************************************************)
 
+(* XXX move to environment.mli
 (** System variables, predefined predicates,
   * definitions bulding and handling. *)
 
@@ -190,6 +191,7 @@ More [y] ? y
 No more solutions. v}
     * The file "test.txt" will contain the string "Test printing". *)
 end
+*)
 
 (** Provide a term during the processing of a request.
   * Expected to ask the term interactivelly to the user. *)
@@ -216,57 +218,8 @@ val use_filter : bool ref
   * be used safely. *)
 val clean_tables : bool ref
 
-(** {6 Type declarations} *)
-
-exception Invalid_type_declaration of
-  string * Input.pos * Input.Typing.ki * string
-exception Missing_type of
-  string * Input.pos
-val declare_type : Input.pos * string -> Input.Typing.ki -> unit
-
-(** {6 Constants and predicates declarations} *)
-
-(** Tabling information: the table itself,
-  * and some theorems for forward/backward chaining. *)
-type tabling_info = { mutable theorem : Term.term ; table : Table.O.t }
-
-(** Describe whether tabling is possible, and if so, how it is used. *)
-type flavour = private
-  | Normal
-    (** only unfolding can be done *)
-  | Inductive of tabling_info
-    (** tabling is possible, and loop is (conditionally) a failure *)
-  | CoInductive of tabling_info
-    (** tabling is possible, and loop is (conditionally) a success *)
-
-(** Predicate: tabling information if the flavours allows it,
-  * stratum of the definition block,
-  * definition and type. *)
-type predicate = private
-    { flavour           : flavour ;
-      stratum           : int ;
-      mutable definition: Term.term ;
-      ty                : Input.Typing.ty }
-
-exception Invalid_const_declaration of
-  string * Input.pos * Input.Typing.ty * string
-exception Invalid_flavour of
-  string * Input.pos * Input.flavour * Input.flavour
-exception Invalid_pred_declaration of
-  string * Input.pos * Input.Typing.ty * string
-
-val declare_const : Input.pos * string -> Input.Typing.ty -> unit
-
-(** Declare predicates.
-  * @return the list of variables and types
-  *  corresponding to those predicates *)
-val declare_preds :
-  (Input.flavour * Input.pos * string * Input.Typing.ty) list -> int
 
 (** {6 Clauses and queries construction} *)
-
-exception Missing_declaration of string * Input.pos
-exception Stratification_error of string * Input.pos
 
 (** Translate a pre-term, with typing and position information,
   * into a term, with variable sharing.
@@ -274,11 +227,18 @@ exception Stratification_error of string * Input.pos
   * and no type information is kept in the terms from this point.
   * If the term isn't well typed, or has a type that isn't [prop],
   * an exception is raised and the global type unifier isn't updated. *)
-val translate_query : Input.preterm -> Term.term
+val translate_query :
+  Preterm.preterm ->
+  k:(unit ->
+     (Preterm.Typing.ty *
+      (Term.var,(Preterm.Typing.ty*Preterm.Pos.t option)) Hashtbl.t *
+      ((Preterm.Pos.t * string) list * Term.term)) option) ->
+  Lexing.lexbuf ->
+  Term.term option
 
 (** {6 Predicates definitions} *)
 
-exception Inconsistent_definition of string * Input.pos * string
+exception Inconsistent_definition of string * Preterm.Pos.t * string
 
 (** For each [(p,h,b)] of [c],
   * [add_clauses s c] adds the clause [h := b] to a definition,
@@ -286,34 +246,43 @@ exception Inconsistent_definition of string * Input.pos * string
   *
   * @return the list of singleton variables of the clause *)
 val add_clauses :
-  int -> (Input.pos * Input.preterm * Input.preterm) list ->
-  (Input.pos * string) list
+  int -> (Preterm.Pos.t * Preterm.preterm * Preterm.preterm) list ->
+  k:(unit ->
+     (Preterm.Typing.ty *
+      (Term.var,(Preterm.Typing.ty*Preterm.Pos.t option)) Hashtbl.t *
+      ((Preterm.Pos.t * string) list * Term.term)) option) ->
+  Lexing.lexbuf ->
+  (Preterm.Pos.t * string) list option
 
 (** {6 Theorem definitions} *)
 
-exception Inconsistent_theorem of string * Input.pos * string
+exception Inconsistent_theorem of string * Preterm.Pos.t * string
 
 (** If possible, add the theorem to the tabling extended rules. *)
-val add_theorem : (Input.pos * string * Input.preterm) -> unit
+val add_theorem :
+  (Preterm.Pos.t * string * Preterm.preterm) ->
+  k:(unit ->
+     (Preterm.Typing.ty *
+      (Term.var,(Preterm.Typing.ty*Preterm.Pos.t option)) Hashtbl.t *
+      ((Preterm.Pos.t * string) list * Term.term)) option) ->
+  Lexing.lexbuf ->
+  unit option
 
 (** {6 Predicates accessors} *)
 
-exception Missing_definition of string * Input.pos option
-exception Missing_table of string * Input.pos option
-
-(** Remove a definition. *)
-val remove_def : Term.term -> unit
+exception Missing_definition of string * Preterm.Pos.t option
+exception Missing_table of string * Preterm.Pos.t option
 
 (** Get a predicate's tabling information and definition.
   * @raise Missing_declaration if [head_tm] is not an existing predicate
   *)
-val get_flav_def : Term.term -> flavour * Term.term
+val get_flav_def : Term.term -> Environment.flavour * Term.term
 
 (** Remove all tables. *)
 val clear_tables : unit -> unit
 
 (** Remove a table. *)
-val clear_table : Input.pos * Term.term -> unit
+val clear_table : Preterm.Pos.t * Term.term -> unit
 
 (** {6 I/O} *)
 
@@ -325,19 +294,26 @@ val print_env : unit -> unit
   * without messing with the future inference,
   * so the global type unifier is left unchanged
   * even if the term is well typed and of type [prop]. *)
-val print_type_of : Input.preterm -> unit
+val print_type_of :
+  Preterm.preterm ->
+  k:(unit ->
+     (Preterm.Typing.ty *
+      (Term.var,(Preterm.Typing.ty*Preterm.Pos.t option)) Hashtbl.t *
+      ((Preterm.Pos.t * string) list * Term.term)) option) ->
+  Lexing.lexbuf ->
+  unit option
 (* TODO rewrite this comment once the new type system is merged *)
 
 (** Display the body of a definition. *)
-val show_def : Input.pos * Term.term -> unit
+val show_def : Preterm.Pos.t * Term.term -> unit
 
 (** Display the content of a table. *)
-val show_table : Input.pos * Term.term -> unit
+val show_table : Preterm.Pos.t * Term.term -> unit
 
 (** Save the content of a table to a file.
   * The proved and disproved entries are stored as arguments
   * to the predicates [proved] and [disproved], respectively. *)
-val save_table : Input.pos * Term.term -> string -> string -> unit
+val save_table : Preterm.Pos.t * Term.term -> string -> string -> unit
 
 (** Export the current tables in an XML file.
   * Doesn't work between a call to [#clear_table] and the following call
@@ -346,7 +322,14 @@ val export : string -> unit
 
 (** Translate a pre-term into a term.
   * Similar to {!translate_query}, but with no assumption on the type. *)
-val translate_term : Input.preterm -> Term.term
+val translate_term :
+  Preterm.preterm ->
+  k:(unit ->
+     (Preterm.Typing.ty *
+      (Term.var,(Preterm.Typing.ty*Preterm.Pos.t option)) Hashtbl.t *
+      ((Preterm.Pos.t * string) list * Term.term)) option) ->
+  Lexing.lexbuf ->
+  Term.term option
 
 (** {6 Misc} *)
 

@@ -1,5 +1,5 @@
 (****************************************************************************)
-(* Bedwyr prover                                                            *)
+(* Bedwyr -- tabling                                                        *)
 (* Copyright (C) 2006-2014 Gacek, Baelde, Tiu, Heath                        *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
@@ -100,7 +100,7 @@ module O : sig
 
   (** Print a table to a file.
     * Nabla variables are abstracted and explicitly quantified. *)
-  val fprint : out_channel -> Term.term -> t -> Input.Typing.ty -> unit
+  val fprint : out_channel -> Term.term -> t -> Preterm.Typing.ty -> unit
 
   (** Export the provided tables in an XML file. *)
   val export : string -> ((Term.term * t) list) -> (son list) -> unit

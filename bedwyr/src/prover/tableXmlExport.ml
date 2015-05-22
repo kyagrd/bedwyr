@@ -1,6 +1,6 @@
 (****************************************************************************)
-(* Bedwyr prover                                                            *)
-(* Copyright (C) 2013 Quentin Heath                                         *)
+(* Bedwyr -- tabling export                                                 *)
+(* Copyright (C) 2013-2015 Quentin Heath                                    *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -102,4 +102,4 @@ module Make (I : TableTypes.INPUT) : TableTypes.INPUT = struct
       Xmlm.output output (`El_end) (* </skeleton> *)
     in
     IO.run_out aux file
-  end
+end

@@ -197,6 +197,7 @@ else
 		TABLE_XML_EXPORT_MODULE_NL="
 ${TABLE_XML_EXPORT_MODULE}"
 		XMLM_TAG="xmlm"
+		XMLM_COMMA="$XMLM_TAG,"
 	else
 		AC_MSG_RESULT(no)
 		AS_IF([test "X$with_xmln" = Xyes],
@@ -371,6 +372,7 @@ AC_CONFIG_FILES([src/config.ml],[chmod a-w src/config.ml])
 AC_CONFIG_FILES([src/prover/table.ml],[chmod a-w src/prover/table.ml])
 AC_CONFIG_FILES([src/prover/prover.mllib],[chmod a-w src/prover/prover.mllib])
 AC_CONFIG_FILES([src/META.part],[chmod a-w src/META.part])
+AC_CONFIG_FILES([src/prover/META.part],[chmod a-w src/prover/META.part])
 AC_CONFIG_FILES([doc/Makefile],[chmod a-w doc/Makefile])
 AC_CONFIG_FILES([man/bedwyr.1],[chmod a-w man/bedwyr.1])
 AC_CONFIG_FILES([contrib/bedwyr.desktop],[chmod a-w contrib/bedwyr.desktop])
@@ -416,6 +418,7 @@ AC_SUBST(MINGW32_OCAMLFIND_CONF)
 AC_SUBST(TABLE_XML_EXPORT_MODULE_DOT)
 AC_SUBST(TABLE_XML_EXPORT_MODULE_NL)
 AC_SUBST(XMLM_TAG)
+AC_SUBST(XMLM_COMMA)
 AC_SUBST(OCAMLFIND_OUNIT)
 
 AC_SUBST(INSTALL)
