@@ -52,9 +52,9 @@ module Pos = struct
     if name = "" then
       (* lexbuf line information is rarely accurate at the toplevel,
        * but character information still is! *)
-      Format.fprintf fmt "At %s:" (pos_to_string (start,curr))
+      Format.fprintf fmt "At %s" (pos_to_string (start,curr))
     else
-      Format.fprintf fmt "In file %S, at %s:" name (pos_to_string (start,curr))
+      Format.fprintf fmt "In file %S, at %s" name (pos_to_string (start,curr))
 end
 
 exception Illegal_byte_sequence of char

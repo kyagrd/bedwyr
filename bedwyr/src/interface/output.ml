@@ -17,24 +17,65 @@
 (* 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.              *)
 (****************************************************************************)
 
-let eprintf ?p ?(formatter=Format.err_formatter) f =
-  begin match p with
-    | None ->
-        Format.fprintf formatter
-          ("@[<hov>@;<0 1>@[" ^^ f ^^ "@]@]@.")
-    | Some p ->
-        Format.fprintf formatter
-          ("@[<hov>%a@;<1 1>@[" ^^ f ^^ "@]@]@.")
-          Preterm.Pos.pp p
-  end
+(* General purpose output facilities *)
 
-let wprintf ?p ?(formatter=Format.err_formatter) f =
-  begin match p with
-    | None ->
-        Format.fprintf formatter
-          ("@[<hov>Warning: @;<1 1>@[" ^^ f ^^ "@]@]@.")
+let kfprintf ~k ~prefix ~formatter f =
+  if prefix="" then
+    Format.kfprintf k formatter
+      ("@[" ^^ f ^^ "@]")
+  else
+    Format.kfprintf k formatter
+      ("@[<hov>%s@;<0 1>@[" ^^ f ^^ "@]@]")
+      prefix
+
+let prefix ~tag ?p () =
+  let pos = match p with
     | Some p ->
-        Format.fprintf formatter
-          ("@[<hov>Warning: %a@;<1 1>@[" ^^ f ^^ "@]@]@.")
-          Preterm.Pos.pp p
-  end
+        Format.fprintf Format.str_formatter "%a: " Preterm.Pos.pp p ;
+        Format.flush_str_formatter ()
+    | None -> ""
+  in
+  (tag^pos)
+
+let fprintf ?(tag="") ?p ?(nl=false) ~formatter f =
+  let k fmt =
+    if nl
+    then Format.pp_print_newline fmt ()
+    else Format.pp_print_flush fmt ()
+  in
+  kfprintf ~k ~prefix:(prefix ~tag ?p ()) ~formatter f
+
+(* Wrappers for normal output *)
+
+let std_out = ref Format.std_formatter
+
+let printf ?nl f =
+  fprintf ?nl ~formatter:!std_out f
+
+let sprintf ?(tag="") ?p f =
+  let buffer = Buffer.create 80 in
+  let return formatter =
+    Format.pp_print_flush formatter () ;
+    Buffer.contents buffer
+  in
+  let formatter = Format.formatter_of_buffer buffer in
+  kfprintf ~k:return ~prefix:(prefix ~tag ?p ()) ~formatter f
+
+(* Wrappers for abnormal output *)
+
+let std_err = ref Format.err_formatter
+
+let eprintf ?p f =
+  fprintf ?p ~nl:true ~formatter:!std_err f
+
+let wprintf ?p f =
+  fprintf ~tag:"Warning: " ?p ~nl:true ~formatter:!std_err f
+
+let std_dbg = ref Format.err_formatter
+
+let debug = ref false
+
+let dprintf ?p f =
+  if !debug
+  then fprintf ~tag:"[DEBUG] " ?p ~nl:true ~formatter:!std_dbg f
+  else Format.ifprintf !std_dbg f

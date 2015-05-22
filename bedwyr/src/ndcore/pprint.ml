@@ -77,18 +77,12 @@ let get_max_priority () = List.length !infix *)
 let get_max_priority () = 4
 
 (* Utility to get a 'to_string' from a 'print' *)
-let formatter,do_formatter =
-  let buf = Buffer.create 20 in
-  let chan = formatter_of_buffer buf in
-    chan,
-    (fun f ->
-       assert (Buffer.length buf = 0) ;
-       f () ;
-       pp_print_flush chan () ;
-       assert (Buffer.length buf > 0) ;
-       let s = Buffer.contents buf in
-       Buffer.clear buf ;
-       s)
+let string_of_formatter f =
+  let buffer = Buffer.create 80 in
+  let formatter = formatter_of_buffer buffer in
+  f formatter ;
+  pp_print_flush formatter () ;
+  Buffer.contents buffer
 
 (* Print a term. Ensures consistent namings, using naming hints when available.
  * Behaves consistently from one call to another unless Term.reset_namespace
@@ -222,7 +216,8 @@ let print_full ~generic ~bound chan term =
   fprintf chan "@[%a@]" (pp ~bound 0) term
 
 let term_to_string_full ~generic ~bound tm =
-  do_formatter (fun () -> print_full ~generic ~bound formatter tm)
+  string_of_formatter
+    (fun formatter -> print_full ~generic ~bound formatter tm)
 
 let term_to_string_full_debug ~generic ~bound dbg term =
   let debug' = !debug in
@@ -246,7 +241,8 @@ let print ?(bound=[]) chan term =
   s
 
 let term_to_string ?(bound=[]) tm =
-  do_formatter (fun () -> print ~bound formatter tm)
+  string_of_formatter
+    (fun formatter -> print ~bound formatter tm)
 
 let pp_term out term = print out term
 
@@ -271,4 +267,5 @@ let pp_preabstracted ~generic ~bound chan term =
         print_full ~generic ~bound chan term
 
 let term_to_string_preabstracted ~generic ~bound term =
-  do_formatter (fun () -> pp_preabstracted ~generic ~bound formatter term)
+  string_of_formatter
+    (fun formatter -> pp_preabstracted ~generic ~bound formatter term)

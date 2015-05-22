@@ -395,7 +395,7 @@ end = struct
         | Preterm.MetaCommand.Session l -> !reload ~session:l ()
 
         (* Turn debugging on/off. *)
-        | Preterm.MetaCommand.Debug value -> System.debug := (bool_of_flag value)
+        | Preterm.MetaCommand.Debug value -> Output.debug := (bool_of_flag value)
 
         (* Turn timing on/off. *)
         | Preterm.MetaCommand.Time value -> System.time := (bool_of_flag value)
@@ -562,23 +562,24 @@ end = struct
       | Some (Some input) -> Eval.term ~print:ignore input lexbuf
 end
 
-let read_term () =
-  let rec aux () =
-    Format.printf " ?> %!" ;
-    let lexbuf = Lexing.from_channel stdin in
-    match Mode.term lexbuf with
-      | None -> aux ()
-      | Some term -> term
-  in
-  try Some (aux ()) with End_of_file -> None
+let () =
+  System.read_term := begin
+    let rec aux () =
+      Format.printf " ?> %!" ;
+      let lexbuf = Lexing.from_channel stdin in
+      match Mode.term lexbuf with
+        | None -> aux ()
+        | Some term -> term
+    in
+    fun () ->
+      try Some (aux ()) with End_of_file -> None
+  end
 
-let () = (System.read_term := read_term)
-
-let fread_term lexbuf () =
-  try Mode.term lexbuf
-  with End_of_file -> None
-
-let () = (System.fread_term := fread_term)
+let () =
+  System.fread_term := begin
+    fun lexbuf () ->
+      try Mode.term lexbuf with End_of_file -> None
+  end
 
 (* definition-mode step *)
 let defs ~test_limit lexbuf =

@@ -17,12 +17,45 @@
 (* 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.              *)
 (****************************************************************************)
 
-val eprintf :
+(** {6 General purpose output facilities} *)
+
+val fprintf :
+  ?tag:string ->
   ?p:Preterm.Pos.t ->
-  ?formatter:Format.formatter ->
-  ('a, Format.formatter, unit, unit, unit, unit) format6 -> 'a
+  ?nl:bool ->
+  formatter:Format.formatter ->
+  ('a, Format.formatter, unit, unit) format4 -> 'a
+
+(** {6 Wrappers for normal output} *)
+
+val std_out : Format.formatter ref
+
+val printf :
+  ?nl:bool ->
+  ('a, Format.formatter, unit, unit) format4 -> 'a
+
+val sprintf :
+  ?tag:string ->
+  ?p:Preterm.Pos.t ->
+  ('a, Format.formatter, unit, string) format4 -> 'a
+
+(** {6 Wrappers for abnormal output} *)
+
+val std_err : Format.formatter ref
+
+val std_dbg : Format.formatter ref
+
+(** Simple debug flag, can be set dynamically from the logic program. *)
+val debug : bool ref
 
 val wprintf :
   ?p:Preterm.Pos.t ->
-  ?formatter:Format.formatter ->
-  ('a, Format.formatter, unit, unit, unit, unit) format6 -> 'a
+  ('a, Format.formatter, unit, unit) format4 -> 'a
+
+val eprintf :
+  ?p:Preterm.Pos.t ->
+  ('a, Format.formatter, unit, unit) format4 -> 'a
+
+val dprintf :
+  ?p:Preterm.Pos.t ->
+  ('a, Format.formatter, unit, unit) format4 -> 'a

@@ -116,7 +116,7 @@ let _ =
            "<n> Enable forward chaining and set its limit" ;
          "--version", Arg.Unit print_version,
            " Display version info and exit" ;
-         "-D", Arg.Set System.debug,
+         "-D", Arg.Set Output.debug,
            " Print debugging information"
        ])
     (fun f -> session := f::!session)
