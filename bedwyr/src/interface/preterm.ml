@@ -1,5 +1,5 @@
 (****************************************************************************)
-(* Parsing and type-checking for the Bedwyr prover                          *)
+(* Bedwyr -- concrete syntax tree to abstract syntax tree                   *)
 (* Copyright (C) 2012-2015 Quentin Heath                                    *)
 (* Copyright (C) 2013 Alwen Tiu                                             *)
 (*                                                                          *)
@@ -18,30 +18,57 @@
 (* 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.              *)
 (****************************************************************************)
 
-(* Pre-terms and pre-AST, translation to terms and checking. *)
+(* Pre-terms (CST) construction, checking, and translation to AST. *)
 
-type pos = Lexing.position * Lexing.position
-and pos' = pos
+module Pos = struct
+  type t = Lexing.position * Lexing.position
 
-let dummy_pos = Lexing.dummy_pos,Lexing.dummy_pos
-let dummy_pos' = dummy_pos
+  let dummy =
+    Lexing.dummy_pos,Lexing.dummy_pos
+
+  let of_lexbuf lexbuf =
+    let start = lexbuf.Lexing.lex_start_p in
+    fun () -> start,lexbuf.Lexing.lex_curr_p
+
+  let of_token i =
+    if i > 0
+    then (Parsing.rhs_start_pos i,Parsing.rhs_end_pos i)
+    else (Parsing.symbol_start_pos (),Parsing.symbol_end_pos ())
+
+  let pp fmt (start,curr) =
+    let pos_to_string (start,curr) =
+      let l1 = start.Lexing.pos_lnum in
+      let l2 = curr.Lexing.pos_lnum in
+      let c1 = start.Lexing.pos_cnum - start.Lexing.pos_bol + 1 in
+      let c2 = curr.Lexing.pos_cnum - curr.Lexing.pos_bol in
+      if l1 < l2 then
+        Printf.sprintf "line %d, byte %d - line %d, byte %d" l1 c1 l2 c2
+      else if c1 < c2  then
+        Printf.sprintf "line %d, bytes %d-%d" l2 c1 c2
+      else
+        Printf.sprintf "line %d, byte %d" l2 c2
+    in
+    let name = curr.Lexing.pos_fname in
+    if name = "" then
+      (* lexbuf line information is rarely accurate at the toplevel,
+       * but character information still is! *)
+      Format.fprintf fmt "At %s:" (pos_to_string (start,curr))
+    else
+      Format.fprintf fmt "In file %S, at %s:" name (pos_to_string (start,curr))
+end
 
 exception Illegal_byte_sequence of char
-exception Illegal_string_comment of pos
+exception Illegal_string_comment of Pos.t
 exception Illegal_token of string * string
 exception Unknown_command of string
 exception EOF_error of string
 exception Empty_command
 exception Empty_term
-exception Parse_error of pos * string * string
+exception Parse_error of Pos.t * string * string
 
-module I = struct
-  type pos = pos'
-  let dummy_pos = dummy_pos'
-end
-module Typing = Typing.Make (I)
+module Typing = Typing.Make (Pos)
 
-type preterm = pos * rawterm
+type preterm = Pos.t * rawterm
 and rawterm =
   | QString             of string
   | Nat                 of int
@@ -54,8 +81,8 @@ and rawterm =
   | And                 of preterm * preterm
   | Or                  of preterm * preterm
   | Arrow               of preterm * preterm
-  | Binder              of Term.binder * (pos * string * Typing.ty) list * preterm
-  | Lam                 of (pos * string * Typing.ty) list * preterm
+  | Binder              of Term.binder * (Pos.t * string * Typing.ty) list * preterm
+  | Lam                 of (Pos.t * string * Typing.ty) list * preterm
   | App                 of preterm * preterm * preterm list
   | Tuple               of preterm * preterm * preterm list
 
@@ -109,18 +136,18 @@ let free_args pre_term =
 
 (* Input AST *)
 
-exception Qed_error of pos
+exception Qed_error of Pos.t
 
 type flavour = Normal | Inductive | CoInductive
 
 module Command = struct
   type t =
-    | Kind    of (pos * string) list * Typing.ki
-    | Type    of (pos * string) list * Typing.ty
-    | Def     of (flavour * pos * string * Typing.ty) list *
-                 (pos * preterm * preterm) list
-    | Theorem of (pos * string * preterm)
-    | Qed     of pos
+    | Kind    of (Pos.t * string) list * Typing.ki
+    | Type    of (Pos.t * string) list * Typing.ty
+    | Def     of (flavour * Pos.t * string * Typing.ty) list *
+                 (Pos.t * preterm * preterm) list
+    | Theorem of (Pos.t * string * preterm)
+    | Qed     of Pos.t
 end
 
 module MetaCommand = struct
@@ -137,11 +164,11 @@ module MetaCommand = struct
     | Saturation    of int
     | Env
     | Type_of       of preterm
-    | Show_def      of pos * string
-    | Show_table    of pos * string
+    | Show_def      of Pos.t * string
+    | Show_table    of Pos.t * string
     | Clear_tables
-    | Clear_table   of pos * string
-    | Save_table    of pos * string * string
+    | Clear_table   of Pos.t * string
+    | Save_table    of Pos.t * string * string
     | Export        of string
     | Assert        of preterm
     | Assert_not    of preterm
@@ -156,18 +183,17 @@ type definition_mode =
 
 type toplevel =
   [
-  | `Term               of pos * preterm
+  | `Term               of Pos.t * preterm
   | `MetaCommand        of MetaCommand.t
   ]
 
 type term_mode =
   [
-  | `Term               of pos * preterm
+  | `Term               of Pos.t * preterm
   ]
 
-(* Pre-terms' type checking *)
 
-exception Term_typing_error of pos * Typing.ty * Typing.ty * Typing.type_unifier
+exception Term_typing_error of Pos.t * Typing.ty * Typing.ty * Typing.type_unifier
 
 let type_check_and_translate
       ?stratum
@@ -177,7 +203,7 @@ let type_check_and_translate
       ~fresh_tyinst
       pre_term
       expected_type
-      (typed_free_var,typed_declared_obj,typed_intern_pred,atomic_kind) =
+      (typed_free_var,typed_declared_obj,typed_intern_pred,kind_check) =
   (* find the type corresponding to a De-Bruijn index *)
   let find_db s bvars =
     let rec aux n = function
@@ -265,10 +291,7 @@ let type_check_and_translate
           List.iter
             (fun (p,ty) ->
                let ty = Typing.ty_norm ~unifier:u ty in
-               let _ =
-                 Typing.kind_check
-                   ~obj:(Typing.QuantVar None) ~p ty ~atomic_kind
-               in
+               let _ = kind_check ~obj:(Typing.QuantVar None) ~p ty in
                ())
             r_vars ;
           Term.binder b arity t,u
@@ -278,9 +301,7 @@ let type_check_and_translate
             List.fold_left
               (fun (bvars,r_tys) (p,name,ty) ->
                  let ty = fresh_tyinst ty in
-                 let _ = Typing.kind_check
-                           ~obj:Typing.AbsVar ~p ty ~atomic_kind
-                 in
+                 let _ = kind_check ~obj:Typing.AbsVar ~p ty in
                  ((name,ty)::bvars,ty::r_tys))
               (bvars,[])
               vars
@@ -336,7 +357,7 @@ let type_check_and_translate
          then Typing.AbsVar
          else (Typing.QuantVar (Some n))
        in
-       let _ = Typing.kind_check ~obj ~p ty ~atomic_kind in
+       let _ = kind_check ~obj ~p ty in
        match single_pos with
          | Some pos when n<>"_" -> (pos,n)::singletons
          | _ -> singletons)

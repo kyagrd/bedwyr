@@ -71,90 +71,9 @@ let bool_of_flag = function
   | Some "off" | Some "false" -> false
   | _ -> raise Invalid_command
 
-let position_lex lexbuf =
-  let start = lexbuf.Lexing.lex_start_p in
-  let curr = lexbuf.Lexing.lex_curr_p in
-  start,curr
-
-let position_range (start,curr) =
-  let position (start,curr) =
-    let l1 = start.Lexing.pos_lnum in
-    let l2 = curr.Lexing.pos_lnum in
-    let c1 = start.Lexing.pos_cnum - start.Lexing.pos_bol + 1 in
-    let c2 = curr.Lexing.pos_cnum - curr.Lexing.pos_bol in
-    if l1 < l2 then
-      Printf.sprintf "line %d, byte %d - line %d, byte %d" l1 c1 l2 c2
-    else if c1 < c2  then
-      Printf.sprintf "line %d, bytes %d-%d" l2 c1 c2
-    else
-      Printf.sprintf "line %d, byte %d" l2 c2
-  in
-  let name = curr.Lexing.pos_fname in
-  if name = "" then
-    (* lexbuf line information is rarely accurate at the toplevel,
-     * but character information is *)
-    Printf.sprintf "At %s:" (position (start,curr))
-  else
-    Printf.sprintf "In file %S, %s:" name (position (start,curr))
-
-let wprintf ~p f =
-  Format.fprintf Format.err_formatter
-    ("@[<hov>Warning: %s@;<1 1>@[" ^^ f ^^ "@]@]@.")
-    (position_range p)
-
-let eprintf ?p ?(k=fun _ -> None) f =
-  match p with
-    | None ->
-        Format.kfprintf k Format.err_formatter
-          ("@[<hov>@;<0 1>@[" ^^ f ^^ "@]@]@.")
-    | Some p ->
-        Format.kfprintf k Format.err_formatter
-          ("@[<hov>%s@;<1 1>@[" ^^ f ^^ "@]@]@.")
-          (position_range p)
-
 (* XXX replace all lexbufes by positions, as we don't do
  * anything else, supposedly (proof skipping, maybe?) *)
 module Catch = struct
-  let parse lexbuf =
-    let k _ =
-      Status.input () ;
-      Lexer.flush_input lexbuf ;
-      None
-    in
-    function
-      (* I/O - Lexer *)
-      | Input.EOF_error s ->
-          eprintf ~p:(position_lex lexbuf) ~k
-            "Lexing error:@ %s@ at end of input."
-            s
-      | Input.Illegal_byte_sequence c ->
-          eprintf ~p:(position_lex lexbuf) ~k
-            "Illegal sequence starting with byte %C in input."
-            c
-      | Input.Illegal_string_comment p ->
-          eprintf ~p ~k
-            "Unmatched comment delimiter in string."
-      | Input.Illegal_token (n1,n2) ->
-          eprintf ~p:(position_lex lexbuf) ~k
-            "%S is illegal in a token, did you mean %S?"
-            (Lexing.lexeme lexbuf)
-            (String.concat " " [n1;n2])
-      | Input.Unknown_command n ->
-          eprintf ~p:(position_lex lexbuf) ~k
-            "Unknown meta-command %S, use \"#help.\" for a short list."
-            ("#" ^ n)
-
-      (* I/O - Parser *)
-      | Parsing.Parse_error ->
-          eprintf ~p:(position_lex lexbuf) ~k
-            "Unexpected input."
-      | Input.Parse_error (p,s1,s2) ->
-          eprintf ~p ~k
-            "%s while parsing@ %s."
-            s1 s2
-
-      | e -> raise e
-
   let check lexbuf =
     let k _ =
       Status.input () ;
@@ -381,28 +300,6 @@ module Catch = struct
           eprintf ~p:(position_lex lexbuf) ~k
             "Unexpected error:@ %s"
             (Printexc.to_string e)
-end
-
-module Read : sig
-  val definition : Lexing.lexbuf -> Input.definition_mode option option
-  val toplevel : Lexing.lexbuf -> Input.toplevel option option
-  val term : Lexing.lexbuf -> Input.term_mode option option
-end = struct
-  let parse ~parser ~lexer lexbuf =
-    try Some (parser lexer lexbuf)
-    with e -> Catch.parse lexbuf e
-
-  let definition lexbuf =
-    try Some (parse ~parser:Parser.definition_mode ~lexer:Lexer.token lexbuf)
-    with Input.Empty_command -> None
-
-  let toplevel lexbuf =
-    try Some (parse ~parser:Parser.toplevel ~lexer:Lexer.token lexbuf)
-    with Input.Empty_term -> None
-
-  let term lexbuf =
-    try Some (parse ~parser:Parser.term_mode ~lexer:Lexer.token lexbuf)
-    with Input.Empty_term -> None
 end
 
 module Eval : sig

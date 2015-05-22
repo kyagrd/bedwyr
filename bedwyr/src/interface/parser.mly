@@ -1,5 +1,5 @@
 /****************************************************************************
- * Bedwyr prover                                                            *
+(* Bedwyr -- parsing                                                        *)
  * Copyright (C) 2006 David Baelde, Alwen Tiu, Axelle Ziegler, Andrew Gacek *
  * Copyright (C) 2011-2013,2015 Quentin Heath                               *
  * Copyright (C) 2013 Alwen Tiu                                             *
@@ -21,17 +21,13 @@
 
 %{
 
-  let pos i =
-    if i = 0 then
-      (Parsing.symbol_start_pos (), Parsing.symbol_end_pos ())
-    else
-      (Parsing.rhs_start_pos i, Parsing.rhs_end_pos i)
+  let pos = Preterm.Pos.of_token
 
   let generic_error i s =
-    raise (Input.Parse_error (pos i,"Unexpected input",s))
+    raise (Preterm.Parse_error (pos i,"Unexpected input",s))
 
   let eof_error s =
-    raise (Input.Parse_error (pos 0,"Unexpected end of file",s))
+    raise (Preterm.Parse_error (pos 0,"Unexpected end of file",s))
 %}
 
 /* Punctuation */
@@ -65,7 +61,7 @@
 
 %token <int> NUM
 %token <string> UPPER_ID LOWER_ID INFIX_ID INTERN_ID
-%token <(Input.Typing.pos * string)> QSTRING
+%token <(Preterm.Pos.t * string)> QSTRING
 %token EOF
 
 /* Lower */
@@ -87,9 +83,9 @@
 %start skip skip_proof definition_mode toplevel term_mode
 %type <unit> skip
 %type <unit> skip_proof
-%type <Input.definition_mode> definition_mode
-%type <Input.toplevel> toplevel
-%type <Input.term_mode> term_mode
+%type <Preterm.definition_mode> definition_mode
+%type <Preterm.toplevel> toplevel
+%type <Preterm.term_mode> term_mode
 
 %%
 
@@ -107,32 +103,32 @@ skip_proof:
 definition_mode:
   | command                             { `Command $1 }
   | meta_command                        { `MetaCommand $1 }
-  | EOF                                 { raise Input.Empty_command }
+  | EOF                                 { raise Preterm.Empty_command }
   | error DOT                           { generic_error 1 "a definition file" }
   | error EOF                           { eof_error "a definition file" }
 
 toplevel:
   | term DOT                            { `Term (pos 1,$1) }
   | meta_command                        { `MetaCommand $1 }
-  | EOF                                 { raise Input.Empty_term }
+  | EOF                                 { raise Preterm.Empty_term }
   | error DOT                           { generic_error 1 "the toplevel" }
   | error EOF                           { eof_error "the toplevel" }
 
 term_mode:
   | term DOT                            { `Term (pos 1,$1) }
-  | EOF                                 { raise Input.Empty_term }
+  | EOF                                 { raise Preterm.Empty_term }
   | error DOT                           { generic_error 1 "the term input" }
   | error EOF                           { eof_error "the term input" }
 
 /* input type */
 
 command:
-  | KKIND type_clist ki DOT             { Input.Command.Kind ($2,$3) }
-  | TTYPE const_clist ty DOT            { Input.Command.Type ($2,$3) }
-  | DEFINE decls BY defs DOT            { Input.Command.Def ($2,$4) }
-  | DEFINE decls DOT                    { Input.Command.Def ($2,[]) }
-  | THEOREM theorem DOT                 { Input.Command.Theorem $2 }
-  | QED DOT                             { Input.Command.Qed (pos 0) }
+  | KKIND type_clist ki DOT             { Preterm.Command.Kind ($2,$3) }
+  | TTYPE const_clist ty DOT            { Preterm.Command.Type ($2,$3) }
+  | DEFINE decls BY defs DOT            { Preterm.Command.Def ($2,$4) }
+  | DEFINE decls DOT                    { Preterm.Command.Def ($2,[]) }
+  | THEOREM theorem DOT                 { Preterm.Command.Theorem $2 }
+  | QED DOT                             { Preterm.Command.Qed (pos 0) }
   | CLOSE                               { failwith "Abella command only." }
   | QUERY                               { failwith "Abella command only." }
   | IMPORT                              { failwith "Abella command only." }
@@ -140,30 +136,30 @@ command:
   | SSPLIT                              { failwith "Abella command only." }
 
 meta_command:
-  | EXIT DOT                            { Input.MetaCommand.Exit }
-  | HELP DOT                            { Input.MetaCommand.Help }
-  | INCLUDE string_args DOT             { Input.MetaCommand.Include $2 }
-  | RESET DOT                           { Input.MetaCommand.Session [] }
-  | RELOAD DOT                          { Input.MetaCommand.Reload }
-  | SESSION string_args DOT             { Input.MetaCommand.Session $2 }
-  | DEBUG opt_bool DOT                  { Input.MetaCommand.Debug $2 }
-  | TIME opt_bool DOT                   { Input.MetaCommand.Time $2 }
-  | EQUIVARIANT opt_bool DOT            { Input.MetaCommand.Equivariant $2 }
-  | FREEZING opt_nat DOT                { Input.MetaCommand.Freezing $2 }
-  | SATURATION opt_nat DOT              { Input.MetaCommand.Saturation $2 }
-  | ENV DOT                             { Input.MetaCommand.Env }
-  | TYPEOF term DOT                     { Input.MetaCommand.Type_of $2 }
-  | SHOW_DEF lower_id DOT               { Input.MetaCommand.Show_def (pos 2,$2) }
-  | SHOW_TABLE lower_id DOT             { Input.MetaCommand.Show_table (pos 2,$2) }
-  | CLEAR_TABLES DOT                    { Input.MetaCommand.Clear_tables }
-  | CLEAR_TABLE lower_id DOT            { Input.MetaCommand.Clear_table (pos 2,$2) }
+  | EXIT DOT                            { Preterm.MetaCommand.Exit }
+  | HELP DOT                            { Preterm.MetaCommand.Help }
+  | INCLUDE string_args DOT             { Preterm.MetaCommand.Include $2 }
+  | RESET DOT                           { Preterm.MetaCommand.Session [] }
+  | RELOAD DOT                          { Preterm.MetaCommand.Reload }
+  | SESSION string_args DOT             { Preterm.MetaCommand.Session $2 }
+  | DEBUG opt_bool DOT                  { Preterm.MetaCommand.Debug $2 }
+  | TIME opt_bool DOT                   { Preterm.MetaCommand.Time $2 }
+  | EQUIVARIANT opt_bool DOT            { Preterm.MetaCommand.Equivariant $2 }
+  | FREEZING opt_nat DOT                { Preterm.MetaCommand.Freezing $2 }
+  | SATURATION opt_nat DOT              { Preterm.MetaCommand.Saturation $2 }
+  | ENV DOT                             { Preterm.MetaCommand.Env }
+  | TYPEOF term DOT                     { Preterm.MetaCommand.Type_of $2 }
+  | SHOW_DEF lower_id DOT               { Preterm.MetaCommand.Show_def (pos 2,$2) }
+  | SHOW_TABLE lower_id DOT             { Preterm.MetaCommand.Show_table (pos 2,$2) }
+  | CLEAR_TABLES DOT                    { Preterm.MetaCommand.Clear_tables }
+  | CLEAR_TABLE lower_id DOT            { Preterm.MetaCommand.Clear_table (pos 2,$2) }
   | SAVE_TABLE lower_id QSTRING DOT     { let _,s = $3 in
-                                          Input.MetaCommand.Save_table (pos 2,$2,s) }
+                                          Preterm.MetaCommand.Save_table (pos 2,$2,s) }
   | EXPORT QSTRING DOT                  { let _,s = $2 in
-                                          Input.MetaCommand.Export s }
-  | ASSERT term DOT                     { Input.MetaCommand.Assert $2 }
-  | ASSERT_NOT term DOT                 { Input.MetaCommand.Assert_not $2 }
-  | ASSERT_RAISE term DOT               { Input.MetaCommand.Assert_raise $2 }
+                                          Preterm.MetaCommand.Export s }
+  | ASSERT term DOT                     { Preterm.MetaCommand.Assert $2 }
+  | ASSERT_NOT term DOT                 { Preterm.MetaCommand.Assert_not $2 }
+  | ASSERT_RAISE term DOT               { Preterm.MetaCommand.Assert_raise $2 }
   | SET                                 { failwith "Abella command only" }
   | SHOW                                { failwith "Abella command only" }
   | QUIT                                { failwith "Abella command only" }
@@ -175,9 +171,9 @@ type_clist:
   | type_clist COMMA lower_id           { (pos 3,$3)::$1 }
 
 ki:
-  | TYPE RARROW ki                      { Input.Typing.ki_arrow
-                                            [Input.Typing.ktype] $3 }
-  | TYPE                                { Input.Typing.ktype }
+  | TYPE RARROW ki                      { Preterm.Typing.ki_arrow
+                                            [Preterm.Typing.ktype] $3 }
+  | TYPE                                { Preterm.Typing.ktype }
   | LPAREN ki RPAREN                    { $2 }
 
 const_clist:
@@ -190,14 +186,14 @@ ty_tuple:
   | ty_singleton STAR ty_singleton      { $1,$3,[] }
 
 ty:
-  | ty RARROW ty                        { Input.Typing.ty_arrow [$1] $3 }
+  | ty RARROW ty                        { Preterm.Typing.ty_arrow [$1] $3 }
   | ty_tuple                            { let ty1,ty2,tys = $1 in
-                                          Input.Typing.ttuple ty1 ty2 tys }
+                                          Preterm.Typing.ttuple ty1 ty2 tys }
   | ty_singleton                        { $1 }
 
 ty_singleton:
   | ty_list                             { let n,l = $1 in
-                                          Input.Typing.tconst n l }
+                                          Preterm.Typing.tconst n l }
   | ty_atom2                            { $1 }
 
 ty_list:
@@ -205,15 +201,15 @@ ty_list:
   | ty_list ty_atom                     { let n,l = $1 in n,$2::l }
 
 ty_atom:
-  | lower_id                            { Input.Typing.tconst $1 [] }
+  | lower_id                            { Preterm.Typing.tconst $1 [] }
   | ty_atom2                            { $1 }
 
 ty_atom2:
-  | PROP                                { Input.Typing.tprop }
-  | STRING                              { Input.Typing.tstring }
-  | NAT                                 { Input.Typing.tnat }
-  | UNDERSCORE                          { Input.Typing.fresh_typaram () }
-  | UPPER_ID				{ Input.Typing.get_typaram $1 }
+  | PROP                                { Preterm.Typing.tprop }
+  | STRING                              { Preterm.Typing.tstring }
+  | NAT                                 { Preterm.Typing.tnat }
+  | UNDERSCORE                          { Preterm.Typing.fresh_typaram () }
+  | UPPER_ID				{ Preterm.Typing.get_typaram $1 }
   | LPAREN ty RPAREN                    { $2 }
 
 /* definitions */
@@ -226,16 +222,16 @@ decl:
   | flavour apred_id                    { let p,n,ty = $2 in ($1,p,n,ty) }
 
 flavour:
-  |                                     { Input.Normal      }
-  | INDUCTIVE                           { Input.Inductive   }
-  | COINDUCTIVE                         { Input.CoInductive }
+  |                                     { Preterm.Normal      }
+  | INDUCTIVE                           { Preterm.Inductive   }
+  | COINDUCTIVE                         { Preterm.CoInductive }
 
 defs:
   | def                                 { [$1] }
   | def SEMICOLON defs                  { $1::$3 }
 
 def:
-  | term                                { pos 0,$1,Input.pre_true (pos 0) }
+  | term                                { pos 0,$1,Preterm.pre_true (pos 0) }
   | term DEFEQ term                     { pos 0,$1,$3 }
 
 theorem:
@@ -249,47 +245,47 @@ term_tuple:
   | singleton COMMA singleton           { $1,$3,[] }
 
 term:
-  | term EQ term                        { Input.pre_eq (pos 0) $1 $3 }
-  | term AND term                       { Input.pre_and (pos 0) $1 $3 }
-  | term OR term                        { Input.pre_or (pos 0) $1 $3 }
-  | term RARROW term                    { Input.pre_arrow (pos 0) $1 $3 }
+  | term EQ term                        { Preterm.pre_eq (pos 0) $1 $3 }
+  | term AND term                       { Preterm.pre_and (pos 0) $1 $3 }
+  | term OR term                        { Preterm.pre_or (pos 0) $1 $3 }
+  | term RARROW term                    { Preterm.pre_arrow (pos 0) $1 $3 }
   | term_tuple                          { let t1,t2,l = $1 in
-                                          Input.pre_tuple (pos 0) t1 t2 l }
+                                          Preterm.pre_tuple (pos 0) t1 t2 l }
   | singleton                           { $1 }
 
 singleton:
   | binder pabound_list COMMA term %prec BINDER
-                                        { Input.pre_binder (pos 0) $1 $2 $4 }
+                                        { Preterm.pre_binder (pos 0) $1 $2 $4 }
   | term_list %prec INFIX_ID            { let t,l = $1 in
-                                          Input.pre_app (pos 1) t l }
+                                          Preterm.pre_app (pos 1) t l }
 
 term_list:
   | term_atom                           { $1,[] }
   | term_list INFIX_ID term_list        { let hd =
-                                            Input.pre_predconstid
+                                            Preterm.pre_predconstid
                                               ~infix:true (pos 2) $2
                                           in
                                           let t1,l1 = $1 in
-                                          let t1 = Input.pre_app (pos 1) t1 l1 in
+                                          let t1 = Preterm.pre_app (pos 1) t1 l1 in
                                           let t3,l3 = $3 in
-                                          let t3 = Input.pre_app (pos 3) t3 l3 in
+                                          let t3 = Preterm.pre_app (pos 3) t3 l3 in
                                           hd,[t3;t1] }
   | term_list term_atom                 { let t,l = $1 in t,$2::l }
 
 term_atom:
   | QSTRING                             { let p,s = $1 in
-                                          Input.pre_qstring p s }
-  | NUM                                 { Input.pre_nat (pos 1) $1 }
+                                          Preterm.pre_qstring p s }
+  | NUM                                 { Preterm.pre_nat (pos 1) $1 }
   | token_id                            { $1 }
-  | TRUE                                { Input.pre_true (pos 0) }
-  | FALSE                               { Input.pre_false (pos 0) }
+  | TRUE                                { Preterm.pre_true (pos 0) }
+  | FALSE                               { Preterm.pre_false (pos 0) }
   | term_abs                            { $1 }
   | LPAREN term RPAREN                  { $2 }
-  | LPAREN INFIX_ID RPAREN              { Input.pre_predconstid
+  | LPAREN INFIX_ID RPAREN              { Preterm.pre_predconstid
                                             ~infix:true (pos 0) $2 }
 
 term_abs:
-  | abound_id BSLASH term               { Input.pre_lambda (pos 0) [$1] $3 }
+  | abound_id BSLASH term               { Preterm.pre_lambda (pos 0) [$1] $3 }
 
 binder:
   | FORALL                              { Term.Forall }
@@ -349,22 +345,22 @@ any_id:
 
 /* annotated id types */
 apred_id:
-  | lower_id                            { pos 1,$1,Input.Typing.fresh_typaram () }
+  | lower_id                            { pos 1,$1,Preterm.Typing.fresh_typaram () }
   | lower_id COLON ty                   { pos 1,$1,$3 }
 
 abound_id:
-  | bound_id                            { pos 1,$1,Input.Typing.fresh_typaram () }
+  | bound_id                            { pos 1,$1,Preterm.Typing.fresh_typaram () }
   | bound_id COLON ty                   { pos 1,$1,$3 }
 
 pabound_id:
-  | bound_id                            { pos 1,$1,Input.Typing.fresh_typaram () }
+  | bound_id                            { pos 1,$1,Preterm.Typing.fresh_typaram () }
   | LPAREN bound_id COLON ty RPAREN     { pos 2,$2,$4 }
 
 /* predicate or constant in a term */
 token_id:
-  | upper_id                            { Input.pre_freeid (pos 1) $1 }
-  | lower_id                            { Input.pre_predconstid (pos 1) $1 }
-  | INTERN_ID                           { Input.pre_internid (pos 1) $1 }
+  | upper_id                            { Preterm.pre_freeid (pos 1) $1 }
+  | lower_id                            { Preterm.pre_predconstid (pos 1) $1 }
+  | INTERN_ID                           { Preterm.pre_internid (pos 1) $1 }
 
 /* misc (commands) */
 
