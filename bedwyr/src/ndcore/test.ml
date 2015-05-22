@@ -1,5 +1,5 @@
 (****************************************************************************)
-(* An implementation of Higher-Order Pattern Unification                    *)
+(* Bedwyr -- HOPU, normalization and indexing testing                       *)
 (* Copyright (C) 2006 Gopalan Nadathur, Natalie Linnell                     *)
 (* Copyright (C) 2006 Andrew Gacek                                          *)
 (* Copyright (C) 2006,2009 David Baelde                                     *)
