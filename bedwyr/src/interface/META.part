@@ -1,5 +1,5 @@
 version = "[internal]"
 description = "Parsing and type-checking for the Bedwyr prover"
-requires = "slimmer.ndcore,slimmer.batyping"
+requires = "slimmer.ndcore,slimmer.batyping,str"
 archive(byte) = "interface.cma"
 archive(native) = "interface.cmxa"
