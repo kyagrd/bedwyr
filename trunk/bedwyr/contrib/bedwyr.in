@@ -25,4 +25,11 @@ if command -v rlwrap >/dev/null 2>&1 ; then
 else
   WRAPPER=""
 fi
-exec -a @PACKAGE_TARNAME@ $WRAPPER $PROGRAM "$@"
+
+if [ -n "${TERM}" ] && command -v tput >/dev/null 2>&1 ; then
+  COLUMNS=`tput cols`
+else
+  COLUMNS=""
+fi
+
+exec -a @PACKAGE_TARNAME@ $WRAPPER env COLUMNS="${COLUMNS}" $PROGRAM "$@"

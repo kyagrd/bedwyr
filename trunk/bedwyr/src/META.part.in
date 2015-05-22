@@ -3,5 +3,5 @@
 #name = "slimmer"
 version = "@PACKAGE_VERSION@"
 description = "Sophisticated Logic Implementations for Modeling and Mechanical Reasoning"
-requires = "slimmer.ndcore slimmer.batyping slimmer.input slimmer.prover"
+requires = "slimmer.ndcore slimmer.batyping slimmer.interface slimmer.prover"
 #directory = "+slimmer"

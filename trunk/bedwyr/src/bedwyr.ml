@@ -30,7 +30,19 @@ Type    ::      A -> list A -> list A.
 Define member : A -> list A -> prop by
   member X (X :: _) ;
   member X (_ :: L) := member X L.
+
+Kind    option  type -> type.
+Type    none    option A.
+Type    some    A -> option A.
 "
+
+let () =
+  let term_width =
+    try int_of_string (Sys.getenv "COLUMNS")
+    with Failure ("int_of_string") | Not_found -> 72
+  in
+  Format.set_margin term_width ;
+  Format.set_max_indent ((Format.get_margin ())*4/5)
 
 let welcome_msg =
   Printf.sprintf
@@ -156,7 +168,7 @@ let _ =
   let test_limit = !test_limit in
   let reload ~strict ?(session=(!session)) () =
     System.reset_decls () ;
-    Input.Typing.clear () ;
+    Preterm.Typing.clear () ;
     run_on_string ~strict (Interface.defl ~test_limit) ~fname:"Bedwyr::stdlib" stdlib ;
     inclfiles := [] ;
     List.iter (run_on_file ~strict (Interface.defl ~test_limit)) session ;

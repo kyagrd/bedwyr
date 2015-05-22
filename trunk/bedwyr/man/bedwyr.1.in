@@ -165,9 +165,11 @@ in addition to any of the following commands.
 .Ar nat , string
 and
 .Ar  prop
-are built in, and
+are built in, while
 .Ar list
-is predeclared.
+and
+.Ar option
+are predeclared.
 .El
 .\"
 .\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
@@ -186,9 +188,11 @@ and any quoted string are runtime-defined constants of type
 and
 .Ic string ,
 and
-.Ar ::
+.Ar :: ,
+.Ar nil ,
+.Ar some
 and
-.Ar nil
+.Ar none
 are predeclared.
 .El
 .\"
