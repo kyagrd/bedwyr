@@ -1,5 +1,5 @@
 version = "[internal]"
-description = "Prenex polymorphic typing"
+description = "prenex polymorphic typing"
 #requires = ""
 archive(byte) = "batyping.cma"
 archive(native) = "batyping.cmxa"
