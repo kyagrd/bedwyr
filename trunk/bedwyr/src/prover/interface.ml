@@ -507,9 +507,9 @@ end = struct
 end
 
 module Mode : sig
-  val definition : test_limit:(int option) -> Lexing.lexbuf -> unit
-  val toplevel : test_limit:(int option) -> Lexing.lexbuf -> unit
-  val term : Lexing.lexbuf -> Term.term option
+  val definition : test_limit:(int option) -> Lexing.lexbuf -> unit option option
+  val toplevel : test_limit:(int option) -> Lexing.lexbuf -> unit option option
+  val term : Lexing.lexbuf -> Term.term option option
 end = struct
   let step ~read ~eval ~print lexbuf =
     match read lexbuf with
@@ -523,16 +523,12 @@ end = struct
       Lexer.flush_input lexbuf ;
       None
     in
-    match
-      try step ~read:(Read.definition_mode ~k) ~eval:(Eval.definition ~test_limit) ~print:ignore lexbuf
-      with e -> try Catch.command lexbuf e
-      with e -> try Catch.solve lexbuf e
-      with e -> try Catch.meta_command lexbuf e
-      with e -> try Catch.io ~lexbuf e
-      with e -> Catch.all lexbuf e
-    with
-      | None -> raise End_of_file
-      | _ -> ()
+    try step ~read:(Read.definition_mode ~k) ~eval:(Eval.definition ~test_limit) ~print:ignore lexbuf
+    with e -> try Catch.command lexbuf e
+    with e -> try Catch.solve lexbuf e
+    with e -> try Catch.meta_command lexbuf e
+    with e -> try Catch.io ~lexbuf e
+    with e -> Catch.all lexbuf e
 
   let toplevel ~test_limit lexbuf =
     let k _ =
@@ -540,15 +536,11 @@ end = struct
       Lexer.flush_input lexbuf ;
       None
     in
-    match
-      try step ~read:(Read.toplevel ~k) ~eval:(Eval.toplevel ~test_limit) ~print:ignore lexbuf
-      with e -> try Catch.solve lexbuf e
-      with e -> try Catch.meta_command lexbuf e
-      with e -> try Catch.io ~lexbuf e
-      with e -> Catch.all lexbuf e
-    with
-      | None -> raise End_of_file
-      | _ -> ()
+    try step ~read:(Read.toplevel ~k) ~eval:(Eval.toplevel ~test_limit) ~print:ignore lexbuf
+    with e -> try Catch.solve lexbuf e
+    with e -> try Catch.meta_command lexbuf e
+    with e -> try Catch.io ~lexbuf e
+    with e -> Catch.all lexbuf e
 
   let term lexbuf =
     let k _ =
@@ -556,10 +548,7 @@ end = struct
       Lexer.flush_input lexbuf ;
       None
     in
-    match (Read.term_mode ~k) lexbuf with
-      | None -> raise End_of_file
-      | Some None -> None
-      | Some (Some input) -> Eval.term ~print:ignore input lexbuf
+    step ~read:(Read.term_mode ~k) ~eval:Eval.term ~print:ignore lexbuf
 end
 
 let () =
@@ -568,44 +557,61 @@ let () =
       Format.printf " ?> %!" ;
       let lexbuf = Lexing.from_channel stdin in
       match Mode.term lexbuf with
-        | None -> aux ()
-        | Some term -> term
+        | None -> None
+        | Some None -> aux ()
+        | Some (Some term) -> Some term
     in
-    fun () ->
-      try Some (aux ()) with End_of_file -> None
+    fun () -> aux ()
   end
 
 let () =
   System.fread_term := begin
     fun lexbuf () ->
-      try Mode.term lexbuf with End_of_file -> None
+      match Mode.term lexbuf with
+        | None | Some None -> None
+        | Some (Some term) -> Some term
   end
 
 (* definition-mode step *)
 let defs ~test_limit lexbuf =
-  try Mode.definition ~test_limit lexbuf
-  with End_of_file ->
-    Output.eprintf ~p:(Preterm.Pos.of_lexbuf lexbuf ()) "Empty command." ;
-    Status.input ()
+  match Mode.definition ~test_limit lexbuf with
+    | None ->
+        Output.eprintf ~p:(Preterm.Pos.of_lexbuf lexbuf ()) "Empty command." ;
+        Status.input () ;
+        None
+    | Some None -> Some None
+    | Some (Some ()) -> Some (Some ())
 
 (* definition-mode loop *)
 let defl ~test_limit lexbuf =
-  try while true do Mode.definition ~test_limit lexbuf done
-  with End_of_file -> ()
+  let rec aux () =
+    match Mode.definition ~test_limit lexbuf with
+      | None -> ()
+      | Some None -> aux ()
+      | Some (Some ()) -> aux ()
+  in
+  aux ()
 
 (* read-eval-print step *)
 let reps ~test_limit lexbuf =
-  try Mode.toplevel ~test_limit lexbuf
-  with End_of_file ->
-    Output.eprintf ~p:(Preterm.Pos.of_lexbuf lexbuf ()) "Empty query." ;
-    Status.input ()
+  match Mode.toplevel ~test_limit lexbuf with
+    | None ->
+        Output.eprintf ~p:(Preterm.Pos.of_lexbuf lexbuf ()) "Empty query." ;
+        Status.input () ;
+        None
+    | Some None -> Some None
+    | Some (Some ()) -> Some (Some ())
 
 (* read-eval-print loop *)
 let repl ~test_limit lexbuf =
-  try while true do
+  let rec aux () =
     Format.printf "?= %!" ;
     Lexer.flush_input lexbuf ;
-    Mode.toplevel ~test_limit lexbuf
-  done with End_of_file -> Format.printf "@."
+    match Mode.toplevel ~test_limit lexbuf with
+      | None -> Format.printf "@."
+      | Some None -> aux ()
+      | Some (Some ()) -> aux ()
+  in
+  aux ()
 
 (* TODO no meta-commands in defs? *)
