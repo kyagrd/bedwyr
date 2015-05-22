@@ -1,5 +1,5 @@
 (****************************************************************************)
-(* Prenex polymorphic typing                                                *)
+(* Bedwyr -- prenex polymorphic typing                                      *)
 (* Copyright (C) 2011-2015 Quentin Heath                                    *)
 (* Copyright (C) 2013 Alwen Tiu                                             *)
 (*                                                                          *)
@@ -21,18 +21,21 @@
 (** Kinds, types; checking and pretty-printing. *)
 
 (** Input signature of the functor {!Typing.Make}. *)
-module type INPUT = sig
-  (** Some additional information. *)
-  type pos
+module type POSITION = sig
+  (** Position information. *)
+  type t
 
-  (** Dummy information. *)
-  val dummy_pos : pos
+  (** Dummy position information. *)
+  val dummy : t
+
+  (** Position information pretty-printing. *)
+  val pp : Format.formatter -> t -> unit
 end
 
 (** Output signature of the functor {!Typing.Make}. *)
 module type S = sig
+  (** Position information. *)
   type pos
-  val dummy_pos : pos
 
   (** {6 Kinds} *)
 
@@ -110,17 +113,17 @@ module type S = sig
     | QuantVar of string option
     | AbsVar
 
-  (** [kind_check ~obj ~p ty ~atomic_kind] checks that type [ty] of a
+  (** [kind_check ~obj ~p ty ~get_kind] checks that type [ty] of a
     * [obj]-style object and all its subtypes are of the kind [TKind].
     *
-    * @param atomic_kind function returning the kind of a type
+    * @param get_kind function returning the kind of a type
     * constructor
     * @return [arity] *)
   val kind_check :
     obj:obj ->
     p:pos ->
     ty ->
-    atomic_kind:(pos * string -> ki) ->
+    get_kind:(pos * string -> ki) ->
     int
 
   (** {6 Typing} *)
@@ -173,4 +176,4 @@ end
 
 (** Functor building an implementation of the typing structure,
   * given a position type. *)
-module Make (I : INPUT) : S with type pos = I.pos
+module Make (Pos : POSITION) : S with type pos = Pos.t

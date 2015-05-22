@@ -1,5 +1,5 @@
 (****************************************************************************)
-(* Prenex polymorphic typing                                                *)
+(* Bedwyr -- prenex polymorphic typing                                      *)
 (* Copyright (C) 2011-2015 Quentin Heath                                    *)
 (* Copyright (C) 2013 Alwen Tiu                                             *)
 (*                                                                          *)
@@ -20,14 +20,14 @@
 
 (* Kinds, types, unifying and pretty-printing. *)
 
-module type INPUT = sig
-  type pos
-  val dummy_pos : pos
+module type POSITION = sig
+  type t
+  val dummy : t
+  val pp : Format.formatter -> t -> unit
 end
 
 module type S = sig
   type pos
-  val dummy_pos : pos
 
   type ki
   val ktype : ki
@@ -63,7 +63,7 @@ module type S = sig
     obj:obj ->
     p:pos ->
     ty ->
-    atomic_kind:(pos * string -> ki) ->
+    get_kind:(pos * string -> ki) ->
     int
   exception Type_order_error of string option * pos * ty
   exception Invalid_pred_declaration of string * pos * ty
@@ -83,9 +83,8 @@ module type S = sig
     ?unifier:type_unifier -> unit -> ty -> string
 end
 
-module Make (I : INPUT) = struct
-  type pos = I.pos
-  let dummy_pos = I.dummy_pos
+module Make (Pos : POSITION) = struct
+  type pos = Pos.t
 
   (* Utility to get a 'to_string' from a 'print'.
    * XXX factorize with the code in ndcore/Pprint? *)
@@ -293,7 +292,7 @@ module Make (I : INPUT) = struct
   module TypeParams = Set.Make (struct type t = int let compare = compare end)
 
   (* Run all kind of checks, and return the arity. *)
-  let kind_check ~obj ~p ty ~atomic_kind =
+  let kind_check ~obj ~p ty ~get_kind =
     let rec aux ty =
       let Ty (tys,ty_base) = ty in
       (* computes the number of source types, the set of their type
@@ -302,7 +301,7 @@ module Make (I : INPUT) = struct
       match ty_base with
         | TConst (name,tys) ->
             (* XXX real position of the type? *)
-            let Ki (kis,KType) as ki = atomic_kind (dummy_pos,name) in
+            let Ki (kis,KType) as ki = get_kind (Pos.dummy,name) in
             let ho,tp2 =
               (* apply the head of the source type on its arguments *)
               try List.fold_left2 aux3 (ho,TypeParams.empty) tys kis
@@ -383,8 +382,8 @@ module Make (I : INPUT) = struct
     in
     aux ty
 
-  let kind_check ~obj ~p ty ~atomic_kind =
-    kind_check ~obj ~p (ty_norm ty) ~atomic_kind
+  let kind_check ~obj ~p ty ~get_kind =
+    kind_check ~obj ~p (ty_norm ty) ~get_kind
 
   let get_pp_type ?unifier () =
     let pp_type = get_pp_type () in

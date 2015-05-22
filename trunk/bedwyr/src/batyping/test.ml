@@ -1,5 +1,5 @@
 (****************************************************************************)
-(* Prenex polymorphic typing                                                *)
+(* Bedwyr -- prenex polymorphic typing testing                              *)
 (* Copyright (C) 2012-2015 Quentin Heath                                    *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
@@ -19,11 +19,12 @@
 
 open OUnit
 
-module I = struct
-  type pos = unit * unit
-  let dummy_pos = (),()
+module Pos = struct
+  type t = unit
+  let dummy = ()
+  let pp _ _ = ()
 end
-module Typing = Typing.Make (I)
+module Typing = Typing.Make (Pos)
 
 open Typing
 
@@ -32,8 +33,6 @@ open Typing
 let assert_equal = assert_equal ~cmp:eq ~printer:Pprint.term_to_string*)
 
 (*
-let dummy_pos = (Lexing.dummy_pos, Lexing.dummy_pos)
-
 let ucon ?(ty=fresh_typaram ()) v =
   UCon(dummy_pos, v, ty)
 
