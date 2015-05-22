@@ -1,5 +1,5 @@
 (****************************************************************************)
-(* An implementation of Higher-Order Pattern Unification                    *)
+(* Bedwyr -- pretty-printing of higher-order terms                          *)
 (* Copyright (C) 2006 Gopalan Nadathur, Natalie Linnell, Axelle Ziegler     *)
 (* Copyright (C) 2006 Andrew Gacek                                          *)
 (* Copyright (C) 2006-2011 David Baelde                                     *)
@@ -188,9 +188,9 @@ let print_full ~generic ~bound chan term =
             | _,hd::tl ->
                 let print =
                   if pr=0 then
-                    fprintf chan "@[<2>%a %a%a@]"
+                    fprintf chan "@[<hv 2>%a %a%a@]"
                    else
-                    fprintf chan "@[<3>(%a %a%a)@]"
+                    fprintf chan "@[<hv 1>(@[<hv 2>%a %a%a@])@]"
                 in
                 print
                   (pp ~bound high_pr) t

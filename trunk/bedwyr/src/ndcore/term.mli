@@ -1,5 +1,5 @@
 (****************************************************************************)
-(* An implementation of Higher-Order Pattern Unification                    *)
+(* Bedwyr -- higher-order untyped terms                                     *)
 (* Copyright (C) 2006 Gopalan Nadathur, Natalie Linnell, Axelle Ziegler     *)
 (* Copyright (C) 2006 Andrew Gacek                                          *)
 (* Copyright (C) 2006-2010 David Baelde                                     *)

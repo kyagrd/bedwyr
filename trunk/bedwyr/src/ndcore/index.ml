@@ -1,5 +1,5 @@
 (****************************************************************************)
-(* An implementation of substitution tree for term indexing                 *)
+(* Bedwyr -- substitution tree based higher-order term indexing             *)
 (* Copyright (C) 2006,2007,2009,2010 David Baelde                           *)
 (* Copyright (C) 2011 Alwen Tiu                                             *)
 (* Copyright (C) 2011-2014 Quentin Heath                                    *)
