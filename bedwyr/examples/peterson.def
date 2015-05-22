@@ -10,66 +10,99 @@
 %    {
 %       i = k;
 %       j = 1 - k;
-% 1:    while (true) {
-% 2:       active[i] = true;
-%          turn = j;
+%       while (true) {
+% noncs:   active[i] = true;
+% reqcs:   turn = j;
 %          while (
-% 3:               active[j] &&
-% 4:               turn == j)
+% letturn:         active[j] &&
+% testcs:          turn == j)
 %               ;
 %           // critical section
-% 5:        ...
+% cs:       ...
 %           // end of critical section
 %           active[i] = false;
 %       }
 %    }
 
+% Identifier / turn
+Type a,b,c      nat.
+
+Define id : nat -> prop
+by id 0 ; id 1 ; id 2.
+
+Define next : nat -> nat -> prop
+by next 0 1
+;  next 1 0.
+
+
+% Program counter
+Kind pc         type.
+Type noncs,
+     reqcs,
+     letturn,
+     testcs,
+     cs         pc.
+
+Define pc : pc -> prop
+by pc noncs
+;  pc reqcs
+;  pc letturn
+;  pc testcs
+;  pc cs.
+
+
+% Flag
+Kind flag       type.
+Type act,inact  flag.
+Define flag : flag -> prop
+by flag act ; flag inact.
+
+
+% State
 Kind state      type.
-Type state      nat -> nat -> nat -> nat -> nat -> state.
+Type state      pc * flag -> pc * flag -> nat -> state.
 
-Define boolean : nat -> prop by
-  boolean 0;
-  boolean 1.
+Define node : state -> prop
+by node (state (PC0,Fl0) (PC1,Fl1) T) :=
+     pc PC0 /\ pc PC1 /\
+     flag Fl0 /\ flag Fl1 /\ id T.
 
-Define section : nat -> prop by
-  section 1;
-  section 2;
-  section 3;
-  section 4;
-  section 5.
+Define step : nat ->                      % me
+              (pc * flag) * flag * nat -> % my pc, my flag, his flag, the turn
+              (pc * flag) * nat ->        % my new pc, my new flag, the new turn
+              prop by
+  step _   ((noncs  ,_   ),_    ,T  )  ((reqcs  ,act  ),T  ) ;
+  step Me  ((reqcs  ,Flag),_    ,_  )  ((letturn,Flag ),Him) := next Me Him ;
+  step _   ((letturn,Flag),inact,T  )  ((cs     ,Flag ),T  ) ;
+  step _   ((letturn,Flag),act  ,T  )  ((testcs ,Flag ),T  ) ;
+  step Me  ((testcs ,Flag),_    ,Me )  ((cs     ,Flag ),Me ) ;
+  step Me  ((testcs ,Flag),_    ,Him)  ((letturn,Flag ),Him) := next Me Him ;
+  step _   ((cs     ,_   ),_    ,T  )  ((noncs  ,inact),T  ).
 
-Define node : state -> prop by
-  node (state P0 P1 A0 A1 T) := section P0 /\ section P1 /\
-    boolean A0 /\ boolean A1 /\ boolean T.
-
-Define arrow : state -> state -> prop by
-  arrow (state  1 P1 A0 A1 T) (state  2 P1  1 A1 T);
-  arrow (state  2 P1 A0 A1 T) (state  3 P1 A0 A1 1);
-  arrow (state  3 P1 A0  0 T) (state  5 P1 A0  0 T);
-  arrow (state  3 P1 A0  1 T) (state  4 P1 A0  1 T);
-  arrow (state  4 P1 A0 A1 0) (state  5 P1 A0 A1 0);
-  arrow (state  4 P1 A0 A1 1) (state  3 P1 A0 A1 1);
-  arrow (state  5 P1 A0 A1 T) (state  1 P1  0 A1 T);
-
-  arrow (state P0  1 A0 A1 T) (state P0  2 A0  1 T);
-  arrow (state P0  2 A0 A1 T) (state P0  3 A0 A1 0);
-  arrow (state P0  3 0  A1 T) (state P0  5  0 A1 T);
-  arrow (state P0  3 1  A1 T) (state P0  4  1 A1 T);
-  arrow (state P0  4 A0 A1 1) (state P0  5 A0 A1 1);
-  arrow (state P0  4 A0 A1 0) (state P0  3 A0 A1 0);
-  arrow (state P0  5 A0 A1 T) (state P0  1 A0  0 T).
+Define arrow : state -> state -> prop
+by arrow
+     (state P0  P1 Turn)
+     (state P0' P1 Turn') :=
+       P1 = (_,Fl1) /\ step 0 (P0,Fl1,Turn) (P0',Turn')
+;  arrow
+     (state P0 P1  Turn)
+     (state P0 P1' Turn') :=
+       P0 = (_,Fl0) /\ step 1 (P1,Fl0,Turn) (P1',Turn')
+.
 
 Define inductive path : state -> state -> prop by
   path X X;
   path X Y := arrow X Z /\ path Z Y.
 
-Define initial : state -> prop by
-  initial (state 1 1 0 0 0).
-Define bad : state -> prop by
-  bad (state 5 5 A0 A1 T) := boolean A0 /\ boolean A1 /\ boolean T.
+Define initial : state -> prop
+by initial (state (noncs,inact) (noncs,inact) T) := id T.
 
-Define test : prop by
-  test := initial I /\ (forall B, bad B /\ path I B -> printstr "Error\n" /\ false) /\
-        printstr "Peterson is right\n".
+Define bad : state -> prop
+by bad (state (cs,Fl0) (cs,Fl1) T) := flag Fl0 /\ flag Fl1 /\ id T.
+
+Define test : prop
+by test := initial I /\
+           (forall B, bad B /\ path I B -> printstr "Error\n" /\ false) /\
+           printstr "Peterson is right\n".
 
 #assert test.
