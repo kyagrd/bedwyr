@@ -22,7 +22,6 @@ module T = Table.O
 
 let read_term = ref (fun () -> None)
 let fread_term = ref (fun _ () -> None)
-let debug = ref false
 let time  = ref false
 let root_atoms = ref []
 let use_filter = ref false
@@ -88,10 +87,9 @@ let mk_clause pred params body =
        * ie not always Logic ones (cf [translate_term]) *)
       (Term.logic_vars [body])
   in
-  if !debug then
-    Format.eprintf "%a := %a@."
-      Pprint.pp_term (Term.app pred (List.rev new_params))
-      Pprint.pp_term body ;
+  Output.dprintf "%a := %a"
+    Pprint.pp_term (Term.app pred (List.rev new_params))
+    Pprint.pp_term body ;
   (* body       Exists\\ U=X /\ (V=(f X #1) /\ (g X #1 #2))
    * Finally, abstract over parameters *)
   let arity,body =
@@ -358,7 +356,7 @@ let print_env () =
     Format.printf "@]@."
   in
   print_types () ;
-  print_constants ();
+  print_constants () ;
   print_predicates ()
 
 let print_type_of pre_term ~k lexbuf =

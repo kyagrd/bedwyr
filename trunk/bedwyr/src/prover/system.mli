@@ -201,9 +201,6 @@ val read_term : (unit -> Term.term option) ref
   * Expected to ask the term interactivelly to the user. *)
 val fread_term : (Lexing.lexbuf -> unit -> Term.term option) ref
 
-(** Simple debug flag, can be set dynamically from the logic program. *)
-val debug : bool ref
-
 (** Enables the display of computation times. *)
 val time : bool ref
 

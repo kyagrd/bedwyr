@@ -23,7 +23,6 @@ exception Left_logic of Term.term
 
 exception Variable_leakage
 
-open Format
 open Environment
 open System
 open Term
@@ -49,7 +48,6 @@ module Left =
                 let constant_like = Constant
               end)
 
-let debug_max_depth = -1 (* limited but global version of #debug *)
 let freezing_point = ref 0
 let saturation_pressure = ref 0
 
@@ -90,7 +88,7 @@ let mark_dependent_until =
   in
   let aux2 status (looping,final_influences,final_dependencies) =
     if !looping then
-      (* this atom is the tip of a loop;
+      (* this atom is the tip of a loop ;
        * we need to make the previous atoms depend on it *)
       add_dependencies status final_dependencies
     else ((* TODO prove that the second level of final influences
@@ -98,11 +96,11 @@ let mark_dependent_until =
   in
   let aux status (looping,final_influences,final_dependencies) =
     if !looping then
-      (* this atom is the tip of a loop;
+      (* this atom is the tip of a loop ;
        * we need to make the previous atoms depend on it *)
       add_dependencies status final_dependencies
     else
-      (* this atom is not a tip but depends upon some;
+      (* this atom is not a tip but depends upon some ;
        * we need to make the previous atoms depend on them *)
       List.iter
         (fun st -> match !st with
@@ -135,7 +133,7 @@ let rec prove sons
 
   let g = Norm.hnorm g in
   let invalid_goal () =
-    failwith (sprintf "Invalid goal %s" (Pprint.term_to_string_full [] [] g))
+    failwith (Format.sprintf "Invalid goal %s" (Pprint.term_to_string_full [] [] g))
   in
 
   (* Function to prove _distinct predicate *)
@@ -217,10 +215,9 @@ let rec prove sons
   (* 2-step procedure (table, definition)
    * to prove a predicative atom *)
   let prove_atom d args (v,temperature,temperatures) =
-    if !debug || depth<=debug_max_depth then
-      eprintf "[%s] Proving %a...@."
-        (match temperature with Frozen t -> string_of_int t | _ -> "+")
-        Pprint.pp_term g ;
+    Output.dprintf "[%s] Proving %a..."
+      (match temperature with Frozen t -> string_of_int t | _ -> "+")
+      Pprint.pp_term g ;
     let flavour,definition = get_flav_def d in
     (* first step, first sub-step: look at the table
      * (whether the atom is frozen or not is irrelevent at this point) *)
@@ -238,13 +235,11 @@ let rec prove sons
           prove sons temperatures (depth+1)
             ~level ~timestamp ~local ~success ~failure (app definition args)
       | Known (_,({contents=T.Proved _} as status),_,_) ->
-          if !debug || depth<=debug_max_depth then
-            eprintf "Goal (%a) proved using table@." Pprint.pp_term g;
+          Output.dprintf "Goal (%a) proved using table" Pprint.pp_term g ;
           sons := T.Cut status :: !sons ;
           success timestamp failure
       | Known (_,({contents=T.Disproved _} as status),_,_) ->
-          if !debug || depth<=debug_max_depth then
-            eprintf "Known disproved@." ;
+          Output.dprintf "Known disproved" ;
           sons := T.Cut status :: !sons ;
           failure ()
       | Known (_,({contents=T.Working (_,w)} as status),_,_) ->
@@ -447,10 +442,9 @@ let rec prove sons
                       let rec fc k pressure = function
                         | [] -> k ()
                         | args::copies ->
-                            if !debug || depth<=debug_max_depth then
-                              eprintf "(%d) Tabling %a...@."
-                                pressure
-                                Pprint.pp_term (app d args);
+                            Output.dprintf "(%d) Tabling %a..."
+                              pressure
+                              Pprint.pp_term (app d args) ;
                             let k () = fc k pressure copies in
                             let status =
                               let add,found,_ =
@@ -464,10 +458,9 @@ let rec prove sons
                             match status with
                               | OffTopic -> k ()
                               | Known (_,{contents=T.Proved _},_,_) ->
-                                  if !debug || depth<=debug_max_depth then
-                                    eprintf
-                                      "Goal (%a) already proved!@."
-                                      Pprint.pp_term (app d args);
+                                  Output.dprintf
+                                    "Goal (%a) already proved!"
+                                    Pprint.pp_term (app d args) ;
                                   k ()
                               | Known (_,{contents=T.Disproved _},_,_) ->
                                   failwith "did our theorem just prove false?"
@@ -479,10 +472,9 @@ let rec prove sons
                                   let status = ref (T.Proved new_sons) in
                                   (* XXX switch_vars? *)
                                   if not (table_add status) then assert false ;
-                                  if !debug || depth<=debug_max_depth then
-                                    eprintf
-                                      "Goal (%a) proved using forward chaining@."
-                                      Pprint.pp_term (app d args) ;
+                                  Output.dprintf
+                                    "Goal (%a) proved using forward chaining"
+                                    Pprint.pp_term (app d args) ;
                                   fc_step k pressure args
                       and fc_step k pressure args =
                         if pressure<>(!saturation_pressure) then begin
@@ -557,19 +549,17 @@ let rec prove sons
               | Frozen t ->
                   t,
                   (fun timestamp failure ->
-                     if !debug || depth<=debug_max_depth then
-                       eprintf
-                         "Frozen goal (%a) proved using backward chaining@."
-                         Pprint.pp_term g;
+                     Output.dprintf
+                       "Frozen goal (%a) proved using backward chaining"
+                       Pprint.pp_term g ;
                      success timestamp failure),
                   failure
               | Unfrozen ->
                   !freezing_point,
                   (fun timestamp failure ->
-                     if !debug || depth<=debug_max_depth then
-                       eprintf
-                         "Unfrozen goal (%a) proved using backward chaining@."
-                         Pprint.pp_term g;
+                     Output.dprintf
+                       "Unfrozen goal (%a) proved using backward chaining"
+                       Pprint.pp_term g ;
                      success timestamp failure),
                   (* second step: unfreeze the atom,
                    * unfold the definition *)
@@ -852,20 +842,26 @@ let rec prove sons
 
           (* Output *)
           | Var v when v == Logic.var_print ->
-              let print_fun t = printf "%a%!" Pprint.pp_term t ; true in
+              let print_fun t =
+                Output.printf "%a" Pprint.pp_term t ;
+                true
+              in
               if IO.print print_fun goals
               then success timestamp failure
               else failure ()
 
           | Var v when v == Logic.var_println ->
-              let print_fun t = printf "%a@." Pprint.pp_term t ; true in
+              let print_fun t =
+                Output.printf "%a@." Pprint.pp_term t ;
+                true
+              in
               if IO.print print_fun goals
               then success timestamp failure
               else failure ()
 
           | Var v when v == Logic.var_printstr ->
               let print_fun t = match observe t with
-                | QString s -> printf "%s%!" s ; true
+                | QString s -> Output.printf "%s" s ; true
                 | _ -> false
               in
               if IO.print print_fun goals
@@ -874,7 +870,8 @@ let rec prove sons
 
           | Var v when v == Logic.var_fprint ->
               let print_fun fmt t =
-                fprintf fmt "%a%!" Pprint.pp_term t ; true
+                Output.fprintf ~formatter:fmt "%a" Pprint.pp_term t ;
+                true
               in
               if IO.fprint print_fun goals
               then success timestamp failure
@@ -882,7 +879,8 @@ let rec prove sons
 
           | Var v when v == Logic.var_fprintln ->
               let print_fun fmt t =
-                fprintf fmt "%a@." Pprint.pp_term t ; true
+                Output.fprintf ~formatter:fmt "%a@." Pprint.pp_term t ;
+                true
               in
               if IO.fprint print_fun goals
               then success timestamp failure
@@ -890,7 +888,7 @@ let rec prove sons
 
           | Var v when v == Logic.var_fprintstr ->
               let print_fun fmt t = match observe t with
-                | QString s -> fprintf fmt "%s%!" s ; true
+                | QString s -> Output.fprintf ~formatter:fmt "%s" s ; true
                 | _ -> false
               in
               if IO.fprint print_fun goals
