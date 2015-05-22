@@ -1,5 +1,5 @@
 (****************************************************************************)
-(* Bedwyr prover                                                            *)
+(* Bedwyr -- tabling                                                        *)
 (* Copyright (C) 2006-2014 Gacek, Baelde, Tiu, Heath                        *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
@@ -104,12 +104,12 @@ module I = struct
 
   let fprint fout head table ty =
     let fmt = (Format.formatter_of_out_channel fout) in
-    let ty = Input.Typing.ty_arrow [ty] ty in
+    let ty = Preterm.Typing.ty_arrow [ty] ty in
     Format.fprintf fmt
       "@[%% Table for %a contains :@,@,@[<hov>Define@;<1 2>proved : %a,@;<1 2>disproved : %a"
       Pprint.pp_term head
-      (Input.Typing.get_pp_type ()) ty
-      (Input.Typing.get_pp_type ()) ty ;
+      (Preterm.Typing.get_pp_type ()) ty
+      (Preterm.Typing.get_pp_type ()) ty ;
     let first = ref true in
     iter
       (fun t tag ->

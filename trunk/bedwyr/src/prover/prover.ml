@@ -1,6 +1,6 @@
 (****************************************************************************)
-(* Bedwyr prover                                                            *)
-(* Copyright (C) 2005-2013 Baelde, Tiu, Ziegler, Gacek, Heath               *)
+(* Bedwyr -- level-0/1 prover                                               *)
+(* Copyright (C) 2005-2015 Baelde, Tiu, Ziegler, Gacek, Heath               *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -24,6 +24,7 @@ exception Left_logic of Term.term
 exception Variable_leakage
 
 open Format
+open Environment
 open System
 open Term
 module T = Table.O

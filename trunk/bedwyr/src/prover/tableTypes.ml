@@ -1,5 +1,5 @@
 (****************************************************************************)
-(* Bedwyr prover                                                            *)
+(* Bedwyr -- tabling                                                        *)
 (* Copyright (C) 2013-2014 Quentin Heath                                    *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
@@ -39,6 +39,6 @@ module type INPUT = sig
   val iter : (Term.term -> tag -> unit) -> t -> unit
   val fold : (Term.term -> tag -> 'a -> 'a) -> t -> 'a -> 'a
   val print : Term.term -> t -> unit
-  val fprint : out_channel -> Term.term -> t -> Input.Typing.ty -> unit
+  val fprint : out_channel -> Term.term -> t -> Preterm.Typing.ty -> unit
   val export : string -> (Term.term * t) list -> son list -> unit
 end
