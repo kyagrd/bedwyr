@@ -26,8 +26,8 @@
 
 <src/ndcore/*.{native,byte}>: use_ndcore
 <src/batyping/*.{native,byte}>: use_batyping
-<src/interface/*.{native,byte}>: use_batyping,use_interface
-<src/prover/*.{native,byte}>: use_batyping,use_interface,use_prover,package(str)
+<src/interface/*.{native,byte}>: use_ndcore,use_batyping,package(str),use_interface
+<src/prover/*.{native,byte}>: use_ndcore,use_batyping,package(str),use_interface,use_prover
 
 <src/prover/*>: package(@XMLM_TAG@)
 
