@@ -64,7 +64,7 @@ SLIMMER_LIBS	= $(foreach m,$(BEDWYR_LIBS),\
 SLIMMER_MLIS	= $(foreach m,$(BEDWYR_LIBS),\
 		  $(wildcard src/$m/*.mli))
 ifneq ($(BEST_SUFFIX),)
-  SLIMMER_CMIS	= $(addprefix $(BUILD)/,$(SLIMMER_MLIS:.mli=.cmi) $(addprefix src/input/,lexer.cmi parser.cmi) src/prover/interface.cmi)
+  SLIMMER_CMIS	= $(addprefix $(BUILD)/,$(SLIMMER_MLIS:.mli=.cmi) $(addprefix src/interface/,lexer.cmi parser.cmi) src/prover/interface.cmi)
 SLIMMER_FINDLIB	= $(SLIMMER_META) $(SLIMMER_LIBS) $(SLIMMER_CMIS)
 endif
 BUILT_FILES	= $(BEDWYR_BINS) $(MANPAGES) $(SLIMMER_FINDLIB) \
@@ -150,7 +150,7 @@ configure: configure.ac
 #
 ##############################################################################
 
-.PHONY: bedwyr test test_libs test_ndcore test_batyping test_input test_prover \
+.PHONY: bedwyr test test_libs test_ndcore test_batyping test_interface test_prover \
   test_bedwyr debug
 
 bedwyr: $(bedwyr_prefix).$(BEST_SUFFIX)
@@ -166,7 +166,7 @@ ifeq ($(OCAMLFIND_OUNIT),)
   test_libs:
 	@echo 'Unit testing disabled, install oUnit to enable.'
 else
-  test_libs: test_ndcore test_batyping test_input test_prover
+  test_libs: test_ndcore test_batyping test_interface test_prover
 endif
 
 test_ndcore: $(BUILD)/src/ndcore/test.$(BEST_SUFFIX)
@@ -177,8 +177,8 @@ test_batyping: $(BUILD)/src/batyping/test.$(BEST_SUFFIX)
 	@echo -n 'Testing the Bedwyr-Abella typing library'
 	@$< $(TEST_FLAGS)
 
-test_input: $(BUILD)/src/input/test.$(BEST_SUFFIX)
-	@echo -n 'Testing the *.def and REPL input library'
+test_interface: $(BUILD)/src/interface/test.$(BEST_SUFFIX)
+	@echo -n 'Testing the *.def and REPL interface library'
 	@$< $(TEST_FLAGS)
 
 test_prover: $(BUILD)/src/prover/test.$(BEST_SUFFIX)
@@ -243,6 +243,9 @@ man/%.byte.1: man/%.1
 	@echo ".so man1/$*.1" > $@
 
 man/%.native.1: man/%.1
+	@echo ".so man1/$*.1" > $@
+
+man/%.exe.1: man/%.1
 	@echo ".so man1/$*.1" > $@
 
 man/%.html: man/%

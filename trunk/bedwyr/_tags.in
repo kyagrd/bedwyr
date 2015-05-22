@@ -20,16 +20,16 @@
 # @configure_input@
 
 <src>: include
-<src/ndcore> or <src/batyping> or <src/input> or <src/prover>: include
+<src/ndcore> or <src/batyping> or <src/interface> or <src/prover>: include
 
 <**/test.*>: package(unix),package(oUnit)
 
 <src/ndcore/*.{native,byte}>: use_ndcore
 <src/batyping/*.{native,byte}>: use_batyping
-<src/input/*.{native,byte}>: use_batyping,use_input
-<src/prover/*.{native,byte}>: use_batyping,use_input,use_prover,package(str)
+<src/interface/*.{native,byte}>: use_batyping,use_interface
+<src/prover/*.{native,byte}>: use_batyping,use_interface,use_prover,package(str)
 
 <src/prover/*>: package(@XMLM_TAG@)
 
 <src/bedwyr.{native,p.native,byte,d.byte}>: package(unix),package(str),\
-  package(@XMLM_TAG@),use_ndcore,use_batyping,use_input,use_prover
+  package(@XMLM_TAG@),use_ndcore,use_batyping,use_interface,use_prover

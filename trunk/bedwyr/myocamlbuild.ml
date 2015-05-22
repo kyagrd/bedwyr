@@ -29,7 +29,7 @@ let _ =
 
         ocaml_lib "src/ndcore/ndcore" ;
         ocaml_lib "src/batyping/batyping" ;
-        ocaml_lib "src/input/input" ;
+        ocaml_lib "src/interface/interface" ;
         ocaml_lib "src/prover/prover" ;
 
         ()
