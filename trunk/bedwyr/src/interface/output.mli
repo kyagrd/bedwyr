@@ -48,6 +48,9 @@ val std_dbg : Format.formatter ref
 (** Simple debug flag, can be set dynamically from the logic program. *)
 val debug : bool ref
 
+val err_poss : (int * int) list ref
+val war_poss : (int * int) list ref
+
 val wprintf :
   ?p:Preterm.Pos.t ->
   ('a, Format.formatter, unit, unit) format4 -> 'a

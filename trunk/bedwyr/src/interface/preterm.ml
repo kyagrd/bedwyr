@@ -35,6 +35,9 @@ module Pos = struct
     then (Parsing.rhs_start_pos i,Parsing.rhs_end_pos i)
     else (Parsing.symbol_start_pos (),Parsing.symbol_end_pos ())
 
+  let to_pair (start,curr) =
+    start.Lexing.pos_cnum,curr.Lexing.pos_cnum
+
   let pp fmt (start,curr) =
     let pos_to_string (start,curr) =
       let l1 = start.Lexing.pos_lnum in

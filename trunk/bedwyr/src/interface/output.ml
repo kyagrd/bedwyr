@@ -65,10 +65,21 @@ let sprintf ?(tag="") ?p f =
 
 let std_err = ref Format.err_formatter
 
+let err_poss = ref []
+let war_poss = ref []
+
 let eprintf ?p f =
+  begin match p with
+    | Some pos -> err_poss := (Preterm.Pos.to_pair pos) :: !err_poss
+    | None -> ()
+  end ;
   fprintf ?p ~nl:true ~formatter:!std_err f
 
 let wprintf ?p f =
+  begin match p with
+    | Some pos -> war_poss := (Preterm.Pos.to_pair pos) :: !war_poss
+    | None -> ()
+  end ;
   fprintf ~tag:"Warning: " ?p ~nl:true ~formatter:!std_err f
 
 let std_dbg = ref Format.err_formatter
