@@ -1,5 +1,5 @@
 (****************************************************************************)
-(* Bedwyr prover                                                            *)
+(* Bedwyr -- lexing                                                         *)
 (* Copyright (C) 2006 David Baelde, Alwen Tiu, Axelle Ziegler, Andrew Gacek *)
 (* Copyright (C) 2011-2013,2015 Quentin Heath                               *)
 (* Copyright (C) 2013 Alwen Tiu                                             *)
@@ -33,8 +33,6 @@
   (* keep track of the content of a quoted string
    * across multiple lines *)
   let strbuf = Buffer.create 128
-  (* also keep track of the beginning of the string *)
-  let strstart = ref dummy_pos
 
   let escape_table = Hashtbl.create 4
   let _ = List.iter (fun (k,t) -> Hashtbl.add escape_table k t)
@@ -81,7 +79,7 @@
             ]
   let get_command n =
     try Hashtbl.find command_table n
-    with Not_found -> raise (Input.Unknown_command n)
+    with Not_found -> raise (Preterm.Unknown_command n)
 
   (* Upper-case tokens *)
   let ub_keyword_t = Hashtbl.create 5
@@ -288,8 +286,10 @@ rule token = parse
   | '\n'                        { new_line lexbuf; token lexbuf }
 
   | '"'                         { Buffer.clear strbuf ;
-                                  strstart := lexbuf.lex_start_p ;
-                                  qstring [] None lexbuf }
+                                  let pos_of_lexbuf =
+                                    Preterm.Pos.of_lexbuf lexbuf
+                                  in
+                                  qstring pos_of_lexbuf [] None lexbuf }
 
   (* Punctuation *)
   | ":"                         { COLON }
@@ -340,12 +340,12 @@ rule token = parse
   | ((safe_char* safe_char_noslash) as n1) (infix_name as n2)
   | (safe_char+ as n1) ((infix_special_nostar infix_special*) as n2)
   | (infix_name as n1) (safe_char+ as n2)
-                                { raise (Input.Illegal_token (n1,n2)) }
+                                { raise (Preterm.Illegal_token (n1,n2)) }
 
   (* misc *)
   | eof                         { EOF }
 
-  | _ as c                      { raise (Input.Illegal_byte_sequence c) }
+  | _ as c                      { raise (Preterm.Illegal_byte_sequence c) }
 
 and proof = parse
   | '\n'                        { new_line lexbuf ;
@@ -369,37 +369,37 @@ and comment level cont = parse
                                     comment (level - 1) cont lexbuf }
   | '\n'                        { new_line lexbuf ;
                                   comment level cont lexbuf }
-  | eof                         { raise (Input.EOF_error "comment not closed") }
+  | eof                         { raise (Preterm.EOF_error "comment not closed") }
 
-and qstring starts finish = parse
+and qstring pos_of_lexbuf starts finish = parse
   | "\\\n"                      { new_line lexbuf ;
-                                  qstring starts finish lexbuf }
+                                  qstring pos_of_lexbuf starts finish lexbuf }
   | "\\/*" as s | "/*" as s     { addString s ;
-                                  let pos = (lexbuf.lex_start_p,lexbuf.lex_curr_p) in
+                                  let pos = Preterm.Pos.of_lexbuf lexbuf () in
                                   let starts = pos :: starts in
-                                  qstring starts finish lexbuf }
+                                  qstring pos_of_lexbuf starts finish lexbuf }
   | "\\*/" as s | "*/" as s     { addString s ;
                                   match starts,finish with
                                     | (_ :: starts),_ ->
-                                        qstring starts finish lexbuf
+                                        qstring pos_of_lexbuf starts finish lexbuf
                                     | [],None ->
-                                        let pos = (lexbuf.lex_start_p,lexbuf.lex_curr_p) in
-                                        qstring starts (Some pos) lexbuf
+                                        let pos = Preterm.Pos.of_lexbuf lexbuf () in
+                                        qstring pos_of_lexbuf starts (Some pos) lexbuf
                                     | _ ->
-                                        qstring starts finish lexbuf }
+                                        qstring pos_of_lexbuf starts finish lexbuf }
   | '\\' (_ as c)               { addEscapedChar c ;
-                                  qstring starts finish lexbuf }
+                                  qstring pos_of_lexbuf starts finish lexbuf }
   | in_qstring as s             { addString s ;
-                                  qstring starts finish lexbuf }
+                                  qstring pos_of_lexbuf starts finish lexbuf }
   | '"'                         { match starts,finish with
                                     | (pos :: _),_ | _,Some pos ->
-                                        raise (Input.Illegal_string_comment pos)
+                                        raise (Preterm.Illegal_string_comment pos)
                                     | _ ->
-                                        let pos = (!strstart,lexbuf.lex_curr_p) in
+                                        let pos = pos_of_lexbuf () in
                                         QSTRING (pos,Buffer.contents strbuf) }
   | '\n'                        { addChar '\n' ;
                                   new_line lexbuf ;
-                                  qstring starts finish lexbuf }
+                                  qstring pos_of_lexbuf starts finish lexbuf }
   | (('/' | '*') as c)          { addChar c ;
-                                  qstring starts finish lexbuf }
-  | eof                         { raise (Input.EOF_error "string not closed") }
+                                  qstring pos_of_lexbuf starts finish lexbuf }
+  | eof                         { raise (Preterm.EOF_error "string not closed") }

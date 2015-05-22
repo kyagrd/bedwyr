@@ -1,5 +1,5 @@
 (****************************************************************************)
-(* Parsing and type-checking for the Bedwyr prover                          *)
+(* Bedwyr -- concrete syntax tree to abstract syntax tree                   *)
 (* Copyright (C) 2012-2015 Quentin Heath                                    *)
 (* Copyright (C) 2013 Alwen Tiu                                             *)
 (*                                                                          *)
@@ -18,13 +18,25 @@
 (* 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.              *)
 (****************************************************************************)
 
-(** Pre-terms and pre-AST, translation to terms and checking. *)
+(* Pre-terms (CST) construction, checking, and translation to AST. *)
 
 (** Position information during parsing. For error messages only. *)
-type pos = Lexing.position * Lexing.position
+module Pos : sig
+  (** Position information. *)
+  type t
 
-(** Dummy position for post-parsing errors. *)
-val dummy_pos : pos
+  (** Dummy position information. *)
+  val dummy : t
+
+  (** Current position (lexing). *)
+  val of_lexbuf : Lexing.lexbuf -> unit -> t
+
+  (** Current position (parsing). *)
+  val of_token : int -> t
+
+  (** Position information pretty-printing. *)
+  val pp : Format.formatter -> t -> unit
+end
 
 (** No valid token could be parsed from the input.
   * It might contain a valid prefix, though,
@@ -38,7 +50,7 @@ exception Illegal_byte_sequence of char
   * (for instance "/\*" and "*\/") or balanced.
   * Note that escaping the first character instead of the second
   * ("\/*" or "\*/") doesn't prevent this exception. *)
-exception Illegal_string_comment of pos
+exception Illegal_string_comment of Pos.t
 
 (** Some characters that are only allowed in prefix names
   * were used next to some that are only allowed in infix names.
@@ -60,9 +72,9 @@ exception Empty_command
 exception Empty_term
 
 (** Wrapper around some [Parsing.Parse_error]. *)
-exception Parse_error of pos * string * string
+exception Parse_error of Pos.t * string * string
 
-module Typing : Typing.S with type pos = pos
+module Typing : Typing.S with type pos = Pos.t
 
 (** Pre-term with type and position information,
   * but without substitutions or sharing. *)
@@ -71,56 +83,56 @@ type preterm
 (** {6 Pre-terms creation} *)
 
 (** Quoted string. *)
-val pre_qstring : pos -> string -> preterm
+val pre_qstring : Pos.t -> string -> preterm
 
 (** (Non-negative) natural number. *)
-val pre_nat : pos -> int -> preterm
+val pre_nat : Pos.t -> int -> preterm
 
 (** Free variable or bound variable id. *)
-val pre_freeid : pos -> string -> preterm
+val pre_freeid : Pos.t -> string -> preterm
 
 (** Declared object (predicate or constant) or bound variable id. *)
-val pre_predconstid : ?infix:bool -> pos -> string -> preterm
+val pre_predconstid : ?infix:bool -> Pos.t -> string -> preterm
 
 (** Internal predicate id. *)
-val pre_internid : pos -> string -> preterm
+val pre_internid : Pos.t -> string -> preterm
 (** It is not possible to define such a predicate;
   * those are predefined and usually experimental. *)
 
 (** True. *)
-val pre_true : pos -> preterm
+val pre_true : Pos.t -> preterm
 
 (** False. *)
-val pre_false : pos -> preterm
+val pre_false : Pos.t -> preterm
 
 (** Term equality. *)
-val pre_eq : pos -> preterm -> preterm -> preterm
+val pre_eq : Pos.t -> preterm -> preterm -> preterm
 
 (** Formula binary conjunction. *)
-val pre_and : pos -> preterm -> preterm -> preterm
+val pre_and : Pos.t -> preterm -> preterm -> preterm
 
 (** Formula binary disjunction. *)
-val pre_or : pos -> preterm -> preterm -> preterm
+val pre_or : Pos.t -> preterm -> preterm -> preterm
 
 (** Formula implication. *)
-val pre_arrow : pos -> preterm -> preterm -> preterm
+val pre_arrow : Pos.t -> preterm -> preterm -> preterm
 
 (** Quantification. *)
 val pre_binder :
-  pos ->
-  Term.binder -> (pos * string * Typing.ty) list -> preterm -> preterm
+  Pos.t ->
+  Term.binder -> (Pos.t * string * Typing.ty) list -> preterm -> preterm
 (** The type [Term.binder] is used here, since the structure
   * is that of a [Term.term], and this module depends on [Term] either way. *)
 
 (** Abstraction. *)
-val pre_lambda : pos -> (pos * string * Typing.ty) list -> preterm -> preterm
+val pre_lambda : Pos.t -> (Pos.t * string * Typing.ty) list -> preterm -> preterm
 
 (** Application. *)
-val pre_app : pos -> preterm -> preterm list -> preterm
+val pre_app : Pos.t -> preterm -> preterm list -> preterm
 (** The (zero or more) arguments of the application are given backwards. *)
 
 (** Term tuple. *)
-val pre_tuple : pos -> preterm -> preterm -> preterm list -> preterm
+val pre_tuple : Pos.t -> preterm -> preterm -> preterm list -> preterm
 (** The (zero or more) last components (after the two first ones) are
   * given in reverse order. *)
 
@@ -133,7 +145,7 @@ val free_args : preterm -> string list
 
 (** "Qed" command used outside of proof mode.
   * It should be the first command to appear after a "Theorem". *)
-exception Qed_error of pos
+exception Qed_error of Pos.t
 
 (** Flavouring keyword, prefixing a predicate declaration. *)
 type flavour =
@@ -144,16 +156,16 @@ type flavour =
 (** Command AST. *)
 module Command : sig
   type t =
-    | Kind    of (pos * string) list * Typing.ki
+    | Kind    of (Pos.t * string) list * Typing.ki
     (** type declaration *)
-    | Type    of (pos * string) list * Typing.ty
+    | Type    of (Pos.t * string) list * Typing.ty
     (** constant declaration *)
-    | Def     of (flavour * pos * string * Typing.ty) list *
-                 (pos * preterm * preterm) list
+    | Def     of (flavour * Pos.t * string * Typing.ty) list *
+                 (Pos.t * preterm * preterm) list
     (** predicate declaration and definition *)
-    | Theorem of (pos * string * preterm)
+    | Theorem of (Pos.t * string * preterm)
     (** theorem (imported from Abella) *)
-    | Qed     of pos
+    | Qed     of Pos.t
     (** end of proof (imported from Abella, ignored by Bedwyr) *)
 end
 
@@ -185,15 +197,15 @@ module MetaCommand : sig
     (** [#env.] call {!System.print_env} *)
     | Type_of of preterm
     (** [#type_of t.] call {!System.print_type_of} *)
-    | Show_def of pos * string
+    | Show_def of Pos.t * string
     (** [#show_def p.] call {!System.show_def} *)
-    | Show_table of pos * string
+    | Show_table of Pos.t * string
     (** [#show_table p.] call {!System.show_table} *)
     | Clear_tables
     (** [#clear_tables.] call {!System.clear_tables} *)
-    | Clear_table of pos * string
+    | Clear_table of Pos.t * string
     (** [#clear_table p.] call {!System.clear_table} *)
-    | Save_table of pos * string * string
+    | Save_table of Pos.t * string * string
     (** [#save_table p "p-table.def".] call {!System.save_table} *)
     | Export of string
     (** [#export "skeleton.xml".] call {!System.export} *)
@@ -213,21 +225,19 @@ type definition_mode =
 
 type toplevel =
   [
-  | `Term               of pos * preterm
+  | `Term               of Pos.t * preterm
   | `MetaCommand        of MetaCommand.t
   ]
 
 type term_mode =
   [
-  | `Term               of pos * preterm
+  | `Term               of Pos.t * preterm
   ]
-
-(** Global AST for any input (file or toplevel). *)
 
 (** {6 Pre-terms' type checking} *)
 
 (** Type checking error. *)
-exception Term_typing_error of pos * Typing.ty * Typing.ty *
+exception Term_typing_error of Pos.t * Typing.ty * Typing.ty *
             Typing.type_unifier
 
 (** [type_check_and_translate pt ty (fv,do,ip,ak)] checks that the
@@ -271,17 +281,17 @@ val type_check_and_translate :
   ?stratum:int ->
   head:bool ->
   free_args:string list ->
-  fold_free_types:((Term.var -> Typing.ty * pos option ->
-                    (pos * string) list ->
-                    (pos * string) list) ->
-                   (pos * string) list ->
-                   (pos * string) list) ->
+  fold_free_types:((Term.var -> Typing.ty * Pos.t option ->
+                    (Pos.t * string) list ->
+                    (Pos.t * string) list) ->
+                   (Pos.t * string) list ->
+                   (Pos.t * string) list) ->
   fresh_tyinst:(Typing.ty -> Typing.ty) ->
   preterm ->
   Typing.ty ->
-  ((pos * string -> Term.term * Typing.ty) *
-   (instantiate_type:bool -> ?forbidden_stratum:int -> pos * string ->
+  ((Pos.t * string -> Term.term * Typing.ty) *
+   (instantiate_type:bool -> ?forbidden_stratum:int -> Pos.t * string ->
     Term.term * Typing.ty) *
-   (pos * string -> Term.term * Typing.ty) *
-   (pos * string -> Typing.ki)) ->
-  (pos * string) list * Term.term
+   (Pos.t * string -> Term.term * Typing.ty) *
+   (obj:Typing.obj -> p:Pos.t -> Typing.ty -> int)) ->
+  (Pos.t * string) list * Term.term

@@ -1,5 +1,5 @@
 (****************************************************************************)
-(* Bedwyr prover                                                            *)
+(* Bedwyr -- file input/output                                              *)
 (* Copyright (C) 2012-2013 Quentin Heath                                    *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
