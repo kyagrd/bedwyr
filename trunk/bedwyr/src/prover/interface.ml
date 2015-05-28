@@ -62,141 +62,122 @@ module Status = struct
   let bedwyr () = set 5
 end
 
-let reload : ((?session:(string list) -> unit -> unit) ref) = ref (fun ?session () -> ())
-let include_file : ((test_limit:(int option) -> string -> unit) ref) =
-  ref (fun ~test_limit:_ _ -> ())
+let reload = ref (fun ?session () -> ())
+let include_file = ref (fun ~test_limit:_ _ -> ())
 
 let bool_of_flag = function
   | None | Some "on" | Some "true" -> true
   | Some "off" | Some "false" -> false
   | _ -> raise Invalid_command
 
-(* XXX replace all lexbufes by positions, as we don't do
- * anything else, supposedly (proof skipping, maybe?) *)
-module Catch = struct
-  let solve lexbuf e =
+module Catch : sig
+  val solve : p:Preterm.Pos.t -> exn -> unit option
+  val meta_command : p:Preterm.Pos.t -> exn -> unit option
+  val io : ?p:Preterm.Pos.t -> exn -> unit option
+  val all : p:Preterm.Pos.t -> exn -> 'a option
+end = struct
+  let solve ~p e =
     begin match e with
       (* Predicates *)
-      | System.Missing_definition (n,p) ->
-          let p = match p with
-            | Some p -> p | None -> Preterm.Pos.of_lexbuf lexbuf ()
-          in
-          Output.eprintf ~p
+      | System.Missing_definition (n,p') ->
+          Output.eprintf ~p:(match p' with Some p -> p | None -> p)
             "Undefined predicate (%s was declared as a constant)."
             n
 
       (* HOPU *)
       | Unify.NotLLambda t ->
-          Output.eprintf ~p:(Preterm.Pos.of_lexbuf lexbuf ())
+          Output.eprintf ~p
             "LLambda unification prevented by %a."
             Pprint.pp_term t
 
       (* 0/1 *)
       | Prover.Level_inconsistency ->
-          Output.eprintf ~p:(Preterm.Pos.of_lexbuf lexbuf ())
+          Output.eprintf ~p
             "This formula cannot be handled by the left prover!"
       | Prover.Left_logic t ->
-          Output.eprintf ~p:(Preterm.Pos.of_lexbuf lexbuf ())
+          Output.eprintf ~p
             "Logic variable %a encountered on the left."
             Pprint.pp_term t
 
       (* Miscellaneous solver interruptions *)
       | System.Interrupt ->
-          Output.eprintf ~p:(Preterm.Pos.of_lexbuf lexbuf ())
+          Output.eprintf ~p
             "User interruption."
       | System.Abort_search ->
-          Output.eprintf ~p:(Preterm.Pos.of_lexbuf lexbuf ())
+          Output.eprintf ~p
             "Proof search aborted!"
 
       | e -> raise e
     end ;
     Status.ndcore () ;
-    Some None
+    None
 
-  let meta_command lexbuf e =
+  let meta_command ~p e =
     begin match e with
       (* Tables *)
-      | System.Missing_table (n,p) ->
-          let p = match p with
-            | Some p -> p | None -> Preterm.Pos.of_lexbuf lexbuf ()
-          in
-          Output.eprintf ~p
+      | System.Missing_table (n,p') ->
+          Output.eprintf ~p:(match p' with Some p -> p | None -> p)
             "No table (%s is neither inductive nor coinductive)."
             n
       | Uncleared_tables ->
-          Output.eprintf ~p:(Preterm.Pos.of_lexbuf lexbuf ())
+          Output.eprintf ~p
             "Unable to export tables (some have been cleared, \
               state might be inconsistent).@ Run #clear_tables to fix."
 
       (* Tests *)
       | Assertion_failed ->
-          Output.eprintf ~p:(Preterm.Pos.of_lexbuf lexbuf ())
+          Output.eprintf ~p
             "Assertion failed."
 
       (* Misc Bedwyr errors *)
       | Invalid_command ->
-          Output.eprintf ~p:(Preterm.Pos.of_lexbuf lexbuf ())
+          Output.eprintf ~p
             "Invalid meta-command, or wrong arguments."
 
       | e -> raise e
     end ;
     Status.solver () ;
-    Some None
+    None
 
-  let io ?lexbuf e =
+  let io ?p e =
     begin match e with
       | IO.File_error (s1,n,s2) ->
-          (match lexbuf with
-             | None -> Output.eprintf "Couldn't %s@ %S:@ %s."
-             | Some l -> Output.eprintf ~p:(Preterm.Pos.of_lexbuf l ()) "Couldn't %s@ %S:@ %s.")
-            s1 n s2
+          Output.eprintf ?p "Couldn't %s@ %S:@ %s." s1 n s2
       | e -> raise e
     end ;
     Status.bedwyr () ;
-    Some None
-
-  let eof ?lexbuf e =
-    begin match e with
-      | IO.File_error (s1,n,s2) ->
-          (match lexbuf with
-             | None -> Output.eprintf "Couldn't %s@ %S:@ %s."
-             | Some l -> Output.eprintf ~p:(Preterm.Pos.of_lexbuf l ()) "Couldn't %s@ %S:@ %s.")
-            s1 n s2
-      | e -> raise e
-    end ;
-    Status.bedwyr () ;
-    Some None
+    None
 
   (* Unhandled errors *)
-  let all lexbuf e =
+  let all ~p e =
     begin match e with
       | Failure s ->
-          Output.eprintf ~p:(Preterm.Pos.of_lexbuf lexbuf ())
+          Output.eprintf ~p
             "Error:@ %s"
             s
       | e ->
-          Output.eprintf ~p:(Preterm.Pos.of_lexbuf lexbuf ())
+          Output.eprintf ~p
             "Unexpected error:@ %s"
             (Printexc.to_string e)
     end ;
     Status.bedwyr () ;
-    Some None
+    None
 end
 
 
 module Eval : sig
   val definition : test_limit:(int option) ->
-    print:('a -> unit) -> Preterm.definition_mode -> Lexing.lexbuf -> unit option
+    print:('a -> unit) -> Preterm.definition_mode -> p:Preterm.Pos.t -> unit option
   val toplevel : test_limit:(int option) ->
-    print:('a -> unit) -> Preterm.toplevel -> Lexing.lexbuf -> unit option
-  val term : print:('a -> unit) -> Preterm.term_mode -> Lexing.lexbuf -> Term.term option
+    print:('a -> unit) -> Preterm.toplevel -> p:Preterm.Pos.t -> unit option
+  val term : print:('a -> unit) -> Preterm.term_mode -> p:Preterm.Pos.t -> Term.term option
 end = struct
   let set_reset () =
     let s = Term.save_state () in
     let ns = Term.save_namespace () in
     fun () -> Term.restore_state s ; Term.restore_namespace ns
 
-  let command c lexbuf =
+  let command c =
     let k _ =
       Status.input () ;
       None
@@ -206,11 +187,11 @@ end = struct
           List.iter (fun s -> Environment.Types.declare s k) l ;
           Some ()
       | Preterm.Command.Type (l, t) ->
-          Environment.Objects.declare_consts l t ~k lexbuf
+          Environment.Objects.declare_consts l t ~k
       | Preterm.Command.Def (decls,defs) ->
-          begin match Environment.Objects.declare_preds decls ~k lexbuf with
+          begin match Environment.Objects.declare_preds decls ~k with
             | Some stratum ->
-                begin match System.add_clauses stratum defs ~k lexbuf with
+                begin match System.add_clauses stratum defs ~k with
                   | Some singletons ->
                       List.iter
                         (fun (p,n) ->
@@ -222,7 +203,7 @@ end = struct
             | None -> None
           end
       | Preterm.Command.Theorem thm ->
-          System.add_theorem thm ~k lexbuf
+          System.add_theorem thm ~k
       | Preterm.Command.Qed p -> raise (Preterm.Qed_error p)
     with e -> begin match e with
       (* Declarations *)
@@ -301,12 +282,12 @@ end = struct
     Status.def () ;
     None
 
-  let query ~p ~print pre_query lexbuf =
+  let query ~p ~print pre_query =
     let k _ =
       Status.input () ;
       None
     in
-    match System.translate_query pre_query ~k lexbuf with
+    match System.translate_query pre_query ~k with
       | None -> None
       | Some query ->
           let reset = set_reset () in
@@ -359,7 +340,8 @@ end = struct
             Some result
           with e ->
             reset () ;
-            raise e
+            try Catch.io ~p e
+            with e -> Catch.solve ~p e
 
   (* Execute meta-commands.
    * @raise Invalid_command if an argument is unexpected
@@ -367,7 +349,7 @@ end = struct
    * "", "true", "on", "false" or "off")
    * @raise Assertion_failed if [#assert formula.], [#assert_not formula.]
    * or [#assert_raise formula.] fails *)
-  let meta_command ~test_limit mc lexbuf =
+  let meta_command ~test_limit mc ~p =
     let k _ =
       Status.input () ;
       None
@@ -404,7 +386,7 @@ end = struct
         | Preterm.MetaCommand.Env -> System.print_env ()
         | Preterm.MetaCommand.Type_of pre_term ->
             (* XXX *)
-            ignore (System.print_type_of pre_term ~k lexbuf)
+            ignore (System.print_type_of pre_term ~k)
         | Preterm.MetaCommand.Show_def (p,name) ->
             System.show_def (p,Term.atom ~tag:Term.Constant name)
         | Preterm.MetaCommand.Show_table (p,name) ->
@@ -426,7 +408,7 @@ end = struct
 
         (* Testing commands *)
         | Preterm.MetaCommand.Assert pre_query ->
-            begin match System.translate_query pre_query ~k lexbuf with
+            begin match System.translate_query pre_query ~k with
               | None -> ()
               | Some query ->
                   begin match test_limit with Some n when n <= 0 -> () | _ ->
@@ -440,7 +422,7 @@ end = struct
                   end
             end
         | Preterm.MetaCommand.Assert_not pre_query ->
-            begin match System.translate_query pre_query ~k lexbuf with
+            begin match System.translate_query pre_query ~k with
               | None -> ()
               | Some query ->
                   begin match test_limit with Some n when n <= 0 -> () | _ ->
@@ -453,7 +435,7 @@ end = struct
                   end
             end
         | Preterm.MetaCommand.Assert_raise pre_query ->
-            begin match System.translate_query pre_query ~k lexbuf with
+            begin match System.translate_query pre_query ~k with
               | None -> ()
               | Some query ->
                   begin match test_limit with Some n when n <= 0 -> () | _ ->
@@ -473,32 +455,34 @@ end = struct
       Some ()
     with e ->
       reset () ;
-      raise e
+      try Catch.io ~p e
+      with e -> try Catch.solve ~p e
+      with e -> Catch.meta_command ~p e
 
-  let term ~p ~print pre_term lexbuf =
+  let term ~p ~print pre_term =
     let k _ =
       Status.input () ;
       None
     in
-    try System.translate_term pre_term ~k lexbuf
+    try System.translate_term pre_term ~k
     with e -> raise e
 
 
-  let definition ~test_limit ~print input lexbuf = match input with
+  let definition ~test_limit ~print input ~p = match input with
     | `Command c ->
-        command c lexbuf
+        command c
     | `MetaCommand mc ->
-        meta_command ~test_limit mc lexbuf
+        meta_command ~test_limit mc ~p
 
-  let toplevel ~test_limit ~print input lexbuf = match input with
+  let toplevel ~test_limit ~print input ~p = match input with
     | `Term (p,pre_query) ->
-        query ~p ~print pre_query lexbuf
+        query ~p ~print pre_query
     | `MetaCommand mc ->
-        meta_command ~test_limit mc lexbuf
+        meta_command ~test_limit mc ~p
 
-  let term ~print input lexbuf = match input with
+  let term ~print input ~p = match input with
     | `Term (p,pre_term) ->
-        term ~p ~print pre_term lexbuf
+        term ~p ~print pre_term
 end
 
 module Mode : sig
@@ -507,10 +491,12 @@ module Mode : sig
   val term : Lexing.lexbuf -> Term.term option option
 end = struct
   let step ~read ~eval ~print lexbuf =
-    match read lexbuf with
+    try match read lexbuf with
       | None -> None
       | Some None -> Some None
-      | Some (Some input) -> Some (eval ~print input lexbuf)
+      | Some (Some input) ->
+          Some (eval ~print input ~p:(Preterm.Pos.of_lexbuf lexbuf ()))
+    with e -> Some (Catch.all ~p:(Preterm.Pos.of_lexbuf lexbuf ()) e)
 
   let definition ~test_limit lexbuf =
     let k _ =
@@ -518,11 +504,8 @@ end = struct
       Lexer.flush_input lexbuf ;
       None
     in
-    try step ~read:(Read.definition_mode ~k) ~eval:(Eval.definition ~test_limit) ~print:ignore lexbuf
-    with e -> try Catch.solve lexbuf e
-    with e -> try Catch.meta_command lexbuf e
-    with e -> try Catch.io ~lexbuf e
-    with e -> Catch.all lexbuf e
+    step ~read:(Read.definition_mode ~k)
+      ~eval:(Eval.definition ~test_limit) ~print:ignore lexbuf
 
   let toplevel ~test_limit lexbuf =
     let k _ =
@@ -530,11 +513,8 @@ end = struct
       Lexer.flush_input lexbuf ;
       None
     in
-    try step ~read:(Read.toplevel ~k) ~eval:(Eval.toplevel ~test_limit) ~print:ignore lexbuf
-    with e -> try Catch.solve lexbuf e
-    with e -> try Catch.meta_command lexbuf e
-    with e -> try Catch.io ~lexbuf e
-    with e -> Catch.all lexbuf e
+    step ~read:(Read.toplevel ~k)
+      ~eval:(Eval.toplevel ~test_limit) ~print:ignore lexbuf
 
   let term lexbuf =
     let k _ =
@@ -580,6 +560,7 @@ let defs ?(incremental=false) ~test_limit lexbuf =
         Some None
     | Some (Some ()) -> Some (Some ())
 
+
 (* definition-mode loop *)
 let defl ?(incremental=false) ~test_limit lexbuf =
   let reset = Environment.get_reset () in
@@ -594,6 +575,7 @@ let defl ?(incremental=false) ~test_limit lexbuf =
       | Some (Some ()) -> aux error_less
   in
   aux true
+  (* TODO no meta-commands in defs? *)
 
 (* read-eval-print step *)
 let reps ~test_limit lexbuf =
@@ -616,5 +598,3 @@ let repl ~test_limit lexbuf =
       | Some (Some ()) -> aux ()
   in
   aux ()
-
-(* TODO no meta-commands in defs? *)

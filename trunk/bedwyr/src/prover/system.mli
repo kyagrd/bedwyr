@@ -230,7 +230,6 @@ val translate_query :
      (Preterm.Typing.ty *
       (Term.var,(Preterm.Typing.ty*Preterm.Pos.t option)) Hashtbl.t *
       ((Preterm.Pos.t * string) list * Term.term)) option) ->
-  Lexing.lexbuf ->
   Term.term option
 
 (** {6 Predicates definitions} *)
@@ -248,7 +247,6 @@ val add_clauses :
      (Preterm.Typing.ty *
       (Term.var,(Preterm.Typing.ty*Preterm.Pos.t option)) Hashtbl.t *
       ((Preterm.Pos.t * string) list * Term.term)) option) ->
-  Lexing.lexbuf ->
   (Preterm.Pos.t * string) list option
 
 (** {6 Theorem definitions} *)
@@ -262,7 +260,6 @@ val add_theorem :
      (Preterm.Typing.ty *
       (Term.var,(Preterm.Typing.ty*Preterm.Pos.t option)) Hashtbl.t *
       ((Preterm.Pos.t * string) list * Term.term)) option) ->
-  Lexing.lexbuf ->
   unit option
 
 (** {6 Predicates accessors} *)
@@ -297,7 +294,6 @@ val print_type_of :
      (Preterm.Typing.ty *
       (Term.var,(Preterm.Typing.ty*Preterm.Pos.t option)) Hashtbl.t *
       ((Preterm.Pos.t * string) list * Term.term)) option) ->
-  Lexing.lexbuf ->
   unit option
 (* TODO rewrite this comment once the new type system is merged *)
 
@@ -325,7 +321,6 @@ val translate_term :
      (Preterm.Typing.ty *
       (Term.var,(Preterm.Typing.ty*Preterm.Pos.t option)) Hashtbl.t *
       ((Preterm.Pos.t * string) list * Term.term)) option) ->
-  Lexing.lexbuf ->
   Term.term option
 
 (** {6 Misc} *)

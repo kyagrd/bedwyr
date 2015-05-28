@@ -38,7 +38,7 @@ module type S = sig
   val kind_to_string : ki -> string
 
   type ty
-  val tconst : string -> ty list -> ty
+  val tconst : pos -> string -> ty list -> ty
   val ttuple : ty -> ty -> ty list -> ty
   val tprop : ty
   val tstring : ty
@@ -138,15 +138,15 @@ module Make (Pos : POSITION) = struct
 
   type ty = Ty of ty list * ty_base
   and ty_base =
-    | TConst    of string * (ty list) (* user-defined type constructors *)
-    | TTuple    of ty * ty * ty list  (* predefined tuples constructors *)
+    | TConst    of pos * string * (ty list) (* user-defined type constructors *)
+    | TTuple    of ty * ty * ty list        (* predefined tuples constructors *)
     | TProp
     | TString
     | TNat
-    | TParam    of int                (* type parameters (for polymorphism) *)
-    | TVar      of int                (* type variables (for inference) *)
+    | TParam    of int                      (* type parameters (for polymorphism) *)
+    | TVar      of int                      (* type variables (for inference) *)
 
-  let tconst name args = Ty ([],TConst (name,List.rev args))
+  let tconst p name args = Ty ([],TConst (p,name,List.rev args))
   let ttuple arg1 arg2 args = Ty ([],TTuple (arg1,arg2,List.rev args))
   let tprop = Ty ([],TProp)
   let tstring = Ty ([],TString)
@@ -182,9 +182,9 @@ module Make (Pos : POSITION) = struct
     let rec aux accum = function
       | Ty (ty::tys,ty_base) ->
           aux ((aux [] ty)::accum) (Ty (tys,ty_base))
-      | Ty ([],TConst (name,tys)) ->
+      | Ty ([],TConst (p,name,tys)) ->
           let tys = List.map (aux []) tys in
-          Ty (List.rev accum,TConst (name,tys))
+          Ty (List.rev accum,TConst (p,name,tys))
       | Ty ([],TTuple (ty1,ty2,tys)) ->
           let ty1 = aux [] ty1
           and ty2 = aux [] ty2
@@ -243,7 +243,7 @@ module Make (Pos : POSITION) = struct
           print (aux 1) ty (aux 0) (Ty (tys,ty_base))
       | Ty ([],ty_base) ->
           begin match ty_base with
-            | TConst (name,tys) ->
+            | TConst (_,name,tys) ->
                 let print =
                   if level>2
                   then Format.fprintf chan "@[(%s%a)@]"
@@ -299,9 +299,8 @@ module Make (Pos : POSITION) = struct
        * parameters, and whether they contain [prop] *)
       let (a,ho),tp1 = List.fold_left aux2 ((0,false),TypeParams.empty) tys in
       match ty_base with
-        | TConst (name,tys) ->
-            (* XXX real position of the type? *)
-            let Ki (kis,KType) as ki = get_kind (Pos.dummy,name) in
+        | TConst (p,name,tys) ->
+            let Ki (kis,KType) as ki = get_kind (p,name) in
             let ho,tp2 =
               (* apply the head of the source type on its arguments *)
               try List.fold_left2 aux3 (ho,TypeParams.empty) tys kis
@@ -372,8 +371,8 @@ module Make (Pos : POSITION) = struct
     and aux_base tys ty_base = match ty_base with
       | TProp | TString | TNat | TParam _ ->
           Ty (tys,ty_base)
-      | TConst (name,tys1) ->
-          Ty (tys,TConst (name,List.map aux tys1))
+      | TConst (p,name,tys1) ->
+          Ty (tys,TConst (p,name,List.map aux tys1))
       | TTuple (ty1,ty2,tys1) ->
           Ty (tys,TTuple (aux ty1,aux ty2,List.map aux tys1))
       | TVar i ->
@@ -401,7 +400,7 @@ module Make (Pos : POSITION) = struct
           List.exists aux tys || aux_base ty_base
     and aux_base = function
       | TProp | TString | TNat | TParam _ -> false
-      | TConst (_,tys) -> List.exists aux tys
+      | TConst (_,_,tys) -> List.exists aux tys
       | TTuple (ty1,ty2,tys) -> aux ty1 || aux ty2 || List.exists aux tys
       | TVar j ->
           if i=j then true
@@ -439,7 +438,7 @@ module Make (Pos : POSITION) = struct
           else Unifier.add j ty1 u
       | Ty ([],ty_base1),Ty ([],ty_base2) ->
           begin match ty_base1,ty_base2 with
-            | TConst (name1,tys1),TConst(name2,tys2) ->
+            | TConst (_,name1,tys1),TConst(_,name2,tys2) ->
                 if name1 = name2 then
                   try List.fold_left2 aux u tys1 tys2
                   with Invalid_argument _ ->
