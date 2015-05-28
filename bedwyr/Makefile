@@ -81,6 +81,7 @@ OPAM_FILES	= opam descr findlib url files/bedwyr.install
 
 NSIS_RC_FILES	= $(addprefix nsis-files/,$(filter %.rc,$(NSIS_FILES)))
 COFF_FILES	= $(NSIS_RC_FILES:.rc=.o)
+OPAM_URL	= http://slimmer.gforge.inria.fr/releases/debian/pool/main/b/bedwyr/$(DEB_NAME).orig.tar.gz
 
 #
 # BUILDING
@@ -351,9 +352,11 @@ install_src_libref: $(SRC_DOCDIR)/index.html
 #
 ##############################################################################
 
-.PHONY: dist archive deb deb_orig deb_debian deb_pkg nsis \
-  nsis_orig_files nsis_files nsis_pkg \
-  $(OPAM_PACKAGES)-repo/packages/$(PACKAGE_TARNAME)/$(OPAM_NAME)
+.PHONY: dist archive \
+  deb deb_orig deb_debian deb_pkg \
+  nsis nsis_orig_files nsis_files nsis_pkg \
+  opam opam_publish $(OPAM_PACKAGES)/$(PACKAGE_TARNAME)/$(OPAM_NAME) \
+  opam-files/findlib opam-files/url opam-files/files/bedwyr.install
 .SUFFIXES: .tar .tbz .tgz
 
 dist: archive opam deb nsis
@@ -379,7 +382,7 @@ $(DIST_NAME).tar: archive.tar doc/archive.tar
 .tar.tgz:
 	@$(GZIP) -c $< > $@
 
-opam: opam-repo/packages/$(PACKAGE_TARNAME)/$(OPAM_NAME)
+opam: $(OPAM_PACKAGES)/$(PACKAGE_TARNAME)/$(OPAM_NAME)
 	@opam update bedwyr
 
 $(OPAM_PACKAGES)/$(PACKAGE_TARNAME)/$(OPAM_NAME): $(addprefix opam-files/,$(OPAM_FILES))
@@ -395,10 +398,9 @@ opam-files/findlib:
 	@for i in $(BEDWYR_LIBS) ; do echo "slimmer.$$i" ; done >> $@
 
 opam-files/url:
-	@echo "archive: \"http://slimmer.gforge.inria.fr/releases/debian/pool/main/b/bedwyr/$(DEB_NAME).orig.tar.gz\"" > $@
+	@echo "archive: \"$(OPAM_URL)\"" > $@
 	@echo -n "checksum: \"" >> $@
-	@curl -L "http://slimmer.gforge.inria.fr/releases/debian/pool/main/b/bedwyr/$(DEB_NAME).orig.tar.gz" \
-	  | md5sum | tr -d ' \n-' >> $@
+	@curl -L $(OPAM_URL) | md5sum | tr -d ' \n-' >> $@
 	@echo "\"" >> $@
 
 opam-files/files/bedwyr.install:
@@ -423,6 +425,12 @@ opam-files/files/bedwyr.install:
 	  echo "  \"contrib/rlwrap/$$i\" {\"contrib/rlwrap/$$i\"}" ; \
 	  done >> $@
 	@echo "]" >> $@
+
+opam_publish: $(DEB_NAME).orig.tar.gz
+	@mv -vf $< ~/$(DEBIAN_VERSION)
+	@make opam
+	@opam upgrade bedwyr
+
 
 deb: deb_orig deb_debian
 	@CONFIGURE_OPTS="$(CONFIGURE_OPTS) --enable-deb" \

@@ -31,6 +31,24 @@ Define member : A -> list A -> prop by
   member X (X :: _) ;
   member X (_ :: L) := member X L.
 
+%Define remove : A -> list A -> list A -> prop by
+%  remove X (X :: L) L ;
+%  remove X (Y :: L1) (Y :: L2) := remove X L1 L2.
+%
+%Define append : list A -> list A -> list A -> prop by
+%  append nil L L ;
+%  append (X :: L1) L2 (X :: L3) := append L1 L2 L3.
+%
+%Define least : (A -> A -> prop) -> list A -> A -> prop by
+%  least _ (X :: nil) X ;
+%  least Smaller (X :: Y :: L) Z :=
+%    least Smaller (Y :: L) W /\\
+%    ((Smaller X W /\\ Z = X) \\/ (Smaller W X /\\ Z = W)).
+%
+%Define sort : (A -> A -> prop) -> list A -> list A -> prop by
+%  sort _ nil nil ;
+%  sort Smaller L1 (X :: L2) := least Smaller L1 X /\\ remove X L1 L2.
+
 Kind    option  type -> type.
 Type    opnone  option A.
 Type    opsome  A -> option A.

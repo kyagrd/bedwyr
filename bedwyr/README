@@ -51,7 +51,7 @@ or
   svn checkout --username anonsvn https://scm.gforge.inria.fr/svn/slimmer
 (the password is the username).
 
-The project is also available for Debian
+The project is also available as an opam package, and for Debian
 (http://slimmer.gforge.inria.fr/releases/debian/ squeeze main), Gentoo
 (public user overlay 'dawan') and Windows.  The Linux packages contains
 the core libraries as well as the complete program.
@@ -62,7 +62,7 @@ the core libraries as well as the complete program.
 
 For proper compilation and installation, a Linux environment and the
 following packages are required:
-- OCaml (3.11 or later) and findlib (often packaged as ocaml-findlib)
+- OCaml (4.01.0 or later) and findlib (often packaged as ocaml-findlib)
 - autotools (at least autoconf-2.60) and GNU make
 - bash, tar, gzip, bzip2 and some other standard tools
 
@@ -71,7 +71,7 @@ With the vanilla archive, the single command
 will build bedwyr with default options (no documentation, byte code
 only).  You can customize the process with configure options:
   $ autoconf
-  $ ./configure [--enable-doc] [--disable-bytecode] [--enable-nativecode] [...]
+  $ ./configure --no-create [--enable-doc] [--enable-nativecode] [...]
   $ make
 Use the `./configure --help` and `make help` commands for more details.
 
@@ -85,10 +85,11 @@ and type "#help." for a little help.
  5. Documentation
 ------------------
 
-See doc/quickstart.(ps.gz|pdf|html) for more information on how to use
-bedwyr, doc/refman/index.html for a complete system description, and
-_build/src_docdir/index.html for the source code documentation.
-Building those files requires the "--enable-doc" configure option (which
+- doc/quickstart.(pdf|html): more information on how to use bedwyr
+- doc/refman/index.html: complete system description
+- _build/src_docdir/index.html: source code documentation
+
+Building these files requires the "--enable-doc" configure option (which
 adds some dependencies on LaTeX, HeVeA, etc), and is done by the
   $ make doc
 command.
@@ -122,7 +123,7 @@ or in a alternative standard place with
 /src/ndcore
   Code for the unification and non-destructive normalization of LLambda.
   Also contains a term indexing module, currently only used for tabling.
-/src/batyping, /src/input
+/src/batyping, /src/interface
   Input and typing modules.
 /src/prover
-  Actual source code for the prover, including the use of tabling.
+  Tabling and actual prover.

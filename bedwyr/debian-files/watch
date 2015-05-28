@@ -1,2 +1,3 @@
 version=3
-opts=uversionmangle=s/-p/+p/;s/-/~/ https://gforge.inria.fr/frs/?group_id=367 /frs/download\.php/.*/bedwyr-(.*)\.tbz
+https://gforge.inria.fr/frs/?group_id=367 \
+ /frs/download\.php/file/.*/bedwyr_(.*)\.orig\.tar\.gz

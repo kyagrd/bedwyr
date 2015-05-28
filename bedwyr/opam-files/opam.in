@@ -43,6 +43,8 @@ depends: [
   "xmlm" {build}
 ]
 depexts: [
-  [ ["debian"] ["autoconf"] ]
-  [ ["debian"] ["bash"] ]
+  [ ["debian"] ["autoconf" "bash"] ]
+]
+post-messages: [
+  "Could not build the package @PACKAGE_TARNAME@; the autotools and bash are required." {failure}
 ]
