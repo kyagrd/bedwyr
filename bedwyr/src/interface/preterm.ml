@@ -209,12 +209,13 @@ let type_check_and_translate
       (typed_free_var,typed_declared_obj,typed_intern_pred,kind_check) =
   (* find the type corresponding to a De-Bruijn index *)
   let find_db s bvars =
-    let rec aux n = function
-      | [] -> None
-      | (name,ty)::_ when name=s -> Some (Term.db n,ty)
-      | _::bvars -> aux (n+1) bvars
-    in
-    aux 1 bvars
+    if s="_" then None else
+      let rec aux n = function
+        | [] -> None
+        | (name,ty)::_ when name=s -> Some (Term.db n,ty)
+        | _::bvars -> aux (n+1) bvars
+      in
+      aux 1 bvars
   in
   let rec aux ?(head=false) ~negative (p,rt) exty bvars u =
     try match rt with
