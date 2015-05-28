@@ -59,7 +59,7 @@ module type S = sig
   type ty
 
   (** User-declared types and type operators. *)
-  val tconst : string -> ty list -> ty
+  val tconst : pos -> string -> ty list -> ty
   (** The (zero or more) arguments of the operator are given backwards. *)
 
   (** Runtime-declared product types. *)

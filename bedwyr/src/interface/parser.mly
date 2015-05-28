@@ -192,16 +192,16 @@ ty:
   | ty_singleton                        { $1 }
 
 ty_singleton:
-  | ty_list                             { let n,l = $1 in
-                                          Preterm.Typing.tconst n l }
+  | ty_list                             { let p,n,l = $1 in
+                                          Preterm.Typing.tconst p n l }
   | ty_atom2                            { $1 }
 
 ty_list:
-  | lower_id                            { $1,[] }
-  | ty_list ty_atom                     { let n,l = $1 in n,$2::l }
+  | lower_id                            { (pos 1),$1,[] }
+  | ty_list ty_atom                     { let p,n,l = $1 in p,n,$2::l }
 
 ty_atom:
-  | lower_id                            { Preterm.Typing.tconst $1 [] }
+  | lower_id                            { Preterm.Typing.tconst (pos 1) $1 [] }
   | ty_atom2                            { $1 }
 
 ty_atom2:

@@ -168,11 +168,11 @@ end
 exception Missing_declaration of string * Preterm.Pos.t
 exception Stratification_error of string * Preterm.Pos.t
 
-let catch ~k lexbuf e =
+let catch ~k e =
   begin match e with
     (* Kind checking *)
-    | Missing_type (n,_) ->
-        Output.eprintf ~p:(Preterm.Pos.of_lexbuf lexbuf ())
+    | Missing_type (n,p) ->
+        Output.eprintf ~p
           "Undeclared type %s."
           n
     | Preterm.Typing.Type_kinding_error (n,p,ki1,ki2) ->
@@ -275,7 +275,7 @@ module Objects = struct
         !recent_keys ;
       recent_keys := []
 
-  let declare_const (p,name) ty ~k lexbuf =
+  let declare_const (p,name) ty ~k =
     let var = Term.get_var (Term.atom ~tag:Term.Constant name) in
     match get_type var with
       | Some (_,ty') ->
@@ -291,7 +291,7 @@ module Objects = struct
             | None ->
                 begin match
                   try Some (Types.kind_check ~obj:(Preterm.Typing.Constant name) ~p ty)
-                  with e -> catch ~k lexbuf e
+                  with e -> catch ~k e
                 with
                   | Some _ ->
                       recent_keys := var :: !recent_keys ;
@@ -300,15 +300,15 @@ module Objects = struct
                 end
           end
 
-  let declare_consts consts ty ~k lexbuf =
+  let declare_consts consts ty ~k =
     List.fold_left
       (fun result s ->
-         match declare_const s ty ~k lexbuf with
+         match declare_const s ty ~k with
            | Some () -> result
            | None -> None)
       (Some ()) consts
 
-  let create_def stratum ?(stratum_flavour=Preterm.Normal) (flavour,p,name,ty) ~k lexbuf =
+  let create_def stratum ?(stratum_flavour=Preterm.Normal) (flavour,p,name,ty) ~k =
     let var = Term.get_var (Term.atom ~tag:Term.Constant name) in
     match get_type var with
       | Some (_,ty') ->
@@ -324,7 +324,7 @@ module Objects = struct
             | None ->
                 begin match
                   try Some (Types.kind_check ~obj:(Preterm.Typing.Predicate name) ~p ty)
-                  with e -> catch ~k lexbuf e
+                  with e -> catch ~k e
                 with
                   | Some arity ->
                       recent_keys := var :: !recent_keys ;
@@ -355,17 +355,17 @@ module Objects = struct
   *  corresponding to those predicates *)
   let declare_preds =
     let stratum = ref 0 in
-    fun decls ~k lexbuf ->
+    fun decls ~k ->
       incr stratum ;
       match
         List.fold_left
           (fun f decl ->
              match f with
                | Some flavour ->
-                   create_def !stratum ~stratum_flavour:flavour decl ~k lexbuf
+                   create_def !stratum ~stratum_flavour:flavour decl ~k
                | None ->
                    (* XXX this is bullshit *)
-                   ignore (create_def !stratum decl ~k lexbuf) ;
+                   ignore (create_def !stratum decl ~k) ;
                    None)
           (Some Preterm.Normal) decls
       with
@@ -409,7 +409,7 @@ let translate_term
       ?(free_args=[])
       ?(expected_type=Preterm.Typing.fresh_tyvar ())
       ?(free_types=create_free_types 10)
-      pre_term ~k lexbuf =
+      pre_term ~k =
   let fresh_tyinst = Preterm.Typing.get_fresh_tyinst () in
   let fold_free_types f =
     Hashtbl.fold f free_types
@@ -486,4 +486,4 @@ let translate_term
               pre_term
               expected_type
               (typed_free_var,typed_declared_obj,typed_intern_pred,Types.kind_check))
-  with e -> catch ~k lexbuf e
+  with e -> catch ~k e

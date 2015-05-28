@@ -32,8 +32,8 @@ let clean_tables = ref true
 (* Clauses and queries construction *)
 
 
-let translate_query pre_term ~k lexbuf =
-  match Environment.translate_term ~expected_type:Ty.tprop pre_term ~k lexbuf with
+let translate_query pre_term ~k =
+  match Environment.translate_term ~expected_type:Ty.tprop pre_term ~k with
     | Some (_,_,(_,term)) -> Some term
     | None -> None
 
@@ -123,17 +123,17 @@ let mk_def_clause p head body =
   mk_clause pred params body
 
 (* returns the list of singleton variables of the clause *)
-let add_def_clause stratum (p,pre_head,pre_body) ~k lexbuf =
+let add_def_clause stratum (p,pre_head,pre_body) ~k =
   let free_args = Preterm.free_args pre_head in
   (* XXX what about stratum in theorems? *)
   match
-    Environment.translate_term ~expected_type:Ty.tprop ~stratum ~free_args ~head:true
-      pre_head ~k lexbuf
+    Environment.translate_term ~expected_type:Ty.tprop ~stratum
+      ~free_args ~head:true pre_head ~k
   with
     | Some (_,free_types,(_,head)) ->
         begin match
           Environment.translate_term ~expected_type:Ty.tprop ~stratum ~free_args
-            ~free_types pre_body ~k lexbuf
+            ~free_types pre_body ~k
         with
           | Some (_,_,(singletons,body)) ->
               begin
@@ -169,10 +169,10 @@ let add_def_clause stratum (p,pre_head,pre_body) ~k lexbuf =
     | None -> None
 
 (* returns the list of singleton variables of the clause *)
-let add_clauses stratum clauses ~k lexbuf =
+let add_clauses stratum clauses ~k =
   List.fold_left
     (fun accum clause ->
-       match accum,(add_def_clause stratum clause ~k lexbuf) with
+       match accum,(add_def_clause stratum clause ~k ) with
          | Some singletons,Some new_singletons ->
              Some (List.rev_append new_singletons singletons)
          | _,_ -> None)
@@ -259,8 +259,8 @@ let add_theorem_clause p (pred,arity,body) =
         let th = Norm.hnorm th in
         x.Environment.theorem <- th
 
-let add_theorem (p,n,pre_theorem) ~k lexbuf =
-  match Environment.translate_term ~expected_type:Ty.tprop pre_theorem ~k lexbuf with
+let add_theorem (p,n,pre_theorem) ~k =
+  match Environment.translate_term ~expected_type:Ty.tprop pre_theorem ~k with
     | Some (_,_,(_,theorem)) ->
         let clauses = mk_theorem_clauses (p,n) theorem in
         List.iter (add_theorem_clause p) clauses ;
@@ -359,8 +359,8 @@ let print_env () =
   print_constants () ;
   print_predicates ()
 
-let print_type_of pre_term ~k lexbuf =
-  match Environment.translate_term pre_term ~k lexbuf with
+let print_type_of pre_term ~k =
+  match Environment.translate_term pre_term ~k with
     | Some (ty,free_types,(_,t)) ->
         let pp_type = Ty.get_pp_type () in
         Format.printf "@[<v 3>@[%a :@;<1 2>%a@]"
@@ -408,9 +408,9 @@ let export file =
   in
   T.export file all_tables !root_atoms
 
-let translate_term pre_term ~k lexbuf =
+let translate_term pre_term ~k =
   (* TODO use the cert type here? *)
-  match Environment.translate_term pre_term ~k lexbuf with
+  match Environment.translate_term pre_term ~k with
     | Some (_,_,(_,term)) -> Some term
     | None -> None
 

@@ -64,7 +64,7 @@ SLIMMER_LIBS	= $(foreach m,$(BEDWYR_LIBS),\
 SLIMMER_MLIS	= $(foreach m,$(BEDWYR_LIBS),\
 		  $(wildcard src/$m/*.mli))
 ifneq ($(BEST_SUFFIX),)
-  SLIMMER_CMIS	= $(addprefix $(BUILD)/,$(SLIMMER_MLIS:.mli=.cmi) $(addprefix src/interface/,lexer.cmi parser.cmi) src/prover/interface.cmi)
+  SLIMMER_CMIS	= $(addprefix $(BUILD)/,$(SLIMMER_MLIS:.mli=.cmi) $(addprefix src/interface/,lexer.cmi parser.cmi))
 SLIMMER_FINDLIB	= $(SLIMMER_META) $(SLIMMER_LIBS) $(SLIMMER_CMIS)
 endif
 BUILT_FILES	= $(BEDWYR_BINS) $(MANPAGES) $(SLIMMER_FINDLIB) \
