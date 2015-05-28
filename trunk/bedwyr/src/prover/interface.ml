@@ -74,84 +74,6 @@ let bool_of_flag = function
 (* XXX replace all lexbufes by positions, as we don't do
  * anything else, supposedly (proof skipping, maybe?) *)
 module Catch = struct
-  let command lexbuf e =
-    begin match e with
-      (* Declarations *)
-      | Environment.Invalid_type_declaration (n,p,ki,s) ->
-          Output.eprintf ~p
-            "Cannot declare type %s of kind %a:@ %s."
-            n
-            Preterm.Typing.pp_kind ki
-            s
-      | Preterm.Typing.Undefinite_type (n,p,ty,tp) ->
-          let type_to_string = Preterm.Typing.get_type_to_string () in
-          Output.eprintf ~p
-            "Polymorphism error for %s: parameter%s %s@ of type %s@ \
-              %s not transparant."
-            n
-            (if List.length tp > 1 then "s" else "")
-            (String.concat ", "
-               (List.map
-                  (fun i -> Format.sprintf "%s"
-                              (type_to_string (Preterm.Typing.tparam i))) tp))
-            (type_to_string ty)
-            (if List.length tp > 1 then "are" else "is")
-      | Environment.Invalid_declaration (t,n,p,ty1,s,ty2) ->
-          Output.eprintf ~p
-            "Cannot declare %s %s of type %a:@ %s of type %a."
-            t n
-            (Preterm.Typing.get_pp_type ()) ty1
-            s
-            (Preterm.Typing.get_pp_type ()) ty2
-      | Preterm.Typing.Invalid_pred_declaration (n,p,ty) ->
-          Output.eprintf ~p
-            "Cannot declare predicate %s of type %a:@ \
-              target type must be %s."
-            n
-            (Preterm.Typing.get_pp_type ()) ty
-            (Preterm.Typing.get_type_to_string () Preterm.Typing.tprop)
-      | Environment.Invalid_flavour (n,p,gf,f) ->
-          let string_of_flavour = function
-            | Preterm.Normal -> assert false
-            | Preterm.Inductive -> "Inductive"
-            | Preterm.CoInductive -> "CoInductive"
-          in
-          Output.eprintf ~p
-            "Cannot declare predicate %s of flavour %s:@ \
-              this definition block is %s."
-            n
-            (string_of_flavour f)
-            (string_of_flavour gf)
-
-      (* Definitions *)
-      | Environment.Stratification_error (n,p) ->
-          Output.eprintf ~p
-            "Inconsistent stratification:@ %s is forbidden here."
-            n
-      | System.Inconsistent_definition (n,p,s) ->
-          Output.eprintf ~p
-            "Inconsistent extension of definition for %s:@ %s."
-            n
-            s
-
-      (* Theorems *)
-      | System.Inconsistent_theorem (n,p,s) ->
-          Output.eprintf ~p
-            "Inconsistent theorem specification for %s:@ %s."
-            n
-            s
-
-      (*
-      | Preterm.Qed_error p ->
-          Output.eprintf ~p
-            "\"Qed.\" command used while not in proof mode."
-       *)
-
-      | e -> raise e
-    end ;
-    Status.def () ;
-    Some None
-
   let solve lexbuf e =
     begin match e with
       (* Predicates *)
@@ -261,6 +183,7 @@ module Catch = struct
     Some None
 end
 
+
 module Eval : sig
   val definition : test_limit:(int option) ->
     print:('a -> unit) -> Preterm.definition_mode -> Lexing.lexbuf -> unit option
@@ -278,24 +201,20 @@ end = struct
       Status.input () ;
       None
     in
-    match c with
+    try match c with
       | Preterm.Command.Kind (l, k) ->
           List.iter (fun s -> Environment.Types.declare s k) l ;
           Some ()
       | Preterm.Command.Type (l, t) ->
-          List.fold_left
-            (fun result s ->
-               match Environment.Objects.declare_const s t ~k lexbuf with
-                 | Some () -> result
-                 | None -> None)
-            (Some ()) l
+          Environment.Objects.declare_consts l t ~k lexbuf
       | Preterm.Command.Def (decls,defs) ->
           begin match Environment.Objects.declare_preds decls ~k lexbuf with
             | Some stratum ->
                 begin match System.add_clauses stratum defs ~k lexbuf with
                   | Some singletons ->
                       List.iter
-                        (fun (p,n) -> Output.wprintf ~p "%s is a singleton variable." n)
+                        (fun (p,n) ->
+                           Output.wprintf ~p "%s is a singleton variable." n)
                         (List.rev singletons) ;
                       Some ()
                   | None -> None
@@ -305,6 +224,82 @@ end = struct
       | Preterm.Command.Theorem thm ->
           System.add_theorem thm ~k lexbuf
       | Preterm.Command.Qed p -> raise (Preterm.Qed_error p)
+    with e -> begin match e with
+      (* Declarations *)
+      | Environment.Invalid_type_declaration (n,p,ki,s) ->
+          Output.eprintf ~p
+            "Cannot declare type %s of kind %a:@ %s."
+            n
+            Preterm.Typing.pp_kind ki
+            s
+      | Preterm.Typing.Undefinite_type (n,p,ty,tp) ->
+          let type_to_string = Preterm.Typing.get_type_to_string () in
+          Output.eprintf ~p
+            "Polymorphism error for %s: parameter%s %s@ of type %s@ \
+              %s not transparant."
+            n
+            (if List.length tp > 1 then "s" else "")
+            (String.concat ", "
+               (List.map
+                  (fun i -> Format.sprintf "%s"
+                              (type_to_string (Preterm.Typing.tparam i))) tp))
+            (type_to_string ty)
+            (if List.length tp > 1 then "are" else "is")
+      | Environment.Invalid_declaration (t,n,p,ty1,s,ty2) ->
+          Output.eprintf ~p
+            "Cannot declare %s %s of type %a:@ %s of type %a."
+            t n
+            (Preterm.Typing.get_pp_type ()) ty1
+            s
+            (Preterm.Typing.get_pp_type ()) ty2
+      | Preterm.Typing.Invalid_pred_declaration (n,p,ty) ->
+          Output.eprintf ~p
+            "Cannot declare predicate %s of type %a:@ \
+              target type must be %s."
+            n
+            (Preterm.Typing.get_pp_type ()) ty
+            (Preterm.Typing.get_type_to_string () Preterm.Typing.tprop)
+      | Environment.Invalid_flavour (n,p,gf,f) ->
+          let string_of_flavour = function
+            | Preterm.Normal -> assert false
+            | Preterm.Inductive -> "Inductive"
+            | Preterm.CoInductive -> "CoInductive"
+          in
+          Output.eprintf ~p
+            "Cannot declare predicate %s of flavour %s:@ \
+              this definition block is %s."
+            n
+            (string_of_flavour f)
+            (string_of_flavour gf)
+
+      (* Definitions *)
+      | Environment.Stratification_error (n,p) ->
+          Output.eprintf ~p
+            "Inconsistent stratification:@ %s is forbidden here."
+            n
+      | System.Inconsistent_definition (n,p,s) ->
+          Output.eprintf ~p
+            "Inconsistent extension of definition for %s:@ %s."
+            n
+            s
+
+      (* Theorems *)
+      | System.Inconsistent_theorem (n,p,s) ->
+          Output.eprintf ~p
+            "Inconsistent theorem specification for %s:@ %s."
+            n
+            s
+
+      (*
+      | Preterm.Qed_error p ->
+          Output.eprintf ~p
+            "\"Qed.\" command used while not in proof mode."
+       *)
+
+      | e -> raise e
+    end ;
+    Status.def () ;
+    None
 
   let query ~p ~print pre_query lexbuf =
     let k _ =
@@ -524,7 +519,6 @@ end = struct
       None
     in
     try step ~read:(Read.definition_mode ~k) ~eval:(Eval.definition ~test_limit) ~print:ignore lexbuf
-    with e -> try Catch.command lexbuf e
     with e -> try Catch.solve lexbuf e
     with e -> try Catch.meta_command lexbuf e
     with e -> try Catch.io ~lexbuf e
@@ -573,24 +567,33 @@ let () =
   end
 
 (* definition-mode step *)
-let defs ~test_limit lexbuf =
+let defs ?(incremental=false) ~test_limit lexbuf =
+  let reset = Environment.get_reset () in
   match Mode.definition ~test_limit lexbuf with
     | None ->
+        if incremental then reset () ;
         Output.eprintf ~p:(Preterm.Pos.of_lexbuf lexbuf ()) "Empty command." ;
         Status.input () ;
         None
-    | Some None -> Some None
+    | Some None ->
+        if incremental then reset () ;
+        Some None
     | Some (Some ()) -> Some (Some ())
 
 (* definition-mode loop *)
-let defl ~test_limit lexbuf =
-  let rec aux () =
+let defl ?(incremental=false) ~test_limit lexbuf =
+  let reset = Environment.get_reset () in
+  let rec aux error_less =
     match Mode.definition ~test_limit lexbuf with
-      | None -> ()
-      | Some None -> aux ()
-      | Some (Some ()) -> aux ()
+      | None ->
+          if error_less then Some () else begin
+            if incremental then reset () ;
+            None
+          end
+      | Some None -> aux false
+      | Some (Some ()) -> aux error_less
   in
-  aux ()
+  aux true
 
 (* read-eval-print step *)
 let reps ~test_limit lexbuf =

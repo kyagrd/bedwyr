@@ -41,8 +41,9 @@ let () =
     try int_of_string (Sys.getenv "COLUMNS")
     with Failure ("int_of_string") | Not_found -> 72
   in
-  Format.set_margin term_width ;
-  Format.set_max_indent ((Format.get_margin ())*4/5)
+  List.iter
+    (fun fref -> Output.set_width !fref term_width)
+    [Output.std_out;Output.std_err;Output.std_dbg]
 
 let welcome_msg =
   Printf.sprintf
@@ -143,9 +144,9 @@ let run_on_file ~strict f fpath =
     else fpath
   in
   if (List.mem fpath !inclfiles) then
-    Format.eprintf "File %S already included, skipping.@." fpath
+    Output.wprintf "File %S already included, skipping." fpath
   else begin
-    Format.eprintf "Now including %S.@." fpath ;
+    Output.wprintf "Now including %S." fpath ;
     inclfiles := fpath :: !inclfiles ;
     try
       IO.chdir (Filename.dirname fpath) ;
@@ -156,7 +157,7 @@ let run_on_file ~strict f fpath =
           lexbuf with lex_curr_p =
             { lexbuf.lex_curr_p with pos_fname = fname } ;
         }) in
-        f lexbuf
+        ignore (f lexbuf)
       in
       IO.run_in aux fname ;
       IO.chdir cwd
@@ -182,6 +183,6 @@ let _ =
   if !batch
   then Interface.Status.exit_with ()
   else begin
-    Format.printf "%s@." welcome_msg ;
+    Output.printf ~nl:true "%s" welcome_msg ;
     Interface.repl ~test_limit (Lexing.from_channel stdin)
   end

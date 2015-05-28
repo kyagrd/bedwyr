@@ -41,7 +41,7 @@ module Logic = struct
 
   let internal_t = Hashtbl.create 8
   let _ = Preterm.Typing.(List.iter
-                            (fun (v,tys) -> Hashtbl.add internal_t v (ty_arrow tys tprop))
+                            (fun (v,tys) -> Hashtbl.replace internal_t v (ty_arrow tys tprop))
                             [ (* Non-logical extensions *)
                               var_not,
                                 [tprop] ;
@@ -50,7 +50,7 @@ module Logic = struct
                               var_abspred,
                                 (let ty0 = tparam 0 in
                                  let ty1 = ty_arrow [ty_arrow [tparam 1] ty0] ty0 in
-                                 [ty0;ty1;ty0] );
+                                 [ty0;ty1;ty0]) ;
                               var_distinct,
                                 [tprop] ;
                               var_assert_rigid,
@@ -96,7 +96,7 @@ module Logic = struct
 
   let builtins = Hashtbl.create 8
   let _ = Preterm.Typing.(List.iter
-                            (fun (v,tys) -> Hashtbl.add builtins v (ty_arrow tys tprop))
+                            (fun (v,tys) -> Hashtbl.replace builtins v (ty_arrow tys tprop))
                             [ (* I/O extensions *)
                               var_read,       [tparam 0] ;
                               var_fread,      [tstring;tparam 0] ;
@@ -129,11 +129,24 @@ module Types = struct
   let env : (Term.var,Preterm.Typing.ki) Hashtbl.t =
     Hashtbl.create 100
 
+  let recent_keys = ref []
+
+  let get_reset () =
+    recent_keys := [] ;
+    fun () ->
+      List.iter
+        (Hashtbl.remove env)
+        !recent_keys ;
+      recent_keys := []
+
   let declare (p,name) ki =
     let var = Term.get_var (Term.atom ~tag:Term.Constant name) in
     if Hashtbl.mem env var
     then raise (Invalid_type_declaration (name,p,ki,"type already declared"))
-    else Hashtbl.add env var ki
+    else begin
+      Hashtbl.replace env var ki ;
+      recent_keys := var :: !recent_keys
+    end
 
   let get_kind (p,name) =
     let var = Term.get_var (Term.atom ~tag:Term.Constant name) in
@@ -252,6 +265,16 @@ module Objects = struct
       | Constant _ -> None
       | Predicate x -> Some x
 
+  let recent_keys = ref []
+
+  let get_reset () =
+    recent_keys := [] ;
+    fun () ->
+      List.iter
+        (Hashtbl.remove env)
+        !recent_keys ;
+      recent_keys := []
+
   let declare_const (p,name) ty ~k lexbuf =
     let var = Term.get_var (Term.atom ~tag:Term.Constant name) in
     match get_type var with
@@ -270,10 +293,20 @@ module Objects = struct
                   try Some (Types.kind_check ~obj:(Preterm.Typing.Constant name) ~p ty)
                   with e -> catch ~k lexbuf e
                 with
-                  | Some _ -> Some (Hashtbl.add env var (Constant ty))
+                  | Some _ ->
+                      recent_keys := var :: !recent_keys ;
+                      Some (Hashtbl.replace env var (Constant ty))
                   | None -> None
                 end
           end
+
+  let declare_consts consts ty ~k lexbuf =
+    List.fold_left
+      (fun result s ->
+         match declare_const s ty ~k lexbuf with
+           | Some () -> result
+           | None -> None)
+      (Some ()) consts
 
   let create_def stratum ?(stratum_flavour=Preterm.Normal) (flavour,p,name,ty) ~k lexbuf =
     let var = Term.get_var (Term.atom ~tag:Term.Constant name) in
@@ -294,6 +327,7 @@ module Objects = struct
                   with e -> catch ~k lexbuf e
                 with
                   | Some arity ->
+                      recent_keys := var :: !recent_keys ;
                       let stratum_flavour,flavour = match stratum_flavour,flavour with
                         | _,Preterm.Normal -> stratum_flavour,Normal
                         | Preterm.Inductive,Preterm.CoInductive
@@ -309,7 +343,7 @@ module Objects = struct
                             CoInductive { theorem = Term.lambda arity Term.op_false ;
                                           table = Table.O.create () }
                       in
-                      Hashtbl.add env var
+                      Hashtbl.replace env var
                         (predicate flavour stratum (Term.lambda arity Term.op_false) ty) ;
                       Some stratum_flavour
                   | None -> None
@@ -359,6 +393,13 @@ module Objects = struct
     Hashtbl.clear env
 end
 
+let get_reset () =
+  let reset_types = Types.get_reset ()
+  and reset_objects = Objects.get_reset () in
+  fun () ->
+    reset_types () ;
+    reset_objects ()
+
 let create_free_types : int -> (Term.var,(Preterm.Typing.ty*Preterm.Pos.t option)) Hashtbl.t =
   fun n -> Hashtbl.create n
 
@@ -396,7 +437,7 @@ let translate_term
         end
       in
       let ty = Preterm.Typing.fresh_tyvar () in
-      Hashtbl.add free_types v (ty,Some p) ;
+      Hashtbl.replace free_types v (ty,Some p) ;
       t,ty
   in
   (* return a typed variable corresponding to the name

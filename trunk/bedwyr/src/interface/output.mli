@@ -19,6 +19,8 @@
 
 (** {6 General purpose output facilities} *)
 
+val set_width : Format.formatter -> int -> unit
+
 val fprintf :
   ?tag:string ->
   ?p:Preterm.Pos.t ->
