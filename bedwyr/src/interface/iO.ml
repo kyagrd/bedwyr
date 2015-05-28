@@ -115,6 +115,14 @@ module O = struct
     Hashtbl.clear files ;
 end
 
+let deactivated = ref false
+
+let deactivate_io () =
+  deactivated := true
+
+let reactivate_io () =
+  deactivated := false
+
 let close_io_files () =
   I.clear () ;
   O.clear ()
@@ -122,7 +130,8 @@ let close_io_files () =
 (* Term input (stdin and file) *)
 
 let read read_fun goals =
-  match goals with
+  if !deactivated then None
+  else match goals with
     | [pattern] ->
         begin match read_fun () with
           | Some term -> Some (Term.op_eq pattern term)
@@ -131,7 +140,8 @@ let read read_fun goals =
     | _ -> assert false
 
 let fopen_in goals =
-  match goals with
+  if !deactivated then true
+  else match goals with
     | [f] ->
         begin match Term.observe f with
           | Term.QString name ->
@@ -143,24 +153,27 @@ let fopen_in goals =
         end
     | _ -> assert false
 
-let fread read_fun goals = match goals with
-  | [f;pattern] ->
-      begin match Term.observe f with
-        | Term.QString name ->
-            begin match I.get name with
-              | Some (_,l) ->
-                  begin match read_fun l () with
-                    | Some term -> Some (Term.op_eq pattern term)
-                    | None -> None
-                  end
-              | None -> None
-            end
-        | _ -> None
-      end
-  | _ -> assert false
+let fread read_fun goals =
+  if !deactivated then None
+  else match goals with
+    | [f;pattern] ->
+        begin match Term.observe f with
+          | Term.QString name ->
+              begin match I.get name with
+                | Some (_,l) ->
+                    begin match read_fun l () with
+                      | Some term -> Some (Term.op_eq pattern term)
+                      | None -> None
+                    end
+                | None -> None
+              end
+          | _ -> None
+        end
+    | _ -> assert false
 
 let fclose_in goals =
-  match goals with
+  if !deactivated then true
+  else match goals with
     | [f] ->
         begin match Term.observe f with
           | Term.QString name ->
@@ -174,12 +187,15 @@ let fclose_in goals =
 
 (* Term output (stdout and file) *)
 
-let print print_fun goals = match goals with
-  | [f] -> print_fun f
-  | _ -> assert false
+let print print_fun goals =
+  if !deactivated then true
+  else match goals with
+    | [f] -> print_fun f
+    | _ -> assert false
 
 let fopen_out goals =
-  match goals with
+  if !deactivated then true
+  else match goals with
     | [f] ->
         begin match Term.observe f with
           | Term.QString name ->
@@ -191,20 +207,23 @@ let fopen_out goals =
         end
     | _ -> assert false
 
-let fprint print_fun goals = match goals with
-  | [f;g] ->
-      begin match Term.observe f with
-        | Term.QString name ->
-            begin match O.get name with
-              | Some (_,f) -> print_fun f g
-              | None -> false
-            end
-        | _ -> false
-      end
-  | _ -> assert false
+let fprint print_fun goals =
+  if !deactivated then true
+  else match goals with
+    | [f;g] ->
+        begin match Term.observe f with
+          | Term.QString name ->
+              begin match O.get name with
+                | Some (_,f) -> print_fun f g
+                | None -> false
+              end
+          | _ -> false
+        end
+    | _ -> assert false
 
 let fclose_out goals =
-  match goals with
+  if !deactivated then true
+  else match goals with
     | [f] ->
         begin match Term.observe f with
           | Term.QString name ->

@@ -29,6 +29,14 @@ exception File_error of string * string * string
   * Raises no exception on system errors. *)
 val close_io_files : unit -> unit
 
+(** Deactivates I/O predicates.
+  * They always return "true" (or "None" for {!read} and {!fread}),
+  * but have no effect. *)
+val deactivate_io : unit -> unit
+
+(** Reactivates I/O predicates. *)
+val reactivate_io : unit -> unit
+
 
 (** {6 Sanity wrappers} *)
 
@@ -38,7 +46,7 @@ val run_out : (out_channel -> 'a) -> string -> 'a
 
 val chdir : string -> unit
 
-(** {6 Term input (stdin)} *)
+(** {6 Term input (stdin and file)} *)
 
 (** Read from the standard input. *)
 val read : (unit -> Term.term option) -> Term.term list -> Term.term option
