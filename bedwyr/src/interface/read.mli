@@ -26,3 +26,11 @@ val toplevel :
 val term_mode :
   k:(unit -> Preterm.term_mode option) -> Lexing.lexbuf ->
   Preterm.term_mode option option
+
+val apply_on_string :
+  (Lexing.lexbuf -> 'a) -> ?fname:string -> string ->
+  'a
+
+val apply_on_channel :
+  (Lexing.lexbuf -> 'a) -> ?fname:string -> in_channel ->
+  'a

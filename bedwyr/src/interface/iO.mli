@@ -32,9 +32,9 @@ val close_io_files : unit -> unit
 
 (** {6 Sanity wrappers} *)
 
-val run_in : (in_channel -> unit) -> string -> unit
+val run_in : (in_channel -> 'a) -> string -> 'a
 
-val run_out : (out_channel -> unit) -> string -> unit
+val run_out : (out_channel -> 'a) -> string -> 'a
 
 val chdir : string -> unit
 
