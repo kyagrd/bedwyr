@@ -63,3 +63,6 @@ val pp_preabstracted :
 
 val term_to_string_preabstracted :
   generic:string list -> bound:string list -> Term.term -> string
+
+(** For lists of bindings. *)
+val pp_env : Format.formatter -> (string * Term.term) list -> unit

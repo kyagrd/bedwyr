@@ -167,16 +167,28 @@ let _ =
   let reload ~strict ?(session=(!session)) () =
     System.reset_decls () ;
     Preterm.Typing.clear () ;
-    run_on_string ~strict (Interface.defl ~test_limit) ~fname:"Bedwyr::stdlib" stdlib ;
+    run_on_string ~strict
+      (Interface.defl ~test_limit)
+      ~fname:"Bedwyr::stdlib" stdlib ;
     inclfiles := [] ;
-    List.iter (run_on_file ~strict (Interface.defl ~test_limit)) session ;
-    List.iter (run_on_string ~strict (Interface.defs ~test_limit)) !definitions
+    List.iter
+      (run_on_file ~strict
+         (Interface.defl ~test_limit))
+      session ;
+    List.iter
+      (run_on_string ~strict
+         (Interface.defs ~test_limit))
+      !definitions
   in
   Interface.reload := reload ~strict:false ;
   Interface.include_file := (fun ~test_limit ->
-    run_on_file ~strict:false (Interface.defl ~test_limit:(decr_test_limit test_limit))) ;
+    run_on_file ~strict:false
+      (Interface.defl ~test_limit:(decr_test_limit test_limit))) ;
   reload ~strict:true () ;
-  List.iter (run_on_string ~strict:true (Interface.reps ~test_limit)) !queries ;
+  List.iter
+    (run_on_string ~strict:true
+       (Interface.reps ~test_limit ~concise:true))
+    !queries ;
   if !batch
   then Interface.Status.exit_with ()
   else begin

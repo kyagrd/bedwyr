@@ -225,7 +225,7 @@ let term_to_string_full_debug ~generic ~bound dbg term =
     debug := dbg ;
     term_to_string_full ~generic ~bound term
   in
-  debug := debug';
+  debug := debug' ;
   s
 
 let get_generic_names x =
@@ -269,3 +269,6 @@ let pp_preabstracted ~generic ~bound chan term =
 let term_to_string_preabstracted ~generic ~bound term =
   string_of_formatter
     (fun formatter -> pp_preabstracted ~generic ~bound formatter term)
+
+let pp_env out =
+  List.iter (fun (n,term) -> fprintf out "@ @[%s = %a@]" n pp_term term)
