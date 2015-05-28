@@ -360,56 +360,81 @@ end = struct
         | _ -> set_reset ())
     in
     try
-      begin match mc with
+      let result = match mc with
         | Preterm.MetaCommand.Exit ->
             IO.close_io_files () ;
             Status.exit_with ()
-        | Preterm.MetaCommand.Help -> Format.printf "%s" help_msg
+        | Preterm.MetaCommand.Help ->
+            Format.printf "%s" help_msg ;
+            Some ()
 
         (* Session management *)
-        | Preterm.MetaCommand.Include l -> List.iter (!include_file ~test_limit) l
-        | Preterm.MetaCommand.Reload -> !reload ()
-        | Preterm.MetaCommand.Session l -> !reload ~session:l ()
+        | Preterm.MetaCommand.Include l ->
+            List.iter (!include_file ~test_limit) l ;
+            Some ()
+        | Preterm.MetaCommand.Reload ->
+            !reload () ;
+            Some ()
+        | Preterm.MetaCommand.Session l ->
+            !reload ~session:l () ;
+            Some ()
 
         (* Turn debugging on/off. *)
-        | Preterm.MetaCommand.Debug value -> Output.debug := (bool_of_flag value)
+        | Preterm.MetaCommand.Debug value ->
+            Output.debug := (bool_of_flag value) ;
+            Some ()
 
         (* Turn timing on/off. *)
-        | Preterm.MetaCommand.Time value -> System.time := (bool_of_flag value)
+        | Preterm.MetaCommand.Time value ->
+            System.time := (bool_of_flag value) ;
+            Some ()
 
         (* Tabling-related commands *)
         | Preterm.MetaCommand.Equivariant value ->
-            Table.O.set_eqvt (bool_of_flag value)
-        | Preterm.MetaCommand.Freezing temp -> Prover.freezing_point := temp
+            Table.O.set_eqvt (bool_of_flag value) ;
+            Some ()
+        | Preterm.MetaCommand.Freezing temp ->
+            Prover.freezing_point := temp ;
+            Some ()
         | Preterm.MetaCommand.Saturation pressure ->
-            Prover.saturation_pressure := pressure
-        | Preterm.MetaCommand.Env -> System.print_env ()
+            Prover.saturation_pressure := pressure ;
+            Some ()
+        | Preterm.MetaCommand.Env ->
+            System.print_env () ;
+            Some ()
         | Preterm.MetaCommand.Type_of pre_term ->
             (* XXX *)
-            ignore (System.print_type_of pre_term ~k)
+            ignore (System.print_type_of pre_term ~k) ;
+            Some ()
         | Preterm.MetaCommand.Show_def (p,name) ->
-            System.show_def (p,Term.atom ~tag:Term.Constant name)
+            System.show_def (p,Term.atom ~tag:Term.Constant name) ;
+            Some ()
         | Preterm.MetaCommand.Show_table (p,name) ->
-            System.show_table (p,Term.atom ~tag:Term.Constant name)
+            System.show_table (p,Term.atom ~tag:Term.Constant name) ;
+            Some ()
         | Preterm.MetaCommand.Clear_tables ->
             System.clean_tables := true ;
-            System.clear_tables ()
+            System.clear_tables () ;
+            Some ()
         | Preterm.MetaCommand.Clear_table (p,name) ->
             System.clean_tables := false ;
-            System.clear_table (p,Term.atom ~tag:Term.Constant name)
+            System.clear_table (p,Term.atom ~tag:Term.Constant name) ;
+            Some ()
         (* save the content of a table to a file. An exception is thrown if
          * file already exists. *)
         | Preterm.MetaCommand.Save_table (p,name,file) ->
-            System.save_table (p,Term.atom ~tag:Term.Constant name) name file
+            System.save_table (p,Term.atom ~tag:Term.Constant name) name file ;
+            Some ()
         | Preterm.MetaCommand.Export name ->
-            if !System.clean_tables
+            begin if !System.clean_tables
             then System.export name
-            else raise Uncleared_tables
+            else raise Uncleared_tables end ;
+            Some ()
 
         (* Testing commands *)
         | Preterm.MetaCommand.Assert pre_query ->
             begin match System.translate_query pre_query ~k with
-              | None -> ()
+              | None -> None
               | Some query ->
                   begin match test_limit with Some n when n <= 0 -> () | _ ->
                     if !Status.value = None then begin
@@ -419,11 +444,12 @@ end = struct
                         ~success:(fun _ _ -> ())
                         ~failure:(fun () -> raise Assertion_failed)
                     end
-                  end
+                  end ;
+                  Some ()
             end
         | Preterm.MetaCommand.Assert_not pre_query ->
             begin match System.translate_query pre_query ~k with
-              | None -> ()
+              | None -> None
               | Some query ->
                   begin match test_limit with Some n when n <= 0 -> () | _ ->
                     if !Status.value = None then begin
@@ -432,11 +458,12 @@ end = struct
                       Prover.prove ~local:0 ~timestamp:0 query
                         ~success:(fun _ _ -> raise Assertion_failed) ~failure:ignore
                     end
-                  end
+                  end ;
+                  Some ()
             end
         | Preterm.MetaCommand.Assert_raise pre_query ->
             begin match System.translate_query pre_query ~k with
-              | None -> ()
+              | None -> None
               | Some query ->
                   begin match test_limit with Some n when n <= 0 -> () | _ ->
                     if !Status.value = None then begin
@@ -448,11 +475,12 @@ end = struct
                       with _ -> false
                       then raise Assertion_failed
                     end
-                  end
+                  end ;
+                  Some ()
             end
-      end ;
+      in
       reset () ;
-      Some ()
+      result
     with e ->
       reset () ;
       try Catch.io ~p e
