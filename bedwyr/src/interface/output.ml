@@ -19,6 +19,11 @@
 
 (* General purpose output facilities *)
 
+let set_width formatter term_width =
+  Format.pp_set_margin formatter term_width ;
+  Format.pp_set_max_indent formatter
+    ((Format.pp_get_margin formatter () * 4) / 5)
+
 let kfprintf ~k ~prefix ~formatter f =
   if prefix="" then
     Format.kfprintf k formatter
