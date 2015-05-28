@@ -68,7 +68,7 @@ int main(int argc, const char *argv[])
       break;
     }
 
-  printf("#include \"../ccs.def\".\n\n");
+  printf("#include \"../ccs_vp_decl.def\".\n\n");
   printf("Type insert,delete label.\n\n");
   for(i=0; i<=num; i++){
     printf("Type s%d,q%d ",i,i);
