@@ -32,8 +32,8 @@ Define member : A -> list A -> prop by
   member X (_ :: L) := member X L.
 
 Kind    option  type -> type.
-Type    none    option A.
-Type    some    A -> option A.
+Type    opnone  option A.
+Type    opsome  A -> option A.
 "
 
 let () =
