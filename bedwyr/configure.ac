@@ -21,7 +21,7 @@ m4_define([M4_VERSION_MAJOR],1)
 m4_define([M4_VERSION_MINOR],4)
 m4_define([M4_VERSION_PATCH],0)
 m4_define([M4_VERSION_BUILD],0)
-m4_define([M4_VERSION_DEV],beta5)
+m4_define([M4_VERSION_DEV],beta6)
 m4_define([M4_VERSION1],[M4_VERSION_MAJOR.M4_VERSION_MINOR])
 m4_define([M4_VERSION2],m4_if(M4_VERSION_PATCH,0,
           [M4_VERSION1],[M4_VERSION1.M4_VERSION_PATCH]))
@@ -368,7 +368,7 @@ FILE_ICON=dutch-wick-0.3-file.ico
 
 AC_CONFIG_FILES([Makefile.include],[chmod a-w Makefile.include])
 AC_CONFIG_FILES([_tags],[chmod a-w _tags])
-AC_CONFIG_FILES([src/config.ml],[chmod a-w src/config.ml])
+AC_CONFIG_FILES([src/prover/config.ml],[chmod a-w src/prover/config.ml])
 AC_CONFIG_FILES([src/prover/table.ml],[chmod a-w src/prover/table.ml])
 AC_CONFIG_FILES([src/prover/prover.mllib],[chmod a-w src/prover/prover.mllib])
 AC_CONFIG_FILES([src/META.part],[chmod a-w src/META.part])

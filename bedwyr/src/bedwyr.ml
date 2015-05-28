@@ -55,8 +55,8 @@ let welcome_msg =
     (if Config.build="v"^Config.package_version || Config.build="" then ""
      else " (revision " ^ Config.build ^ ")")
 
-let print_version () : unit =
-  Printf.printf
+let version_msg =
+  Printf.sprintf
     "%s prover %s, Copyright (C) 2005-2015 Slimmer project.\n\
     This is free software, distributed under the GNU General Public License\n\
     version 2.  There is NO WARRANTY, not even SOUNDNESS nor COMPLETENESS.\n\
@@ -69,9 +69,14 @@ let print_version () : unit =
     Config.ocaml_version
     Config.build_date
     (String.concat ""
-       (List.map
-          (fun (s1,s2) -> (match s2 with "" -> "\n - " | _ -> "\n + ") ^ s1)
-          Config.features)) ;
+       (List.flatten
+          (List.map
+             (fun (s1,s2) ->
+                [(match s2 with "" -> "\n - " | _ -> "\n + ") ; s1])
+             Config.features)))
+
+let print_version () =
+  Output.printf ~nl:true "%s" version_msg ;
   exit 0
 
 let usage_msg =
