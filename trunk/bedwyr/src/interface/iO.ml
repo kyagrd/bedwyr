@@ -37,11 +37,13 @@ let close_in name c =
 
 let run_in f name =
   let c = open_in name in
-  begin try f c with e ->
-    close_in name c ;
-    raise e
-  end ;
-  close_in name c
+  let result =
+    try f c with e ->
+      close_in name c ;
+      raise e
+  in
+  close_in name c ;
+  result
 
 let open_out name =
   try open_out_gen [Open_wronly;Open_creat;Open_excl] 0o600 name
@@ -53,11 +55,13 @@ let close_out name c =
 
 let run_out f name =
   let c = open_out name in
-  begin try f c with e ->
-    close_out name c ;
-    raise e
-  end ;
-  close_out name c
+  let result =
+    try f c with e ->
+      close_out name c ;
+      raise e
+  in
+  close_out name c ;
+  result
 
 let chdir name =
   try Sys.chdir name
@@ -75,7 +79,7 @@ module I = struct
   let add name =
     let c = open_in name in
     let l = Lexing.from_channel c in
-    Hashtbl.add files name (c,l)
+    Hashtbl.replace files name (c,l)
 
   let remove name c =
     close_in name c ;
@@ -98,7 +102,7 @@ module O = struct
   let add name =
     let c = open_out name in
     let f = Format.formatter_of_out_channel c in
-    Hashtbl.add files name (c,f)
+    Hashtbl.replace files name (c,f)
 
   let remove name c =
     close_out name c ;

@@ -66,3 +66,19 @@ let toplevel ~k lexbuf =
 let term_mode ~k lexbuf =
   try Some (parse ~k ~parser:Parser.term_mode ~lexer:Lexer.token lexbuf)
   with Preterm.Empty_term -> None
+
+let apply_on_string f ?(fname="") str =
+  let lexbuf = Lexing.from_string str in
+  let lexbuf = Lexing.({
+    lexbuf with lex_curr_p =
+      { lexbuf.lex_curr_p with pos_fname = fname }
+  }) in
+  f lexbuf
+
+let apply_on_channel f ?(fname="") channel =
+  let lexbuf = Lexing.from_channel channel in
+  let lexbuf = Lexing.({
+    lexbuf with lex_curr_p =
+      { lexbuf.lex_curr_p with pos_fname = fname } ;
+  }) in
+  f lexbuf

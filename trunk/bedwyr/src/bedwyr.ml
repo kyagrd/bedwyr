@@ -131,13 +131,9 @@ let _ =
   definitions := List.rev (!definitions) ;
   queries := List.rev (!queries)
 
-let run_on_string ~strict f ?(fname="") str =
-  let lexbuf = Lexing.from_string str in
-  let lexbuf = Lexing.({
-    lexbuf with lex_curr_p =
-      { lexbuf.lex_curr_p with pos_fname = fname }
-  }) in
-  f lexbuf ;
+let run_on_string ~strict f ?fname str =
+  Read.apply_on_string
+    (fun lexbuf -> ignore (f lexbuf)) ?fname str ;
   if strict then Interface.Status.exit_if ()
 
 let run_on_file ~strict f fpath =
@@ -156,15 +152,11 @@ let run_on_file ~strict f fpath =
     try
       IO.chdir (Filename.dirname fpath) ;
       let fname = Filename.basename fpath in
-      let aux channel =
-        let lexbuf = Lexing.from_channel channel in
-        let lexbuf = Lexing.({
-          lexbuf with lex_curr_p =
-            { lexbuf.lex_curr_p with pos_fname = fname } ;
-        }) in
-        ignore (f lexbuf)
-      in
-      IO.run_in aux fname ;
+      IO.run_in
+        (fun channel ->
+           Read.apply_on_channel
+             (fun lexbuf -> ignore (f lexbuf)) ~fname channel)
+        fname ;
       IO.chdir cwd
     with e -> ignore (Interface.Catch.io e)
   end ;
