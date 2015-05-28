@@ -30,19 +30,17 @@ module Catch : sig
 end
 
 val defs :
-  ?incremental:bool ->
-  test_limit:int option -> Lexing.lexbuf ->
+  ?incremental:bool -> test_limit:int option -> Lexing.lexbuf ->
   unit option option
 
 val defl :
-  ?incremental:bool ->
-  test_limit:int option -> Lexing.lexbuf ->
+  ?incremental:bool -> test_limit:int option -> Lexing.lexbuf ->
   unit option
 
 val reps :
-  test_limit:int option -> Lexing.lexbuf ->
-  unit option option
+  ?concise:bool -> test_limit:int option -> Lexing.lexbuf ->
+  unit option
 
 val repl :
-  test_limit:int option -> Lexing.lexbuf ->
+  ?concise:bool -> test_limit:int option -> Lexing.lexbuf ->
   unit

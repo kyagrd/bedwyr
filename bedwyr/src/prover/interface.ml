@@ -167,10 +167,14 @@ end
 
 module Eval : sig
   val definition : test_limit:(int option) ->
-    print:('a -> unit) -> Preterm.definition_mode -> p:Preterm.Pos.t -> unit option
-  val toplevel : test_limit:(int option) ->
-    print:('a -> unit) -> Preterm.toplevel -> p:Preterm.Pos.t -> unit option
-  val term : print:('a -> unit) -> Preterm.term_mode -> p:Preterm.Pos.t -> Term.term option
+    print:('a -> unit) -> Preterm.definition_mode -> p:Preterm.Pos.t ->
+    unit option
+  val toplevel : ?concise:bool -> test_limit:(int option) ->
+    print:('a -> unit) -> Preterm.toplevel -> p:Preterm.Pos.t ->
+    unit option
+  val term :
+    print:('a -> unit) -> Preterm.term_mode -> p:Preterm.Pos.t ->
+    Term.term option
 end = struct
   let set_reset () =
     let s = Term.save_state () in
@@ -282,7 +286,7 @@ end = struct
     Status.def () ;
     None
 
-  let query ~p ~print pre_query =
+  let query ~p ~print ?(all=false) pre_query =
     let k _ =
       Status.input () ;
       None
@@ -293,43 +297,44 @@ end = struct
           let reset = set_reset () in
           try
             let s0 = Term.save_state () in
-            let vars = List.map (fun t -> Pprint.term_to_string t, t)
-                         (List.rev (Term.logic_vars [query])) in
+            let vars =
+              List.map
+                (fun t -> Pprint.term_to_string t, t)
+                (List.rev (Term.logic_vars [query]))
+            in
             let found = ref false in
             let reset_time,time =
               let t0 = ref (Unix.gettimeofday ()) in
               (fun () -> t0 := Unix.gettimeofday ()),
               (fun () ->
-                 if !System.time
-                 then Format.printf "+ %.0fms@."
-                        (1000. *. (Unix.gettimeofday () -. !t0)))
+                 if !System.time then
+                   Output.printf ~nl:true "+ %.0fms"
+                     (1000. *. (Unix.gettimeofday () -. !t0)))
             in
             let show _ k =
               time () ;
               found := true ;
-              if vars = [] then Format.printf "Yes.@." else
-                Format.printf "Solution found:@." ;
-              List.iter
-                (fun (o,t) -> Format.printf " %s = %a@." o Pprint.pp_term t)
-                vars ;
-              Format.printf "More [y] ? %!" ;
-              if
+              if vars = [] then Output.printf ~nl:true "Solution found."
+              else Output.printf ~nl:true "@[<v 1>Solution found:%a@]"
+                     Pprint.pp_env vars ;
+              if all || begin
+                Output.printf "More [y] ? " ;
                 try
                   let l = input_line stdin in
                   l = "" || l.[0] = 'y' || l.[0] = 'Y'
                 with End_of_file -> false
-              then begin
+              end then begin
                 reset_time () ;
                 k ()
               end else begin
                 Term.restore_state s0 ;
-                Format.printf "Search stopped.@."
+                Output.printf ~nl:true "Search stopped."
               end
             in
             let continue () =
               time () ;
-              if !found then Format.printf "No more solutions.@."
-              else Format.printf "No solution.@."
+              if !found then Output.printf ~nl:true "No more solutions."
+              else Output.printf ~nl:true "No solution."
             in
             let result =
               Prover.prove ~local:0 ~timestamp:0 query
@@ -502,11 +507,12 @@ end = struct
     | `MetaCommand mc ->
         meta_command ~test_limit mc ~p
 
-  let toplevel ~test_limit ~print input ~p = match input with
+  let toplevel ?(concise=false) ~test_limit ~print input ~p = match input with
     | `Term (p,pre_query) ->
-        query ~p ~print pre_query
+        query ~p ~print ~all:concise pre_query
     | `MetaCommand mc ->
-        meta_command ~test_limit mc ~p
+        if concise then Some ()
+        else meta_command ~test_limit mc ~p
 
   let term ~print input ~p = match input with
     | `Term (p,pre_term) ->
@@ -514,9 +520,12 @@ end = struct
 end
 
 module Mode : sig
-  val definition : test_limit:(int option) -> Lexing.lexbuf -> unit option option
-  val toplevel : test_limit:(int option) -> Lexing.lexbuf -> unit option option
-  val term : Lexing.lexbuf -> Term.term option option
+  val definition : test_limit:(int option) ->
+    Lexing.lexbuf -> unit option option
+  val toplevel : ?concise:bool -> test_limit:(int option) ->
+    Lexing.lexbuf -> unit option option
+  val term :
+    Lexing.lexbuf -> Term.term option option
 end = struct
   let step ~read ~eval ~print lexbuf =
     try match read lexbuf with
@@ -535,14 +544,14 @@ end = struct
     step ~read:(Read.definition_mode ~k)
       ~eval:(Eval.definition ~test_limit) ~print:ignore lexbuf
 
-  let toplevel ~test_limit lexbuf =
+  let toplevel ?concise ~test_limit lexbuf =
     let k _ =
       Status.input () ;
       Lexer.flush_input lexbuf ;
       None
     in
     step ~read:(Read.toplevel ~k)
-      ~eval:(Eval.toplevel ~test_limit) ~print:ignore lexbuf
+      ~eval:(Eval.toplevel ?concise ~test_limit) ~print:ignore lexbuf
 
   let term lexbuf =
     let k _ =
@@ -606,21 +615,21 @@ let defl ?(incremental=false) ~test_limit lexbuf =
   (* TODO no meta-commands in defs? *)
 
 (* read-eval-print step *)
-let reps ~test_limit lexbuf =
-  match Mode.toplevel ~test_limit lexbuf with
+let reps ?concise ~test_limit lexbuf =
+  match Mode.toplevel ?concise ~test_limit lexbuf with
     | None ->
         Output.eprintf ~p:(Preterm.Pos.of_lexbuf lexbuf ()) "Empty query." ;
         Status.input () ;
         None
-    | Some None -> Some None
-    | Some (Some ()) -> Some (Some ())
+    | Some None -> None
+    | Some (Some ()) -> Some ()
 
 (* read-eval-print loop *)
-let repl ~test_limit lexbuf =
+let repl ?concise ~test_limit lexbuf =
   let rec aux () =
     Format.printf "?= %!" ;
     Lexer.flush_input lexbuf ;
-    match Mode.toplevel ~test_limit lexbuf with
+    match Mode.toplevel ?concise ~test_limit lexbuf with
       | None -> Format.printf "@."
       | Some None -> aux ()
       | Some (Some ()) -> aux ()
