@@ -22,6 +22,7 @@
 val set_width : Format.formatter -> int -> unit
 
 val fprintf :
+  ?colour:string ->
   ?tag:string ->
   ?p:Preterm.Pos.t ->
   ?nl:bool ->
