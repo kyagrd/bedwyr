@@ -106,7 +106,13 @@ let test_limit  = ref (Some 0)
 let session     = ref []
 let definitions = ref []
 let queries     = ref []
-let inclfiles   = ref []
+
+(* Bedwyr's running directory *)
+let bwd = Sys.getcwd ()
+module InclFiles =
+  Set.Make (struct type t = string let compare = compare end)
+let inclfiles = ref (InclFiles.empty)
+let relative_paths = ref true
 
 let incr_test_limit () =
   test_limit := match !test_limit with
@@ -155,30 +161,36 @@ let run_on_string ~strict f ?fname str =
   if strict then Interface.Status.exit_if ()
 
 let run_on_file ~strict f fpath =
-  let cwd = Sys.getcwd () in
-  let fpath =
-    if (Filename.is_relative fpath &&
-        not (String.length fpath > 2 && fpath.[0]='~' && fpath.[1]='/'))
-    then Filename.concat cwd fpath
-    else fpath
-  in
-  if (List.mem fpath !inclfiles) then
-    Output.wprintf "File %S already included, skipping." fpath
-  else begin
-    Output.wprintf "Now including %S." fpath ;
-    inclfiles := fpath :: !inclfiles ;
-    try
-      IO.chdir (Filename.dirname fpath) ;
-      let fname = Filename.basename fpath in
+  let old_cwd = Sys.getcwd ()
+  and old_relative_paths = !relative_paths in
+  begin try
+    let dirname = Filename.dirname fpath in
+    IO.chdir dirname ;
+    let cwd = Sys.getcwd ()
+    and basename = Filename.basename fpath in
+    let full_path = Filename.concat cwd basename in
+    let nice_path =
+      if not (Filename.is_relative dirname) then (relative_paths := false) ;
+      if !relative_paths
+      then Str.replace_first (Str.regexp ("^" ^ bwd ^ "/")) "" full_path
+      else full_path
+    in
+    if InclFiles.mem full_path !inclfiles
+    then Output.wprintf "Skipping already included@ %S." nice_path
+    else begin
+      Output.wprintf "Now including@ %S." nice_path ;
+      inclfiles := InclFiles.add full_path !inclfiles ;
       IO.run_in
         (fun channel ->
            Read.apply_on_channel
-             (fun lexbuf -> ignore (f lexbuf)) ~fname channel)
-        fname ;
-      IO.chdir cwd
-    with e -> ignore (Interface.Catch.io e)
-  end ;
+             (fun lexbuf -> ignore (f lexbuf)) ~fname:nice_path channel)
+        full_path
+    end
+  with e -> ignore (Interface.Catch.io e) end ;
+  IO.chdir old_cwd ; (* purposely not caught *)
+  relative_paths := old_relative_paths ;
   if strict then Interface.Status.exit_if ()
+
 
 let _ =
   let test_limit = !test_limit in
@@ -188,7 +200,7 @@ let _ =
     run_on_string ~strict
       (Interface.defl ~test_limit)
       ~fname:"Bedwyr::stdlib" stdlib ;
-    inclfiles := [] ;
+    inclfiles := InclFiles.empty ;
     List.iter
       (run_on_file ~strict
          (Interface.defl ~test_limit))
