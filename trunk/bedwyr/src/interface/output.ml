@@ -17,6 +17,21 @@
 (* 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.              *)
 (****************************************************************************)
 
+let error_colour,warning_colour,debug_colour =
+  match
+    try int_of_string (Sys.getenv "COLORS")
+    with Failure ("int_of_string") | Not_found -> 0
+  with
+    | 256 ->
+        Some "38;5;210",
+        Some "38;5;228",
+        Some "38;5;213"
+    | 8 ->
+        Some "31",
+        Some "33",
+        Some "35"
+    | x -> None,None,None
+
 (* General purpose output facilities *)
 
 let set_width formatter term_width =
@@ -33,22 +48,27 @@ let kfprintf ~k ~prefix ~formatter f =
       ("@[<hov>%s@;<0 1>@[" ^^ f ^^ "@]@]")
       prefix
 
-let prefix ~tag ?p () =
-  let pos = match p with
-    | Some p ->
-        Format.fprintf Format.str_formatter "%a: " Preterm.Pos.pp p ;
-        Format.flush_str_formatter ()
-    | None -> ""
-  in
-  (tag^pos)
+let prefix ?colour ~tag ?p () = match colour,p with
+  | Some c,Some p ->
+      Format.fprintf Format.str_formatter "\027[%sm%a: \027[0m" c Preterm.Pos.pp p ;
+      Format.flush_str_formatter ()
+  | Some c,None ->
+      Format.fprintf Format.str_formatter "\027[%sm%s\027[0m" c tag ;
+      Format.flush_str_formatter ()
+  | None,Some p ->
+      Format.fprintf Format.str_formatter "%s%a: " tag Preterm.Pos.pp p ;
+      Format.flush_str_formatter ()
+  | None,None ->
+      Format.fprintf Format.str_formatter "%s" tag ;
+      Format.flush_str_formatter ()
 
-let fprintf ?(tag="") ?p ?(nl=false) ~formatter f =
+let fprintf ?colour ?(tag="") ?p ?(nl=false) ~formatter f =
   let k fmt =
     if nl
     then Format.pp_print_newline fmt ()
     else Format.pp_print_flush fmt ()
   in
-  kfprintf ~k ~prefix:(prefix ~tag ?p ()) ~formatter f
+  kfprintf ~k ~prefix:(prefix ?colour ~tag ?p ()) ~formatter f
 
 (* Wrappers for normal output *)
 
@@ -78,14 +98,14 @@ let eprintf ?p f =
     | Some pos -> err_poss := (Preterm.Pos.to_pair pos) :: !err_poss
     | None -> ()
   end ;
-  fprintf ?p ~nl:true ~formatter:!std_err f
+  fprintf ?colour:error_colour ~tag:"[Error] " ?p ~nl:true ~formatter:!std_err f
 
 let wprintf ?p f =
   begin match p with
     | Some pos -> war_poss := (Preterm.Pos.to_pair pos) :: !war_poss
     | None -> ()
   end ;
-  fprintf ~tag:"Warning: " ?p ~nl:true ~formatter:!std_err f
+  fprintf ?colour:warning_colour ~tag:"[Warning] " ?p ~nl:true ~formatter:!std_err f
 
 let std_dbg = ref Format.err_formatter
 
@@ -93,5 +113,5 @@ let debug = ref false
 
 let dprintf ?p f =
   if !debug
-  then fprintf ~tag:"[DEBUG] " ?p ~nl:true ~formatter:!std_dbg f
+  then fprintf ?colour:debug_colour ~tag:"[Debug] " ?p ~nl:true ~formatter:!std_dbg f
   else Format.ifprintf !std_dbg f

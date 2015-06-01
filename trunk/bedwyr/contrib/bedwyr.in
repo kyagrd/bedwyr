@@ -26,10 +26,11 @@ else
   WRAPPER=""
 fi
 
-if [ -n "${TERM}" ] && command -v tput >/dev/null 2>&1 ; then
-  COLUMNS=`tput cols`
-else
-  COLUMNS=""
+if command -v tput >/dev/null 2>&1 ; then
+  if [ -n "${TERM}" ] ; then
+    COLUMNS=`tput cols`
+    COLORS=`tput colors`
+  fi
 fi
 
-exec -a @PACKAGE_TARNAME@ $WRAPPER env COLUMNS="${COLUMNS}" $PROGRAM "$@"
+exec -a @PACKAGE_TARNAME@ $WRAPPER env COLUMNS="${COLUMNS}" COLORS="${COLORS}" $PROGRAM "$@"
