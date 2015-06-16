@@ -3,9 +3,12 @@ function inc($file, $hidden=true){
 ?>
     <figure>
       <figcaption>
-      <?=$file?>
-      [<a class="view"><span style="display:<?=($hidden?'default':'none;')?>;">show</span><span style="display:<?=($hidden?'none':'default;')?>;">hide</span></a>,
-      <a class="view" href="<?=$file?>">get</a>]
+      <a>
+        <span class="caret down" style="display:<?=($hidden?'default':'none;')?>;"></span>
+        <span class="caret up" style="display:<?=($hidden?'none':'default;')?>;"></span>
+        <?=htmlspecialchars($file)?>
+      </a>
+      [<a href="<?=$file?>">thm</a>]
       </figcaption>
       <pre style="display: <?=($hidden?'none':'default;')?>;" class='vimCodeElement'>
 <?php include($file.'.html')?>
@@ -23,9 +26,28 @@ function inc($file, $hidden=true){
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
     <style>
 td>figure { margin: 1em; font-size: small; }
-a.view { color: grey; text-decoration: none }
 tr>th {text-align: left; }
 tr>td>figure>figcaption {text-align: right; }
+
+.caret {
+  position: relative;
+  cursor: pointer;
+  padding-right: 1em;
+}
+.caret:before {
+  content: '';
+  position: absolute;
+  top: 0.4em;
+  border: 0.4em solid transparent;
+}
+.caret.down:before {
+  border-top-color: grey;
+  border-bottom-width: 0em;
+}
+.caret.up:before {
+  border-bottom-color: grey;
+  border-top-width: 0em;
+}
 
 .vimCodeElement { overflow-x: auto; white-space: pre; font-family: monospace; color: #ffffff; background-color: #000000; padding: 1em; }
 .vimCodeElement * { font-size: 1em; }
@@ -41,7 +63,7 @@ tr>td>figure>figcaption {text-align: right; }
     <script>
 $(function(){
   $('.vimCodeElement').parent().find('figcaption>a:first-child').click(function(){
-    $(this).children().toggle();
+    $(this).children('.caret').toggle();
     $(this).parent().parent().children('pre.vimCodeElement').toggle(500);
   });
   $('th>h3>a.view:first-child').click(function(){
@@ -73,47 +95,55 @@ $(function(){
     <p>The definition files (usually <code>*.def</code> or
     <code>*.thm</code>) can be run with the
     <a href="../#download">Bedwyr system</a>, for example with the
-    command <code>bedwyr -t -I &lt;NAME&gt;-harness.thm</code>.
+    command <code>bedwyr -t -I &lt;NAME&gt;/harness.thm</code>.
 
     <p>The files presented on this page are available as an archive
-    (<a href="pcpm-examples.tbz">tbz</a>, <a href="pcpm-examples.zip">zip</a>).</p>
+    (<a href="pcmc-examples.tbz">tbz</a>, <a href="pcmc-examples.zip">zip</a>).</p>
 
     <h2>Harness</h2>
 
-    A harness loads
+    A testing harness is modelled after
+    <code>generic/harness.thm</code>.  It loads
     <ul>
       <li>the core of the framework (<code>logic.thm</code>,
         <code>cert-sig.thm</code> and, especially,
         <code>kernel.thm</code>)</li>
-      <li>the modular part of the framework (<code>*-fpc.thm</code>)</li>
+      <li>the modular part of the framework (<code>*/fpc.thm</code>)</li>
       <li>definitions to be used in test assertions
-        (<code>*-examples.thm</code>)</li>
+        (<code>*/examples.thm</code>)</li>
     </ul>
     As there are no separate signature files, the order is important:
-    the FPC must be loaded between the logic and the kernel.
-<?php inc('generic-harness.thm')?>
+    the FPC must be loaded before the kernel, but after the logic and
+    the certificates.
+<?php inc('generic/harness.thm')?>
 
-    For simplicity reasons, the logic only uses abstraction on one type,
-    <code>i</code>, and Bedwyr's polymorphism is unused; these details
-    may change in future versions of the framework.
+    For simplicity reasons, the logic defined in <code>logic.thm</code>
+    only uses abstraction on one type, <code>i</code>, and Bedwyr's
+    polymorphism is unused; these details may change in future versions
+    of the framework.
+    <code>cert-sig.thm</code> defines common certificate constructors
+    may be used by any FPC.
 <?php inc('logic.thm')?>
 <?php inc('cert-sig.thm')?>
 
-    The file <code>generic-fpc.thm</code> contains the signature of
-    FPCs: it contains constants instead of (defined) predicates for
-    clerks and experts.  It is only a starting point for writting new
-    FPCs.
-<?php inc('generic-fpc.thm')?>
+    The file <code>generic/fpc.thm</code> contains a basic example of
+    FPC, i.e. defined predicates for each clerks and experts, which use
+    the common certificates constructors from <code>cert-sig.thm</code>.
+    It is only a starting point for writing new FPCs.
+    The FPCs from the provided examples are mostly identical to this
+    generic FPC; the differences are marked by <code>% XXX</code>
+    comments in the source files.
+<?php inc('generic/fpc.thm')?>
 
     The kernel is a direct implementation of the inference rules.
     Thanks to the simple settings chosen ("switchable formulas"), the
     treatment of object-level implication can be done without Bedwyr's
-    own implication.  The latter is only used in the case of
+    meta-level implication.  The latter is only used in the case of
     unification.
 <?php inc('kernel.thm')?>
 
 
-    <h2>Examples</h2>
+    <h2>Examples from the paper</h2>
 
     <table style="width: 100%; display: block;">
 
@@ -127,14 +157,14 @@ $(function(){
       </tr>
       <tr style="vertical-align: top;">
         <td>
-<?php inc('reachable-fpc.thm')?>
+<?php inc('reachable/fpc.thm')?>
 <?php inc('adj.thm')?>
         </td>
         <td>
-<?php inc('reachable-examples.thm')?>
+<?php inc('reachable/examples.thm')?>
         </td>
         <td>
-<?php inc('reachable-harness.thm')?>
+<?php inc('reachable/harness.thm')?>
         </td>
       </tr>
 
@@ -148,13 +178,13 @@ $(function(){
       </tr>
       <tr style="vertical-align: top;">
         <td>
-<?php inc('unreachable-fpc.thm')?>
+<?php inc('unreachable/fpc.thm')?>
         </td>
         <td>
-<?php inc('unreachable-examples.thm')?>
+<?php inc('unreachable/examples.thm')?>
         </td>
         <td>
-<?php inc('unreachable-harness.thm')?>
+<?php inc('unreachable/harness.thm')?>
         </td>
       </tr>
 
@@ -168,14 +198,14 @@ $(function(){
       </tr>
       <tr style="vertical-align: top;">
         <td>
-<?php inc('sim-fpc.thm')?>
+<?php inc('sim/fpc.thm')?>
 <?php inc('lts.thm')?>
         </td>
         <td>
-<?php inc('sim-examples.thm')?>
+<?php inc('sim/examples.thm')?>
         </td>
         <td>
-<?php inc('sim-harness.thm')?>
+<?php inc('sim/harness.thm')?>
         </td>
       </tr>
 
@@ -189,18 +219,18 @@ $(function(){
       </tr>
       <tr style="vertical-align: top;">
         <td>
-<?php inc('nonsim-fpc.thm')?>
+<?php inc('nonsim/fpc.thm')?>
         </td>
         <td>
-<?php inc('nonsim-examples.thm')?>
+<?php inc('nonsim/examples.thm')?>
         </td>
         <td>
-<?php inc('nonsim-harness.thm')?>
+<?php inc('nonsim/harness.thm')?>
         </td>
       </tr>
 
     </table>
 
-    <p>Last modifed: October 2014.</p>
+    <p>Last modifed: June 2015.</p>
   </body>
 </html>

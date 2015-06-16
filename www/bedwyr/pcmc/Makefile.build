@@ -1,0 +1,35 @@
+TARGETS=index.html pcmc-examples.tbz pcmc-examples.zip
+EXAMPLES=logic.thm cert-sig.thm kernel.thm \
+	 generic/fpc.thm generic/harness.thm \
+	 adj.thm reachable/fpc.thm reachable/examples.thm reachable/harness.thm \
+	 unreachable/fpc.thm unreachable/examples.thm unreachable/harness.thm \
+	 lts.thm sim/fpc.thm sim/examples.thm sim/harness.thm \
+	 nonsim/fpc.thm nonsim/examples.thm nonsim/harness.thm
+ARCH_FILES=Makefile $(EXAMPLES)
+
+all: $(TARGETS)
+
+%.html: %.html.php $(EXAMPLES:=.html)
+	@php $< > $@
+
+pcmc-examples.tbz: $(ARCH_FILES)
+	@tar -czhf $@ $^
+
+pcmc-examples.zip: $(ARCH_FILES)
+	@zip -q $@ $^
+
+clean:
+	@rm -vf $(TARGETS) $(EXAMPLES:=.html)
+
+%.thm.html: %.thm
+	@vim -n \
+	  +'set nonumber' \
+	  +'let html_use_css=1' \
+	  +'TOhtml' \
+	  +'/<pre\>/,/<\/pre>/d a' \
+	  +'%d' \
+	  +'1pu a' \
+	  +'1,2d' \
+	  +'$$d' \
+	  +"wq! $@" \
+	  +'q!' $<
