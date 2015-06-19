@@ -27,7 +27,7 @@ build: [
     "man/bedwyr.native.1"
     "man/bedwyr.1"
     "slimmer_lib_opam"
-    "contrib/rlwrap/bedwyr_words"
+    "contrib/rlwrap/completions"
   ]
 ]
 install: [

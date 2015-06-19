@@ -13,9 +13,9 @@ else
   fi
 fi
 
-WORDS="+pkgdatadir+/contrib/rlwrap/@PACKAGE_TARNAME@_words"
+WORDS="+pkgdatadir+/contrib/rlwrap/completions"
 if [ -f "$WORDS" ] ; then
-  AUTOCOMPLETION="-b(){}[],%\"; -f$WORDS"
+  AUTOCOMPLETION="-b(){}[],%\";. -f$WORDS"
 else
   AUTOCOMPLETION="-b(){}[],%\";"
 fi
