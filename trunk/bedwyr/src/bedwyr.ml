@@ -147,7 +147,9 @@ let _ =
          "--version", Arg.Unit print_version,
            " Display version info and exit" ;
          "-D", Arg.Set Output.debug,
-           " Print debugging information"
+           " Print debugging information" ;
+         "--colours", Arg.Int (fun n -> Output.set_colours n),
+          " Number of supported colours (256 or 8; 0 do disable)" ;
        ])
     (fun f -> session := f::!session)
     usage_msg ;

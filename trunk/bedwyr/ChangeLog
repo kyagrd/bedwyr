@@ -31,6 +31,7 @@ New:
     - #show_def to peek in a predicate at run-time
     - proof skeleton XML export
     - "singleton variable" warning
+    - shiny coloured messages
   - better input
     - definitions on the command-line
     - assertions checked in all files

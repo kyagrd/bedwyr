@@ -17,22 +17,36 @@
 (* 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.              *)
 (****************************************************************************)
 
-let error_colour,warning_colour,debug_colour =
-  match
-    try int_of_string (Sys.getenv "COLORS")
-    with Failure ("int_of_string") | Not_found -> 0
-  with
+(* General purpose output facilities *)
+
+let get_colours =
+  let rgb_to_256 r g b =
+    "38;5;"^(string_of_int (16 + 6 * (6 * r + g) + b))
+  in
+  function
     | 256 ->
-        Some "38;5;210",
-        Some "38;5;228",
-        Some "38;5;213"
+        Some (rgb_to_256 5 1 1),
+        Some (rgb_to_256 4 3 0),
+        Some (rgb_to_256 4 1 5)
     | 8 ->
         Some "31",
         Some "33",
         Some "35"
-    | x -> None,None,None
+    | _ -> None,None,None
 
-(* General purpose output facilities *)
+let error_colour,warning_colour,debug_colour =
+  let nb_colours =
+    try int_of_string (Sys.getenv "COLORS")
+    with Failure ("int_of_string") | Not_found -> 0
+  in
+  let e,w,d = get_colours nb_colours in
+  ref e,ref w,ref d
+
+let set_colours nb_colours =
+  let e,w,d = get_colours nb_colours in
+  error_colour := e ;
+  warning_colour := w ;
+  debug_colour := d
 
 let set_width formatter term_width =
   Format.pp_set_margin formatter term_width ;
@@ -45,7 +59,7 @@ let kfprintf ~k ~prefix ~formatter f =
       ("@[" ^^ f ^^ "@]")
   else
     Format.kfprintf k formatter
-      ("@[<hov>%s@;<0 1>@[" ^^ f ^^ "@]@]")
+      ("@[<hov 2>%s@," ^^ f ^^ "@]")
       prefix
 
 let prefix ?colour ~tag ?p () = match colour,p with
@@ -98,14 +112,14 @@ let eprintf ?p f =
     | Some pos -> err_poss := (Preterm.Pos.to_pair pos) :: !err_poss
     | None -> ()
   end ;
-  fprintf ?colour:error_colour ~tag:"[Error] " ?p ~nl:true ~formatter:!std_err f
+  fprintf ?colour:!error_colour ~tag:"[Error] " ?p ~nl:true ~formatter:!std_err f
 
 let wprintf ?p f =
   begin match p with
     | Some pos -> war_poss := (Preterm.Pos.to_pair pos) :: !war_poss
     | None -> ()
   end ;
-  fprintf ?colour:warning_colour ~tag:"[Warning] " ?p ~nl:true ~formatter:!std_err f
+  fprintf ?colour:!warning_colour ~tag:"[Warning] " ?p ~nl:true ~formatter:!std_err f
 
 let std_dbg = ref Format.err_formatter
 
@@ -113,5 +127,5 @@ let debug = ref false
 
 let dprintf ?p f =
   if !debug
-  then fprintf ?colour:debug_colour ~tag:"[Debug] " ?p ~nl:true ~formatter:!std_dbg f
+  then fprintf ?colour:!debug_colour ~tag:"[Debug] " ?p ~nl:true ~formatter:!std_dbg f
   else Format.ifprintf !std_dbg f

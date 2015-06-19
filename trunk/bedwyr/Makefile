@@ -81,7 +81,14 @@ OPAM_FILES	= opam descr findlib url files/bedwyr.install
 
 NSIS_RC_FILES	= $(addprefix nsis-files/,$(filter %.rc,$(NSIS_FILES)))
 COFF_FILES	= $(NSIS_RC_FILES:.rc=.o)
-OPAM_URL	= http://slimmer.gforge.inria.fr/releases/debian/pool/main/b/bedwyr/$(DEB_NAME).orig.tar.gz
+ifeq (,)
+  OPAM_URL_SCHEME	= http
+  OPAM_URL_FULL_PATH	= slimmer.gforge.inria.fr/releases/debian/pool/main/b/bedwyr/$(DEB_NAME).orig.tar.gz
+else
+  OPAM_URL_SCHEME	= file
+  OPAM_URL_FULL_PATH	= $(HOME)/$(DEBIAN_VERSION)/$(DEB_NAME).orig.tar.gz
+endif
+OPAM_URL	= $(OPAM_URL_SCHEME)://$(OPAM_URL_FULL_PATH)
 
 #
 # BUILDING
@@ -433,8 +440,15 @@ opam-files/files/bedwyr.install:
 	  done >> $@
 	@echo "]" >> $@
 
-opam_publish: $(DEB_NAME).orig.tar.gz
-	@mv -vf $< ~/$(DEBIAN_VERSION)
+ifeq ($(OPAM_URL_SCHEME),file)
+opam_publish: $(OPAM_URL_FULL_PATH)
+
+$(OPAM_URL_FULL_PATH): $(notdir $(OPAM_URL_FULL_PATH))
+	@mkdir -pv $(@D)
+	@mv -vf $< $(@D)
+endif
+
+opam_publish:
 	@make opam
 	@opam upgrade bedwyr
 
