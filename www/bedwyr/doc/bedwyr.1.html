@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.22.2 -->
-<!-- CreationDate: Wed Mar 11 12:02:15 2015 -->
+<!-- CreationDate: Fri Jun 19 15:12:54 2015 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -31,13 +31,14 @@ not-so-sound logician</p>
 <p style="margin-top: 1em"><b>SYNOPSIS</b></p>
 
 <p style="margin-left:6%;"><b>bedwyr</b> [<b>&minus;I</b>]
-[<b>&minus;t</b>] [<b>&minus;&minus;strict</b>]
+[<b>&minus;t</b>] [<b>&minus;T</b>]
 [<b>&minus;&minus;filter</b>]
 [<b>&minus;d&nbsp;</b><i>command</i>]
 [<b>&minus;e&nbsp;</b><i>query</i>]
 [<b>&minus;&minus;freezing&nbsp;</b><i>fp</i>]
 [<b>&minus;&minus;saturation&nbsp;</b><i>sp</i>]
 [<b>&minus;&minus;version</b>] [<b>&minus;D</b>]
+[<b>&minus;&minus;colour&nbsp;</b><i>n</i>]
 [<b>&minus;help</b>|<b>&minus;&minus;help</b>]
 [<i>file&nbsp;...</i>]</p>
 
@@ -74,21 +75,19 @@ interactive mode.</p>
 
 <p style="margin-top: 1em"><b>&minus;t</b></p>
 
+<p style="margin-left:22%; margin-top: 1em">Run tests
+(given by <b>#assert</b> <i>query</i><b>.</b>, see
+<i>META-COMMANDS</i>) from the definition files given on the
+command-line. Use <i>n+1</i> times to test also files that
+occured under up to <i>n</i> levels of <b>#include</b>
+&quot;</p>
+
+<p><i>file.def</i> &quot;<b>.</b>.</p>
+
+<p style="margin-top: 1em"><b>&minus;T</b></p>
+
 <p style="margin-left:22%; margin-top: 1em">Run tests in
-definition files. Those are the queries given by
-<b>#assert</b> <i>form</i><b>.</b> (see
-<i>META-COMMANDS</i>). Use once for top-level definition
-files only, twice for included definition files too.</p>
-
-<p style="margin-top: 1em"><b>&minus;&minus;strict</b></p>
-
-<p style="margin-left:22%; margin-top: 1em">Quit at the
-first non-interactive error. If not set, <b>bedwyr</b>
-won&rsquo;t exit on non-interactive errors (except for
-critical errors of status <i>5</i>, see <i>EXIT STATUS</i>)
-but will exit at the end of the non-interactive stage with
-the exit status of the first non-interactive error (this is
-useful to typecheck a whole file at once).</p>
+all definition files.</p>
 
 <p style="margin-top: 1em"><b>&minus;&minus;filter</b></p>
 
@@ -144,6 +143,14 @@ information and a list of compiled features.</p>
 information on stderr. Can be enabled/disabled at run-time
 with <b>#debug</b>.</p>
 
+<p style="margin-top: 1em"><b>&minus;&minus;colours</b>
+<i>n</i></p>
+
+<p style="margin-left:22%;">Force the number of supported
+colours. <i>256</i> and <i>8</i> assume the corresponding
+number of ANSI colours, anything else disables the coloured
+output.</p>
+
 <p style="margin-top: 1em"><b>&minus;help</b>,
 <b>&minus;&minus;help</b></p>
 
@@ -163,24 +170,23 @@ occurs.</p>
 
 <p style="margin-top: 1em"><i>2</i></p>
 
-<p style="margin-left:22%; margin-top: 1em">Definition
-error (wrong declaration, wrong definition or object
-misuse)</p>
+<p style="margin-left:22%; margin-top: 1em">Command error
+(wrong declaration, wrong definition)</p>
 
 <p style="margin-top: 1em"><i>3</i></p>
 
-<p style="margin-left:22%; margin-top: 1em">Core error
-(LLambda violation)</p>
+<p style="margin-left:22%; margin-top: 1em">Solver error
+(LLambda violation, Level 0/1 violation, object misuse)</p>
 
 <p style="margin-top: 1em"><i>4</i></p>
 
-<p style="margin-left:22%; margin-top: 1em">Solver error
-(failed assertion, Level 0/1 violation)</p>
+<p style="margin-left:22%; margin-top: 1em">Bedwyr error
+(failed assertion, meta-command misuse)</p>
 
 <p style="margin-top: 1em"><i>5</i></p>
 
-<p style="margin-left:22%; margin-top: 1em">Generic error
-(undefined error)</p>
+<p style="margin-left:22%; margin-top: 1em">Undefined
+error</p>
 
 <p style="margin-top: 1em"><b>INPUT FILES</b></p>
 
@@ -195,8 +201,8 @@ declaration</b></p>
 type.</b></p>
 
 <p style="margin-left:22%;"><i>nat</i>, <i>string</i> and
-<i>prop</i> are built in, and <i>list</i> is
-predeclared.</p>
+<i>prop</i> are built in, while <i>list</i> and
+<i>option</i> are predeclared.</p>
 
 <p style="margin-left:6%; margin-top: 1em"><b>Constant
 declaration</b></p>
@@ -211,7 +217,8 @@ A.</b></p>
 are built-ins of type <b>prop</b>, <i>0</i>, <i>1</i>,
 <i>...</i> and any quoted string are runtime-defined
 constants of type <b>nat</b> and <b>string</b>, and
-<i>::</i> and <i>nil</i> are predeclared.</p>
+<i>::</i>, <i>nil</i>, <i>some</i> and <i>none</i> are
+predeclared.</p>
 
 <p style="margin-left:6%; margin-top: 1em"><b>Predicate
 declaration and definition</b></p>
@@ -248,13 +255,16 @@ them one by one).</p>
 <i>query</i><b>.</b></p>
 
 <p style="margin-left:22%; margin-top: 1em">Interactive
-toplevel.</p>
+toplevel. Queries can span on several lines, but all input
+between the <b>.</b> and the end of the line is ignored.</p>
 
 <p style="margin-top: 1em"><b>bedwyr &minus;e</b> &quot;
 <i><br>
 query</i><b>.</b>&quot;</p>
 
-<p style="margin-left:22%;">Non-interactive toplevel.</p>
+<p style="margin-left:22%;">Non-interactive toplevel. The
+string must not be empty, and all input between the <b>.</b>
+and the end of the line is ignored.</p>
 
 <p style="margin-top: 1em"><b>META-COMMANDS</b></p>
 
@@ -294,10 +304,10 @@ command-line option <b>&minus;t</b>.</p>
 
 <p style="margin-top: 1em"><b>SEE ALSO</b></p>
 
-<p style="margin-left:6%;">abella(1), tac(1), teyjus(1)</p>
+<p style="margin-left:6%;">teyjus(1)</p>
 
 <p style="margin-left:6%; margin-top: 1em">Bedwyr
-v1.4-beta1 January&nbsp;23, 2015 Bedwyr v1.4-beta1</p>
+v1.4-beta9 June&nbsp;16, 2015 Bedwyr v1.4-beta9</p>
 <hr>
 </body>
 </html>

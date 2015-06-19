@@ -13,6 +13,12 @@
     </h1>
 
 
+    <p>
+    <span class="new">New</span> June 2015:
+    some <a href="pcmc/">recent work</a> on describing proof
+    certificates for model checking, and a new release to match.
+    </p>
+
     <h2>Overview</h2>
 
     <p>
@@ -51,12 +57,6 @@
     about computer systems than about proof theory foundations.
     </p>
 
-    <p>
-    <span class="new">New</span> December 2014:
-    some <a href="pcmc/">recent work</a> on describing proof
-    certificates for model checking.
-    </p>
-
     <h2 id="developers">Current developers</h2>
 
     <p>
@@ -67,19 +67,19 @@
     </p>
     <ul>
       <li> <a href="http://www.lsv.ens-cachan.fr/~baelde/">David
-        Baelde</a> (LSV, ENS Cachan)
+          Baelde</a> (LSV, ENS Cachan)
       </li>
-      <li> <a href="http://www.cs.umn.edu/~agacek/">Andrew Gacek</a>
-      (Rockwell Collins)
+      <li> <a href="http://loonwerks.com/people/andrew-gacek.html">Andrew
+          Gacek</a> (Rockwell Collins)
       </li>
       <li> <a href="http://www.lix.polytechnique.fr/Labo/Dale.Miller/">Dale
         Miller</a> &amp; <a href="http://www.lix.polytechnique.fr/~heath/">
         Quentin Heath</a> (Parsifal, INRIA &amp; LIX/&Eacute;cole polytechnique)
       </li>
-      <li> <a href="http://www.cs.umn.edu/~gopalan/">Gopalan Nadathur</a>
+      <li> <a href="http://www-users.cs.umn.edu/~gopalan/">Gopalan Nadathur</a>
       (University of Minnesota)
       </li>
-      <li> <a href="http://users.cecs.anu.edu.au/~tiu/">Alwen Tiu</a>
+      <li> <a href="http://www.ntu.edu.sg/home/atiu/">Alwen Tiu</a>
       (Australian National University).
       </li>
     </ul>
@@ -106,16 +106,18 @@
 
     <h2 id="download">Download</h2>
 
-    <p>The latest stablish release is version 1.4-beta1 (January 2015).</p>
+    <p>The latest stablish release is version <a
+        href="https://gforge.inria.fr/frs/?group_id=367&release_id=9256">
+      1.4-beta9</a> (June 2015).</p>
 
     <h3>SCM (open source repository)</h3>
     <p>The <a href="https://gforge.inria.fr/scm/?group_id=367">SVN repository</a>
     hosted on INRIAGforge offers a read-only access to the complete
     development sources.
     You can <a
-      href="https://gforge.inria.fr/scm/viewvc.php/trunk/bedwyr/?root=slimmer">
+      href="https://gforge.inria.fr/scm/viewvc.php/slimmer/trunk/bedwyr/">
       browse the repository</a>, especially the <a
-      href="https://gforge.inria.fr/scm/viewvc.php/trunk/bedwyr/examples/?root=slimmer">
+      href="https://gforge.inria.fr/scm/viewvc.php/slimmer/trunk/bedwyr/examples/">
       example files</a>.</p>
     <p>The sources are currently known to not work on OSX or BSD.</p>
 
@@ -129,20 +131,20 @@
     <h3>Packages</h3>
     <p>Some packages, containing both versions of the program (native and
     bytecode), the complete documentation, all examples and some language files
-    for Emacs and Vim, are available for GNU/Linux (Debian testing and Gentoo)
+    for Emacs and Vim, are available for GNU/Linux (Debian testing<!-- and Gentoo-->)
     and Windows 8. The Linux packages also include the standalone core library
     <em>ndcore</em> for development purposes.</p>
     <ul>
       <li>The <a
-        href="http://slimmer.gforge.inria.fr/releases/debian/pool/main/b/bedwyr/">Debian
+        href="http://slimmer.gforge.inria.fr/releases/debian/pool/main/">Debian
         packages</a> exist for i386 and amd64 and are designed for
-      the current testing (<em>Jessie</em>), but might just work for other
+      the current testing (<em>Stretch</em>), but might just work for other
       versions or even derivatives such as Ubuntu:
       <ul>
         <li>create the file
           <code>/etc/apt/sources.list.d/slimmer.list</code>
           containing the line
-          <code>deb http://slimmer.gforge.inria.fr/releases/debian/ jessie main</code>
+          <code>deb http://slimmer.gforge.inria.fr/releases/debian/ stretch main</code>
         </li>
         <li>download this public <a href="/heath.asc">PGP key</a>
           and add it to your APT keyring by running
@@ -151,14 +153,14 @@
           <code>apt-get install bedwyr bedwyr-doc</code></li>
         <li>find files in <code>/usr/share/bedwyr/examples</code> to run <code>bedwyr</code> on</li>
       </ul></li>
-      <li>The Gentoo package, for ~x86 and ~amd64, is in the overlay
+      <!--li>The Gentoo package, for ~x86 and ~amd64, is in the overlay
       <em>dawan</em>:
       <ul>
         <li>emerge <em>layman</em> and run <code>layman -a dawan</code></li>
         <li>make sure that <code>/var/lib/layman/make.conf</code> is
           sourced by <code>/etc/portage/make.conf</code></li>
         <li>emerge <em>sci-mathematics/bedwyr</em></li>
-      </ul></li>
+      </ul></li-->
       <li>The <a
         href="https://gforge.inria.fr/frs/download.php/file/34079/bedwyr-1.4-alpha17-installer.exe">Windows
         package</a> is a full-featured (although simple) installer
@@ -255,7 +257,7 @@
 
     <hr/>
 
-    <p>Last modifed: October 2014.</p>
+    <p>Last modifed: June 2015.</p>
 
     <script src="http://www.google-analytics.com/urchin.js"
       type="text/javascript">

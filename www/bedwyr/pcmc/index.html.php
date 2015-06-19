@@ -83,10 +83,10 @@ $(function(){
     </h1>
 
     <p>This page provides examples illustrating the framework presented
-    in the paper
-    <a href="http://www.lix.polytechnique.fr/~dale/papers/pcmc-draft.pdf">A
-      framework for proof certificates in model checking</a> by
-    <a href="http://www.lix.polytechnique.fr/Labo/Dale.Miller/">Dale
+    in the paper <em>A framework for proof certificates in model
+      checking</em> [<a
+      href="http://www.lix.polytechnique.fr/~dale/papers/pcmc-draft.pdf">pdf</a>]
+    by <a href="http://www.lix.polytechnique.fr/Labo/Dale.Miller/">Dale
       Miller</a> and
     <a href="http://www.lix.polytechnique.fr/~heath/">Quentin Heath</a>.
     Each example demonstrates the use of one FPC
