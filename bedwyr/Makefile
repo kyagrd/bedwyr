@@ -132,6 +132,10 @@ $(SLIMMER_META): $(SLIMMER_META).part $(BEDWYR_LIBS:%=src/%/META.part)
 	  echo ')' ; \
 	  done >> $@
 
+contrib/rlwrap/$(RLWRAP_CONTRIB:.in=): $(BUILD)/src/interface/rlwrap.$(BEST_SUFFIX) contrib/rlwrap/$(RLWRAP_CONTRIB)
+	@cat $@.in > $@
+	@$< >> $@
+
 %:: config.status %.in Makefile
 	@./$< $@
 	@sed -i.bkp \
@@ -421,8 +425,11 @@ opam-files/files/bedwyr.install:
 	  done >> $@
 	@echo "]" >> $@
 	@echo "share: [" >> $@
-	@for i in $(RLWRAP_CONTRIB) ; do \
+	@for i in $(RLWRAP_CONTRIB:.in=) ; do \
 	  echo "  \"contrib/rlwrap/$$i\" {\"contrib/rlwrap/$$i\"}" ; \
+	  done >> $@
+	@for i in $(EXAMPLES_FILES) ; do \
+	  echo "  \"$$i\" {\"$$i\"}" ; \
 	  done >> $@
 	@echo "]" >> $@
 
