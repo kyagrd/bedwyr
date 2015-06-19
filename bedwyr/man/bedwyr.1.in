@@ -44,6 +44,7 @@
 .Op Fl \-saturation Ar sp
 .Op Fl \-version
 .Op Fl D
+.Op Fl \-colour Ar n
 .Op Fl help Ns | Ns Fl \-help
 .Op Ar
 .\"
@@ -130,6 +131,13 @@ Display version information and a list of compiled features.
 Print debugging information on stderr.  Can be enabled/disabled at
 run-time with
 .Ic #debug .
+.It Fl \-colours Ar n
+Force the number of supported colours.
+.Ar 256
+and
+.Ar 8
+assume the corresponding number of ANSI colours,
+anything else disables the coloured output.
 .It Fl help , \-help
 Display the list of command-line options.
 .El

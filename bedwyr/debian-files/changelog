@@ -1,3 +1,12 @@
+bedwyr (1.4~beta4-1) unstable; urgency=medium
+
+  * new upstream release
+  * no more PS version of the doc
+  * debhelper version 8
+  * debian/rules homogenized
+
+ -- Quentin Heath <quentin.heath@inria.fr>  Tue, 21 Apr 2015 04:24:56 +0200
+
 bedwyr (1.4~alpha17-1) unstable; urgency=medium
 
   * new upstream release

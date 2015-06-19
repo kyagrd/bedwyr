@@ -15,7 +15,7 @@ Vcs-Browser: https://gforge.inria.fr/scm/viewvc.php/?root=slimmer
 Package: @PACKAGE_TARNAME@
 Architecture: any
 Depends: ${misc:Depends}, ${shlibs:Depends}
-Recommends: rlwrap
+Recommends: rlwrap | readline-editor
 Suggests: @PACKAGE_TARNAME@-doc
 Description: @PACKAGE_TAGLINE@
  Bedwyr is a generalization of logic programming
