@@ -1,164 +1,226 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN"
-            "http://www.w3.org/TR/REC-html40/loose.dtd">
-<HTML>
-<HEAD>
-<TITLE>A Quick-Start Guide to Bedwyr v1.4
-</TITLE>
-
-<META http-equiv="Content-Type" content="text/html; charset=UTF-8">
-<META name="GENERATOR" content="hevea 1.10">
-<STYLE type="text/css">
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta name="generator" content="hevea 2.18">
+<style type="text/css">
+.c000{color:#4C1919}
+.c001{color:#4C4C00}
+.c002{color:black}
+.c003{font-family:monospace}
+.c004{font-family:monospace;background-color:#FFE5CC}
+.c005{font-family:sans-serif}
+.c006{font-family:sans-serif;font-weight:bold}
+.c007{font-size:small}
+.c008{font-style:italic}
+.c009{font-weight:bold}
+.c010{font-weight:bold;color:#19194C}
+.c011{padding:1ex;border-style:solid none;}
+.c012{text-align:center;border:solid 1px;white-space:nowrap}
+.c013{text-align:left;border:solid 1px;white-space:nowrap}
+.c014{width:80%;height:2}
 .li-itemize{margin:1ex 0ex;}
+.dd-description{margin:0ex 0ex 1ex 4ex;}
+.dt-description{margin:0ex;}
+div.footnotetext P{margin:0px; text-indent:1em;}
 .title{margin:2ex auto;text-align:center}
+.titlemain{margin:1ex 2ex 2ex 1ex;}
+.titlerest{margin:0ex 2ex;}
 .center{text-align:center;margin-left:auto;margin-right:auto;}
-DIV TABLE{margin-left:inherit;margin-right:inherit;}
-PRE{text-align:left;margin-left:0ex;margin-right:auto;}
-BLOCKQUOTE{margin-left:4ex;margin-right:4ex;text-align:left;}
-TD P{margin:0px;}
+div table{margin-left:inherit;margin-right:inherit;margin-bottom:2px;margin-top:2px}
+td table{margin:auto;}
+table{border-collapse:collapse;}
+td{padding:0;}
+.cellpadding1 tr td{padding:1px;}
+pre{text-align:left;margin-left:0ex;margin-right:auto;}
+blockquote{margin-left:4ex;margin-right:4ex;text-align:left;}
+td p{margin:0px;}
 .lstlisting{font-family:monospace;white-space:pre;margin-right:auto;margin-left:0pt;text-align:left}
-</STYLE>
-<LINK REL=STYLESHEET type="text/css" HREF="http://slimmer.gforge.inria.fr/bedwyr/bd.css">
-</HEAD>
-<BODY >
+</style>
+<link rel="stylesheet" type="text/css" href="http://slimmer.gforge.inria.fr/bedwyr/bd.css">
+<title>A Quick-Start Guide to 
+Bedwyr v1.4
+</title>
+</head>
+<body>
 <!--HEVEA command line is: /usr/bin/hevea -O png.hva -fix quickstart -->
-<!--CUT DEF section 1 --><TABLE CLASS="title"><TR><TD><H1 CLASS="titlemain"><FONT SIZE=7>A Quick-Start Guide to Bedwyr v1.4</FONT></H1><H3 CLASS="titlerest">Quentin Heath<BR>
- INRIA Saclay and LIX/École polytechnique</H3></TD></TR>
-</TABLE><!--TOC section Overview-->
-<H2 CLASS="section"><!--SEC ANCHOR --><A NAME="htoc1">1</A>  Overview</H2><!--SEC END --><P>Bedwyr is a generalization of logic programming that allows model checking
-directly on syntactic expression possibly containing bindings. It identifies
-finite successes and finite failures under the closed world assumption. The
-logic manipulated, a subset of LINC (for <EM>lambda, induction, nabla,
-co-induction</EM>), contains object-level λ-abstractions, three quantifiers
-(including the ∇ quantifier), and inductive and co-inductive
-definitions. While LINC is a extension of higher-order intuitionistic logic,
-formulae are restricted to a fragment where connectives on the left of an
-implication must have invertible rules (i.e. no universal quantifier nor
-implication – this enables the closed-world assumption), while equalities are
-restricted to the <I>L</I><SUB>λ</SUB> fragment (allowing for the use of higher-order pattern
-unification).</P><P>The system, written in OCaml, is part of an open source project.
-The <A HREF="http://slimmer.gforge.inria.fr/bedwyr/#download">web page</A>
+<!--CUT STYLE article--><!--CUT DEF section 1 --><table class="title"><tr><td style="padding:1ex"><h1 class="titlemain"><span style="font-size:xx-large"><span style="font-size:150%">A Quick-Start Guide to<br>
+Bedwyr v1.4</span></span></h1><h3 class="titlerest">Quentin Heath<br>
+ Inria Saclay–Île-de-France &amp; LIX, École polytechnique</h3></td></tr>
+</table>
+<!--TOC section id="sec1" Overview-->
+<h2 class="section" id="sec1">1  Overview</h2><!--SEC END --><p>Bedwyr is a generalization of logic programming that allows model
+checking directly on syntactic expression.</p><p>The logic manipulated, a subset of LINC (for <em>lambda, induction,
+nabla, co-induction</em>), contains object-level λ-abstractions,
+∇ (nominal) quantification, and (co-)inductive definitions.
+While LINC is a extension of higher-order intuitionistic logic, Bedwyr
+formulae are restricted to a fragment where connectives on the left of
+an implication must have invertible rules (i.e. no universal
+quantifier nor implication – this enables the closed-world assumption
+when identifying finite success and finite failure), while equalities
+are restricted to the <span class="c008">L</span><sub>λ</sub> fragment (allowing for the use of
+higher-order pattern unification).</p><p>The OCaml implementation is part of an open source project. The
+<a href="http://slimmer.gforge.inria.fr/bedwyr/#download">web page</a>
 offers multiple ways to get it:
-</P><UL CLASS="itemize"><LI CLASS="li-itemize">
-read-only SVN repository
-</LI><LI CLASS="li-itemize">sources tarball
-</LI><LI CLASS="li-itemize">precompiled binaries (win32, GNU/Linux, OCaml bytecode)
-</LI><LI CLASS="li-itemize">GNU/Linux (Gentoo and Debian) unofficial packages
-</LI><LI CLASS="li-itemize">Windows installer
-</LI></UL><P>The <A HREF="http://slimmer.gforge.inria.fr/bedwyr/#documentation">documentation</A>
-includes this quick-start guide, a reference manual and the source-code
-documentation.</P><!--TOC section Input format-->
-<H2 CLASS="section"><!--SEC ANCHOR --><A NAME="htoc2">2</A>  Input format</H2><!--SEC END --><P>Bedwyr accepts three kinds of input: commands, queries and meta-commands.</P><P>Commands are grouped in definition files (plain text files,
-usually named <SPAN STYLE="background-color:#FFE5CC"><TT>*.def</TT></SPAN>). They declare new types and constants,
-declare and define new predicates, and define theorems
-(note that theorems are not proved, but are used as lemmas).</P><P>Queries are entered at the toplevel (either in batch-mode or interactively).
-They are plain formulae that Bedwyr attempts to solve.
-If it succeeds in its search, it either displays the list of solutions
-(substitutions of the free variables) or a negative answer; otherwise,
-if the formula is not handled by the prover (non-invertible connective on the
-left) or by the unifier (not <I>L</I><SUB>λ</SUB>), it aborts with an appropriate error
-message.</P><P>Meta-commands can be entered either in files or at the toplevel.
-Most of them aim at improving the user experience by executing strictly
-non-logical tasks, mainly input (
-<CODE><FONT COLOR="#4C1919">#include </FONT><FONT COLOR="#9300D1">"inc.def"</FONT>.</CODE>), output
+</p><ul class="itemize"><li class="li-itemize">SVN repository
+</li><li class="li-itemize">tarballs
+</li><li class="li-itemize">precompiled binaries
+</li><li class="li-itemize">GNU/Linux packages
+</li><li class="li-itemize">Windows installer
+</li></ul><p>The
+<a href="http://slimmer.gforge.inria.fr/bedwyr/#documentation">documentation</a>
+includes this quick-start guide, a reference manual and the
+source-code documentation.</p>
+<!--TOC section id="sec2" Input-->
+<h2 class="section" id="sec2">2  Input</h2><!--SEC END --><p>Input sources can be plain text definition files (<span class="c004">*.def</span>), the
+REPL (read-eval-print loop), the 
+<code><span class="c002">read</span></code> predicate, and
+arguments to the <span class="c003">-d</span>, <span class="c003">-e</span> and <span class="c003">-c</span> CLI
+(command-line interface) options. Three modes are available:
+</p><dl class="description"><dt class="dt-description"><span class="c009">definition mode</span></dt><dd class="dd-description"> is used in <span class="c004">*.def</span> files and with
+<span class="c003">-d</span>
+</dd><dt class="dt-description"><span class="c009">toplevel mode</span></dt><dd class="dd-description"> is used in the REPL and with <span class="c003">-e</span>
+</dd><dt class="dt-description"><span class="c009">term mode</span></dt><dd class="dd-description"> is used at run-time via 
+<code><span class="c002">read</span></code> and with
+<span class="c003">-c</span>
+</dd></dl><blockquote class="figure"><div class="center"><div class="center"><hr class="c014"></div>
+<table class="cellpadding1" border=1 style="border-spacing:0;"><tr><td class="c013">&nbsp;</td><td class="c012">*.def</td><td class="c012">REPL</td><td class="c012">
+<code><span class="c002">read</span></code></td><td class="c012">CLI </td></tr>
+<tr><td class="c013"> <a href="#sec%3Acommands">2.1</a> 
+<code><span class="c000"><U>Define</U></span> <span class="c002">p</span> <span class="c001">:</span> <span class="c010">prop</span>.</code></td><td class="c012">✓</td><td class="c012">&nbsp;</td><td class="c012">&nbsp;</td><td class="c012"><span class="c003">-d</span> </td></tr>
+<tr><td class="c013"> <a href="#sec%3Aqueries">2.2</a> 
+<code><span class="c002">X</span> <span class="c010">=</span> 42.</code></td><td class="c012">&nbsp;</td><td class="c012">✓</td><td class="c012">&nbsp;</td><td class="c012"><span class="c003">-e</span> </td></tr>
+<tr><td class="c013"> <a href="#sec%3Ameta-commands">2.3</a> 
+<span class="c000"><code>#env.</code></span></td><td class="c012">✓</td><td class="c012">✓</td><td class="c012">&nbsp;</td><td class="c012"><span class="c003">-d/-e</span> </td></tr>
+<tr><td class="c013"> <a href="#sec%3Aterms">2.4</a> 
+<code>1 <span class="c001">::</span> 2 <span class="c001">::</span> <span class="c010">nil</span>.</code></td><td class="c012">&nbsp;</td><td class="c012">&nbsp;</td><td class="c012">✓</td><td class="c012"><span class="c003">-c</span>
+</td></tr>
+</table>
+<div class="center"><hr class="c014"></div></div></blockquote>
+<!--TOC subsection id="sec3" Commands-->
+<h3 class="subsection" id="sec3">2.1  Commands</h3><!--SEC END --><p>
+<a id="sec:commands"></a></p><p>Commands are used in definition mode to declare new types and
+constants, declare and define predicates, and define theorems (which
+are not proved, but are used as lemmas).</p>
+<!--TOC subsection id="sec4" Queries-->
+<h3 class="subsection" id="sec4">2.2  Queries</h3><!--SEC END --><p>
+<a id="sec:queries"></a></p><p>Queries are plain formulae (terms of type 
+<span class="c010"><code>prop</code></span>), entered
+at the toplevel, that Bedwyr attempts to solve. If possible, it
+outputs the list of solutions (substitutions of the free variables).
+Otherwise, if the formula is not handled by the prover (non-invertible
+connective on the left) or by the unifier (not <span class="c008">L</span><sub>λ</sub>), resolution
+aborts.</p>
+<!--TOC subsection id="sec5" Meta-commands-->
+<h3 class="subsection" id="sec5">2.3  Meta-commands</h3><!--SEC END --><p>
+<a id="sec:meta-commands"></a></p><p>Meta-commands are used both in definition mode and at the toplevel,
+mostly to improve the user experience by executing strictly
+non-logical tasks, such as input (
+<code><span class="c000">#include </span><span style="color:#9300D1">"inc.def"</span>.</code>),
+output (
+<code><span class="c000">#typeof </span><span class="c002">X</span> <span class="c002">Y</span> <span class="c001">::</span> <span class="c010">nil</span>.</code>) or testing
 (
-<CODE><FONT COLOR="#4C1919">#debug </FONT><FONT COLOR="black">on</FONT>.</CODE>, 
-<CODE><FONT COLOR="#4C1919">#typeof </FONT><FONT COLOR="black">X</FONT> <FONT COLOR="black">Y</FONT> <FONT COLOR="#4C4C00">::</FONT> <FONT COLOR="#19194C"><B>nil</B></FONT>.</CODE>) and testing
-(
-<CODE><FONT COLOR="#4C1919">#assert </FONT><FONT COLOR="#19194C"><B>true</B></FONT>.</CODE>, 
-<CODE><FONT COLOR="#4C1919">#assert_not </FONT><FONT COLOR="#19194C"><B>false</B></FONT>.</CODE>).
-A few of them change the order of computations, and thus performances, but not
-provability (
-<CODE><FONT COLOR="#4C1919">#freezing </FONT>4.</CODE>, 
-<CODE><FONT COLOR="#4C1919">#saturation </FONT>2.</CODE>).</P><!--TOC section Sample files-->
-<H2 CLASS="section"><!--SEC ANCHOR --><A NAME="htoc3">3</A>  Sample files</H2><!--SEC END --><P>Listing <A HREF="#def:maxa">1</A> shows a complete sample definition file,
-with the declarations for a type and two constants, along with a few predicates.</P><BLOCKQUOTE CLASS="figure"><DIV CLASS="center"><HR WIDTH="80%" SIZE=2></DIV>
+<code><span class="c000">#assert </span><span class="c010">true</span>.</code>). A few of them change proof structure,
+but not provability (
+<code><span class="c000">#freezing </span>4.</code>, 
+<code><span class="c000">#saturation </span>2.</code>).</p>
+<!--TOC subsection id="sec6" Terms-->
+<h3 class="subsection" id="sec6">2.4  Terms</h3><!--SEC END --><p>
+<a id="sec:terms"></a></p><p>Term-mode is a way to improve interactivity.</p>
+<!--TOC section id="sec7" Sample definition file-->
+<h2 class="section" id="sec7">3  Sample definition file</h2><!--SEC END --><p><a href="#def%3Amaxa"> 1</a> shows a complete sample definition file,
+with the declarations for a type and two constants, along with a few predicates.</p><blockquote class="figure"><div class="center"><hr class="c014"></div>
 
-<DIV CLASS="center">Listing 1: <A NAME="def:maxa"></A><SPAN STYLE="background-color:#FFE5CC">maxa.def</SPAN></DIV><BR>
-<TABLE CLASS="lstframe" STYLE="padding:1ex;border-style:solid none;"><TR><TD CLASS="lstlisting"><FONT COLOR="#4C1919"><U>Kind</U></FONT> <FONT COLOR="black">ch <FONT COLOR="#19194C"><B>type</B></FONT>.
+<div class="center">Listing 1: <a id="def:maxa"></a><span style="background-color:#FFE5CC">maxa.def</span></div><br>
+<table class="lstframe c011"><tr><td class="lstlisting"><span class="c007"><span class="c000"><U>Kind</U></span> <span class="c002">ch <span class="c010">type</span>.
 
-<FONT COLOR="#4C1919"><U>Type</U></FONT> z  ch.
-<FONT COLOR="#4C1919"><U>Type</U></FONT> s  ch <FONT COLOR="#4C4C00">-&gt;</FONT> ch.
+<span class="c000"><U>Type</U></span> z  ch.
+<span class="c000"><U>Type</U></span> s  ch <span class="c001">-&gt;</span> ch.
 
 % The predicate a holds for 3, 5, and 2.
-<FONT COLOR="#4C1919"><U>Define</U></FONT> a <FONT COLOR="#4C4C00">:</FONT> ch <FONT COLOR="#4C4C00">-&gt;</FONT> <FONT COLOR="#19194C"><B>prop</B></FONT> <FONT COLOR="#4C1919"><U>by</U></FONT>
+<span class="c000"><U>Define</U></span> a <span class="c001">:</span> ch <span class="c001">-&gt;</span> <span class="c010">prop</span> <span class="c000"><U>by</U></span>
   a (s (s (s z))) ;
   a (s (s (s (s (s z))))) ;
   a (s (s z)).
 
 % The less-than-or-equal relation
-<FONT COLOR="#4C1919"><U>Define</U> <U>inductive</U></FONT> leq <FONT COLOR="#4C4C00">:</FONT> ch <FONT COLOR="#4C4C00">-&gt;</FONT> ch <FONT COLOR="#4C4C00">-&gt;</FONT> <FONT COLOR="#19194C"><B>prop</B></FONT> <FONT COLOR="#4C1919"><U>by</U></FONT>
-  leq z N ;
-  leq (s N) (s M) <FONT COLOR="#4C4C00">:=</FONT> leq N M.
+<span class="c000"><U>Define</U> <U>inductive</U></span> leq <span class="c001">:</span> ch <span class="c001">-&gt;</span> ch <span class="c001">-&gt;</span> <span class="c010">prop</span>
+<span class="c000"><U>by</U></span> leq z _
+;  leq (s N) (s M) <span class="c001">:=</span> leq N M.
 
 % Compute the maximum of a
-<FONT COLOR="#4C1919"><U>Define</U></FONT> maxa <FONT COLOR="#4C4C00">:</FONT> ch <FONT COLOR="#4C4C00">-&gt;</FONT> <FONT COLOR="#19194C"><B>prop</B></FONT> <FONT COLOR="#4C1919"><U>by</U></FONT>
-  maxa N <FONT COLOR="#4C4C00">:=</FONT> a N /\ <FONT COLOR="#19194C"><B>forall</B></FONT> x, a x <FONT COLOR="#4C4C00">-&gt;</FONT> leq x N.</FONT></TD></TR>
-</TABLE>
-<DIV CLASS="center"><HR WIDTH="80%" SIZE=2></DIV></BLOCKQUOTE><P>The predicate 
-<FONT COLOR="black"><CODE>a</CODE></FONT> is a typical example of what must be done to build
+<span class="c000"><U>Define</U></span> maxa <span class="c001">:</span> ch <span class="c001">-&gt;</span> <span class="c010">prop</span>
+<span class="c000"><U>by</U></span> maxa N <span class="c001">:=</span>
+     a N /\ <span class="c010">forall</span> x, a x <span class="c001">-&gt;</span> leq x N.</span></span></td></tr>
+</table>
+<div class="center"><hr class="c014"></div></blockquote><p>The predicate 
+<code><span class="c002">a</span></code> is a typical example of what must be done to build
 a Bedwyr example: even with a theoretically infinite search space
 (here, Church numerals), Bedwyr only does finite reasoning, and hence must be
-given an explicit description of its finite actual search space.</P><P>The use of the 
-<FONT COLOR="#4C1919"><U><CODE>inductive</CODE></U></FONT> keyword has two consequences.
+given an explicit description of its finite actual search space.</p><p>The use of the 
+<code><span class="c000"><U>inductive</U></span></code> keyword has two consequences.
 Firstly, memoization is used on the corresponding predicate;
 secondly, it has an impact on the way loops in computation are handled.
 Since the 
-<FONT COLOR="black"><CODE>leq</CODE></FONT> predicate obviously cannot loop,
+<code><span class="c002">leq</span></code> predicate obviously cannot loop,
 only the first aspect is used here (meaning we might as well have used the
 
-<FONT COLOR="#4C1919"><U><CODE>coinductive</CODE></U></FONT> keyword instead).</P><!--TOC section REPL demo-->
-<H2 CLASS="section"><!--SEC ANCHOR --><A NAME="htoc4">4</A>  REPL demo</H2><!--SEC END --><P>Listing <A HREF="#repl:maxa">2</A> shows an example of use of the interactive toplevel
-following the invocation of <CODE>bedwyr maxa.def</CODE>.</P><BLOCKQUOTE CLASS="figure"><DIV CLASS="center"><HR WIDTH="80%" SIZE=2></DIV>
-
-<DIV CLASS="center">Listing 2: <A NAME="repl:maxa"></A>Interactive session</DIV><BR>
-<TABLE CLASS="lstframe" STYLE="padding:1ex;border-style:solid none;"><TR><TD CLASS="lstlisting"><FONT COLOR="black"><B>?=</B> #env.
+<code><span class="c000"><U>coinductive</U></span></code> keyword instead).</p>
+<!--TOC section id="sec8" REPL demo-->
+<h2 class="section" id="sec8">4  REPL demo</h2><!--SEC END --><p><a href="#repl%3Amaxa"> 2</a> shows an example of use of the interactive toplevel
+following the invocation of <code>bedwyr maxa.def</code>.</p><blockquote class="figure"><div class="center"><hr class="c014"></div>
+<div class="center">Listing 2: <a id="repl:maxa"></a>Interactive session</div><br>
+<table class="lstframe c011"><tr><td class="lstlisting"><span style="font-size:small;color:black"><span class="c006">?=</span> #env.
 *** Types ***
-   <FONT COLOR="#19194C"><B>list</B></FONT> <FONT COLOR="#4C4C00">:</FONT> * <FONT COLOR="#4C4C00">-&gt;</FONT> *
-   ch <FONT COLOR="#4C4C00">:</FONT> *
+   option <span class="c001">:</span> * <span class="c001">-&gt;</span> *
+   <span class="c010">list</span> <span class="c001">:</span> * <span class="c001">-&gt;</span> *
+   ch <span class="c001">:</span> *
 *** Constants ***
-   (<FONT COLOR="#4C4C00">::</FONT>) <FONT COLOR="#4C4C00">:</FONT> A <FONT COLOR="#4C4C00">-&gt;</FONT> (<FONT COLOR="#19194C"><B>list</B></FONT> A) <FONT COLOR="#4C4C00">-&gt;</FONT> <FONT COLOR="#19194C"><B>list</B></FONT> A
-   <FONT COLOR="#19194C"><B>nil</B> <FONT COLOR="#4C4C00">:</FONT> <B>list</B></FONT> A
-   s <FONT COLOR="#4C4C00">:</FONT> ch <FONT COLOR="#4C4C00">-&gt;</FONT> ch
-   z <FONT COLOR="#4C4C00">:</FONT> ch
+   (<span class="c001">::</span>) <span class="c001">:</span> A <span class="c001">-&gt;</span> <span class="c010">list</span> A <span class="c001">-&gt;</span> <span class="c010">list</span> A
+   <span style="color:#19194C"><span class="c009">nil</span> <span class="c001">:</span> <span class="c009">list</span></span> A
+   opnone <span class="c001">:</span> option A
+   opsome <span class="c001">:</span> A <span class="c001">-&gt;</span> option A
+   s <span class="c001">:</span> ch <span class="c001">-&gt;</span> ch
+   z <span class="c001">:</span> ch
 *** Predicates ***
-   a <FONT COLOR="#4C4C00">:</FONT> ch <FONT COLOR="#4C4C00">-&gt;</FONT> <FONT COLOR="#19194C"><B>prop</B></FONT>
- I leq <FONT COLOR="#4C4C00">:</FONT> ch <FONT COLOR="#4C4C00">-&gt;</FONT> ch <FONT COLOR="#4C4C00">-&gt;</FONT> <FONT COLOR="#19194C"><B>prop</B></FONT>
-   maxa <FONT COLOR="#4C4C00">:</FONT> ch <FONT COLOR="#4C4C00">-&gt;</FONT> <FONT COLOR="#19194C"><B>prop</B></FONT>
-   member <FONT COLOR="#4C4C00">:</FONT> A <FONT COLOR="#4C4C00">-&gt;</FONT> (<FONT COLOR="#19194C"><B>list</B></FONT> A) <FONT COLOR="#4C4C00">-&gt;</FONT> <B><FONT COLOR="#19194C">prop</FONT>
-?=</B> leq X (s (s z)).
-<B>Solution found:</B>
- X <FONT COLOR="#19194C"><B>=</B></FONT> z
-<B>More</B> [y] ? y
-<B>Solution found:</B>
- X <FONT COLOR="#19194C"><B>=</B></FONT> s z
-<B>More</B> [y] ? y
-<B>Solution found:</B>
- X <FONT COLOR="#19194C"><B>=</B></FONT> s (s z)
-<B>More</B> [y] ? y
-<B>No more solutions</B>.
-<B>?=</B> maxa X.
-<B>Solution found:</B>
- X <FONT COLOR="#19194C"><B>=</B></FONT> s (s (s (s (s z))))
-<B>More</B> [y] ? y
-<B>No more solutions</B>.
-<B>?=</B> #exit.</FONT></TD></TR>
-</TABLE><DIV CLASS="center"><HR WIDTH="80%" SIZE=2></DIV></BLOCKQUOTE><P>The 
-<FONT COLOR="#4C1919"><CODE>#env.</CODE></FONT> meta-command shows all declared objects
-(including the standard pre-declared list-related objects),
-and displays 
-<FONT COLOR="black"><CODE>leq</CODE></FONT> as inductive.
-The call to the query 
-<CODE><FONT COLOR="black">leq</FONT> <FONT COLOR="black">X</FONT> (<FONT COLOR="black">s</FONT> (<FONT COLOR="black">s</FONT> <FONT COLOR="black">z</FONT>)).</CODE> offers to display all
+   a <span class="c001">:</span> ch <span class="c001">-&gt;</span> <span class="c010">prop</span>
+ I leq <span class="c001">:</span> ch <span class="c001">-&gt;</span> ch <span class="c001">-&gt;</span> <span class="c010">prop</span>
+   maxa <span class="c001">:</span> ch <span class="c001">-&gt;</span> <span class="c010">prop</span>
+   member <span class="c001">:</span> A <span class="c001">-&gt;</span> <span class="c010">list</span> A <span class="c001">-&gt;</span> <span class="c009"><span style="color:#19194C">prop</span>
+<span class="c005">?=</span></span> read Y /\ leq X Y.
+ ?&gt; s z.
+<span class="c009"><span class="c005">Solution</span> <span class="c005">found:</span></span>
+ X <span class="c010">=</span> z
+ Y <span class="c010">=</span> s z
+<span class="c006">More</span> [y] ? y
+<span class="c009"><span class="c005">Solution</span> <span class="c005">found:</span></span>
+ X <span class="c010">=</span> s z
+ Y <span class="c010">=</span> s z
+<span class="c006">More</span> [y] ? y
+<span class="c009"><span class="c005">No</span> <span class="c005">more</span> <span class="c005">solutions</span></span>.
+<span class="c006">?=</span> maxa X.
+<span class="c009"><span class="c005">Solution</span> <span class="c005">found:</span></span>
+ X <span class="c010">=</span> s (s (s (s (s z))))
+<span class="c006">More</span> [y] ? y
+<span class="c009"><span class="c005">No</span> <span class="c005">more</span> <span class="c005">solutions</span></span>.
+<span class="c006">?=</span> #exit.</span></td></tr>
+</table><div class="center"><hr class="c014"></div></blockquote><p>The 
+<span class="c000"><code>#env.</code></span> meta-command shows all declared objects
+(including the standard pre-declared list-related objects), and
+informs 
+<code><span class="c002">leq</span></code> is inductive. The call to the queries
+
+<code><span class="c002">leq</span> <span class="c002">X</span> (<span class="c002">s</span> <span class="c002">z</span>).</code> and 
+<code><span class="c002">maxa</span> <span class="c002">X</span>.</code> offer to display all
 solutions, one by one.
-The call to the query 
-<CODE><FONT COLOR="black">maxa</FONT> <FONT COLOR="black">X</FONT>.</CODE> does the same,
-but a subsequent call to 
-<CODE><FONT COLOR="#4C1919">#show_table </FONT><FONT COLOR="black">leq</FONT>.</CODE> would then show the table
-filled with 
-<FONT COLOR="black"><CODE>leq</CODE></FONT>-headed atoms, either marked as proved or disproved.</P><!--CUT END -->
+A subsequent call to 
+<code><span class="c000">#show_table </span><span class="c002">leq</span>.</code> would show the table
+filled by the second query with 
+<code><span class="c002">leq</span></code>-headed atoms, either
+marked as proved or disproved.</p><!--CUT END -->
 <!--HTMLFOOT-->
 <!--ENDHTML-->
 <!--FOOTER-->
-<HR SIZE=2><BLOCKQUOTE CLASS="quote"><EM>This document was translated from L<sup>A</sup>T<sub>E</sub>X by
-<A HREF="http://hevea.inria.fr/index.html">H<FONT SIZE=2><sup>E</sup></FONT>V<FONT SIZE=2><sup>E</sup></FONT>A</A>.</EM></BLOCKQUOTE></BODY>
-</HTML>
+<hr style="height:2"><blockquote class="quote"><em>This document was translated from L<sup>A</sup>T<sub>E</sub>X by
+</em><a href="http://hevea.inria.fr/index.html"><em>H<span class="c007"><sup>E</sup></span>V<span class="c007"><sup>E</sup></span>A</em></a><em>.</em></blockquote></body>
+</html>
