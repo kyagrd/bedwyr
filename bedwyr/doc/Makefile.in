@@ -158,7 +158,7 @@ all: $(TARGETS)
 	@echo -e "$(SET_MAG)===== HTML -> HTMLs Pass ==== $* =====$(RESET_COLOR)"
 	@mkdir -p $*
 	@$(HACHA) -o $@ $<
-	@for i in $**.png ; do [ -f $$i ] && cp -pvf $$i $*/ ; done
+	@for i in $(wildcard $**.png) ; do cp -pvf $$i $*/ ; done
 
 #
 # INSTALL
