@@ -32,7 +32,10 @@ higher-order pattern unification).
 The OCaml implementation is part of an open source project.  The
 \href{http://slimmer.gforge.inria.fr/bedwyr/#download}{web page}
 offers multiple ways to get it:
-\begin{itemize}[nolistsep]
+\begin{itemize}%
+%BEGIN LATEX
+[nolistsep]
+%END LATEX
   \item SVN repository
   \item tarballs
   \item precompiled binaries
@@ -52,7 +55,10 @@ Input sources can be plain text definition files (\path{*.def}), the
 REPL (read-eval-print loop), the \lstinline+read+ predicate, and
 arguments to the \texttt{-d}, \texttt{-e} and \texttt{-c} CLI
 (command-line interface) options.  Three modes are available:
-\begin{description}[nolistsep]
+\begin{description}%
+%BEGIN LATEX
+[nolistsep]
+%END LATEX
   \item[definition mode] is used in \path{*.def} files and with
     \texttt{-d}
   \item[toplevel mode] is used in the REPL and with \texttt{-e}
@@ -139,27 +145,30 @@ following the invocation of \verb+bedwyr maxa.def+.
   style=bedwyr-repl,caption={Interactive session},label=repl:maxa]
 ?= #env.
 *** Types ***
+   option : * -> *
    list : * -> *
    ch : *
 *** Constants ***
-   (::) : A -> (list A) -> list A
+   (::) : A -> list A -> list A
    nil : list A
+   opnone : option A
+   opsome : A -> option A
    s : ch -> ch
    z : ch
 *** Predicates ***
    a : ch -> prop
  I leq : ch -> ch -> prop
    maxa : ch -> prop
-   member : A -> (list A) -> prop
+   member : A -> list A -> prop
 ?= read Y /\ leq X Y.
-Input term: (s z).
+ ?> s z.
 Solution found:
- Y = s z
  X = z
+ Y = s z
 More [y] ? y
 Solution found:
- Y = s z
  X = s z
+ Y = s z
 More [y] ? y
 No more solutions.
 ?= maxa X.
