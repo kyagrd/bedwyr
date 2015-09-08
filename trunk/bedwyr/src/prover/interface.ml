@@ -40,6 +40,22 @@ let help_msg =
   For more information (including commands relevant in definition mode),\n\
   see the user guide.\n\n"
 
+let session     = ref []
+let definitions = ref []
+let queries     = ref []
+let test_limit  = ref (Some 0)
+
+let incr_test_limit () =
+  test_limit := match !test_limit with
+    | Some n -> Some (n+1)
+    | None -> None
+let remove_test_limit () =
+  test_limit := None
+let decr_test_limit = function
+  | Some n when n > 0 -> Some (n-1)
+  | Some _ -> Some 0
+  | None -> None
+
 module Status = struct
   let value = ref None
 
@@ -62,18 +78,15 @@ module Status = struct
   let bedwyr () = set 5
 end
 
-let reload = ref (fun ?session () -> ())
-let include_file = ref (fun ~test_limit:_ _ -> ())
-
 let bool_of_flag = function
   | None | Some "on" | Some "true" -> true
   | Some "off" | Some "false" -> false
   | _ -> raise Invalid_command
 
 module Catch : sig
-  val solve : p:Preterm.Pos.t -> exn -> unit option
-  val meta_command : p:Preterm.Pos.t -> exn -> unit option
-  val io : ?p:Preterm.Pos.t -> exn -> unit option
+  val solve : p:Preterm.Pos.t -> exn -> 'a option
+  val meta_command : p:Preterm.Pos.t -> exn -> 'a option
+  val io : ?p:Preterm.Pos.t -> exn -> 'a option
   val all : p:Preterm.Pos.t -> exn -> 'a option
 end = struct
   let solve ~p e =
@@ -166,10 +179,16 @@ end
 
 
 module Eval : sig
-  val definition : test_limit:(int option) ->
+  val definition :
+    include_file:(?test_limit:(int option) -> string -> unit option) ->
+    reload:(?session:(string list) -> unit -> unit) ->
+    test_limit:(int option) ->
     print:('a -> unit) -> Preterm.definition_mode -> p:Preterm.Pos.t ->
     unit option
-  val toplevel : concise:bool -> test_limit:(int option) ->
+  val toplevel : concise:bool ->
+    include_file:(?test_limit:(int option) -> string -> unit option) ->
+    reload:(?session:(string list) -> unit -> unit) ->
+    test_limit:(int option) ->
     print:('a -> unit) -> Preterm.toplevel -> p:Preterm.Pos.t ->
     unit option
   val term :
@@ -286,7 +305,7 @@ end = struct
     Status.def () ;
     None
 
-  let query ~p ~print ?(all=false) pre_query =
+  let query ~p ~print ~concise pre_query =
     let k _ =
       Status.input () ;
       None
@@ -317,7 +336,7 @@ end = struct
               if vars = [] then Output.printf ~nl:true "Found a solution."
               else Output.printf ~nl:true "@[<v 1>Found a solution:%a@]"
                      Pprint.pp_env vars ;
-              if all || begin
+              if concise || begin
                 Output.printf "More [y] ? " ;
                 try
                   let l = input_line stdin in
@@ -354,7 +373,7 @@ end = struct
    * "", "true", "on", "false" or "off")
    * @raise Assertion_failed if [#assert formula.], [#assert_not formula.]
    * or [#assert_raise formula.] fails *)
-  let meta_command ~test_limit mc ~p =
+  let meta_command ~(include_file:(?test_limit:(int option) -> string -> unit option)) ~(reload:(?session:(string list) -> unit -> unit)) ~test_limit mc ~p =
     let k _ =
       Status.input () ;
       None
@@ -368,21 +387,26 @@ end = struct
       let result = match mc with
         | Preterm.MetaCommand.Exit ->
             IO.close_io_files () ;
-            Status.exit_with ()
+            exit 0
         | Preterm.MetaCommand.Help ->
             Format.printf "%s" help_msg ;
             Some ()
 
         (* Session management *)
-        | Preterm.MetaCommand.Include l ->
-            List.iter (!include_file ~test_limit) l ;
-            Some ()
+        | Preterm.MetaCommand.Include files ->
+            let f =
+              include_file ~test_limit:(decr_test_limit test_limit)
+            in
+            List.fold_left
+              (fun accum file -> match accum,f file with
+                 | Some (),Some () -> Some ()
+                 | _ -> None)
+              (Some ())
+              files
         | Preterm.MetaCommand.Reload ->
-            !reload () ;
-            Some ()
-        | Preterm.MetaCommand.Session l ->
-            !reload ~session:l () ;
-            Some ()
+            Some (reload ())
+        | Preterm.MetaCommand.Session session ->
+            Some (reload ~session ())
 
         (* Turn debugging on/off. *)
         | Preterm.MetaCommand.Debug value ->
@@ -501,18 +525,17 @@ end = struct
     with e -> raise e
 
 
-  let definition ~test_limit ~print input ~p = match input with
+  let definition ~include_file ~reload ~test_limit ~print input ~p = match input with
     | `Command c ->
         command c
     | `MetaCommand mc ->
-        meta_command ~test_limit mc ~p
+        meta_command ~include_file ~reload ~test_limit mc ~p
 
-  let toplevel ~concise ~test_limit ~print input ~p = match input with
+  let toplevel ~concise ~include_file ~reload ~test_limit ~print input ~p = match input with
     | `Term (p,pre_query) ->
-        query ~p ~print ~all:concise pre_query
+        query ~p ~print ~concise pre_query
     | `MetaCommand mc ->
-        if concise then Some ()
-        else meta_command ~test_limit mc ~p
+        meta_command ~include_file ~reload ~test_limit mc ~p
 
   let term ~print input ~p = match input with
     | `Term (p,pre_term) ->
@@ -520,9 +543,15 @@ end = struct
 end
 
 module Mode : sig
-  val definition : test_limit:(int option) ->
+  val definition :
+    include_file:(?test_limit:(int option) -> string -> unit option) ->
+    reload:(?session:(string list) -> unit -> unit) ->
+    test_limit:(int option) ->
     Lexing.lexbuf -> unit option option
-  val toplevel : concise:bool -> test_limit:(int option) ->
+  val toplevel : concise:bool ->
+    include_file:(?test_limit:(int option) -> string -> unit option) ->
+    reload:(?session:(string list) -> unit -> unit) ->
+    test_limit:(int option) ->
     Lexing.lexbuf -> unit option option
   val term :
     Lexing.lexbuf -> Term.term option option
@@ -535,21 +564,21 @@ end = struct
           Some (eval ~print input ~p:(Preterm.Pos.of_lexbuf lexbuf ()))
     with e -> Some (Catch.all ~p:(Preterm.Pos.of_lexbuf lexbuf ()) e)
 
-  let definition ~test_limit lexbuf =
+  let definition ~include_file ~reload ~test_limit lexbuf =
     let k _ =
       Status.input () ;
       None
     in
-    step ~read:(Read.definition_mode ~k)
-      ~eval:(Eval.definition ~test_limit) ~print:ignore lexbuf
+    let eval = Eval.definition ~include_file ~reload ~test_limit in
+    step ~read:(Read.definition_mode ~k) ~eval ~print:ignore lexbuf
 
-  let toplevel ~concise ~test_limit lexbuf =
+  let toplevel ~concise ~include_file ~reload ~test_limit lexbuf =
     let k _ =
       Status.input () ;
       None
     in
-    step ~read:(Read.toplevel ~k)
-      ~eval:(Eval.toplevel ~concise ~test_limit) ~print:ignore lexbuf
+    let eval = Eval.toplevel ~concise ~include_file ~reload ~test_limit in
+    step ~read:(Read.toplevel ~k) ~eval ~print:ignore lexbuf
 
   let term lexbuf =
     let k _ =
@@ -580,40 +609,32 @@ let () =
         | Some (Some term) -> Some term
   end
 
+
+(* 4 basic input styles *)
+
 (* definition-mode step *)
-let defs ?(incremental=false) ~test_limit lexbuf =
-  let reset = Environment.get_reset () in
-  match Mode.definition ~test_limit lexbuf with
+let defs ?(test_limit=(!test_limit)) ~include_file ~reload lexbuf =
+  match Mode.definition ~include_file ~reload ~test_limit lexbuf with
     | None ->
-        if incremental then reset () ;
         Output.eprintf ~p:(Preterm.Pos.of_lexbuf lexbuf ()) "Empty command." ;
         Status.input () ;
         None
-    | Some None ->
-        if incremental then reset () ;
-        Some None
+    | Some None -> Some None
     | Some (Some ()) -> Some (Some ())
 
-
 (* definition-mode loop *)
-let defl ?(incremental=false) ~test_limit lexbuf =
-  let reset = Environment.get_reset () in
+let defl ?(test_limit=(!test_limit)) ~include_file ~reload lexbuf =
   let rec aux error_less =
-    match Mode.definition ~test_limit lexbuf with
-      | None ->
-          if error_less then Some () else begin
-            if incremental then reset () ;
-            None
-          end
+    match Mode.definition ~include_file ~reload ~test_limit lexbuf with
+      | None -> if error_less then Some () else None
       | Some None -> aux false
       | Some (Some ()) -> aux error_less
   in
   aux true
-  (* TODO no meta-commands in defs? *)
 
 (* read-eval-print step *)
-let reps ?(concise=true) ~test_limit lexbuf =
-  match Mode.toplevel ~concise ~test_limit lexbuf with
+let reps ?(concise=true) ?(test_limit=(!test_limit)) ~include_file ~reload lexbuf =
+  match Mode.toplevel ~concise ~include_file ~reload ~test_limit lexbuf with
     | None ->
         Output.eprintf ~p:(Preterm.Pos.of_lexbuf lexbuf ()) "Empty query." ;
         Status.input () ;
@@ -622,13 +643,50 @@ let reps ?(concise=true) ~test_limit lexbuf =
     | Some (Some ()) -> Some ()
 
 (* read-eval-print loop *)
-let repl ?(concise=false) ~test_limit lexbuf =
+let repl ?(concise=false) ?(test_limit=(!test_limit)) ~include_file ~reload lexbuf =
   let rec aux () =
     Format.printf "?= %!" ;
     Lexer.flush_input lexbuf ;
-    match Mode.toplevel ~concise ~test_limit lexbuf with
+    match Mode.toplevel ~concise ~include_file ~reload ~test_limit lexbuf with
       | None -> Format.printf "@."
       | Some None -> aux ()
       | Some (Some ()) -> aux ()
   in
   aux ()
+
+
+(* convenience wrappers *)
+
+let run_file f path =
+  try Some (Environment.IncludedFiles.apply_on_file f path)
+  with e -> Catch.io e
+
+let run_string f ?fname str =
+  Read.apply_on_string f ?fname str
+
+let run_channel f ?fname chan =
+  Read.apply_on_channel f ?fname chan
+
+(* public wrappers *)
+
+let rec include_file ?test_limit name =
+  match run_file (defl ?test_limit ~include_file ~reload) name with
+    | None (* I/O error *)
+    | Some (Some None) (* corrupted file *) -> None
+    | Some None (* file already included *)
+    | Some (Some (Some ())) (* include success *) -> Some ()
+
+and reload ?(session=(!session)) () =
+  System.reset () ;
+  ignore (run_definitions_string ~fname:"Bedwyr::stdlib" Environment.stdlib) ;
+  List.iter (function name -> ignore (include_file name)) session ;
+  List.iter (function query -> ignore (run_query_string query)) !definitions
+
+and run_query_string str =
+  run_string (reps ~include_file ~reload) str
+
+and run_definitions_string ?fname str =
+  run_string (defl ~include_file ~reload) ?fname str
+
+let run_queries_channel chan =
+  run_channel (repl ~include_file ~reload) chan

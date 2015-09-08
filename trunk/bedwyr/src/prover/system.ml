@@ -1,6 +1,9 @@
 (****************************************************************************)
 (* Bedwyr -- base functions                                                 *)
-(* Copyright (C) 2005-2015 Baelde, Tiu, Ziegler, Heath                      *)
+(* Copyright (C) 2006 Alwen Tiu, Axelle Ziegler, Andrew Gacek               *)
+(* Copyright (C) 2006-2009 David Baelde                                     *)
+(* Copyright (C) 2011 Alwen Tiu                                             *)
+(* Copyright (C) 2011-2015 Quentin Heath                                    *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -421,9 +424,20 @@ exception Interrupt
 exception Abort_search
 
 
-let reset_decls () =
+let get_reset () =
+  let types_state = Environment.Types.save_state ()
+  and objects_state = Environment.Objects.save_state ()
+  and includedfiles_state = Environment.IncludedFiles.save_state () in
+  fun () ->
+    Environment.Types.restore_state types_state ;
+    Environment.Objects.restore_state objects_state ;
+    Environment.IncludedFiles.restore_state includedfiles_state
+
+let reset () =
   Environment.Types.clear () ;
-  Environment.Objects.clear ()
+  Environment.Objects.clear () ;
+  Environment.IncludedFiles.clear () ;
+  Preterm.Typing.clear ()
 
 (* Handle user interruptions *)
 let interrupt = ref false

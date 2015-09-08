@@ -23,11 +23,26 @@
 exception File_error of string * string * string
 
 
-(** List of open files used for user I/O. *)
+(** {6 Sanity wrappers} *)
 
-(** Close all open files.
-  * Raises no exception on system errors. *)
-val close_io_files : unit -> unit
+(** Bedwyr working directory. *)
+val bwd : string ref
+
+(** Wether file access is allowed outside of {!!bwd} or not. *)
+val chrooted : bool ref
+
+val run_in :
+  wrap:((basename:string -> nice_path:string -> full_path:string -> 'a) ->
+        (basename:string -> nice_path:string -> full_path:string -> 'b)) ->
+  (?fname:string -> in_channel -> 'a) -> string ->
+  'b
+
+val get_in : string -> string
+
+val run_out : (out_channel -> 'a) -> string -> 'a
+
+
+(** {6 List of open files used for user predicate I/O} *)
 
 (** Deactivates I/O predicates.
   * They always return "true" (or "None" for {!read} and {!fread}),
@@ -37,14 +52,10 @@ val deactivate_io : unit -> unit
 (** Reactivates I/O predicates. *)
 val reactivate_io : unit -> unit
 
+(** Close all open files.
+  * Raises no exception on system errors. *)
+val close_io_files : unit -> unit
 
-(** {6 Sanity wrappers} *)
-
-val run_in : (in_channel -> 'a) -> string -> 'a
-
-val run_out : (out_channel -> 'a) -> string -> 'a
-
-val chdir : string -> unit
 
 (** {6 Term input (stdin and file)} *)
 

@@ -331,8 +331,12 @@ exception Interrupt
 (** Raised when aborting search. *)
 exception Abort_search
 
-(** Remove all definitions. *)
-val reset_decls : unit -> unit
+(** Remember the current included files, declared and defined objects,
+  * so as to get back to this point with the second invocation. *)
+val get_reset : unit -> unit -> unit
+
+(** Forget all included files, declared and defined objects. *)
+val reset : unit -> unit
 
 (** @return [true] if a user interruption was detected since the last call to
   * {!check_interrupt}, [false] otherwise. *)

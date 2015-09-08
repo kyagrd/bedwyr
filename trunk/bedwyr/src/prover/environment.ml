@@ -117,9 +117,41 @@ module Logic = struct
     with Not_found -> None
 end
 
+let stdlib = "\
+Kind    list    type -> type.
+
+Type    nil     list _.
+Type    ::      A -> list A -> list A.
+
+Define member : A -> list A -> prop by
+  member X (X :: _) ;
+  member X (_ :: L) := member X L.
+
+%Define remove : A -> list A -> list A -> prop by
+%  remove X (X :: L) L ;
+%  remove X (Y :: L1) (Y :: L2) := remove X L1 L2.
+%
+%Define append : list A -> list A -> list A -> prop by
+%  append nil L L ;
+%  append (X :: L1) L2 (X :: L3) := append L1 L2 L3.
+%
+%Define least : (A -> A -> prop) -> list A -> A -> prop by
+%  least _ (X :: nil) X ;
+%  least Smaller (X :: Y :: L) Z :=
+%    least Smaller (Y :: L) W /\\
+%    ((Smaller X W /\\ Z = X) \\/ (Smaller W X /\\ Z = W)).
+%
+%Define sort : (A -> A -> prop) -> list A -> list A -> prop by
+%  sort _ nil nil ;
+%  sort Smaller L1 (X :: L2) := least Smaller L1 X /\\ remove X L1 L2.
+
+Kind    option  type -> type.
+Type    opnone  option A.
+Type    opsome  A -> option A.
+"
+
 
 (** {6 Type declarations} *)
-(* Types declarations *)
 
 exception Invalid_type_declaration of string * Preterm.Pos.t * Preterm.Typing.ki * string
 exception Missing_type of string * Preterm.Pos.t
@@ -164,10 +196,12 @@ module Types = struct
     Hashtbl.clear env
 end
 
-(** {6 ??} *)
+
+(** {6 Error handling} *)
 
 exception Missing_declaration of string * Preterm.Pos.t
 exception Stratification_error of string * Preterm.Pos.t
+
 
 let catch ~k e =
   begin match e with
@@ -210,8 +244,8 @@ let catch ~k e =
   end ;
   k ()
 
+
 (** {6 Constants and predicates declarations} *)
-(* Constants and predicates declarations *)
 
 exception Invalid_declaration of
   string * string * Preterm.Pos.t * Preterm.Typing.ty * string * Preterm.Typing.ty
@@ -250,7 +284,9 @@ let predicate flavour stratum definition ty =
               definition=definition ;
               ty=ty }
 
+
 (** {6 Constants and predicates declarations} *)
+
 module Objects = struct
   let env : (Term.var,object_declaration) Hashtbl.t =
     Hashtbl.create 100
@@ -351,9 +387,9 @@ module Objects = struct
                 end
           end
 
-(** Declare predicates.
-  * @return the list of variables and types
-  *  corresponding to those predicates *)
+  (** Declare predicates.
+    * @return the list of variables and types
+    *  corresponding to those predicates *)
   let declare_preds =
     let stratum = ref 0 in
     fun decls ~k ->
@@ -391,13 +427,6 @@ module Objects = struct
     let () = Stack.clear keys in
     Hashtbl.clear env
 end
-
-let get_reset () =
-  let types_state = Types.save_state ()
-  and objects_state = Objects.save_state () in
-  fun () ->
-    Types.restore_state types_state ;
-    Objects.restore_state objects_state
 
 let create_free_types : int -> (Term.var,(Preterm.Typing.ty*Preterm.Pos.t option)) Hashtbl.t =
   fun n -> Hashtbl.create n
@@ -486,3 +515,40 @@ let translate_term
               expected_type
               (typed_free_var,typed_declared_obj,typed_intern_pred,Types.kind_check))
   with e -> catch ~k e
+
+
+(** {6 Definitions files} *)
+
+module IncludedFiles : sig
+  type state
+  val save_state : unit -> state
+  val restore_state : state -> unit
+  val apply_on_file : (Lexing.lexbuf -> 'a) -> string -> 'a option
+  val clear : unit -> unit
+end = struct
+  module M = Set.Make (struct type t = string let compare = compare end)
+
+  let files = ref M.empty
+
+  type state = M.t
+
+  let save_state () = !files
+
+  let restore_state f = files := f
+
+  let apply_on_file f name =
+    let wrap add ~basename ~nice_path ~full_path =
+      if M.mem full_path !files then begin
+        Output.wprintf "Skipping already included@ %S." nice_path ;
+        None
+      end else begin
+        Output.wprintf "Now including@ %S." nice_path ;
+        let result = add ~basename ~nice_path ~full_path in
+        files := M.add full_path !files ;
+        Some result
+      end
+    in
+    IO.run_in ~wrap (Read.apply_on_channel f) name
+
+  let clear () = files := M.empty
+end

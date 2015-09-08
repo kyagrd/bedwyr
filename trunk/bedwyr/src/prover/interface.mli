@@ -22,25 +22,16 @@ module Status : sig
   val exit_if : unit -> unit
 end
 
-val reload : (?session:(string list) -> unit -> unit) ref
-val include_file : (test_limit:int option -> string -> unit) ref
 
-module Catch : sig
-  val io : ?p:Preterm.Pos.t -> exn -> unit option
-end
+val incr_test_limit : unit -> unit
+val remove_test_limit : unit -> unit
 
-val defs :
-  ?incremental:bool -> test_limit:int option -> Lexing.lexbuf ->
-  unit option option
+val session     : string list ref
+val definitions : string list ref
+val queries     : string list ref
+val test_limit  : int option ref
 
-val defl :
-  ?incremental:bool -> test_limit:int option -> Lexing.lexbuf ->
-  unit option
-
-val reps :
-  ?concise:bool -> test_limit:int option -> Lexing.lexbuf ->
-  unit option
-
-val repl :
-  ?concise:bool -> test_limit:int option -> Lexing.lexbuf ->
-  unit
+val reload : ?session:(string list) -> unit -> unit
+val run_query_string : string -> unit option
+val run_definitions_string : ?fname:string -> string -> unit option
+val run_queries_channel : in_channel -> unit
