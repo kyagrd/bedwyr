@@ -367,6 +367,11 @@ end = struct
             try Catch.io ~p e
             with e -> Catch.solve ~p e
 
+  let apply_on_predicate ~k f (p,name) =
+    match System.translate_term (Preterm.pre_predconstid p name) ~k with
+      | None -> None
+      | Some pred -> f (p,pred) ; Some None
+
   (* Execute meta-commands.
    * @raise Invalid_command if an argument is unexpected
    * (especially if a boolean flag is given something other than
@@ -437,24 +442,26 @@ end = struct
             ignore (System.print_type_of pre_term ~k) ;
             Some None
         | Preterm.MetaCommand.Show_def (p,name) ->
-            System.show_def (p,Term.atom ~tag:Term.Constant name) ;
-            Some None
+            apply_on_predicate ~k System.show_def (p,name)
         | Preterm.MetaCommand.Show_table (p,name) ->
-            System.show_table (p,Term.atom ~tag:Term.Constant name) ;
-            Some None
+            apply_on_predicate ~k System.show_table (p,name)
         | Preterm.MetaCommand.Clear_tables ->
             System.clean_tables := true ;
             System.clear_tables () ;
             Some None
         | Preterm.MetaCommand.Clear_table (p,name) ->
-            System.clean_tables := false ;
-            System.clear_table (p,Term.atom ~tag:Term.Constant name) ;
-            Some None
+            let f (p,pred) =
+              System.clean_tables := false ;
+              System.clear_table (p,pred)
+            in
+            apply_on_predicate ~k f (p,name)
         (* save the content of a table to a file. An exception is thrown if
          * file already exists. *)
         | Preterm.MetaCommand.Save_table (p,name,file) ->
-            System.save_table (p,Term.atom ~tag:Term.Constant name) name file ;
-            Some None
+            let f (p,pred) =
+              System.save_table (p,pred) name file
+            in
+            apply_on_predicate ~k f (p,name)
         | Preterm.MetaCommand.Export name ->
             begin if !System.clean_tables
             then System.export name
