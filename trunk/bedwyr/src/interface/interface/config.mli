@@ -1,6 +1,6 @@
 (****************************************************************************)
-(* Bedwyr -- prover input                                                   *)
-(* Copyright (C) 2015 Quentin Heath                                         *)
+(* Bedwyr prover                                                            *)
+(* Copyright (C) 2011-2015 Quentin Heath                                    *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -17,20 +17,12 @@
 (* 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.              *)
 (****************************************************************************)
 
-val definition_mode :
-  k:(unit -> Preterm.definition_mode option) -> Lexing.lexbuf ->
-  Preterm.definition_mode option option
-val toplevel :
-  k:(unit -> Preterm.toplevel option) -> Lexing.lexbuf ->
-  Preterm.toplevel option option
-val term_mode :
-  k:(unit -> Preterm.term_mode option) -> Lexing.lexbuf ->
-  Preterm.term_mode option option
+(** Build-time global variables. *)
 
-val apply_on_string :
-  (Lexing.lexbuf -> 'a) -> ?fname:string -> string ->
-  'a
-
-val apply_on_channel :
-  (Lexing.lexbuf -> 'a) -> ?fname:string -> in_channel ->
-  'a
+val project_tarname : string
+val package_name : string
+val package_version : string
+val ocaml_version : string
+val build : string
+val build_date : string
+val features : (string * string) list

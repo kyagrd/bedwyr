@@ -1,6 +1,6 @@
 (****************************************************************************)
-(* Bedwyr prover                                                            *)
-(* Copyright (C) 2011-2015 Quentin Heath                                    *)
+(* Bedwyr -- toplevel eval                                                  *)
+(* Copyright (C) 2015 Quentin Heath                                         *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -17,11 +17,18 @@
 (* 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.              *)
 (****************************************************************************)
 
-(** Build-time global variables. *)
-
-val package_name : string
-val package_version : string
-val ocaml_version : string
-val build : string
-val build_date : string
-val features : (string * string) list
+val definition :
+  include_file:(?test_limit:(int option) -> string -> Ndcore.Term.term list option) ->
+  reload:(?session:(string list) -> unit -> unit) ->
+  test_limit:(int option) ->
+  print:('a -> unit) -> Parsetree.Preterm.definition_mode -> p:IO.Pos.t ->
+  Ndcore.Term.term option option
+val toplevel : concise:bool ->
+  include_file:(?test_limit:(int option) -> string -> Ndcore.Term.term list option) ->
+  reload:(?session:(string list) -> unit -> unit) ->
+  test_limit:(int option) ->
+  print:('a -> unit) -> Parsetree.Preterm.toplevel -> p:IO.Pos.t ->
+  unit option
+val term :
+  print:('a -> unit) -> Parsetree.Preterm.term_mode -> p:IO.Pos.t ->
+  Ndcore.Term.term option
