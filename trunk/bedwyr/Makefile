@@ -99,8 +99,6 @@ OPAM_URL	= $(OPAM_URL_SCHEME)://$(OPAM_URL_FULL_PATH)
 
 build: $(BUILT_FILES) bedwyr
 
-#slimmer_lib_opam: $(SLIMMER_FINDLIB)
-
 $(BUILD)/%.byte: $(OCAML_FILES:.in=)
 	@$(OCAMLBUILD) $*.byte
 
@@ -115,6 +113,10 @@ $(BUILD)/%.cma: $(OCAML_FILES:.in=)
 
 $(BUILD)/%.cmxa $(BUILD)/%.a: $(OCAML_FILES:.in=)
 	@$(OCAMLBUILD) $*.cmxa
+
+$(BUILD)/%.cmxs: $(OCAML_FILES:.in=)
+	@ln -svf $(*F).mllib $*.mldylib
+	@$(OCAMLBUILD) $*.cmxs
 
 $(BUILD)/%.docdir/index.html: $(OCAML_FILES:.in=) %.odocl
 	@$(OCAMLBUILD) $*.docdir/index.html
@@ -263,6 +265,11 @@ man/%.exe.1: man/%.1
 man/%.html: man/%
 	@groff -Thtml -mandoc $< > $@
 
+%.html: %.md
+	@markdown $< > $@
+
+slimmer_lib: $(SLIMMER_FINDLIB) $(SLIMMER_MLIS)
+
 #
 # INSTALL
 #
@@ -402,10 +409,6 @@ opam: $(OPAM_PACKAGES)/$(PACKAGE_TARNAME)/$(OPAM_NAME)
 	@opam update bedwyr
 
 $(OPAM_PACKAGES)/$(PACKAGE_TARNAME)/$(OPAM_NAME): $(addprefix opam-files/,$(OPAM_FILES))
-	@sed -i.bkp \
-	  -e 's|^\(\s*\)"slimmer_lib_opam"$$|\1$(SLIMMER_FINDLIB:%=\"%\")|' \
-	  opam-files/opam
-	@rm -f opam-files/opam.bkp
 	@rm -rf $@
 	@$(TAR) -cpf - $^ --xform 's|^opam-files/|$@/|S' | $(TAR) -xpf -
 
@@ -553,7 +556,7 @@ clean: doc/Makefile mostlyclean
 	@$(MAKE) -C examples/ccs_vp/timing clean
 	@rm -vf $(addprefix opam-files/,$(OPAM_FILES))
 	@rm -vf $(SLIMMER_FINDLIB)
-	@rm -vf *.bz2 *.gz *.tar *.tbz *.tgz *.odocl $(MANPAGES) $(MANPAGES:=.html)
+	@rm -vf *.bz2 *.gz *.tar *.tbz *.tgz *.odocl $(MANPAGES) $(MANPAGES:=.html) README.html
 	@rm -vf *.debian.tar.xz *.build *.changes *.dsc *.deb *-installer.exe
 	@rm -rvf $(DEB_DIST_NAME) nsis-build
 
