@@ -32,7 +32,7 @@ exception IllegalVariable of Term.term
 let not_ll x = raise (NotLLambda x)
 let illegal_variable x = raise (IllegalVariable x)
 let non_normal () = raise Term.NonNormalTerm
-let raise e = raise (Error e)
+let raise_error e = raise (Error e)
 
 module type Param =
 sig
@@ -420,7 +420,7 @@ let makesubst h1 t2 a1 =
   let rec nested_subst c lev =
     match observe c with
       | Var v2 when variable v2.tag ->
-          if eq c h1 then raise OccursCheck ;
+          if eq c h1 then raise_error OccursCheck ;
           let (changed,a1',a2') = raise_and_invert v1 v2 a1 [] lev in
             if changed || not (lts1 >= v2.lts && ts1 >= v2.ts) then
               let h'= fresh ~lts:(min lts1 v2.lts) ~ts:(min ts1 v2.ts) in
@@ -432,17 +432,17 @@ let makesubst h1 t2 a1 =
       (* If [h1] can't depend on [c], [c] must belong to the argument list. *)
       | Var v when not (v.ts <= ts1 && v.lts <= lts1) ->
           begin match cindex v a1 n with
-            | 0 -> raise OccursCheck
+            | 0 -> raise_error OccursCheck
             | j -> db (j+lev)
           end
       | DB i when i>lev ->
           begin match bvindex (i-lev) a1 n with
-            | 0 -> raise OccursCheck
+            | 0 -> raise_error OccursCheck
             | j -> db (j+lev)
           end
       | NB i when i>lts1 ->
           begin match nbindex i a1 n with
-            | 0 -> raise OccursCheck
+            | 0 -> raise_error OccursCheck
             | j -> db (j+lev)
           end
       | Binop (b,x,y) ->
@@ -457,7 +457,7 @@ let makesubst h1 t2 a1 =
       | App (h2,a2) ->
           begin match observe h2 with
             | Var v2 when variable v2.tag ->
-                if eq h2 h1 then raise OccursCheck ;
+                if eq h2 h1 then raise_error OccursCheck ;
                 let a2 = List.map Norm.hnorm a2 in
                 let ts2,lts2 = v2.ts,v2.lts in
                 check_flex_args a2 ts2 lts2 ;
@@ -503,7 +503,7 @@ let makesubst h1 t2 a1 =
       | Lam (n,t2) -> toplevel_subst t2 (lev+n)
       | Var v2 when variable v2.tag ->
           if h1=t2 then
-            if n=0 && lev=0 then h1 else raise TypesMismatch
+            if n=0 && lev=0 then h1 else raise_error TypesMismatch
           else begin
             if not (lts1 >= v2.lts && ts1 >= v2.ts) then
               bind t2 (fresh ~lts:(min lts1 v2.lts) ~ts:(min ts1 v2.ts)) ;
@@ -526,8 +526,7 @@ let makesubst h1 t2 a1 =
                   let h1' = fresh ~lts:lts1 ~ts:ts1 in
                   let args = prune_same_var a1 a2 lev bindlen in
                   lambda bindlen (app h1' args)
-                end else
-                  raise TypesMismatch
+                end else raise_error TypesMismatch
             | Susp _ -> non_normal ()
             | _ -> lambda (n+lev) (nested_subst t2 lev)
           end
@@ -538,12 +537,12 @@ let makesubst h1 t2 a1 =
   try
     check_flex_args a1 ts1 lts1 ;
     toplevel_subst t2 0
-  with NotLLambda e ->
+  with (NotLLambda _) as e ->
         (* Not a pattern: try a very strict occurs-check to allow
          * simple cases of the form v1=t2. *)
     if a1 = [] && (can_bind v1 t2)
     then t2
-    else not_ll e
+    else raise e
 
 (* Unifying the arguments of two rigid terms with the same head, these
  * arguments being given as lists. Exceptions are raised if
@@ -551,7 +550,7 @@ let makesubst h1 t2 a1 =
  * latter will not arise if type checking has been done. *)
 let rec unify_list l1 l2 =
   try List.iter2 (fun a1 a2 -> unify (Norm.hnorm a1) (Norm.hnorm a2)) l1 l2
-  with Invalid_argument _ -> raise TypesMismatch
+  with Invalid_argument _ -> raise_error TypesMismatch
 
 (* [unify_const_term cst t2] unifies the constant [cst] with [t2].
  * [t2] should be head-normalized,
@@ -565,7 +564,7 @@ and unify_const_term cst t2 =
         let a1 = lift_args [] n in
         unify_app_term cst a1 (app cst a1) t2
     | Susp _ -> non_normal ()
-    | _ -> raise (ConstClash (cst,t2))
+    | _ -> raise_error (ConstClash (cst,t2))
 
 (* [unify_bv_term n1 t1 t2] unifies the bound variable [t1 = DB n1] with [t2].
  * [t2] should be head-normalized,
@@ -579,7 +578,7 @@ and unify_bv_term n1 t1 t2 = match observe t2 with
       let a1 = lift_args [] n in
       unify_app_term t1' a1 (app t1' a1) t2
   | Susp _ -> non_normal ()
-  | _ -> raise (ConstClash (t1,t2))
+  | _ -> raise_error (ConstClash (t1,t2))
 
 (* [unify_nv_term n1 t1 t2] unifies the nabla variable [t1 = NB n1] with [t2].
  * [t2] should be head-normalized,
@@ -592,7 +591,7 @@ and unify_nv_term n1 t1 t2 = match observe t2 with
       let a1 = lift_args [] n in
       unify_app_term t1 a1 (app t1 a1) t2
   | Susp _ -> non_normal ()
-  | _ -> raise (ConstClash (t1,t2))
+  | _ -> raise_error (ConstClash (t1,t2))
 
 (* [unify_app_term h1 a1 t1 t2] solves [App h1 a1 = t2].
  * [h1] should be head-normalized.
@@ -620,10 +619,10 @@ and unify_app_term h1 a1 t1 t2 = match observe h1,observe t2 with
             unify_list (x1::a1) (x2::a2)
         | _,_ ->
             if eq h1 h2 then unify_list a1 a2
-            else raise (ConstClash (h1,h2))
+            else raise_error (ConstClash (h1,h2))
       end
   | _,Susp _ -> non_normal ()
-  | _,_ -> raise (ConstClash (t1,t2))
+  | _,_ -> raise_error (ConstClash (t1,t2))
 
 (* Main unification procedure.
  *
@@ -658,14 +657,14 @@ and unify t1 t2 = match observe t1,observe t2 with
       unify (Norm.hnorm y1) (Norm.hnorm y2)
   | Binder (b1,n1,t1),Binder (b2,n2,t2) when b1=b2 && n1=n2 ->
       unify (Norm.hnorm t1) (Norm.hnorm t2)
-  | Binop _,Binop _ | Binder _,Binder _         -> raise TypesMismatch
+  | Binop _,Binop _ | Binder _,Binder _         -> raise_error TypesMismatch
   | Lam (n1,t1),Lam(n2,t2)   ->
       if n1>n2 then
         unify (lambda (n1-n2) t1) t2
       else
         unify t1 (lambda (n2-n1) t2)
   | Susp _, _ | _, Susp _                       -> non_normal ()
-  | _,_                                         -> raise TypesMismatch
+  | _,_                                         -> raise_error TypesMismatch
 
 let pattern_unify t1 t2 = unify (Norm.hnorm t1) (Norm.hnorm t2)
 
