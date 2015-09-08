@@ -129,23 +129,23 @@ module Types = struct
   let env : (Term.var,Preterm.Typing.ki) Hashtbl.t =
     Hashtbl.create 100
 
-  let recent_keys = ref []
+  let keys = Stack.create ()
 
-  let get_reset () =
-    recent_keys := [] ;
-    fun () ->
-      List.iter
-        (Hashtbl.remove env)
-        !recent_keys ;
-      recent_keys := []
+  let save_state () = Stack.length keys
+
+  let restore_state n =
+    for i=Stack.length keys downto n+1 do
+      let key = Stack.pop keys in
+      Hashtbl.remove env key
+    done
 
   let declare (p,name) ki =
     let var = Term.get_var (Term.atom ~tag:Term.Constant name) in
     if Hashtbl.mem env var
     then raise (Invalid_type_declaration (name,p,ki,"type already declared"))
     else begin
+      let () = Stack.push var keys in
       Hashtbl.replace env var ki ;
-      recent_keys := var :: !recent_keys
     end
 
   let get_kind (p,name) =
@@ -160,6 +160,7 @@ module Types = struct
     Hashtbl.iter f env
 
   let clear () =
+    let () = Stack.clear keys in
     Hashtbl.clear env
 end
 
@@ -265,15 +266,15 @@ module Objects = struct
       | Constant _ -> None
       | Predicate x -> Some x
 
-  let recent_keys = ref []
+  let keys = Stack.create ()
 
-  let get_reset () =
-    recent_keys := [] ;
-    fun () ->
-      List.iter
-        (Hashtbl.remove env)
-        !recent_keys ;
-      recent_keys := []
+  let save_state () = Stack.length keys
+
+  let restore_state n =
+    for i=Stack.length keys downto n+1 do
+      let key = Stack.pop keys in
+      Hashtbl.remove env key
+    done
 
   let declare_const (p,name) ty ~k =
     let var = Term.get_var (Term.atom ~tag:Term.Constant name) in
@@ -294,7 +295,7 @@ module Objects = struct
                   with e -> catch ~k e
                 with
                   | Some _ ->
-                      recent_keys := var :: !recent_keys ;
+                      let () = Stack.push var keys in
                       Some (Hashtbl.replace env var (Constant ty))
                   | None -> None
                 end
@@ -327,7 +328,6 @@ module Objects = struct
                   with e -> catch ~k e
                 with
                   | Some arity ->
-                      recent_keys := var :: !recent_keys ;
                       let stratum_flavour,flavour = match stratum_flavour,flavour with
                         | _,Preterm.Normal -> stratum_flavour,Normal
                         | Preterm.Inductive,Preterm.CoInductive
@@ -343,6 +343,7 @@ module Objects = struct
                             CoInductive { theorem = Term.lambda arity Term.op_false ;
                                           table = Table.O.create () }
                       in
+                      let () = Stack.push var keys in
                       Hashtbl.replace env var
                         (predicate flavour stratum (Term.lambda arity Term.op_false) ty) ;
                       Some stratum_flavour
@@ -379,9 +380,6 @@ module Objects = struct
          | Predicate p -> g k p)
       env
 
-  let fold f seed =
-    Hashtbl.fold f env seed
-
   let fold f g seed =
     Hashtbl.fold
       (fun k v accum -> match v with
@@ -390,15 +388,16 @@ module Objects = struct
       env seed
 
   let clear () =
+    let () = Stack.clear keys in
     Hashtbl.clear env
 end
 
 let get_reset () =
-  let reset_types = Types.get_reset ()
-  and reset_objects = Objects.get_reset () in
+  let types_state = Types.save_state ()
+  and objects_state = Objects.save_state () in
   fun () ->
-    reset_types () ;
-    reset_objects ()
+    Types.restore_state types_state ;
+    Objects.restore_state objects_state
 
 let create_free_types : int -> (Term.var,(Preterm.Typing.ty*Preterm.Pos.t option)) Hashtbl.t =
   fun n -> Hashtbl.create n
