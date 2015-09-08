@@ -1,6 +1,6 @@
 (****************************************************************************)
 (* Bedwyr -- tabling export                                                 *)
-(* Copyright (C) 2013-2014 Quentin Heath                                    *)
+(* Copyright (C) 2013-2015 Quentin Heath                                    *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -17,6 +17,7 @@
 (* 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.              *)
 (****************************************************************************)
 
-(** Overload of {!Table.O.export}. *)
+(** Redefinition of {!Table.xml_export}. *)
 
-module Make (I : TableTypes.INPUT) : TableTypes.INPUT
+(** This module is to be dynlinked, and therefore has no access point,
+  * but executes code as a side effect of its loading. *)
