@@ -53,7 +53,7 @@ source-code documentation.
 
 Input sources can be plain text definition files (\path{*.def}), the
 REPL (read-eval-print loop), the \lstinline+read+ predicate, and
-arguments to the \texttt{-d}, \texttt{-e} and \texttt{-c} CLI
+arguments to the \texttt{-d} and \texttt{-e} CLI
 (command-line interface) options.  Three modes are available:
 \begin{description}%
 %BEGIN LATEX
@@ -62,8 +62,7 @@ arguments to the \texttt{-d}, \texttt{-e} and \texttt{-c} CLI
   \item[definition mode] is used in \path{*.def} files and with
     \texttt{-d}
   \item[toplevel mode] is used in the REPL and with \texttt{-e}
-  \item[term mode] is used at run-time via \lstinline+read+ and with
-    \texttt{-c}
+  \item[term mode] is used at run-time via \lstinline+read+
 \end{description}
 
 \begin{figure}[t]
@@ -74,7 +73,7 @@ arguments to the \texttt{-d}, \texttt{-e} and \texttt{-c} CLI
          \ref{sec:commands} \lstinline+Define p : prop.+ & \checkmark &            &                  & \texttt{-d} \\
           \ref{sec:queries} \lstinline+X = 42.+          &            & \checkmark &                  & \texttt{-e} \\
     \ref{sec:meta-commands} \lstinline+#env.+            & \checkmark & \checkmark &                  & \texttt{-d/-e} \\
-            \ref{sec:terms} \lstinline+1 :: 2 :: nil.+   &            &            & \checkmark       & \texttt{-c}
+            \ref{sec:terms} \lstinline+1 :: 2 :: nil.+   &            &            & \checkmark       &
   \end{tabular}
 \end{figure}
 

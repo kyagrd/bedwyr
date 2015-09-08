@@ -1,5 +1,5 @@
-Bedwyr, the not-so-sound logician
-=================================
+![bedwyr-48x48.png](http://slimmer.gforge.inria.fr/bedwyr/bedwyr-48x48.png) Bedwyr, the not-so-sound logician
+=============================================================================================================
 v1.4 -- Bedwyr-with-round-tables
 --------------------------------
 
@@ -40,8 +40,10 @@ license can be found in COPYING or, depending on your distribution,
 
 ### 3. Obtaining Bedwyr ###
 
-Released sources, binaries and packages may be obtained from:
-  [https://gforge.inria.fr/frs/?group_id=367](https://gforge.inria.fr/frs/?group_id=367)
+Released sources and binaries may be obtained from
+[https://gforge.inria.fr/frs/?group_id=367](https://gforge.inria.fr/frs/?group_id=367)
+and packages from
+[http://slimmer.gforge.inria.fr/bedwyr/#download](http://slimmer.gforge.inria.fr/bedwyr/#download).
 
 Development sources may be obtained via the commands
   `svn checkout svn://scm.gforge.inria.fr/svn/slimmer`
@@ -60,9 +62,9 @@ the core libraries as well as the complete program.
 For proper compilation and installation, a Linux environment and the
 following packages are required:
 
-- OCaml (4.01.0 or later) and findlib (often packaged as ocaml-findlib)
-- autotools (at least autoconf-2.60) and GNU make
-- bash, tar, gzip, bzip2 and some other standard tools
+- `OCaml-3.12.1` (or later) and `findlib` (sometimes packaged as *ocamlfind*)
+- `autotools` (at least `autoconf-2.60`) and `GNU make`
+- `bash`, `tar`, `gzip`, `bzip2` and some other standard tools
 
 With the vanilla archive, the single command
 
@@ -79,7 +81,7 @@ Use the `./configure --help` and `make help` commands for more details.
 
 Then pick an example in examples/ and run
 
-    $ ./bedwyr examples/<file>.def
+    $ ./bedwyr [-t] examples/<file>.def
 
 or just run
 
@@ -92,14 +94,13 @@ and type "#help." for a little help.
 
 - `doc/quickstart.(pdf|html)`: more information on how to use bedwyr
 - `doc/refman/index.html`: complete system description
-- `_build/src_docdir/index.html`: source code documentation
+- `_build/src.docdir/index.html`: source code documentation
 
 Building these files requires the "--enable-doc" configure option (which
 adds some dependencies on LaTeX, HeVeA, etc), and is done by the
+command
 
     $ make doc
-
-command.
 
 
 ### 6. Installation ###
@@ -115,7 +116,7 @@ hierarchy by typing
 
 or in a alternative standard place with
 
-    $ ./configure --prefix=/usr
+    $ ./configure --prefix=/usr/local
     $ make
     $ make install
 
