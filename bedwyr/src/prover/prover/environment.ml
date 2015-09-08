@@ -17,103 +17,101 @@
 (* 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.              *)
 (****************************************************************************)
 
+open Parsetree.Preterm.Typing
+
 (* TODO get the code from [Prover] here, so that internal/predefined
  * predicates are declared and defined in one single place
  * TODO add the word pervasive and remove some predecared/predefined *)
 module Logic = struct
-  let not               = Term.atom ~tag:Term.Constant "_not"
-  let ite               = Term.atom ~tag:Term.Constant "_if"
-  let abspred           = Term.atom ~tag:Term.Constant "_abstract"
-  let distinct          = Term.atom ~tag:Term.Constant "_distinct"
-  let assert_rigid      = Term.atom ~tag:Term.Constant "_rigid"
-  let abort_search      = Term.atom ~tag:Term.Constant "_abort"
-  let cutpred           = Term.atom ~tag:Term.Constant "_cut"
-  let check_eqvt        = Term.atom ~tag:Term.Constant "_eqvt"
+  let not               = Ndcore.Term.atom ~tag:Ndcore.Term.Constant "_not"
+  let ite               = Ndcore.Term.atom ~tag:Ndcore.Term.Constant "_if"
+  let abspred           = Ndcore.Term.atom ~tag:Ndcore.Term.Constant "_abstract"
+  let distinct          = Ndcore.Term.atom ~tag:Ndcore.Term.Constant "_distinct"
+  let assert_rigid      = Ndcore.Term.atom ~tag:Ndcore.Term.Constant "_rigid"
+  let abort_search      = Ndcore.Term.atom ~tag:Ndcore.Term.Constant "_abort"
+  let cutpred           = Ndcore.Term.atom ~tag:Ndcore.Term.Constant "_cut"
+  let check_eqvt        = Ndcore.Term.atom ~tag:Ndcore.Term.Constant "_eqvt"
 
-  let var_not           = Term.get_var not
-  let var_ite           = Term.get_var ite
-  let var_abspred       = Term.get_var abspred
-  let var_distinct      = Term.get_var distinct
-  let var_assert_rigid  = Term.get_var assert_rigid
-  let var_abort_search  = Term.get_var abort_search
-  let var_cutpred       = Term.get_var cutpred
-  let var_check_eqvt    = Term.get_var check_eqvt
+  let var_not           = Ndcore.Term.get_var not
+  let var_ite           = Ndcore.Term.get_var ite
+  let var_abspred       = Ndcore.Term.get_var abspred
+  let var_distinct      = Ndcore.Term.get_var distinct
+  let var_assert_rigid  = Ndcore.Term.get_var assert_rigid
+  let var_abort_search  = Ndcore.Term.get_var abort_search
+  let var_cutpred       = Ndcore.Term.get_var cutpred
+  let var_check_eqvt    = Ndcore.Term.get_var check_eqvt
 
   let internal_t = Hashtbl.create 8
-  let _ = Preterm.Typing.(List.iter
-                            (fun (v,tys) -> Hashtbl.replace internal_t v (ty_arrow tys tprop))
-                            [ (* Non-logical extensions *)
-                              var_not,
-                                [tprop] ;
-                              var_ite,
-                                [tprop;tprop;tprop] ;
-                              var_abspred,
-                                (let ty0 = tparam 0 in
-                                 let ty1 = ty_arrow [ty_arrow [tparam 1] ty0] ty0 in
-                                 [ty0;ty1;ty0]) ;
-                              var_distinct,
-                                [tprop] ;
-                              var_assert_rigid,
-                                [tparam 0] ;
-                              var_abort_search,
-                                [] ;
-                              var_cutpred,
-                                [tprop] ;
-                              var_check_eqvt,
-                                (let ty = tparam 0 in
-                                 [ty;ty] ) ;
-                            ])
+  let () =
+    List.iter
+      (fun (v,tys) -> Hashtbl.replace internal_t v (Type.arrow tys Type.prop))
+      [ (* Non-logical extensions *)
+        var_not,          [Type.prop] ;
+        var_ite,          [Type.prop;Type.prop;Type.prop] ;
+        var_abspred,
+          (let ty0 = Type.param 0 in
+           let ty1 = Type.arrow [Type.arrow [Type.param 1] ty0] ty0 in
+           [ty0;ty1;ty0]) ;
+        var_distinct,     [Type.prop] ;
+        var_assert_rigid, [Type.param 0] ;
+        var_abort_search, [] ;
+        var_cutpred,      [Type.prop] ;
+        var_check_eqvt,
+          (let ty = Type.param 0 in
+           [ty;ty] ) ;
+      ]
 
   let get_internal_type v =
     Hashtbl.find internal_t v
 
 
-  let read              = Term.atom ~tag:Term.Constant "read"
-  let fread             = Term.atom ~tag:Term.Constant "fread"
-  let fopen_in          = Term.atom ~tag:Term.Constant "fopen_in"
-  let fclose_in         = Term.atom ~tag:Term.Constant "fclose_in"
-  let print             = Term.atom ~tag:Term.Constant "print"
-  let println           = Term.atom ~tag:Term.Constant "println"
-  let printstr          = Term.atom ~tag:Term.Constant "printstr"
-  let fprint            = Term.atom ~tag:Term.Constant "fprint"
-  let fprintln          = Term.atom ~tag:Term.Constant "fprintln"
-  let fprintstr         = Term.atom ~tag:Term.Constant "fprintstr"
-  let fopen_out         = Term.atom ~tag:Term.Constant "fopen_out"
-  let fclose_out        = Term.atom ~tag:Term.Constant "fclose_out"
+  let read              = Ndcore.Term.atom ~tag:Ndcore.Term.Constant "read"
+  let fread             = Ndcore.Term.atom ~tag:Ndcore.Term.Constant "fread"
+  let fopen_in          = Ndcore.Term.atom ~tag:Ndcore.Term.Constant "fopen_in"
+  let fclose_in         = Ndcore.Term.atom ~tag:Ndcore.Term.Constant "fclose_in"
+  let print             = Ndcore.Term.atom ~tag:Ndcore.Term.Constant "print"
+  let println           = Ndcore.Term.atom ~tag:Ndcore.Term.Constant "println"
+  let printstr          = Ndcore.Term.atom ~tag:Ndcore.Term.Constant "printstr"
+  let fprint            = Ndcore.Term.atom ~tag:Ndcore.Term.Constant "fprint"
+  let fprintln          = Ndcore.Term.atom ~tag:Ndcore.Term.Constant "fprintln"
+  let fprintstr         = Ndcore.Term.atom ~tag:Ndcore.Term.Constant "fprintstr"
+  let fopen_out         = Ndcore.Term.atom ~tag:Ndcore.Term.Constant "fopen_out"
+  let fclose_out        = Ndcore.Term.atom ~tag:Ndcore.Term.Constant "fclose_out"
 
-  let var_read          = Term.get_var read
-  let var_fread         = Term.get_var fread
-  let var_fopen_in      = Term.get_var fopen_in
-  let var_fclose_in     = Term.get_var fclose_in
-  let var_print         = Term.get_var print
-  let var_println       = Term.get_var println
-  let var_printstr      = Term.get_var printstr
-  let var_fprint        = Term.get_var fprint
-  let var_fprintln      = Term.get_var fprintln
-  let var_fprintstr     = Term.get_var fprintstr
-  let var_fopen_out     = Term.get_var fopen_out
-  let var_fclose_out    = Term.get_var fclose_out
+  let var_read          = Ndcore.Term.get_var read
+  let var_fread         = Ndcore.Term.get_var fread
+  let var_fopen_in      = Ndcore.Term.get_var fopen_in
+  let var_fclose_in     = Ndcore.Term.get_var fclose_in
+  let var_print         = Ndcore.Term.get_var print
+  let var_println       = Ndcore.Term.get_var println
+  let var_printstr      = Ndcore.Term.get_var printstr
+  let var_fprint        = Ndcore.Term.get_var fprint
+  let var_fprintln      = Ndcore.Term.get_var fprintln
+  let var_fprintstr     = Ndcore.Term.get_var fprintstr
+  let var_fopen_out     = Ndcore.Term.get_var fopen_out
+  let var_fclose_out    = Ndcore.Term.get_var fclose_out
 
-  let builtins = Hashtbl.create 8
-  let _ = Preterm.Typing.(List.iter
-                            (fun (v,tys) -> Hashtbl.replace builtins v (ty_arrow tys tprop))
-                            [ (* I/O extensions *)
-                              var_read,       [tparam 0] ;
-                              var_fread,      [tstring;tparam 0] ;
-                              var_fopen_in,   [tstring] ;
-                              var_fclose_in,  [tstring] ;
-                              var_print,      [tparam 0] ;
-                              var_println,    [tparam 0] ;
-                              var_printstr,   [tstring] ;
-                              var_fprint,     [tstring;tparam 0] ;
-                              var_fprintln,   [tstring;tparam 0] ;
-                              var_fprintstr,  [tstring;tstring] ;
-                              var_fopen_out,  [tstring] ;
-                              var_fclose_out, [tstring] ;
-                            ])
+  let builtins_t = Hashtbl.create 8
+  let () =
+    List.iter
+      (fun (v,tys) -> Hashtbl.replace builtins_t v (Type.arrow tys Type.prop))
+      [ (* I/O extensions *)
+        var_read,       [Type.param 0] ;
+        var_fread,      [Type.string;Type.param 0] ;
+        var_fopen_in,   [Type.string] ;
+        var_fclose_in,  [Type.string] ;
+        var_print,      [Type.param 0] ;
+        var_println,    [Type.param 0] ;
+        var_printstr,   [Type.string] ;
+        var_fprint,     [Type.string;Type.param 0] ;
+        var_fprintln,   [Type.string;Type.param 0] ;
+        var_fprintstr,  [Type.string;Type.string] ;
+        var_fopen_out,  [Type.string] ;
+        var_fclose_out, [Type.string] ;
+      ]
 
   let get_builtin v =
-    try Some (Hashtbl.find builtins v)
+    try Some (Hashtbl.find builtins_t v)
     with Not_found -> None
 end
 
@@ -153,46 +151,46 @@ Type    opsome  A -> option A.
 
 (* Error handling. *)
 
-exception Missing_type of string * Preterm.Pos.t
-exception Missing_declaration of string * Preterm.Pos.t
+exception Missing_type of string * IO.Pos.t
+exception Missing_declaration of string * IO.Pos.t
 
 
 let catch ~k e =
   begin match e with
     (* Kind checking *)
     | Missing_type (n,p) ->
-        Output.eprintf ~p
+        IO.Output.eprintf ~p
           "Undeclared type %s."
           n
-    | Preterm.Typing.Type_kinding_error (n,p,ki1,ki2) ->
-        Output.eprintf ~p
+    | Type_kinding_error (n,p,ki1,ki2) ->
+        IO.Output.eprintf ~p
           "Kinding error: the type constructor %s has kind %a@ \
             but is used as %a."
           n
-          Preterm.Typing.pp_kind ki2
-          Preterm.Typing.pp_kind ki1
+          Kind.pp ki2
+          Kind.pp ki1
 
     (* Type checking *)
     | Missing_declaration (n,p) ->
-        Output.eprintf ~p
+        IO.Output.eprintf ~p
           "Undeclared object %s."
           n
-    | Preterm.Term_typing_error (p,ty1,ty2,unifier) ->
-        let pp_type = Preterm.Typing.get_pp_type ~unifier () in
-        Output.eprintf ~p
+    | Parsetree.Preterm.Term_typing_error (p,ty1,ty2,unifier) ->
+        let pp_type = Type.get_pp ~unifier () in
+        IO.Output.eprintf ~p
           "Typing error: this term has type %a but is used as %a."
           pp_type ty2
           pp_type ty1
-    | Preterm.Typing.Type_order_error (n,p,ty) ->
+    | Type_order_error (n,p,ty) ->
         begin match n with
           | Some n ->
-              Output.eprintf ~p
+              IO.Output.eprintf ~p
                 "Typing error: cannot give free variable %s the type %a." n
-                (Preterm.Typing.get_pp_type ()) ty
+                Type.pp ty
           | None ->
-              Output.eprintf ~p
+              IO.Output.eprintf ~p
                 "Typing error: cannot quantify over type %a."
-                (Preterm.Typing.get_pp_type ()) ty
+                Type.pp ty
         end
     | e -> raise e
   end ;
@@ -201,20 +199,20 @@ let catch ~k e =
 
 (* Type declarations and access. *)
 
-exception Invalid_type_declaration of string * Preterm.Pos.t * Preterm.Typing.ki * string
+exception Invalid_type_declaration of string * IO.Pos.t * Kind.t * string
 
 
 module Types : sig
   val save_state : unit -> int
   val restore_state : int -> unit
-  val declare : Preterm.Pos.t * string -> Preterm.Typing.ki -> unit
+  val declare : IO.Pos.t * string -> Kind.t -> unit
   val kind_check :
-    obj:Preterm.Typing.obj ->
-    p:Preterm.Typing.pos -> Preterm.Typing.ty -> int
-  val iter : (Term.var -> Preterm.Typing.ki -> unit) -> unit
+    obj:obj ->
+    p:IO.Pos.t -> Type.t -> int
+  val iter : (Ndcore.Term.var -> Kind.t -> unit) -> unit
   val clear : unit -> unit
 end = struct
-  let env : (Term.var,Preterm.Typing.ki) Hashtbl.t =
+  let env : (Ndcore.Term.var,Kind.t) Hashtbl.t =
     Hashtbl.create 100
 
   let keys = Stack.create ()
@@ -228,7 +226,7 @@ end = struct
     done
 
   let declare (p,name) ki =
-    let var = Term.get_var (Term.atom ~tag:Term.Constant name) in
+    let var = Ndcore.Term.(get_var (atom ~tag:Constant name)) in
     if Hashtbl.mem env var
     then raise (Invalid_type_declaration (name,p,ki,"type already declared"))
     else begin
@@ -237,12 +235,12 @@ end = struct
     end
 
   let get_kind (p,name) =
-    let var = Term.get_var (Term.atom ~tag:Term.Constant name) in
+    let var = Ndcore.Term.(get_var (atom ~tag:Constant name)) in
     try Hashtbl.find env var
     with Not_found -> raise (Missing_type (name,p))
 
   let kind_check ~obj ~p ty =
-    Preterm.Typing.kind_check ~obj ~p ty ~get_kind
+    kind_check ~obj ~p ty ~get_kind
 
   let iter f =
     Hashtbl.iter f env
@@ -255,14 +253,14 @@ end
 
 (* Constants and predicates declarations. *)
 
-exception Stratification_error of string * Preterm.Pos.t
+exception Stratification_error of string * IO.Pos.t
 exception Invalid_declaration of
-  string * string * Preterm.Pos.t * Preterm.Typing.ty * string * Preterm.Typing.ty
+  string * string * IO.Pos.t * Type.t * string * Type.t
 exception Invalid_flavour of
-  string * Preterm.Pos.t * Preterm.flavour * Preterm.flavour
+  string * IO.Pos.t * Parsetree.Preterm.flavour * Parsetree.Preterm.flavour
 
 
-type tabling_info = { mutable theorem : Term.term ; table : Table.O.t }
+type tabling_info = { mutable theorem : Ndcore.Term.term ; table : Table.t }
 
 type flavour = (* XXX private *)
   | Normal
@@ -273,10 +271,10 @@ type flavour = (* XXX private *)
 type predicate = (* XXX private *)
     { flavour           : flavour ;
       stratum           : int ;
-      mutable definition: Term.term ;
-      ty                : Preterm.Typing.ty }
+      mutable definition: Ndcore.Term.term ;
+      ty                : Type.t }
 type object_declaration =
-  | Constant of Preterm.Typing.ty
+  | Constant of Type.t
   | Predicate of predicate
 
 let predicate flavour stratum definition ty =
@@ -286,36 +284,36 @@ let predicate flavour stratum definition ty =
               ty=ty }
 
 module Objects : sig
-  val get_type : Term.var -> (int option * Preterm.Typing.ty) option
-  val get_pred : Term.var -> predicate option
+  val get_type : Ndcore.Term.var -> (int option * Type.t) option
+  val get_pred : Ndcore.Term.var -> predicate option
   type state
   val save_state : unit -> state
   val restore_state : state -> unit
   val declare_const :
-    Preterm.Typing.pos * string ->
-    Preterm.Typing.ty -> k:(unit -> int option) -> unit option
+    IO.Pos.t * string ->
+    Type.t -> k:(unit -> int option) -> unit option
   val declare_consts :
-    (Preterm.Typing.pos * string) list ->
-    Preterm.Typing.ty -> k:(unit -> int option) -> unit option
+    (IO.Pos.t * string) list ->
+    Type.t -> k:(unit -> int option) -> unit option
   val create_def :
     int ->
-    ?stratum_flavour:Preterm.flavour ->
-    Preterm.flavour * Preterm.Typing.pos * string * Preterm.Typing.ty ->
-    k:(unit -> int option) -> Preterm.flavour option
+    ?stratum_flavour:Parsetree.Preterm.flavour ->
+    Parsetree.Preterm.flavour * IO.Pos.t * string * Type.t ->
+    k:(unit -> int option) -> Parsetree.Preterm.flavour option
   val declare_preds :
-    (Preterm.flavour * Preterm.Typing.pos * string * Preterm.Typing.ty)
+    (Parsetree.Preterm.flavour * IO.Pos.t * string * Type.t)
     list -> k:(unit -> int option) -> int option
   val iter :
-    (Term.var -> Preterm.Typing.ty -> unit) ->
-    (Term.var -> predicate -> unit) ->
+    (Ndcore.Term.var -> Type.t -> unit) ->
+    (Ndcore.Term.var -> predicate -> unit) ->
     unit
   val fold :
-    (Term.var -> Preterm.Typing.ty -> 'a -> 'a) ->
-    (Term.var -> predicate -> 'a -> 'a) ->
+    (Ndcore.Term.var -> Type.t -> 'a -> 'a) ->
+    (Ndcore.Term.var -> predicate -> 'a -> 'a) ->
     'a -> 'a
   val clear : unit -> unit
 end = struct
-  let env : (Term.var,object_declaration) Hashtbl.t =
+  let env : (Ndcore.Term.var,object_declaration) Hashtbl.t =
     Hashtbl.create 100
 
   let get_type v =
@@ -342,7 +340,7 @@ end = struct
     done
 
   let declare_const (p,name) ty ~k =
-    let var = Term.get_var (Term.atom ~tag:Term.Constant name) in
+    let var = Ndcore.Term.get_var (Ndcore.Term.atom ~tag:Ndcore.Term.Constant name) in
     match get_type var with
       | Some (_,ty') ->
           raise (Invalid_declaration
@@ -356,7 +354,7 @@ end = struct
                           "name conflict with a built in predicate",ty'))
             | None ->
                 begin match
-                  try Some (Types.kind_check ~obj:(Preterm.Typing.Constant name) ~p ty)
+                  try Some (Types.kind_check ~obj:(Constant name) ~p ty)
                   with e -> catch ~k e
                 with
                   | Some _ ->
@@ -374,8 +372,8 @@ end = struct
            | None -> None)
       (Some ()) consts
 
-  let create_def stratum ?(stratum_flavour=Preterm.Normal) (flavour,p,name,ty) ~k =
-    let var = Term.get_var (Term.atom ~tag:Term.Constant name) in
+  let create_def stratum ?(stratum_flavour=Parsetree.Preterm.Normal) (flavour,p,name,ty) ~k =
+    let var = Ndcore.Term.get_var (Ndcore.Term.atom ~tag:Ndcore.Term.Constant name) in
     match get_type var with
       | Some (_,ty') ->
           raise (Invalid_declaration
@@ -389,28 +387,28 @@ end = struct
                           "name conflict with a build in predicate",ty'))
             | None ->
                 begin match
-                  try Some (Types.kind_check ~obj:(Preterm.Typing.Predicate name) ~p ty)
+                  try Some (Types.kind_check ~obj:(Predicate name) ~p ty)
                   with e -> catch ~k e
                 with
                   | Some arity ->
                       let stratum_flavour,flavour = match stratum_flavour,flavour with
-                        | _,Preterm.Normal -> stratum_flavour,Normal
-                        | Preterm.Inductive,Preterm.CoInductive
-                        | Preterm.CoInductive,Preterm.Inductive ->
+                        | _,Parsetree.Preterm.Normal -> stratum_flavour,Normal
+                        | Parsetree.Preterm.Inductive,Parsetree.Preterm.CoInductive
+                        | Parsetree.Preterm.CoInductive,Parsetree.Preterm.Inductive ->
                             raise (Invalid_flavour
                                      (name,p,stratum_flavour,flavour))
-                        | _,Preterm.Inductive ->
+                        | _,Parsetree.Preterm.Inductive ->
                             flavour,
-                            Inductive { theorem = Term.lambda arity Term.op_false ;
-                                        table = Table.O.create () }
-                        | _,Preterm.CoInductive ->
+                            Inductive { theorem = Ndcore.Term.lambda arity Ndcore.Term.op_false ;
+                                        table = Table.create () }
+                        | _,Parsetree.Preterm.CoInductive ->
                             flavour,
-                            CoInductive { theorem = Term.lambda arity Term.op_false ;
-                                          table = Table.O.create () }
+                            CoInductive { theorem = Ndcore.Term.lambda arity Ndcore.Term.op_false ;
+                                          table = Table.create () }
                       in
                       let () = Stack.push var keys in
                       Hashtbl.replace env var
-                        (predicate flavour stratum (Term.lambda arity Term.op_false) ty) ;
+                        (predicate flavour stratum (Ndcore.Term.lambda arity Ndcore.Term.op_false) ty) ;
                       Some stratum_flavour
                   | None -> None
                 end
@@ -430,7 +428,7 @@ end = struct
                    (* XXX this is bullshit *)
                    ignore (create_def !stratum decl ~k) ;
                    None)
-          (Some Preterm.Normal) decls
+          (Some Parsetree.Preterm.Normal) decls
       with
         | Some _ -> Some !stratum
         | None -> None
@@ -454,55 +452,22 @@ end = struct
     Hashtbl.clear env
 end
 
-let create_free_types : int -> (Term.var,(Preterm.Typing.ty*Preterm.Pos.t option)) Hashtbl.t =
-  fun n -> Hashtbl.create n
-
 let translate_term
       ?stratum
       ?(head=false)
       ?(free_args=[])
-      ?(expected_type=Preterm.Typing.fresh_tyvar ())
-      ?(free_types=create_free_types 10)
+      ?(expected_type=Type.fresh_var ())
+      ?(free_types=Hashtbl.create 10)
       pre_term ~k =
-  let fresh_tyinst = Preterm.Typing.get_fresh_tyinst () in
-  let fold_free_types f =
-    Hashtbl.fold f free_types
-  in
-  (* return (and create if needed) a typed variable
-   * corresponding to the name of a free variable *)
-  let typed_free_var (p,name) =
-    let was_free = Term.is_free name in
-    let t = Term.atom ~tag:Term.Logic name in
-    let v = Term.get_var t in
-    try begin
-      let ty,_ = Hashtbl.find free_types v in
-      Hashtbl.replace free_types v (ty,None) ;
-      t,ty
-    end with Not_found ->
-      let t,v =
-        if was_free then t,v else begin
-          Term.free name ;
-          (* XXX in case we actually use this variable on day,
-           * we should depend on the level to create an instantiable variable,
-           * ie not always a Logic one (cf [mk_clause])*)
-          let t = Term.atom ~tag:Term.Logic name in
-          let v = Term.get_var t in
-          t,v
-        end
-      in
-      let ty = Preterm.Typing.fresh_tyvar () in
-      Hashtbl.replace free_types v (ty,Some p) ;
-      t,ty
-  in
   (* return a typed variable corresponding to the name
    * of a constant or a predicate (built in or not) *)
   let typed_declared_obj ~instantiate_type ?forbidden_stratum (p,name) =
-    let t = Term.atom ~tag:Term.Constant name in
-    let v = Term.get_var t in
+    let t = Ndcore.Term.atom ~tag:Ndcore.Term.Constant name in
+    let v = Ndcore.Term.get_var t in
     let ty =
       match Objects.get_type v with
         | Some (Some stratum,_) when forbidden_stratum=Some stratum ->
-            Term.free name ;
+            Ndcore.Term.free name ;
             raise (Stratification_error (name,p))
         | Some (_,ty) -> ty
         | None ->
@@ -510,36 +475,34 @@ let translate_term
               match Logic.get_builtin v with
                 | Some ty -> ty
                 | None ->
-                    Term.free name ;
+                    Ndcore.Term.free name ;
                     raise (Missing_declaration (name,p))
             end
-    in t,(if instantiate_type then Preterm.Typing.get_fresh_tyinst () ty else ty)
-  in
+    in t,(if instantiate_type then Type.instantiate_params () ty else ty)
   (* return a typed variable corresponding to the name
    * of an internal predicate *)
-  let typed_intern_pred (p,name) =
-    let t = Term.atom ~tag:Term.Constant name in
-    let v = Term.get_var t in
+  and typed_intern_pred (p,name) =
+    let t = Ndcore.Term.atom ~tag:Ndcore.Term.Constant name in
+    let v = Ndcore.Term.get_var t in
     let ty =
       try Logic.get_internal_type v
       with Not_found ->
         begin
-          Term.free name ;
+          Ndcore.Term.free name ;
           raise (Missing_declaration (name,p))
         end
-    in t,Preterm.Typing.get_fresh_tyinst () ty
-  in
+    in t,Type.instantiate_params () ty
+  and kind_check = Types.kind_check in
   try Some (expected_type,
             free_types,
-            Preterm.type_check_and_translate
+            Parsetree.Preterm.type_check_and_translate
               ?stratum
               ~head
               ~free_args
-              ~fold_free_types
-              ~fresh_tyinst
+              ~free_types
               pre_term
               expected_type
-              (typed_free_var,typed_declared_obj,typed_intern_pred,Types.kind_check))
+              (typed_declared_obj,typed_intern_pred,kind_check))
   with e -> catch ~k e
 
 
@@ -565,16 +528,16 @@ end = struct
   let apply_on_file f name =
     let wrap add ~basename ~nice_path ~full_path =
       if M.mem full_path !files then begin
-        Output.wprintf "Skipping already included@ %S." nice_path ;
+        IO.Output.wprintf "Skipping already included@ %S." nice_path ;
         None
       end else begin
-        Output.wprintf "Now including@ %S." nice_path ;
+        IO.Output.wprintf "Now including@ %S." nice_path ;
         let result = add ~basename ~nice_path ~full_path in
         files := M.add full_path !files ;
         Some result
       end
     in
-    IO.run_in ~wrap (Read.apply_on_channel f) name
+    IO.Files.run_in ~wrap (IO.Input.apply_on_channel f) name
 
   let clear () = files := M.empty
 end
