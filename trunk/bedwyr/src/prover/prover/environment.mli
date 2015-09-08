@@ -235,6 +235,7 @@ module Types : sig
   val restore_state : int -> unit
   val declare : IO.Pos.t * string -> Kind.t -> unit
   val iter : (Ndcore.Term.var -> Kind.t -> unit) -> unit
+  val fold : (Ndcore.Term.var -> Kind.t -> 'a -> 'a) -> 'a -> 'a
   val clear : unit -> unit
 end
 
