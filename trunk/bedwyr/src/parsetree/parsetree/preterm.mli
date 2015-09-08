@@ -18,28 +18,9 @@
 (* 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.              *)
 (****************************************************************************)
 
+module Typing : Typing.S with type pos = IO.Pos.t
+
 (* Pre-terms (CST) construction, checking, and translation to AST. *)
-
-(** Position information during parsing. For error messages only. *)
-module Pos : sig
-  (** Position information. *)
-  type t
-
-  (** Dummy position information. *)
-  val dummy : t
-
-  (** Current position (lexing). *)
-  val of_lexbuf : Lexing.lexbuf -> unit -> t
-
-  (** Current position (parsing). *)
-  val of_token : int -> t
-
-  (** Offset pair. *)
-  val to_pair : t -> int * int
-
-  (** Position information pretty-printing. *)
-  val pp : Format.formatter -> t -> unit
-end
 
 (** Wrapper around End_of_file in definition mode. *)
 exception Empty_command
@@ -48,67 +29,68 @@ exception Empty_command
 exception Empty_term
 
 (** Wrapper around some [Parsing.Parse_error]. *)
-exception Parse_error of Pos.t * string * string
-
-module Typing : Typing.S with type pos = Pos.t
+exception Parse_error of IO.Pos.t * string * string
 
 (** Pre-term with type and position information,
   * but without substitutions or sharing. *)
 type preterm
 
+(** Position-agnostic comparison. *)
+val compare : preterm -> preterm -> int
+
 (** {6 Pre-terms creation} *)
 
 (** Quoted string. *)
-val pre_qstring : Pos.t -> string -> preterm
+val pre_qstring : IO.Pos.t -> string -> preterm
 
 (** (Non-negative) natural number. *)
-val pre_nat : Pos.t -> int -> preterm
+val pre_nat : IO.Pos.t -> int -> preterm
 
 (** Free variable or bound variable id. *)
-val pre_freeid : Pos.t -> string -> preterm
+val pre_freeid : IO.Pos.t -> string -> preterm
 
 (** Declared object (predicate or constant) or bound variable id. *)
-val pre_predconstid : ?infix:bool -> Pos.t -> string -> preterm
+val pre_predconstid : ?infix:bool -> IO.Pos.t -> string -> preterm
 
 (** Internal predicate id. *)
-val pre_internid : Pos.t -> string -> preterm
+val pre_internid : IO.Pos.t -> string -> preterm
 (** It is not possible to define such a predicate;
   * those are predefined and usually experimental. *)
 
 (** True. *)
-val pre_true : Pos.t -> preterm
+val pre_true : IO.Pos.t -> preterm
 
 (** False. *)
-val pre_false : Pos.t -> preterm
+val pre_false : IO.Pos.t -> preterm
 
 (** Term equality. *)
-val pre_eq : Pos.t -> preterm -> preterm -> preterm
+val pre_eq : IO.Pos.t -> preterm -> preterm -> preterm
 
 (** Formula binary conjunction. *)
-val pre_and : Pos.t -> preterm -> preterm -> preterm
+val pre_and : IO.Pos.t -> preterm -> preterm -> preterm
 
 (** Formula binary disjunction. *)
-val pre_or : Pos.t -> preterm -> preterm -> preterm
+val pre_or : IO.Pos.t -> preterm -> preterm -> preterm
 
 (** Formula implication. *)
-val pre_arrow : Pos.t -> preterm -> preterm -> preterm
+val pre_arrow : IO.Pos.t -> preterm -> preterm -> preterm
 
 (** Quantification. *)
 val pre_binder :
-  Pos.t ->
-  Term.binder -> (Pos.t * string * Typing.ty) list -> preterm -> preterm
-(** The type [Term.binder] is used here, since the structure
-  * is that of a [Term.term], and this module depends on [Term] either way. *)
+  IO.Pos.t ->
+  Ndcore.Term.binder -> (IO.Pos.t * string * Typing.Type.t) list -> preterm -> preterm
+(** The type [Ndcore.Term.binder] is used here, since the structure
+  * is that of a [Ndcore.Term.term], and this module depends on [Ndcore.Term] either way. *)
 
 (** Abstraction. *)
-val pre_lambda : Pos.t -> (Pos.t * string * Typing.ty) list -> preterm -> preterm
+val pre_lambda : IO.Pos.t -> (IO.Pos.t * string * Typing.Type.t) list -> preterm -> preterm
 
 (** Application. *)
-val pre_app : Pos.t -> preterm -> preterm list -> preterm
+val pre_app : IO.Pos.t -> preterm -> preterm list -> preterm
 (** The (zero or more) arguments of the application are given backwards. *)
 
 (** Term tuple. *)
-val pre_tuple : Pos.t -> preterm -> preterm -> preterm list -> preterm
+val pre_tuple : IO.Pos.t -> preterm -> preterm -> preterm list -> preterm
 (** The (zero or more) last components (after the two first ones) are
   * given in reverse order. *)
 
@@ -121,7 +103,7 @@ val free_args : preterm -> string list
 
 (** "Qed" command used outside of proof mode.
   * It should be the first command to appear after a "Theorem". *)
-exception Qed_error of Pos.t
+exception Qed_error of IO.Pos.t
 
 (** Flavouring keyword, prefixing a predicate declaration. *)
 type flavour =
@@ -132,16 +114,16 @@ type flavour =
 (** Command AST. *)
 module Command : sig
   type t =
-    | Kind    of (Pos.t * string) list * Typing.ki
+    | Kind    of (IO.Pos.t * string) list * Typing.Kind.t
     (** type declaration *)
-    | Type    of (Pos.t * string) list * Typing.ty
+    | Type    of (IO.Pos.t * string) list * Typing.Type.t
     (** constant declaration *)
-    | Def     of (flavour * Pos.t * string * Typing.ty) list *
-                 (Pos.t * preterm * preterm) list
+    | Def     of (flavour * IO.Pos.t * string * Typing.Type.t) list *
+                 (IO.Pos.t * preterm * preterm) list
     (** predicate declaration and definition *)
-    | Theorem of (Pos.t * string * preterm)
+    | Theorem of (IO.Pos.t * string * preterm)
     (** theorem (imported from Abella) *)
-    | Qed     of Pos.t
+    | Qed     of IO.Pos.t
     (** end of proof (imported from Abella, ignored by Bedwyr) *)
 end
 
@@ -173,15 +155,15 @@ module MetaCommand : sig
     (** [#env.] call {!System.print_env} *)
     | Type_of of preterm
     (** [#type_of t.] call {!System.print_type_of} *)
-    | Show_def of Pos.t * string
+    | Show_def of IO.Pos.t * string
     (** [#show_def p.] call {!System.show_def} *)
-    | Show_table of Pos.t * string
+    | Show_table of IO.Pos.t * string
     (** [#show_table p.] call {!System.show_table} *)
     | Clear_tables
     (** [#clear_tables.] call {!System.clear_tables} *)
-    | Clear_table of Pos.t * string
+    | Clear_table of IO.Pos.t * string
     (** [#clear_table p.] call {!System.clear_table} *)
-    | Save_table of Pos.t * string * string
+    | Save_table of IO.Pos.t * string * string
     (** [#save_table p "p-table.def".] call {!System.save_table} *)
     | Export of string
     (** [#export "skeleton.xml".] call {!System.export} *)
@@ -201,22 +183,22 @@ type definition_mode =
 
 type toplevel =
   [
-  | `Term               of Pos.t * preterm
+  | `Term               of IO.Pos.t * preterm
   | `MetaCommand        of MetaCommand.t
   ]
 
 type term_mode =
   [
-  | `Term               of Pos.t * preterm
+  | `Term               of IO.Pos.t * preterm
   ]
 
 (** {6 Pre-terms' type checking} *)
 
 (** Type checking error. *)
-exception Term_typing_error of Pos.t * Typing.ty * Typing.ty *
-            Typing.type_unifier
+exception Term_typing_error of IO.Pos.t * Typing.Type.t * Typing.Type.t *
+            Typing.Type.Unifier.u
 
-(** [type_check_and_translate pt ty (fv,do,ip,ak)] checks that the
+(** [type_check_and_translate pt ty (do,ip,ak)] checks that the
   * pre-term [pt] built by the parser has the type [ty] (usually
   * [TProp]), and either translates it to the corresponding term and
   * realizes the type unification as side effect, or raises an exception
@@ -224,16 +206,16 @@ exception Term_typing_error of Pos.t * Typing.ty * Typing.ty *
   * authorized types.
   *
   * The algorithm is certainly close to {e Algorithm W}, with
-  * [Typing.unify_constraint] being the {e Var} rule.
+  * [Typing.Type.Unifier.refine] being the {e Var} rule.
   *
   * {e FIXME}
   * Whether it succeeds or not, a lot of fresh type variables are created
   * that aren't needed after this stage, and nothing is done to clean up
   * the global type unifier at present, so this function has a memory leak.
   *
-  * [fv], [do] and [ip] are functions returning the type (and, depending
-  * on the case, the corresponding term) of a free variable, declared
-  * object (constant or predicate) or intern predicate.
+  * [do] and [ip] are functions returning the type (and, depending on
+  * the case, the corresponding term) of a declared object (constant or
+  * predicate) or internal predicate.
   * [ak] returns the kind of a type constant.
   * @param stratum stratum of the predicate where this term belongs
   * @param head whether the term is the head of a clause (in which case
@@ -241,10 +223,9 @@ exception Term_typing_error of Pos.t * Typing.ty * Typing.ty *
   * @param free_args names of the free variables used as argument of a
   * top-level (wrt a definition) application, ie which will be
   * abstracted on, and whose type can allowed to contain [TProp]
-  * @param fold_free_types function that folds a provided action on a
-  * set of types once the type unification is done
-  * @param fresh_tyinst polymorphic type instantier
-  * @return a list of singleton variables and a type-checked Term.term
+  * @param free_types table of the types of the free variables, and of
+  * their position when they are singletons
+  * @return a list of singleton variables and a type-checked Ndcore.Term.term
   * @raise Invalid_pred_declaration if the target type of a predicate is
   * not [prop]
   * @raise Type_order_error if the type of a quantified or free variable
@@ -257,17 +238,11 @@ val type_check_and_translate :
   ?stratum:int ->
   head:bool ->
   free_args:string list ->
-  fold_free_types:((Term.var -> Typing.ty * Pos.t option ->
-                    (Pos.t * string) list ->
-                    (Pos.t * string) list) ->
-                   (Pos.t * string) list ->
-                   (Pos.t * string) list) ->
-  fresh_tyinst:(Typing.ty -> Typing.ty) ->
+  free_types:(Ndcore.Term.var,(Typing.Type.t * IO.Pos.t option)) Hashtbl.t ->
   preterm ->
-  Typing.ty ->
-  ((Pos.t * string -> Term.term * Typing.ty) *
-   (instantiate_type:bool -> ?forbidden_stratum:int -> Pos.t * string ->
-    Term.term * Typing.ty) *
-   (Pos.t * string -> Term.term * Typing.ty) *
-   (obj:Typing.obj -> p:Pos.t -> Typing.ty -> int)) ->
-  (Pos.t * string) list * Term.term
+  Typing.Type.t ->
+  ((instantiate_type:bool -> ?forbidden_stratum:int -> IO.Pos.t * string ->
+    Ndcore.Term.term * Typing.Type.t) *
+   (IO.Pos.t * string -> Ndcore.Term.term * Typing.Type.t) *
+   (obj:Typing.obj -> p:IO.Pos.t -> Typing.Type.t -> int)) ->
+  (IO.Pos.t * string) list * Ndcore.Term.term

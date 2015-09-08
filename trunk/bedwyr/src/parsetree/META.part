@@ -1,0 +1,5 @@
+version = "[internal]"
+description = "parsing and prenex polymorphic typing of higher-order lambda-terms"
+requires = "slimmer.ndcore,slimmer.iO"
+archive(byte) = "parsetree.cma"
+archive(native) = "parsetree.cmxa"
