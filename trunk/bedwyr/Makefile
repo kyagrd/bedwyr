@@ -171,7 +171,8 @@ configure: configure.ac
 #
 ##############################################################################
 
-.PHONY: bedwyr test test_libs test_ndcore test_batyping test_interface test_prover \
+.PHONY: bedwyr test test_libs \
+  test_pack_ndcore test_pack_parsetree test_pack_prover test_pack_interface \
   test_bedwyr debug
 
 bedwyr: $(bedwyr_prefix).$(BEST_SUFFIX)
@@ -187,24 +188,13 @@ ifeq ($(OCAMLFIND_OUNIT),)
   test_libs:
 	@echo 'Unit testing disabled, install oUnit to enable.'
 else
-  test_libs: test_ndcore test_batyping test_interface test_prover
+  test_libs: test_pack_ndcore test_pack_parsetree test_pack_prover test_pack_interface
 endif
 
-test_ndcore: $(BUILD)/src/ndcore/test.$(BEST_SUFFIX)
-	@echo -n 'Testing the core LLambda library'
-	@$< $(TEST_FLAGS)
-
-test_batyping: $(BUILD)/src/batyping/test.$(BEST_SUFFIX)
-	@echo -n 'Testing the Bedwyr-Abella typing library'
-	@$< $(TEST_FLAGS)
-
-test_interface: $(BUILD)/src/interface/test.$(BEST_SUFFIX)
-	@echo -n 'Testing the *.def and REPL interface library'
-	@$< $(TEST_FLAGS)
-
-test_prover: $(BUILD)/src/prover/test.$(BEST_SUFFIX)
-	@echo -n 'Testing the theorem prover library'
-	@$< $(TEST_FLAGS)
+.SECONDEXPANSION:
+test_pack_%: $(BUILD)/src/$$*/$$*/test.$(BEST_SUFFIX)
+	@echo -n 'Testing the $* module'
+	@$< $(OUNIT_FLAGS)
 
 test_bedwyr: bedwyr
 	@time for i in $(TEST_EXAMPLES) ; do \
