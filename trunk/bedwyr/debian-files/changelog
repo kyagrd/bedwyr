@@ -1,3 +1,9 @@
+bedwyr (1.4~beta10-1) stretch; urgency=medium
+
+  * new upstream release
+
+ -- Quentin Heath <quentin.heath@inria.fr>  Mon, 13 Jul 2015 21:31:28 +0200
+
 bedwyr (1.4~beta9-1) stretch; urgency=medium
 
   * new upstream release

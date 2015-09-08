@@ -151,17 +151,63 @@ Type    opsome  A -> option A.
 "
 
 
-(* Type declarations. *)
+(* Error handling. *)
+
+exception Missing_type of string * Preterm.Pos.t
+exception Missing_declaration of string * Preterm.Pos.t
+
+
+let catch ~k e =
+  begin match e with
+    (* Kind checking *)
+    | Missing_type (n,p) ->
+        Output.eprintf ~p
+          "Undeclared type %s."
+          n
+    | Preterm.Typing.Type_kinding_error (n,p,ki1,ki2) ->
+        Output.eprintf ~p
+          "Kinding error: the type constructor %s has kind %a@ \
+            but is used as %a."
+          n
+          Preterm.Typing.pp_kind ki2
+          Preterm.Typing.pp_kind ki1
+
+    (* Type checking *)
+    | Missing_declaration (n,p) ->
+        Output.eprintf ~p
+          "Undeclared object %s."
+          n
+    | Preterm.Term_typing_error (p,ty1,ty2,unifier) ->
+        let pp_type = Preterm.Typing.get_pp_type ~unifier () in
+        Output.eprintf ~p
+          "Typing error: this term has type %a but is used as %a."
+          pp_type ty2
+          pp_type ty1
+    | Preterm.Typing.Type_order_error (n,p,ty) ->
+        begin match n with
+          | Some n ->
+              Output.eprintf ~p
+                "Typing error: cannot give free variable %s the type %a." n
+                (Preterm.Typing.get_pp_type ()) ty
+          | None ->
+              Output.eprintf ~p
+                "Typing error: cannot quantify over type %a."
+                (Preterm.Typing.get_pp_type ()) ty
+        end
+    | e -> raise e
+  end ;
+  k ()
+
+
+(* Type declarations and access. *)
 
 exception Invalid_type_declaration of string * Preterm.Pos.t * Preterm.Typing.ki * string
-exception Missing_type of string * Preterm.Pos.t
 
 
 module Types : sig
   val save_state : unit -> int
   val restore_state : int -> unit
   val declare : Preterm.Pos.t * string -> Preterm.Typing.ki -> unit
-  val get_kind : Preterm.Pos.t * string -> Preterm.Typing.ki
   val kind_check :
     obj:Preterm.Typing.obj ->
     p:Preterm.Typing.pos -> Preterm.Typing.ty -> int
@@ -207,56 +253,9 @@ end = struct
 end
 
 
-(* Error handling. *)
-
-exception Missing_declaration of string * Preterm.Pos.t
-exception Stratification_error of string * Preterm.Pos.t
-
-
-let catch ~k e =
-  begin match e with
-    (* Kind checking *)
-    | Missing_type (n,p) ->
-        Output.eprintf ~p
-          "Undeclared type %s."
-          n
-    | Preterm.Typing.Type_kinding_error (n,p,ki1,ki2) ->
-        Output.eprintf ~p
-          "Kinding error: the type constructor %s has kind %a@ \
-            but is used as %a."
-          n
-          Preterm.Typing.pp_kind ki2
-          Preterm.Typing.pp_kind ki1
-
-    (* Type checking *)
-    | Missing_declaration (n,p) ->
-        Output.eprintf ~p
-          "Undeclared object %s."
-          n
-    | Preterm.Term_typing_error (p,ty1,ty2,unifier) ->
-        let pp_type = Preterm.Typing.get_pp_type ~unifier () in
-        Output.eprintf ~p
-          "Typing error: this term has type %a but is used as %a."
-          pp_type ty2
-          pp_type ty1
-    | Preterm.Typing.Type_order_error (n,p,ty) ->
-        begin match n with
-          | Some n ->
-              Output.eprintf ~p
-                "Typing error: cannot give free variable %s the type %a." n
-                (Preterm.Typing.get_pp_type ()) ty
-          | None ->
-              Output.eprintf ~p
-                "Typing error: cannot quantify over type %a."
-                (Preterm.Typing.get_pp_type ()) ty
-        end
-    | e -> raise e
-  end ;
-  k ()
-
-
 (* Constants and predicates declarations. *)
 
+exception Stratification_error of string * Preterm.Pos.t
 exception Invalid_declaration of
   string * string * Preterm.Pos.t * Preterm.Typing.ty * string * Preterm.Typing.ty
 exception Invalid_flavour of
@@ -269,6 +268,7 @@ type flavour = (* XXX private *)
   | Normal
   | Inductive of tabling_info
   | CoInductive of tabling_info
+
 
 type predicate = (* XXX private *)
     { flavour           : flavour ;
@@ -284,9 +284,6 @@ let predicate flavour stratum definition ty =
               stratum=stratum ;
               definition=definition ;
               ty=ty }
-
-
-(* Constants and predicates declarations. *)
 
 module Objects : sig
   val get_type : Term.var -> (int option * Preterm.Typing.ty) option
