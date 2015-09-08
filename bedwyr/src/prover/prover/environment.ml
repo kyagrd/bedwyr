@@ -210,6 +210,7 @@ module Types : sig
     obj:obj ->
     p:IO.Pos.t -> Type.t -> int
   val iter : (Ndcore.Term.var -> Kind.t -> unit) -> unit
+  val fold : (Ndcore.Term.var -> Kind.t -> 'a -> 'a) -> 'a -> 'a
   val clear : unit -> unit
 end = struct
   let env : (Ndcore.Term.var,Kind.t) Hashtbl.t =
@@ -244,6 +245,9 @@ end = struct
 
   let iter f =
     Hashtbl.iter f env
+
+  let fold f seed =
+    Hashtbl.fold f env seed
 
   let clear () =
     let () = Stack.clear keys in
