@@ -21,23 +21,23 @@ let parse ~k ~parser ~lexer lexbuf =
   try Some (parser lexer lexbuf) with e ->
     begin match e with
       (* Lexer *)
-      | Preterm.EOF_error s ->
+      | Lexer.EOF_error s ->
           Output.eprintf ~p:(Preterm.Pos.of_lexbuf lexbuf ())
             "Lexing error:@ %s@ at end of input."
             s
-      | Preterm.Illegal_byte_sequence c ->
+      | Lexer.Illegal_byte_sequence c ->
           Output.eprintf ~p:(Preterm.Pos.of_lexbuf lexbuf ())
             "Illegal sequence starting with byte %C in input."
             c
-      | Preterm.Illegal_string_comment p ->
+      | Lexer.Illegal_string_comment p ->
           Output.eprintf ~p
             "Unmatched comment delimiter in string."
-      | Preterm.Illegal_token (n1,n2) ->
+      | Lexer.Illegal_token (n1,n2) ->
           Output.eprintf ~p:(Preterm.Pos.of_lexbuf lexbuf ())
             "%S is illegal in a token, did you mean %S?"
             (Lexing.lexeme lexbuf)
             (String.concat " " [n1;n2])
-      | Preterm.Unknown_command n ->
+      | Lexer.Unknown_command n ->
           Output.eprintf ~p:(Preterm.Pos.of_lexbuf lexbuf ())
             "Unknown meta-command %S, use \"#help.\" for a short list."
             ("#" ^ n)

@@ -20,6 +20,33 @@
 (****************************************************************************)
 
 {
+  (** Wrapper around some Failures raised in Lexer. *)
+  exception EOF_error of string
+
+  (** No valid token could be parsed from the input.
+    * It might contain a valid prefix, though,
+    * and in particular the provided byte could be a valid character,
+    * but it often is the first byte of a multibyte unicode character. *)
+  exception Illegal_byte_sequence of char
+
+  (** An unmatched "/*" or a "*/" was found in a quoted string.
+    * In order to allow for commenting a block of valid code without
+    * breaking the whole file, comment delimiters must be properly escaped
+    * (for instance "/\*" and "*\/") or balanced.
+    * Note that escaping the first character instead of the second
+    * ("\/*" or "\*/") doesn't prevent this exception. *)
+  exception Illegal_string_comment of Preterm.Pos.t
+
+  (** Some characters that are only allowed in prefix names
+    * were used next to some that are only allowed in infix names.
+    * This happens to be forbidden for compatibility reasons;
+    * a separating sequence (spaces, tabs, carriage returns, line feeds),
+    * a comment or a quoted string is needed between two such names. *)
+  exception Illegal_token of string * string
+
+  (** The hash character was misused, or a meta-command was misspelled. *)
+  exception Unknown_command of string
+
   open Parser
   open Lexing
 
@@ -35,7 +62,7 @@
   let strbuf = Buffer.create 128
 
   let escape_table = Hashtbl.create 4
-  let _ = List.iter (fun (k,t) -> Hashtbl.add escape_table k t)
+  let _ = List.iter (fun (k,t) -> Hashtbl.replace escape_table k t)
             [ (* standard escaping sequences *)
               'b',  '\b' ;
               't',  '\t' ;
@@ -52,7 +79,7 @@
   (* == Token tables ================================================ *)
 
   let command_table = Hashtbl.create 22
-  let _ = List.iter (fun (k,t) -> Hashtbl.add command_table k t)
+  let _ = List.iter (fun (k,t) -> Hashtbl.replace command_table k t)
             [ (* Bedwyr meta-commands *)
               "exit",           EXIT ;
               "help",           HELP ;
@@ -79,11 +106,11 @@
             ]
   let get_command n =
     try Hashtbl.find command_table n
-    with Not_found -> raise (Preterm.Unknown_command n)
+    with Not_found -> raise (Unknown_command n)
 
   (* Upper-case tokens *)
   let ub_keyword_t = Hashtbl.create 5
-  let _ = List.iter (fun (k,t) -> Hashtbl.add ub_keyword_t k t)
+  let _ = List.iter (fun (k,t) -> Hashtbl.replace ub_keyword_t k t)
             [ (* Bedwyr upper-case keywords *)
               "Kind",           KKIND ;
               "Type",           TTYPE ;
@@ -92,7 +119,7 @@
               "Qed",            QED ;
             ]
   let ua_keyword_t = Hashtbl.create 8
-  let _ = List.iter (fun (k,t) -> Hashtbl.add ua_keyword_t k t)
+  let _ = List.iter (fun (k,t) -> Hashtbl.replace ua_keyword_t k t)
             [ (* Abella upper-case keywords *)
               "Close",          CLOSE ;
               "Query",          QUERY ;
@@ -113,14 +140,14 @@
 
   (* Lower-case tokens *)
   let lb_keyword_t = Hashtbl.create 3
-  let _ = List.iter (fun (k,t) -> Hashtbl.add lb_keyword_t k t)
+  let _ = List.iter (fun (k,t) -> Hashtbl.replace lb_keyword_t k t)
             [ (* Bedwyr lower-case keywords *)
               "inductive",      INDUCTIVE ;
               "coinductive",    COINDUCTIVE ;
               "by",             BY ;
             ]
   let lb_primitive_t = Hashtbl.create 9
-  let _ = List.iter (fun (k,t) -> Hashtbl.add lb_primitive_t k t)
+  let _ = List.iter (fun (k,t) -> Hashtbl.replace lb_primitive_t k t)
             [ (* Bedwyr lower-case primitive operators and constants *)
               "type",           TYPE ;
               "prop",           PROP ;
@@ -133,7 +160,7 @@
               "false",          FALSE ;
             ]
   let la_keyword_t = Hashtbl.create 5
-  let _ = List.iter (fun (k,t) -> Hashtbl.add la_keyword_t k t)
+  let _ = List.iter (fun (k,t) -> Hashtbl.replace la_keyword_t k t)
             [ (* Abella lower-case keywords, except for tactics *)
               "to",             TO ;
               "with",           WITH ;
@@ -142,7 +169,7 @@
               "keep",           KEEP ;
             ]
   let la_tactic_t = Hashtbl.create 23
-  let _ = List.iter (fun (k,t) -> Hashtbl.add la_tactic_t k t)
+  let _ = List.iter (fun (k,t) -> Hashtbl.replace la_tactic_t k t)
             [ (* Abella tactics, except for "exists" and "split*" *)
               "induction",      IND_T ;
               "coinduction",    COIND_T ;
@@ -168,7 +195,7 @@
               "unabbrev",       UNABBREV_T ;
             ]
   let lt_keyword_t = Hashtbl.create 22
-  let _ = List.iter (fun (k,t) -> Hashtbl.add lt_keyword_t k t)
+  let _ = List.iter (fun (k,t) -> Hashtbl.replace lt_keyword_t k t)
             [ (* Teyjus lower-case keywords *)
               "sig",            TEYJUS_KEYWORD ;
               "module",         TEYJUS_KEYWORD ;
@@ -217,19 +244,19 @@
 
   (* Infix-case tokens *)
   let ib_primitive_t = Hashtbl.create 2
-  let _ = List.iter (fun (k,t) -> Hashtbl.add ib_primitive_t k t)
+  let _ = List.iter (fun (k,t) -> Hashtbl.replace ib_primitive_t k t)
             [ (* Bedwyr infix-case primitive operators and constants *)
               "->",             RARROW ;
               "*",              STAR ;
               "=",              EQ ;
             ]
   let ia_primitive_t = Hashtbl.create 1
-  let _ = List.iter (fun (k,t) -> Hashtbl.add ia_primitive_t k t)
+  let _ = List.iter (fun (k,t) -> Hashtbl.replace ia_primitive_t k t)
             [ (* Abella infix-case primitive operators and constants *)
               "|-",             TURN ;
             ]
   let it_primitive_t = Hashtbl.create 2
-  let _ = List.iter (fun (k,t) -> Hashtbl.add it_primitive_t k t)
+  let _ = List.iter (fun (k,t) -> Hashtbl.replace it_primitive_t k t)
             [ (* Teyjus infix-case primitive operators and constants *)
               ":-",             TEYJUS_KEYWORD ;
               "=>",             TEYJUS_KEYWORD ;
@@ -340,12 +367,12 @@ rule token = parse
   | ((safe_char* safe_char_noslash) as n1) (infix_name as n2)
   | (safe_char+ as n1) ((infix_special_nostar infix_special*) as n2)
   | (infix_name as n1) (safe_char+ as n2)
-                                { raise (Preterm.Illegal_token (n1,n2)) }
+                                { raise (Illegal_token (n1,n2)) }
 
   (* misc *)
   | eof                         { EOF }
 
-  | _ as c                      { raise (Preterm.Illegal_byte_sequence c) }
+  | _ as c                      { raise (Illegal_byte_sequence c) }
 
 and proof = parse
   | '\n'                        { new_line lexbuf ;
@@ -369,7 +396,7 @@ and comment level cont = parse
                                     comment (level - 1) cont lexbuf }
   | '\n'                        { new_line lexbuf ;
                                   comment level cont lexbuf }
-  | eof                         { raise (Preterm.EOF_error "comment not closed") }
+  | eof                         { raise (EOF_error "comment not closed") }
 
 and qstring pos_of_lexbuf starts finish = parse
   | "\\\n"                      { new_line lexbuf ;
@@ -393,7 +420,7 @@ and qstring pos_of_lexbuf starts finish = parse
                                   qstring pos_of_lexbuf starts finish lexbuf }
   | '"'                         { match starts,finish with
                                     | (pos :: _),_ | _,Some pos ->
-                                        raise (Preterm.Illegal_string_comment pos)
+                                        raise (Illegal_string_comment pos)
                                     | _ ->
                                         let pos = pos_of_lexbuf () in
                                         QSTRING (pos,Buffer.contents strbuf) }
@@ -402,4 +429,4 @@ and qstring pos_of_lexbuf starts finish = parse
                                   qstring pos_of_lexbuf starts finish lexbuf }
   | (('/' | '*') as c)          { addChar c ;
                                   qstring pos_of_lexbuf starts finish lexbuf }
-  | eof                         { raise (Preterm.EOF_error "string not closed") }
+  | eof                         { raise (EOF_error "string not closed") }

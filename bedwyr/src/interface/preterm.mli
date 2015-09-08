@@ -41,33 +41,6 @@ module Pos : sig
   val pp : Format.formatter -> t -> unit
 end
 
-(** No valid token could be parsed from the input.
-  * It might contain a valid prefix, though,
-  * and in particular the provided byte could be a valid character,
-  * but it often is the first byte of a multibyte unicode character. *)
-exception Illegal_byte_sequence of char
-
-(** An unmatched "/*" or a "*/" was found in a quoted string.
-  * In order to allow for commenting a block of valid code without
-  * breaking the whole file, comment delimiters must be properly escaped
-  * (for instance "/\*" and "*\/") or balanced.
-  * Note that escaping the first character instead of the second
-  * ("\/*" or "\*/") doesn't prevent this exception. *)
-exception Illegal_string_comment of Pos.t
-
-(** Some characters that are only allowed in prefix names
-  * were used next to some that are only allowed in infix names.
-  * This happens to be forbidden for compatibility reasons;
-  * a separating sequence (spaces, tabs, carriage returns, line feeds),
-  * a comment or a quoted string is needed between two such names. *)
-exception Illegal_token of string * string
-
-(** The hash character was misused, or a meta-command was misspelled. *)
-exception Unknown_command of string
-
-(** Wrapper around some Failures raised in Lexer. *)
-exception EOF_error of string
-
 (** Wrapper around End_of_file in definition mode. *)
 exception Empty_command
 
