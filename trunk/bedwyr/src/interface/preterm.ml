@@ -60,11 +60,6 @@ module Pos = struct
       Format.fprintf fmt "In file %S, at %s" name (pos_to_string (start,curr))
 end
 
-exception Illegal_byte_sequence of char
-exception Illegal_string_comment of Pos.t
-exception Illegal_token of string * string
-exception Unknown_command of string
-exception EOF_error of string
 exception Empty_command
 exception Empty_term
 exception Parse_error of Pos.t * string * string
