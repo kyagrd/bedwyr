@@ -1,6 +1,23 @@
 #!/bin/bash
 #
-# finds the best way to invoke the tool
+#  Bedwyr prover -- wrapper guessing the best way to invoke the tool
+#  Copyright (C) 2012-2015 Quentin Heath
+#
+#  This program is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation; either version 2 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License along
+#  with this program; if not, write to the Free Software Foundation, Inc.,
+#  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+#
+# @configure_input@
 
 if command -v @PACKAGE_TARNAME@.native >/dev/null 2>&1 ; then
   PROGRAM=@PACKAGE_TARNAME@.native
@@ -13,17 +30,20 @@ else
   fi
 fi
 
-WORDS="+pkgdatadir+/contrib/rlwrap/completions"
-if [ -f "$WORDS" ] ; then
-  AUTOCOMPLETION="-b(){}[],%\";. -f$WORDS"
-else
-  AUTOCOMPLETION="-b(){}[],%\";"
-fi
-
 if command -v rlwrap >/dev/null 2>&1 ; then
-  WRAPPER="rlwrap -c -C@PACKAGE_TARNAME@ -D2 -g'^(n|y)$' -m -pgreen -q'\"' $AUTOCOMPLETION"
+  WORDS="+pkgdatadir+/contrib/rlwrap/completions"
+  if [ -f "$WORDS" ] ; then
+    AUTOCOMPLETION=('-b(){}[],%";.' "-f${WORDS}")
+  else
+    AUTOCOMPLETION=('-b(){}[],%";.')
+  fi
+  WRAPPER=(rlwrap -c -C'@PACKAGE_TARNAME@' -D2 -g'^(n|y)$' -m -O '^(\?=| \?>) $' -pGreen -w0 -q'"' -e' ' "${AUTOCOMPLETION[@]}")
 else
-  WRAPPER=""
+  if command -v ledit >/dev/null 2>&1 ; then
+    WRAPPER=(ledit -h '~/.@PACKAGE_TARNAME@_history' -x)
+  else
+    WRAPPER=()
+  fi
 fi
 
 if command -v tput >/dev/null 2>&1 ; then
@@ -33,4 +53,4 @@ if command -v tput >/dev/null 2>&1 ; then
   fi
 fi
 
-exec -a @PACKAGE_TARNAME@ $WRAPPER env COLUMNS="${COLUMNS}" COLORS="${COLORS}" $PROGRAM "$@"
+exec -a '@PACKAGE_TARNAME@' "${WRAPPER[@]}" env COLUMNS="${COLUMNS}" COLORS="${COLORS}" "${PROGRAM}" "$@"
