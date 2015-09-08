@@ -1,6 +1,6 @@
 ##############################################################################
 #  Bedwyr prover                                                             #
-#  Copyright (C) 2012-2013 Quentin Heath                                     #
+#  Copyright (C) 2012-2015 Quentin Heath                                     #
 #                                                                            #
 #  This program is free software; you can redistribute it and/or modify      #
 #  it under the terms of the GNU General Public License as published by      #
@@ -37,7 +37,6 @@
 !define PACKAGE_VERSION "@PACKAGE_VERSION@"
 !define PACKAGE_FULLNAME \
   "${PACKAGE_NAME} ${PACKAGE_VERSION}"
-!define OCAML_VERSION   "@OCAML_VERSION@"
 !define PACKAGE_TAGLINE "@PACKAGE_TAGLINE@"
 !define PROJECT_PACKAGE "${PROJECT_NAME}\${PACKAGE_NAME}"
 !define UNINSTALL_KEY \
@@ -183,11 +182,6 @@ SectionGroup "!Bedwyr binaries"
     File _build\src\bedwyr.exe
     WriteUninstaller "$INSTDIR\uninstall.exe"
   SectionEnd
-  Section "bytecode (for OCaml ${OCAML_VERSION})"
-    SectionIn 1
-    SetOutPath "$INSTDIR"
-    File _build\src\bedwyr.byte
-  SectionEnd
 SectionGroupEnd
 
 Section "!Examples"
@@ -209,9 +203,6 @@ SectionGroup "Start Menu Shortcuts"
       "$INSTDIR\uninstall.exe" "" "$INSTDIR\uninstall.exe" 0
     CreateShortCut "${PACKAGE_NAME}.lnk" \
       "$INSTDIR\bedwyr.exe" "" "$INSTDIR\bedwyr.exe" 0
-    IfFileExists "$INSTDIR\bedwyr.byte" 0 +2
-    CreateShortCut "${PACKAGE_NAME} - bytecode.lnk" \
-      "$INSTDIR\bedwyr.byte" "" "$INSTDIR\bedwyr.exe" 0
     #!define MUI_STARTMENU_WRITE_END
   SectionEnd
   Section "Files"
@@ -270,13 +261,6 @@ SectionGroup "Documentation"
       File doc\refman.pdf
     SectionEnd
   SectionGroupEnd
-  SectionGroup "Library reference"
-    Section "HTML"
-      SectionIn 1
-      SetOutPath "$INSTDIR\Doc\libref"
-      File _build\src.docdir\*
-    SectionEnd
-  SectionGroupEnd
 SectionGroupEnd
 
 #
@@ -298,7 +282,6 @@ Section "Uninstall"
   RMDir /r "$INSTDIR\Doc"
 
   Delete "$INSTDIR\bedwyr.exe"
-  Delete "$INSTDIR\bedwyr.byte"
   Delete "$INSTDIR\uninstall.exe"
   RMDir "$INSTDIR"
   RMDir "$PROGRAMFILES32\${PROJECT_NAME}"

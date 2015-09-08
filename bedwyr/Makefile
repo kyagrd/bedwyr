@@ -40,7 +40,6 @@ TEST_EXAMPLES	= list.def internal/scoping.def internal/checks.def \
 		  pi/pi_trace.def pi/corr-assert.def pi/pi_modal.def \
 		  pi/pi_asserts.def
 
-l_cclib		= -lflags -cclib,
 BUILD		= _build
 bedwyr_prefix	= $(BUILD)/src/bedwyr
 OPAM_PACKAGES	= opam-repo/packages
@@ -97,6 +96,7 @@ OPAM_URL	= $(OPAM_URL_SCHEME)://$(OPAM_URL_FULL_PATH)
 #
 ##############################################################################
 
+.SECONDEXPANSION:
 .PHONY: build slimmer_lib
 
 build: $(BUILT_FILES) bedwyr
@@ -104,37 +104,34 @@ build: $(BUILT_FILES) bedwyr
 slimmer_lib: $(SLIMMER_FINDLIB)
 
 $(BUILD)/%.byte: $(OCAML_FILES:.in=)
-	@$(OCAMLBUILD) $*.byte
+	@$(OCAMLBUILD) $(patsubst $(BUILD)/%,%,$@)
 
 $(BUILD)/%.native: $(OCAML_FILES:.in=)
-	@$(OCAMLBUILD) $*.native
+	@$(OCAMLBUILD) $(patsubst $(BUILD)/%,%,$@)
 
 $(BUILD)/%.cmi: $(OCAML_FILES:.in=)
-	@$(OCAMLBUILD) $*.cmi
+	@$(OCAMLBUILD) $(patsubst $(BUILD)/%,%,$@)
 
 $(BUILD)/%.cmo: $(OCAML_FILES:.in=)
-	@$(OCAMLBUILD) $*.cmo
+	@$(OCAMLBUILD) $(patsubst $(BUILD)/%,%,$@)
 
 $(BUILD)/%.cma: $(OCAML_FILES:.in=)
-	@$(OCAMLBUILD) $*.cma
+	@$(OCAMLBUILD) $(patsubst $(BUILD)/%,%,$@)
 
 $(BUILD)/%.cmxa $(BUILD)/%.a: $(OCAML_FILES:.in=)
-	@$(OCAMLBUILD) $*.cmxa
+	@$(OCAMLBUILD) $(patsubst $(BUILD)/%,%,$@)
 
-$(BUILD)/%.cmxs: $(OCAML_FILES:.in=)
-	@ln -svf $(*F).mllib $*.mldylib
-	@$(OCAMLBUILD) $*.cmxs
+$(BUILD)/%.cmxs: %.mldylib $(OCAML_FILES:.in=)
+	@$(OCAMLBUILD) $(patsubst $(BUILD)/%,%,$@)
 
 $(BUILD)/%.docdir/index.html: $(OCAML_FILES:.in=) %.odocl
-	@$(OCAMLBUILD) $*.docdir/index.html
+	@$(OCAMLBUILD) $(patsubst $(BUILD)/%,%,$@)
 
-#$(BUILD)/%.odoc: $(OCAML_FILES:.in=)
-#	@$(OCAMLBUILD) $*.odoc
+$(BUILD)/%.exe: nsis-files/$$(*F).o $(BUILD)/%.native
+	$(MINGW32_LD) $^ -o $@
 
-$(BUILD)/%.exe: $(OCAML_FILES:.in=) $(COFF_FILES)
-	@$(OCAMLBUILD) -just-plugin
-	@$(OCAMLBUILDWIN32) $(addprefix $(l_cclib)../,$(COFF_FILES)) $*.native
-	@mv -vi $(BUILD)/$*.native $(BUILD)/$*.exe
+%.mldylib: %.mllib
+	@ln -svf $(<F) $@
 
 %.o: %.rc
 	@$(MINGW32_WINDRES) $< $@
@@ -191,7 +188,6 @@ else
   test_libs: test_pack_ndcore test_pack_parsetree test_pack_prover test_pack_interface
 endif
 
-.SECONDEXPANSION:
 test_pack_%: $(BUILD)/src/$$*/$$*/test.$(BEST_SUFFIX)
 	@echo -n 'Testing the $* module'
 	@$< $(OUNIT_FLAGS)
@@ -478,8 +474,8 @@ else
 endif
 
 nsis: nsis_orig_files nsis_files
-	@CONFIGURE_OPTS="$(CONFIGURE_OPTS) --enable-nsis \
-	  --enable-bytecode --enable-win32 --enable-doc --without-xmlm" \
+	@CONFIGURE_OPTS="$(CONFIGURE_OPTS) --enable-nsis --host=win32 \
+	  --disable-bytecode --enable-nativecode --enable-doc" \
 	  $(MAKE) -C nsis-build nsis_pkg
 	@cp -pvf nsis-build/$(DIST_NAME)-installer.exe .
 
@@ -498,11 +494,7 @@ ifeq (0,$(MAKELEVEL))
   nsis_pkg:
 	@echo 'Use the "nsis" target to ensure the necessary files exist.'
 else
-  nsis_pkg: build doc
-	@mv $(SRC_DOCDIR)/index.html $(SRC_DOCDIR)/index.htm
-	@find $(SRC_DOCDIR)/ -type f \
-	  -exec sed -i.bkp -e 's|\<index.html\>|index.htm|' {} \; \
-	  -exec rm -f {}.bkp \;
+  nsis_pkg: $(filter %.exe contrib/emacs/% contrib/vim/%,$(BUILT_FILES)) bedwyr_doc
 	@$(MAKENSIS) nsis-files/bedwyr.nsi
 endif
 
