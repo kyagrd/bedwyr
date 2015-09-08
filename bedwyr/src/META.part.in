@@ -2,6 +2,6 @@
 # @configure_input@
 #name = "slimmer"
 version = "@PACKAGE_VERSION@"
-description = "Sophisticated Logic Implementations for Modeling and Mechanical Reasoning"
-requires = "slimmer.ndcore slimmer.batyping slimmer.interface slimmer.prover"
+description = "Sophisticated Logic Implementations for Modeling and MEchanical Reasoning"
+requires = "slimmer.ndcore slimmer.io slimmer.parsetree slimmer.prover slimmer.interface"
 #directory = "+slimmer"
