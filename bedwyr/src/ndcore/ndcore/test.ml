@@ -23,43 +23,46 @@
 open OUnit
 open Term
 open Notations
+open Norm
+open Unify
+open Index
+open Pprint
 
 (* No normalization, plain observational equality. *)
 let assert_equal x y =
   assert_equal
     ~cmp:eq
-    ~printer:(fun t -> Pprint.term_to_string_full ~generic:[] ~bound:[] t)
+    ~printer:(fun t -> term_to_string_full ~generic:[] ~bound:[] t)
     x y
 (* No normalization, equivariance checking. *)
 and assert_eqvt x y =
   assert_equal
     ~cmp:eqvt
-    ~printer:(fun t -> Pprint.term_to_string_full ~generic:[] ~bound:[] t)
+    ~printer:(fun t -> term_to_string_full ~generic:[] ~bound:[] t)
     x y
 
 (* Normalized form equality. *)
 and assert_equal2 a b c d =
-  let eq a b = eq (Norm.deep_norm a) (Norm.deep_norm b) in
+  let eq a b = eq (deep_norm a) (deep_norm b) in
   assert_equal
     ~cmp:(fun (a,c) (b,d) -> eq a b && eq c d)
     ~printer:(fun (a,b) ->
-                (Pprint.term_to_string a) ^ " and " ^
-                  (Pprint.term_to_string b) ^ "\n")
+                (term_to_string a) ^ " and " ^
+                  (term_to_string b) ^ "\n")
     (a,c) (b,d)
 (* Idem. *)
 and assert_equal_norm x y =
-  let eq a b = eq (Norm.deep_norm a) (Norm.deep_norm b) in
+  let eq a b = eq (deep_norm a) (deep_norm b) in
   assert_equal
     ~cmp:eq
-    ~printer:Pprint.term_to_string x y
+    ~printer:term_to_string x y
 
 let unify =
-  let module Unify =
-    Unify.Make (struct
-                  let instantiatable = Logic
-                  let constant_like  = Eigen
-                end)
-  in
+  let module Params = struct
+    let instantiatable = Logic
+    let constant_like  = Eigen
+  end in
+  let module Unify = Make (Params) in
   Unify.pattern_unify
 
 (* Extracting a variable at some position in a term,
@@ -81,59 +84,57 @@ let eig ?(lts=0) nm ts = fresh ~tag:Eigen ~name:nm ~ts:ts ~lts
 let const nm = fresh ~tag:Constant ~name:nm ~ts:0 ~lts:0
 
 let add index terms =
-  let add,_ = Index.access ~switch_vars:false index terms in
+  let add,_ = access ~switch_vars:false index terms in
   add
 
 let find index terms =
-  let _,found = Index.access ~switch_vars:false index terms in
+  let _,found = access ~switch_vars:false index terms in
   found
 
 let filter_count ?(o=0) ?(e=0) ?(u=0) index terms =
   let over = ref 0 in
   let exact = ref 0 in
   let under = ref 0 in
-  Index.filter
+  filter
     ~switch_vars:false index terms
     (fun _ ms -> match ms with
-         | Index.Over -> incr over
-         | Index.Exact -> incr exact
-         | Index.Under _ -> incr under) ;
+         | Over -> incr over
+         | Exact -> incr exact
+         | Under _ -> incr under) ;
   assert (!over = o) ;
   assert (!exact = e) ;
   assert (!under = u)
 
 let test =
-  "NdCore" >:::
-  [
-    "Term" >:::
-    [
-      (* Test that there are no empty Term.Binder *)
+  "NdCore" >::: [
+    "Term" >::: [
+      (* Test that there are no empty Binder *)
       "[exists, a]" >::
       (fun () ->
          let a = const "a" in
          let t = 0 &/ a in
          assert_equal a t) ;
 
-      (* Test that Term.Binder is flattened *)
+      (* Test that Binder is flattened *)
       "[forall x, forall y, x]" >::
       (fun () ->
          let t = 1 @/ (1 @/ (db 1)) in
          assert_equal (2 @/ (db 1)) t) ;
 
-      (* Test that there are no empty Term.Lam *)
+      (* Test that there are no empty Lam *)
       "[[]\\ a]" >::
       (fun () ->
          let a = const "a" in
          let t = 0 // a in
          assert_equal a t) ;
 
-      (* Test that Term.Lam is flattened *)
+      (* Test that Lam is flattened *)
       "[x\\ (y\\ x)]" >::
       (fun () ->
          let t = 1 // (1 // (db 1)) in
          assert_equal (2 // (db 1)) t) ;
 
-      (* Test that Term.App is flattened *)
+      (* Test that App is flattened *)
       "[(a b) c]" >::
       (fun () ->
          let a = const "a" in
@@ -158,57 +159,56 @@ let test =
       (* TODO tests for abstract, get_vars and *_copy_* *)
     ] ;
 
-    "Norm" >:::
-    [
+    "Norm" >::: [
       "[(x\\ x) c]" >::
       (fun () ->
          let c = const "c" in
          let t = (1 // db 1) ^^ [c] in
-         assert_equal c (Norm.hnorm t)) ;
+         assert_equal c (hnorm t)) ;
 
       "[(x\\ y\\ x) a b]" >::
       (fun () ->
          let a = const "a" in
          let b = const "b" in
          let t = (2 // db 2) ^^ [a; b] in
-         assert_equal a (Norm.hnorm t)) ;
+         assert_equal a (hnorm t)) ;
 
       "[(x\\ y\\ y) a b]" >::
       (fun () ->
          let a = const "a" in
          let b = const "b" in
          let t = (2 // db 1) ^^ [a; b] in
-         assert_equal b (Norm.hnorm t)) ;
+         assert_equal b (hnorm t)) ;
 
       "[(x\\ y\\ z\\ x)]" >::
       (fun () ->
          let t = (3 // db 3) in
-         assert_equal (3 // db 3) (Norm.hnorm t)) ;
+         assert_equal (3 // db 3) (hnorm t)) ;
 
       "[(x\\ y\\ z\\ x) a]" >::
       (fun () ->
          let a = const "a" in
          let t = (3 // db 3) ^^ [a] in
-         assert_equal (2 // a) (Norm.hnorm t)) ;
+         assert_equal (2 // a) (hnorm t)) ;
 
       "[(x\\ x (x\\ x)) (x\\ y\\ x y)]" >::
       (fun () ->
          let t = 1 // (db 1 ^^ [1 // db 1]) in
          let t = t ^^ [ 2 // (db 2 ^^ [db 1]) ] in
-         assert_equal (1 // db 1)  (Norm.hnorm t)) ;
+         assert_equal (1 // db 1)  (hnorm t)) ;
 
       "[(x\\ x (x\\ x)) (x\\ y\\ x y) c]" >::
       (fun () ->
          let c = const "c" in
          let t = 1 // (db 1 ^^ [1 // db 1]) in
          let t = t ^^ [ 2 // (db 2 ^^ [db 1]) ; c ] in
-         assert_equal c (Norm.hnorm t)) ;
+         assert_equal c (hnorm t)) ;
 
       "[x\\ c x]" >::
       (fun () ->
          let c = const "c" in
          let t = 1 // (c ^^ [db 1]) in
-         assert_equal (1 // (c ^^ [db 1])) (Norm.hnorm t)) ;
+         assert_equal (1 // (c ^^ [db 1])) (hnorm t)) ;
 
       (* This test needs deep normalization
        * to get rid of a suspension on y. *)
@@ -216,11 +216,10 @@ let test =
       (fun () ->
          let ii = 2 // (db 2 ^^ [db 1]) in
          let t = 2 // (ii ^^ [db 2;db 1]) in
-         assert_equal (2 // (db 2 ^^ [db 1])) (Norm.deep_norm t)) ;
+         assert_equal (2 // (db 2 ^^ [db 1])) (deep_norm t)) ;
     ] ;
 
-    "Unif" >:::
-    [
+    "Unif" >::: [
       (********************************************
        * Tests from Nadathur's SML implementation *
        ********************************************)
@@ -273,7 +272,7 @@ let test =
          let t2 = y ^^ [ b ; c ] in
          unify t1 t2 ;
          let h =
-           let x = Norm.hnorm x in
+           let x = hnorm x in
            let e = extract [L;H] x in
            match observe e with
              | Var {ts=1;tag=Logic} -> e
@@ -295,7 +294,7 @@ let test =
          let c3 = eig "c" 3 in
          unify (x ^^ [a;b]) (c ^^ [y ^^ [b;c3]]) ;
          let h =
-           let x = Norm.hnorm x in
+           let x = hnorm x in
            let e = extract [L;A;H] x in
            match !!e with
              | Var {ts=1;tag=Logic} -> e
@@ -347,7 +346,7 @@ let test =
          let c = eig "c" 3 in
          unify (x ^^ [a;b;c]) (x ^^ [c;b;a]) ;
          let h =
-           let x = Norm.hnorm x in
+           let x = hnorm x in
            let e = extract [L;H] x in
            match !!e with
              | Var {ts=1;tag=Logic} -> e
@@ -367,7 +366,7 @@ let test =
          try
            unify (x ^^ [a;b]) (c1 ^^ [x ^^ [b;c3]]) ;
            "Expected OccursCheck" @? false
-         with Unify.Error Unify.OccursCheck -> ()) ;
+         with Error OccursCheck -> ()) ;
 
       (* 10bis: quantifier dependency violation -- raise OccursCheck too *)
       "[X1 a2 b3 != c3 (X b c)]" >::
@@ -379,7 +378,7 @@ let test =
          try
            unify (x ^^ [a;b]) (c ^^ [x ^^ [b;c]]) ;
            "Expected OccursCheck" @? false
-         with Unify.Error Unify.OccursCheck -> ()) ;
+         with Error OccursCheck -> ()) ;
 
       (* Example 11, flex-flex without raising *)
       "[X1 a2 b3 = Y1 b3 c3]" >::
@@ -391,13 +390,13 @@ let test =
          let c = eig "c" 3 in
          unify (x ^^ [a;b]) (y ^^ [b;c]) ;
          let h =
-           let x = Norm.hnorm x in
+           let x = hnorm x in
            let e = extract [L;H] x in
            match !!e with
              | Var {ts=1;tag=Logic} -> e
              | _ -> failwith
                       (Printf.sprintf "X=%s should match Lam (_,(App H _))"
-                         (Pprint.term_to_string x))
+                         (term_to_string x))
          in
          assert_equal2
            (2 // (h ^^ [db 1])) x
@@ -413,7 +412,7 @@ let test =
          let c = eig "c" 3 in
          unify (x ^^ [a;b;c]) (y ^^ [c]) ;
          let h =
-           let x = Norm.hnorm x in
+           let x = hnorm x in
            let e = extract [L;H] x in
            match !!e with
              | Var {ts=1;tag=Logic} -> e
@@ -433,7 +432,7 @@ let test =
          let c = eig "c" 3 in
          unify (x ^^ [a;b]) (a ^^ [y ^^ [b;c]]) ;
          let h =
-           let x = Norm.hnorm x in
+           let x = hnorm x in
            let e = extract [L;A;H] x in
            match !!e with
              | Var {ts=1;tag=Logic} -> e
@@ -455,7 +454,7 @@ let test =
          try
            unify (x ^^ [a;b]) (d ^^ [y ^^ [b;c]]) ;
            "Expected OccursCheck" @? false
-         with Unify.Error Unify.OccursCheck -> ()) ;
+         with Error OccursCheck -> ()) ;
 
       (* Example 15, unifying constants *)
       "[a = a]" >::
@@ -499,7 +498,7 @@ let test =
          unify t (a x) ;
          unify t (a y) ;
          try unify y t ; assert false
-         with Unify.Error _ -> ()) ;
+         with Error _ -> ()) ;
 
       (* This one used to fail, but the bug is fixed *)
       "[x\\y\\ H1 x = x\\y\\ G2 x]" >::
@@ -515,7 +514,7 @@ let test =
          let x = var "X" 1 in
          let y = eig "y" 2 in
          try unify x y ; assert false
-         with Unify.Error _ -> ()) ;
+         with Error _ -> ()) ;
 
       "[X^0 n1 = Y^0]" >::
       (fun () ->
@@ -559,7 +558,7 @@ let test =
          let y = fresh ~tag:Logic ~name:"Y" ~lts:1 ~ts:0 in
          unify x (c ^^ [y]) ;
          match !!y with
-           | Var {lts=0} -> () | _ -> Pprint.print_term y ; assert false) ;
+           | Var {lts=0} -> () | _ -> print_term y ; assert false) ;
 
       "[X^0 n1 n2 = c Y^2 = c n2]" >::
       (fun () ->
@@ -568,11 +567,10 @@ let test =
          let c = const "c" in
          let t = x ^^ [nabla 1 ; nabla 2] in
          unify t (c ^^ [y]) ;
-         unify (Norm.hnorm t) (c ^^ [nabla 2]))
+         unify (hnorm t) (c ^^ [nabla 2]))
     ] ;
 
-    "Indexing" >:::
-    [
+    "Indexing" >::: [
       "Ground terms" >::
       (fun () ->
          let d = db in
@@ -580,7 +578,7 @@ let test =
          let t2 = ((d 1) ^^ [ d 3 ; (d 1) ^^ [ d 4 ; d 5 ] ]) in
          let t3 = ((d 1) ^^ [ d 3 ; (d 1) ^^ [ d 4 ; d 4 ] ]) in
          let t4 = ((d 1) ^^ [ d 3 ; d 2 ]) in
-         let i0 = Index.empty in
+         let i0 = empty in
          let i1 = add i0 [t1] 10 in
          let i2 = add i1 [t2] 20 in
          let i3 = add i2 [t3] 30 in
@@ -605,7 +603,7 @@ let test =
        [
          "Plain" >::
          (fun () ->
-            let index = add (add Index.empty [t1] 1) [t2] 2 in
+            let index = add (add empty [t1] 1) [t2] 2 in
             assert (Some 1 = find index [(db 1) ^^ [ y ; z ; z ]]) ;
             assert (Some 2 = find index [(db 1) ^^ [ x ; x ; x ]]) ;
             assert (None = find index [(db 1) ^^ [ x ; z ; x ]]) ;
@@ -615,7 +613,7 @@ let test =
 
          "Match with eigen variables" >::
          (fun () ->
-            let index = add (add Index.empty [t1] 1) [t2] 2 in
+            let index = add (add empty [t1] 1) [t2] 2 in
             filter_count index [(db 1) ^^ [ y ; z ; z ]] ~e:1 ~u:1 ;
             filter_count index [(db 1) ^^ [ z ; z ; z ]] ~o:1 ~e:1 ;
             filter_count index [(db 1) ^^ [ x ; y ; z ]] ~u:2 ;
@@ -626,12 +624,12 @@ let test =
 
          "Match with constants" >::
          (fun () ->
-            let index = add (add Index.empty [t3] 3) [t4] 4 in
+            let index = add (add empty [t3] 3) [t4] 4 in
             filter_count index [(db 1) ^^ [ x ; y ; y ]] ~u:1 ;
             filter_count index [(db 1) ^^ [ a ; b ; b ]] ~o:2 ;
             filter_count index [(db 1) ^^ [ a ; a ; b ]] ~o:0 ;
             let t5 = (db 1) ^^ [ a ; a ; b ] in
-            let index = add Index.empty [t5] 5 in
+            let index = add empty [t5] 5 in
             filter_count index [(db 1) ^^ [ a ; x ; x ]] ~u:0) ;
 
          "Mixed with nominal variables" >::
@@ -642,7 +640,7 @@ let test =
             let t1 = (db 1) ^^ [ x ; y ] in
             let t2 = (db 1) ^^ [ x ; z ] in
             let t3 = (db 1) ^^ [ y ; z ] in
-            let index = add (add (add Index.empty [t1] 1) [t2] 2) [t3] 3 in
+            let index = add (add (add empty [t1] 1) [t2] 2) [t3] 3 in
             assert (Some 1 = find index [t1]) ;
             assert (Some 2 = find index [t2]) ;
             assert (Some 3 = find index [t3]) ;
@@ -654,22 +652,16 @@ let test =
             filter_count index [t3] ~o:0 ~e:1 ~u:2) ;
        ]) ;
 
-      "Nominal variables" >:::
-      [
+      "Nominal variables" >::: [
         "Bug in equivariant indexing" >::
         (fun () ->
-           let index = add Index.empty [nabla 1 ; nabla 2] 42 in
+           let index = add empty [nabla 1 ; nabla 2] 42 in
            assert (Some 42 = find index [nabla 3 ; nabla 1]) ;
-           let () = Index.eqvt_index := false in
+           let () = eqvt_index := false in
            assert (None = find index [nabla 3 ; nabla 1])) ;
       ] ;
 
-      "Logic variables" >:::
-      [
-        (*
-        "" >::
-        (fun () -> ())
-         *)
+      "Logic variables" >::: [
       ]
     ]
   ]
@@ -689,25 +681,29 @@ let _ =
   in
   match get_ids [] argv with
     | [] ->
-        let l = run_test_tt ~verbose test in
-        if List.exists (function RSuccess _ -> false | _ -> true) l then exit 1
+        if List.exists (function RSuccess _ -> false | _ -> true)
+             (run_test_tt ~verbose test)
+        then exit 1
     | ids ->
         (* Running specific tests (given positions in the tree) so you
          * can trace exceptions or do whatever debugging you want. *)
         let display_test id =
           let rec get_test l n k t =
-            let next n = match k with
-              | [] -> raise Not_found
-              | t::tl -> get_test l n tl t
-            in
             match t with
-              | TestCase f -> if n = id then l,f else next (n+1)
-              | TestList [] -> next n
+              | TestCase _ -> if n = id then l,t else next l (n+1) k
               | TestLabel (l,t) -> get_test l n k t
-              | TestList (h::tl) -> get_test l n (tl@k) h
+              | TestList [] -> next l n k
+              | TestList (hd::tl) -> get_test l n (tl::k) hd
+          and next l n = function
+            | [] -> raise Not_found
+            | []::tl -> next l n tl
+            | (hd1::tl1)::tl2 -> get_test l n (tl1::tl2) hd1
           in
           let lbl,test = get_test "" 0 [] test in
-          Printf.printf "Running test %d: %s\n%!" id lbl ;
-          test ()
+          Printf.printf "\nRunning test %d: %s%!" id lbl ;
+          match run_test_tt test with
+            | [RSuccess _] -> ()
+            | [_] -> exit 1
+            | _ -> assert false
         in
         List.iter display_test ids

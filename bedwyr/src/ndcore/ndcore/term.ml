@@ -181,7 +181,10 @@ let eqvt t1 t2 =
 (* [var_names] is used to attach a naming hint for the pretty printer
  * to variables, not only those built by the parser. It is designed to not
  * interfere with the GC. *)
-module Hint = struct
+module Hint : sig
+  val add : var -> string -> unit
+  val find : var -> string
+end = struct
   module M = Map.Make(struct type t = int let compare = compare end)
   let var_names = ref M.empty
   let add var name =
@@ -331,8 +334,8 @@ let atom ?tag name =
   then fresh Logic ~ts:0 ~lts:0
   else get_var_by_name ~ts:0 ~lts:0 ~tag name
 
-(* @return the naming hint attached to the variable,
- * or a default hint if there is none *)
+(* @return a generic name for the variable
+ * (neither unique nor real) *)
 let get_var_name v =
   try Hint.find v
   with Not_found -> "_"

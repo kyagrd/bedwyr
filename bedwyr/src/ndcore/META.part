@@ -1,5 +1,5 @@
 version = "[internal]"
-description = "higher-order pattern unification, non-destructive normalization and indexing of higher-order lambda-term"
+description = "higher-order pattern unification, non-destructive normalization and indexing of higher-order lambda-terms"
 #requires = ""
 archive(byte) = "ndcore.cma"
 archive(native) = "ndcore.cmxa"
