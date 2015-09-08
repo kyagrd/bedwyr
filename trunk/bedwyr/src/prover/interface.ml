@@ -169,7 +169,7 @@ module Eval : sig
   val definition : test_limit:(int option) ->
     print:('a -> unit) -> Preterm.definition_mode -> p:Preterm.Pos.t ->
     unit option
-  val toplevel : ?concise:bool -> test_limit:(int option) ->
+  val toplevel : concise:bool -> test_limit:(int option) ->
     print:('a -> unit) -> Preterm.toplevel -> p:Preterm.Pos.t ->
     unit option
   val term :
@@ -302,7 +302,7 @@ end = struct
                 (fun t -> Pprint.term_to_string t, t)
                 (List.rev (Term.logic_vars [query]))
             in
-            let found = ref false in
+            let number = ref 0 in
             let reset_time,time =
               let t0 = ref (Unix.gettimeofday ()) in
               (fun () -> t0 := Unix.gettimeofday ()),
@@ -313,9 +313,9 @@ end = struct
             in
             let show _ k =
               time () ;
-              found := true ;
-              if vars = [] then Output.printf ~nl:true "Solution found."
-              else Output.printf ~nl:true "@[<v 1>Solution found:%a@]"
+              incr number ;
+              if vars = [] then Output.printf ~nl:true "Found a solution."
+              else Output.printf ~nl:true "@[<v 1>Found a solution:%a@]"
                      Pprint.pp_env vars ;
               if all || begin
                 Output.printf "More [y] ? " ;
@@ -333,8 +333,8 @@ end = struct
             in
             let continue () =
               time () ;
-              if !found then Output.printf ~nl:true "No more solutions."
-              else Output.printf ~nl:true "No solution."
+              if !number=0 then Output.printf ~nl:true "No solution."
+              else Output.printf ~nl:true "No more solutions (found %d)." !number
             in
             let result =
               Prover.prove ~local:0 ~timestamp:0 query
@@ -507,7 +507,7 @@ end = struct
     | `MetaCommand mc ->
         meta_command ~test_limit mc ~p
 
-  let toplevel ?(concise=false) ~test_limit ~print input ~p = match input with
+  let toplevel ~concise ~test_limit ~print input ~p = match input with
     | `Term (p,pre_query) ->
         query ~p ~print ~all:concise pre_query
     | `MetaCommand mc ->
@@ -522,7 +522,7 @@ end
 module Mode : sig
   val definition : test_limit:(int option) ->
     Lexing.lexbuf -> unit option option
-  val toplevel : ?concise:bool -> test_limit:(int option) ->
+  val toplevel : concise:bool -> test_limit:(int option) ->
     Lexing.lexbuf -> unit option option
   val term :
     Lexing.lexbuf -> Term.term option option
@@ -538,25 +538,22 @@ end = struct
   let definition ~test_limit lexbuf =
     let k _ =
       Status.input () ;
-      Lexer.flush_input lexbuf ;
       None
     in
     step ~read:(Read.definition_mode ~k)
       ~eval:(Eval.definition ~test_limit) ~print:ignore lexbuf
 
-  let toplevel ?concise ~test_limit lexbuf =
+  let toplevel ~concise ~test_limit lexbuf =
     let k _ =
       Status.input () ;
-      Lexer.flush_input lexbuf ;
       None
     in
     step ~read:(Read.toplevel ~k)
-      ~eval:(Eval.toplevel ?concise ~test_limit) ~print:ignore lexbuf
+      ~eval:(Eval.toplevel ~concise ~test_limit) ~print:ignore lexbuf
 
   let term lexbuf =
     let k _ =
       Status.input () ;
-      Lexer.flush_input lexbuf ;
       None
     in
     step ~read:(Read.term_mode ~k) ~eval:Eval.term ~print:ignore lexbuf
@@ -615,8 +612,8 @@ let defl ?(incremental=false) ~test_limit lexbuf =
   (* TODO no meta-commands in defs? *)
 
 (* read-eval-print step *)
-let reps ?concise ~test_limit lexbuf =
-  match Mode.toplevel ?concise ~test_limit lexbuf with
+let reps ?(concise=true) ~test_limit lexbuf =
+  match Mode.toplevel ~concise ~test_limit lexbuf with
     | None ->
         Output.eprintf ~p:(Preterm.Pos.of_lexbuf lexbuf ()) "Empty query." ;
         Status.input () ;
@@ -625,11 +622,11 @@ let reps ?concise ~test_limit lexbuf =
     | Some (Some ()) -> Some ()
 
 (* read-eval-print loop *)
-let repl ?concise ~test_limit lexbuf =
+let repl ?(concise=false) ~test_limit lexbuf =
   let rec aux () =
     Format.printf "?= %!" ;
     Lexer.flush_input lexbuf ;
-    match Mode.toplevel ?concise ~test_limit lexbuf with
+    match Mode.toplevel ~concise ~test_limit lexbuf with
       | None -> Format.printf "@."
       | Some None -> aux ()
       | Some (Some ()) -> aux ()
