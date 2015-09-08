@@ -1,3 +1,10 @@
+bedwyr (1.4~beta9-1) stretch; urgency=medium
+
+  * new upstream release
+  * from unstable to stretch (explicit testing) to please reprepro
+
+ -- Quentin Heath <quentin.heath@inria.fr>  Fri, 19 Jun 2015 08:24:45 -0700
+
 bedwyr (1.4~beta4-1) unstable; urgency=medium
 
   * new upstream release
