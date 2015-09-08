@@ -1,6 +1,6 @@
 (****************************************************************************)
-(* Bedwyr -- interface                                                      *)
-(* Copyright (C) 2015 Quentin Heath                                         *)
+(* Bedwyr prover                                                            *)
+(* Copyright (C) 2011-2015 Quentin Heath                                    *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -17,27 +17,14 @@
 (* 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.              *)
 (****************************************************************************)
 
-module Status : sig
-  val exit_with : unit -> unit
-  val exit_if : unit -> unit
-end
+(* @configure_input@ *)
 
+(* Build-time global variables. *)
 
-module Catch : sig
-  val io : ?p:Preterm.Pos.t -> exn -> 'a option
-end
-
-
-val incr_test_limit : unit -> unit
-val remove_test_limit : unit -> unit
-
-val session     : string list ref
-val definitions : string list ref
-val queries     : string list ref
-val test_limit  : int option ref
-
-val reload : ?session:(string list) -> unit -> unit
-val run_query_string : string -> unit option
-val run_definition_string : string -> Term.term option option option
-val run_definitions_string : ?fname:string -> string -> Term.term list option
-val run_queries_channel : in_channel -> unit
+let project_tarname = "@PROJECT_TARNAME@"
+let package_name = "@PACKAGE_NAME@"
+let package_version = "@PACKAGE_VERSION@"
+let ocaml_version = "@OCAML_VERSION@"
+let build = "@REVISION@"
+let build_date = "@BUILD_DATE_F@"
+let features = []

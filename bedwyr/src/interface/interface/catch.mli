@@ -1,6 +1,6 @@
 (****************************************************************************)
-(* Bedwyr prover                                                            *)
-(* Copyright (C) 2011-2015 Quentin Heath                                    *)
+(* Bedwyr -- toplevel exception catching                                    *)
+(* Copyright (C) 2015 Quentin Heath                                         *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -17,15 +17,7 @@
 (* 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.              *)
 (****************************************************************************)
 
-(* @configure_input@ *)
-
-(* Build-time global variables. *)
-
-let package_name = "@PACKAGE_NAME@"
-let package_version = "@PACKAGE_VERSION@"
-let ocaml_version = "@OCAML_VERSION@"
-let build = "@REVISION@"
-let build_date = "@BUILD_DATE_F@"
-let features = [
-  "XML export of proofs","@XMLM_TAG@"
-]
+val solve : p:IO.Pos.t -> exn -> 'a option
+val meta_command : p:IO.Pos.t -> exn -> 'a option
+val io : ?p:IO.Pos.t -> exn -> 'a option
+val all : p:IO.Pos.t -> exn -> 'a option

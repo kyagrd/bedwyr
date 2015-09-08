@@ -1,5 +1,5 @@
 version = "[internal]"
-description = "generic I/O for the Bedwyr prover"
+description = "high-level interface"
 requires = "slimmer.ndcore,slimmer.batyping,str"
 archive(byte) = "interface.cma"
 archive(native) = "interface.cmxa"
