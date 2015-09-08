@@ -19,7 +19,7 @@
 .\"
 .\" @configure_input@
 .\"
-.Dd April 3, 2015
+.Dd June 16, 2015
 .Os @PACKAGE_NAME@ v@PACKAGE_VERSION@
 .Dt BEDWYR 1 URM
 .\"

@@ -278,11 +278,11 @@ type predicate = (* XXX private *)
       mutable definition: Ndcore.Term.term ;
       ty                : Type.t }
 type object_declaration =
-  | Constant of Type.t
-  | Predicate of predicate
+  | Cons of Type.t
+  | Pred of predicate
 
 let predicate flavour stratum definition ty =
-  Predicate { flavour=flavour ;
+  Pred { flavour=flavour ;
               stratum=stratum ;
               definition=definition ;
               ty=ty }
@@ -322,14 +322,14 @@ end = struct
 
   let get_type v =
     try match Hashtbl.find env v with
-      | Constant ty -> Some (None,ty)
-      | Predicate {stratum=stratum;ty=ty} -> Some (Some stratum,ty)
+      | Cons ty -> Some (None,ty)
+      | Pred {stratum=stratum;ty=ty} -> Some (Some stratum,ty)
     with Not_found -> None
 
   let get_pred v =
     match Hashtbl.find env v with
-      | Constant _ -> None
-      | Predicate x -> Some x
+      | Cons _ -> None
+      | Pred x -> Some x
 
   let keys = Stack.create ()
 
@@ -363,7 +363,7 @@ end = struct
                 with
                   | Some _ ->
                       let () = Stack.push var keys in
-                      Some (Hashtbl.replace env var (Constant ty))
+                      Some (Hashtbl.replace env var (Cons ty))
                   | None -> None
                 end
           end
@@ -440,15 +440,15 @@ end = struct
   let iter f g =
     Hashtbl.iter
       (fun k v -> match v with
-         | Constant c -> f k c
-         | Predicate p -> g k p)
+         | Cons c -> f k c
+         | Pred p -> g k p)
       env
 
   let fold f g seed =
     Hashtbl.fold
       (fun k v accum -> match v with
-         | Constant c -> f k c accum
-         | Predicate p -> g k p accum)
+         | Cons c -> f k c accum
+         | Pred p -> g k p accum)
       env seed
 
   let clear () =

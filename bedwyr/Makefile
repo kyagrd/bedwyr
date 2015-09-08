@@ -405,9 +405,6 @@ opam-files/files/bedwyr.install:
 	  done >> $@
 	@echo "]" >> $@
 	@echo "lib: [" >> $@
-	@for i in $(SLIMMER_FINDLIB) ; do \
-	  echo "#  \"$$i\"" ; \
-	  done >> $@
 	@echo "]" >> $@
 	@echo "share: [" >> $@
 	@for i in $(RLWRAP_CONTRIB:.in=) ; do \
