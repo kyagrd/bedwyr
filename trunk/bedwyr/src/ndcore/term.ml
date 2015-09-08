@@ -5,7 +5,7 @@
 (* Copyright (C) 2006-2010 David Baelde                                     *)
 (* Copyright (C) 2007,2009 Zach Snow                                        *)
 (* Copyright (C) 2011 Alwen Tiu                                             *)
-(* Copyright (C) 2011-2014 Quentin Heath                                    *)
+(* Copyright (C) 2011-2015 Quentin Heath                                    *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -230,7 +230,7 @@ let save_state () = !bind_len
 
 let restore_state n =
   assert (n <= !bind_len) ;
-  for i = 1 to !bind_len-n do
+  for i = !bind_len downto n+1 do
     let (v,contents) = Stack.pop bind_stack in
     v := contents
   done ;
@@ -302,6 +302,7 @@ type namespace = term NS.t
 let symbols = ref NS.empty
 
 let save_namespace () = !symbols
+let clear_namespace () = symbols := NS.empty
 let restore_namespace s = symbols := s
 
 (* Get the unique variable attached to that name, preserving sharing.

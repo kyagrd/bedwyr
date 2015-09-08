@@ -5,7 +5,7 @@
 (* Copyright (C) 2006-2010 David Baelde                                     *)
 (* Copyright (C) 2007,2009 Zach Snow                                        *)
 (* Copyright (C) 2011 Alwen Tiu                                             *)
-(* Copyright (C) 2011,2012 Quentin Heath                                    *)
+(* Copyright (C) 2010,2012,2015 Quentin Heath                               *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -164,6 +164,7 @@ val eq_subst    : subst -> subst -> bool
 type namespace
 
 val save_namespace : unit -> namespace
+val clear_namespace : unit -> unit
 val restore_namespace : namespace -> unit
 
 (** Get the unique variable attached to that name, preserving sharing.

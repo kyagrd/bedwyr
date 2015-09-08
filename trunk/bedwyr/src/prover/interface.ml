@@ -606,7 +606,17 @@ let () =
         | Some None -> aux ()
         | Some (Some term) -> Some term
     in
-    fun () -> aux ()
+    fun () ->
+      let restore =
+        let namespace = Term.save_namespace () in
+        Term.clear_namespace () ;
+        fun () -> Term.restore_namespace namespace
+      in
+      let x =
+        try aux () with e -> restore () ; raise e
+      in
+      restore () ;
+      x
   end
 
 let () =
