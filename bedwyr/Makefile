@@ -59,15 +59,19 @@ BEDWYR_ARCH	= $(addprefix $(DIST_NAME).,$(ARCH_SUFFIXES))
 
 BEDWYR_BINS	= $(addprefix $(bedwyr_prefix).,$(BIN_SUFFIXES)) $(BEDWYR_WRAPPER:.in=)
 MANPAGES	= $(MAN_FILES:.in=) $(foreach m,$(BIN_SUFFIXES),$(MAN_FILES:.1.in=.$m.1))
+
 SLIMMER_META	= src/META
-SLIMMER_LIBS	= $(foreach m,$(BEDWYR_LIBS),\
-		  $(addprefix $(BUILD)/src/$m/$m.,$(LIB_SUFFIXES)))
-SLIMMER_MLIS	= $(foreach m,$(BEDWYR_LIBS),\
-		  $(wildcard src/$m/*.mli))
-ifneq ($(BEST_SUFFIX),)
-  SLIMMER_CMIS	= $(addprefix $(BUILD)/,$(SLIMMER_MLIS:.mli=.cmi) $(addprefix src/interface/,lexer.cmi parser.cmi))
-SLIMMER_FINDLIB	= $(SLIMMER_META) $(SLIMMER_LIBS) $(SLIMMER_CMIS)
-endif
+SLIMMER_LIBS	= $(foreach l,$(BEDWYR_LIBS),\
+		  $(addprefix $(BUILD)/src/$l/$l.,$(LIB_SUFFIXES)))
+SLIMMER_PLUGINS	= $(foreach p,$(BEDWYR_PLUGINS),\
+		  $(addprefix $(BUILD)/src/plugins/$p.,$(PLUGIN_SUFFIXES)))
+SLIMMER_CMIS	= $(foreach l,$(BEDWYR_LIBS),$(BUILD)/src/$l/$l.cmi) \
+		  $(foreach p,$(BEDWYR_PLUGINS),$(BUILD)/src/plugins/$p.cmi)
+SLIMMER_MLIS	= $(foreach l,$(BEDWYR_LIBS),\
+		  $(wildcard src/$l/$l/*.mli))
+SLIMMER_FINDLIB	= $(SLIMMER_META) $(SLIMMER_LIBS) $(SLIMMER_PLUGINS) \
+		  $(SLIMMER_CMIS)
+
 BUILT_FILES	= $(BEDWYR_BINS) $(MANPAGES) $(SLIMMER_FINDLIB) \
 		  $(CONTRIB_FILES:.in=) $(DESKTOP_FILES:.in=)
 
@@ -96,9 +100,11 @@ OPAM_URL	= $(OPAM_URL_SCHEME)://$(OPAM_URL_FULL_PATH)
 #
 ##############################################################################
 
-.PHONY: build
+.PHONY: build slimmer_lib
 
 build: $(BUILT_FILES) bedwyr
+
+slimmer_lib: $(SLIMMER_FINDLIB)
 
 $(BUILD)/%.byte: $(OCAML_FILES:.in=)
 	@$(OCAMLBUILD) $*.byte
@@ -108,6 +114,9 @@ $(BUILD)/%.native: $(OCAML_FILES:.in=)
 
 $(BUILD)/%.cmi: $(OCAML_FILES:.in=)
 	@$(OCAMLBUILD) $*.cmi
+
+$(BUILD)/%.cmo: $(OCAML_FILES:.in=)
+	@$(OCAMLBUILD) $*.cmo
 
 $(BUILD)/%.cma: $(OCAML_FILES:.in=)
 	@$(OCAMLBUILD) $*.cma
@@ -142,7 +151,7 @@ $(SLIMMER_META): $(SLIMMER_META).part $(BEDWYR_LIBS:%=src/%/META.part)
 	  echo ')' ; \
 	  done >> $@
 
-contrib/rlwrap/$(RLWRAP_CONTRIB:.in=): $(BUILD)/src/interface/rlwrap.$(BEST_SUFFIX) contrib/rlwrap/$(RLWRAP_CONTRIB)
+contrib/rlwrap/$(RLWRAP_CONTRIB:.in=): $(BUILD)/src/interface/interface/rlwrap.$(BEST_SUFFIX) contrib/rlwrap/$(RLWRAP_CONTRIB)
 	@cat $@.in > $@
 	@$< >> $@
 
@@ -268,8 +277,6 @@ man/%.html: man/%
 
 %.html: %.md
 	@markdown $< > $@
-
-slimmer_lib: $(SLIMMER_FINDLIB) $(SLIMMER_MLIS)
 
 #
 # INSTALL
@@ -544,7 +551,7 @@ help:
 	@echo
 	@echo ' help           display this message'
 	@echo ' mostlyclean    remove compiled files'
-	@echo ' clean          also remove make-generated files'
+	@echo ' clean          also remove other make-generated files'
 	@echo ' distclean      also remove configure-generated and backup files'
 
 mostlyclean:
@@ -556,8 +563,9 @@ clean: doc/Makefile mostlyclean
 	@$(MAKE) -C $(<D) clean
 	@$(MAKE) -C examples/ccs_vp/timing clean
 	@rm -vf $(addprefix opam-files/,$(OPAM_FILES))
-	@rm -vf $(SLIMMER_FINDLIB)
-	@rm -vf *.bz2 *.gz *.tar *.tbz *.tgz *.odocl $(MANPAGES) $(MANPAGES:=.html) README.html
+	@rm -vf src/*/*.mldylib
+	@rm -vf $(BEDWYR_BINS) $(MANPAGES) $(SLIMMER_FINDLIB)
+	@rm -vf *.bz2 *.gz *.tar *.tbz *.tgz *.odocl $(MANPAGES:=.html) README.html
 	@rm -vf *.debian.tar.xz *.build *.changes *.dsc *.deb *-installer.exe
 	@rm -rvf $(DEB_DIST_NAME) nsis-build
 

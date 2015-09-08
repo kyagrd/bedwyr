@@ -4,7 +4,7 @@
 (* Copyright (C) 2006 Andrew Gacek                                          *)
 (* Copyright (C) 2006,2007,2009,2011 David Baelde                           *)
 (* Copyright (C) 2011 Alwen Tiu                                             *)
-(* Copyright (C) 2011-2013 Quentin Heath                                    *)
+(* Copyright (C) 2011-2015 Quentin Heath                                    *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -44,23 +44,21 @@ let welcome_msg =
 let plugins = ref []
 
 let add_plugin_dir,add_plugin =
-  let plugin_dirs =
-    ref [
-      Findlib.package_directory Interface.Config.project_tarname ;
-    ]
-  in
-  let add_plugin_dir dir = plugin_dirs := dir :: !plugin_dirs
+  let add_plugin_dir dir =
+    Interface.Config.(plugin_dirs := dir :: !plugin_dirs)
   and add_plugin (plugin,desc) =
     let open Dynlink in
     let rec aux = function
-      | [] -> ()
+      | [] ->
+          IO.Output.dprintf
+            "The plugin %s was not found in the search path." plugin
       | dir::dirs ->
           try
             loadfile (adapt_filename (Filename.concat dir plugin ^ ".cma")) ;
             plugins := desc :: !plugins
           with Error e -> aux dirs
     in
-    aux !plugin_dirs
+    aux !Interface.Config.plugin_dirs
   in
   add_plugin_dir,add_plugin
 

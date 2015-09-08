@@ -186,6 +186,15 @@ fi
 #
 ##############################################################################
 
+AC_MSG_CHECKING(for findlib (runtime version))
+if ocamlfind_findlib=$(OCAMLFIND_CONF="$OCAMLFIND_CONF" "$OCAMLFIND" query findlib 2>/dev/null) ; then
+	AC_MSG_RESULT($ocamlfind_findlib)
+	FINDLIB_PACKAGE_DIRECTORY="Findlib.package_directory"
+	FINDLIB_TAG="findlib"
+else
+	AC_MSG_RESULT(no)
+fi
+
 AC_MSG_CHECKING(for xmlm)
 AC_ARG_WITH([xmlm],
             AC_HELP_STRING([--with-xmlm],
@@ -197,6 +206,10 @@ else
 	if ocamlfind_xmlm=$("$OCAMLFIND" query xmlm 2>/dev/null) ; then
 		AC_MSG_RESULT(${ocamlfind_xmlm})
 		OCAMLFIND_XMLM="${ocamlfind_xmlm}"
+                TABLE_XML_EXPORT="tableXmlExport"
+                PLUGINS_CMA="${PLUGINS_CMA} ${TABLE_XML_EXPORT}.cma"
+                PLUGINS_CMXA="${PLUGINS_CMXA} ${TABLE_XML_EXPORT}.cmxa"
+                PLUGINS_CMXS="${PLUGINS_CMXS} ${TABLE_XML_EXPORT}.cmxs"
 	else
 		AC_MSG_RESULT(no)
 		AS_IF([test "X$with_xmln" = Xyes],
@@ -420,7 +433,12 @@ AC_SUBST(BEST_SUFFIX)
 AC_SUBST(OCAML_VERSION)
 AC_SUBST(MINGW32_OCAMLFIND_CONF)
 
+AC_SUBST(FINDLIB_PACKAGE_DIRECTORY)
+AC_SUBST(FINDLIB_TAG)
 AC_SUBST(OCAMLFIND_XMLM)
+AC_SUBST(PLUGINS_CMA)
+AC_SUBST(PLUGINS_CMXA)
+AC_SUBST(PLUGINS_CMXS)
 AC_SUBST(OCAMLFIND_OUNIT)
 
 AC_SUBST(INSTALL)
