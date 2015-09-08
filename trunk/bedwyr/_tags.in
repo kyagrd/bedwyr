@@ -46,7 +46,7 @@
 #
 ##############################################################################
 
-<src/plugins/tableXmlExport.*>: package(xmlm)
+<src/plugins/tableXmlExport.*>: package(unix,xmlm)
 
 #
 # programs
@@ -55,9 +55,9 @@
 
 <src/**/test.*>: package(oUnit)
 
-<src/parsetree/parsetree/*.{byte,native}>: package(str)
-<src/prover/prover/*.{byte,native}>: package(str)
+<src/parsetree/parsetree/*.{byte,native}>: package(str,unix)
+<src/prover/prover/*.{byte,native}>: package(str,unix)
 <src/interface/interface/*.{byte,native}>: package(str,unix)
 
-<src/bedwyr.*>: package(findlib)
+<src/interface/interface/*> or <src/bedwyr.*>: package(@FINDLIB_TAG@)
 <src/bedwyr.{byte,native}>: package(str,unix,dynlink)

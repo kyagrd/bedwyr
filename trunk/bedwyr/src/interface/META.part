@@ -1,5 +1,5 @@
 version = "[internal]"
 description = "high-level interface"
-requires = "slimmer.ndcore,slimmer.batyping,str"
+requires = "str,unix,slimmer.ndcore,slimmer.iO,slimmer.parsetree,slimmer.prover"
 archive(byte) = "interface.cma"
 archive(native) = "interface.cmxa"

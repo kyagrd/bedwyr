@@ -26,3 +26,5 @@ val ocaml_version : string
 val build : string
 val build_date : string
 val features : (string * string) list
+
+val plugin_dirs : string list ref

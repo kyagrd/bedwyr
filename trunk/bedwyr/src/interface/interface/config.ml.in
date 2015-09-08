@@ -28,3 +28,8 @@ let ocaml_version = "@OCAML_VERSION@"
 let build = "@REVISION@"
 let build_date = "@BUILD_DATE_F@"
 let features = []
+let plugin_dirs =
+  ref [
+    (try @FINDLIB_PACKAGE_DIRECTORY@ project_tarname with _ -> project_tarname) ;
+    "_build/src/plugins" ;
+  ]

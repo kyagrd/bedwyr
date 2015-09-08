@@ -142,6 +142,9 @@ OCAMLFIND_OUNIT	= @OCAMLFIND_OUNIT@
 SLIMMER_FILES	= ChangeLog TODO
 BEDWYR_FILES	= README.md
 BEDWYR_LIBS	= ndcore iO parsetree prover interface
+ifneq ($(OCAMLFIND_XMLM),)
+  BEDWYR_PLUGINS	= tableXmlExport
+endif
 MAN_FILES	= $(wildcard man/*.in)
 BASH_CONTRIB	= bedwyr.sh
 RLWRAP_CONTRIB	= completions.in
