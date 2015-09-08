@@ -1,5 +1,5 @@
 (****************************************************************************)
-(* Bedwyr -- prover output                                                  *)
+(* Bedwyr -- input                                                          *)
 (* Copyright (C) 2015 Quentin Heath                                         *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
@@ -17,53 +17,16 @@
 (* 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.              *)
 (****************************************************************************)
 
-(** {6 General purpose output facilities} *)
+(** {6 General purpose input facilities} *)
 
-val set_colours : int -> unit
+val apply_on_lexbuf :
+  (Lexing.lexbuf -> 'a) -> Lexing.lexbuf ->
+  'a option
 
-val set_width : Format.formatter -> int -> unit
+val apply_on_string :
+  (Lexing.lexbuf -> 'a) -> ?fname:string -> string ->
+  'a
 
-val fprintf :
-  ?colour:string ->
-  ?tag:string ->
-  ?p:Preterm.Pos.t ->
-  ?nl:bool ->
-  formatter:Format.formatter ->
-  ('a, Format.formatter, unit, unit) format4 -> 'a
-
-(** {6 Wrappers for normal output} *)
-
-val std_out : Format.formatter ref
-
-val printf :
-  ?nl:bool ->
-  ('a, Format.formatter, unit, unit) format4 -> 'a
-
-val sprintf :
-  ?tag:string ->
-  ?p:Preterm.Pos.t ->
-  ('a, Format.formatter, unit, string) format4 -> 'a
-
-(** {6 Wrappers for abnormal output} *)
-
-val std_err : Format.formatter ref
-
-val std_dbg : Format.formatter ref
-
-(** Simple debug flag, can be set dynamically from the logic program. *)
-val debug : bool ref
-
-val err_poss : (int * int) list ref
-val war_poss : (int * int) list ref
-
-val wprintf :
-  ?p:Preterm.Pos.t ->
-  ('a, Format.formatter, unit, unit) format4 -> 'a
-
-val eprintf :
-  ?p:Preterm.Pos.t ->
-  ('a, Format.formatter, unit, unit) format4 -> 'a
-
-val dprintf :
-  ?p:Preterm.Pos.t ->
-  ('a, Format.formatter, unit, unit) format4 -> 'a
+val apply_on_channel :
+  (Lexing.lexbuf -> 'a) -> ?fname:string -> in_channel ->
+  'a
