@@ -84,40 +84,41 @@ AC_ARG_ENABLE([debug],
               [AC_MSG_RESULT(no)])
 if test "X$enable_debug" = Xyes ; then
 	BYTE_BIN_SUFFIX="d.byte"
-	NATIVE_BIN_SUFFIX="p.native"
+	NATIVE_BIN_SUFFIX="p."
 	BYTE_LIBS_SUFFIX="d.cma"
 	NATIVE_LIBS_SUFFIX="p.a p.cmxa"
 	NATIVE_SHARED_LIBS_SUFFIX="p.cmxs"
 else
 	BYTE_BIN_SUFFIX="byte"
-	NATIVE_BIN_SUFFIX="native"
+	NATIVE_BIN_SUFFIX=""
 	BYTE_LIBS_SUFFIX="cma"
 	NATIVE_LIBS_SUFFIX="a cmxa"
 	NATIVE_SHARED_LIBS_SUFFIX="cmxs"
 fi
 
-WIN32_BIN_SUFFIX="exe"
-AC_MSG_CHECKING(if native win32 code should be generated)
-AC_ARG_ENABLE([win32],
-              AC_HELP_STRING([--enable-win32],[output native win32 code (no)]),
-              [AC_MSG_RESULT($enable_win32)],
-              [AC_MSG_RESULT(no)])
-if test "X$enable_win32" = Xyes ; then
-	MINGW32_OCAMLFIND_CONF=/etc/i686-w64-mingw32-ocamlfind.conf
-	AC_CHECK_FILE($MINGW32_OCAMLFIND_CONF,,
-	              MINGW32_OCAMLFIND_CONF=no)
-	AS_IF([test "X$MINGW32_OCAMLFIND_CONF" = Xno],
-              [AC_MSG_ERROR(Cannot find findlib support for native win32 code generation. Install mingw32-ocaml.)])
-	BIN_SUFFIXES="$BIN_SUFFIXES $WIN32_BIN_SUFFIX"
-	BEST_SUFFIX="$WIN32_BIN_SUFFIX"
-	OCAML_VERSION=$(OCAMLFIND_CONF="$MINGW32_OCAMLFIND_CONF" "$OCAMLFIND" ocamlopt -version)
+AC_MSG_CHECKING(for cross-compilation)
+if test "X$host_alias" = Xwin32 ; then
+	AC_MSG_RESULT([yes, for win32])
+	OCAMLFIND_CONF=/etc/i686-w64-mingw32-ocamlfind.conf
+	AC_CHECK_FILE($OCAMLFIND_CONF,,OCAMLFIND_CONF=no)
+	AS_IF([test "X$OCAMLFIND_CONF" = Xno],
+              [AC_MSG_ERROR(Cannot find findlib support for native win32 code generation.  Install mingw32-ocaml.)])
+	NATIVE_BIN_SUFFIX="${NATIVE_BIN_SUFFIX}exe"
+
+	AC_PATH_PROGS(MINGW32_LD,
+	              i686-w64-mingw32-ld i586-mingw32msvc-ld,
+	              no)
+	AS_IF([test "X$MINGW32_LD" = Xno],
+	      [AC_MSG_ERROR(Cannot find ld. Install binutils-mingw-w64.)])
 
 	AC_PATH_PROGS(MINGW32_WINDRES,
-	              i686-w64-mingw32-windres.opt i686-w64-mingw32-windres \
-	                i586-mingw32msvc-windres.opt i586-mingw32msvc-windres,
+	              i686-w64-mingw32-windres i586-mingw32msvc-windres,
 	              no)
 	AS_IF([test "X$MINGW32_WINDRES" = Xno],
-	      [AC_MSG_ERROR(Cannot find windres. Install mingw32-binutils.)])
+	      [AC_MSG_ERROR(Cannot find windres. Install binutils-mingw-w64.)])
+else
+	AC_MSG_RESULT(no)
+	NATIVE_BIN_SUFFIX="${NATIVE_BIN_SUFFIX}native"
 fi
 
 AC_MSG_CHECKING(if bytecode should be generated)
@@ -133,7 +134,7 @@ if test "X$enable_bytecode" != Xno ; then
 	PLUGIN_SUFFIXES="$PLUGIN_SUFFIXES $BYTE_LIBS_SUFFIX"
 	BIN_SUFFIXES="$BIN_SUFFIXES $BYTE_BIN_SUFFIX"
 	BEST_SUFFIX="$BYTE_BIN_SUFFIX"
-	OCAML_VERSION=$("$OCAMLC" -version)
+	OCAML_VERSION=$(OCAMLFIND_CONF="$OCAMLFIND_CONF" "$OCAMLFIND" "$OCAMLC" -version)
 fi
 
 AC_MSG_CHECKING(if native code should be generated)
@@ -149,11 +150,13 @@ if test "X$enable_nativecode" = Xyes ; then
 	PLUGIN_SUFFIXES="$PLUGIN_SUFFIXES $NATIVE_SHARED_LIBS_SUFFIX"
 	BIN_SUFFIXES="$BIN_SUFFIXES $NATIVE_BIN_SUFFIX"
 	BEST_SUFFIX="$NATIVE_BIN_SUFFIX"
-	OCAML_VERSION=$("$OCAMLOPT" -version)
+	OCAML_VERSION=$(OCAMLFIND_CONF="$OCAMLFIND_CONF" "$OCAMLFIND" "$OCAMLOPT" -version)
 fi
 
-AS_VERSION_COMPARE([$OCAML_VERSION],[3.11],
-                   AC_MSG_ERROR([OCaml version $OCAML_VERSION is not supported (>=3.11 required).]))
+if test "X$OCAML_VERSION" != "X" ; then
+	AS_VERSION_COMPARE([$OCAML_VERSION],[3.11],
+	                   AC_MSG_ERROR([OCaml version $OCAML_VERSION is not supported (>=3.11 required).]))
+fi
 
 if test "$BEST_SUFFIX" = "" ; then
 	AC_MSG_WARN(You may want to enable at least one type of compilation.)
@@ -203,13 +206,13 @@ AC_ARG_WITH([xmlm],
 if test "X$with_xmlm" = Xno ; then
 	AC_MSG_RESULT(no)
 else
-	if ocamlfind_xmlm=$("$OCAMLFIND" query xmlm 2>/dev/null) ; then
-		AC_MSG_RESULT(${ocamlfind_xmlm})
-		OCAMLFIND_XMLM="${ocamlfind_xmlm}"
+	if ocamlfind_xmlm=$(OCAMLFIND_CONF="$OCAMLFIND_CONF" "$OCAMLFIND" query xmlm 2>/dev/null) ; then
+		AC_MSG_RESULT($ocamlfind_xmlm)
+		OCAMLFIND_XMLM="$ocamlfind_xmlm"
                 TABLE_XML_EXPORT="tableXmlExport"
-                PLUGINS_CMA="${PLUGINS_CMA} ${TABLE_XML_EXPORT}.cma"
-                PLUGINS_CMXA="${PLUGINS_CMXA} ${TABLE_XML_EXPORT}.cmxa"
-                PLUGINS_CMXS="${PLUGINS_CMXS} ${TABLE_XML_EXPORT}.cmxs"
+                PLUGINS_CMA="$PLUGINS_CMA $TABLE_XML_EXPORT.cma"
+                PLUGINS_CMXA="$PLUGINS_CMXA $TABLE_XML_EXPORT.cmxa"
+                PLUGINS_CMXS="$PLUGINS_CMXS $TABLE_XML_EXPORT.cmxs"
 	else
 		AC_MSG_RESULT(no)
 		AS_IF([test "X$with_xmln" = Xyes],
@@ -218,9 +221,9 @@ else
 fi
 
 AC_MSG_CHECKING(for oUnit)
-if ocamlfind_oUnit=$("$OCAMLFIND" query oUnit 2>/dev/null) ; then
-	AC_MSG_RESULT(${ocamlfind_oUnit})
-	OCAMLFIND_OUNIT="${ocamlfind_oUnit}"
+if ocamlfind_oUnit=$(OCAMLFIND_CONF="$OCAMLFIND_CONF" "$OCAMLFIND" query oUnit 2>/dev/null) ; then
+	AC_MSG_RESULT($ocamlfind_oUnit)
+	OCAMLFIND_OUNIT="$ocamlfind_oUnit"
 else
 	AC_MSG_RESULT(no (library tests will be disabled))
 fi
@@ -263,13 +266,13 @@ if test "X$enable_doc" = Xyes ; then
 			AC_MSG_RESULT(no)
 			AC_MSG_ERROR(Cannot find xypic.sty. Install texlive-pictures.)
 		fi
-		AC_MSG_RESULT(${kpsewhich_xypic})
+		AC_MSG_RESULT($kpsewhich_xypic)
 		AC_MSG_CHECKING(for txfonts.sty)
 		if ! kpsewhich_txfonts=$("$KPSEWHICH" txfonts.sty) ; then
 			AC_MSG_RESULT(no)
 			AC_MSG_ERROR(Cannot find xypic.sty. Install texlive-fonts-recommended.)
 		fi
-		AC_MSG_RESULT(${kpsewhich_txfonts})
+		AC_MSG_RESULT($kpsewhich_txfonts)
 	fi
 
 	AC_PATH_PROG(BIBTEX,bibtex,no)
@@ -431,7 +434,7 @@ AC_SUBST(PLUGIN_SUFFIXES)
 AC_SUBST(BIN_SUFFIXES)
 AC_SUBST(BEST_SUFFIX)
 AC_SUBST(OCAML_VERSION)
-AC_SUBST(MINGW32_OCAMLFIND_CONF)
+AC_SUBST(OCAMLFIND_CONF)
 
 AC_SUBST(FINDLIB_PACKAGE_DIRECTORY)
 AC_SUBST(FINDLIB_TAG)
