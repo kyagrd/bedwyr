@@ -68,33 +68,13 @@ AS_IF([test "X$BZIP2" = Xno],
       [ARCH_SUFFIXES="$ARCH_SUFFIXES tbz"])
 
 #
-# OCaml stuff (only $OCAML[C|DEBUG|BUILD] and $MINGW32_* are actually used)
+# OCaml stuff (only $OCAML[C|BUILD] and $MINGW32_* are actually used)
 #
 ##############################################################################
 
 AC_PATH_PROGS(OCAMLFIND,ocamlfind.opt ocamlfind,no)
 AS_IF([test "X$OCAMLFIND" = Xno],
       [AC_MSG_ERROR(Cannot find ocamlfind. Install findlib.)])
-
-AC_MSG_CHECKING(if debugging information should be added)
-AC_ARG_ENABLE([debug],
-              AC_HELP_STRING([--enable-debug],
-                             [add debugging/profiling information (no)]),
-              [AC_MSG_RESULT($enable_debug)],
-              [AC_MSG_RESULT(no)])
-if test "X$enable_debug" = Xyes ; then
-	BYTE_BIN_SUFFIX="d.byte"
-	NATIVE_BIN_SUFFIX="p."
-	BYTE_LIBS_SUFFIX="d.cma"
-	NATIVE_LIBS_SUFFIX="p.a p.cmxa"
-	NATIVE_SHARED_LIBS_SUFFIX="p.cmxs"
-else
-	BYTE_BIN_SUFFIX="byte"
-	NATIVE_BIN_SUFFIX=""
-	BYTE_LIBS_SUFFIX="cma"
-	NATIVE_LIBS_SUFFIX="a cmxa"
-	NATIVE_SHARED_LIBS_SUFFIX="cmxs"
-fi
 
 AC_MSG_CHECKING(for cross-compilation)
 if test "X$host_alias" = Xwin32 ; then
@@ -103,7 +83,7 @@ if test "X$host_alias" = Xwin32 ; then
 	AC_CHECK_FILE($OCAMLFIND_CONF,,OCAMLFIND_CONF=no)
 	AS_IF([test "X$OCAMLFIND_CONF" = Xno],
               [AC_MSG_ERROR(Cannot find findlib support for native win32 code generation.  Install mingw32-ocaml.)])
-	NATIVE_BIN_SUFFIX="${NATIVE_BIN_SUFFIX}exe"
+	NATIVE_BIN_SUFFIX="exe"
 
 	AC_PATH_PROGS(MINGW32_LD,
 	              i686-w64-mingw32-ld i586-mingw32msvc-ld,
@@ -118,7 +98,7 @@ if test "X$host_alias" = Xwin32 ; then
 	      [AC_MSG_ERROR(Cannot find windres. Install binutils-mingw-w64.)])
 else
 	AC_MSG_RESULT(no)
-	NATIVE_BIN_SUFFIX="${NATIVE_BIN_SUFFIX}native"
+	NATIVE_BIN_SUFFIX="native"
 fi
 
 AC_MSG_CHECKING(if bytecode should be generated)
@@ -130,10 +110,10 @@ if test "X$enable_bytecode" != Xno ; then
 	AC_PATH_PROGS(OCAMLC,ocamlc.opt ocamlc,no)
 	AS_IF([test "X$OCAMLC" = Xno],
 	      [AC_MSG_ERROR(Cannot find a bytecode compiler.)])
-	LIB_SUFFIXES="$LIB_SUFFIXES $BYTE_LIBS_SUFFIX"
-	PLUGIN_SUFFIXES="$PLUGIN_SUFFIXES $BYTE_LIBS_SUFFIX"
-	BIN_SUFFIXES="$BIN_SUFFIXES $BYTE_BIN_SUFFIX"
-	BEST_SUFFIX="$BYTE_BIN_SUFFIX"
+	LIB_SUFFIXES="$LIB_SUFFIXES cma"
+	PLUGIN_SUFFIXES="$PLUGIN_SUFFIXES cma"
+	BIN_SUFFIXES="$BIN_SUFFIXES byte"
+	BEST_SUFFIX="byte"
 	OCAML_VERSION=$(OCAMLFIND_CONF="$OCAMLFIND_CONF" "$OCAMLFIND" "$OCAMLC" -version)
 fi
 
@@ -146,8 +126,8 @@ if test "X$enable_nativecode" = Xyes ; then
 	AC_PATH_PROGS(OCAMLOPT,ocamlopt.opt ocamlopt,no)
 	AS_IF([test "X$OCAMLOPT" = Xno],
 	      [AC_MSG_ERROR(Cannot find a native code compiler.)])
-	LIB_SUFFIXES="$LIB_SUFFIXES $NATIVE_LIBS_SUFFIX"
-	PLUGIN_SUFFIXES="$PLUGIN_SUFFIXES $NATIVE_SHARED_LIBS_SUFFIX"
+	LIB_SUFFIXES="$LIB_SUFFIXES a cmxa"
+	PLUGIN_SUFFIXES="$PLUGIN_SUFFIXES cmxs"
 	BIN_SUFFIXES="$BIN_SUFFIXES $NATIVE_BIN_SUFFIX"
 	BEST_SUFFIX="$NATIVE_BIN_SUFFIX"
 	OCAML_VERSION=$(OCAMLFIND_CONF="$OCAMLFIND_CONF" "$OCAMLFIND" "$OCAMLOPT" -version)
@@ -161,12 +141,6 @@ fi
 if test "$BEST_SUFFIX" = "" ; then
 	AC_MSG_WARN(You may want to enable at least one type of compilation.)
 else
-	if test "X$enable_debug" = Xyes ; then
-		AC_PATH_PROGS(OCAMLDEBUG,ocamldebug.opt ocamldebug,no)
-		AS_IF([test "X$OCAMLDEBUG" = Xno],
-		      [AC_MSG_ERROR(Cannot find ocamldebug.)])
-	fi
-
 	AC_PATH_PROGS(OCAMLDEP,ocamldep.opt ocamldep,no)
 	AS_IF([test "X$OCAMLDEP" = Xno],
 	      [AC_MSG_ERROR(Cannot find ocamldep.)])

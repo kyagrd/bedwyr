@@ -170,7 +170,7 @@ configure: configure.ac
 
 .PHONY: bedwyr test test_libs \
   test_pack_ndcore test_pack_parsetree test_pack_prover test_pack_interface \
-  test_bedwyr debug
+  test_bedwyr
 
 bedwyr: $(bedwyr_prefix).$(BEST_SUFFIX)
 	@ln -svf $< $@
@@ -198,21 +198,6 @@ test_bedwyr: bedwyr
 	  if ./$< -t -I examples/$$i ; then echo "All done." ; \
 	  else echo "Error." ; exit 1 ; fi ; \
 	  done
-
-ifeq ($(OCAMLDEBUG),)
-  debug:
-	@echo 'Debug information generation disabled,'
-	@echo 'add "--enable-debug" to your ./configure options.'
-else
-  ifeq ($(OCAMLC),)
-  debug:
-	@echo 'Bytecode generation disabled,'
-	@echo 'add "--enable-bytecode" to your ./configure options.'
-  else
-  debug: $(bedwyr_prefix).d.byte
-	$(OCAMLDEBUG) $<
-  endif
-endif
 
 #
 # DOC
