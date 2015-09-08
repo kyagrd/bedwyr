@@ -23,6 +23,11 @@ module Status : sig
 end
 
 
+module Catch : sig
+  val io : ?p:Preterm.Pos.t -> exn -> 'a option
+end
+
+
 val incr_test_limit : unit -> unit
 val remove_test_limit : unit -> unit
 
@@ -33,5 +38,6 @@ val test_limit  : int option ref
 
 val reload : ?session:(string list) -> unit -> unit
 val run_query_string : string -> unit option
-val run_definitions_string : ?fname:string -> string -> unit option
+val run_definition_string : string -> Term.term option option option
+val run_definitions_string : ?fname:string -> string -> Term.term list option
 val run_queries_channel : in_channel -> unit

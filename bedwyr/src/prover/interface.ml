@@ -180,13 +180,13 @@ end
 
 module Eval : sig
   val definition :
-    include_file:(?test_limit:(int option) -> string -> unit option) ->
+    include_file:(?test_limit:(int option) -> string -> Term.term list option) ->
     reload:(?session:(string list) -> unit -> unit) ->
     test_limit:(int option) ->
     print:('a -> unit) -> Preterm.definition_mode -> p:Preterm.Pos.t ->
-    unit option
+    Term.term option option
   val toplevel : concise:bool ->
-    include_file:(?test_limit:(int option) -> string -> unit option) ->
+    include_file:(?test_limit:(int option) -> string -> Term.term list option) ->
     reload:(?session:(string list) -> unit -> unit) ->
     test_limit:(int option) ->
     print:('a -> unit) -> Preterm.toplevel -> p:Preterm.Pos.t ->
@@ -373,7 +373,7 @@ end = struct
    * "", "true", "on", "false" or "off")
    * @raise Assertion_failed if [#assert formula.], [#assert_not formula.]
    * or [#assert_raise formula.] fails *)
-  let meta_command ~(include_file:(?test_limit:(int option) -> string -> unit option)) ~(reload:(?session:(string list) -> unit -> unit)) ~test_limit mc ~p =
+  let meta_command ~(include_file:(?test_limit:(int option) -> string -> Term.term list option)) ~(reload:(?session:(string list) -> unit -> unit)) ~test_limit mc ~p =
     let k _ =
       Status.input () ;
       None
@@ -390,7 +390,7 @@ end = struct
             exit 0
         | Preterm.MetaCommand.Help ->
             Format.printf "%s" help_msg ;
-            Some ()
+            Some None
 
         (* Session management *)
         | Preterm.MetaCommand.Include files ->
@@ -399,66 +399,67 @@ end = struct
             in
             List.fold_left
               (fun accum file -> match accum,f file with
-                 | Some (),Some () -> Some ()
+                 | Some None,Some _ -> Some None
                  | _ -> None)
-              (Some ())
+              (Some None)
               files
         | Preterm.MetaCommand.Reload ->
-            Some (reload ())
+            reload () ;
+            Some None
         | Preterm.MetaCommand.Session session ->
-            Some (reload ~session ())
+            reload ~session () ;
+            Some None
 
         (* Turn debugging on/off. *)
         | Preterm.MetaCommand.Debug value ->
             Output.debug := (bool_of_flag value) ;
-            Some ()
+            Some None
 
         (* Turn timing on/off. *)
         | Preterm.MetaCommand.Time value ->
             System.time := (bool_of_flag value) ;
-            Some ()
+            Some None
 
         (* Tabling-related commands *)
         | Preterm.MetaCommand.Equivariant value ->
             Table.O.set_eqvt (bool_of_flag value) ;
-            Some ()
+            Some None
         | Preterm.MetaCommand.Freezing temp ->
             Prover.freezing_point := temp ;
-            Some ()
+            Some None
         | Preterm.MetaCommand.Saturation pressure ->
             Prover.saturation_pressure := pressure ;
-            Some ()
+            Some None
         | Preterm.MetaCommand.Env ->
             System.print_env () ;
-            Some ()
+            Some None
         | Preterm.MetaCommand.Type_of pre_term ->
-            (* XXX *)
             ignore (System.print_type_of pre_term ~k) ;
-            Some ()
+            Some None
         | Preterm.MetaCommand.Show_def (p,name) ->
             System.show_def (p,Term.atom ~tag:Term.Constant name) ;
-            Some ()
+            Some None
         | Preterm.MetaCommand.Show_table (p,name) ->
             System.show_table (p,Term.atom ~tag:Term.Constant name) ;
-            Some ()
+            Some None
         | Preterm.MetaCommand.Clear_tables ->
             System.clean_tables := true ;
             System.clear_tables () ;
-            Some ()
+            Some None
         | Preterm.MetaCommand.Clear_table (p,name) ->
             System.clean_tables := false ;
             System.clear_table (p,Term.atom ~tag:Term.Constant name) ;
-            Some ()
+            Some None
         (* save the content of a table to a file. An exception is thrown if
          * file already exists. *)
         | Preterm.MetaCommand.Save_table (p,name,file) ->
             System.save_table (p,Term.atom ~tag:Term.Constant name) name file ;
-            Some ()
+            Some None
         | Preterm.MetaCommand.Export name ->
             begin if !System.clean_tables
             then System.export name
             else raise Uncleared_tables end ;
-            Some ()
+            Some None
 
         (* Testing commands *)
         | Preterm.MetaCommand.Assert pre_query ->
@@ -474,7 +475,7 @@ end = struct
                         ~failure:(fun () -> raise Assertion_failed)
                     end
                   end ;
-                  Some ()
+                  Some (Some query)
             end
         | Preterm.MetaCommand.Assert_not pre_query ->
             begin match System.translate_query pre_query ~k with
@@ -488,7 +489,7 @@ end = struct
                         ~success:(fun _ _ -> raise Assertion_failed) ~failure:ignore
                     end
                   end ;
-                  Some ()
+                  Some (Some query)
             end
         | Preterm.MetaCommand.Assert_raise pre_query ->
             begin match System.translate_query pre_query ~k with
@@ -505,7 +506,7 @@ end = struct
                       then raise Assertion_failed
                     end
                   end ;
-                  Some ()
+                  Some None
             end
       in
       reset () ;
@@ -527,7 +528,10 @@ end = struct
 
   let definition ~include_file ~reload ~test_limit ~print input ~p = match input with
     | `Command c ->
-        command c
+        begin match command c with
+          | Some () -> Some None
+          | None -> None
+        end
     | `MetaCommand mc ->
         meta_command ~include_file ~reload ~test_limit mc ~p
 
@@ -535,7 +539,10 @@ end = struct
     | `Term (p,pre_query) ->
         query ~p ~print ~concise pre_query
     | `MetaCommand mc ->
-        meta_command ~include_file ~reload ~test_limit mc ~p
+        begin match meta_command ~include_file ~reload ~test_limit mc ~p with
+          | Some _ -> Some ()
+          | None -> None
+        end
 
   let term ~print input ~p = match input with
     | `Term (p,pre_term) ->
@@ -544,12 +551,12 @@ end
 
 module Mode : sig
   val definition :
-    include_file:(?test_limit:(int option) -> string -> unit option) ->
+    include_file:(?test_limit:(int option) -> string -> Term.term list option) ->
     reload:(?session:(string list) -> unit -> unit) ->
     test_limit:(int option) ->
-    Lexing.lexbuf -> unit option option
+    Lexing.lexbuf -> Term.term option option option
   val toplevel : concise:bool ->
-    include_file:(?test_limit:(int option) -> string -> unit option) ->
+    include_file:(?test_limit:(int option) -> string -> Term.term list option) ->
     reload:(?session:(string list) -> unit -> unit) ->
     test_limit:(int option) ->
     Lexing.lexbuf -> unit option option
@@ -605,8 +612,8 @@ let () =
   System.fread_term := begin
     fun lexbuf () ->
       match Mode.term lexbuf with
-        | None | Some None -> None
-        | Some (Some term) -> Some term
+        | None -> None
+        | Some x -> x
   end
 
 
@@ -619,18 +626,18 @@ let defs ?(test_limit=(!test_limit)) ~include_file ~reload lexbuf =
         Output.eprintf ~p:(Preterm.Pos.of_lexbuf lexbuf ()) "Empty command." ;
         Status.input () ;
         None
-    | Some None -> Some None
-    | Some (Some ()) -> Some (Some ())
+    | x -> x
 
 (* definition-mode loop *)
 let defl ?(test_limit=(!test_limit)) ~include_file ~reload lexbuf =
-  let rec aux error_less =
+  let rec aux accum error_less =
     match Mode.definition ~include_file ~reload ~test_limit lexbuf with
-      | None -> if error_less then Some () else None
-      | Some None -> aux false
-      | Some (Some ()) -> aux error_less
+      | None -> if error_less then Some (List.rev accum) else None
+      | Some None -> aux accum false
+      | Some (Some None) -> aux accum error_less
+      | Some (Some (Some term)) -> aux (term::accum) error_less
   in
-  aux true
+  aux [] true
 
 (* read-eval-print step *)
 let reps ?(concise=true) ?(test_limit=(!test_limit)) ~include_file ~reload lexbuf =
@@ -673,17 +680,20 @@ let rec include_file ?test_limit name =
   match run_file (defl ?test_limit ~include_file ~reload) name with
     | None (* I/O error *)
     | Some (Some None) (* corrupted file *) -> None
-    | Some None (* file already included *)
-    | Some (Some (Some ())) (* include success *) -> Some ()
+    | Some None (* file already included *) -> Some []
+    | Some (Some (Some assertions)) (* include success *) -> Some assertions
 
 and reload ?(session=(!session)) () =
   System.reset () ;
   ignore (run_definitions_string ~fname:"Bedwyr::stdlib" Environment.stdlib) ;
   List.iter (function name -> ignore (include_file name)) session ;
-  List.iter (function query -> ignore (run_query_string query)) !definitions
+  List.iter (function query -> ignore (run_definition_string query)) !definitions
 
 and run_query_string str =
   run_string (reps ~include_file ~reload) str
+
+and run_definition_string str =
+  run_string (defs ~include_file ~reload) str
 
 and run_definitions_string ?fname str =
   run_string (defl ~include_file ~reload) ?fname str
