@@ -36,6 +36,7 @@
 TEST_EXAMPLES	= list.def internal/scoping.def internal/checks.def \
 		  3bits.def lambda.def progs.def \
 		  graph-alt.def minmax.def peterson.def multisim.def \
+		  tictactoe.def \
 		  pi/pi_trace.def pi/corr-assert.def pi/pi_modal.def \
 		  pi/pi_asserts.def
 
