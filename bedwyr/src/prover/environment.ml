@@ -151,13 +151,23 @@ Type    opsome  A -> option A.
 "
 
 
-(** {6 Type declarations} *)
+(* Type declarations. *)
 
 exception Invalid_type_declaration of string * Preterm.Pos.t * Preterm.Typing.ki * string
 exception Missing_type of string * Preterm.Pos.t
 
 
-module Types = struct
+module Types : sig
+  val save_state : unit -> int
+  val restore_state : int -> unit
+  val declare : Preterm.Pos.t * string -> Preterm.Typing.ki -> unit
+  val get_kind : Preterm.Pos.t * string -> Preterm.Typing.ki
+  val kind_check :
+    obj:Preterm.Typing.obj ->
+    p:Preterm.Typing.pos -> Preterm.Typing.ty -> int
+  val iter : (Term.var -> Preterm.Typing.ki -> unit) -> unit
+  val clear : unit -> unit
+end = struct
   let env : (Term.var,Preterm.Typing.ki) Hashtbl.t =
     Hashtbl.create 100
 
@@ -197,7 +207,7 @@ module Types = struct
 end
 
 
-(** {6 Error handling} *)
+(* Error handling. *)
 
 exception Missing_declaration of string * Preterm.Pos.t
 exception Stratification_error of string * Preterm.Pos.t
@@ -245,7 +255,7 @@ let catch ~k e =
   k ()
 
 
-(** {6 Constants and predicates declarations} *)
+(* Constants and predicates declarations. *)
 
 exception Invalid_declaration of
   string * string * Preterm.Pos.t * Preterm.Typing.ty * string * Preterm.Typing.ty
@@ -253,22 +263,13 @@ exception Invalid_flavour of
   string * Preterm.Pos.t * Preterm.flavour * Preterm.flavour
 
 
-(** Tabling information: the table itself,
-  * and some theorems for forward/backward chaining. *)
 type tabling_info = { mutable theorem : Term.term ; table : Table.O.t }
 
-(** Describe whether tabling is possible, and if so, how it is used. *)
 type flavour = (* XXX private *)
   | Normal
-    (** only unfolding can be done *)
   | Inductive of tabling_info
-    (** tabling is possible, and loop is (conditionally) a failure *)
   | CoInductive of tabling_info
-    (** tabling is possible, and loop is (conditionally) a success *)
 
-(** Predicate: tabling information if the flavours allows it,
-  * stratum of the definition block,
-  * definition and type. *)
 type predicate = (* XXX private *)
     { flavour           : flavour ;
       stratum           : int ;
@@ -285,9 +286,38 @@ let predicate flavour stratum definition ty =
               ty=ty }
 
 
-(** {6 Constants and predicates declarations} *)
+(* Constants and predicates declarations. *)
 
-module Objects = struct
+module Objects : sig
+  val get_type : Term.var -> (int option * Preterm.Typing.ty) option
+  val get_pred : Term.var -> predicate option
+  type state
+  val save_state : unit -> state
+  val restore_state : state -> unit
+  val declare_const :
+    Preterm.Typing.pos * string ->
+    Preterm.Typing.ty -> k:(unit -> int option) -> unit option
+  val declare_consts :
+    (Preterm.Typing.pos * string) list ->
+    Preterm.Typing.ty -> k:(unit -> int option) -> unit option
+  val create_def :
+    int ->
+    ?stratum_flavour:Preterm.flavour ->
+    Preterm.flavour * Preterm.Typing.pos * string * Preterm.Typing.ty ->
+    k:(unit -> int option) -> Preterm.flavour option
+  val declare_preds :
+    (Preterm.flavour * Preterm.Typing.pos * string * Preterm.Typing.ty)
+    list -> k:(unit -> int option) -> int option
+  val iter :
+    (Term.var -> Preterm.Typing.ty -> unit) ->
+    (Term.var -> predicate -> unit) ->
+    unit
+  val fold :
+    (Term.var -> Preterm.Typing.ty -> 'a -> 'a) ->
+    (Term.var -> predicate -> 'a -> 'a) ->
+    'a -> 'a
+  val clear : unit -> unit
+end = struct
   let env : (Term.var,object_declaration) Hashtbl.t =
     Hashtbl.create 100
 
@@ -303,6 +333,8 @@ module Objects = struct
       | Predicate x -> Some x
 
   let keys = Stack.create ()
+
+  type state = int
 
   let save_state () = Stack.length keys
 
@@ -387,9 +419,6 @@ module Objects = struct
                 end
           end
 
-  (** Declare predicates.
-    * @return the list of variables and types
-    *  corresponding to those predicates *)
   let declare_preds =
     let stratum = ref 0 in
     fun decls ~k ->
@@ -517,7 +546,7 @@ let translate_term
   with e -> catch ~k e
 
 
-(** {6 Definitions files} *)
+(* Definitions files. *)
 
 module IncludedFiles : sig
   type state

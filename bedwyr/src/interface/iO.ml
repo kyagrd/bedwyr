@@ -96,7 +96,15 @@ let run_in ~wrap (f : (?fname:string -> in_channel -> 'a)) name =
 
 let get_in fname =
   run_in ~wrap:(function f -> f)
-    (fun ?fname:_ c -> really_input_string c (in_channel_length c))
+    (fun ?fname:_ c ->
+       (*
+        * XXX even if the doc doesn't say so, this is OCaml 4.02 news
+       really_input_string c (in_channel_length c)
+        *)
+       let len = in_channel_length c in
+       let s = String.create len in
+       really_input c s 0 len ;
+       s)
     fname
 
 let open_out ~nice_path name =
