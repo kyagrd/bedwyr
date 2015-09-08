@@ -1,30 +1,7 @@
-Define edge : nat -> nat -> prop by
-  edge 1 2 ;
-  edge 1 3 ;
-  edge 2 3 ; % 1---3---5   7
-  edge 2 4 ; %  \ / \ /   /
-  edge 3 4 ; %   2---4---6
-  edge 3 5 ;
-  edge 4 5 ; % (1-((2-((3-(4-6))-7))-6))-7
-  edge 4 6 ;
-  edge 6 7.
+Kind obj        type.
 
-Define inductive path : nat -> nat -> prop by
-  path X Y := edge X Y ;
-  path X Y := path Y X ;
-  path X Z := path X Y /\ path Y Z.
-
-Theorem transitivity : forall P Q R, path P Q -> path Q R -> path P R.%TODO
-Qed.
-Theorem symmetry : forall P Q, path P Q -> path Q P.%TODO
-Qed.
-
-%#freezing 1.
-%#saturation 1.
-%#debug.
-%#assert path 1 2 /\ path 2 3 /\ path 1 3.
-%#show_table path.
-
+Type a,b,c,
+     d,e,f      obj.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % First example
@@ -32,111 +9,110 @@ Qed.
 % with no external predicates in the theorems
 %
 % p1:
-%   3 - 4
+%   c - d
 %  /
-% 1 - 2
+% a - b
 %  \
-%   5 - 6
+%   e _ f
 
-Define coinductive p1 : nat -> prop by
-  p1 1 := printstr " *** This is a computation intensive request to (p1 1). ***\n";
-  p1 2 := printstr " *** This is a computation intensive request to (p1 2). ***\n";
-  p1 3 := printstr " *** This is a computation intensive request to (p1 3). ***\n";
-  p1 4 := printstr " *** This is a computation intensive request to (p1 4). ***\n";
-  p1 5 := printstr " *** This is a computation intensive request to (p1 5). ***\n";
-  p1 6 := printstr " *** This is a computation intensive request to (p1 6). ***\n".
-
-Define print_p1 : prop by
-  print_p1 := printstr "
-%   3 - 4
-%  /
-% 1 - 2
-%  \\
-%   5 - 6\n\n".
-
-Theorem p1_th1 : p1 1 -> p1 2.% TODO proof
-Qed.
-%Theorem p1_th2 : p1 1 -> p1 3.% TODO proof
-%Qed.
-%Theorem p1_th3 : p1 3 -> p1 4.% TODO proof
-%Qed.
-%Theorem p1_th4 : p1 1 -> p1 5.% TODO proof
-%Qed.
-Theorem p1_th5 : p1 5 -> p1 6.% TODO proof
-Qed.
-Theorem p1_thXXX : p1 1 /\ p1 2 -> p1 42.% TODO proof
-Qed.
-/*
- */
+%Define inductive p1 : obj -> prop by
+%  p1 a := printstr "This is a computation intensive request to (p1 a).\n";
+%  p1 b := printstr "This is a computation intensive request to (p1 b).\n";
+%  p1 c := printstr "This is a computation intensive request to (p1 c).\n";
+%  p1 d := printstr "This is a computation intensive request to (p1 d).\n";
+%  p1 e := printstr "This is a computation intensive request to (p1 e).\n";
+%  p1 f := printstr "This is a computation intensive request to (p1 f).\n".
+%
+%Define print_p1 : prop by
+%  print_p1 := printstr "
+%%   c - d
+%%  /
+%% a - b
+%%  \\
+%%   e _ f\n\n".
+%
+%Theorem p1_th1 : p1 a -> p1 b.
+%Theorem p1_th2 : p1 a -> p1 c.
+%Theorem p1_th3 : p1 c -> p1 d.
+%Theorem p1_th4 : p1 a -> p1 e.
+%Theorem p1_th5 : p1 e -> p1 f.
+%
+%#assert print_p1.
+%#debug on.
+%
+%#freezing 42.
+%#assert p1 a.
+%#show_table p1.
+%#assert p1 a.
+%#assert p1 b.
+%#show_table p1.
+%#assert p1 d.
+%#show_table p1.
+%#freezing 1.
+%#assert p1 f.
+%#show_table p1.
+%
+%#freezing 0.
+%#debug off.
+%#clear_table p1.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Second example
 % simple forward chaining
 % with no external predicates in the theorems
 
-#assert print_p1.
-#debug on.
+%#assert print_p1.
+%#debug on.
+%
+%#assert p1 c.
+%#saturation 1.
+%#assert p1 e.
+%#assert p1 d.
+%
+%#saturation 0.
+%#debug off.
+%#clear_table p1.
 
-#saturation 0.
-#freezing 0.
-#assert p1 3.
-#saturation 1.
-#assert p1 5.
-#assert p1 4.
-#show_table p1.
-
-#saturation 2.
-#assert p1 1.
-#show_table p1.
-
-#saturation 0.
-#debug off.
-#clear_table p1.
-
-/*
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Third example
 % simple backward chaining
 % with eigen variables
 %
 % p2:
-%   2
+%   b
 %    \
-% 3 - 1
+% c - a
 %    /
-%   4
+%   d
 
-%Define inductive p2 : nat -> prop by
-%  p2 1 := printstr " *** This is a computation intensive request to (p2 1). ***\n";
-%  p2 2 := printstr " *** This is a computation intensive request to (p2 2). ***\n";
-%  p2 3 := printstr " *** This is a computation intensive request to (p2 3). ***\n";
-%  p2 4 := printstr " *** This is a computation intensive request to (p2 4).\n". ***
-%
-%Define print_p2 : prop by
-%  print_p2 := printstr "
-%%   2
-%%    \\
-%% 3 - 1
-%%    /
-%%   d\n\n".
-%
-%Theorem p2_th1 : (true -> p2 2) /\
-%                 (forall X, true -> p2 3).% TODO proof
-%Qed.
-%Theorem p2_th2 : p2 4.% TODO proof
-%Qed.
-%
-%#assert print_p2.
-%#debug on.
-%
-%#freezing 1.
-%#assert p2 2.
-%#assert p2 3.
-%#assert p2 4.
-%
-%#freezing 0.
-%#debug off.
-%#clear_table p2.
-%
-%#exit.
- */
+Define inductive p2 : obj -> prop by
+  p2 a := printstr "This is a computation intensive request to (p2 a).\n";
+  p2 b := printstr "This is a computation intensive request to (p2 b).\n";
+  p2 c := printstr "This is a computation intensive request to (p2 c).\n";
+  p2 d := printstr "This is a computation intensive request to (p2 d).\n".
+
+Define print_p2 : prop by
+  print_p2 := printstr "
+%   b
+%    \\
+% c - a
+%    /
+%   d\n\n".
+
+Theorem p2_th1 : (true -> p2 b) /\
+                 (forall X, true -> p2 c).
+Theorem p2_th2 : p2 d.
+
+#assert print_p2.
+#debug on.
+
+#freezing 1.
+#assert p2 b.
+#assert p2 c.
+#assert p2 d.
+
+#freezing 0.
+#debug off.
+#clear_table p2.
+
+#exit.
