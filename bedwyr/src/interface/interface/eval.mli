@@ -17,6 +17,11 @@
 (* 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.              *)
 (****************************************************************************)
 
+(** Evaluation functions (to be used in a read-eval-print way).
+  *
+  * Most of the printing is actually already done by these same
+  * functions.*)
+
 val definition :
   include_file:(?test_limit:(int option) -> string -> Ndcore.Term.term list option) ->
   reload:(?session:(string list) -> unit -> unit) ->

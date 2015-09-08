@@ -75,9 +75,6 @@ SLIMMER_FINDLIB	= $(SLIMMER_META) $(SLIMMER_LIBS) $(SLIMMER_PLUGINS) \
 BUILT_FILES	= $(BEDWYR_BINS) $(MANPAGES) $(SLIMMER_FINDLIB) \
 		  $(CONTRIB_FILES:.in=) $(DESKTOP_FILES:.in=)
 
-NDCORE_MLS	= $(foreach m,$(BEDWYR_LIBS),\
-		  $(filter-out src/$m/test.ml,$(wildcard src/$m/*.ml)))
-SLIMMER_ODOCS	= $(addprefix $(BUILD)/,$(NDCORE_MLS:.ml=.odoc))
 SRC_DOCDIR	= $(BUILD)/src.docdir
 
 OPAM_FILES	= opam descr findlib url files/bedwyr.install
@@ -131,8 +128,8 @@ $(BUILD)/%.cmxs: $(OCAML_FILES:.in=)
 $(BUILD)/%.docdir/index.html: $(OCAML_FILES:.in=) %.odocl
 	@$(OCAMLBUILD) $*.docdir/index.html
 
-$(BUILD)/%.odoc: $(OCAML_FILES:.in=)
-	@$(OCAMLBUILD) $*.odoc
+#$(BUILD)/%.odoc: $(OCAML_FILES:.in=)
+#	@$(OCAMLBUILD) $*.odoc
 
 $(BUILD)/%.exe: $(OCAML_FILES:.in=) $(COFF_FILES)
 	@$(OCAMLBUILD) -just-plugin
@@ -236,7 +233,7 @@ endif
 #
 ##############################################################################
 
-.PHONY: doc slimmer_doc ndcore_src_doc bedwyr_doc bedwyr_src_doc bedwyr_refman
+.PHONY: doc bedwyr_doc slimmer_doc bedwyr_refman src_libref
 
 ifeq ($(OCAMLDOC),)
   doc:
@@ -251,14 +248,12 @@ bedwyr_doc: bedwyr_refman
 bedwyr_refman: doc/Makefile
 	@$(MAKE) -C $(<D)
 
-slimmer_doc: src_odocs src_libref
-
-src_odocs: $(SLIMMER_ODOCS)
+slimmer_doc: src_libref
 
 src_libref: $(SRC_DOCDIR)/index.html
 
-src.odocl: $(foreach m,$(BEDWYR_LIBS),src/$m/$m.mllib)
-	@echo "src/Bedwyr" > $@
+src.odocl: $(foreach m,$(BEDWYR_LIBS),src/$m/$m.mlpack)
+	@rm -f $@
 	@for i in $^ ; do \
 	  sed -e "s|^|$$(dirname $$i)/|" -e '/Parser/d' $$i ; \
 	  done >> $@
@@ -291,7 +286,7 @@ man/%.html: man/%
   install_slimmer install_slimmer_lib install_slimmer_files \
   install_doc \
   install_bedwyr_doc install_bedwyr_refman \
-  install_slimmer_doc install_src_odocs install_src_libref
+  install_slimmer_doc install_src_libref
 
 install: install_bedwyr install_slimmer
 
@@ -367,11 +362,7 @@ install_bedwyr_doc: install_bedwyr_refman
 install_bedwyr_refman: doc/Makefile
 	@$(MAKE) -C $(<D) install
 
-install_slimmer_doc: install_src_odocs install_src_libref
-
-install_src_odocs: $(SLIMMER_ODOCS:=.gz)
-	@$(INSTALL_DIR) $(DOCDIR)/odocs
-	@for i in $^ ; do $(INSTALL_DATA) $$i $(DOCDIR)/odocs ; done
+install_slimmer_doc: install_src_libref
 
 install_src_libref: $(SRC_DOCDIR)/index.html
 	@$(INSTALL_DIR) $(DOCDIR)/libref

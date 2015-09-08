@@ -155,25 +155,27 @@ No. v} *)
    *)
 
   (** {[read : A -> prop]} Parses the standard input and succeeds if the
-    * result is a well-formed and well-typed term
-    * (see {!System.read}). *)
+    * result is a well-formed and well-typed term.
+    * @see "" {!System.read} *)
   val var_read : Ndcore.Term.var
 
   (** {[fread : string -> A -> prop]} Parses the file specified in the
     * first argument and succeeds if the result is a well-formed and
-    * well-typed term (see {!System.fread}).
-    * Fails if the file was not opened yet. *)
+    * well-typed term.
+    * Fails if the file was not opened yet.
+    * @see "" {!System.fread} *)
   val var_fread : Ndcore.Term.var
 
-  (** {[fopen_in : string -> prop]} Open a file for reading
-    * (see {!IO.fopen_in}). *)
+  (** {[fopen_in : string -> prop]} Open a file for reading.
+    * @see "" {!System.fopen_in} *)
   val var_fopen_in : Ndcore.Term.var
 
-  (** {[fclose_in : string -> prop]} Close an open file
-    * (see {!IO.fclose_in}). *)
+  (** {[fclose_in : string -> prop]} Close an open file.
+    * @see "" {!System.fclose_in} *)
   val var_fclose_in : Ndcore.Term.var
 
-  (** {[print : A -> prop]} Print a term and succeeds (see {!IO.print}). *)
+  (** {[print : A -> prop]} Print a term and succeeds.
+    * @see "" {!System.print} *)
   val var_print : Ndcore.Term.var
 
   (** {[println : A -> prop]} [print] +  '\n'. *)
@@ -185,8 +187,9 @@ No. v} *)
   val var_printstr : Ndcore.Term.var
 
   (** {[fprint : string -> A -> prop]} Print a term in the file
-    * specified in the first argument and succeeds (see {!IO.fprint}).
-    * Fails if the file was not opened yet. *)
+    * specified in the first argument and succeeds.
+    * Fails if the file was not opened yet.
+    * @see "" {!System.fprint} *)
   val var_fprint : Ndcore.Term.var
 
   (** {[fprintln : string -> A -> prop]} [println] in a file. *)
@@ -195,12 +198,12 @@ No. v} *)
   (** {[var_fprintstr : string -> A -> prop]} [printstr] in a file. *)
   val var_fprintstr : Ndcore.Term.var
 
-  (** {[fopen_out : string -> prop]} Open a file for writing
-    * (see {!IO.fopen_out}). *)
+  (** {[fopen_out : string -> prop]} Open a file for writing.
+    * @see "" {!System.fopen_out} *)
   val var_fopen_out : Ndcore.Term.var
 
-  (** {[fclose_out : string -> prop]} Close an open file
-    * (see {!IO.fclose_out}). *)
+  (** {[fclose_out : string -> prop]} Close an open file.
+    * @see "" {!System.fclose_out} *)
   val var_fclose_out : Ndcore.Term.var
 
   (** Example:
@@ -222,6 +225,8 @@ No more solutions. v}
   val get_builtin : Ndcore.Term.var -> Type.t option
 end
 
+(** Inlined definition file containing common types, constants and
+  * predicates that are purely logical (i.e. no side effects). *)
 val stdlib : string
 
 
