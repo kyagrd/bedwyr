@@ -474,13 +474,11 @@ end = struct
               | None -> None
               | Some query ->
                   begin match test_limit with Some n when n <= 0 -> () | _ ->
-                    if !Status.value = None then begin
-                      Format.eprintf "@[<hv 2>Checking that@ %a@,...@]@."
-                        Pprint.pp_term query ;
-                      Prover.prove ~local:0 ~timestamp:0 query
-                        ~success:(fun _ _ -> ())
-                        ~failure:(fun () -> raise Assertion_failed)
-                    end
+                    Format.eprintf "@[<hv 2>Checking that@ %a@,...@]@."
+                      Pprint.pp_term query ;
+                    Prover.prove ~local:0 ~timestamp:0 query
+                      ~success:(fun _ _ -> ())
+                      ~failure:(fun () -> raise Assertion_failed)
                   end ;
                   Some (Some query)
             end
@@ -489,12 +487,10 @@ end = struct
               | None -> None
               | Some query ->
                   begin match test_limit with Some n when n <= 0 -> () | _ ->
-                    if !Status.value = None then begin
-                      Format.eprintf "@[<hv 2>Checking that@ %a@ is false...@]@."
-                        Pprint.pp_term query ;
-                      Prover.prove ~local:0 ~timestamp:0 query
-                        ~success:(fun _ _ -> raise Assertion_failed) ~failure:ignore
-                    end
+                    Format.eprintf "@[<hv 2>Checking that@ %a@ is false...@]@."
+                      Pprint.pp_term query ;
+                    Prover.prove ~local:0 ~timestamp:0 query
+                      ~success:(fun _ _ -> raise Assertion_failed) ~failure:ignore
                   end ;
                   Some (Some query)
             end
@@ -503,15 +499,13 @@ end = struct
               | None -> None
               | Some query ->
                   begin match test_limit with Some n when n <= 0 -> () | _ ->
-                    if !Status.value = None then begin
-                      Format.eprintf "@[<hv 2>Checking that@ %a@ causes an error...@]@."
-                        Pprint.pp_term query ;
-                      if try
-                        Prover.prove ~local:0 ~timestamp:0 query
-                          ~success:(fun _ _ -> true) ~failure:(fun _ -> true)
-                      with _ -> false
-                      then raise Assertion_failed
-                    end
+                    Format.eprintf "@[<hv 2>Checking that@ %a@ causes an error...@]@."
+                      Pprint.pp_term query ;
+                    if try
+                      Prover.prove ~local:0 ~timestamp:0 query
+                        ~success:(fun _ _ -> true) ~failure:(fun _ -> true)
+                    with _ -> false
+                    then raise Assertion_failed
                   end ;
                   Some None
             end
