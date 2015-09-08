@@ -130,7 +130,7 @@ let print_full ~generic ~bound chan term =
             if pr_op >= pr then
               fprintf chan "@[%a@ %s@ %a@]"
             else
-              fprintf chan "@[<1>(%a@ %s@ %a)@]"
+              fprintf chan "(@[%a@ %s@ %a@])"
           in
           print
             (pp ~bound pr_left) t1
@@ -144,9 +144,9 @@ let print_full ~generic ~bound chan term =
           let head = String.concat " " more in
           let print =
             if pr=0 then
-              fprintf chan "@[<2>%s@ %s,@ %a@]"
+              fprintf chan "@[%s %s,@ %a@]"
              else
-              fprintf chan "@[<3>(%s@ %s,@ %a)@]"
+              fprintf chan "(@[%s %s,@ %a@])"
           in
           print
             (string_of_binder b)
@@ -173,27 +173,26 @@ let print_full ~generic ~bound chan term =
                 in
                 print (pp ~bound pr_left) a op (pp ~bound pr_right) b*)
             | (Var v),hd::tl when v == vtuple ->
-                fprintf chan "@[(%a%a)@]"
+                fprintf chan "(@[%a%a@])"
                   (pp ~bound high_pr) hd
                   (fun chan ->
                      List.iter
                        (fprintf chan ",@ %a" (pp ~bound high_pr)))
                   tl
-            | _,hd::tl ->
+            | _,[] -> pp ~bound pr chan t
+            | _,args ->
                 let print =
                   if pr=0 then
-                    fprintf chan "@[<hv 2>%a %a%a@]"
+                    fprintf chan "@[<1>%a%a@]"
                    else
-                    fprintf chan "@[<hv 1>(@[<hv 2>%a %a%a@])@]"
+                    fprintf chan "(@[<1>%a%a@])"
                 in
                 print
                   (pp ~bound high_pr) t
-                  (pp ~bound high_pr) hd
                   (fun chan ->
                      List.iter
                        (fprintf chan "@ %a" (pp ~bound high_pr)))
-                  tl
-            | _,[] -> pp ~bound pr chan t
+                  args
           end
       | Lam (i,t) ->
           assert (i>0) ;
@@ -203,9 +202,9 @@ let print_full ~generic ~bound chan term =
           let head = String.concat "\\" more in
           let print =
             if pr=0 then
-              fprintf chan "%s\\@ %a"
+              fprintf chan "@[%s\\@ %a@]"
             else
-              fprintf chan "@[<1>(%s\\@ %a)@]"
+              fprintf chan "(@[%s\\@ %a@])"
           in
           print head (pp ~bound:(List.rev_append more bound) 0) t ;
           List.iter free more
