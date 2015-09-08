@@ -35,7 +35,7 @@
     * (for instance "/\*" and "*\/") or balanced.
     * Note that escaping the first character instead of the second
     * ("\/*" or "\*/") doesn't prevent this exception. *)
-  exception Illegal_string_comment of Preterm.Pos.t
+  exception Illegal_string_comment of IO.Pos.t
 
   (** Some characters that are only allowed in prefix names
     * were used next to some that are only allowed in infix names.
@@ -314,7 +314,7 @@ rule token = parse
 
   | '"'                         { Buffer.clear strbuf ;
                                   let pos_of_lexbuf =
-                                    Preterm.Pos.of_lexbuf lexbuf
+                                    IO.Pos.of_lexbuf lexbuf
                                   in
                                   qstring pos_of_lexbuf [] None lexbuf }
 
@@ -402,7 +402,7 @@ and qstring pos_of_lexbuf starts finish = parse
   | "\\\n"                      { new_line lexbuf ;
                                   qstring pos_of_lexbuf starts finish lexbuf }
   | "\\/*" as s | "/*" as s     { addString s ;
-                                  let pos = Preterm.Pos.of_lexbuf lexbuf () in
+                                  let pos = IO.Pos.of_lexbuf lexbuf () in
                                   let starts = pos :: starts in
                                   qstring pos_of_lexbuf starts finish lexbuf }
   | "\\*/" as s | "*/" as s     { addString s ;
@@ -410,7 +410,7 @@ and qstring pos_of_lexbuf starts finish = parse
                                     | (_ :: starts),_ ->
                                         qstring pos_of_lexbuf starts finish lexbuf
                                     | [],None ->
-                                        let pos = Preterm.Pos.of_lexbuf lexbuf () in
+                                        let pos = IO.Pos.of_lexbuf lexbuf () in
                                         qstring pos_of_lexbuf starts (Some pos) lexbuf
                                     | _ ->
                                         qstring pos_of_lexbuf starts finish lexbuf }

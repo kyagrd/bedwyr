@@ -21,13 +21,15 @@
 
 %{
 
-  let pos = Preterm.Pos.of_token
+open Preterm
+
+  let pos = IO.Pos.of_token
 
   let generic_error i s =
-    raise (Preterm.Parse_error (pos i,"Unexpected input",s))
+    raise (Parse_error (pos i,"Unexpected input",s))
 
   let eof_error s =
-    raise (Preterm.Parse_error (pos 0,"Unexpected end of file",s))
+    raise (Parse_error (pos 0,"Unexpected end of file",s))
 %}
 
 /* Punctuation */
@@ -61,7 +63,7 @@
 
 %token <int> NUM
 %token <string> UPPER_ID LOWER_ID INFIX_ID INTERN_ID
-%token <(Preterm.Pos.t * string)> QSTRING
+%token <(IO.Pos.t * string)> QSTRING
 %token EOF
 
 /* Lower */
@@ -103,20 +105,20 @@ skip_proof:
 definition_mode:
   | command                             { `Command $1 }
   | meta_command                        { `MetaCommand $1 }
-  | EOF                                 { raise Preterm.Empty_command }
+  | EOF                                 { raise Empty_command }
   | error DOT                           { generic_error 1 "a definition file" }
   | error EOF                           { eof_error "a definition file" }
 
 toplevel:
   | term DOT                            { `Term (pos 1,$1) }
   | meta_command                        { `MetaCommand $1 }
-  | EOF                                 { raise Preterm.Empty_term }
+  | EOF                                 { raise Empty_term }
   | error DOT                           { generic_error 1 "the toplevel" }
   | error EOF                           { eof_error "the toplevel" }
 
 term_mode:
   | term DOT                            { `Term (pos 1,$1) }
-  | EOF                                 { raise Preterm.Empty_term }
+  | EOF                                 { raise Empty_term }
   | error DOT                           { generic_error 1 "the term input" }
   | error EOF                           { eof_error "the term input" }
 
@@ -171,9 +173,9 @@ type_clist:
   | type_clist COMMA lower_id           { (pos 3,$3)::$1 }
 
 ki:
-  | TYPE RARROW ki                      { Preterm.Typing.ki_arrow
-                                            [Preterm.Typing.ktype] $3 }
-  | TYPE                                { Preterm.Typing.ktype }
+  | TYPE RARROW ki                      { Preterm.Typing.Kind.arrow
+                                            [Preterm.Typing.Kind.ktype] $3 }
+  | TYPE                                { Preterm.Typing.Kind.ktype }
   | LPAREN ki RPAREN                    { $2 }
 
 const_clist:
@@ -186,14 +188,14 @@ ty_tuple:
   | ty_singleton STAR ty_singleton      { $1,$3,[] }
 
 ty:
-  | ty RARROW ty                        { Preterm.Typing.ty_arrow [$1] $3 }
+  | ty RARROW ty                        { Preterm.Typing.Type.arrow [$1] $3 }
   | ty_tuple                            { let ty1,ty2,tys = $1 in
-                                          Preterm.Typing.ttuple ty1 ty2 tys }
+                                          Preterm.Typing.Type.tuple ty1 ty2 tys }
   | ty_singleton                        { $1 }
 
 ty_singleton:
   | ty_list                             { let p,n,l = $1 in
-                                          Preterm.Typing.tconst p n l }
+                                          Preterm.Typing.Type.const p n l }
   | ty_atom2                            { $1 }
 
 ty_list:
@@ -201,15 +203,15 @@ ty_list:
   | ty_list ty_atom                     { let p,n,l = $1 in p,n,$2::l }
 
 ty_atom:
-  | lower_id                            { Preterm.Typing.tconst (pos 1) $1 [] }
+  | lower_id                            { Preterm.Typing.Type.const (pos 1) $1 [] }
   | ty_atom2                            { $1 }
 
 ty_atom2:
-  | PROP                                { Preterm.Typing.tprop }
-  | STRING                              { Preterm.Typing.tstring }
-  | NAT                                 { Preterm.Typing.tnat }
-  | UNDERSCORE                          { Preterm.Typing.fresh_typaram () }
-  | UPPER_ID				{ Preterm.Typing.get_typaram $1 }
+  | PROP                                { Preterm.Typing.Type.prop }
+  | STRING                              { Preterm.Typing.Type.string }
+  | NAT                                 { Preterm.Typing.Type.nat }
+  | UNDERSCORE                          { Preterm.Typing.Type.fresh_param () }
+  | UPPER_ID				{ Preterm.Typing.Type.get_param $1 }
   | LPAREN ty RPAREN                    { $2 }
 
 /* definitions */
@@ -222,16 +224,16 @@ decl:
   | flavour apred_id                    { let p,n,ty = $2 in ($1,p,n,ty) }
 
 flavour:
-  |                                     { Preterm.Normal      }
-  | INDUCTIVE                           { Preterm.Inductive   }
-  | COINDUCTIVE                         { Preterm.CoInductive }
+  |                                     { Normal      }
+  | INDUCTIVE                           { Inductive   }
+  | COINDUCTIVE                         { CoInductive }
 
 defs:
   | def                                 { [$1] }
   | def SEMICOLON defs                  { $1::$3 }
 
 def:
-  | term                                { pos 0,$1,Preterm.pre_true (pos 0) }
+  | term                                { pos 0,$1,pre_true (pos 0) }
   | term DEFEQ term                     { pos 0,$1,$3 }
 
 theorem:
@@ -245,52 +247,52 @@ term_tuple:
   | singleton COMMA singleton           { $1,$3,[] }
 
 term:
-  | term EQ term                        { Preterm.pre_eq (pos 0) $1 $3 }
-  | term AND term                       { Preterm.pre_and (pos 0) $1 $3 }
-  | term OR term                        { Preterm.pre_or (pos 0) $1 $3 }
-  | term RARROW term                    { Preterm.pre_arrow (pos 0) $1 $3 }
+  | term EQ term                        { pre_eq (pos 0) $1 $3 }
+  | term AND term                       { pre_and (pos 0) $1 $3 }
+  | term OR term                        { pre_or (pos 0) $1 $3 }
+  | term RARROW term                    { pre_arrow (pos 0) $1 $3 }
   | term_tuple                          { let t1,t2,l = $1 in
-                                          Preterm.pre_tuple (pos 0) t1 t2 l }
+                                          pre_tuple (pos 0) t1 t2 l }
   | singleton                           { $1 }
 
 singleton:
   | binder pabound_list COMMA term %prec BINDER
-                                        { Preterm.pre_binder (pos 0) $1 $2 $4 }
+                                        { pre_binder (pos 0) $1 $2 $4 }
   | term_list %prec INFIX_ID            { let t,l = $1 in
-                                          Preterm.pre_app (pos 1) t l }
+                                          pre_app (pos 1) t l }
 
 term_list:
   | term_atom                           { $1,[] }
   | term_list INFIX_ID term_list        { let hd =
-                                            Preterm.pre_predconstid
+                                            pre_predconstid
                                               ~infix:true (pos 2) $2
                                           in
                                           let t1,l1 = $1 in
-                                          let t1 = Preterm.pre_app (pos 1) t1 l1 in
+                                          let t1 = pre_app (pos 1) t1 l1 in
                                           let t3,l3 = $3 in
-                                          let t3 = Preterm.pre_app (pos 3) t3 l3 in
+                                          let t3 = pre_app (pos 3) t3 l3 in
                                           hd,[t3;t1] }
   | term_list term_atom                 { let t,l = $1 in t,$2::l }
 
 term_atom:
   | QSTRING                             { let p,s = $1 in
-                                          Preterm.pre_qstring p s }
-  | NUM                                 { Preterm.pre_nat (pos 1) $1 }
+                                          pre_qstring p s }
+  | NUM                                 { pre_nat (pos 1) $1 }
   | token_id                            { $1 }
-  | TRUE                                { Preterm.pre_true (pos 0) }
-  | FALSE                               { Preterm.pre_false (pos 0) }
+  | TRUE                                { pre_true (pos 0) }
+  | FALSE                               { pre_false (pos 0) }
   | term_abs                            { $1 }
   | LPAREN term RPAREN                  { $2 }
-  | LPAREN INFIX_ID RPAREN              { Preterm.pre_predconstid
+  | LPAREN INFIX_ID RPAREN              { pre_predconstid
                                             ~infix:true (pos 0) $2 }
 
 term_abs:
-  | abound_id BSLASH term               { Preterm.pre_lambda (pos 0) [$1] $3 }
+  | abound_id BSLASH term               { pre_lambda (pos 0) [$1] $3 }
 
 binder:
-  | FORALL                              { Term.Forall }
-  | EXISTS                              { Term.Exists }
-  | NABLA                               { Term.Nabla }
+  | FORALL                              { Ndcore.Term.Forall }
+  | EXISTS                              { Ndcore.Term.Exists }
+  | NABLA                               { Ndcore.Term.Nabla }
 
 pabound_list:
   | pabound_id                          { [$1] }
@@ -345,22 +347,22 @@ any_id:
 
 /* annotated id types */
 apred_id:
-  | lower_id                            { pos 1,$1,Preterm.Typing.fresh_typaram () }
+  | lower_id                            { pos 1,$1,Preterm.Typing.Type.fresh_param () }
   | lower_id COLON ty                   { pos 1,$1,$3 }
 
 abound_id:
-  | bound_id                            { pos 1,$1,Preterm.Typing.fresh_typaram () }
+  | bound_id                            { pos 1,$1,Preterm.Typing.Type.fresh_param () }
   | bound_id COLON ty                   { pos 1,$1,$3 }
 
 pabound_id:
-  | bound_id                            { pos 1,$1,Preterm.Typing.fresh_typaram () }
+  | bound_id                            { pos 1,$1,Preterm.Typing.Type.fresh_param () }
   | LPAREN bound_id COLON ty RPAREN     { pos 2,$2,$4 }
 
 /* predicate or constant in a term */
 token_id:
-  | upper_id                            { Preterm.pre_freeid (pos 1) $1 }
-  | lower_id                            { Preterm.pre_predconstid (pos 1) $1 }
-  | INTERN_ID                           { Preterm.pre_internid (pos 1) $1 }
+  | upper_id                            { pre_freeid (pos 1) $1 }
+  | lower_id                            { pre_predconstid (pos 1) $1 }
+  | INTERN_ID                           { pre_internid (pos 1) $1 }
 
 /* misc (commands) */
 
