@@ -122,27 +122,32 @@ or in a alternative standard place with
 
 ### 7. Distribution ###
 
--   /contrib
+- /contrib
+  > Vim and Emacs files.
 
-    > Vim and Emacs files.
+- /doc
+  > LaTeX documentation.
 
--   /doc
+- /examples
+  > A few simple examples.
 
-    > LaTeX documentation.
-
--   /examples
-
-    > A few simple examples.
-
--   /src/ndcore
-
+- /src
+  - /ndcore
     > Code for the unification and non-destructive normalization of LLambda.
     > Also contains a term indexing module, currently only used for tabling.
 
--   /src/batyping, /src/interface
+  - /iO
+    > Generic low-level input/output functions.
 
-    > Input and typing modules.
+  - /parsetree
+    > Construction of a typed parse tree (lexer and parser), transformation
+    > to an untyped but type-checked abstract syntax tree.
 
--   /src/prover
+  - /prover
+    > Tabling, environments and proof-search procedure.
 
-    > Tabling and actual prover.
+  - /interface
+    > High-level interface.
+
+  - /plugins
+    > Optional functionallies (XML proof export).

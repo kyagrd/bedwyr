@@ -1,2 +1,4 @@
 # the description is uniform across the whole package
 bedwyr-dev: description-synopsis-starts-with-article
+# we use packs, so no mli's to go with our cmi's
+bedwyr-dev: ocaml-dangling-cmi

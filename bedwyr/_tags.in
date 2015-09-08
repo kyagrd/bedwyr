@@ -19,17 +19,45 @@
 
 # @configure_input@
 
-<src>: include
-<src/ndcore> or <src/batyping> or <src/interface> or <src/prover>: include
+#
+# libraries and packs
+#
+##############################################################################
 
-<**/test.*>: package(unix),package(oUnit)
+<src/ndcore>: include
+<src/ndcore/ndcore/*.cmx>: for-pack(Ndcore)
 
-<src/ndcore/*.{native,byte}>: use_ndcore
-<src/batyping/*.{native,byte}>: use_batyping
-<src/interface/*.{native,byte}>: use_ndcore,use_batyping,package(str),use_interface
-<src/prover/*.{native,byte}>: use_ndcore,use_batyping,package(str),use_interface,use_prover
+<src/iO>: include
+<src/iO/io/*.cmx>: for-pack(IO)
 
-<src/prover/*>: package(@XMLM_TAG@)
+<src/parsetree>: include
+<src/parsetree/parsetree/*.cmx>: for-pack(Parsetree)
 
-<src/bedwyr.{native,p.native,byte,d.byte}>: package(unix),package(str),\
-  package(@XMLM_TAG@),use_ndcore,use_batyping,use_interface,use_prover
+<src/prover>: include
+<src/prover/prover/*.cmx>: for-pack(Prover)
+
+<src/interface>: include
+<src/interface/interface/*.cmx>: for-pack(Interface)
+
+<src/plugins>: include
+
+#
+# plugins
+#
+##############################################################################
+
+<src/plugins/tableXmlExport.*>: package(xmlm)
+
+#
+# programs
+#
+##############################################################################
+
+<src/**/test.*>: package(oUnit)
+
+<src/parsetree/parsetree/*.{byte,native}>: package(str)
+<src/prover/prover/*.{byte,native}>: package(str)
+<src/interface/interface/*.{byte,native}>: package(str,unix)
+
+<src/bedwyr.*>: package(findlib)
+<src/bedwyr.{byte,native}>: package(str,unix,dynlink)
