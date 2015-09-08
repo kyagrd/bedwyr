@@ -1,0 +1,5 @@
+version = "[internal]"
+description = "generic I/O"
+#requires = ""
+archive(byte) = "iO.cma"
+archive(native) = "iO.cmxa"
