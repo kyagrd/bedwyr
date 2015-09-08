@@ -21,9 +21,17 @@ open Ocamlbuild_plugin ;;
 
 let _ =
   dispatch begin function
+    | Before_options ->
+        Options.use_ocamlfind := true ;
+        Options.exclude_dirs := [
+          "debian" ;
+          "nsis-files" ;
+          "nsis-build" ;
+        ] ;
+        Options.make_links := false
     | After_rules ->
         flag ["ocaml" ; "compile"] (S [
-          A "-annot" ;
+          A "-annot" ; (* A "-bin-annot" ; *)
           A "-warn-error" ; A "A-3-28" ;
           (* TODO re-enable for 4.02.1
           A "-safe-string" ;
@@ -35,10 +43,12 @@ let _ =
         ]) ;
         flag ["ocamlyacc"] (A "-v") ;
 
-        ocaml_lib "src/ndcore/ndcore" ;
-        ocaml_lib "src/batyping/batyping" ;
-        ocaml_lib "src/interface/interface" ;
-        ocaml_lib "src/prover/prover" ;
+        flag ["package(xmlm)" ; "ocaml" ; "link" ; "byte"] (S [
+          A "xmlm.cma" ;
+        ]) ;
+        flag ["package(xmlm)" ; "ocaml" ; "link" ; "native"] (S [
+          A "xmlm.cmxa" ;
+        ]) ;
 
         ()
     | _ -> ()

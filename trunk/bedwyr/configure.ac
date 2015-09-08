@@ -21,7 +21,7 @@ m4_define([M4_VERSION_MAJOR],1)
 m4_define([M4_VERSION_MINOR],4)
 m4_define([M4_VERSION_PATCH],0)
 m4_define([M4_VERSION_BUILD],0)
-m4_define([M4_VERSION_DEV],beta11)
+m4_define([M4_VERSION_DEV],beta12)
 m4_define([M4_VERSION1],[M4_VERSION_MAJOR.M4_VERSION_MINOR])
 m4_define([M4_VERSION2],m4_if(M4_VERSION_PATCH,0,
           [M4_VERSION1],[M4_VERSION1.M4_VERSION_PATCH]))
@@ -86,12 +86,14 @@ if test "X$enable_debug" = Xyes ; then
 	BYTE_BIN_SUFFIX="d.byte"
 	NATIVE_BIN_SUFFIX="p.native"
 	BYTE_LIBS_SUFFIX="d.cma"
-	NATIVE_LIBS_SUFFIX="p.a p.cmxa p.cmxs"
+	NATIVE_LIBS_SUFFIX="p.a p.cmxa"
+	NATIVE_SHARED_LIBS_SUFFIX="p.cmxs"
 else
 	BYTE_BIN_SUFFIX="byte"
 	NATIVE_BIN_SUFFIX="native"
 	BYTE_LIBS_SUFFIX="cma"
-	NATIVE_LIBS_SUFFIX="a cmxa cmxs"
+	NATIVE_LIBS_SUFFIX="a cmxa"
+	NATIVE_SHARED_LIBS_SUFFIX="cmxs"
 fi
 
 WIN32_BIN_SUFFIX="exe"
@@ -128,6 +130,7 @@ if test "X$enable_bytecode" != Xno ; then
 	AS_IF([test "X$OCAMLC" = Xno],
 	      [AC_MSG_ERROR(Cannot find a bytecode compiler.)])
 	LIB_SUFFIXES="$LIB_SUFFIXES $BYTE_LIBS_SUFFIX"
+	PLUGIN_SUFFIXES="$PLUGIN_SUFFIXES $BYTE_LIBS_SUFFIX"
 	BIN_SUFFIXES="$BIN_SUFFIXES $BYTE_BIN_SUFFIX"
 	BEST_SUFFIX="$BYTE_BIN_SUFFIX"
 	OCAML_VERSION=$("$OCAMLC" -version)
@@ -143,6 +146,7 @@ if test "X$enable_nativecode" = Xyes ; then
 	AS_IF([test "X$OCAMLOPT" = Xno],
 	      [AC_MSG_ERROR(Cannot find a native code compiler.)])
 	LIB_SUFFIXES="$LIB_SUFFIXES $NATIVE_LIBS_SUFFIX"
+	PLUGIN_SUFFIXES="$PLUGIN_SUFFIXES $NATIVE_SHARED_LIBS_SUFFIX"
 	BIN_SUFFIXES="$BIN_SUFFIXES $NATIVE_BIN_SUFFIX"
 	BEST_SUFFIX="$NATIVE_BIN_SUFFIX"
 	OCAML_VERSION=$("$OCAMLOPT" -version)
@@ -192,12 +196,7 @@ if test "X$with_xmlm" = Xno ; then
 else
 	if ocamlfind_xmlm=$("$OCAMLFIND" query xmlm 2>/dev/null) ; then
 		AC_MSG_RESULT(${ocamlfind_xmlm})
-		TABLE_XML_EXPORT_MODULE="TableXmlExport"
-		TABLE_XML_EXPORT_MODULE_DOT="${TABLE_XML_EXPORT_MODULE}."
-		TABLE_XML_EXPORT_MODULE_NL="
-${TABLE_XML_EXPORT_MODULE}"
-		XMLM_TAG="xmlm"
-		XMLM_COMMA="$XMLM_TAG,"
+		OCAMLFIND_XMLM="${ocamlfind_xmlm}"
 	else
 		AC_MSG_RESULT(no)
 		AS_IF([test "X$with_xmln" = Xyes],
@@ -376,11 +375,8 @@ FILE_ICON=dutch-wick-0.3-file.ico
 
 AC_CONFIG_FILES([Makefile.include],[chmod a-w Makefile.include])
 AC_CONFIG_FILES([_tags],[chmod a-w _tags])
-AC_CONFIG_FILES([src/prover/config.ml],[chmod a-w src/prover/config.ml])
-AC_CONFIG_FILES([src/prover/table.ml],[chmod a-w src/prover/table.ml])
-AC_CONFIG_FILES([src/prover/prover.mllib],[chmod a-w src/prover/prover.mllib])
+AC_CONFIG_FILES([src/interface/interface/config.ml],[chmod a-w src/interface/interface/config.ml])
 AC_CONFIG_FILES([src/META.part],[chmod a-w src/META.part])
-AC_CONFIG_FILES([src/prover/META.part],[chmod a-w src/prover/META.part])
 AC_CONFIG_FILES([doc/Makefile],[chmod a-w doc/Makefile])
 AC_CONFIG_FILES([man/bedwyr.1],[chmod a-w man/bedwyr.1])
 AC_CONFIG_FILES([contrib/bedwyr.desktop],[chmod a-w contrib/bedwyr.desktop])
@@ -418,15 +414,13 @@ AC_SUBST(VERSION_DEV)
 
 AC_SUBST(ARCH_SUFFIXES)
 AC_SUBST(LIB_SUFFIXES)
+AC_SUBST(PLUGIN_SUFFIXES)
 AC_SUBST(BIN_SUFFIXES)
 AC_SUBST(BEST_SUFFIX)
 AC_SUBST(OCAML_VERSION)
 AC_SUBST(MINGW32_OCAMLFIND_CONF)
 
-AC_SUBST(TABLE_XML_EXPORT_MODULE_DOT)
-AC_SUBST(TABLE_XML_EXPORT_MODULE_NL)
-AC_SUBST(XMLM_TAG)
-AC_SUBST(XMLM_COMMA)
+AC_SUBST(OCAMLFIND_XMLM)
 AC_SUBST(OCAMLFIND_OUNIT)
 
 AC_SUBST(INSTALL)
