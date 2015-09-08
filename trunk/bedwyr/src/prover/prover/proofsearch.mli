@@ -1,5 +1,5 @@
 (****************************************************************************)
-(* Bedwyr -- level-0/1 prover                                               *)
+(* Bedwyr -- level-0/1 proof search                                         *)
 (* Copyright (C) 2005-2011 Baelde, Tiu, Ziegler, Gacek, Heath               *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
@@ -17,13 +17,13 @@
 (* 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.              *)
 (****************************************************************************)
 
-(** Bedwyr's engine. *)
+(** Bedwyr's core engine. *)
 
 (** Raised when a Level-1 operator or predicate is used in level 0. *)
 exception Level_inconsistency
 
 (** Logic variable on the left. *)
-exception Left_logic of Term.term
+exception Left_logic of Ndcore.Term.term
 
 (** Raised when a instantiatable variable (eigen in level 0, logic in level 1)
   * is detected in a goal that is supposed to be ground. *)
@@ -53,4 +53,4 @@ val saturation_pressure : int ref
 val prove :
   success:(int -> (unit -> 'a) -> 'a) ->
   failure:(unit -> 'a) ->
-  timestamp:int -> local:int -> Term.term -> 'a
+  timestamp:int -> local:int -> Ndcore.Term.term -> 'a

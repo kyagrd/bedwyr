@@ -1,6 +1,9 @@
 (****************************************************************************)
-(* Bedwyr -- level-0/1 prover                                               *)
-(* Copyright (C) 2005-2015 Baelde, Tiu, Ziegler, Gacek, Heath               *)
+(* Bedwyr -- level-0/1 proof search                                         *)
+(* Copyright (C) 2006 Alwen Tiu, Axelle Ziegler, Andrew Gacek               *)
+(* Copyright (C) 2006-2009 David Baelde                                     *)
+(* Copyright (C) 2011 Alwen Tiu                                             *)
+(* Copyright (C) 2011-2015 Quentin Heath                                    *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -19,14 +22,13 @@
 
 exception Level_inconsistency
 
-exception Left_logic of Term.term
+exception Left_logic of Ndcore.Term.term
 
 exception Variable_leakage
 
 open Environment
 open System
-open Term
-module T = Table.O
+open Ndcore.Term
 
 (* Internal design of the prover has two levels, Zero and One.
  * On level One, logic vars are instantiated and eigenvars are constants.
@@ -37,29 +39,33 @@ let assert_level_one = function
   | One -> ()
   | Zero -> raise Level_inconsistency
 
-module Right =
-  Unify.Make (struct
-                let instantiatable = Logic
-                let constant_like = Eigen
-              end)
-module Left =
-  Unify.Make (struct
-                let instantiatable = Eigen
-                let constant_like = Constant
-              end)
-
 let freezing_point = ref 0
 let saturation_pressure = ref 0
 
 type temperature = Unfrozen | Frozen of int
 
-let unify lvl a b =
-  try
-    (if lvl = Zero then Left.pattern_unify else Right.pattern_unify) a b ;
-    true
-  with
-    | Unify.Error _ -> false
-    | Unify.IllegalVariable t -> raise (Left_logic t)
+let unify =
+  let module RightParams = struct
+    let instantiatable = Logic
+    let constant_like = Eigen
+  end in
+  let module Right = Ndcore.Unify.Make (RightParams) in
+
+  let module LeftParams = struct
+    let instantiatable = Eigen
+    let constant_like = Constant
+  end in
+  let module Left = Ndcore.Unify.Make (LeftParams) in
+
+  fun lvl a b ->
+    try
+      if lvl = Zero
+      then Left.pattern_unify a b
+      else Right.pattern_unify a b ;
+      true
+    with
+      | Ndcore.Unify.Error _ -> false
+      | Ndcore.Unify.IllegalVariable t -> raise (Left_logic t)
 
 (* Tabling provides a way to cut some parts of the search,
  * but we should take care not to mistake shortcuts and disproving. *)
@@ -69,7 +75,7 @@ let dependency_stack = Stack.create ()
 let clear_dependency_stack () =
   try
     while true do
-      let s,_ = Stack.pop dependency_stack in s := T.Unset
+      let s,_ = Stack.pop dependency_stack in s := Table.Unset
     done
   with Stack.Empty -> ()
 
@@ -92,7 +98,7 @@ let mark_dependent_until =
        * we need to make the previous atoms depend on it *)
       add_dependencies status final_dependencies
     else ((* TODO prove that the second level of final influences
-               * is included in the first *))
+           * is included in the first *))
   in
   let aux status (looping,final_influences,final_dependencies) =
     if !looping then
@@ -104,15 +110,15 @@ let mark_dependent_until =
        * we need to make the previous atoms depend on them *)
       List.iter
         (fun st -> match !st with
-           | T.Working (_,w) -> aux2 st w
+           | Table.Working (_,w) -> aux2 st w
            | _ -> assert false)
         !final_influences
   in
   aux
 
 type 'a answer =
-  | Known of ('a ref -> bool) * 'a ref * Term.term * T.t
-  | Unknown of ('a ref -> bool) * Term.term * T.t
+  | Known of ('a ref -> bool) * 'a ref * term * Table.t
+  | Unknown of ('a ref -> bool) * term * Table.t
   | OffTopic
 
 
@@ -131,9 +137,9 @@ let rec prove sons
     raise Interrupt
   end ;
 
-  let g = Norm.hnorm g in
+  let g = Ndcore.Norm.hnorm g in
   let invalid_goal () =
-    failwith (Format.sprintf "Invalid goal %s" (Pprint.term_to_string_full [] [] g))
+    failwith (Format.sprintf "Invalid goal %s" (Ndcore.Pprint.term_to_string_full [] [] g))
   in
 
   (* Function to prove _distinct predicate *)
@@ -141,7 +147,7 @@ let rec prove sons
     let sol = ref [] in
     let match_list l1 l2 = List.for_all2 eq l1 l2 in
     let a = match goals with [a] -> a | _ -> invalid_goal () in
-    let a = Norm.deep_norm a in
+    let a = Ndcore.Norm.deep_norm a in
     let vars = if level = Zero then eigen_vars [a] else logic_vars [a] in
     prove sons
       temperatures (depth+1)
@@ -157,9 +163,9 @@ let rec prove sons
   (* Function to prove _abstract predicate *)
   let prove_abstract goals =
     let a,b,c = match goals with [a;b;c] -> a,b,c | _ -> invalid_goal () in
-    let a = Norm.deep_norm a in
-    let b = Norm.deep_norm b in
-    let c = Norm.deep_norm c in
+    let a = Ndcore.Norm.deep_norm a in
+    let b = Ndcore.Norm.deep_norm b in
+    let c = Ndcore.Norm.deep_norm c in
     let vars =
       if level = Zero then eigen_vars [a] else logic_vars [a]
     in
@@ -175,7 +181,7 @@ let rec prove sons
   (* Function to prove _not predicate *)
   let prove_not goals =
     let a = match goals with [a] -> a | _ -> invalid_goal () in
-    let a = Norm.deep_norm a in
+    let a = Ndcore.Norm.deep_norm a in
     let state = save_state () in
     prove sons temperatures (depth+1) ~level ~timestamp ~local a
       ~success:(fun ts k ->
@@ -189,9 +195,9 @@ let rec prove sons
   (* Function to prove _if predicate *)
   let prove_ite goals =
     let (a,b,c) = match goals with [a;b;c] -> a,b,c | _ -> invalid_goal () in
-    let a = Norm.deep_norm a in
-    let b = Norm.deep_norm b in
-    let c = Norm.deep_norm c in
+    let a = Ndcore.Norm.deep_norm a in
+    let b = Ndcore.Norm.deep_norm b in
+    let c = Ndcore.Norm.deep_norm c in
     let succeeded = ref false in
     let state = save_state () in
     prove sons temperatures (depth+1) ~level ~timestamp ~local a
@@ -215,9 +221,9 @@ let rec prove sons
   (* 2-step procedure (table, definition)
    * to prove a predicative atom *)
   let prove_atom d args (v,temperature,temperatures) =
-    Output.dprintf "[%s] Proving %a..."
+    IO.Output.dprintf "[%s] Proving@ %a..."
       (match temperature with Frozen t -> string_of_int t | _ -> "+")
-      Pprint.pp_term g ;
+      Ndcore.Pprint.pp_term g ;
     let flavour,definition = get_flav_def d in
     (* first step, first sub-step: look at the table
      * (whether the atom is frozen or not is irrelevent at this point) *)
@@ -225,7 +231,7 @@ let rec prove sons
       | Normal -> OffTopic
       | Inductive {theorem=theorem;table=table}
       | CoInductive {theorem=theorem;table=table} ->
-          let add,found,_ = T.access ~switch_vars:(level=Zero) table args in
+          let add,found,_ = Table.access ~switch_vars:(level=Zero) table args in
           match found with
             | Some c -> Known (add,c,theorem,table)
             | None -> Unknown (add,theorem,table)
@@ -234,15 +240,15 @@ let rec prove sons
       | OffTopic ->
           prove sons temperatures (depth+1)
             ~level ~timestamp ~local ~success ~failure (app definition args)
-      | Known (_,({contents=T.Proved _} as status),_,_) ->
-          Output.dprintf "Goal (%a) proved using table" Pprint.pp_term g ;
-          sons := T.Cut status :: !sons ;
+      | Known (_,({contents=Table.Proved _} as status),_,_) ->
+          IO.Output.dprintf "Goal (%a) proved using table." Ndcore.Pprint.pp_term g ;
+          sons := Table.Cut status :: !sons ;
           success timestamp failure
-      | Known (_,({contents=T.Disproved _} as status),_,_) ->
-          Output.dprintf "Known disproved" ;
-          sons := T.Cut status :: !sons ;
+      | Known (_,({contents=Table.Disproved _} as status),_,_) ->
+          IO.Output.dprintf "Known disproved." ;
+          sons := Table.Cut status :: !sons ;
           failure ()
-      | Known (_,({contents=T.Working (_,w)} as status),_,_) ->
+      | Known (_,({contents=Table.Working (_,w)} as status),_,_) ->
           (* this is an unsure atom *)
           begin match temperature with
             | Frozen _ ->
@@ -258,9 +264,9 @@ let rec prove sons
             | Unfrozen ->
                 let looping,_,_ = w in
                 if !looping then begin
-                  sons := T.Loop status :: !sons
+                  sons := Table.Loop status :: !sons
                 end else begin
-                  sons := T.Cut status :: !sons
+                  sons := Table.Cut status :: !sons
                 end ;
                 begin match flavour with
                   | Inductive _ ->
@@ -273,15 +279,15 @@ let rec prove sons
                 end
           end
       | Unknown (table_add,theorem,table)
-      | Known (table_add,{contents=T.Unset},theorem,table) ->
-          match T.filter ~switch_vars:(level=Zero) table args with
+      | Known (table_add,{contents=Table.Unset},theorem,table) ->
+          match Table.filter ~switch_vars:(level=Zero) table args with
             | Some true ->
                 success timestamp failure
             | Some false ->
                 failure ()
             | None ->
           (* This handles the cases where nothing is in the table,
-           * or Unset has been left, in which case the [T.add]
+           * or Unset has been left, in which case the [Table.add]
            * will overwrite it. *)
           (* This is a generic function that works both for unfrozen proof
            * and backward chaining. *)
@@ -292,7 +298,7 @@ let rec prove sons
                 | ([],_) :: l2 -> aux l2
                 | ((st :: l1),st') :: l2 ->
                     begin match !st with
-                      | T.Working (sons',(_,fi,fd)) ->
+                      | Table.Working (sons',(_,fi,fd)) ->
                           let fi1,fi2 =
                             let rec rem l1 = function
                               | [] -> assert false
@@ -313,7 +319,7 @@ let rec prove sons
               in
               (* we have to add a dumy dependency for the atom,
                * since [aux] decrements the number of dependencies *)
-              let r = ref T.Unset in
+              let r = ref Table.Unset in
               final_influences := r :: !final_influences ;
               aux [[status],r]
             in
@@ -323,8 +329,8 @@ let rec prove sons
                 | [] :: l2 -> aux l2
                 | (st :: l1) :: l2 ->
                     begin match !st with
-                      | T.Working (_,(_,_,fd)) ->
-                          st := T.Unset ;
+                      | Table.Working (_,(_,_,fd)) ->
+                          st := Table.Unset ;
                           aux (!fd :: l1 :: l2)
                       | _ -> aux (l1 :: l2)
                     end
@@ -338,16 +344,16 @@ let rec prove sons
                 | Frozen _ ->
                     (* Theorems cannot handle loops,
                      * so no (in)validation. *)
-                    status := T.Proved new_sons
+                    status := Table.Proved new_sons
                     (* TODO maybe remove this case, since final_dependencies
                      * and final_influences are empty anyway *)
                 | Unfrozen ->
                     begin match flavour with
                       | Inductive _ ->
-                          invalidate status (T.Proved new_sons)
+                          invalidate status (Table.Proved new_sons)
                       | CoInductive _ ->
                           validate status final_influences
-                            (fun sons' -> T.Proved sons')
+                            (fun sons' -> Table.Proved sons')
                       | _ -> assert false
                     end
             in
@@ -356,7 +362,7 @@ let rec prove sons
                 | Frozen _ ->
                     (* Theorems cannot handle negated atoms yet,
                      * so a failure means nothing. *)
-                    status := T.Unset
+                    status := Table.Unset
                     (* XXX (Frozen !freezing_point) never actually happens,
                      * instead the temperature is Unfrozen and the atom
                      * is incorrectly marked as Disproved,
@@ -367,9 +373,9 @@ let rec prove sons
                     begin match flavour with
                       | Inductive _ ->
                           validate status final_influences
-                            (fun sons' -> T.Disproved sons')
+                            (fun sons' -> Table.Disproved sons')
                       | CoInductive _ ->
-                          invalidate status (T.Disproved new_sons)
+                          invalidate status (Table.Disproved new_sons)
                       | _ -> assert false
                     end
             in
@@ -378,7 +384,7 @@ let rec prove sons
             in
             let status =
               let w = looping,final_influences,final_dependencies in
-              ref (T.Working (new_sons,w))
+              ref (Table.Working (new_sons,w))
             in
             let s0 = save_state () in
             let table_update_success ts _ =
@@ -442,13 +448,13 @@ let rec prove sons
                       let rec fc k pressure = function
                         | [] -> k ()
                         | args::copies ->
-                            Output.dprintf "(%d) Tabling %a..."
+                            IO.Output.dprintf "(%d) Tabling@ %a..."
                               pressure
-                              Pprint.pp_term (app d args) ;
+                              Ndcore.Pprint.pp_term (app d args) ;
                             let k () = fc k pressure copies in
                             let status =
                               let add,found,_ =
-                                T.access
+                                Table.access
                                   ~switch_vars:(level=Zero) table args
                               in
                               match found with
@@ -457,24 +463,24 @@ let rec prove sons
                             in
                             match status with
                               | OffTopic -> k ()
-                              | Known (_,{contents=T.Proved _},_,_) ->
-                                  Output.dprintf
+                              | Known (_,{contents=Table.Proved _},_,_) ->
+                                  IO.Output.dprintf
                                     "Goal (%a) already proved!"
-                                    Pprint.pp_term (app d args) ;
+                                    Ndcore.Pprint.pp_term (app d args) ;
                                   k ()
-                              | Known (_,{contents=T.Disproved _},_,_) ->
+                              | Known (_,{contents=Table.Disproved _},_,_) ->
                                   failwith "did our theorem just prove false?"
-                              | Known (_,{contents=T.Working _},_,_) ->
+                              | Known (_,{contents=Table.Working _},_,_) ->
                                   assert false
                               | Unknown (table_add,theorem,table)
-                              | Known (table_add,{contents=T.Unset},theorem,table) ->
+                              | Known (table_add,{contents=Table.Unset},theorem,table) ->
                                   (* XXX what [sons] to use here? *)
-                                  let status = ref (T.Proved new_sons) in
+                                  let status = ref (Table.Proved new_sons) in
                                   (* XXX switch_vars? *)
                                   if not (table_add status) then assert false ;
-                                  Output.dprintf
-                                    "Goal (%a) proved using forward chaining"
-                                    Pprint.pp_term (app d args) ;
+                                  IO.Output.dprintf
+                                    "Goal (%a) proved using forward chaining."
+                                    Ndcore.Pprint.pp_term (app d args) ;
                                   fc_step k pressure args
                       and fc_step k pressure args =
                         if pressure<>(!saturation_pressure) then begin
@@ -508,16 +514,16 @@ let rec prove sons
             in
             let table_update_failure () =
               begin match !status with
-                | T.Proved _ ->
+                | Table.Proved _ ->
                     (* This is just backtracking, we are seeing the tabling
                      * entry corresponding to a previous goal.
                      * Never happens if we skipped the success continuation. *)
                     assert false
-                | T.Working _ ->
+                | Table.Working _ ->
                     ignore (Stack.pop dependency_stack) ;
                     looping := false ;
                     process_failure status final_influences
-                | T.Disproved _ | T.Unset -> assert false
+                | Table.Disproved _ | Table.Unset -> assert false
               end ;
               failure ()
             in
@@ -525,7 +531,7 @@ let rec prove sons
               (* TODO maybe do not add this when frozen *)
               Stack.push (status,final_influences) dependency_stack ;
               looping := true ;
-              sons := T.Son status :: !sons ;
+              sons := Table.Son status :: !sons ;
               prove new_sons
                 temperatures (depth+1)
                 ~level ~local ~timestamp (app body args)
@@ -549,17 +555,17 @@ let rec prove sons
               | Frozen t ->
                   t,
                   (fun timestamp failure ->
-                     Output.dprintf
-                       "Frozen goal (%a) proved using backward chaining"
-                       Pprint.pp_term g ;
+                     IO.Output.dprintf
+                       "Frozen goal (%a) proved using backward chaining."
+                       Ndcore.Pprint.pp_term g ;
                      success timestamp failure),
                   failure
               | Unfrozen ->
                   !freezing_point,
                   (fun timestamp failure ->
-                     Output.dprintf
-                       "Unfrozen goal (%a) proved using backward chaining"
-                       Pprint.pp_term g ;
+                     IO.Output.dprintf
+                       "Unfrozen goal (%a) proved using backward chaining."
+                       Ndcore.Pprint.pp_term g ;
                      success timestamp failure),
                   (* second step: unfreeze the atom,
                    * unfold the definition *)
@@ -591,7 +597,7 @@ let rec prove sons
     | Binop (Eq,t1,t2) ->
         let state = save_state () in
         let failure () = restore_state state ; failure () in
-        if unify level (Norm.hnorm t1) (Norm.hnorm t2) then
+        if unify level (Ndcore.Norm.hnorm t1) (Ndcore.Norm.hnorm t2) then
           success timestamp failure
         else
           failure ()
@@ -607,7 +613,7 @@ let rec prove sons
                 ~failure
                 goal
         in
-        conj timestamp failure [Norm.hnorm t1;Norm.hnorm t2]
+        conj timestamp failure [Ndcore.Norm.hnorm t1;Ndcore.Norm.hnorm t2]
 
     (* Proving a disjunction *)
     | Binop (Or,t1,t2) ->
@@ -619,13 +625,13 @@ let rec prove sons
                 ~failure:(fun () -> alt goals)
                 g
         in
-        alt [Norm.hnorm t1;Norm.hnorm t2]
+        alt [Ndcore.Norm.hnorm t1;Ndcore.Norm.hnorm t2]
 
     (* Level 1: Implication *)
     | Binop (Arrow,a,b) ->
         assert_level_one level ;
-        let a = Norm.deep_norm a in
-        let b = Norm.deep_norm b in
+        let a = Ndcore.Norm.deep_norm a in
+        let b = Ndcore.Norm.deep_norm b in
         let check_variables =
           let eigen = eigen_vars [a] in
           let logic = logic_vars [b] in
@@ -645,7 +651,7 @@ let rec prove sons
           let var v =
             match observe v with
               | Var v when v.tag = Eigen -> v
-              | _ -> raise (Unify.NotLLambda v)
+              | _ -> raise (Ndcore.Unify.NotLLambda v)
           in
           fun () ->
             (* This is called when some left solution has been
@@ -655,7 +661,7 @@ let rec prove sons
               | [] -> ()
               | (va,a)::tl ->
                   if List.exists (fun (_,b) -> a=b) tl then
-                    raise (Unify.NotLLambda va) ;
+                    raise (Ndcore.Unify.NotLLambda va) ;
                   unicity tl
             in
             unicity eigen
@@ -680,7 +686,7 @@ let rec prove sons
           List.map
             (fun (ts,sigma) ->
                let unsig = apply_subst sigma in
-               let g = Norm.deep_norm g in
+               let g = Ndcore.Norm.deep_norm g in
                let newg = shared_copy g in
                undo_subst unsig ;
                (ts, newg))
@@ -757,13 +763,13 @@ let rec prove sons
           ~success ~failure goal
 
     | App (hd,goals) ->
-        let goals = List.map Norm.hnorm goals in
+        let goals = List.map Ndcore.Norm.hnorm goals in
         begin match observe hd with
           (* Checking equivariance between terms *)
           | Var v when v == Logic.var_check_eqvt ->
               let a,b = match goals with [a;b] -> a,b | _ -> invalid_goal () in
-              let a = Norm.deep_norm a in
-              let b = Norm.deep_norm b in
+              let a = Ndcore.Norm.deep_norm a in
+              let b = Ndcore.Norm.deep_norm b in
               if (eqvt a b) then success timestamp failure else failure ()
 
           (* Proving a negation-as-failure *)
@@ -781,7 +787,7 @@ let rec prove sons
           (* Checking rigidity assumption *)
           | Var v when v == Logic.var_assert_rigid ->
              let a = match goals with [a] -> a | _ -> invalid_goal () in
-             let a = Norm.deep_norm a in
+             let a = Ndcore.Norm.deep_norm a in
              let vars =
                if level = Zero then eigen_vars [a] else logic_vars [a]
              in
@@ -793,7 +799,7 @@ let rec prove sons
           (* proving cut predicate *)
           | Var v when v == Logic.var_cutpred ->
              let a = match goals with [a] -> a | _ -> invalid_goal () in
-             let a = Norm.deep_norm a in
+             let a = Ndcore.Norm.deep_norm a in
              let state = save_state () in
              prove sons
                temperatures (depth+1)
@@ -809,7 +815,7 @@ let rec prove sons
           (* Input *)
           | Var v when v == Logic.var_read ->
               let read_fun () = !System.read_term () in
-              begin match IO.read read_fun goals with
+              begin match System.read read_fun goals with
                 | None -> failure ()
                 | Some goal ->
                     prove sons
@@ -820,7 +826,7 @@ let rec prove sons
 
           | Var v when v == Logic.var_fread ->
               let read_fun lexbuf () = !System.fread_term lexbuf () in
-              begin match IO.fread read_fun goals with
+              begin match System.fread read_fun goals with
                 | None -> failure ()
                 | Some goal ->
                     prove sons
@@ -832,78 +838,78 @@ let rec prove sons
           (* Opening file for input *)
           | Var v when v == Logic.var_fopen_in ->
               assert_level_one level ;
-              if (IO.fopen_in goals) then success timestamp failure
+              if (System.fopen_in goals) then success timestamp failure
               else failure ()
 
           | Var v when v == Logic.var_fclose_in ->
               assert_level_one level ;
-              if (IO.fclose_in goals) then success timestamp failure
+              if (System.fclose_in goals) then success timestamp failure
               else failure ()
 
           (* Output *)
           | Var v when v == Logic.var_print ->
               let print_fun t =
-                Output.printf "%a" Pprint.pp_term t ;
+                IO.Output.printf "%a" Ndcore.Pprint.pp_term t ;
                 true
               in
-              if IO.print print_fun goals
+              if System.print print_fun goals
               then success timestamp failure
               else failure ()
 
           | Var v when v == Logic.var_println ->
               let print_fun t =
-                Output.printf "%a@." Pprint.pp_term t ;
+                IO.Output.printf "%a@\n" Ndcore.Pprint.pp_term t ;
                 true
               in
-              if IO.print print_fun goals
+              if System.print print_fun goals
               then success timestamp failure
               else failure ()
 
           | Var v when v == Logic.var_printstr ->
               let print_fun t = match observe t with
-                | QString s -> Output.printf "%s" s ; true
+                | QString s -> IO.Output.printf "%s" s ; true
                 | _ -> false
               in
-              if IO.print print_fun goals
+              if System.print print_fun goals
               then success timestamp failure
               else failure ()
 
           | Var v when v == Logic.var_fprint ->
               let print_fun fmt t =
-                Output.fprintf ~formatter:fmt "%a" Pprint.pp_term t ;
+                IO.Output.fprintf ~formatter:fmt "%a" Ndcore.Pprint.pp_term t ;
                 true
               in
-              if IO.fprint print_fun goals
+              if System.fprint print_fun goals
               then success timestamp failure
               else failure ()
 
           | Var v when v == Logic.var_fprintln ->
               let print_fun fmt t =
-                Output.fprintf ~formatter:fmt "%a@." Pprint.pp_term t ;
+                IO.Output.fprintf ~formatter:fmt "%a@\n" Ndcore.Pprint.pp_term t ;
                 true
               in
-              if IO.fprint print_fun goals
+              if System.fprint print_fun goals
               then success timestamp failure
               else failure ()
 
           | Var v when v == Logic.var_fprintstr ->
               let print_fun fmt t = match observe t with
-                | QString s -> Output.fprintf ~formatter:fmt "%s" s ; true
+                | QString s -> IO.Output.fprintf ~formatter:fmt "%s" s ; true
                 | _ -> false
               in
-              if IO.fprint print_fun goals
+              if System.fprint print_fun goals
               then success timestamp failure
               else failure ()
 
           (* Opening file for output *)
           | Var v when v == Logic.var_fopen_out ->
               assert_level_one level ;
-              if (IO.fopen_out goals) then success timestamp failure
+              if (System.fopen_out goals) then success timestamp failure
               else failure ()
 
           | Var v when v == Logic.var_fclose_out ->
               assert_level_one level ;
-              if (IO.fclose_out goals) then success timestamp failure
+              if (System.fclose_out goals) then success timestamp failure
               else failure ()
 
           (* Check for definitions *)

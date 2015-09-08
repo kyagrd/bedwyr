@@ -1,5 +1,5 @@
 version = "[internal]"
 description = "tabled level-0/1 prover"
-requires = "@XMLM_COMMA@slimmer.interface"
+requires = "slimmer.interface"
 archive(byte) = "prover.cma"
 archive(native) = "prover.cmxa"
