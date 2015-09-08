@@ -22,10 +22,18 @@ open Ocamlbuild_plugin ;;
 let _ =
   dispatch begin function
     | After_rules ->
-        flag ["ocaml" ; "compile"] (A "-annot") ;
-        flag ["ocaml" ; "compile"] (S [A "-warn-error" ; A "A-3-28"]) ;
-        flag ["ocaml" ; "native" ; "compile"] (A "-nodynlink") ;
-        flag ["ocaml" ; "doc"] (S [A "-stars" ; A "-m" ; A "A"]) ;
+        flag ["ocaml" ; "compile"] (S [
+          A "-annot" ;
+          A "-warn-error" ; A "A-3-28" ;
+          (* TODO re-enable for 4.02.1
+          A "-safe-string" ;
+           *)
+        ]) ;
+        flag ["ocaml" ; "doc"] (S [
+          A "-stars" ;
+          A "-m" ; A "A" ;
+        ]) ;
+        flag ["ocamlyacc"] (A "-v") ;
 
         ocaml_lib "src/ndcore/ndcore" ;
         ocaml_lib "src/batyping/batyping" ;

@@ -88,7 +88,7 @@ DOCDIR		= $(DESTDIR)$(docdir)
 #PDFDIR		= $(DESTDIR)$(pdfdir)
 #PSDIR		= $(DESTDIR)$(psdir)
 #LIBDIR		= $(DESTDIR)$(libdir)
-OCAMLLIBDIR	= $(DESTDIR)$(ocamllibdir)
+OCAMLLIBDIR	?= $(DESTDIR)$(ocamllibdir)
 #LOCALEDIR	= $(DESTDIR)$(localedir)
 MANDIR		= $(DESTDIR)$(mandir)
 
@@ -111,9 +111,7 @@ BZIP2		= @BZIP2@ -9 -f
 OCAMLC		= @OCAMLC@
 OCAMLDEBUG	= @OCAMLDEBUG@
 OCAMLBUILD	= @OCAMLBUILD@ -use-ocamlfind -classic-display \
-		  -yaccflag -v \
-		  -Xs debian,$(DEB_DIST_NAME),nsis-files,nsis-build -no-links# \
-		  -cflag -safe-string
+		  -Xs debian,$(DEB_DIST_NAME),nsis-files,nsis-build -no-links
 OCAMLBUILDWIN32	= OCAMLFIND_CONF=@MINGW32_OCAMLFIND_CONF@ $(OCAMLBUILD)
 MINGW32_WINDRES	= @MINGW32_WINDRES@ -c0xfde9 -l0x0890
 OCAMLDOC	= @OCAMLDOC@
@@ -141,7 +139,7 @@ OCAML_FILES	= @OCAML_FILES@ $(OCAML_IN_FILES)
 .SECONDARY: $(OCAML_IN_FILES:.in=)
 OCAMLFIND_OUNIT	= @OCAMLFIND_OUNIT@
 SLIMMER_FILES	= ChangeLog TODO
-BEDWYR_FILES	= README
+BEDWYR_FILES	= README.md
 BEDWYR_LIBS	= ndcore batyping interface prover
 MAN_FILES	= $(wildcard man/*.in)
 BASH_CONTRIB	= bedwyr.sh

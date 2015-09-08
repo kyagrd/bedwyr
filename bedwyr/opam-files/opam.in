@@ -26,14 +26,12 @@ build: [
     "contrib/bedwyr"
     "man/bedwyr.native.1"
     "man/bedwyr.1"
-    "slimmer_lib_opam"
+    "slimmer_lib"
     "contrib/rlwrap/completions"
   ]
 ]
 install: [
-  ["ocamlfind" "install" "slimmer"
-    "slimmer_lib_opam"
-  ]
+  [make "OCAMLLIBDIR=%{lib}%" "install_slimmer_lib"]
 ]
 remove: [
   ["ocamlfind" "remove" "slimmer"]
