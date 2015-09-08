@@ -18,53 +18,58 @@
 (****************************************************************************)
 
 let parse ~k ~parser ~lexer lexbuf =
-  try Some (parser lexer lexbuf) with e ->
-    begin match e with
-      (* Lexer *)
-      | Lexer.EOF_error s ->
-          Output.eprintf ~p:(Preterm.Pos.of_lexbuf lexbuf ())
-            "Lexing error:@ %s@ at end of input."
-            s
-      | Lexer.Illegal_byte_sequence c ->
-          Output.eprintf ~p:(Preterm.Pos.of_lexbuf lexbuf ())
-            "Illegal sequence starting with byte %C in input."
-            c
-      | Lexer.Illegal_string_comment p ->
-          Output.eprintf ~p
-            "Unmatched comment delimiter in string."
-      | Lexer.Illegal_token (n1,n2) ->
-          Output.eprintf ~p:(Preterm.Pos.of_lexbuf lexbuf ())
-            "%S is illegal in a token, did you mean %S?"
-            (Lexing.lexeme lexbuf)
-            (String.concat " " [n1;n2])
-      | Lexer.Unknown_command n ->
-          Output.eprintf ~p:(Preterm.Pos.of_lexbuf lexbuf ())
-            "Unknown meta-command %S, use \"#help.\" for a short list."
-            ("#" ^ n)
+  try
+    try Some (Some (parser lexer lexbuf)) with e ->
+      begin match e with
+        (* Lexer *)
+        | Lexer.EOF_error s ->
+            Output.eprintf ~p:(Preterm.Pos.of_lexbuf lexbuf ())
+              "Lexing error:@ %s@ at end of input."
+              s
+        | Lexer.Illegal_byte_sequence c ->
+            Output.eprintf ~p:(Preterm.Pos.of_lexbuf lexbuf ())
+              "Illegal sequence starting with byte %C in input."
+              c
+        | Lexer.Illegal_string_comment p ->
+            Output.eprintf ~p
+              "Unmatched comment delimiter in string."
+        | Lexer.Illegal_token (n1,n2) ->
+            Output.eprintf ~p:(Preterm.Pos.of_lexbuf lexbuf ())
+              "%S is illegal in a token, did you mean %S?"
+              (Lexing.lexeme lexbuf)
+              (String.concat " " [n1;n2])
+        | Lexer.Unknown_command n ->
+            Output.eprintf ~p:(Preterm.Pos.of_lexbuf lexbuf ())
+              "Unknown meta-command %S, use \"#help.\" for a short list."
+              ("#" ^ n)
 
-      (* Parser *)
-      | Parsing.Parse_error ->
-          Output.eprintf ~p:(Preterm.Pos.of_lexbuf lexbuf ())
-            "Unexpected input."
-      | Preterm.Parse_error (p,s1,s2) ->
-          Output.eprintf ~p
-            "%s while parsing@ %s."
-            s1 s2
+        (* Parser *)
+        | Parsing.Parse_error ->
+            Output.eprintf ~p:(Preterm.Pos.of_lexbuf lexbuf ())
+              "Unexpected input."
+        | Preterm.Parse_error (p,s1,s2) ->
+            Output.eprintf ~p
+              "%s while parsing@ %s."
+              s1 s2
 
       | e -> raise e
     end ;
-    k ()
+    Some (k ())
+  with Sys_error e ->
+    Output.eprintf "Couldn't parse %S:@ %s."
+      (lexbuf.Lexing.lex_curr_p.Lexing.pos_fname) e ;
+    None
 
 let definition_mode ~k lexbuf =
-  try Some (parse ~k ~parser:Parser.definition_mode ~lexer:Lexer.token lexbuf)
+  try parse ~k ~parser:Parser.definition_mode ~lexer:Lexer.token lexbuf
   with Preterm.Empty_command -> None
 
 let toplevel ~k lexbuf =
-  try Some (parse ~k ~parser:Parser.toplevel ~lexer:Lexer.token lexbuf)
+  try parse ~k ~parser:Parser.toplevel ~lexer:Lexer.token lexbuf
   with Preterm.Empty_term -> None
 
 let term_mode ~k lexbuf =
-  try Some (parse ~k ~parser:Parser.term_mode ~lexer:Lexer.token lexbuf)
+  try parse ~k ~parser:Parser.term_mode ~lexer:Lexer.token lexbuf
   with Preterm.Empty_term -> None
 
 let apply_on_string f ?(fname="") str =
