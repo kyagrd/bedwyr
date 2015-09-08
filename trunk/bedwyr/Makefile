@@ -248,7 +248,7 @@ src_libref: $(SRC_DOCDIR)/index.html
 src.odocl: $(foreach m,$(BEDWYR_LIBS),src/$m/$m.mllib)
 	@echo "src/Bedwyr" > $@
 	@for i in $^ ; do \
-	  sed -e "s|^|$$(dirname $$i)/|" -e '/Lexer\|Parser/d' $$i ; \
+	  sed -e "s|^|$$(dirname $$i)/|" -e '/Parser/d' $$i ; \
 	  done >> $@
 
 man/%.byte.1: man/%.1
@@ -308,6 +308,11 @@ install_bedwyr_man: $(MANPAGES)
 install_bedwyr_contrib: $(CONTRIB_FILES:.in=)
 	@for i in $^ ; do \
 	  $(INSTALL_DATA) -D $$i $(PKGDATADIR)/$$i ; done
+ifneq ($(BASHCOMP_D),$(DESTDIR))
+	@for i in $(BASH_CONTRIB) ; do \
+	  $(INSTALL_DIR) $$(dirname $(BASHCOMP_D)/$$i) ; \
+	  ln -svf $(pkgdatadir)/contrib/bash_completion.d/$$i $(BASHCOMP_D)/$$i ; done
+endif
 ifneq ($(VIMFILES),$(DESTDIR))
 	@for i in $(VIM_CONTRIB) ; do \
 	  $(INSTALL_DIR) $$(dirname $(VIMFILES)/$$i) ; \

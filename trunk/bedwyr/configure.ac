@@ -21,7 +21,7 @@ m4_define([M4_VERSION_MAJOR],1)
 m4_define([M4_VERSION_MINOR],4)
 m4_define([M4_VERSION_PATCH],0)
 m4_define([M4_VERSION_BUILD],0)
-m4_define([M4_VERSION_DEV],beta9)
+m4_define([M4_VERSION_DEV],beta10)
 m4_define([M4_VERSION1],[M4_VERSION_MAJOR.M4_VERSION_MINOR])
 m4_define([M4_VERSION2],m4_if(M4_VERSION_PATCH,0,
           [M4_VERSION1],[M4_VERSION1.M4_VERSION_PATCH]))
@@ -293,6 +293,14 @@ fi
 # Installation-related options
 #
 ##############################################################################
+
+AC_MSG_CHECKING(if bash completion files should be installed)
+AC_ARG_WITH([bash_completion],
+            AC_HELP_STRING([--with-bash_completion],[install bash completion files (no)]),
+            [AC_MSG_RESULT($with_bash_completion)],
+            [AC_MSG_RESULT(no)])
+AS_IF([test "X$with_bash_completion" = Xyes],
+      [BASHCOMP_D='${sysconfdir}/bash_completion.d'])
 
 AC_MSG_CHECKING(if vim files should be installed)
 AC_ARG_WITH([vimfiles],

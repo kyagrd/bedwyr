@@ -53,7 +53,7 @@ bindir		= @bindir@
 #libexecdir	= @libexecdir@
 datarootdir	= @datarootdir@
 pkgdatadir	= @datadir@/$(PACKAGE_TARNAME)
-#sysconfdir	= @sysconfdir@
+sysconfdir	= @sysconfdir@
 #sharedstatedir	= @sharedstatedir@
 #localstatedir	= @localstatedir@
 #includedir	= @includedir@
@@ -92,6 +92,7 @@ OCAMLLIBDIR	= $(DESTDIR)$(ocamllibdir)
 #LOCALEDIR	= $(DESTDIR)$(localedir)
 MANDIR		= $(DESTDIR)$(mandir)
 
+BASHCOMP_D	= $(DESTDIR)@BASHCOMP_D@
 VIMFILES	= $(DESTDIR)@VIMFILES@
 PIXMAPS_DIR	= $(DATAROOTDIR)/pixmaps
 ICONS_DIR	= $(DATAROOTDIR)/icons
@@ -143,12 +144,14 @@ SLIMMER_FILES	= ChangeLog TODO
 BEDWYR_FILES	= README
 BEDWYR_LIBS	= ndcore batyping interface prover
 MAN_FILES	= $(wildcard man/*.in)
+BASH_CONTRIB	= bedwyr.sh
 RLWRAP_CONTRIB	= completions.in
 XML_CONTRIB	= bedwyr.dtd bedwyr-skeleton.xsl skeleton.css
 VIM_CONTRIB	= ftdetect/bedwyr.vim ftplugin/bedwyr.vim \
 		  indent/bedwyr.vim syntax/bedwyr.vim
 EMACS_CONTRIB	= bedwyr.el
-CONTRIB_FILES	= $(addprefix contrib/rlwrap/,$(RLWRAP_CONTRIB)) \
+CONTRIB_FILES	= $(addprefix contrib/bash_completion.d/,$(BASH_CONTRIB)) \
+		  $(addprefix contrib/rlwrap/,$(RLWRAP_CONTRIB)) \
 		  $(addprefix contrib/xml/,$(XML_CONTRIB)) \
 		  $(addprefix contrib/emacs/,$(EMACS_CONTRIB)) \
 		  $(addprefix contrib/vim/,$(VIM_CONTRIB))

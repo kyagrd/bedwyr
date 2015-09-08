@@ -24,7 +24,8 @@ build:
 	dh_testdir
 	autoconf
 	dh_auto_configure -- --libdir=/usr/lib --no-create \
-	  --enable-nativecode --enable-doc --with-vimfiles --with-xmlm
+	  --enable-nativecode --enable-doc \
+	  --with-bash_completion --with-vimfiles --with-xmlm
 	dh_auto_build
 	dh_auto_build -- doc
 	dh_auto_test
