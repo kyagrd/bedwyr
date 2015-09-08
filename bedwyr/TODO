@@ -7,3 +7,62 @@
 
 * make "_blah" a logic variable, (like "Blah"), but remove the
   "singleton variable" warning for it (like for "_")
+
+
+
+* use getarg instead of arg
+* add a verbosity option
+* add a single-query mode, where the output gives the answer
+  (add an exit status for false)
+* add --with-ndcore for a system ndcore, à la
+      AC_ARG_WITH(slang, AC_HELP_STRING([--with-slang@<:@=DIR@:>@], [Use S-Lang instead of ncurses]),
+              [AC_CACHE_CHECK([if this is a BSD system], mutt_cv_bsdish,
+                              [AC_TRY_RUN([#include <sys/param.h>
+* add type annotations for objects (eg variables), except if they aren't accepted by abella
+  -> instead of instantiating the type of an object and feeding it to the surrounding term,
+     instantiate the type and unify with the polymorphic annotation to check its validity,
+     then instantiate the annotation (which is a refinment) and feed it to the term
+  -> wait, are variables allowed to be polymorphic, anyway??!?!
+  -> ok, so with more thought into this: a variable cannot be polymorphic,
+     so the annotation is not a refinment of the type
+* go in Typing and replace "TParam of int" by "TParam of string",
+  with a simpler fresh_typaram, a way simpler get_typaram,
+  and a more complicated fresh_tyinst
+* check what Abella says about non-definite types, eg is
+    Kind t type.
+    Type f A -> t.
+    Define p : _ -> _ -> prop by
+      p X Y := f X = f Y.
+  a valid over-universal equality giving a well-typed pair
+  to the unifier, which turns it in wrongly-typed unification attempts...
+* do something for the trailing nabla variables in (non equivariant) tabling
+
+
+packaging
+  * ajouter les fichiers de la session (en deux morceaux) dans #env
+  * ebuild : prepallman
+  * unicité des noms de théorèmes
+  * finir la doc : examples, meta-commands, built-ins, limitations
+  * écrire le 'technical report'
+  * ajouter la possibilité d'appeler xmllint et/ou xsltproc
+
+sub-releases
+  * essayer d'instancier les instanciables de la table avec des termes
+    (ie mettre au point une seconde recherche, en largeur, avec un [bindings] différent)
+    * regarder le commit 97b33d1536e928787616b3eca6003d791bc51939 et faire
+      les trucs qui manquent
+      puis packager et balancer des rc sur gentoo, debian et opam
+  * tabler des instanciables pour les réfutations, ie des logiques et plus des eigens
+  * ajouter les variables non instanciables dans les atomes réfutés
+  * ajouter le tabling de solutions pour les atomes non grounds prouvés
+  * améliorer les lemmes pour l'exemple d'Alwen
+  * voir si le truc simple pour que eigen%nominal marche joue aussi
+    pour nominal%eigen (cf fin de pi_modal.def)
+  * abiteboul et un autre: fixpoints...datalog
+  * essayer de remplacer final_influences par son cardinal
+  * peaufiner l'affichage de skelette de preuve (js)
+
+examples
+  * la grille torique -> predicate abstraction for the unreach case
+  * (a.b.0)|(c.d.0) ~ a.b.c.d.0 + a.c.b.d.0 + ... c.d.a.b.0
+  * la même choser avec des mu

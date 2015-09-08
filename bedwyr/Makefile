@@ -82,7 +82,7 @@ OPAM_FILES	= opam descr findlib url files/bedwyr.install
 
 NSIS_RC_FILES	= $(addprefix nsis-files/,$(filter %.rc,$(NSIS_FILES)))
 COFF_FILES	= $(NSIS_RC_FILES:.rc=.o)
-ifeq (,)
+ifeq (x,)
   OPAM_URL_SCHEME	= http
   OPAM_URL_FULL_PATH	= slimmer.gforge.inria.fr/releases/debian/pool/main/b/bedwyr/$(DEB_NAME).orig.tar.gz
 else
@@ -175,7 +175,51 @@ configure: configure.ac
 bedwyr: $(bedwyr_prefix).$(BEST_SUFFIX)
 	@ln -svf $< $@
 
-test:
+test: bedwyr
+#	@rlwrap ./$< -T examples/grid.def -I
+#	@rlwrap ./$< examples/internal/closure.def -t \
+	  -e '#assert inf X z.' -e '#assert inf z Y.' \
+	  -e '#show_table inf.' -I
+#	@rlwrap ./$< examples/internal/filter.def
+#	@time ./$< -t -I \
+	  examples/pi/pi.def \
+	  -e "#assert (forall t, weak_bisim (nu u\ nu d\ (par (num (s (s zz)) d) \
+	  (par (num (s (s (s zz))) u) \
+	  (add u d t)))) \
+	  (num (s (s (s (s (s zz))))) t))."
+#	@./$< -t -I \
+	  examples/internal/tabling.def \
+	  -e ''
+#	@./$< -t -I \
+	  examples/ccs.def \
+#	@rm -f blah.xml
+#	@./$< examples/internal/tabling.def -I -t \
+#	  -e '#assert p 0. #show_table p. #show_table q.' \
+#	  -e '#assert_not r 0. #show_table r. #export "blah.xml".'
+#	@cat blah.xml
+#	@xsltproc --path contrib/xml/ blah.xml > blah.html
+#  test_bkp: bedwyr
+#	@./$< examples/internal/tabling.def -I \
+#	  -e 'printstr " ******* " /\ false.' \
+#	  -e '          p 1 0.' \
+#	  -e '#show_table q.' \
+#	  -e '          p 1 0.' \
+#	  -e 'exists X, p 1 X.' \
+#	  -e '          p 1 X.' \
+#	  -e 'printstr " ******* " /\ false.' \
+#	  -e '          p 2 0.' \
+#	  -e '#show_table q.' \
+#	  -e '          p 2 0.' \
+#	  -e 'exists X, p 2 X.' \
+#	  -e '          p 2 X.' \
+#	  -e 'printstr " ******* " /\ false.' \
+#	  -e 'exists X, p 3 X.' \
+#	  -e '#show_table q.' \
+#	  -e 'exists X, p 3 X.' \
+#	  -e '          p 3 7.' \
+#	  -e 'forall X, p 3 X.' \
+#	  -e '#show_table q.'
+test_all:
 	@echo '** Testing bedwyr libraries **'
 	@$(MAKE) test_libs
 	@echo '** Testing bedwyr on examples **'
