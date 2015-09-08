@@ -49,7 +49,7 @@ val access :
   * the latter could return [(_,Some _,_)].
   * As it never adds atoms to the table, it currently doesn't carry
   * proof skeleton information.
-  * @returns [(Some true)] if the queried atom is implied by a proved
+  * @return [(Some true)] if the queried atom is implied by a proved
   * atom, [(Some false)] if it implies a disproved atom, [None]
   * otherwise *)
 val filter :

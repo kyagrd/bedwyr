@@ -17,6 +17,8 @@
 (* 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.              *)
 (****************************************************************************)
 
+(** Reading functions (to be used in a read-eval-print way). *)
+
 val definition_mode :
   k:(unit -> Parsetree.Preterm.definition_mode option) -> Lexing.lexbuf ->
   Parsetree.Preterm.definition_mode option option

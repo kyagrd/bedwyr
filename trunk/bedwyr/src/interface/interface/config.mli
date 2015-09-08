@@ -19,12 +19,15 @@
 
 (** Build-time global variables. *)
 
+(** Name of the {b findlib} package. *)
 val project_tarname : string
 val package_name : string
 val package_version : string
 val ocaml_version : string
 val build : string
 val build_date : string
+
+(** List of compile-time included optional features. *)
 val features : (string * string) list
 
 val plugin_dirs : string list ref

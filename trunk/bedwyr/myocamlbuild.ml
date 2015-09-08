@@ -40,6 +40,7 @@ let _ =
         flag ["ocaml" ; "doc"] (S [
           A "-stars" ;
           A "-m" ; A "A" ;
+          A "-colorize-code" ;
         ]) ;
         flag ["ocamlyacc"] (A "-v") ;
 

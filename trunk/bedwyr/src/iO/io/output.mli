@@ -21,10 +21,12 @@
 
 type colours = [`Error | `Warning | `Debug | `Clear]
 
+(** Only [8] and [256] are currently supported. *)
 val set_colours : int -> unit
 
 val set_width : Format.formatter -> int -> unit
 
+(** Augmented version of [Format.fprintf]. *)
 val fprintf :
   ?colour:colours ->
   ?tag:string ->
@@ -41,10 +43,12 @@ val pp_spaced_string : Format.formatter -> string -> unit
 
 val std_out : Format.formatter ref
 
+(** Augmented version of [Format.printf], outputing on {!std_out}. *)
 val printf :
   ?nl:bool ->
   ('a, Format.formatter, unit, unit) format4 -> 'a
 
+(** Augmented version of [Format.sprintf]. *)
 val sprintf :
   ?tag:string ->
   ?p:Pos.t ->
@@ -62,14 +66,20 @@ val debug : bool ref
 val err_poss : (int * int) list ref
 val war_poss : (int * int) list ref
 
-val wprintf :
-  ?p:Pos.t ->
-  ('a, Format.formatter, unit, unit) format4 -> 'a
-
+(** Augmented version of [Format.printf], outputing on {!std_err} with a
+  * formatting indicating erros. *)
 val eprintf :
   ?p:Pos.t ->
   ('a, Format.formatter, unit, unit) format4 -> 'a
 
+(** Augmented version of [Format.printf], outputing on {!std_err} with a
+  * formatting indicating warnings. *)
+val wprintf :
+  ?p:Pos.t ->
+  ('a, Format.formatter, unit, unit) format4 -> 'a
+
+(** Augmented version of [Format.printf], outputing on {!std_dbg} with a
+  * formatting indicating debugging information. *)
 val dprintf :
   ?p:Pos.t ->
   ('a, Format.formatter, unit, unit) format4 -> 'a

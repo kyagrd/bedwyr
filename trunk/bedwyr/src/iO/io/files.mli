@@ -28,7 +28,7 @@ exception File_error of string * string * string
 (** Bedwyr working directory. *)
 val bwd : string ref
 
-(** Wether file access is allowed outside of {!!bwd} or not. *)
+(** Wether file access is allowed outside of [!]{!bwd} or not. *)
 val chrooted : bool ref
 
 (** Open a file for input and run a function on it, with default sanity

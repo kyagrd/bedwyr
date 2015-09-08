@@ -17,7 +17,20 @@
 (* 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.              *)
 (****************************************************************************)
 
+(** Catch some selected exceptions, replace them by an error message and
+  * return [None]. *)
+
+(** Catch exceptions commonly raised by query solving (from the unifier
+  * or the prover). *)
 val solve : p:IO.Pos.t -> exn -> 'a option
+
+(** Catch exceptions commonly raised by meta-command execution (from
+  * assertion, or actions that espect their arguments to be in an
+  * appropriate state). *)
 val meta_command : p:IO.Pos.t -> exn -> 'a option
+
+(** Catch exceptions commonly raised by file I/O. *)
 val io : ?p:IO.Pos.t -> exn -> 'a option
+
+(** Catch all exceptions otherwise not handled. *)
 val all : p:IO.Pos.t -> exn -> 'a option
