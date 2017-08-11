@@ -629,85 +629,96 @@ let rec prove sons
 
     (* Level 1: Implication *)
     | Binop (Arrow,a,b) ->
-        assert_level_one level ;
-        let a = Ndcore.Norm.deep_norm a in
         let b = Ndcore.Norm.deep_norm b in
-        let check_variables =
-          let eigen = eigen_vars [a] in
-          let logic = logic_vars [b] in
-          let var v =
-            match observe v with
-              | Var v -> v
-              | _ -> assert false
-          in
-          let max = (* maximum logic variable timestamp *)
-            List.fold_left
-              (fun m v -> max m (var v).ts) (-1) logic
-          in
-          let eigen = List.filter (fun v -> (var v).ts <= max) eigen in
-          (* Check that all eigen-variables on which logic vars
-           * can depend are instantiated to distinct eigenvars.
-           * Then LLambda unifications will be preserved. *)
-          let var v =
-            match observe v with
-              | Var v when v.tag = Eigen -> v
-              | _ -> raise (Ndcore.Unify.NotLLambda v)
-          in
-          fun () ->
-            (* This is called when some left solution has been
-             * found. We check that everything is a variable. *)
-            let eigen = List.map (fun v -> v,var v) eigen in
-            let rec unicity = function
-              | [] -> ()
-              | (va,a)::tl ->
-                  if List.exists (fun (_,b) -> a=b) tl then
-                    raise (Ndcore.Unify.NotLLambda va) ;
-                  unicity tl
+        let a = Ndcore.Norm.deep_norm a in
+        begin match (level, observe a, observe b) with
+        | (Zero, Binop(Eq,t1,t2), False) ->
+          if t1 = t2 (* only when they are syntactically identical *)
+          then failure ()
+          else
+            begin
+              IO.Output.printf "%a TODO put this as a constraint to be solved at level 1 disjucted with the conclusion goal \n" Ndcore.Pprint.pp_term a ;
+              assert_level_one level ;
+              failure ()
+            end
+        | _ ->
+          assert_level_one level ;
+          let check_variables =
+            let eigen = eigen_vars [a] in
+            let logic = logic_vars [b] in
+            let var v =
+              match observe v with
+                | Var v -> v
+                | _ -> assert false
             in
-            unicity eigen
-        in
-        (* Solve [a] using level 0,
-         * remind of the solution substitutions as slices of the bind stack,
-         * then prove [b] at level 1 for every solution for [a],
-         * thanks to the commutability between patches for [a] and [b],
-         * one modifying eigenvars,
-         * the other modifying logical variables. *)
-        let substs = ref [] in
-        let state = save_state () in
-        let store_subst ts k =
-          check_variables () ;
-          (* We get sigma by comparing the current solution
-           * with the state [k] will leave the system in,
-           * and we store it. *)
-          substs := (ts,get_subst state)::!substs ;
-          k ()
-        in
-        let make_copies vs g =
-          List.map
-            (fun (ts,sigma) ->
-               let unsig = apply_subst sigma in
-               let g = Ndcore.Norm.deep_norm g in
-               let newg = shared_copy g in
-               undo_subst unsig ;
-               (ts, newg))
-            vs
-        in
-        let rec prove_conj ts failure = function
-          | [] -> success ts failure
-          | (ts'',g)::gs ->
-              prove sons
-                temperatures (depth+1)
-                ~level ~local ~timestamp:ts''
-                ~success:(fun ts' k -> prove_conj (max ts ts') k gs)
-                ~failure g
-        in
-        prove sons
-          temperatures (depth+1)
-          ~level:Zero ~local ~timestamp a
-          ~success:store_subst
-          ~failure:(fun () ->
-                      prove_conj timestamp failure (make_copies !substs b))
-
+            let max = (* maximum logic variable timestamp *)
+              List.fold_left
+                (fun m v -> max m (var v).ts) (-1) logic
+            in
+            let eigen = List.filter (fun v -> (var v).ts <= max) eigen in
+            (* Check that all eigen-variables on which logic vars
+             * can depend are instantiated to distinct eigenvars.
+             * Then LLambda unifications will be preserved. *)
+            let var v =
+              match observe v with
+                | Var v when v.tag = Eigen -> v
+                | _ -> raise (Ndcore.Unify.NotLLambda v)
+            in
+            fun () ->
+              (* This is called when some left solution has been
+               * found. We check that everything is a variable. *)
+              let eigen = List.map (fun v -> v,var v) eigen in
+              let rec unicity = function
+                | [] -> ()
+                | (va,a)::tl ->
+                    if List.exists (fun (_,b) -> a=b) tl then
+                      raise (Ndcore.Unify.NotLLambda va) ;
+                    unicity tl
+              in
+              unicity eigen
+          in
+          (* Solve [a] using level 0,
+           * remind of the solution substitutions as slices of the bind stack,
+           * then prove [b] at level 1 for every solution for [a],
+           * thanks to the commutability between patches for [a] and [b],
+           * one modifying eigenvars,
+           * the other modifying logical variables. *)
+          let substs = ref [] in
+          let state = save_state () in
+          let store_subst ts k =
+            check_variables () ;
+            (* We get sigma by comparing the current solution
+             * with the state [k] will leave the system in,
+             * and we store it. *)
+            substs := (ts,op_true,get_subst state)::!substs ; (* TODO instaed of op_true put in a real negative constraint collected from level 0 arrow implying False *)
+            k ()
+          in
+          let make_copies vs g =
+            List.map
+              (fun (ts,negcond,sigma) ->
+                 let unsig = apply_subst sigma in
+                 let g = Ndcore.Norm.deep_norm g in
+                 let newg = shared_copy g in
+                 undo_subst unsig ;
+                 (ts, Ndcore.Term.op_or negcond newg))
+              vs
+          in
+          let rec prove_conj ts failure = function
+            | [] -> success ts failure
+            | (ts'',g)::gs ->
+                prove sons
+                  temperatures (depth+1)
+                  ~level ~local ~timestamp:ts''
+                  ~success:(fun ts' k -> prove_conj (max ts ts') k gs)
+                  ~failure g
+          in
+          prove sons
+            temperatures (depth+1)
+            ~level:Zero ~local ~timestamp a
+            ~success:store_subst
+            ~failure:(fun () ->
+                        prove_conj timestamp failure (make_copies !substs b))
+        end
     (* Level 1: Universal quantification *)
     | Binder (Forall,n,goal) ->
         assert_level_one level ;
