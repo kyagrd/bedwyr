@@ -53,4 +53,5 @@ val saturation_pressure : int ref
 val prove :
   success:(int -> (unit -> 'a) -> 'a) ->
   failure:(unit -> 'a) ->
+  constraints: Ndcore.Term.term list ->
   timestamp:int -> local:int -> Ndcore.Term.term -> 'a

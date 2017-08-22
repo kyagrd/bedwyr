@@ -130,7 +130,7 @@ type 'a answer =
  * [timestamp] must be the oldest timestamp in the goal. *)
 let rec prove sons
       temperatures depth
-      ~success ~failure ~level ~timestamp ~local g =
+      ~success ~failure ~constraints ~level ~timestamp ~local g =
 
   if check_interrupt () then begin
     clear_dependency_stack () ;

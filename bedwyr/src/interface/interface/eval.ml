@@ -219,6 +219,7 @@ let query ~p ~print ~concise pre_query =
             Prover.Proofsearch.prove ~local:0 ~timestamp:0 query
               ~success:show
               ~failure:continue
+              ~constraints (* TODO prove non prove *)
           in
           reset () ;
           Some result
@@ -334,6 +335,7 @@ let meta_command ~(include_file:(?test_limit:(int option) -> string -> Ndcore.Te
                   Prover.Proofsearch.prove ~local:0 ~timestamp:0 query
                     ~success:(fun _ _ -> ())
                     ~failure:(fun () -> raise Prover.System.Assertion_failed)
+                    ~constraints (* TODO *)
                 end ;
                 Some (Some query)
           end
@@ -346,6 +348,7 @@ let meta_command ~(include_file:(?test_limit:(int option) -> string -> Ndcore.Te
                     Ndcore.Pprint.pp_term query ;
                   Prover.Proofsearch.prove ~local:0 ~timestamp:0 query
                     ~success:(fun _ _ -> raise Prover.System.Assertion_failed) ~failure:ignore
+                    ~constraints (* TODO *)
                 end ;
                 Some (Some query)
           end
@@ -359,6 +362,7 @@ let meta_command ~(include_file:(?test_limit:(int option) -> string -> Ndcore.Te
                   if try
                     Prover.Proofsearch.prove ~local:0 ~timestamp:0 query
                       ~success:(fun _ _ -> true) ~failure:(fun _ -> true)
+                      ~constraints (* TODO *)
                   with _ -> false
                   then raise Prover.System.Assertion_failed
                 end ;
