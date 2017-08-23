@@ -130,7 +130,7 @@ type 'a answer =
  * [timestamp] must be the oldest timestamp in the goal. *)
 let rec prove sons
       temperatures depth
-      ~success ~failure ~level ~timestamp ~local g =
+      ~success ~failure ~constraints ~level ~timestamp ~local g =
 
   if check_interrupt () then begin
     clear_dependency_stack () ;
@@ -152,6 +152,7 @@ let rec prove sons
     prove sons
       temperatures (depth+1)
       ~level ~timestamp ~failure ~local a
+      ~constraints
       ~success:(fun ts k ->
                   let tm_list = List.map shared_copy vars in
                   if List.exists (match_list tm_list) !sol then k () else begin
@@ -175,7 +176,7 @@ let rec prove sons
     let g = op_eq c d in
     prove sons
       temperatures (depth+1)
-      ~level ~success ~failure ~timestamp ~local g
+      ~level ~success ~failure ~constraints ~timestamp ~local g
   in
 
   (* Function to prove _not predicate *)
@@ -184,6 +185,7 @@ let rec prove sons
     let a = Ndcore.Norm.deep_norm a in
     let state = save_state () in
     prove sons temperatures (depth+1) ~level ~timestamp ~local a
+      ~constraints
       ~success:(fun ts k ->
                   restore_state state ;
                   failure ())
@@ -201,6 +203,7 @@ let rec prove sons
     let succeeded = ref false in
     let state = save_state () in
     prove sons temperatures (depth+1) ~level ~timestamp ~local a
+      ~constraints
       ~success:(fun ts k ->
                   (*  restore_state state ; *)
                   (*  prove temperatures (depth+1) ~success ~failure ~level
@@ -208,14 +211,14 @@ let rec prove sons
                   succeeded := true ;
                   prove sons
                     temperatures (depth+1)
-                    ~success ~level ~timestamp:ts ~local b ~failure:k)
+                    ~success ~constraints ~level ~timestamp:ts ~local b ~failure:k)
       (* (fun () -> restore_state state ; failure()) *)
       ~failure:(fun () ->
                   restore_state state ;
                   if !succeeded then failure () else
                     prove sons
                       temperatures (depth+1)
-                      ~success ~failure ~level ~timestamp ~local c)
+                      ~success ~failure ~constraints ~level ~timestamp ~local c)
   in
 
   (* 2-step procedure (table, definition)
@@ -239,7 +242,7 @@ let rec prove sons
     match status with
       | OffTopic ->
           prove sons temperatures (depth+1)
-            ~level ~timestamp ~local ~success ~failure (app definition args)
+            ~level ~timestamp ~local ~success ~failure ~constraints (app definition args)
       | Known (_,({contents=Table.Proved _} as status),_,_) ->
           IO.Output.dprintf "Goal (%a) proved using table." Ndcore.Pprint.pp_term g ;
           sons := Table.Cut status :: !sons ;
@@ -503,7 +506,7 @@ let rec prove sons
                            * to improve performance *)
                           (* XXX check this sons! *)
                           prove new_sons ((v,Frozen 0)::temperatures)
-                            (depth+1) ~local ~timestamp
+                            (depth+1) ~local ~timestamp ~constraints
                             ~level:Zero ~success:store_subst ~failure th_body
                         end else k ()
                       in
@@ -535,6 +538,7 @@ let rec prove sons
               prove new_sons
                 temperatures (depth+1)
                 ~level ~local ~timestamp (app body args)
+                ~constraints
                 ~success:table_update_success
                 ~failure:table_update_failure
             end else
@@ -546,7 +550,7 @@ let rec prove sons
                *)
               prove sons
                 temperatures (depth+1)
-                ~level ~local ~timestamp ~success ~failure (app body args)
+                ~level ~local ~timestamp ~success ~failure ~constraints (app body args)
           in
           (* first step, second sub-step: freeze the atom if needed,
            * unfold the theorem *)
@@ -611,6 +615,7 @@ let rec prove sons
                 ~local ~level ~timestamp
                 ~success:(fun ts' k -> conj (max ts ts') k goals)
                 ~failure
+                ~constraints
                 goal
         in
         conj timestamp failure [Ndcore.Norm.hnorm t1;Ndcore.Norm.hnorm t2]
@@ -623,6 +628,7 @@ let rec prove sons
               prove sons temperatures (depth+1)
                 ~level ~local ~success ~timestamp
                 ~failure:(fun () -> alt goals)
+                ~constraints
                 g
         in
         alt [Ndcore.Norm.hnorm t1;Ndcore.Norm.hnorm t2]
@@ -709,12 +715,14 @@ let rec prove sons
                 prove sons
                   temperatures (depth+1)
                   ~level ~local ~timestamp:ts''
+                  ~constraints
                   ~success:(fun ts' k -> prove_conj (max ts ts') k gs)
                   ~failure g
           in
           prove sons
             temperatures (depth+1)
             ~level:Zero ~local ~timestamp a
+            ~constraints
             ~success:store_subst
             ~failure:(fun () ->
                         prove_conj timestamp failure (make_copies !substs b))
@@ -733,7 +741,7 @@ let rec prove sons
         let goal = app goal vars in
         prove sons
           temperatures (depth+1)
-          ~local ~timestamp:(timestamp + n) ~level ~success ~failure goal
+          ~local ~timestamp:(timestamp + n) ~level ~success ~failure ~constraints goal
 
     (* Local quantification *)
     | Binder (Nabla,n,goal) ->
@@ -748,7 +756,7 @@ let rec prove sons
         let goal = app goal vars in
         prove sons
           temperatures (depth+1)
-          ~local:(local + n) ~timestamp ~level ~success ~failure goal
+          ~local:(local + n) ~timestamp ~level ~success ~failure ~constraints goal
 
     (* Existential quantification *)
     | Binder (Exists,n,goal) ->
@@ -770,7 +778,7 @@ let rec prove sons
               timestamp,aux [] n
         in
         let goal = app goal vars in
-        prove sons temperatures (depth+1) ~local ~timestamp ~level
+        prove sons temperatures (depth+1) ~local ~timestamp ~level ~constraints
           ~success ~failure goal
 
     | App (hd,goals) ->
@@ -815,6 +823,7 @@ let rec prove sons
              prove sons
                temperatures (depth+1)
                ~level ~local ~timestamp ~failure a
+               ~constraints
                ~success:(fun ts k -> success ts (fun () ->
                                                    restore_state state ;
                                                    failure ()) )
@@ -831,7 +840,7 @@ let rec prove sons
                 | Some goal ->
                     prove sons
                       temperatures (depth+1)
-                      ~level ~local ~timestamp ~failure ~success
+                      ~level ~local ~timestamp ~failure ~success ~constraints
                       goal
               end
 
@@ -842,7 +851,7 @@ let rec prove sons
                 | Some goal ->
                     prove sons
                       temperatures (depth+1)
-                      ~level ~local ~timestamp ~failure ~success
+                      ~level ~local ~timestamp ~failure ~success ~constraints
                       goal
               end
 
@@ -941,7 +950,7 @@ let rec prove sons
     | _ -> invalid_goal ()
 
 (* Wrap prove with sanity checks. *)
-let prove ~success ~failure ~timestamp ~local g =
+let prove ~success ~failure ~constraints ~timestamp ~local g =
   let s0 = save_state () in
   let success ts k =
     assert (Stack.is_empty dependency_stack) ;
@@ -955,7 +964,7 @@ let prove ~success ~failure ~timestamp ~local g =
   try
     prove System.root_atoms
       [] 0
-      ~success ~failure  ~level:One ~timestamp ~local g
+      ~success ~failure ~constraints ~level:One ~timestamp ~local g
   with e ->
     clear_dependency_stack () ;
     restore_state s0 ;
