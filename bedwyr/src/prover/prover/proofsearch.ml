@@ -639,14 +639,19 @@ let rec prove sons
         let a = Ndcore.Norm.deep_norm a in
         begin match (level, observe a, observe b) with
         | (Zero, Binop(Eq,t1,t2), False) ->
-          if t1 = t2 (* only when they are syntactically identical *)
-          then failure ()
-          else
-            begin
-              IO.Output.printf "%a TODO put this as a constraint to be solved at level 1 disjucted with the conclusion goal \n" Ndcore.Pprint.pp_term a ;
-              assert_level_one level ;
-              failure ()
-            end
+          begin match (observe t1, observe t2) with
+          | (Var x1, Var x2) ->
+            if x1 = x2 then failure ()
+            else
+              prove sons temperatures depth
+                ~level ~local ~timestamp ~success
+                ~failure
+                ~constraints:(op_binop Eq t1 t2::constraints)
+                b
+          | _ ->
+            assert_level_one level ;
+            failure ()
+          end 
         | _ ->
           assert_level_one level ;
           let check_variables =
@@ -701,17 +706,18 @@ let rec prove sons
           in
           let make_copies vs g =
             List.map
-              (fun (ts,negcond,sigma) ->
+              (fun (ts,cs,sigma) ->
                  let unsig = apply_subst sigma in
                  let g = Ndcore.Norm.deep_norm g in
                  let newg = shared_copy g in
+                 (* TODO t1 t2 *)
                  undo_subst unsig ;
-                 (ts, Ndcore.Term.op_or negcond newg))
+                 (ts, cs, newg))
               vs
           in
           let rec prove_conj ts failure = function
             | [] -> success ts failure
-            | (ts'',g)::gs ->
+            | (ts'',cs,g)::gs ->
                 prove sons
                   temperatures (depth+1)
                   ~level ~local ~timestamp:ts''
