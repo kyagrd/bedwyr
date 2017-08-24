@@ -635,25 +635,37 @@ let rec prove sons
 
     (* Level 1: Implication *)
     | Binop (Arrow,a,b) ->
+        IO.Output.printf "constraints: " ;
+        List.iter (fun t -> IO.Output.printf "%a ;" Ndcore.Pprint.pp_term t) constraints ;
+        IO.Output.printf "\n" ;
+        IO.Output.printf "here %a\n" Ndcore.Pprint.pp_term g ;
         let b = Ndcore.Norm.deep_norm b in
         let a = Ndcore.Norm.deep_norm a in
         begin match (level, observe a, observe b) with
         | (Zero, Binop(Eq,t1,t2), False) ->
           begin match (observe t1, observe t2) with
-          | (Var x1, Var x2) ->
-            if x1 = x2 then failure ()
-            else
-              prove sons temperatures depth
+          | (x1, x2) ->
+            IO.Output.printf "t1 %a\n" Ndcore.Pprint.pp_term t1 ;
+            IO.Output.printf "t2 %a\n" Ndcore.Pprint.pp_term t2 ;
+            if x1 = x2
+            then failure ()
+            else success timestamp failure (*
+              prove sons temperatures (depth+1)
                 ~level ~local ~timestamp ~success
                 ~failure
                 ~constraints:(op_binop Eq t1 t2::constraints)
-                b
-          | _ ->
+                op_true (* TODO this is not right constraints are not passed to level 1 how can we do this?
+                and how do we make sure x1 and x2 are vars *)
+          | (t1o,t2o) ->
+            IO.Output.printf "t1o %a\n" Ndcore.Pprint.pp_term t1 ;
+            IO.Output.printf "t2o %a\n" Ndcore.Pprint.pp_term t2 ;
             assert_level_one level ;
-            failure ()
+            failure () *)
           end 
         | _ ->
           assert_level_one level ;
+          let a = Ndcore.Norm.deep_norm a in
+          let b = Ndcore.Norm.deep_norm b in
           let check_variables =
             let eigen = eigen_vars [a] in
             let logic = logic_vars [b] in
@@ -701,23 +713,39 @@ let rec prove sons
             (* We get sigma by comparing the current solution
              * with the state [k] will leave the system in,
              * and we store it. *)
-            substs := (ts,op_true,get_subst state)::!substs ; (* TODO instaed of op_true put in a real negative constraint collected from level 0 arrow implying False *)
+            substs := (ts,
+                       begin match observe a with
+                             | Binop (Arrow,a1,a2)
+                               when (match (observe a1,observe a2) with
+                                     | (Binop (Eq,_,_), False) -> true
+                                     | _                       -> false)
+                                 -> [a1]
+                             | _ -> []
+                       end,
+                       get_subst state)::!substs ;
             k ()
           in
           let make_copies vs g =
             List.map
               (fun (ts,cs,sigma) ->
+               match cs with
+               | [] ->
                  let unsig = apply_subst sigma in
                  let g = Ndcore.Norm.deep_norm g in
                  let newg = shared_copy g in
-                 (* TODO t1 t2 *)
                  undo_subst unsig ;
-                 (ts, cs, newg))
+                 (ts, newg)
+               | (a1::_) ->
+                 let unsig = apply_subst sigma in
+                 let g = Ndcore.Norm.deep_norm g in
+                 let newg = shared_copy g in
+                 undo_subst unsig ;
+              )
               vs
           in
           let rec prove_conj ts failure = function
             | [] -> success ts failure
-            | (ts'',cs,g)::gs ->
+            | (ts'',g)::gs ->
                 prove sons
                   temperatures (depth+1)
                   ~level ~local ~timestamp:ts''
@@ -731,7 +759,8 @@ let rec prove sons
             ~constraints
             ~success:store_subst
             ~failure:(fun () ->
-                        prove_conj timestamp failure (make_copies !substs b))
+                        prove_conj timestamp failure
+                          (make_copies !substs b))
         end
     (* Level 1: Universal quantification *)
     | Binder (Forall,n,goal) ->
